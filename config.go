@@ -1,0 +1,47 @@
+package apic
+
+import (
+	"github.com/Axway/ace-golang-sdk/config"
+	log "github.com/sirupsen/logrus"
+)
+
+// Config - Represents the APIC config
+type Config struct {
+	TenantID   string `cfg:"APIC_TENANT_ID"`
+	ApicURL    string `cfg:"APIC_URL"`
+	TeamID     string `cfg:"APIC_TEAM_ID"`
+	AuthPolicy string `cfg:"APIC_AUTH_POLICY" cfg_default:"verify-api-key"`
+}
+
+// ApicConfig - Holds the apicentral configuration
+var apicConfig Config
+
+func init() {
+	config.ReadConfigFromEnv(&apicConfig)
+	log.Debug("APIC config: ", apicConfig)
+}
+
+// GetApicConfig - Returns the auth config
+func GetApicConfig() *Config {
+	return &apicConfig
+}
+
+// GetApicURL - Returns the configured base apicentral URL
+func (apicConfig *Config) GetApicURL() string {
+	return apicConfig.ApicURL
+}
+
+// GetTenantID - Returns the configured apicentral tenantID
+func (apicConfig *Config) GetTenantID() string {
+	return apicConfig.TenantID
+}
+
+// GetTeamID - Returns the configured apicentral Default team id
+func (apicConfig *Config) GetTeamID() string {
+	return apicConfig.TeamID
+}
+
+// GetAuthPolicy - Returns the configured apicentral auth policy for the API
+func (apicConfig *Config) GetAuthPolicy() string {
+	return apicConfig.AuthPolicy
+}
