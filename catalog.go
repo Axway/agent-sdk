@@ -7,15 +7,13 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-
-	"fmt"
+	log "github.com/sirupsen/logrus"
 )
-
-// "https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems"
 
 type CatalogPropertyValue struct {
 	URL        string `json:"url"`
@@ -51,7 +49,7 @@ type CatalogItem struct {
 	DefinitionRevision int    `json:"definitionRevision"`
 
 	Name         string `json:"name"`
-	OwningTeamId string `json:"owningTeamId"`
+	OwningTeamID string `json:"owningTeamId"`
 	Description  string `json:"description,omitempty"`
 
 	Properties   []CatalogProperty   `json:"properties,omitempty"`
@@ -81,20 +79,23 @@ func init() {
 
 const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
-func CreateCatalogItem(apiID, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+// CreateCatalogItem -
+func CreateCatalogItem(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+	region := os.Getenv("AWS_REGION")
 	newCatalogItem := CatalogItem{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               apiID + "_" + stageName,
-		OwningTeamId:       apicConfig.GetTeamID(),
+		Name:               apiName,
+		OwningTeamID:       apicConfig.GetTeamID(),
 		Description:        "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")",
 		Properties: []CatalogProperty{
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
 					AuthPolicy: apicConfig.GetAuthPolicy(),
-					URL:        "https://f0d9c067be62dc9adeb44b57bc0eeaa601631b47.cloudapp-enterprise.appcelerator.com/music/v2",
+					// URL is of the form https://<restApiId>.execute-api.<awsRegion>.amazonaws.com/<stageName>
+					URL: "https://" + apiID + ".execute-api." + region + ".amazonaws.com/" + stageName,
 				},
 			},
 		},
@@ -138,6 +139,7 @@ func apicRequest(method, url string, body io.Reader) (*http.Request, error) {
 	return request, nil
 }
 
+// AddCatalogItem -
 func AddCatalogItem(catalogBuffer []byte) error {
 	/**
 	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
@@ -158,18 +160,16 @@ func AddCatalogItem(catalogBuffer []byte) error {
 
 		json.NewDecoder(response.Body).Decode(&detail)
 		for k, v := range detail {
-			fmt.Println(k)
 			buffer, _ := v.MarshalJSON()
-			fmt.Println(string(buffer))
+			log.Debugf("HTTP response key %v: %v", k, string(buffer))
 		}
 		return errors.New(response.Status)
 	}
 	defer response.Body.Close()
 	json.NewDecoder(response.Body).Decode(&detail)
 	for k, v := range detail {
-		fmt.Println(k)
 		buffer, _ := v.MarshalJSON()
-		fmt.Println(string(buffer))
+		log.Debugf("HTTP response key %v: %v", k, string(buffer))
 	}
 	return nil
 }
