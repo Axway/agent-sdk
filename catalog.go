@@ -5,13 +5,16 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	"github.com/aws/aws-sdk-go/aws"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,10 +33,22 @@ type CatalogRevisionProperty struct {
 	Value json.RawMessage `json:"value"`
 }
 
-type CatalogRevision struct {
+type CatalogItemInitRevision struct {
+	ID         string                    `json:"id,omitempty"`
 	Properties []CatalogRevisionProperty `json:"properties"`
+	Number     int                       `json:"number,omitempty"`
 	Version    string                    `json:"version"`
 	State      string                    `json:"state"`
+	Status     string                    `json:"status,omitempty"`
+}
+
+type CatalogItemRevision struct {
+	ID string `json:"id,omitempty"`
+	// metadata []CatalogRevisionProperty `json:"properties"`
+	Number  int    `json:"number,omitempty"`
+	Version string `json:"version"`
+	State   string `json:"state"`
+	Status  string `json:"status,omitempty"`
 }
 
 type CatalogSubscription struct {
@@ -43,18 +58,41 @@ type CatalogSubscription struct {
 	Properties      []CatalogRevisionProperty `json:"properties"`
 }
 
+type CatalogItemInit struct {
+	OwningTeamID       string                  `json:"owningTeamId"`
+	DefinitionType     string                  `json:"definitionType"`
+	DefinitionSubType  string                  `json:"definitionSubType"`
+	DefinitionRevision int                     `json:"definitionRevision"`
+	Name               string                  `json:"name"`
+	Description        string                  `json:"description,omitempty"`
+	Properties         []CatalogProperty       `json:"properties,omitempty"`
+	Tags               []string                `json:"tags,omitempty"`
+	Visibility         string                  `json:"visibility"` // default: RESTRICTED
+	Subscription       CatalogSubscription     `json:"subscription,omitempty"`
+	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
+	CategoryReferences string                  `json:"categoryReferences,omitempty"`
+}
+
 type CatalogItem struct {
+	ID                 string `json:"id"`
+	OwningTeamID       string `json:"owningTeamId"`
 	DefinitionType     string `json:"definitionType"`
 	DefinitionSubType  string `json:"definitionSubType"`
 	DefinitionRevision int    `json:"definitionRevision"`
-
-	Name         string `json:"name"`
-	OwningTeamID string `json:"owningTeamId"`
-	Description  string `json:"description,omitempty"`
-
-	Properties   []CatalogProperty   `json:"properties,omitempty"`
-	Revision     CatalogRevision     `json:"revision,omitempty"`
-	Subscription CatalogSubscription `json:"subscription,omitempty"`
+	Name               string `json:"name"`
+	// relationships
+	Description string   `json:"description,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	// metadata
+	Visibility string `json:"visibility"` // default: RESTRICTED
+	State      string `json:"state"`      // default: UNPUBLISHED
+	Access     string `json:"access,omitempty"`
+	// availableRevisions
+	LatestVersion        int                 `json:"latestVersion,omitempty"`
+	TotalSubscriptions   int                 `json:"totalSubscriptions,omitempty"`
+	LatestVersionDetails CatalogItemRevision `json:"latestVersionDetails,omitempty"`
+	// image
+	// categories
 }
 
 var tokenRequester *apicauth.PlatformTokenGetter
@@ -79,14 +117,16 @@ func init() {
 
 const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
-// CreateCatalogItem -
-func CreateCatalogItem(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+// CreateCatalogItemBodyForAdd -
+func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
 	region := os.Getenv("AWS_REGION")
-	newCatalogItem := CatalogItem{
+	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
+
+	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               apiName,
+		Name:               nameToPush,
 		OwningTeamID:       apicConfig.GetTeamID(),
 		Description:        "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")",
 		Properties: []CatalogProperty{
@@ -99,7 +139,18 @@ func CreateCatalogItem(apiID, apiName, stageName string, swagger []byte, documen
 				},
 			},
 		},
-		Revision: CatalogRevision{
+		Tags:       []string{"tag1", "tag2"}, // todo - where do these come from?
+		Visibility: "RESTRICTED",             // default value
+		Subscription: CatalogSubscription{
+			Enabled:         true,
+			AutoSubscribe:   true,
+			AutoUnsubscribe: true,
+			Properties: []CatalogRevisionProperty{{
+				Key:   "profile",
+				Value: json.RawMessage([]byte(subscriptionSchema)),
+			}},
+		},
+		Revision: CatalogItemInitRevision{
 			Version: "1.0.0",
 			State:   "PUBLISHED",
 			Properties: []CatalogRevisionProperty{
@@ -113,14 +164,28 @@ func CreateCatalogItem(apiID, apiName, stageName string, swagger []byte, documen
 				},
 			},
 		},
-		Subscription: CatalogSubscription{
-			Enabled:         true,
-			AutoSubscribe:   true,
-			AutoUnsubscribe: true,
-			Properties: []CatalogRevisionProperty{{
-				Key:   "profile",
-				Value: json.RawMessage([]byte(subscriptionSchema)),
-			}},
+	}
+
+	return json.Marshal(newCatalogItem)
+}
+
+// CreateCatalogItemBodyForUpdate -
+func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
+
+	newCatalogItem := CatalogItem{
+		DefinitionType:     "API",
+		DefinitionSubType:  "swaggerv2",
+		DefinitionRevision: 1,
+		Name:               nameToPush,
+		OwningTeamID:       apicConfig.GetTeamID(),
+		Description:        "API From AWS APIGateway Updated (RestApiId: " + apiID + ", StageName: " + stageName + ")",
+		Tags:               []string{"tag1", "tag2", "tag3"}, // todo - where do these come from?
+		Visibility:         "RESTRICTED",                     // default value
+		State:              "UNPUBLISHED",                    //default
+		LatestVersionDetails: CatalogItemRevision{
+			Version: "1.0.1",
+			State:   "PUBLISHED",
 		},
 	}
 
@@ -140,12 +205,51 @@ func apicRequest(method, url string, body io.Reader) (*http.Request, error) {
 }
 
 // AddCatalogItem -
-func AddCatalogItem(catalogBuffer []byte) error {
+func AddCatalogItem(catalogBuffer []byte) (string, error) {
 	/**
 	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
 	**/
 
 	request, err := apicRequest("POST", apicConfig.GetApicURL()+"/api/unifiedCatalog/v1/catalogItems", bytes.NewBuffer(catalogBuffer))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Add("Content-Type", "application/json")
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+	detail := make(map[string]*json.RawMessage)
+	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
+
+		json.NewDecoder(response.Body).Decode(&detail)
+		for k, v := range detail {
+			buffer, _ := v.MarshalJSON()
+			log.Debugf("HTTP response key %v: %v", k, string(buffer))
+		}
+		return "", errors.New(response.Status)
+	}
+	defer response.Body.Close()
+	json.NewDecoder(response.Body).Decode(&detail)
+	itemID := ""
+	for k, v := range detail {
+		buffer, _ := v.MarshalJSON()
+		if k == "id" {
+			itemID = string(buffer)
+		}
+		log.Debugf("HTTP response key %v: %v", k, string(buffer))
+	}
+	return strconv.Unquote(itemID)
+}
+
+// UpdateCatalogItem -
+func UpdateCatalogItem(catalogBuffer []byte, itemID *string) error {
+	/**
+	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
+	**/
+	// catalogItemID := "e4e082276d83464c016d839e3e2d0048"
+	request, err := apicRequest("PUT", apicConfig.GetApicURL()+"/api/unifiedCatalog/v1/catalogItems/"+aws.StringValue(itemID), bytes.NewBuffer(catalogBuffer))
 	if err != nil {
 		return err
 	}
