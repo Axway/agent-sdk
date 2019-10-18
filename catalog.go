@@ -18,21 +18,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//CatalogPropertyValue -
 type CatalogPropertyValue struct {
 	URL        string `json:"url"`
 	AuthPolicy string `json:"authPolicy"`
 }
 
+//CatalogProperty -
 type CatalogProperty struct {
 	Key   string               `json:"key"`
 	Value CatalogPropertyValue `json:"value"`
 }
 
+//CatalogRevisionProperty -
 type CatalogRevisionProperty struct {
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
 
+//CatalogItemInitRevision -
 type CatalogItemInitRevision struct {
 	ID         string                    `json:"id,omitempty"`
 	Properties []CatalogRevisionProperty `json:"properties"`
@@ -42,6 +46,7 @@ type CatalogItemInitRevision struct {
 	Status     string                    `json:"status,omitempty"`
 }
 
+//CatalogItemRevision -
 type CatalogItemRevision struct {
 	ID string `json:"id,omitempty"`
 	// metadata []CatalogRevisionProperty `json:"properties"`
@@ -51,6 +56,7 @@ type CatalogItemRevision struct {
 	Status  string `json:"status,omitempty"`
 }
 
+//CatalogSubscription -
 type CatalogSubscription struct {
 	Enabled         bool                      `json:"enabled"`
 	AutoSubscribe   bool                      `json:"autoSubscribe"`
@@ -58,6 +64,7 @@ type CatalogSubscription struct {
 	Properties      []CatalogRevisionProperty `json:"properties"`
 }
 
+//CatalogItemInit -
 type CatalogItemInit struct {
 	OwningTeamID       string                  `json:"owningTeamId"`
 	DefinitionType     string                  `json:"definitionType"`
@@ -73,6 +80,7 @@ type CatalogItemInit struct {
 	CategoryReferences string                  `json:"categoryReferences,omitempty"`
 }
 
+//CatalogItem -
 type CatalogItem struct {
 	ID                 string `json:"id"`
 	OwningTeamID       string `json:"owningTeamId"`
