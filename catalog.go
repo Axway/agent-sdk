@@ -2,7 +2,6 @@ package apic
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -105,12 +103,7 @@ type CatalogItem struct {
 
 var tokenRequester *apicauth.PlatformTokenGetter
 
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-	Timeout: time.Second * 10,
-}
+var httpClient = http.DefaultClient
 
 func init() {
 	tokenURL := auth.GetAuthConfig().GetTokenURL()

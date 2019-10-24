@@ -2,14 +2,12 @@ package apic
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -32,12 +30,7 @@ type Spec struct {
 
 var apiServerTokenRequester *apicauth.PlatformTokenGetter
 
-var apiServerHTTPClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-	Timeout: time.Second * 10,
-}
+var apiServerHTTPClient = http.DefaultClient
 
 func init() {
 	tokenURL := auth.GetAuthConfig().GetTokenURL()
