@@ -71,6 +71,10 @@ func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []str
 
 // AddAPIServer -
 func AddAPIServer(apiServerBuffer []byte, apiServerEnv string) (string, error) {
+	// Unit testing. For now just dummy up a return
+	if isUnitTesting() {
+		return "12345678", nil
+	}
 
 	// local
 	request, err := apiServerServiceRequest("POST", "http://localhost:8080/apis/management/v1alpha1/environments/"+apiServerEnv+"/apiservices", bytes.NewBuffer(apiServerBuffer))
