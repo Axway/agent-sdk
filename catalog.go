@@ -208,6 +208,11 @@ func apicRequest(method, url string, body io.Reader) (*http.Request, error) {
 
 // AddCatalogItem -
 func AddCatalogItem(catalogBuffer []byte) (string, error) {
+	// Unit testing. For now just dummy up a return
+	if isUnitTesting() {
+		return "12345678", nil
+	}
+
 	/**
 	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
 	**/
@@ -217,11 +222,6 @@ func AddCatalogItem(catalogBuffer []byte) (string, error) {
 		return "", err
 	}
 	request.Header.Add("Content-Type", "application/json")
-
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
 
 	response, err := httpClient.Do(request)
 	if err != nil {
@@ -252,6 +252,11 @@ func AddCatalogItem(catalogBuffer []byte) (string, error) {
 
 // UpdateCatalogItem -
 func UpdateCatalogItem(catalogBuffer []byte, itemID *string) error {
+	// Unit testing. For now just dummy up a return
+	if isUnitTesting() {
+		return nil
+	}
+
 	/**
 	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
 	**/
@@ -260,11 +265,6 @@ func UpdateCatalogItem(catalogBuffer []byte, itemID *string) error {
 		return err
 	}
 	request.Header.Add("Content-Type", "application/json")
-
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return nil
-	}
 
 	response, err := httpClient.Do(request)
 	if err != nil {
