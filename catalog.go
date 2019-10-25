@@ -120,7 +120,7 @@ func init() {
 const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
 // CreateCatalogItemBodyForAdd -
-func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, documentation []byte, stageTags []string) ([]byte, error) {
 	region := os.Getenv("AWS_REGION")
 	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
 
@@ -141,8 +141,8 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 				},
 			},
 		},
-		Tags:       []string{"tag1", "tag2"}, // todo - where do these come from?
-		Visibility: "RESTRICTED",             // default value
+		Tags:       stageTags,
+		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
 			AutoSubscribe:   true,
@@ -172,7 +172,7 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 }
 
 // CreateCatalogItemBodyForUpdate -
-func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string) ([]byte, error) {
+func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
 	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
 
 	newCatalogItem := CatalogItem{
@@ -182,9 +182,9 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string) ([]byte, e
 		Name:               nameToPush,
 		OwningTeamID:       apicConfig.GetTeamID(),
 		Description:        "API From AWS APIGateway Updated (RestApiId: " + apiID + ", StageName: " + stageName + ")",
-		Tags:               []string{"tag1", "tag2", "tag3"}, // todo - where do these come from?
-		Visibility:         "RESTRICTED",                     // default value
-		State:              "UNPUBLISHED",                    //default
+		Tags:               stageTags,
+		Visibility:         "RESTRICTED",  // default value
+		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{
 			Version: "1.0.1",
 			State:   "PUBLISHED",

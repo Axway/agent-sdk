@@ -46,7 +46,7 @@ func init() {
 const apiServerSubscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
 // CreateAPIServerBodyForAdd -
-func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
 
 	// TODO - Hardcoding attributes for now.  We can use this for whatever
 	attribute := make(map[string]interface{})
@@ -63,7 +63,7 @@ func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, swagger []byte,
 		Title:      fmt.Sprintf("%v (Stage: %v)", apiName, stageName),
 		Attributes: attribute,
 		Spec:       spec,
-		Tags:       []string{"tag1", "tag2"}, // todo - where do these come from?
+		Tags:       stageTags,
 	}
 
 	return json.Marshal(apiServerService)
