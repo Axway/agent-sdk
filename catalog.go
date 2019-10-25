@@ -171,7 +171,7 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 }
 
 // CreateCatalogItemBodyForUpdate -
-func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, swagger []byte, documentation []byte) ([]byte, error) {
+func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string) ([]byte, error) {
 	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
 
 	newCatalogItem := CatalogItem{
@@ -249,7 +249,6 @@ func UpdateCatalogItem(catalogBuffer []byte, itemID *string) error {
 	/**
 	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
 	**/
-	// catalogItemID := "e4e082276d83464c016d839e3e2d0048"
 	request, err := apicRequest("PUT", apicConfig.GetApicURL()+"/api/unifiedCatalog/v1/catalogItems/"+aws.StringValue(itemID), bytes.NewBuffer(catalogBuffer))
 	if err != nil {
 		return err
