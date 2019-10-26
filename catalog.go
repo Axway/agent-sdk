@@ -1,20 +1,12 @@
 package apic
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/aws/aws-sdk-go/aws"
-	log "github.com/sirupsen/logrus"
 )
 
 //CatalogPropertyValue -
@@ -102,21 +94,6 @@ type CatalogItem struct {
 	// categories
 }
 
-var tokenRequester *apicauth.PlatformTokenGetter
-
-var httpClient = http.DefaultClient
-
-func init() {
-	tokenURL := auth.GetAuthConfig().GetTokenURL()
-	aud := auth.GetAuthConfig().GetRealmURL()
-	priKey := auth.GetAuthConfig().GetPrivateKey()
-	pubKey := auth.GetAuthConfig().GetPublicKey()
-	keyPwd := auth.GetAuthConfig().GetKeyPwd()
-	clientID := auth.GetAuthConfig().GetClientID()
-	authTimeout := auth.GetAuthConfig().GetAuthTimeout()
-	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
-}
-
 const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
 // CreateCatalogItemBodyForAdd -
@@ -194,99 +171,28 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags 
 	return json.Marshal(newCatalogItem)
 }
 
-func apicRequest(method, url string, body io.Reader) (*http.Request, error) {
-	request, err := http.NewRequest(method, url, body)
-	var token string
-	if token, err = tokenRequester.GetToken(); err != nil {
-		return nil, err
-	}
-
-	request.Header.Add("X-Axway-Tenant-Id", apicConfig.GetTenantID())
-	request.Header.Add("Authorization", "Bearer "+token)
-	return request, nil
-}
-
 // AddCatalogItem -
-func AddCatalogItem(catalogBuffer []byte) (string, error) {
+func AddCatalogItem(catalogBuffer []byte, deploymentTarget string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	/**
-	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
-	**/
+	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems"
+	return DeployAPI("POST", catalogBuffer, deploymentTarget, url)
 
-	request, err := apicRequest("POST", apicConfig.GetApicURL()+"/api/unifiedCatalog/v1/catalogItems", bytes.NewBuffer(catalogBuffer))
-	if err != nil {
-		return "", err
-	}
-	request.Header.Add("Content-Type", "application/json")
-
-	response, err := httpClient.Do(request)
-	if err != nil {
-		return "", err
-	}
-	detail := make(map[string]*json.RawMessage)
-	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
-
-		json.NewDecoder(response.Body).Decode(&detail)
-		for k, v := range detail {
-			buffer, _ := v.MarshalJSON()
-			log.Debugf("HTTP response key %v: %v", k, string(buffer))
-		}
-		return "", errors.New(response.Status)
-	}
-	defer response.Body.Close()
-	json.NewDecoder(response.Body).Decode(&detail)
-	itemID := ""
-	for k, v := range detail {
-		buffer, _ := v.MarshalJSON()
-		if k == "id" {
-			itemID = string(buffer)
-		}
-		log.Debugf("HTTP response key %v: %v", k, string(buffer))
-	}
-	return strconv.Unquote(itemID)
 }
 
 // UpdateCatalogItem -
-func UpdateCatalogItem(catalogBuffer []byte, itemID *string) error {
+func UpdateCatalogItem(catalogBuffer []byte, itemID *string, deploymentTarget string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
-		return nil
+		return "", nil
 	}
 
-	/**
-	* https://apicentral.tempenv.apicentral-k8s.axwaytest.net/api/unifiedCatalog/v1/catalogItems
-	**/
-	request, err := apicRequest("PUT", apicConfig.GetApicURL()+"/api/unifiedCatalog/v1/catalogItems/"+aws.StringValue(itemID), bytes.NewBuffer(catalogBuffer))
-	if err != nil {
-		return err
-	}
-	request.Header.Add("Content-Type", "application/json")
+	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems/" + aws.StringValue(itemID)
+	return DeployAPI("PUT", catalogBuffer, deploymentTarget, url)
 
-	response, err := httpClient.Do(request)
-	if err != nil {
-		return err
-	}
-	detail := make(map[string]*json.RawMessage)
-	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
-
-		json.NewDecoder(response.Body).Decode(&detail)
-		for k, v := range detail {
-			buffer, _ := v.MarshalJSON()
-			log.Debugf("HTTP response key %v: %v", k, string(buffer))
-		}
-		return errors.New(response.Status)
-	}
-	defer response.Body.Close()
-	json.NewDecoder(response.Body).Decode(&detail)
-	for k, v := range detail {
-		buffer, _ := v.MarshalJSON()
-		log.Debugf("HTTP response key %v: %v", k, string(buffer))
-	}
-	return nil
 }
 
 func isUnitTesting() bool {

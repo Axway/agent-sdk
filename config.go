@@ -7,10 +7,11 @@ import (
 
 // Config - Represents the APIC config
 type Config struct {
-	TenantID   string `cfg:"APIC_TENANT_ID"`
-	ApicURL    string `cfg:"APIC_URL"`
-	TeamID     string `cfg:"APIC_TEAM_ID"`
-	AuthPolicy string `cfg:"APIC_AUTH_POLICY" cfg_default:"verify-api-key"`
+	TenantID     string `cfg:"APIC_TENANT_ID"`
+	ApicURL      string `cfg:"APIC_URL"`
+	APIServerURL string `cfg:"API_SERVER_URL"`
+	TeamID       string `cfg:"APIC_TEAM_ID"`
+	AuthPolicy   string `cfg:"APIC_AUTH_POLICY" cfg_default:"verify-api-key"`
 }
 
 // ApicConfig - Holds the apicentral configuration
@@ -29,6 +30,11 @@ func GetApicConfig() *Config {
 // GetApicURL - Returns the configured base apicentral URL
 func (apicConfig *Config) GetApicURL() string {
 	return apicConfig.ApicURL
+}
+
+// GetAPIServerURL - Returns the configured base apicentral URL
+func (apicConfig *Config) GetAPIServerURL() string {
+	return apicConfig.APIServerURL
 }
 
 // GetTenantID - Returns the configured apicentral tenantID
