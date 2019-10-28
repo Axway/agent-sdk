@@ -183,26 +183,26 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags 
 }
 
 // AddCatalogItem -
-func AddCatalogItem(catalogBuffer []byte, deploymentTarget string) (string, error) {
+func AddCatalogItem(catalogBuffer []byte, agentMode string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
 	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems"
-	return DeployAPI("POST", catalogBuffer, deploymentTarget, url)
+	return DeployAPI("POST", catalogBuffer, agentMode, url)
 
 }
 
 // UpdateCatalogItem -
-func UpdateCatalogItem(catalogBuffer []byte, itemID *string, deploymentTarget string) (string, error) {
+func UpdateCatalogItem(catalogBuffer []byte, itemID *string, agentMode string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "", nil
 	}
 
 	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems/" + aws.StringValue(itemID)
-	return DeployAPI("PUT", catalogBuffer, deploymentTarget, url)
+	return DeployAPI("PUT", catalogBuffer, agentMode, url)
 
 }
 
