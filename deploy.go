@@ -29,7 +29,7 @@ func init() {
 }
 
 // DeployAPI -
-func DeployAPI(method string, apiServerBuffer []byte, deploymentTarget string, url string) (string, error) {
+func DeployAPI(method string, apiServerBuffer []byte, agentMode string, url string) (string, error) {
 	request, err := setHeader(method, url, bytes.NewBuffer(apiServerBuffer))
 	if err != nil {
 		return "", err
@@ -52,11 +52,11 @@ func DeployAPI(method string, apiServerBuffer []byte, deploymentTarget string, u
 	defer response.Body.Close()
 	json.NewDecoder(response.Body).Decode(&detail)
 
-	return handleResponse(method, deploymentTarget, detail)
+	return handleResponse(method, agentMode, detail)
 }
 
-func handleResponse(method string, deploymentTarget string, detail map[string]*json.RawMessage) (string, error) {
-	if strings.ToLower(deploymentTarget) == strings.ToLower("catalog") {
+func handleResponse(method string, agentMode string, detail map[string]*json.RawMessage) (string, error) {
+	if strings.ToLower(agentMode) == strings.ToLower("catalog") {
 
 		if strings.ToLower(method) == strings.ToLower("POST") {
 			itemID := ""
@@ -88,8 +88,7 @@ func setHeader(method, url string, body io.Reader) (*http.Request, error) {
 		return nil, err
 	}
 
-	// request.Header.Add("X-Axway-Tenant-Id", apicConfig.GetTenantID())
-	request.Header.Add("X-Axway-Tenant-Id", "axway")
+	request.Header.Add("X-Axway-Tenant-Id", apicConfig.GetTenantID())
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 	return request, nil

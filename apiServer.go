@@ -45,12 +45,12 @@ func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []str
 }
 
 // AddAPIServer -
-func AddAPIServer(apiServerBuffer []byte, deploymentTarget string, apiServerEnv string) (string, error) {
+func AddAPIServer(apiServerBuffer []byte, agentMode string, apiServerEnv string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
 	url := apicConfig.GetApicURL() + apiServerEnv + "/apiservices"
-	return DeployAPI("POST", apiServerBuffer, deploymentTarget, url)
+	return DeployAPI("POST", apiServerBuffer, agentMode, url)
 }
