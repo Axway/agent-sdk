@@ -52,6 +52,10 @@ func DeployAPI(method string, apiServerBuffer []byte, deploymentTarget string, u
 	defer response.Body.Close()
 	json.NewDecoder(response.Body).Decode(&detail)
 
+	return handleResponse(method, deploymentTarget, detail)
+}
+
+func handleResponse(method string, deploymentTarget string, detail map[string]*json.RawMessage) (string, error) {
 	if strings.ToLower(deploymentTarget) == strings.ToLower("catalog") {
 
 		if strings.ToLower(method) == strings.ToLower("POST") {
@@ -73,7 +77,8 @@ func DeployAPI(method string, apiServerBuffer []byte, deploymentTarget string, u
 
 	}
 
-	return "", err
+	return "", nil
+
 }
 
 func setHeader(method, url string, body io.Reader) (*http.Request, error) {
