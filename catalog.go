@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/aws/aws-sdk-go/aws"
 )
 
@@ -97,9 +99,18 @@ type CatalogItem struct {
 const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 
 // CreateCatalogItemBodyForAdd -
-func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, documentation []byte, stageTags []string) ([]byte, error) {
+func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, stageTags []string) ([]byte, error) {
 	region := os.Getenv("AWS_REGION")
 	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
+	desc := gjson.Get(string(swagger), "info.description")
+	documentation := desc.Str
+	if documentation == "" {
+		documentation = "API imported from AWS APIGateway"
+	}
+	docBytes, err := json.Marshal(documentation)
+	if err != nil {
+		return nil, err
+	}
 
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
@@ -131,11 +142,11 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 		},
 		Revision: CatalogItemInitRevision{
 			Version: "1.0.0",
-			State:   "PUBLISHED",
+			State:   "UNPUBLISHED",
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
-					Value: json.RawMessage(string(documentation)),
+					Value: json.RawMessage(docBytes),
 				},
 				{
 					Key:   "swagger",
