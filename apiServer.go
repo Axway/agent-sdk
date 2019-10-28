@@ -51,6 +51,6 @@ func AddAPIServer(apiServerBuffer []byte, agentMode string, apiServerEnv string)
 		return "12345678", nil
 	}
 
-	url := apicConfig.GetApicURL() + apiServerEnv + "/apiservices"
+	url := apicConfig.GetAPIServerURL() + "/" + apiServerEnv + "/apiservices"
 	return DeployAPI("POST", apiServerBuffer, agentMode, url)
 }
