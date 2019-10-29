@@ -142,7 +142,7 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 		},
 		Revision: CatalogItemInitRevision{
 			Version: "1.0.0",
-			State:   "UNPUBLISHED",
+			State:   "PUBLISHED",
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
