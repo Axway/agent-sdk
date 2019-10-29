@@ -11,7 +11,6 @@ type Config struct {
 	ApicURL      string `cfg:"APIC_URL"`
 	APIServerURL string `cfg:"API_SERVER_URL"`
 	TeamID       string `cfg:"APIC_TEAM_ID"`
-	AuthPolicy   string `cfg:"APIC_AUTH_POLICY" cfg_default:"verify-api-key"`
 }
 
 // ApicConfig - Holds the apicentral configuration
@@ -45,9 +44,4 @@ func (apicConfig *Config) GetTenantID() string {
 // GetTeamID - Returns the configured apicentral Default team id
 func (apicConfig *Config) GetTeamID() string {
 	return apicConfig.TeamID
-}
-
-// GetAuthPolicy - Returns the configured apicentral auth policy for the API
-func (apicConfig *Config) GetAuthPolicy() string {
-	return apicConfig.AuthPolicy
 }

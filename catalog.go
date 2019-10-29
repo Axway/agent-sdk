@@ -96,7 +96,38 @@ type CatalogItem struct {
 	// categories
 }
 
-const subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
+const (
+	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
+	apikey             = "verify-api-key"
+	passthrough        = "pass-through"
+)
+
+func determineAuthPolicyFromSwagger(swagger *[]byte) string {
+	// Traverse the swagger looking for any route that has security set
+	// return the security of the first route, if none- found return passthrough
+	var authPolicy = passthrough
+
+	// Check all paths in Swagger
+	gjson.GetBytes(*swagger, "paths").ForEach(func(path, pathObj gjson.Result) bool {
+		// Check all methods in path
+		pathObj.ForEach(func(method, methodObj gjson.Result) bool {
+			securityObjs := methodObj.Get("security")
+			if securityObjs.Exists() {
+				// if security exists in the method check for hte api_key key
+				securityObjs.ForEach(func(i, securityObj gjson.Result) bool {
+					if securityObj.Get("api_key").Exists() {
+						authPolicy = apikey
+					}
+					return authPolicy == passthrough // Return from security loop anonymous func, true = go to next item
+				})
+			}
+			return authPolicy == passthrough // Return from method loop anonymous func, true = go to next item
+		})
+		return authPolicy == passthrough // Return from path loop anonymous func, true = go to next item
+	})
+
+	return authPolicy
+}
 
 // CreateCatalogItemBodyForAdd -
 func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, stageTags []string) ([]byte, error) {
@@ -123,7 +154,7 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
-					AuthPolicy: apicConfig.GetAuthPolicy(),
+					AuthPolicy: determineAuthPolicyFromSwagger(&swagger),
 					// URL is of the form https://<restApiId>.execute-api.<awsRegion>.amazonaws.com/<stageName>
 					URL: "https://" + apiID + ".execute-api." + region + ".amazonaws.com/" + stageName,
 				},
