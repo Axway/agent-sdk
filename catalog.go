@@ -108,7 +108,7 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	// return the security of the first route, if none- found return passthrough
 	var authPolicy = passthrough
 
-	gjson.GetBytes(*swagger, "paths").ForEach(func(path, pathObj gjson.Result) bool {
+	gjson.GetBytes(*swagger, "paths").ForEach(func(_, pathObj gjson.Result) bool {
 		for _, method := range methods {
 			if pathObj.Get(fmt.Sprint(method, ".security.#.api_key")).Exists() {
 				authPolicy = apikey
