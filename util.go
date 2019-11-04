@@ -5,14 +5,29 @@ import (
 	"net/http"
 )
 
+// IsSuccessStatus - Returns true if the HTTP status is between 200 and 400
+func IsSuccessStatus(status int) bool {
+	return status >= http.StatusOK && status < http.StatusBadRequest
+}
+
+// IsFailureStatus - Returns true if the HTTP status is between 400 and 500
+func IsFailureStatus(status int) bool {
+	return status >= http.StatusBadRequest && status < http.StatusInternalServerError
+}
+
+// IsExceptionStatus - Returns true if the HTTP status is between 500 and 511
+func IsExceptionStatus(status int) bool {
+	return status >= http.StatusInternalServerError && status < http.StatusNetworkAuthenticationRequired
+}
+
 // GetTransactionSummaryStatus - Returns the summary status based on HTTP status code.
 func GetTransactionSummaryStatus(status int) string {
 	transSummaryStatus := "Unknown"
-	if status >= http.StatusOK && status < http.StatusBadRequest {
+	if IsSuccessStatus(status) {
 		transSummaryStatus = "Success"
-	} else if status >= http.StatusBadRequest && status < http.StatusInternalServerError {
+	} else if IsFailureStatus(status) {
 		transSummaryStatus = "Failure"
-	} else if status >= http.StatusInternalServerError && status < http.StatusNetworkAuthenticationRequired {
+	} else if IsExceptionStatus(status) {
 		transSummaryStatus = "Exception"
 	}
 	return transSummaryStatus
@@ -21,7 +36,7 @@ func GetTransactionSummaryStatus(status int) string {
 // GetTransactionEventStatus - Returns the transaction event status based on HTTP status code.
 func GetTransactionEventStatus(status int) string {
 	transStatus := "Fail"
-	if status >= http.StatusOK && status < http.StatusBadRequest {
+	if IsSuccessStatus(status) {
 		transStatus = "Pass"
 	}
 	return transStatus
