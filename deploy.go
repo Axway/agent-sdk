@@ -56,7 +56,7 @@ func DeployAPI(method string, apiServerBuffer []byte, agentMode string, url stri
 }
 
 func handleResponse(method string, agentMode string, detail map[string]*json.RawMessage) (string, error) {
-	if strings.ToLower(agentMode) == strings.ToLower("connected") {
+	if strings.ToLower(agentMode) != strings.ToLower("connected") {
 		if strings.ToLower(method) == strings.ToLower("POST") {
 			itemID := ""
 			for k, v := range detail {
