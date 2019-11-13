@@ -9,27 +9,36 @@ import (
 	"strconv"
 	"strings"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/auth"
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var tokenRequester *apicauth.PlatformTokenGetter
 var httpClient = http.DefaultClient
 
-func init() {
-	tokenURL := auth.GetAuthConfig().GetTokenURL()
-	aud := auth.GetAuthConfig().GetRealmURL()
-	priKey := auth.GetAuthConfig().GetPrivateKey()
-	pubKey := auth.GetAuthConfig().GetPublicKey()
-	keyPwd := auth.GetAuthConfig().GetKeyPwd()
-	clientID := auth.GetAuthConfig().GetClientID()
-	authTimeout := auth.GetAuthConfig().GetAuthTimeout()
+var log logrus.FieldLogger = logrus.WithField("package", "apic")
+
+// SetLog sets the logger for the package.
+func SetLog(newLog logrus.FieldLogger) {
+	log = newLog
+	return
+}
+
+func Initialize() {
+	tokenURL := config.GetConfig().CentralConfig.GetAuthConfig().GetTokenURL()
+	aud := config.GetConfig().CentralConfig.GetAuthConfig().GetAudience()
+	priKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPrivateKey()
+	pubKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPublicKey()
+	keyPwd := config.GetConfig().CentralConfig.GetAuthConfig().GetKeyPassword()
+	clientID := config.GetConfig().CentralConfig.GetAuthConfig().GetClientID()
+	authTimeout := config.GetConfig().CentralConfig.GetAuthConfig().GetTimeout()
 	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
 }
 
 // DeployAPI -
-func DeployAPI(method string, apiServerBuffer []byte, agentMode string, url string) (string, error) {
+func DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
 	request, err := setHeader(method, url, bytes.NewBuffer(apiServerBuffer))
 	if err != nil {
 		return "", err
@@ -55,8 +64,8 @@ func DeployAPI(method string, apiServerBuffer []byte, agentMode string, url stri
 	return handleResponse(method, agentMode, detail)
 }
 
-func handleResponse(method string, agentMode string, detail map[string]*json.RawMessage) (string, error) {
-	if strings.ToLower(agentMode) != strings.ToLower("connected") {
+func handleResponse(method string, agentMode corecfg.AgentMode, detail map[string]*json.RawMessage) (string, error) {
+	if agentMode != corecfg.Connected {
 		if strings.ToLower(method) == strings.ToLower("POST") {
 			itemID := ""
 			for k, v := range detail {
@@ -87,7 +96,7 @@ func setHeader(method, url string, body io.Reader) (*http.Request, error) {
 		return nil, err
 	}
 
-	request.Header.Add("X-Axway-Tenant-Id", apicConfig.GetTenantID())
+	request.Header.Add("X-Axway-Tenant-Id", config.GetConfig().CentralConfig.GetTenantID())
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 	return request, nil

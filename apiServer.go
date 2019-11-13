@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 )
 
 // APIServer -
@@ -45,12 +48,12 @@ func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []str
 }
 
 // AddAPIServer -
-func AddAPIServer(apiServerBuffer []byte, agentMode string, apiServerEnv string) (string, error) {
+func AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	url := apicConfig.GetAPIServerURL() + "/" + apiServerEnv + "/apiservices"
+	url := config.GetConfig().CentralConfig.GetAPIServerServicesURL()
 	return DeployAPI("POST", apiServerBuffer, agentMode, url)
 }

@@ -5,9 +5,28 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/awsconfig"
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 )
 
+func setConfig() {
+	cfg := &config.Configuration{
+		AWSConfig: &awsconfig.AWSConfiguration{
+			Region: "eu-west-1",
+		},
+		CentralConfig: &corecfg.CentralConfiguration{
+			TeamID: "test",
+		},
+	}
+	config.SetConfig(cfg)
+}
+
 func TestCreateCatalogItemBodyForAdd(t *testing.T) {
+	// set the config values
+	setConfig()
+
 	jsonFile1, _ := os.Open("./testdata/swagger1.json") // No Security
 	swaggerFile1, _ := ioutil.ReadAll(jsonFile1)
 	catalogBytes1, _ := CreateCatalogItemBodyForAdd("123", "Test", "stage", swaggerFile1, []string{})

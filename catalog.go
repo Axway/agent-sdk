@@ -8,6 +8,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"github.com/aws/aws-sdk-go/aws"
 )
 
@@ -123,7 +125,8 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 
 // CreateCatalogItemBodyForAdd -
 func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, stageTags []string) ([]byte, error) {
-	region := os.Getenv("AWS_REGION")
+	fmt.Println(config.GetConfig().AWSConfig.GetRegion())
+	region := config.GetConfig().AWSConfig.GetRegion()
 	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
 	desc := gjson.Get(string(swagger), "info.description")
 	documentation := desc.Str
@@ -140,7 +143,7 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
 		Name:               nameToPush,
-		OwningTeamID:       apicConfig.GetTeamID(),
+		OwningTeamID:       config.GetConfig().CentralConfig.GetTeamID(),
 		Description:        "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")",
 		Properties: []CatalogProperty{
 			{
@@ -191,7 +194,7 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags 
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
 		Name:               nameToPush,
-		OwningTeamID:       apicConfig.GetTeamID(),
+		OwningTeamID:       config.GetConfig().CentralConfig.GetTeamID(),
 		Description:        "API From AWS APIGateway Updated (RestApiId: " + apiID + ", StageName: " + stageName + ")",
 		Tags:               stageTags,
 		Visibility:         "RESTRICTED",  // default value
@@ -206,25 +209,25 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags 
 }
 
 // AddCatalogItem -
-func AddCatalogItem(catalogBuffer []byte, agentMode string) (string, error) {
+func AddCatalogItem(catalogBuffer []byte, agentMode corecfg.AgentMode) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems"
+	url := config.GetConfig().CentralConfig.GetCatalogItemsURL()
 	return DeployAPI("POST", catalogBuffer, agentMode, url)
 
 }
 
 // UpdateCatalogItem -
-func UpdateCatalogItem(catalogBuffer []byte, itemID *string, agentMode string) (string, error) {
+func UpdateCatalogItem(catalogBuffer []byte, itemID *string, agentMode corecfg.AgentMode) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "", nil
 	}
 
-	url := apicConfig.GetApicURL() + "/api/unifiedCatalog/v1/catalogItems/" + aws.StringValue(itemID)
+	url := config.GetConfig().CentralConfig.GetCatalogItemsURL() + "/" + aws.StringValue(itemID)
 	return DeployAPI("PUT", catalogBuffer, agentMode, url)
 
 }
