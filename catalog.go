@@ -7,10 +7,6 @@ import (
 	"strings"
 
 	"github.com/tidwall/gjson"
-
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
-	"github.com/aws/aws-sdk-go/aws"
 )
 
 //CatalogPropertyValue -
@@ -75,6 +71,12 @@ type CatalogItemInit struct {
 	CategoryReferences string                  `json:"categoryReferences,omitempty"`
 }
 
+// CatalogItemImage -
+type CatalogItemImage struct {
+	DataType      string `json:"data,omitempty"`
+	Base64Content string `json:"base64,omitempty"`
+}
+
 //CatalogItem -
 type CatalogItem struct {
 	ID                 string `json:"id"`
@@ -94,7 +96,7 @@ type CatalogItem struct {
 	LatestVersion        int                 `json:"latestVersion,omitempty"`
 	TotalSubscriptions   int                 `json:"totalSubscriptions,omitempty"`
 	LatestVersionDetails CatalogItemRevision `json:"latestVersionDetails,omitempty"`
-	// image
+	Image                *CatalogItemImage   `json:"image,omitempty"`
 	// categories
 }
 
@@ -124,38 +126,24 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 }
 
 // CreateCatalogItemBodyForAdd -
-func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byte, stageTags []string) ([]byte, error) {
-	fmt.Println(config.GetConfig().AWSConfig.GetRegion())
-	region := config.GetConfig().AWSConfig.GetRegion()
-	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
-	desc := gjson.Get(string(swagger), "info.description")
-	documentation := desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS APIGateway"
-	}
-	docBytes, err := json.Marshal(documentation)
-	if err != nil {
-		return nil, err
-	}
-
+func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam) ([]byte, error) {
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               nameToPush,
-		OwningTeamID:       config.GetConfig().CentralConfig.GetTeamID(),
-		Description:        "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")",
+		Name:               bodyForAdd.NameToPush,
+		OwningTeamID:       bodyForAdd.TeamID,
+		Description:        bodyForAdd.Description,
 		Properties: []CatalogProperty{
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
-					AuthPolicy: determineAuthPolicyFromSwagger(&swagger),
-					// URL is of the form https://<restApiId>.execute-api.<awsRegion>.amazonaws.com/<stageName>
-					URL: "https://" + apiID + ".execute-api." + region + ".amazonaws.com/" + stageName,
+					AuthPolicy: determineAuthPolicyFromSwagger(&bodyForAdd.Swagger),
+					URL:        bodyForAdd.URL,
 				},
 			},
 		},
-		Tags:       stageTags,
+		Tags:       bodyForAdd.StageTags,
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -167,16 +155,16 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 			}},
 		},
 		Revision: CatalogItemInitRevision{
-			Version: "1.0.0",
+			Version: bodyForAdd.Version,
 			State:   "PUBLISHED",
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
-					Value: json.RawMessage(docBytes),
+					Value: json.RawMessage(string(bodyForAdd.Documentation)),
 				},
 				{
 					Key:   "swagger",
-					Value: json.RawMessage(swagger),
+					Value: json.RawMessage(bodyForAdd.Swagger),
 				},
 			},
 		},
@@ -186,21 +174,19 @@ func CreateCatalogItemBodyForAdd(apiID, apiName, stageName string, swagger []byt
 }
 
 // CreateCatalogItemBodyForUpdate -
-func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
-	nameToPush := fmt.Sprintf("%v (Stage: %v)", apiName, stageName)
-
+func (c *Client) CreateCatalogItemBodyForUpdate(bodyForUpdate CatalogItemBodyUpdateParam) ([]byte, error) {
 	newCatalogItem := CatalogItem{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               nameToPush,
-		OwningTeamID:       config.GetConfig().CentralConfig.GetTeamID(),
-		Description:        "API From AWS APIGateway Updated (RestApiId: " + apiID + ", StageName: " + stageName + ")",
-		Tags:               stageTags,
+		Name:               bodyForUpdate.NameToPush,
+		OwningTeamID:       bodyForUpdate.TeamID,
+		Description:        bodyForUpdate.Description,
+		Tags:               bodyForUpdate.StageTags,
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{
-			Version: "1.0.1",
+			Version: bodyForUpdate.Version,
 			State:   "PUBLISHED",
 		},
 	}
@@ -209,27 +195,42 @@ func CreateCatalogItemBodyForUpdate(apiID, apiName, stageName string, stageTags 
 }
 
 // AddCatalogItem -
-func AddCatalogItem(catalogBuffer []byte, agentMode corecfg.AgentMode) (string, error) {
+func (c *Client) AddCatalogItem(addCatalogItem AddCatalogItemParam) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	url := config.GetConfig().CentralConfig.GetCatalogItemsURL()
-	return DeployAPI("POST", catalogBuffer, agentMode, url)
+	return DeployAPI("POST", addCatalogItem.Buffer, addCatalogItem.AgentMode, addCatalogItem.URL)
 
 }
 
 // UpdateCatalogItem -
-func UpdateCatalogItem(catalogBuffer []byte, itemID *string, agentMode corecfg.AgentMode) (string, error) {
+func (c *Client) UpdateCatalogItem(updateCatalogItem UpdateCatalogItemParam) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "", nil
 	}
 
-	url := config.GetConfig().CentralConfig.GetCatalogItemsURL() + "/" + aws.StringValue(itemID)
-	return DeployAPI("PUT", catalogBuffer, agentMode, url)
+	return DeployAPI("PUT", updateCatalogItem.Buffer, updateCatalogItem.AgentMode, updateCatalogItem.URL)
 
+}
+
+// AddCatalogItemImage -
+func (c *Client) AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (string, error) {
+	if addCatalogImage.Image != "" {
+		catalogImage := CatalogItemImage{
+			DataType:      addCatalogImage.ImageContentType,
+			Base64Content: addCatalogImage.Image,
+		}
+		catalogItemImageBuffer, _ := json.Marshal(catalogImage)
+
+		//TODO
+		url := "Need url for catalog item image"
+
+		return DeployAPI("POST", catalogItemImageBuffer, addCatalogImage.AgentMode, url)
+	}
+	return "", nil
 }
 
 func isUnitTesting() bool {
