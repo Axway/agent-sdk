@@ -24,11 +24,13 @@ const Disconnected AgentMode = 1
 // Connected - Mode definition for connected mode
 const Connected AgentMode = 2
 
+// AgentModeStringMap -
 var AgentModeStringMap = map[AgentMode]string{
 	Connected:    "connected",
 	Disconnected: "disconnected",
 }
 
+// StringAgentModeMap -
 var StringAgentModeMap = map[string]AgentMode{
 	"connected":    Connected,
 	"disconnected": Disconnected,

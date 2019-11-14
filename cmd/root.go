@@ -14,6 +14,7 @@ import (
 
 var agentName string
 
+// CreateRootCmd -
 func CreateRootCmd(exeName, desc string, runFnnc func(cmd *cobra.Command, args []string) error) *cobra.Command {
 	cobra.OnInitialize(initConfig)
 
@@ -72,12 +73,14 @@ func initConfig() {
 	}
 }
 
+// BindOrPanic -
 func BindOrPanic(key string, flag *flag.Flag) {
 	if err := viper.BindPFlag(key, flag); err != nil {
 		panic(err)
 	}
 }
 
+// ParseCentralConfig -
 func ParseCentralConfig() *corecfg.CentralConfiguration {
 	return &corecfg.CentralConfiguration{
 		TenantID:         viper.GetString("central.tenantId"),

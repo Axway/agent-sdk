@@ -1,6 +1,11 @@
 package awsconfig
 
-import "time"
+import (
+	"errors"
+	"time"
+
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/exception"
+)
 
 // AWSConfig - Interface for aws config
 type AWSConfig interface {
@@ -11,6 +16,7 @@ type AWSConfig interface {
 	GetStageTags() string
 	GetAccessKey() string
 	GetSecretKey() string
+	validate()
 }
 
 // AWSConfiguration - AWS Configuration
@@ -24,7 +30,48 @@ type AWSConfiguration struct {
 	SecretKey    string
 }
 
-// GetTokenURL - Returns the poll Interval
+// NewAWSConfig - Creates the default aws config
+func NewAWSConfig() AWSConfig {
+	return &AWSConfiguration{
+		PollInterval: 30 * time.Second,
+	}
+}
+
+// Validate - Validates the config
+func (a *AWSConfiguration) Validate() (err error) {
+	exception.Block{
+		Try: func() {
+			a.validate()
+		},
+		Catch: func(e error) {
+			err = e
+		},
+	}.Do()
+
+	return
+}
+
+func (a *AWSConfiguration) validate() {
+	if a.GetRegion() == "" {
+		exception.Throw(errors.New("Error aws.region not set in config"))
+	}
+
+	if a.GetQueueName() == "" {
+		exception.Throw(errors.New("Error aws.queueName not set in config"))
+	}
+
+	if a.GetAccessKey() == "" {
+		exception.Throw(errors.New("Error aws.auth.accessKey not set in config"))
+	}
+
+	if a.GetSecretKey() == "" {
+		exception.Throw(errors.New("Error aws.auth.secretKey not set in config"))
+	}
+
+	return
+}
+
+// GetPollInterval - Returns the poll Interval
 func (a *AWSConfiguration) GetPollInterval() time.Duration {
 	return a.PollInterval
 }
@@ -58,3 +105,4 @@ func (a *AWSConfiguration) GetAccessKey() string {
 func (a *AWSConfiguration) GetSecretKey() string {
 	return a.SecretKey
 }
+

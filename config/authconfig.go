@@ -23,6 +23,7 @@ type AuthConfig interface {
 	validate()
 }
 
+// AuthConfiguration -
 type AuthConfiguration struct {
 	AuthConfig
 	URL        string        `config:"url"`
