@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -14,39 +14,34 @@ const (
 	logPackage = "package"
 )
 
-var log logrus.FieldLogger = logrus.StandardLogger()
-
-func getFormatter(format string) (logrus.Formatter, error) {
+func getFormatter(format string) (log.Formatter, error) {
 	switch format {
 	case lineFormat:
-		return &logrus.TextFormatter{TimestampFormat: time.RFC3339}, nil
+		return &log.TextFormatter{TimestampFormat: time.RFC3339}, nil
 	case jsonFormat:
-		return &logrus.JSONFormatter{TimestampFormat: time.RFC3339}, nil
+		return &log.JSONFormatter{TimestampFormat: time.RFC3339}, nil
 	default:
 		return nil, errors.New("[discovery_agent] invalid log format")
 	}
 }
 
-// SetupLogging - sets up logging for each used package
-func SetupLogging(level string, format string) error {
+// SetupLogging - sets up logging
+func SetupLogging(level string, format string) {
 
-	lvl, err := logrus.ParseLevel(level)
-	if err != nil {
-		return err
+	lvl, err := log.ParseLevel(level)
+	if err == nil {
+		log.Debugf("Unknown logLevel: %v. Defaulting to Info", level)
+	} else {
+		log.SetLevel(lvl)
 	}
 
 	formatter, err := getFormatter(format)
-
 	if err != nil {
-		return err
+		log.Debugf("Unknown logFormat: %v. Defaulting to JSON", format)
+		log.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339})
+	} else {
+		log.SetFormatter(formatter)
 	}
 
-	logger := logrus.New()
-
-	logger.SetLevel(lvl)
-	logger.SetFormatter(formatter)
-	logger.SetOutput(os.Stdout)
-
-	return nil
-
+	log.SetOutput(os.Stdout)
 }
