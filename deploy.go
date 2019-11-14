@@ -26,6 +26,7 @@ func SetLog(newLog logrus.FieldLogger) {
 	return
 }
 
+// Initialize -
 func Initialize() {
 	tokenURL := config.GetConfig().CentralConfig.GetAuthConfig().GetTokenURL()
 	aud := config.GetConfig().CentralConfig.GetAuthConfig().GetAudience()
