@@ -1,67 +1,93 @@
 package cmd
 
 import (
-	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/spf13/cobra"
 
+	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-var agentName string
+// CommandHandler - Root command execution handler
+type CommandHandler func() error
 
-// CreateRootCmd -
-func CreateRootCmd(exeName, desc string, runFnnc func(cmd *cobra.Command, args []string) error) *cobra.Command {
-	cobra.OnInitialize(initConfig)
+// InitConfigHandler - Handler to be invoked on config initialization
+type InitConfigHandler func(centralConfig corecfg.CentralConfig) (interface{}, error)
 
-	agentName = exeName
+// AgentRootCmd - Root Command for the Agents
+type AgentRootCmd interface {
+	RootCmd() *cobra.Command
+	Execute() error
 
-	var RootCmd = &cobra.Command{
-		Use:     agentName,
-		Short:   desc,
-		Version: BuildVersion,
-		RunE:    runFnnc,
-	}
+	// Methods for adding yaml properties and command flag
+	AddStringProperty(name, flagName string, defaultVal string, description string)
+	AddDurationProperty(name, flagName string, defaultVal time.Duration, description string)
+	AddIntProperty(name, flagName string, defaultVal int, description string)
+	AddBoolProperty(name, flagName string, defaultVal bool, description string)
 
-	// APIC Flags
-	RootCmd.Flags().String("centralUrl", "https://platform.axway.com", "URL of API Central")
-	RootCmd.Flags().String("centralTenantId", "", "Tenant ID for the owner of the environment")
-	RootCmd.Flags().String("centralEnvironmentId", "", "Environment ID for the current environment")
-	RootCmd.Flags().String("centralTeamId", "", "Team ID for the current default team for creating catalog")
-	RootCmd.Flags().String("apiServerUrl", "", "The URL that the API Server is listening on")
-	RootCmd.Flags().String("apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
-	RootCmd.Flags().String("authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
-	RootCmd.Flags().String("authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
-	RootCmd.Flags().String("authKeyPassword", "", "Password for the private key, if needed")
-	RootCmd.Flags().String("authUrl", "https://login-preprod.axway.com/auth", "API Central authentication URL")
-	RootCmd.Flags().String("authRealm", "Broker", "API Central authentication Realm")
-	RootCmd.Flags().String("authClientId", "", "Client ID for the service account")
-	RootCmd.Flags().Duration("authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-
-	// APIC Lookups
-	BindOrPanic("central.url", RootCmd.Flags().Lookup("centralUrl"))
-	BindOrPanic("central.tenantId", RootCmd.Flags().Lookup("centralTenantId"))
-	BindOrPanic("central.teamId", RootCmd.Flags().Lookup("centralEnvironmentId"))
-	BindOrPanic("central.mode", RootCmd.Flags().Lookup("centralTeamId"))
-	BindOrPanic("central.apiServerUrl", RootCmd.Flags().Lookup("apiServerUrl"))
-	BindOrPanic("central.apiServerEnvironment", RootCmd.Flags().Lookup("apiServerEnvironment"))
-	BindOrPanic("central.auth.privateKey", RootCmd.Flags().Lookup("authPrivateKey"))
-	BindOrPanic("central.auth.publicKey", RootCmd.Flags().Lookup("authPublicKey"))
-	BindOrPanic("central.auth.password", RootCmd.Flags().Lookup("authKeyPassword"))
-	BindOrPanic("central.auth.url", RootCmd.Flags().Lookup("authUrl"))
-	BindOrPanic("central.auth.realm", RootCmd.Flags().Lookup("authRealm"))
-	BindOrPanic("central.auth.clientId", RootCmd.Flags().Lookup("authClientId"))
-	BindOrPanic("central.auth.timeout", RootCmd.Flags().Lookup("authTimeout"))
-
-	return RootCmd
+	// Methods to get the configured properties
+	StringPropertyValue(name string) string
+	DurationPropertyValue(name string) time.Duration
+	IntPropertyValue(name string) int
+	BoolPropertyValue(name string) bool
 }
 
-func initConfig() {
-	viper.SetConfigName(agentName)
+// agentRootCommand - Represents the agent root command
+type agentRootCommand struct {
+	agentName         string
+	rootCmd           *cobra.Command
+	commandHandler    CommandHandler
+	initConfigHandler InitConfigHandler
+}
+
+// NewRootCmd - Creates a new Agent Root Command
+func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler) AgentRootCmd {
+	c := &agentRootCommand{
+		agentName:         exeName,
+		commandHandler:    commandHandler,
+		initConfigHandler: initConfigHandler,
+	}
+
+	c.rootCmd = &cobra.Command{
+		Use:     c.agentName,
+		Short:   desc,
+		Version: BuildVersion,
+		RunE:    c.run,
+	}
+
+	cobra.OnInitialize(c.intialize)
+	// APIC yaml properties and command flags
+	c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
+	c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
+	c.AddStringProperty("central.url", "centralUrl", "https://platform.axway.com", "URL of API Central")
+	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
+	c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
+	c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
+	c.AddStringProperty("central.apiServerUrl", "apiServerUrl", "", "The URL that the API Server is listening on")
+	c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
+	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
+	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
+	c.AddStringProperty("central.auth.password", "authKeyPassword", "", "Password for the private key, if needed")
+	c.AddStringProperty("central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "API Central authentication URL")
+	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
+	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
+	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+
+	// Log yaml properties and command flags
+	c.AddStringProperty("log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
+	c.AddStringProperty("log.format", "logFormat", "json", "Log format (json, line, package)")
+	c.AddStringProperty("log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
+	c.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
+	return c
+}
+
+func (c *agentRootCommand) intialize() {
+	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
@@ -69,36 +95,164 @@ func initConfig() {
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
 	if err != nil {
-		fmt.Println(err.Error())
+		panic(err.Error())
 	}
 }
 
-// BindOrPanic -
-func BindOrPanic(key string, flag *flag.Flag) {
+func (c *agentRootCommand) bindOrPanic(key string, flag *flag.Flag) {
 	if err := viper.BindPFlag(key, flag); err != nil {
 		panic(err)
 	}
 }
 
-// ParseCentralConfig -
-func ParseCentralConfig() *corecfg.CentralConfiguration {
-	return &corecfg.CentralConfiguration{
-		TenantID:         viper.GetString("central.tenantId"),
-		TeamID:           viper.GetString("central.teamId"),
-		Mode:             corecfg.StringAgentModeMap[strings.ToLower(viper.GetString("central.mode"))],
-		APICDeployment:   viper.GetString("central.deployment"),
-		EnvironmentName:  viper.GetString("central.environmenName"),
-		EnvironmentID:    viper.GetString("central.environmentId"),
-		URL:              viper.GetString("central.url"),
-		APIServerVersion: viper.GetString("central.apiServerVersion"),
+// initConfig - Initializes the central config and invokes initConfig handler
+// to initialize the agent config. Performs validation on returned agent config
+func (c *agentRootCommand) initConfig() error {
+	logLevel := c.StringPropertyValue("log.level")
+	logFormat := c.StringPropertyValue("log.format")
+	logOutput := c.StringPropertyValue("log.output")
+	logPath := c.StringPropertyValue("log.path")
+	SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
+
+	// Init Central Config
+	centralCfg, err := c.parseCentralConfig()
+	if err != nil {
+		return err
+	}
+
+	// Initialize Agent Config
+	agentCfg, err := c.initConfigHandler(centralCfg)
+	if err != nil {
+		return err
+	}
+
+	// Validate Agent Config
+	return c.validateAgentConfig(agentCfg)
+}
+
+func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
+	cfg := &corecfg.CentralConfiguration{
+		TenantID:         c.StringPropertyValue("central.tenantId"),
+		TeamID:           c.StringPropertyValue("central.teamId"),
+		Mode:             corecfg.StringAgentModeMap[strings.ToLower(c.StringPropertyValue("central.mode"))],
+		APICDeployment:   c.StringPropertyValue("central.deployment"),
+		EnvironmentName:  c.StringPropertyValue("central.environmenName"),
+		EnvironmentID:    c.StringPropertyValue("central.environmentId"),
+		URL:              c.StringPropertyValue("central.url"),
+		APIServerVersion: c.StringPropertyValue("central.apiServerVersion"),
 		Auth: &corecfg.AuthConfiguration{
-			URL:        viper.GetString("central.auth.url"),
-			Realm:      viper.GetString("central.auth.realm"),
-			ClientID:   viper.GetString("central.auth.clientID"),
-			PrivateKey: viper.GetString("central.auth.privateKey"),
-			PublicKey:  viper.GetString("central.auth.publicKey"),
-			KeyPwd:     viper.GetString("central.auth.keyPassword"),
-			Timeout:    viper.GetDuration("central.auth.timeout") * time.Second,
+			URL:        c.StringPropertyValue("central.auth.url"),
+			Realm:      c.StringPropertyValue("central.auth.realm"),
+			ClientID:   c.StringPropertyValue("central.auth.clientID"),
+			PrivateKey: c.StringPropertyValue("central.auth.privateKey"),
+			PublicKey:  c.StringPropertyValue("central.auth.publicKey"),
+			KeyPwd:     c.StringPropertyValue("central.auth.keyPassword"),
+			Timeout:    c.DurationPropertyValue("central.auth.timeout"),
 		},
 	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// validateAgentConfig - Validates the agent config
+// Uses reflection to get the Validate method on the config struct or
+// struct variable.
+// Makes call to Validate method except if the struct variable is of CentralConfig type
+// as the validation for CentralConfig is already done during parseCentralConfig
+func (c *agentRootCommand) validateAgentConfig(agentCfg interface{}) error {
+	// Check if top level struct has Validate. If it does then call Validate
+	// only at top level
+	if objInterface, ok := agentCfg.(interface{ Validate() error }); ok {
+		return objInterface.Validate()
+	}
+
+	// If the parameter is of struct pointer, use indirection to get the
+	// real value object
+	v := reflect.ValueOf(agentCfg)
+	if v.Kind() == reflect.Ptr {
+		v = reflect.Indirect(v)
+	}
+
+	// Look for Validate method on stuct properties and invoke it
+	for i := 0; i < v.NumField(); i++ {
+		fieldInterface := v.Field(i).Interface()
+		// Skip the property it is CentralConfig type as its already Validated
+		// during parseCentralConfig
+		if _, ok := fieldInterface.(corecfg.CentralConfig); !ok {
+			if objInterface, ok := fieldInterface.(interface{ Validate() error }); ok {
+				err := objInterface.Validate()
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// run - Executes the agent command
+func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
+	err = c.initConfig()
+
+	log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
+	if err == nil {
+		err = c.commandHandler()
+	}
+
+	return
+}
+
+func (c *agentRootCommand) RootCmd() *cobra.Command {
+	return c.rootCmd
+}
+
+func (c *agentRootCommand) Execute() error {
+	return c.rootCmd.Execute()
+}
+
+func (c *agentRootCommand) AddStringProperty(name, flagName string, defaultVal string, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().String(flagName, defaultVal, description)
+		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
+func (c *agentRootCommand) AddDurationProperty(name, flagName string, defaultVal time.Duration, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().Duration(flagName, defaultVal, description)
+		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
+func (c *agentRootCommand) AddIntProperty(name, flagName string, defaultVal int, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().Int(flagName, defaultVal, description)
+		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
+func (c *agentRootCommand) AddBoolProperty(name, flagName string, defaultVal bool, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().Bool(flagName, defaultVal, description)
+		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
+func (c *agentRootCommand) StringPropertyValue(name string) string {
+	return viper.GetString(name)
+}
+
+func (c *agentRootCommand) DurationPropertyValue(name string) time.Duration {
+	return viper.GetDuration(name)
+}
+
+func (c *agentRootCommand) IntPropertyValue(name string) int {
+	return viper.GetInt(name)
+}
+
+func (c *agentRootCommand) BoolPropertyValue(name string) bool {
+	return viper.GetBool(name)
 }
