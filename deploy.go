@@ -10,13 +10,10 @@ import (
 	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 )
 
-var tokenRequester *apicauth.PlatformTokenGetter
 var httpClient = http.DefaultClient
-
 var log logrus.FieldLogger = logrus.WithField("package", "apic")
 
 // SetLog sets the logger for the package.
@@ -27,7 +24,7 @@ func SetLog(newLog logrus.FieldLogger) {
 
 // DeployAPI -
 func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
-	request, err := setHeader(c, method, url, bytes.NewBuffer(apiServerBuffer))
+	request, err := c.SetHeader(method, url, bytes.NewBuffer(apiServerBuffer))
 	if err != nil {
 		return "", err
 	}
@@ -76,7 +73,8 @@ func handleResponse(method string, agentMode corecfg.AgentMode, detail map[strin
 
 }
 
-func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, error) {
+// SetHeader - set header
+func (c *Client) SetHeader(method, url string, body io.Reader) (*http.Request, error) {
 	request, err := http.NewRequest(method, url, body)
 	var token string
 

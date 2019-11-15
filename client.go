@@ -1,6 +1,9 @@
 package apic
 
 import (
+	"io"
+	"net/http"
+
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
@@ -15,6 +18,7 @@ type CatalogCreator interface {
 	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error)
 	AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error)
 	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
+	SetHeader(method, url string, body io.Reader) (*http.Request, error)
 }
 
 //CatalogItemBodyAddParam -
@@ -69,9 +73,6 @@ type Client struct {
 
 // New -
 func New(cfg corecfg.CentralConfig) *Client {
-
-	cfg.GetAuthConfig().GetTokenURL()
-
 	tokenURL := cfg.GetAuthConfig().GetTokenURL()
 	aud := cfg.GetAuthConfig().GetAudience()
 	priKey := cfg.GetAuthConfig().GetPrivateKey()
@@ -79,7 +80,6 @@ func New(cfg corecfg.CentralConfig) *Client {
 	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
 	clientID := cfg.GetAuthConfig().GetClientID()
 	authTimeout := cfg.GetAuthConfig().GetTimeout()
-	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
 
 	return &Client{
 		cfg:            cfg,
