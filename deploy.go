@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 )
@@ -85,7 +84,7 @@ func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, er
 		return nil, err
 	}
 
-	request.Header.Add("X-Axway-Tenant-Id", config.GetConfig().CentralConfig.GetTenantID())
+	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 	return request, nil

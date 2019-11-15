@@ -2,7 +2,6 @@ package apic
 
 import (
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
 
@@ -64,31 +63,26 @@ type AddCatalogItemImageParam struct {
 
 // Client -
 type Client struct {
-	url            string
-	tenantID       string
-	teamID         string
 	tokenRequester *apicauth.PlatformTokenGetter
+	cfg            corecfg.CentralConfig
 }
 
 // New -
-func New() *Client {
+func New(cfg corecfg.CentralConfig) *Client {
 
-	cfg := config.GetConfig()
+	cfg.GetAuthConfig().GetTokenURL()
 
-	tokenURL := config.GetConfig().CentralConfig.GetAuthConfig().GetTokenURL()
-	aud := config.GetConfig().CentralConfig.GetAuthConfig().GetAudience()
-	tenantID := config.GetConfig().CentralConfig.GetTenantID()
-	priKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPrivateKey()
-	pubKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPublicKey()
-	keyPwd := config.GetConfig().CentralConfig.GetAuthConfig().GetKeyPassword()
-	clientID := config.GetConfig().CentralConfig.GetAuthConfig().GetClientID()
-	authTimeout := config.GetConfig().CentralConfig.GetAuthConfig().GetTimeout()
+	tokenURL := cfg.GetAuthConfig().GetTokenURL()
+	aud := cfg.GetAuthConfig().GetAudience()
+	priKey := cfg.GetAuthConfig().GetPrivateKey()
+	pubKey := cfg.GetAuthConfig().GetPublicKey()
+	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
+	clientID := cfg.GetAuthConfig().GetClientID()
+	authTimeout := cfg.GetAuthConfig().GetTimeout()
 	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
 
 	return &Client{
-		url:            cfg.CentralConfig.URL,
-		tenantID:       tenantID,
-		teamID:         cfg.CentralConfig.TeamID,
+		cfg:            cfg,
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -227,7 +226,7 @@ func (c *Client) AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (
 		catalogItemImageBuffer, _ := json.Marshal(catalogImage)
 
 		//TODO for Dale.  This needs to change and be set in the agent of v7
-		url := config.GetConfig().CentralConfig.GetCatalogItemImage(addCatalogImage.CatalogItemID)
+		url := c.cfg.GetCatalogItemImage(addCatalogImage.CatalogItemID)
 		return c.DeployAPI("POST", catalogItemImageBuffer, addCatalogImage.AgentMode, url)
 	}
 	return "", nil

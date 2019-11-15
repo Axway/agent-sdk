@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 )
 
 // APIServer -
@@ -54,6 +53,6 @@ func (c *Client) AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMod
 		return "12345678", nil
 	}
 
-	url := config.GetConfig().CentralConfig.GetAPIServerServicesURL()
+	url := c.cfg.GetAPIServerServicesURL()
 	return c.DeployAPI("POST", apiServerBuffer, agentMode, url)
 }
