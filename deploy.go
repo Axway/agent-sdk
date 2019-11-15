@@ -28,7 +28,7 @@ func SetLog(newLog logrus.FieldLogger) {
 
 // DeployAPI -
 func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
-	request, err := setHeader(method, url, bytes.NewBuffer(apiServerBuffer))
+	request, err := setHeader(c, method, url, bytes.NewBuffer(apiServerBuffer))
 	if err != nil {
 		return "", err
 	}
@@ -49,7 +49,6 @@ func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode core
 	}
 	defer response.Body.Close()
 	json.NewDecoder(response.Body).Decode(&detail)
-
 	return handleResponse(method, agentMode, detail)
 }
 
@@ -78,10 +77,12 @@ func handleResponse(method string, agentMode corecfg.AgentMode, detail map[strin
 
 }
 
-func setHeader(method, url string, body io.Reader) (*http.Request, error) {
+func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, error) {
+	log.Info("url ", url)
 	request, err := http.NewRequest(method, url, body)
 	var token string
-	if token, err = tokenRequester.GetToken(); err != nil {
+
+	if token, err = c.tokenRequester.GetToken(); err != nil {
 		return nil, err
 	}
 
