@@ -24,7 +24,7 @@ type Spec struct {
 }
 
 // CreateAPIServerBodyForAdd -
-func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
+func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
 
 	// attributes used for extraneous data
 	attribute := make(map[string]interface{})
@@ -48,7 +48,7 @@ func CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []str
 }
 
 // AddAPIServer -
-func AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error) {
+func (c *Client) AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil

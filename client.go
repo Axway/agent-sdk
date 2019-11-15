@@ -18,6 +18,8 @@ type CatalogCreator interface {
 	AddCatalogItem(addCatalogItem AddCatalogItemParam) (string, error)
 	UpdateCatalogItem(updateCatalogItem UpdateCatalogItemParam) (string, error)
 	AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (string, error)
+	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error)
+	AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error)
 }
 
 //CatalogItemBodyAddParam -
