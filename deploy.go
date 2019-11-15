@@ -78,7 +78,6 @@ func handleResponse(method string, agentMode corecfg.AgentMode, detail map[strin
 }
 
 func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, error) {
-	log.Info("url ", url)
 	request, err := http.NewRequest(method, url, body)
 	var token string
 
