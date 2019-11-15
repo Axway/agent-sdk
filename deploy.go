@@ -26,20 +26,8 @@ func SetLog(newLog logrus.FieldLogger) {
 	return
 }
 
-// Initialize -
-func Initialize() {
-	tokenURL := config.GetConfig().CentralConfig.GetAuthConfig().GetTokenURL()
-	aud := config.GetConfig().CentralConfig.GetAuthConfig().GetAudience()
-	priKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPrivateKey()
-	pubKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPublicKey()
-	keyPwd := config.GetConfig().CentralConfig.GetAuthConfig().GetKeyPassword()
-	clientID := config.GetConfig().CentralConfig.GetAuthConfig().GetClientID()
-	authTimeout := config.GetConfig().CentralConfig.GetAuthConfig().GetTimeout()
-	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
-}
-
 // DeployAPI -
-func DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
+func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
 	request, err := setHeader(method, url, bytes.NewBuffer(apiServerBuffer))
 	if err != nil {
 		return "", err

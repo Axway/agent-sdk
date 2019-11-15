@@ -1,14 +1,9 @@
 package apic
 
 import (
-	"crypto/tls"
-	"net/http"
-	"time"
-
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"git.ecd.axway.int/apigov/v7_discovery_agent/pkg/api"
-	"git.ecd.axway.int/apigov/v7_discovery_agent/pkg/config"
 )
 
 //CatalogCreator - interface
@@ -20,6 +15,7 @@ type CatalogCreator interface {
 	AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (string, error)
 	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error)
 	AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error)
+	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
 }
 
 //CatalogItemBodyAddParam -
@@ -68,41 +64,31 @@ type AddCatalogItemImageParam struct {
 
 // Client -
 type Client struct {
-	url      string
-	tenantID string
-	teamID   string
-
+	url            string
+	tenantID       string
+	teamID         string
 	tokenRequester *apicauth.PlatformTokenGetter
-	apiClient      *api.Client
 }
 
 // New -
 func New() *Client {
 
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: time.Second * 10,
-	}
-
 	cfg := config.GetConfig()
 
-	tokenURL := cfg.AuthConfig.URL
-	aud := cfg.AuthConfig.Audience
-	priKey := cfg.AuthConfig.PrivateKeyPath
-	pubKey := cfg.AuthConfig.PublicKeyPath
-	keyPwd := cfg.AuthConfig.KeyPassword
-	clientID := cfg.AuthConfig.ClientID
-	tenantID := cfg.AuthConfig.TenantID
-	authTimeout := cfg.AuthConfig.Timeout
+	tokenURL := config.GetConfig().CentralConfig.GetAuthConfig().GetTokenURL()
+	aud := config.GetConfig().CentralConfig.GetAuthConfig().GetAudience()
+	tenantID := config.GetConfig().CentralConfig.GetTenantID()
+	priKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPrivateKey()
+	pubKey := config.GetConfig().CentralConfig.GetAuthConfig().GetPublicKey()
+	keyPwd := config.GetConfig().CentralConfig.GetAuthConfig().GetKeyPassword()
+	clientID := config.GetConfig().CentralConfig.GetAuthConfig().GetClientID()
+	authTimeout := config.GetConfig().CentralConfig.GetAuthConfig().GetTimeout()
+	tokenRequester = apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout)
 
 	return &Client{
-		url:      cfg.CentralConfig.URL,
-		tenantID: tenantID,
-		teamID:   cfg.CentralConfig.TeamID,
-
-		apiClient:      api.NewClient(httpClient),
+		url:            cfg.CentralConfig.URL,
+		tenantID:       tenantID,
+		teamID:         cfg.CentralConfig.TeamID,
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
 }

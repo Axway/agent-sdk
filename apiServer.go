@@ -55,5 +55,5 @@ func (c *Client) AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMod
 	}
 
 	url := config.GetConfig().CentralConfig.GetAPIServerServicesURL()
-	return DeployAPI("POST", apiServerBuffer, agentMode, url)
+	return c.DeployAPI("POST", apiServerBuffer, agentMode, url)
 }

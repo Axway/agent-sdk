@@ -202,7 +202,7 @@ func (c *Client) AddCatalogItem(addCatalogItem AddCatalogItemParam) (string, err
 		return "12345678", nil
 	}
 
-	return DeployAPI("POST", addCatalogItem.Buffer, addCatalogItem.AgentMode, addCatalogItem.URL)
+	return c.DeployAPI("POST", addCatalogItem.Buffer, addCatalogItem.AgentMode, addCatalogItem.URL)
 
 }
 
@@ -213,7 +213,7 @@ func (c *Client) UpdateCatalogItem(updateCatalogItem UpdateCatalogItemParam) (st
 		return "", nil
 	}
 
-	return DeployAPI("PUT", updateCatalogItem.Buffer, updateCatalogItem.AgentMode, updateCatalogItem.URL)
+	return c.DeployAPI("PUT", updateCatalogItem.Buffer, updateCatalogItem.AgentMode, updateCatalogItem.URL)
 
 }
 
@@ -228,7 +228,7 @@ func (c *Client) AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (
 
 		//TODO for Dale.  This needs to change and be set in the agent of v7
 		url := config.GetConfig().CentralConfig.GetCatalogItemImage(addCatalogImage.CatalogItemID)
-		return DeployAPI("POST", catalogItemImageBuffer, addCatalogImage.AgentMode, url)
+		return c.DeployAPI("POST", catalogItemImageBuffer, addCatalogImage.AgentMode, url)
 	}
 	return "", nil
 }
