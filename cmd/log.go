@@ -27,7 +27,7 @@ func getFormatter(format string) (log.Formatter, error) {
 }
 
 // SetupLogging - sets up logging
-func SetupLogging(agentName, level string, format, outputType, logPath string) {
+func SetupLogging(agentName, level, format, outputType, logPath string) {
 	setupLogLevel(level)
 	setupLogFormatter(format)
 	setLogOutput(agentName, outputType, logPath)
@@ -56,14 +56,12 @@ func setupLogFormatter(format string) {
 
 // setLogOutput - Sets up the log output (stdout, file or both)
 func setLogOutput(agentName, outputType, logPath string) {
-	var logWriter io.Writer
+	logWriter := io.Writer(os.Stdout)
 	if outputType == "file" {
 		logWriter = createFileWriter(logPath, agentName)
 	} else if outputType == "both" {
 		fileWriter := createFileWriter(logPath, agentName)
 		logWriter = io.MultiWriter(os.Stdout, fileWriter)
-	} else {
-		logWriter = os.Stdout
 	}
 	log.SetOutput(logWriter)
 }
