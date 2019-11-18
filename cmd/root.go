@@ -60,7 +60,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		RunE:    c.run,
 	}
 
-	cobra.OnInitialize(c.intialize)
+	cobra.OnInitialize(c.initialize)
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
 	c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
@@ -86,7 +86,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	return c
 }
 
-func (c *agentRootCommand) intialize() {
+func (c *agentRootCommand) initialize() {
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
