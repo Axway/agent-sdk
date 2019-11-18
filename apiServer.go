@@ -23,7 +23,7 @@ type Spec struct {
 }
 
 // CreateAPIServerBodyForAdd -
-func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, stageTags []string) ([]byte, error) {
+func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags []string) ([]byte, error) {
 
 	// attributes used for extraneous data
 	attribute := make(map[string]interface{})
@@ -40,7 +40,7 @@ func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, sta
 		Title:      fmt.Sprintf("%v (Stage: %v)", apiName, stageName),
 		Attributes: attribute,
 		Spec:       spec,
-		Tags:       stageTags,
+		Tags:       tags,
 	}
 
 	return json.Marshal(apiServerService)

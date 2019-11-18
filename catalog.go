@@ -143,7 +143,7 @@ func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam)
 				},
 			},
 		},
-		Tags:       bodyForAdd.StageTags,
+		Tags:       bodyForAdd.Tags,
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -182,7 +182,7 @@ func (c *Client) CreateCatalogItemBodyForUpdate(bodyForUpdate CatalogItemBodyUpd
 		Name:               bodyForUpdate.NameToPush,
 		OwningTeamID:       bodyForUpdate.TeamID,
 		Description:        bodyForUpdate.Description,
-		Tags:               bodyForUpdate.StageTags,
+		Tags:               bodyForUpdate.Tags,
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{
