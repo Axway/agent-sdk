@@ -8,17 +8,18 @@ import (
 	"testing"
 	"time"
 
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"git.ecd.axway.int/apigov/aws_apigw_traceability_agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func createMapperTestConfig(authURL, tenantID, env, envID string) *config.Config {
 	return &config.Config{
-		Central: config.CentralConfig{
-			TenantID:      tenantID,
-			Environment:   env,
-			EnvironmentID: envID,
-			Auth: config.AuthConfig{
+		Central: &corecfg.CentralConfiguration{
+			TenantID:       tenantID,
+			APICDeployment: env,
+			EnvironmentID:  envID,
+			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
 				ClientID:   "test",
 				Realm:      "Broker",
@@ -38,12 +39,12 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "1111")
-	authCfg := &cfg.Central.Auth
-	eventGenerator := NewEventGenerator(authCfg.GetTokenURL(), authCfg.GetRealmURL(), authCfg.PrivateKey, authCfg.PublicKey, "", authCfg.ClientID, authCfg.Timeout)
+	authCfg := cfg.Central.GetAuthConfig()
+	eventGenerator := NewEventGenerator(authCfg.GetTokenURL(), authCfg.GetAudience(), authCfg.GetPrivateKey(), authCfg.GetPublicKey(), "", authCfg.GetClientID(), authCfg.GetTimeout())
 	dummyLogEvent := LogEvent{
-		TenantID:      cfg.Central.TenantID,
-		Environment:   cfg.Central.Environment,
-		EnvironmentID: cfg.Central.EnvironmentID,
+		TenantID:      cfg.Central.GetTenantID(),
+		Environment:   cfg.Central.GetAPICDeployment(),
+		EnvironmentID: cfg.Central.GetEnvironmentID(),
 	}
 	event, _ := eventGenerator.CreateEvent(dummyLogEvent, time.Now(), nil, nil)
 	assert.NotNil(t, event)
@@ -65,12 +66,12 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "1111")
-	authCfg := &cfg.Central.Auth
-	eventGenerator := NewEventGenerator(authCfg.GetTokenURL(), authCfg.GetRealmURL(), authCfg.PrivateKey, authCfg.PublicKey, "", authCfg.ClientID, authCfg.Timeout)
+	authCfg := cfg.Central.GetAuthConfig()
+	eventGenerator := NewEventGenerator(authCfg.GetTokenURL(), authCfg.GetAudience(), authCfg.GetPrivateKey(), authCfg.GetPublicKey(), "", authCfg.GetClientID(), authCfg.GetTimeout())
 	dummyLogEvent := LogEvent{
-		TenantID:      cfg.Central.TenantID,
-		Environment:   cfg.Central.Environment,
-		EnvironmentID: cfg.Central.EnvironmentID,
+		TenantID:      cfg.Central.GetTenantID(),
+		Environment:   cfg.Central.GetAPICDeployment(),
+		EnvironmentID: cfg.Central.GetEnvironmentID(),
 	}
 
 	_, err := eventGenerator.CreateEvent(dummyLogEvent, time.Now(), nil, nil)
