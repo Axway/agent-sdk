@@ -9,7 +9,7 @@ import (
 	"time"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_traceability_agent/config"
+	"git.ecd.axway.int/apigov/aws_apigw_traceability_agent/pkg/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
