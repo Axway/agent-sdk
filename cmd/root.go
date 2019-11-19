@@ -72,7 +72,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
 	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
-	c.AddStringProperty("central.auth.password", "authKeyPassword", "", "Password for the private key, if needed")
+	c.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
 	c.AddStringProperty("central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "API Central authentication URL")
 	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
