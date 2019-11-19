@@ -42,7 +42,7 @@ func TestAWSCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "aws.region", "awsRegion", "", "AWS Region that we are watching for changes")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.accessKey", "awsAccessKey", "", "Access Key for AWS Authentication")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.secretKey", "awsSecretKey", "", "Secret Key for AWS Authentication")
-	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "/", "AWS Log Group ARN for AWS APIGW Access logs")
+	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS APIGW Access logs")
 	assertStringCmdFlag(t, rootCmd, "aws.stageTags", "awsStageTags", "APIC", "Tags on AWS APIGW stages that will be discovered")
 
 	// Traceability Agent
@@ -64,6 +64,7 @@ func TestAWSCmdConfigDefault(t *testing.T) {
 		fmt.Sprintf("--awsQueueName=%s", "queue"),
 		fmt.Sprintf("--awsAccessKey=%s", "123"),
 		fmt.Sprintf("--awsSecretKey=%s", "346"),
+		fmt.Sprintf("--awsLogGroupArn=%s", "/"),
 	})
 	fExecute := func() {
 		rootCmd.Execute()
@@ -75,8 +76,12 @@ func TestAWSCmdConfigDefault(t *testing.T) {
 
 	assert.Nil(t, err, "Parsing AWS Config returned error")
 	assert.Equal(t, 20*time.Second, awsConfig.GetPollInterval())
-	assert.Equal(t, "/", awsConfig.GetLogGroupArn())
 	assert.Equal(t, "APIC", awsConfig.GetStageTags())
+	assert.Equal(t, "eu-west-1", awsConfig.GetRegion())
+	assert.Equal(t, "queue", awsConfig.GetQueueName())
+	assert.Equal(t, "123", awsConfig.GetAuthConfig().GetAccessKey())
+	assert.Equal(t, "346", awsConfig.GetAuthConfig().GetSecretKey())
+	assert.Equal(t, "/", awsConfig.GetLogGroupArn())
 
 	// Traceability
 	rootCmd = corecmd.NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
@@ -94,4 +99,8 @@ func TestAWSCmdConfigDefault(t *testing.T) {
 
 	assert.Nil(t, err, "Parsing AWS Config returned error")
 	assert.Equal(t, 20*time.Second, awsConfig.GetPollInterval())
+	assert.Equal(t, "eu-west-1", awsConfig.GetRegion())
+	assert.Equal(t, "queue", awsConfig.GetQueueName())
+	assert.Equal(t, "123", awsConfig.GetAuthConfig().GetAccessKey())
+	assert.Equal(t, "346", awsConfig.GetAuthConfig().GetSecretKey())
 }

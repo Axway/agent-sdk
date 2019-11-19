@@ -17,7 +17,7 @@ func AddAWSProperties(rootCmd corecmd.AgentRootCmd) {
 	rootCmd.AddStringProperty("aws.auth.secretKey", "awsSecretKey", "", "Secret Key for AWS Authentication")
 
 	if rootCmd.GetAgentType() == corecfg.DiscoveryAgent {
-		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "/", "AWS Log Group ARN for AWS APIGW Access logs")
+		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS APIGW Access logs")
 		rootCmd.AddStringProperty("aws.stageTags", "awsStageTags", "APIC", "Tags on AWS APIGW stages that will be discovered")
 	}
 }
