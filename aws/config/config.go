@@ -15,7 +15,7 @@ type AWSConfig interface {
 	GetLogGroupArn() string
 	GetStageTags() string
 	GetAuthConfig() AWSAuthConfig
-	validate()
+	Validate() error
 }
 
 // AWSConfiguration - AWS Configuration

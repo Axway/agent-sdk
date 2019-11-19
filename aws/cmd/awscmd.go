@@ -10,7 +10,7 @@ import (
 
 //AddAWSProperties - Add AWS properties and command line flag
 func AddAWSProperties(rootCmd corecmd.AgentRootCmd) {
-	rootCmd.AddDurationProperty("aws.pollInterval", "awsPollInterval", 10*time.Second, "Interval between polling the SQS Queue")
+	rootCmd.AddDurationProperty("aws.pollInterval", "awsPollInterval", 20*time.Second, "Interval between polling the SQS Queue")
 	rootCmd.AddStringProperty("aws.region", "awsRegion", "", "AWS Region that we are watching for changes")
 	rootCmd.AddStringProperty("aws.queueName", "awsQueueName", "", "SQS Queue Name that we are polling")
 	rootCmd.AddStringProperty("aws.auth.accessKey", "awsAccessKey", "", "Access Key for AWS Authentication")

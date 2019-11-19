@@ -11,7 +11,7 @@ import (
 func validateAWS(cfg AWSConfig) (err error) {
 	exception.Block{
 		Try: func() {
-			cfg.validate()
+			cfg.Validate()
 		},
 		Catch: func(e error) {
 			err = e
