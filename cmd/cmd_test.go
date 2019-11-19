@@ -35,17 +35,6 @@ func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagNam
 	assertCmdFlag(t, cmd, flagName, "duration", description)
 	assert.Equal(t, defaultVal, viper.GetDuration(propertyName))
 }
-func TestAll(t *testing.T) {
-	TestRootCmdFlags(t)
-
-	TestRootCmdConfigFileLoad(t)
-	TestRootCmdAgentConfigValidation(t)
-	TestRootCmdAgentConfigChildValidation(t)
-	TestRootCmdConfigDefault(t)
-
-	TestRootCmdHandlers(t)
-	TestRootCmdHandlersWithError(t)
-}
 func TestRootCmdFlags(t *testing.T) {
 
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil)
