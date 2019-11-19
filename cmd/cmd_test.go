@@ -37,15 +37,27 @@ func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagNam
 }
 func TestRootCmdFlags(t *testing.T) {
 
-	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil)
+	// Discovery Agent
+	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
 	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "disconnected", "Agent Mode")
-	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "preprod", "API Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.apiServerUrl", "apiServerUrl", "", "The URL that the API Server is listening on")
 	assertStringCmdFlag(t, rootCmd, "central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.password", "authKeyPassword", "", "Password for the private key, if needed")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "API Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+
+	// Traceability Agent
+	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
+	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "preprod", "API Central")
+	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
+	assertStringCmdFlag(t, rootCmd, "central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.password", "authKeyPassword", "", "Password for the private key, if needed")
@@ -64,13 +76,13 @@ func TestRootCmdFlags(t *testing.T) {
 
 func TestRootCmdConfigFileLoad(t *testing.T) {
 
-	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil)
+	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
 	fExecute := func() {
 		rootCmd.Execute()
 	}
 	assert.Panics(t, fExecute)
 
-	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", nil, nil)
+	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", nil, nil, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 	fExecute = func() {
 		rootCmd.Execute()
@@ -83,9 +95,8 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 }
 
 func TestRootCmdConfigDefault(t *testing.T) {
-	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		assert.Equal(t, corecfg.Disconnected, centralConfig.GetAgentMode())
-		assert.Equal(t, "preprod", centralConfig.GetAPICDeployment())
 		assert.Equal(t, "https://apicentral.preprod.k8s.axwayamplify.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamID())
 		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
@@ -99,7 +110,21 @@ func TestRootCmdConfigDefault(t *testing.T) {
 		return centralConfig, errors.New("Test return error from init config handler")
 	}
 
-	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil)
+	traceabilityInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+		assert.Equal(t, "preprod", centralConfig.GetAPICDeployment())
+		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
+		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
+		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
+		assert.Equal(t, "Broker", centralConfig.GetAuthConfig().GetRealm())
+		assert.Equal(t, "/etc/private_key.pem", centralConfig.GetAuthConfig().GetPrivateKey())
+		assert.Equal(t, "/etc/public_key", centralConfig.GetAuthConfig().GetPublicKey())
+		assert.Equal(t, "", centralConfig.GetAuthConfig().GetKeyPassword())
+		assert.Equal(t, 10*time.Second, centralConfig.GetAuthConfig().GetTimeout())
+		return centralConfig, errors.New("Test return error from init config handler")
+	}
+
+	// Discovery
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", discoveryInitConfigHandler, nil, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 	fExecute := func() {
 		rootCmd.Execute()
@@ -108,7 +133,19 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	rootCmd.RootCmd().SetErr(errBuf)
 	assert.NotPanics(t, fExecute)
 
-	assert.Contains(t, "Test return error from init config handler", errBuf.String())
+	assert.Contains(t, "Test return error from init config handler, Discovery Agent", errBuf.String())
+
+	// Traceability
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.TraceabilityAgent)
+	rootCmd.(*agentRootCommand).configPath = "./testdata"
+	fExecute = func() {
+		rootCmd.Execute()
+	}
+	errBuf = new(bytes.Buffer)
+	rootCmd.RootCmd().SetErr(errBuf)
+	assert.NotPanics(t, fExecute)
+
+	assert.Contains(t, "Test return error from init config handler, Traceability Agent", errBuf.String())
 }
 
 type IAgentCfgWithValidate interface {
@@ -169,7 +206,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 		return cfg, nil
 	}
 
-	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil)
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 
 	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
@@ -207,7 +244,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 		return cfg, nil
 	}
 
-	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil)
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 
 	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
@@ -237,13 +274,13 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 		centralCfg.GetAgentMode()
 		return nil
 	}
-	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler)
+	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	fExecute := func() {
 		rootCmd.Execute()
 	}
 	assert.Panics(t, fExecute)
 
-	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler)
+	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 	fExecute = func() {
 		str := rootCmd.(*agentRootCommand).configPath
@@ -275,7 +312,7 @@ func TestRootCmdHandlers(t *testing.T) {
 		cmdHandlerInvoked = true
 		return nil
 	}
-	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler)
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 
 	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
@@ -312,7 +349,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler)
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 
 	rescueStdout := os.Stdout
@@ -337,7 +374,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler)
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
@@ -367,7 +404,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler)
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	rootCmd.(*agentRootCommand).configPath = "./testdata"
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",

@@ -9,28 +9,30 @@ import (
 // AgentType - Defines the type of agent
 type AgentType int
 
+const (
+	// DiscoveryAgent - Type definition for discovery agent
+	DiscoveryAgent AgentType = iota + 1
+	// TraceabilityAgent - Type definition for traceability agent
+	TraceabilityAgent
+)
+
 // AgentMode - Defines the agent mode
 type AgentMode int
 
-// DiscoveryAgent - Type definition for discovery agent
-const DiscoveryAgent AgentType = 1
+const (
+	// Disconnected - Mode definition for disconnected mode
+	Disconnected AgentMode = iota + 1
+	// Connected - Mode definition for connected mode
+	Connected
+)
 
-// TraceabilityAgent - Type definition for traceability agent
-const TraceabilityAgent AgentType = 2
-
-// Disconnected - Mode definition for disconnected mode
-const Disconnected AgentMode = 1
-
-// Connected - Mode definition for connected mode
-const Connected AgentMode = 2
-
-// AgentModeStringMap -
+// AgentModeStringMap - Map the Agent Mode constant to a string
 var AgentModeStringMap = map[AgentMode]string{
 	Connected:    "connected",
 	Disconnected: "disconnected",
 }
 
-// StringAgentModeMap -
+// StringAgentModeMap - Map the string to the Agent Mode constant
 var StringAgentModeMap = map[string]AgentMode{
 	"connected":    Connected,
 	"disconnected": Disconnected,
@@ -58,7 +60,7 @@ type CentralConfig interface {
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
-	agentType        AgentType
+	AgentType        AgentType
 	Mode             AgentMode  `config:"mode"`
 	TenantID         string     `config:"tenantID"`
 	TeamID           string     `config:"teamID" `
@@ -73,7 +75,7 @@ type CentralConfiguration struct {
 // NewCentralConfig - Creates the default central config
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
-		agentType:        agentType,
+		AgentType:        agentType,
 		Mode:             Disconnected,
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
@@ -82,7 +84,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 
 // GetAgentType - Returns the agent type
 func (c *CentralConfiguration) GetAgentType() AgentType {
-	return c.agentType
+	return c.AgentType
 }
 
 // GetAgentMode - Returns the agent mode
@@ -170,7 +172,7 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.tenantID not set in config"))
 	}
 
-	if c.agentType == TraceabilityAgent {
+	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
 		c.validateDiscoveryAgentConfig()

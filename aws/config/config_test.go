@@ -1,4 +1,4 @@
-package awsconfig
+package config
 
 import (
 	"testing"
@@ -26,7 +26,7 @@ func TestAWSConfig(t *testing.T) {
 	err := awsCfg.Validate()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error aws.region not set in config", err.Error())
-	assert.Equal(t, 30*time.Second, cfg.GetPollInterval())
+	assert.Equal(t, 20*time.Second, cfg.GetPollInterval())
 
 	region := "eu-west-2"
 	awsCfg.Region = region
@@ -43,17 +43,22 @@ func TestAWSConfig(t *testing.T) {
 	assert.Equal(t, queue, cfg.GetQueueName())
 
 	accessKey := "cccc"
-	awsCfg.AccessKey = accessKey
+	awsCfg.Auth = &AWSAuthConfiguration{
+		AccessKey: accessKey,
+	}
 	err = awsCfg.Validate()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error aws.auth.secretKey not set in config", err.Error())
-	assert.Equal(t, accessKey, cfg.GetAccessKey())
+	assert.Equal(t, accessKey, cfg.GetAuthConfig().GetAccessKey())
 
 	secretKey := "ppp"
-	awsCfg.SecretKey = secretKey
+	awsCfg.Auth = &AWSAuthConfiguration{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+	}
 	err = awsCfg.Validate()
 	assert.Nil(t, err)
-	assert.Equal(t, secretKey, cfg.GetSecretKey())
+	assert.Equal(t, secretKey, cfg.GetAuthConfig().GetSecretKey())
 	assert.Equal(t, "", cfg.GetLogGroupArn())
 	assert.Equal(t, "", cfg.GetStageTags())
 }

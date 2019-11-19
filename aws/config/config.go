@@ -1,4 +1,4 @@
-package awsconfig
+package config
 
 import (
 	"errors"
@@ -14,26 +14,25 @@ type AWSConfig interface {
 	GetQueueName() string
 	GetLogGroupArn() string
 	GetStageTags() string
-	GetAccessKey() string
-	GetSecretKey() string
+	GetAuthConfig() AWSAuthConfig
 	validate()
 }
 
 // AWSConfiguration - AWS Configuration
 type AWSConfiguration struct {
 	PollInterval time.Duration
-	Region       string
-	QueueName    string
-	LogGroupArn  string
-	StageTags    string
-	AccessKey    string
-	SecretKey    string
+	Region       string        `config:"region"`
+	QueueName    string        `config:"queueName"`
+	LogGroupArn  string        `config:"logGroupArn"`
+	StageTags    string        `config:"stageTags"`
+	Auth         AWSAuthConfig `config:"auth"`
 }
 
 // NewAWSConfig - Creates the default aws config
 func NewAWSConfig() AWSConfig {
 	return &AWSConfiguration{
-		PollInterval: 30 * time.Second,
+		PollInterval: 20 * time.Second,
+		Auth:         &AWSAuthConfiguration{},
 	}
 }
 
@@ -42,6 +41,7 @@ func (a *AWSConfiguration) Validate() (err error) {
 	exception.Block{
 		Try: func() {
 			a.validate()
+			a.Auth.validate()
 		},
 		Catch: func(e error) {
 			err = e
@@ -58,14 +58,6 @@ func (a *AWSConfiguration) validate() {
 
 	if a.GetQueueName() == "" {
 		exception.Throw(errors.New("Error aws.queueName not set in config"))
-	}
-
-	if a.GetAccessKey() == "" {
-		exception.Throw(errors.New("Error aws.auth.accessKey not set in config"))
-	}
-
-	if a.GetSecretKey() == "" {
-		exception.Throw(errors.New("Error aws.auth.secretKey not set in config"))
 	}
 
 	return
@@ -96,13 +88,7 @@ func (a *AWSConfiguration) GetStageTags() string {
 	return a.StageTags
 }
 
-// GetAccessKey - Returns the AWS access key
-func (a *AWSConfiguration) GetAccessKey() string {
-	return a.AccessKey
+// GetAuthConfig - Returns the Auth Config
+func (a *AWSConfiguration) GetAuthConfig() AWSAuthConfig {
+	return a.Auth
 }
-
-// GetSecretKey - Returns the AWS secret key
-func (a *AWSConfiguration) GetSecretKey() string {
-	return a.SecretKey
-}
-

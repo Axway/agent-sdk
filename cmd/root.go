@@ -35,6 +35,9 @@ type AgentRootCmd interface {
 	DurationPropertyValue(name string) time.Duration
 	IntPropertyValue(name string) int
 	BoolPropertyValue(name string) bool
+
+	// Get the agentType
+	GetAgentType() corecfg.AgentType
 }
 
 // agentRootCommand - Represents the agent root command
@@ -44,15 +47,17 @@ type agentRootCommand struct {
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
+	agentType         corecfg.AgentType
 }
 
 // NewRootCmd - Creates a new Agent Root Command
-func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler) AgentRootCmd {
+func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
 	c := &agentRootCommand{
 		configPath:        ".",
 		agentName:         exeName,
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
+		agentType:         agentType,
 	}
 
 	c.rootCmd = &cobra.Command{
@@ -64,14 +69,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 
 	// APIC yaml properties and command flags
-	c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
-	c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
-	c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
-	c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
-	c.AddStringProperty("central.apiServerUrl", "apiServerUrl", "", "The URL that the API Server is listening on")
-	c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
 	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
 	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
 	c.AddStringProperty("central.auth.password", "authKeyPassword", "", "Password for the private key, if needed")
@@ -79,6 +77,17 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+
+	if c.GetAgentType() == corecfg.TraceabilityAgent {
+		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
+		c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
+	} else {
+		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
+		c.AddStringProperty("central.apiServerUrl", "apiServerUrl", "", "The URL that the API Server is listening on")
+		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
+		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
+		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
+	}
 
 	// Log yaml properties and command flags
 	c.AddStringProperty("log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
@@ -134,14 +143,8 @@ func (c *agentRootCommand) initConfig() error {
 
 func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 	cfg := &corecfg.CentralConfiguration{
-		TenantID:         c.StringPropertyValue("central.tenantId"),
-		TeamID:           c.StringPropertyValue("central.teamId"),
-		Mode:             corecfg.StringAgentModeMap[strings.ToLower(c.StringPropertyValue("central.mode"))],
-		APICDeployment:   c.StringPropertyValue("central.deployment"),
-		EnvironmentName:  c.StringPropertyValue("central.environmenName"),
-		EnvironmentID:    c.StringPropertyValue("central.environmentId"),
-		URL:              c.StringPropertyValue("central.url"),
-		APIServerVersion: c.StringPropertyValue("central.apiServerVersion"),
+		AgentType: c.agentType,
+		TenantID:  c.StringPropertyValue("central.tenantId"),
 		Auth: &corecfg.AuthConfiguration{
 			URL:        c.StringPropertyValue("central.auth.url"),
 			Realm:      c.StringPropertyValue("central.auth.realm"),
@@ -152,6 +155,18 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 			Timeout:    c.DurationPropertyValue("central.auth.timeout"),
 		},
 	}
+
+	if c.GetAgentType() == corecfg.TraceabilityAgent {
+		cfg.APICDeployment = c.StringPropertyValue("central.deployment")
+		cfg.EnvironmentID = c.StringPropertyValue("central.environmentId")
+	} else {
+		cfg.URL = c.StringPropertyValue("central.url")
+		cfg.Mode = corecfg.StringAgentModeMap[strings.ToLower(c.StringPropertyValue("central.mode"))]
+		cfg.EnvironmentName = c.StringPropertyValue("central.environmenName")
+		cfg.APIServerVersion = c.StringPropertyValue("central.apiServerVersion")
+		cfg.TeamID = c.StringPropertyValue("central.teamId")
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -259,4 +274,8 @@ func (c *agentRootCommand) IntPropertyValue(name string) int {
 
 func (c *agentRootCommand) BoolPropertyValue(name string) bool {
 	return viper.GetBool(name)
+}
+
+func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
+	return c.agentType
 }
