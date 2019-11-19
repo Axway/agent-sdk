@@ -3,7 +3,7 @@ package apic
 import (
 	"testing"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/awsconfig"
+	awsconfig "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/aws/config"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 )
