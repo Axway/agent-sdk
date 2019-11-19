@@ -170,11 +170,10 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.tenantID not set in config"))
 	}
 
-	if c.agentType == DiscoveryAgent {
-		c.validateDiscoveryAgentConfig()
-	}
 	if c.agentType == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
+	} else {
+		c.validateDiscoveryAgentConfig()
 	}
 }
 

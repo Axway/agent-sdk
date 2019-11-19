@@ -39,6 +39,7 @@ type AgentRootCmd interface {
 
 // agentRootCommand - Represents the agent root command
 type agentRootCommand struct {
+	configPath        string
 	agentName         string
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
@@ -48,6 +49,7 @@ type agentRootCommand struct {
 // NewRootCmd - Creates a new Agent Root Command
 func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler) AgentRootCmd {
 	c := &agentRootCommand{
+		configPath:        ".",
 		agentName:         exeName,
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
@@ -58,13 +60,13 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		Short:   desc,
 		Version: BuildVersion,
 		RunE:    c.run,
+		PreRun:  c.intialize,
 	}
 
-	cobra.OnInitialize(c.intialize)
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
 	c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
-	c.AddStringProperty("central.url", "centralUrl", "https://platform.axway.com", "URL of API Central")
+	c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
@@ -86,10 +88,10 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	return c
 }
 
-func (c *agentRootCommand) intialize() {
+func (c *agentRootCommand) intialize(cmd *cobra.Command, args []string) {
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(c.configPath)
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -99,8 +101,8 @@ func (c *agentRootCommand) intialize() {
 	}
 }
 
-func (c *agentRootCommand) bindOrPanic(key string, flag *flag.Flag) {
-	if err := viper.BindPFlag(key, flag); err != nil {
+func (c *agentRootCommand) bindOrPanic(key string, flg *flag.Flag) {
+	if err := viper.BindPFlag(key, flg); err != nil {
 		panic(err)
 	}
 }
@@ -177,14 +179,16 @@ func (c *agentRootCommand) validateAgentConfig(agentCfg interface{}) error {
 
 	// Look for Validate method on stuct properties and invoke it
 	for i := 0; i < v.NumField(); i++ {
-		fieldInterface := v.Field(i).Interface()
-		// Skip the property it is CentralConfig type as its already Validated
-		// during parseCentralConfig
-		if _, ok := fieldInterface.(corecfg.CentralConfig); !ok {
-			if objInterface, ok := fieldInterface.(interface{ Validate() error }); ok {
-				err := objInterface.Validate()
-				if err != nil {
-					return err
+		if v.Field(i).CanInterface() {
+			fieldInterface := v.Field(i).Interface()
+			// Skip the property it is CentralConfig type as its already Validated
+			// during parseCentralConfig
+			if _, ok := fieldInterface.(corecfg.CentralConfig); !ok {
+				if objInterface, ok := fieldInterface.(interface{ Validate() error }); ok {
+					err := objInterface.Validate()
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -197,8 +201,8 @@ func (c *agentRootCommand) validateAgentConfig(agentCfg interface{}) error {
 func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	err = c.initConfig()
 
-	log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 	if err == nil {
+		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 		err = c.commandHandler()
 	}
 

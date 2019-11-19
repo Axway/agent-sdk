@@ -1,0 +1,5 @@
+central:
+  tenantId: "111111"
+  teamId: "222222"
+  auth:
+    clientId: "cccc"
