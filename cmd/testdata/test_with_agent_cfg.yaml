@@ -1,0 +1,10 @@
+central:
+  tenantId: "111111"
+  teamId: "222222"
+  auth:
+    clientId: "cccc"
+agent:
+  bool: true
+  string: "ssss"
+  duration: 30s
+  int: 555
