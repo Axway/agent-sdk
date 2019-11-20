@@ -59,7 +59,9 @@ func handleResponse(method string, agentMode corecfg.AgentMode, detail map[strin
 				}
 				log.Debugf("HTTP response key %v: %v", k, string(buffer))
 			}
-			return strconv.Unquote(itemID)
+			if itemID != "" {
+				return strconv.Unquote(itemID)
+			}
 		}
 		// This is an update to catalog item (PUT)
 		for k, v := range detail {
