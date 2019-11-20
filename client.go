@@ -28,6 +28,7 @@ type CatalogItemBodyAddParam struct {
 	TeamID        string
 	Description   string
 	Version       string
+	AuthPolicy    string
 	Swagger       []byte
 	Documentation []byte
 	Tags          []string

@@ -2,11 +2,8 @@ package apic
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
-
-	"github.com/tidwall/gjson"
 )
 
 //CatalogPropertyValue -
@@ -100,30 +97,9 @@ type CatalogItem struct {
 	// categories
 }
 
-var methods = [5]string{"get", "post", "put", "patch", "delete"} // RestAPI methods
 const (
 	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
-	apikey             = "verify-api-key"
-	passthrough        = "pass-through"
 )
-
-func determineAuthPolicyFromSwagger(swagger *[]byte) string {
-	// Traverse the swagger looking for any route that has security set
-	// return the security of the first route, if none- found return passthrough
-	var authPolicy = passthrough
-
-	gjson.GetBytes(*swagger, "paths").ForEach(func(_, pathObj gjson.Result) bool {
-		for _, method := range methods {
-			if pathObj.Get(fmt.Sprint(method, ".security.#.api_key")).Exists() {
-				authPolicy = apikey
-				return false
-			}
-		}
-		return authPolicy == passthrough // Return from path loop anonymous func, true = go to next item
-	})
-
-	return authPolicy
-}
 
 // CreateCatalogItemBodyForAdd -
 func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam) ([]byte, error) {
@@ -138,7 +114,7 @@ func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam)
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
-					AuthPolicy: determineAuthPolicyFromSwagger(&bodyForAdd.Swagger),
+					AuthPolicy: bodyForAdd.AuthPolicy,
 					URL:        bodyForAdd.URL,
 				},
 			},
