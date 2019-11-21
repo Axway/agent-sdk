@@ -44,7 +44,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.apiServerEnvironment not set in config", err.Error())
 
-	centralConfig.EnvironmentName = "eee"
+	centralConfig.APIServerEnvironment = "eee"
 	err = cfg.Validate()
 	assert.Nil(t, err)
 
