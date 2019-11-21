@@ -195,7 +195,7 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 
 func (c *CentralConfiguration) validateConnectedModeConfig() {
 	if c.GetEnvironmentName() == "" {
-		exception.Throw(errors.New("Error central.environmentName not set in config"))
+		exception.Throw(errors.New("Error central.apiServerEnvironment not set in config"))
 	}
 
 	if c.APIServerVersion == "" {

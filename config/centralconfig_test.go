@@ -42,7 +42,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	centralConfig.Mode = Connected
 	err = cfg.Validate()
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.environmentName not set in config", err.Error())
+	assert.Equal(t, "Error central.apiServerEnvironment not set in config", err.Error())
 
 	centralConfig.EnvironmentName = "eee"
 	err = cfg.Validate()
