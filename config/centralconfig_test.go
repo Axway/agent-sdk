@@ -56,7 +56,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	centralConfig.APIServerVersion = "v1alpha1"
 
 	assert.Equal(t, "aaa/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
-	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetAPIServerEnvironmentsURL())
+	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetAPIServerServicesURL())
 }
 
 func TestTraceabilityAgentConfig(t *testing.T) {
