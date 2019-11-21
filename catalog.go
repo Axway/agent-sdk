@@ -61,7 +61,7 @@ type CatalogItemInit struct {
 	Name               string                  `json:"name"`
 	Description        string                  `json:"description,omitempty"`
 	Properties         []CatalogProperty       `json:"properties,omitempty"`
-	Tags               map[string]interface{}  `json:"tags,omitempty"`
+	Tags               []string                `json:"tags,omitempty"`
 	Visibility         string                  `json:"visibility"` // default: RESTRICTED
 	Subscription       CatalogSubscription     `json:"subscription,omitempty"`
 	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
@@ -83,8 +83,8 @@ type CatalogItem struct {
 	DefinitionRevision int    `json:"definitionRevision"`
 	Name               string `json:"name"`
 	// relationships
-	Description string                 `json:"description,omitempty"`
-	Tags        map[string]interface{} `json:"tags,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
 	// metadata
 	Visibility string `json:"visibility"` // default: RESTRICTED
 	State      string `json:"state"`      // default: UNPUBLISHED
@@ -119,7 +119,9 @@ func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam)
 				},
 			},
 		},
-		Tags:       bodyForAdd.Tags,
+
+		// todo
+		Tags:       c.MapToStringArray(bodyForAdd.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -158,7 +160,7 @@ func (c *Client) CreateCatalogItemBodyForUpdate(bodyForUpdate CatalogItemBodyUpd
 		Name:               bodyForUpdate.NameToPush,
 		OwningTeamID:       bodyForUpdate.TeamID,
 		Description:        bodyForUpdate.Description,
-		Tags:               bodyForUpdate.Tags,
+		Tags:               c.MapToStringArray(bodyForUpdate.Tags),
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{

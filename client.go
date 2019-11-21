@@ -87,3 +87,14 @@ func New(cfg corecfg.CentralConfig) *Client {
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
 }
+
+// MapToStringArray -
+func (c *Client) MapToStringArray(m map[string]interface{}) []string {
+	strArr := []string{}
+
+	for key, val := range m {
+		v := val.(*string)
+		strArr = append(strArr, key+"_"+*v)
+	}
+	return strArr
+}

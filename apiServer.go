@@ -8,9 +8,10 @@ import (
 
 // APIServer -
 type APIServer struct {
-	Name       string                 `json:"name"`
-	Title      string                 `json:"title"`
-	Tags       map[string]interface{} `json:"tags"`
+	Name  string `json:"name"`
+	Title string `json:"title"`
+	// Tags       map[string]interface{} `json:"tags"`		// todo when server ready for key/val pairs
+	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Spec       map[string]interface{} `json:"spec"`
 }
@@ -33,12 +34,15 @@ func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tag
 	spec := make(map[string]interface{})
 	spec["description"] = "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")"
 
+	// todo temp until api fixed
+	newtags := c.MapToStringArray(tags)
+
 	apiServerService := APIServer{
 		Name:       strings.ToLower(apiName), // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
 		Title:      fmt.Sprintf("%v (Stage: %v)", apiName, stageName),
 		Attributes: attribute,
 		Spec:       spec,
-		Tags:       tags,
+		Tags:       newtags,
 	}
 
 	return json.Marshal(apiServerService)
