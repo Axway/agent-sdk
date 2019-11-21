@@ -60,16 +60,16 @@ type CentralConfig interface {
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
-	AgentType        AgentType
-	Mode             AgentMode  `config:"mode"`
-	TenantID         string     `config:"tenantID"`
-	TeamID           string     `config:"teamID" `
-	APICDeployment   string     `config:"deployment"`
-	EnvironmentName  string     `config:"environmenName"`
-	EnvironmentID    string     `config:"environmentID"`
-	URL              string     `config:"url"`
-	APIServerVersion string     `config:"apiServerVersion"`
-	Auth             AuthConfig `config:"auth"`
+	AgentType            AgentType
+	Mode                 AgentMode  `config:"mode"`
+	TenantID             string     `config:"tenantID"`
+	TeamID               string     `config:"teamID" `
+	APICDeployment       string     `config:"deployment"`
+	APIServerEnvironment string     `config:"apiServerEnvironment"`
+	EnvironmentID        string     `config:"environmentID"`
+	URL                  string     `config:"url"`
+	APIServerVersion     string     `config:"apiServerVersion"`
+	Auth                 AuthConfig `config:"auth"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -114,7 +114,7 @@ func (c *CentralConfiguration) GetEnvironmentID() string {
 
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
-	return c.EnvironmentName
+	return c.APIServerEnvironment
 }
 
 // GetTeamID - Returns the team ID
@@ -139,12 +139,12 @@ func (c *CentralConfiguration) GetCatalogItemImage(catalogItemID string) string 
 
 // GetAPIServerEnvironmentsURL - Returns the APIServer URL for environments API
 func (c *CentralConfiguration) GetAPIServerEnvironmentsURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.EnvironmentName + "/apiservices"
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
 }
 
 // GetAPIServerServicesURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetAPIServerServicesURL() string {
-	return c.GetAPIServerEnvironmentsURL() + "/" + c.EnvironmentName + "/apiservices"
+	return c.GetAPIServerEnvironmentsURL() + "/" + c.APIServerEnvironment + "/apiservices"
 }
 
 // GetAuthConfig - Returns the Auth Config

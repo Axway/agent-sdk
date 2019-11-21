@@ -162,7 +162,7 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 	} else {
 		cfg.URL = c.StringPropertyValue("central.url")
 		cfg.Mode = corecfg.StringAgentModeMap[strings.ToLower(c.StringPropertyValue("central.mode"))]
-		cfg.EnvironmentName = c.StringPropertyValue("central.apiServerEnvironment")
+		cfg.APIServerEnvironment = c.StringPropertyValue("central.apiServerEnvironment")
 		cfg.APIServerVersion = c.StringPropertyValue("central.apiServerVersion")
 		cfg.TeamID = c.StringPropertyValue("central.teamId")
 	}
