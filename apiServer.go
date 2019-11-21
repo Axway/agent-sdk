@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 )
 
 // APIServer -
 type APIServer struct {
 	Name       string                 `json:"name"`
 	Title      string                 `json:"title"`
-	Tags       []string               `json:"tags"`
+	Tags       map[string]interface{} `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Spec       map[string]interface{} `json:"spec"`
 }
@@ -23,7 +21,7 @@ type Spec struct {
 }
 
 // CreateAPIServerBodyForAdd -
-func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags []string) ([]byte, error) {
+func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags map[string]interface{}) ([]byte, error) {
 
 	// attributes used for extraneous data
 	attribute := make(map[string]interface{})
@@ -47,12 +45,13 @@ func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tag
 }
 
 // AddAPIServer -
-func (c *Client) AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error) {
+func (c *Client) AddAPIServer(apiServerBuffer []byte) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	url := c.cfg.GetAPIServerServicesURL()
+	url := c.cfg.GetAPIServerEnvironmentsURL()
+	agentMode := c.cfg.GetAgentMode()
 	return c.DeployAPI("POST", apiServerBuffer, agentMode, url)
 }

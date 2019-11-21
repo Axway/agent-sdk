@@ -61,7 +61,7 @@ type CatalogItemInit struct {
 	Name               string                  `json:"name"`
 	Description        string                  `json:"description,omitempty"`
 	Properties         []CatalogProperty       `json:"properties,omitempty"`
-	Tags               []string                `json:"tags,omitempty"`
+	Tags               map[string]interface{}  `json:"tags,omitempty"`
 	Visibility         string                  `json:"visibility"` // default: RESTRICTED
 	Subscription       CatalogSubscription     `json:"subscription,omitempty"`
 	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
@@ -83,8 +83,8 @@ type CatalogItem struct {
 	DefinitionRevision int    `json:"definitionRevision"`
 	Name               string `json:"name"`
 	// relationships
-	Description string   `json:"description,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Tags        map[string]interface{} `json:"tags,omitempty"`
 	// metadata
 	Visibility string `json:"visibility"` // default: RESTRICTED
 	State      string `json:"state"`      // default: UNPUBLISHED

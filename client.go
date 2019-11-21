@@ -15,7 +15,7 @@ type CatalogCreator interface {
 	AddCatalogItem(addCatalogItem AddCatalogItemParam) (string, error)
 	UpdateCatalogItem(updateCatalogItem UpdateCatalogItemParam) (string, error)
 	AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (string, error)
-	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags []string) ([]byte, error)
+	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags map[string]interface{}) ([]byte, error)
 	AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error)
 	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
 	SetHeader(method, url string, body io.Reader) (*http.Request, error)
@@ -31,7 +31,7 @@ type CatalogItemBodyAddParam struct {
 	AuthPolicy    string
 	Swagger       []byte
 	Documentation []byte
-	Tags          []string
+	Tags          map[string]interface{}
 }
 
 //CatalogItemBodyUpdateParam -
@@ -40,7 +40,7 @@ type CatalogItemBodyUpdateParam struct {
 	Description string
 	TeamID      string
 	Version     string
-	Tags        []string
+	Tags        map[string]interface{}
 }
 
 //AddCatalogItemParam -
