@@ -52,7 +52,6 @@ type CentralConfig interface {
 	GetCatalogItemsURL() string
 	GetCatalogItemImage(catalogItemID string) string
 	GetAPIServerEnvironmentsURL() string
-	GetAPIServerServicesURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 }
@@ -140,11 +139,6 @@ func (c *CentralConfiguration) GetCatalogItemImage(catalogItemID string) string 
 // GetAPIServerEnvironmentsURL - Returns the APIServer URL for environments API
 func (c *CentralConfiguration) GetAPIServerEnvironmentsURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
-}
-
-// GetAPIServerServicesURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetAPIServerServicesURL() string {
-	return c.GetAPIServerEnvironmentsURL() + "/" + c.APIServerEnvironment + "/apiservices"
 }
 
 // GetAuthConfig - Returns the Auth Config
