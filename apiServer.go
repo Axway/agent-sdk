@@ -55,7 +55,7 @@ func (c *Client) AddAPIServer(apiServerBuffer []byte) (string, error) {
 		return "12345678", nil
 	}
 
-	url := c.cfg.GetAPIServerEnvironmentsURL()
+	url := c.cfg.GetAPIServerServicesURL()
 	agentMode := c.cfg.GetAgentMode()
 	return c.DeployAPI("POST", apiServerBuffer, agentMode, url)
 }
