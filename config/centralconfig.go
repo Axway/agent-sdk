@@ -139,7 +139,7 @@ func (c *CentralConfiguration) GetCatalogItemImage(catalogItemID string) string 
 
 // GetAPIServerEnvironmentsURL - Returns the APIServer URL for environments API
 func (c *CentralConfiguration) GetAPIServerEnvironmentsURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments"
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.EnvironmentName + "/apiservices"
 }
 
 // GetAPIServerServicesURL - Returns the APIServer URL for services API
