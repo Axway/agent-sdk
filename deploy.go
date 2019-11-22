@@ -11,6 +11,7 @@ import (
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 )
 
 var httpClient = http.DefaultClient
@@ -49,9 +50,11 @@ func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode core
 }
 
 func handleResponse(method string, agentMode corecfg.AgentMode, detail map[string]*json.RawMessage) (string, error) {
-	if agentMode != corecfg.Connected {
-		if strings.ToLower(method) == strings.ToLower("POST") {
-			itemID := ""
+	if strings.ToLower(method) == strings.ToLower("POST") {
+		itemID := ""
+
+		// Disconnected Mode
+		if agentMode != corecfg.Connected {
 			for k, v := range detail {
 				buffer, _ := v.MarshalJSON()
 				if k == "id" {
@@ -62,13 +65,24 @@ func handleResponse(method string, agentMode corecfg.AgentMode, detail map[strin
 			if itemID != "" {
 				return strconv.Unquote(itemID)
 			}
+			// Connected Mode
+		} else {
+			for k, v := range detail {
+				buffer, _ := v.MarshalJSON()
+				if k == "metadata" {
+					itemID = gjson.Get(string(buffer), "id").String()
+				}
+				log.Debugf("HTTP response key %v: %v", k, string(buffer))
+			}
+			if itemID != "" {
+				return itemID, nil
+			}
 		}
-		// This is an update to catalog item (PUT)
-		for k, v := range detail {
-			buffer, _ := v.MarshalJSON()
-			log.Debugf("HTTP response key %v: %v", k, string(buffer))
-		}
-
+	}
+	// This is an update to catalog item (PUT)
+	for k, v := range detail {
+		buffer, _ := v.MarshalJSON()
+		log.Debugf("HTTP response key %v: %v", k, string(buffer))
 	}
 
 	return "", nil
