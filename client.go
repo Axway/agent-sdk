@@ -94,7 +94,11 @@ func (c *Client) MapToStringArray(m map[string]interface{}) []string {
 
 	for key, val := range m {
 		v := val.(*string)
-		strArr = append(strArr, key+"_"+*v)
+		if *v == "" {
+			strArr = append(strArr, key)
+		} else {
+			strArr = append(strArr, key+"_"+*v)
+		}
 	}
 	return strArr
 }
