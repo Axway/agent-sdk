@@ -65,7 +65,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		Short:   desc,
 		Version: BuildVersion,
 		RunE:    c.run,
-		PreRun:  c.intialize,
+		PreRun:  c.initialize,
 	}
 
 	// APIC yaml properties and command flags
@@ -97,7 +97,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	return c
 }
 
-func (c *agentRootCommand) intialize(cmd *cobra.Command, args []string) {
+func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(c.configPath)
@@ -192,7 +192,7 @@ func (c *agentRootCommand) validateAgentConfig(agentCfg interface{}) error {
 		v = reflect.Indirect(v)
 	}
 
-	// Look for Validate method on stuct properties and invoke it
+	// Look for Validate method on struct properties and invoke it
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).CanInterface() {
 			fieldInterface := v.Field(i).Interface()

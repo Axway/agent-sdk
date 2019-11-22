@@ -131,7 +131,7 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
-// GetCatalogItemImage - Returnes the image based on catalogItemID
+// GetCatalogItemImage - Returns the image based on catalogItemID
 func (c *CentralConfiguration) GetCatalogItemImage(catalogItemID string) string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/image"
 }
