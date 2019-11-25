@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	apigw "github.com/aws/aws-sdk-go/service/apigateway"
 )
 
 //CatalogPropertyValue -
@@ -102,7 +104,8 @@ const (
 )
 
 // CreateCatalogItemBodyForAdd -
-func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam) ([]byte, error) {
+func (c *Client) CreateCatalogItemBodyForAdd(restAPIID, stageName string, restAPI *apigw.RestApi, exportOut *apigw.GetExportOutput, tags map[string]interface{}) ([]byte, error) {
+	bodyForAdd := c.buildCatalogItemBody(restAPIID, stageName, restAPI, exportOut, tags)
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
@@ -152,7 +155,8 @@ func (c *Client) CreateCatalogItemBodyForAdd(bodyForAdd CatalogItemBodyAddParam)
 }
 
 // CreateCatalogItemBodyForUpdate -
-func (c *Client) CreateCatalogItemBodyForUpdate(bodyForUpdate CatalogItemBodyUpdateParam) ([]byte, error) {
+func (c *Client) CreateCatalogItemBodyForUpdate(restAPIID, stageName string, restAPI *apigw.RestApi, tags map[string]interface{}) ([]byte, error) {
+	bodyForUpdate := c.buildCatalogItemBodyForUpdate(restAPIID, stageName, restAPI, tags)
 	newCatalogItem := CatalogItem{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
@@ -172,42 +176,16 @@ func (c *Client) CreateCatalogItemBodyForUpdate(bodyForUpdate CatalogItemBodyUpd
 	return json.Marshal(newCatalogItem)
 }
 
-// AddCatalogItem -
-func (c *Client) AddCatalogItem(addCatalogItem AddCatalogItemParam) (string, error) {
+// ProcessCatalogItem - Used for both Adding and Updating catalog item.
+// The Method will either be POST (add) or PUT (update)
+func (c *Client) ProcessCatalogItem(method, apicURL string, catalogBuffer []byte) (string, error) {
+	catalogItem := c.buildCatalogItem(method, apicURL, catalogBuffer)
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	return c.DeployAPI("POST", addCatalogItem.Buffer, addCatalogItem.AgentMode, addCatalogItem.URL)
-
-}
-
-// UpdateCatalogItem -
-func (c *Client) UpdateCatalogItem(updateCatalogItem UpdateCatalogItemParam) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "", nil
-	}
-
-	return c.DeployAPI("PUT", updateCatalogItem.Buffer, updateCatalogItem.AgentMode, updateCatalogItem.URL)
-
-}
-
-// AddCatalogItemImage -
-func (c *Client) AddCatalogItemImage(addCatalogImage AddCatalogItemImageParam) (string, error) {
-	if addCatalogImage.Image != "" {
-		catalogImage := CatalogItemImage{
-			DataType:      addCatalogImage.ImageContentType,
-			Base64Content: addCatalogImage.Image,
-		}
-		catalogItemImageBuffer, _ := json.Marshal(catalogImage)
-
-		//TODO for Dale.  This needs to change and be set in the agent of v7
-		url := c.cfg.GetCatalogItemImage(addCatalogImage.CatalogItemID)
-		return c.DeployAPI("POST", catalogItemImageBuffer, addCatalogImage.AgentMode, url)
-	}
-	return "", nil
+	return c.DeployAPI("POST", catalogItem.Buffer, catalogItem.AgentMode, catalogItem.URL)
 }
 
 func isUnitTesting() bool {

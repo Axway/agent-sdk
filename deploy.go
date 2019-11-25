@@ -54,7 +54,7 @@ func handleResponse(method string, agentMode corecfg.AgentMode, body []byte) (st
 	itemID := ""
 
 	// Connected Mode
-	if agentMode != corecfg.Connected {
+	if agentMode == corecfg.Connected {
 		metadata := gjson.Get(string(body), "metadata").String()
 		if metadata != "" {
 			itemID = gjson.Get(string(metadata), "id").String()

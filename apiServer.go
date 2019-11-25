@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	apigw "github.com/aws/aws-sdk-go/service/apigateway"
 )
 
 // APIServer -
@@ -22,7 +25,9 @@ type Spec struct {
 }
 
 // CreateAPIServerBodyForAdd -
-func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags map[string]interface{}) ([]byte, error) {
+func (c *Client) CreateAPIServerBodyForAdd(restAPIID, stageName string, restAPI *apigw.RestApi, exportOut *apigw.GetExportOutput, tags map[string]interface{}) ([]byte, error) {
+
+	apiName := aws.StringValue(restAPI.Name)
 
 	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
 	attributes := make(map[string]interface{})
@@ -30,13 +35,13 @@ func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tag
 		v := val.(*string)
 		attributes[key] = *v
 	}
-	attributes["apiID"] = apiID
+	attributes["apiID"] = restAPIID
 	attributes["apiName"] = apiName
 	attributes["stageName"] = stageName
 
 	// spec needs to adhere to environment schema
 	spec := make(map[string]interface{})
-	spec["description"] = "API From AWS APIGateway (RestApiId: " + apiID + ", StageName: " + stageName + ")"
+	spec["description"] = "API From AWS APIGateway (RestApiId: " + restAPIID + ", StageName: " + stageName + ")"
 
 	// todo temp until api fixed
 	newtags := c.MapToStringArray(tags)
