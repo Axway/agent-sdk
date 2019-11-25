@@ -24,11 +24,15 @@ type Spec struct {
 // CreateAPIServerBodyForAdd -
 func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags map[string]interface{}) ([]byte, error) {
 
-	// attributes used for extraneous data
-	attribute := make(map[string]interface{})
-	attribute["apiID"] = apiID
-	attribute["apiName"] = apiName
-	attribute["stageName"] = stageName
+	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
+	attributes := make(map[string]interface{})
+	for key, val := range tags {
+		v := val.(*string)
+		attributes[key] = *v
+	}
+	attributes["apiID"] = apiID
+	attributes["apiName"] = apiName
+	attributes["stageName"] = stageName
 
 	// spec needs to adhere to environment schema
 	spec := make(map[string]interface{})
@@ -40,7 +44,7 @@ func (c *Client) CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tag
 	apiServerService := APIServer{
 		Name:       strings.ToLower(apiName), // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
 		Title:      fmt.Sprintf("%v (Stage: %v)", apiName, stageName),
-		Attributes: attribute,
+		Attributes: attributes,
 		Spec:       spec,
 		Tags:       newtags,
 	}
