@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
-	"strconv"
-	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/sirupsen/logrus"
@@ -34,9 +33,9 @@ func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode core
 	if err != nil {
 		return "", err
 	}
-	detail := make(map[string]*json.RawMessage)
-	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
 
+	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
+		detail := make(map[string]*json.RawMessage)
 		json.NewDecoder(response.Body).Decode(&detail)
 		for k, v := range detail {
 			buffer, _ := v.MarshalJSON()
@@ -45,48 +44,28 @@ func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode core
 		return "", errors.New(response.Status)
 	}
 	defer response.Body.Close()
-	json.NewDecoder(response.Body).Decode(&detail)
-	return handleResponse(method, agentMode, detail)
+	body, err := ioutil.ReadAll(response.Body)
+
+	return handleResponse(method, agentMode, body)
 }
 
-func handleResponse(method string, agentMode corecfg.AgentMode, detail map[string]*json.RawMessage) (string, error) {
-	if strings.ToLower(method) == strings.ToLower("POST") {
-		itemID := ""
+func handleResponse(method string, agentMode corecfg.AgentMode, body []byte) (string, error) {
 
-		// Disconnected Mode
-		if agentMode != corecfg.Connected {
-			for k, v := range detail {
-				buffer, _ := v.MarshalJSON()
-				if k == "id" {
-					itemID = string(buffer)
-				}
-				log.Debugf("HTTP response key %v: %v", k, string(buffer))
-			}
-			if itemID != "" {
-				return strconv.Unquote(itemID)
-			}
-			// Connected Mode
-		} else {
-			for k, v := range detail {
-				buffer, _ := v.MarshalJSON()
-				if k == "metadata" {
-					itemID = gjson.Get(string(buffer), "id").String()
-				}
-				log.Debugf("HTTP response key %v: %v", k, string(buffer))
-			}
-			if itemID != "" {
-				return itemID, nil
-			}
+	itemID := ""
+
+	// Connected Mode
+	if agentMode != corecfg.Connected {
+		metadata := gjson.Get(string(body), "metadata").String()
+		if metadata != "" {
+			itemID = gjson.Get(string(metadata), "id").String()
 		}
-	}
-	// This is an update to catalog item (PUT)
-	for k, v := range detail {
-		buffer, _ := v.MarshalJSON()
-		log.Debugf("HTTP response key %v: %v", k, string(buffer))
+		// Disconnected Mode
+	} else {
+		itemID = gjson.Get(string(body), "id").String()
 	}
 
-	return "", nil
-
+	log.Debugf("HTTP response returning itemID: [%v]", itemID)
+	return itemID, nil
 }
 
 // SetHeader - set header
