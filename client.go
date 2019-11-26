@@ -38,12 +38,10 @@ type ServiceBody struct {
 
 //Service - Used for both adding and updating of catalog item
 type Service struct {
-	Method           string            `json:",omitempty"`
-	URL              string            `json:",omitempty"`
-	Buffer           []byte            `json:",omitempty"`
-	AgentMode        corecfg.AgentMode `json:",omitempty"`
-	Image            string            `json:",omitempty"`
-	ImageContentType string            `json:",omitempty"`
+	Method    string            `json:",omitempty"`
+	URL       string            `json:",omitempty"`
+	Buffer    []byte            `json:",omitempty"`
+	AgentMode corecfg.AgentMode `json:",omitempty"`
 }
 
 // Client -
