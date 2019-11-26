@@ -101,9 +101,8 @@ type CatalogItem struct {
 
 // APIServer -
 type APIServer struct {
-	Name  string `json:"name"`
-	Title string `json:"title"`
-	// Tags       map[string]interface{} `json:"tags"`		// todo when server ready for key/val pairs
+	Name       string                 `json:"name"`
+	Title      string                 `json:"title"`
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Spec       map[string]interface{} `json:"spec"`
