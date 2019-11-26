@@ -16,8 +16,8 @@ import (
 
 //CatalogCreator - interface
 type CatalogCreator interface {
-	CreateServiceBody(serviceBody ServiceBody) ([]byte, error)
-	ProcessService(service Service) (string, error)
+	CreateService(serviceBody ServiceBody) ([]byte, error)
+	ExecuteService(service Service) (string, error)
 	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
 }
 

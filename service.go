@@ -118,8 +118,8 @@ const (
 	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 )
 
-// CreateServiceBody -
-func (c *Client) CreateServiceBody(serviceBody ServiceBody) ([]byte, error) {
+// CreateService -
+func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
 	if serviceBody.AgentMode == config.Connected {
 		return createAPIServerBody(c, serviceBody)
 	}
@@ -223,9 +223,9 @@ func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte
 	return json.Marshal(newCatalogItem)
 }
 
-// ProcessService - Used for both Adding and Updating catalog item.
+// ExecuteService - Used for both Adding and Updating catalog item.
 // The Method will either be POST (add) or PUT (update)
-func (c *Client) ProcessService(service Service) (string, error) {
+func (c *Client) ExecuteService(service Service) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil

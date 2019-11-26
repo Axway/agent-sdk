@@ -81,7 +81,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes1, _ := c.CreateServiceBody(serviceBody)
+	catalogBytes1, _ := c.CreateService(serviceBody)
 
 	var catalogItem1 CatalogItemInit
 	json.Unmarshal(catalogBytes1, &catalogItem1)
@@ -113,7 +113,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes2, _ := c.CreateServiceBody(serviceBody)
+	catalogBytes2, _ := c.CreateService(serviceBody)
 
 	var catalogItem2 CatalogItemInit
 	json.Unmarshal(catalogBytes2, &catalogItem2)
