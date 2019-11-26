@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
-
-	apigw "github.com/aws/aws-sdk-go/service/apigateway"
 )
 
 //CatalogPropertyValue -
@@ -99,32 +97,54 @@ type CatalogItem struct {
 	// categories
 }
 
+// APIServer -
+type APIServer struct {
+	Name  string `json:"name"`
+	Title string `json:"title"`
+	// Tags       map[string]interface{} `json:"tags"`		// todo when server ready for key/val pairs
+	Tags       []string               `json:"tags"`
+	Attributes map[string]interface{} `json:"attributes"`
+	Spec       map[string]interface{} `json:"spec"`
+}
+
+// Spec -
+type Spec struct {
+	Description string `json:"description"`
+}
+
 const (
 	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 )
 
-// CreateCatalogItemBodyForAdd -
-func (c *Client) CreateCatalogItemBodyForAdd(restAPIID, stageName string, restAPI *apigw.RestApi, exportOut *apigw.GetExportOutput, tags map[string]interface{}) ([]byte, error) {
-	bodyForAdd := c.buildCatalogItemBody(restAPIID, stageName, restAPI, exportOut, tags)
+// CreateServiceBody -
+func (c *Client) CreateServiceBody(serviceBody ServiceBody) ([]byte, error) {
+	if strings.ToLower(c.cfg.GetAgentModeString()) == "connected" {
+		return createAPIServerBody(c, serviceBody)
+	}
+	return createCatalogBody(c, serviceBody)
+
+}
+
+func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               bodyForAdd.NameToPush,
-		OwningTeamID:       bodyForAdd.TeamID,
-		Description:        bodyForAdd.Description,
+		Name:               serviceBody.NameToPush,
+		OwningTeamID:       serviceBody.TeamID,
+		Description:        serviceBody.Description,
 		Properties: []CatalogProperty{
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
-					AuthPolicy: bodyForAdd.AuthPolicy,
-					URL:        bodyForAdd.URL,
+					AuthPolicy: serviceBody.AuthPolicy,
+					URL:        serviceBody.URL,
 				},
 			},
 		},
 
 		// todo
-		Tags:       c.MapToStringArray(bodyForAdd.Tags),
+		Tags:       c.MapToStringArray(serviceBody.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -136,16 +156,16 @@ func (c *Client) CreateCatalogItemBodyForAdd(restAPIID, stageName string, restAP
 			}},
 		},
 		Revision: CatalogItemInitRevision{
-			Version: bodyForAdd.Version,
+			Version: serviceBody.Version,
 			State:   "PUBLISHED",
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
-					Value: json.RawMessage(string(bodyForAdd.Documentation)),
+					Value: json.RawMessage(string(serviceBody.Documentation)),
 				},
 				{
 					Key:   "swagger",
-					Value: json.RawMessage(bodyForAdd.Swagger),
+					Value: json.RawMessage(serviceBody.Swagger),
 				},
 			},
 		},
@@ -154,21 +174,46 @@ func (c *Client) CreateCatalogItemBodyForAdd(restAPIID, stageName string, restAP
 	return json.Marshal(newCatalogItem)
 }
 
+func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
+	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
+	attributes := make(map[string]interface{})
+	for key, val := range serviceBody.Tags {
+		v := val.(*string)
+		attributes[key] = *v
+	}
+
+	// spec needs to adhere to environment schema
+	spec := make(map[string]interface{})
+	spec["description"] = serviceBody.Description
+
+	// todo temp until api fixed
+	newtags := c.MapToStringArray(serviceBody.Tags)
+
+	apiServerService := APIServer{
+		Name:       strings.ToLower(serviceBody.APIName), // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
+		Title:      serviceBody.NameToPush,
+		Attributes: attributes,
+		Spec:       spec,
+		Tags:       newtags,
+	}
+
+	return json.Marshal(apiServerService)
+}
+
 // CreateCatalogItemBodyForUpdate -
-func (c *Client) CreateCatalogItemBodyForUpdate(restAPIID, stageName string, restAPI *apigw.RestApi, tags map[string]interface{}) ([]byte, error) {
-	bodyForUpdate := c.buildCatalogItemBodyForUpdate(restAPIID, stageName, restAPI, tags)
+func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte, error) {
 	newCatalogItem := CatalogItem{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
 		DefinitionRevision: 1,
-		Name:               bodyForUpdate.NameToPush,
-		OwningTeamID:       bodyForUpdate.TeamID,
-		Description:        bodyForUpdate.Description,
-		Tags:               c.MapToStringArray(bodyForUpdate.Tags),
+		Name:               serviceBody.NameToPush,
+		OwningTeamID:       serviceBody.TeamID,
+		Description:        serviceBody.Description,
+		Tags:               c.MapToStringArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{
-			Version: bodyForUpdate.Version,
+			Version: serviceBody.Version,
 			State:   "PUBLISHED",
 		},
 	}
@@ -176,16 +221,15 @@ func (c *Client) CreateCatalogItemBodyForUpdate(restAPIID, stageName string, res
 	return json.Marshal(newCatalogItem)
 }
 
-// ProcessCatalogItem - Used for both Adding and Updating catalog item.
+// ProcessService - Used for both Adding and Updating catalog item.
 // The Method will either be POST (add) or PUT (update)
-func (c *Client) ProcessCatalogItem(method, apicURL string, catalogBuffer []byte) (string, error) {
-	catalogItem := c.buildCatalogItem(method, apicURL, catalogBuffer)
+func (c *Client) ProcessService(service Service) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	return c.DeployAPI("POST", catalogItem.Buffer, catalogItem.AgentMode, catalogItem.URL)
+	return c.DeployAPI(service.Method, service.Buffer, service.AgentMode, service.URL)
 }
 
 func isUnitTesting() bool {

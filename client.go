@@ -1,50 +1,48 @@
 package apic
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"github.com/aws/aws-sdk-go/aws"
-	apigw "github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
 
 //CatalogCreator - interface
 type CatalogCreator interface {
-	CreateCatalogItemBody(bodyForAdd CatalogItemBodyParam) ([]byte, error)
-	ProcessCatalogItem(catalogItem CatalogItemParam) (string, error)
-	CreateAPIServerBodyForAdd(apiID, apiName, stageName string, tags map[string]interface{}) ([]byte, error)
-	AddAPIServer(apiServerBuffer []byte, agentMode corecfg.AgentMode, apiServerEnv string) (string, error)
+	CreateServiceBody(serviceBody ServiceBody) ([]byte, error)
+	ProcessService(service Service) (string, error)
 	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
-	SetHeader(method, url string, body io.Reader) (*http.Request, error)
 }
 
-//CatalogItemBodyParam -
-type CatalogItemBodyParam struct {
-	NameToPush    string
+//ServiceBody -
+type ServiceBody struct {
+	NameToPush    string `json:",omitempty"`
+	APIName       string `json:",omitempty"`
 	URL           string `json:",omitempty"`
-	TeamID        string
-	Description   string
-	Version       string
+	TeamID        string `json:",omitempty"`
+	Description   string `json:",omitempty"`
+	Version       string `json:",omitempty"`
 	AuthPolicy    string `json:",omitempty"`
 	Swagger       []byte `json:",omitempty"`
 	Documentation []byte `json:",omitempty"`
 	Tags          map[string]interface{}
 }
 
-//CatalogItemParam - Used for both adding and updating of catalog item
-type CatalogItemParam struct {
-	Method           string
-	URL              string
-	Buffer           []byte
-	AgentMode        corecfg.AgentMode
-	Image            string `json:",omitempty"`
-	ImageContentType string `json:",omitempty"`
+//Service - Used for both adding and updating of catalog item
+type Service struct {
+	Method           string            `json:",omitempty"`
+	URL              string            `json:",omitempty"`
+	Buffer           []byte            `json:",omitempty"`
+	AgentMode        corecfg.AgentMode `json:",omitempty"`
+	Image            string            `json:",omitempty"`
+	ImageContentType string            `json:",omitempty"`
 }
 
 // Client -
@@ -84,82 +82,72 @@ func (c *Client) MapToStringArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-var methods = [5]string{"get", "post", "put", "patch", "delete"} // RestAPI methods
+var httpClient = http.DefaultClient
+var log logrus.FieldLogger = logrus.WithField("package", "apic")
 
-const (
-	apikey      = "verify-api-key"
-	passthrough = "pass-through"
-)
+// SetLog sets the logger for the package.
+func SetLog(newLog logrus.FieldLogger) {
+	log = newLog
+	return
+}
 
-func (c *Client) determineAuthPolicyFromSwagger(swagger *[]byte) string {
-	// Traverse the swagger looking for any route that has security set
-	// return the security of the first route, if none- found return passthrough
-	var authPolicy = passthrough
+// DeployAPI -
+func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
+	request, err := setHeader(c, method, url, bytes.NewBuffer(apiServerBuffer))
+	if err != nil {
+		return "", err
+	}
 
-	gjson.GetBytes(*swagger, "paths").ForEach(func(_, pathObj gjson.Result) bool {
-		for _, method := range methods {
-			if pathObj.Get(fmt.Sprint(method, ".security.#.api_key")).Exists() {
-				authPolicy = apikey
-				return false
-			}
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
+		detail := make(map[string]*json.RawMessage)
+		json.NewDecoder(response.Body).Decode(&detail)
+		for k, v := range detail {
+			buffer, _ := v.MarshalJSON()
+			log.Debugf("HTTP response key %v: %v", k, string(buffer))
 		}
-		return authPolicy == passthrough // Return from path loop anonymous func, true = go to next item
-	})
+		return "", errors.New(response.Status)
+	}
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
 
-	return authPolicy
+	return handleResponse(method, agentMode, body)
 }
 
-// build up struct for catalog item body
-func (c *Client) buildCatalogItemBody(restAPIID, stageName string, restAPI *apigw.RestApi, exportOut *apigw.GetExportOutput, tags map[string]interface{}) CatalogItemBodyParam {
-	// Build up catalog body
-	region := config.GetConfig().AWSConfig.GetRegion()
-	nameToPush := fmt.Sprintf("%v (Stage: %v)", aws.StringValue(restAPI.Name), stageName)
-	url := "https://" + restAPIID + ".execute-api." + region + ".amazonaws.com/" + stageName
-	teamID := config.GetConfig().CentralConfig.GetTeamID()
-	description := "API From AWS APIGateway (RestApiId: " + restAPIID + ", StageName: " + stageName + ")"
-	version := "1.0.0"
-	authPolicy := c.determineAuthPolicyFromSwagger(&exportOut.Body)
-	desc := gjson.Get(string(exportOut.Body), "info.description")
-	documentation := desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS APIGateway"
-	}
-	docBytes, _ := json.Marshal(documentation)
+func handleResponse(method string, agentMode corecfg.AgentMode, body []byte) (string, error) {
 
-	return CatalogItemBodyParam{
-		NameToPush:    nameToPush,
-		URL:           url,
-		TeamID:        teamID,
-		Description:   description,
-		Version:       version,
-		AuthPolicy:    authPolicy,
-		Swagger:       exportOut.Body,
-		Documentation: docBytes,
-		Tags:          tags,
+	itemID := ""
+
+	// Connected Mode
+	if agentMode == corecfg.Connected {
+		metadata := gjson.Get(string(body), "metadata").String()
+		if metadata != "" {
+			itemID = gjson.Get(string(metadata), "id").String()
+		}
+		// Disconnected Mode
+	} else {
+		itemID = gjson.Get(string(body), "id").String()
 	}
 
+	log.Debugf("HTTP response returning itemID: [%v]", itemID)
+	return itemID, nil
 }
 
-func (c *Client) buildCatalogItemBodyForUpdate(restAPIID, stageName string, restAPI *apigw.RestApi, tags map[string]interface{}) CatalogItemBodyParam {
-	nameToPush := fmt.Sprintf("%v (Stage: %v)", aws.StringValue(restAPI.Name), stageName)
-	teamID := config.GetConfig().CentralConfig.GetTeamID()
-	description := "API From AWS APIGateway Updated (RestApiId: " + restAPIID + ", StageName: " + stageName + ")"
-	version := "1.0.1"
-	return CatalogItemBodyParam{
-		NameToPush:  nameToPush,
-		Description: description,
-		TeamID:      teamID,
-		Version:     version,
-		Tags:        tags,
-	}
-}
+// SetHeader - set header
+func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, error) {
+	request, err := http.NewRequest(method, url, body)
+	var token string
 
-// build up struct for catalog item for add and update
-func (c *Client) buildCatalogItem(method, apicURL string, catalogBuffer []byte) CatalogItemParam {
-	return CatalogItemParam{
-		Method:    method,
-		URL:       apicURL,
-		Buffer:    catalogBuffer,
-		AgentMode: config.GetConfig().CentralConfig.GetAgentMode(),
+	if token, err = c.tokenRequester.GetToken(); err != nil {
+		return nil, err
 	}
+
+	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
+	request.Header.Add("Authorization", "Bearer "+token)
+	request.Header.Add("Content-Type", "application/json")
+	return request, nil
 }
