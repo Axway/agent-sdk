@@ -230,7 +230,7 @@ func (c *Client) ExecuteService(service Service) (string, error) {
 		return "12345678", nil
 	}
 
-	return c.DeployAPI(service.Method, service.Buffer, service.AgentMode, service.URL)
+	return c.DeployAPI(service)
 }
 
 func isUnitTesting() bool {

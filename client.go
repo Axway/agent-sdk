@@ -18,7 +18,7 @@ import (
 type CatalogCreator interface {
 	CreateService(serviceBody ServiceBody) ([]byte, error)
 	ExecuteService(service Service) (string, error)
-	DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error)
+	DeployAPI(service Service)
 }
 
 //ServiceBody -
@@ -93,8 +93,9 @@ func SetLog(newLog logrus.FieldLogger) {
 }
 
 // DeployAPI -
-func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode corecfg.AgentMode, url string) (string, error) {
-	request, err := setHeader(c, method, url, bytes.NewBuffer(apiServerBuffer))
+func (c *Client) DeployAPI(service Service) (string, error) {
+	request, err := setHeader(c, service.Method, service.URL, bytes.NewBuffer(service.Buffer))
+
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +117,7 @@ func (c *Client) DeployAPI(method string, apiServerBuffer []byte, agentMode core
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
-	return handleResponse(method, agentMode, body)
+	return handleResponse(service.Method, service.AgentMode, body)
 }
 
 func handleResponse(method string, agentMode corecfg.AgentMode, body []byte) (string, error) {
