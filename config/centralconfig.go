@@ -50,7 +50,7 @@ type CentralConfig interface {
 	GetTeamID() string
 	GetURL() string
 	GetCatalogItemsURL() string
-	GetCatalogItemImage(catalogItemID string) string
+	GetCatalogItemImageURL(catalogItemID string) string
 	GetAPIServerServicesURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
@@ -131,8 +131,8 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
-// GetCatalogItemImage - Returns the image based on catalogItemID
-func (c *CentralConfiguration) GetCatalogItemImage(catalogItemID string) string {
+// GetCatalogItemImageURL - Returns the image based on catalogItemID
+func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/image"
 }
 
