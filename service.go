@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 )
 
 //CatalogPropertyValue -
@@ -118,7 +120,7 @@ const (
 
 // CreateServiceBody -
 func (c *Client) CreateServiceBody(serviceBody ServiceBody) ([]byte, error) {
-	if strings.ToLower(c.cfg.GetAgentModeString()) == "connected" {
+	if serviceBody.AgentMode == config.Connected {
 		return createAPIServerBody(c, serviceBody)
 	}
 	return createCatalogBody(c, serviceBody)

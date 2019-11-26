@@ -33,6 +33,7 @@ type ServiceBody struct {
 	Swagger       []byte `json:",omitempty"`
 	Documentation []byte `json:",omitempty"`
 	Tags          map[string]interface{}
+	AgentMode     corecfg.AgentMode `json:",omitempty"`
 }
 
 //Service - Used for both adding and updating of catalog item
