@@ -127,7 +127,6 @@ func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
 		return createAPIServerBody(c, serviceBody)
 	}
 	return createCatalogBody(c, serviceBody)
-
 }
 
 func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {

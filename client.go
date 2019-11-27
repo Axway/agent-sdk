@@ -20,7 +20,8 @@ const (
 	Passthrough = "pass-through"
 )
 
-var ValidPolicies = []string{Apikey, Passthrough} // add to this list as more policies are supported
+// ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
+var ValidPolicies = []string{Apikey, Passthrough}
 
 //CatalogCreator - interface
 type CatalogCreator interface {
