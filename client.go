@@ -124,10 +124,10 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
-	return handleResponse(service.Method, service.AgentMode, body)
+	return handleResponse(service.AgentMode, body)
 }
 
-func handleResponse(method string, agentMode corecfg.AgentMode, body []byte) (string, error) {
+func handleResponse(agentMode corecfg.AgentMode, body []byte) (string, error) {
 
 	itemID := ""
 

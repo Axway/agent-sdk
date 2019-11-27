@@ -147,7 +147,6 @@ func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			},
 		},
 
-		// todo
 		Tags:       c.MapToStringArray(serviceBody.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
@@ -199,7 +198,6 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	spec := make(map[string]interface{})
 	spec["description"] = serviceBody.Description
 
-	// todo temp until api fixed
 	newtags := c.MapToStringArray(serviceBody.Tags)
 
 	apiServerService := APIServer{
