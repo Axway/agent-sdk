@@ -14,6 +14,14 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// consts for auth policy types
+const (
+	Apikey      = "verify-api-key"
+	Passthrough = "pass-through"
+)
+
+var ValidPolicies = []string{Apikey, Passthrough} // add to this list as more policies are supported
+
 //CatalogCreator - interface
 type CatalogCreator interface {
 	CreateService(serviceBody ServiceBody) ([]byte, error)

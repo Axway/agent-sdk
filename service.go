@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -119,6 +120,9 @@ const (
 
 // CreateService -
 func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
+	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
+		return nil, fmt.Errorf("Unsuppored security policy '%v'. ", serviceBody.AuthPolicy)
+	}
 	if serviceBody.AgentMode == config.Connected {
 		return createAPIServerBody(c, serviceBody)
 	}
@@ -173,6 +177,15 @@ func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	}
 
 	return json.Marshal(newCatalogItem)
+}
+
+func isValidAuthPolicy(auth string) bool {
+	for _, item := range ValidPolicies {
+		if item == auth {
+			return true
+		}
+	}
+	return false
 }
 
 func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
