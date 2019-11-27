@@ -83,7 +83,6 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	} else {
 		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
-		c.AddStringProperty("central.apiServerUrl", "apiServerUrl", "", "The URL that the API Server is listening on")
 		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
 		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
