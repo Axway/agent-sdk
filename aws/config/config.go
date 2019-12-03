@@ -13,19 +13,19 @@ type AWSConfig interface {
 	GetRegion() string
 	GetQueueName() string
 	GetLogGroupArn() string
-	GetStageTags() string
+	GetDiscoveryTags() string
 	GetAuthConfig() AWSAuthConfig
 	Validate() error
 }
 
 // AWSConfiguration - AWS Configuration
 type AWSConfiguration struct {
-	PollInterval time.Duration
-	Region       string        `config:"region"`
-	QueueName    string        `config:"queueName"`
-	LogGroupArn  string        `config:"logGroupArn"`
-	StageTags    string        `config:"stageTags"`
-	Auth         AWSAuthConfig `config:"auth"`
+	PollInterval  time.Duration
+	Region        string        `config:"region"`
+	QueueName     string        `config:"queueName"`
+	LogGroupArn   string        `config:"logGroupArn"`
+	DiscoveryTags string        `config:"discoveryTags"`
+	Auth          AWSAuthConfig `config:"auth"`
 }
 
 // NewAWSConfig - Creates the default aws config
@@ -83,9 +83,9 @@ func (a *AWSConfiguration) GetLogGroupArn() string {
 	return a.LogGroupArn
 }
 
-// GetStageTags - Returns the stage tags
-func (a *AWSConfiguration) GetStageTags() string {
-	return a.StageTags
+// GetDiscoveryTags - Returns the discovery tags
+func (a *AWSConfiguration) GetDiscoveryTags() string {
+	return a.DiscoveryTags
 }
 
 // GetAuthConfig - Returns the Auth Config

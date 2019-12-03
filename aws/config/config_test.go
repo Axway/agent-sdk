@@ -60,5 +60,5 @@ func TestAWSConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, secretKey, cfg.GetAuthConfig().GetSecretKey())
 	assert.Equal(t, "", cfg.GetLogGroupArn())
-	assert.Equal(t, "", cfg.GetStageTags())
+	assert.Equal(t, "", cfg.GetDiscoveryTags())
 }
