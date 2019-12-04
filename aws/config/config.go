@@ -14,6 +14,7 @@ type AWSConfig interface {
 	GetQueueName() string
 	GetLogGroupArn() string
 	GetDiscoveryTags() string
+	ShouldPushTags() bool
 	GetAuthConfig() AWSAuthConfig
 	Validate() error
 }
@@ -25,6 +26,7 @@ type AWSConfiguration struct {
 	QueueName     string        `config:"queueName"`
 	LogGroupArn   string        `config:"logGroupArn"`
 	DiscoveryTags string        `config:"discoveryTags"`
+	PushTags      bool          `config:"pushTags"`
 	Auth          AWSAuthConfig `config:"auth"`
 }
 
@@ -86,6 +88,11 @@ func (a *AWSConfiguration) GetLogGroupArn() string {
 // GetDiscoveryTags - Returns the discovery tags
 func (a *AWSConfiguration) GetDiscoveryTags() string {
 	return a.DiscoveryTags
+}
+
+// ShouldPushTags - should the tags be pushed?
+func (a *AWSConfiguration) ShouldPushTags() bool {
+	return a.PushTags
 }
 
 // GetAuthConfig - Returns the Auth Config
