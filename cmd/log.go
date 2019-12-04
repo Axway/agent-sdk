@@ -71,7 +71,7 @@ func createFileWriter(logPath, agentName string) io.Writer {
 	if err != nil {
 		panic(err.Error())
 	}
-	logFile, err := os.OpenFile(logPath+"/"+agentName+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile(logPath+"/"+agentName+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		panic(err.Error())
 	}
