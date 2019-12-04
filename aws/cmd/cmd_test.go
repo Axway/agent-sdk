@@ -30,7 +30,7 @@ func assertStringCmdFlag(t *testing.T, cmd corecmd.AgentRootCmd, propertyName, f
 
 func assertBoolCmdFlag(t *testing.T, cmd corecmd.AgentRootCmd, propertyName, flagName string, defaultVal bool, description string) {
 	assertCmdFlag(t, cmd, flagName, "bool", description)
-	assert.Equal(t, defaultVal, viper.GetString(propertyName))
+	assert.Equal(t, defaultVal, viper.GetBool(propertyName))
 }
 
 func assertDurationCmdFlag(t *testing.T, cmd corecmd.AgentRootCmd, propertyName, flagName string, defaultVal time.Duration, description string) {
