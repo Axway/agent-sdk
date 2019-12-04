@@ -19,6 +19,7 @@ func AddAWSProperties(rootCmd corecmd.AgentRootCmd) {
 	if rootCmd.GetAgentType() == corecfg.DiscoveryAgent {
 		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS APIGW Access logs")
 		rootCmd.AddStringProperty("aws.discoveryTags", "awsDiscoveryTags", "PublishToCentral", "Tags on AWS APIGW stages that will be discovered by the agent")
+		rootCmd.AddBoolProperty("aws.pushTags", "awsPushTags", false, "Push the Tags on AWS APIGW stages to API Central")
 	}
 }
 
@@ -37,6 +38,7 @@ func ParseAWSConfig(rootCmd corecmd.AgentRootCmd) (awsconfig.AWSConfig, error) {
 	if rootCmd.GetAgentType() == corecfg.DiscoveryAgent {
 		cfg.LogGroupArn = rootCmd.StringPropertyValue("aws.logGroupArn")
 		cfg.DiscoveryTags = rootCmd.StringPropertyValue("aws.discoveryTags")
+		cfg.PushTags = rootCmd.BoolPropertyValue("aws.pushTags")
 	}
 
 	if err := cfg.Validate(); err != nil {
