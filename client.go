@@ -123,6 +123,9 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 	}
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
 
 	return handleResponse(service.AgentMode, body)
 }
