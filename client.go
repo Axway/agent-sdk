@@ -165,7 +165,7 @@ func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, er
 }
 
 // QueryApi -
-func (c *Client) QueryApi(apiName string) string {
+func (c *Client) QueryAPI(apiName string) string {
 	var token string
 	request, err := http.NewRequest("GET", config.GetConfig().CentralConfig.GetAPIServerServiceByEnvironmentURL()+"/"+apiName, nil)
 
