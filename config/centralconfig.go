@@ -52,6 +52,9 @@ type CentralConfig interface {
 	GetCatalogItemsURL() string
 	GetCatalogItemImageURL(catalogItemID string) string
 	GetAPIServerServicesURL() string
+	GetAPIServerServicesRevisionsURL() string
+	GetAPIServerServicesInstancesURL() string
+	GetAPIServerServiceByEnvironmentURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 }
@@ -138,6 +141,21 @@ func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) stri
 
 // GetAPIServerServicesURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetAPIServerServicesURL() string {
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
+}
+
+// GetAPIServerServicesRevisionsURL - Returns the APIServer URL for services API revisions
+func (c *CentralConfiguration) GetAPIServerServicesRevisionsURL() string {
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservicerevisions"
+}
+
+// GetAPIServerServicesInstancesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiserviceinstances"
+}
+
+// GetAPIServerServiceByEnvironmentURL - Returns the APIServer URL for an api service by environment
+func (c *CentralConfiguration) GetAPIServerServiceByEnvironmentURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
 }
 
