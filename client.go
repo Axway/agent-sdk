@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -164,16 +163,16 @@ func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, er
 	return request, nil
 }
 
-// QueryApi -
+// QueryAPI -
 func (c *Client) QueryAPI(apiName string) string {
 	var token string
-	request, err := http.NewRequest("GET", config.GetConfig().CentralConfig.GetAPIServerServiceByEnvironmentURL()+"/"+apiName, nil)
+	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
 
 	if token, err = c.tokenRequester.GetToken(); err != nil {
 		log.Error("Could not get token")
 	}
 
-	request.Header.Add("X-Axway-Tenant-Id", config.GetConfig().CentralConfig.GetTenantID())
+	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 

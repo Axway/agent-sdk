@@ -120,8 +120,8 @@ type APIServer struct {
 	Spec       interface{}            `json:"spec"`
 }
 
-// APIServerSpec -
-type APIServerSpec struct {
+// APIServiceSpec -
+type APIServiceSpec struct {
 	Description string `json:"description"`
 }
 
@@ -237,7 +237,7 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 
 	switch serviceBody.ServiceExecution {
 	case int(addAPIServerSpec):
-		spec = APIServerSpec{
+		spec = APIServiceSpec{
 			Description: serviceBody.Description,
 		}
 	case int(addAPIServerRevisionSpec):
