@@ -2,11 +2,22 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"github.com/tidwall/gjson"
+)
+
+type serviceExecution int
+
+const (
+	addAPIServerSpec serviceExecution = iota + 1
+	addAPIServerRevisionSpec
+	addAPIServerInstanceSpec
+	addCatalog
 )
 
 //CatalogPropertyValue -
@@ -106,12 +117,37 @@ type APIServer struct {
 	Title      string                 `json:"title"`
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
-	Spec       map[string]interface{} `json:"spec"`
+	Spec       interface{}            `json:"spec"`
 }
 
-// Spec -
-type Spec struct {
+// APIServiceSpec -
+type APIServiceSpec struct {
 	Description string `json:"description"`
+}
+
+// APIServiceRevisionSpec -
+type APIServiceRevisionSpec struct {
+	APIServiceRef string             `json:"apiServiceRef"`
+	Definition    RevisionDefinition `json:"definition"`
+}
+
+// RevisionDefinition -
+type RevisionDefinition struct {
+	Type  string `json:"type,omitempty"`
+	Value []byte `json:"value,omitempty"`
+}
+
+// APIServerInstanceSpec -
+type APIServerInstanceSpec struct {
+	APIServiceRevisionRef string     `json:"apiServiceRevisionRef,omitempty"`
+	InstanceEndPoint      []EndPoint `json:"endpoint,omitempty"`
+}
+
+// EndPoint -
+type EndPoint struct {
+	Host     string `json:"host,omitempty"`
+	Port     int    `json:"port,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
 }
 
 const (
@@ -186,6 +222,7 @@ func isValidAuthPolicy(auth string) bool {
 	return false
 }
 
+// createAPIServerBody - This function is being used by both the api server creation and api server revision creation
 func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
 	attributes := make(map[string]interface{})
@@ -195,13 +232,46 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	}
 
 	// spec needs to adhere to environment schema
-	spec := make(map[string]interface{})
-	spec["description"] = serviceBody.Description
+	var spec interface{}
+	name := strings.ToLower(serviceBody.APIName) // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
+
+	switch serviceBody.ServiceExecution {
+	case int(addAPIServerSpec):
+		spec = APIServiceSpec{
+			Description: serviceBody.Description,
+		}
+	case int(addAPIServerRevisionSpec):
+		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
+		revisionDefinition := RevisionDefinition{
+			Type:  "swagger2",
+			Value: serviceBody.Swagger,
+		}
+		spec = APIServiceRevisionSpec{
+			APIServiceRef: strings.ToLower(serviceBody.APIName),
+			Definition:    revisionDefinition,
+		}
+	case int(addAPIServerInstanceSpec):
+		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
+		host := gjson.Get(string(serviceBody.Swagger), "host").String()
+		protocol := gjson.Get(string(serviceBody.Swagger), "schemes").String()
+
+		endPoint := EndPoint{
+			Host:     host,
+			Port:     443, // TODO : this is a hard coded value as of now.  Port is not showing up in swagger at the time of check in
+			Protocol: protocol,
+		}
+		spec = APIServerInstanceSpec{
+			APIServiceRevisionRef: name,
+			InstanceEndPoint:      []EndPoint{endPoint},
+		}
+	default:
+		return nil, errors.New("Error getting execution service -- not set")
+	}
 
 	newtags := c.MapToStringArray(serviceBody.Tags)
 
 	apiServerService := APIServer{
-		Name:       strings.ToLower(serviceBody.APIName), // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
+		Name:       name,
 		Title:      serviceBody.NameToPush,
 		Attributes: attributes,
 		Spec:       spec,
@@ -214,8 +284,9 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 // CreateCatalogItemBodyForUpdate -
 func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte, error) {
 	newCatalogItem := CatalogItem{
-		DefinitionType:     "API",
-		DefinitionSubType:  "swaggerv2",
+		DefinitionType:    "API",
+		DefinitionSubType: "swaggerv2",
+
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,

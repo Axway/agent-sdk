@@ -32,17 +32,19 @@ type CatalogCreator interface {
 
 //ServiceBody -
 type ServiceBody struct {
-	NameToPush    string `json:",omitempty"`
-	APIName       string `json:",omitempty"`
-	URL           string `json:",omitempty"`
-	TeamID        string `json:",omitempty"`
-	Description   string `json:",omitempty"`
-	Version       string `json:",omitempty"`
-	AuthPolicy    string `json:",omitempty"`
-	Swagger       []byte `json:",omitempty"`
-	Documentation []byte `json:",omitempty"`
-	Tags          map[string]interface{}
-	AgentMode     corecfg.AgentMode `json:",omitempty"`
+	NameToPush       string `json:",omitempty"`
+	APIName          string `json:",omitempty"`
+	URL              string `json:",omitempty"`
+	Stage            string `json:",omitempty"`
+	TeamID           string `json:",omitempty"`
+	Description      string `json:",omitempty"`
+	Version          string `json:",omitempty"`
+	AuthPolicy       string `json:",omitempty"`
+	Swagger          []byte `json:",omitempty"`
+	Documentation    []byte `json:",omitempty"`
+	Tags             map[string]interface{}
+	AgentMode        corecfg.AgentMode `json:",omitempty"`
+	ServiceExecution int               `json:"omitempty"`
 }
 
 //Service - Used for both adding and updating of catalog item
@@ -162,4 +164,36 @@ func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, er
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 	return request, nil
+}
+
+// QueryAPI -
+func (c *Client) QueryAPI(apiName string) string {
+	var token string
+	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
+
+	if token, err = c.tokenRequester.GetToken(); err != nil {
+		log.Error("Could not get token")
+	}
+
+	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
+	request.Header.Add("Authorization", "Bearer "+token)
+	request.Header.Add("Content-Type", "application/json")
+
+	response, _ := http.DefaultClient.Do(request)
+	if response.StatusCode == http.StatusNotFound {
+		log.Debug("New api found to deploy")
+		return apiName
+	}
+
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Error("Could not validate if api " + apiName + " exists.")
+	}
+
+	metadata := gjson.Get(string(body), "metadata").String()
+	if metadata != "" {
+		return apiName + gjson.Get(string(metadata), "id").String()
+	}
+	return apiName
 }
