@@ -54,7 +54,6 @@ type CentralConfig interface {
 	GetAPIServerServicesURL() string
 	GetAPIServerServicesRevisionsURL() string
 	GetAPIServerServicesInstancesURL() string
-	GetAPIServerServiceByEnvironmentURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 }
@@ -139,24 +138,24 @@ func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) stri
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/image"
 }
 
+// getAPIServerURL - Returns the base path for the API server
+func (c *CentralConfiguration) getAPIServerURL() string {
+	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
+}
+
 // GetAPIServerServicesURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetAPIServerServicesURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiservices"
 }
 
 // GetAPIServerServicesRevisionsURL - Returns the APIServer URL for services API revisions
 func (c *CentralConfiguration) GetAPIServerServicesRevisionsURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservicerevisions"
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiservicerevisions"
 }
 
 // GetAPIServerServicesInstancesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiserviceinstances"
-}
-
-// GetAPIServerServiceByEnvironmentURL - Returns the APIServer URL for an api service by environment
-func (c *CentralConfiguration) GetAPIServerServiceByEnvironmentURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/" + c.APIServerEnvironment + "/apiservices"
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiserviceinstances"
 }
 
 // GetAuthConfig - Returns the Auth Config
