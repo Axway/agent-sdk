@@ -250,7 +250,6 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			APIServiceRef: strings.ToLower(serviceBody.APIName),
 			Definition:    revisionDefinition,
 		}
-		// NOTE : The end points will come from SWAGGER?
 	case int(addAPIServerInstanceSpec):
 		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
 		host := gjson.Get(string(serviceBody.Swagger), "host").String()
@@ -258,7 +257,7 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 
 		endPoint := EndPoint{
 			Host:     host,
-			Port:     443, // NOTE : Dont see port info
+			Port:     443, // TODO : this is a hard coded value as of now.  Port is not showing up in swagger at the time of check in
 			Protocol: protocol,
 		}
 		spec = APIServerInstanceSpec{
