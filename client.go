@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/api"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -57,6 +58,12 @@ type Service struct {
 type Client struct {
 	tokenRequester *apicauth.PlatformTokenGetter
 	cfg            corecfg.CentralConfig
+	apiClient      *coreapi.Client //
+}
+
+// todo temp
+func (c *Client) getHttpClient() *http.Client {
+	return c.apiClient.GetHttpClient()
 }
 
 // New -
@@ -72,6 +79,7 @@ func New(cfg corecfg.CentralConfig) *Client {
 	return &Client{
 		cfg:            cfg,
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
+		apiClient:      coreapi.NewClient(cfg.GetTLSConfig()),
 	}
 }
 
@@ -90,7 +98,6 @@ func (c *Client) MapToStringArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-var httpClient = http.DefaultClient
 var log logrus.FieldLogger = logrus.WithField("package", "apic")
 
 // SetLog sets the logger for the package.
@@ -107,7 +114,7 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 		return "", err
 	}
 
-	response, err := httpClient.Do(request)
+	response, err := c.getHttpClient().Do(request)
 	if err != nil {
 		return "", err
 	}
