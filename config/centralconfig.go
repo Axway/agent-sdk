@@ -54,7 +54,7 @@ type CentralConfig interface {
 	GetAPIServerServicesURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
-	GetTSLConfig() TLSConfig
+	GetTLSConfig() TLSConfig
 }
 
 // CentralConfiguration - Structure to hold the central config

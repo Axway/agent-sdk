@@ -44,9 +44,9 @@ var tlsCipherSuites = map[string]TLSCipherSuite{
 	"RSA-AES-256-GCM-SHA384": TLSCipherSuite(tls.TLS_RSA_WITH_AES_256_GCM_SHA384),
 
 	// TLS 1.3
-	"TLS_AES_128_GCM_SHA256":       TLSCipherSuite(tls.TLS_AES_128_GCM_SHA256),
-	"TLS_AES_256_GCM_SHA384":       TLSCipherSuite(tls.TLS_AES_256_GCM_SHA384),
-	"TLS_CHACHA20_POLY1305_SHA256": TLSCipherSuite(tls.TLS_CHACHA20_POLY1305_SHA256),
+	"TLS-AES-128-GCM-SHA256":       TLSCipherSuite(tls.TLS_AES_128_GCM_SHA256),
+	"TLS-AES-256-GCM-SHA384":       TLSCipherSuite(tls.TLS_AES_256_GCM_SHA384),
+	"TLS-CHACHA20-POLY1305-SHA256": TLSCipherSuite(tls.TLS_CHACHA20_POLY1305_SHA256),
 }
 
 // TLSDefaultCipherSuites - list of suites to use by default
@@ -97,9 +97,6 @@ var tlsVersions = map[string]TLSVersion{
 	"TLS1.3": tls.VersionTLS13,
 }
 
-// TLSDefaultVersionString - default value
-var TLSDefaultVersionString = TLSVersionAsString(tls.VersionTLS12)
-
 var tlsVersionsInverse = make(map[TLSVersion]string, len(tlsVersions))
 
 // TLSVersionAsString - get the version string
@@ -108,6 +105,11 @@ func TLSVersionAsString(cs TLSVersion) string {
 		return s
 	}
 	return "unknown"
+}
+
+// TLSDefaultVersionString - default value
+func TLSDefaultVersionString() string {
+	return TLSVersionAsString(tls.VersionTLS12)
 }
 
 // TLSVersionAsValue - get the version value
@@ -139,6 +141,7 @@ type TLSConfig interface {
 	GetCipherSuites() []TLSCipherSuite
 	GetMinVersion() TLSVersion
 	GetMaxVersion() TLSVersion
+	BuildTLSConfig() *tls.Config
 	Validate()
 }
 
@@ -173,6 +176,25 @@ func newTLSConfig() TLSConfig {
 	return &TLSConfiguration{}
 }
 
+// BuildTLSConfig takes the TLSConfiguration and transform it into a `tls.Config`.
+func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
+	if c == nil {
+		// use default TLS settings, if config is empty.
+		return &tls.Config{}
+	}
+
+	ciphers := make([]uint16, len(c.CipherSuites))
+	for i, num := range c.CipherSuites {
+		ciphers[i] = uint16(num)
+	}
+	return &tls.Config{
+		MinVersion:         uint16(c.MinVersion),
+		MaxVersion:         uint16(c.MaxVersion),
+		InsecureSkipVerify: c.InsecureSkipVerify,
+		CipherSuites:       ciphers,
+	}
+}
+
 // NewCipherArray - create an array of TLSCipherSuite
 func NewCipherArray(ciphers string) []TLSCipherSuite {
 	cipherArray := strings.Split(ciphers, ",")
@@ -185,65 +207,65 @@ func NewCipherArray(ciphers string) []TLSCipherSuite {
 }
 
 // GetNextProtos -
-func (tls *TLSConfiguration) GetNextProtos() []string {
+func (c *TLSConfiguration) GetNextProtos() []string {
 	return nil
 }
 
 // IsInsecureSkipVerify -
-func (tls *TLSConfiguration) IsInsecureSkipVerify() bool {
-	return tls.InsecureSkipVerify
+func (c *TLSConfiguration) IsInsecureSkipVerify() bool {
+	return c.InsecureSkipVerify
 }
 
 // GetCipherSuites -
-func (tls *TLSConfiguration) GetCipherSuites() []TLSCipherSuite {
-	return tls.CipherSuites
+func (c *TLSConfiguration) GetCipherSuites() []TLSCipherSuite {
+	return c.CipherSuites
 }
 
 // GetMinVersion -
-func (tls *TLSConfiguration) GetMinVersion() TLSVersion {
-	return tls.MinVersion
+func (c *TLSConfiguration) GetMinVersion() TLSVersion {
+	return c.MinVersion
 }
 
 // GetMaxVersion -
-func (tls *TLSConfiguration) GetMaxVersion() TLSVersion {
-	return tls.MaxVersion
+func (c *TLSConfiguration) GetMaxVersion() TLSVersion {
+	return c.MaxVersion
 }
 
 // Validate -
-func (tls *TLSConfiguration) Validate() {
-	if tls.MinVersion != 0 && !tls.isValidMinVersion() {
+func (c *TLSConfiguration) Validate() {
+	if c.MinVersion != 0 && !c.isValidMinVersion() {
 		exception.Throw(errors.New("Error ssl.minVersion not valid in config"))
 	}
 
-	if tls.MaxVersion != 0 && !tls.isValidMaxVersion() {
+	if c.MaxVersion != 0 && !c.isValidMaxVersion() {
 		exception.Throw(errors.New("Error ssl.maxVersion not valid in config"))
 	}
 
-	if len(tls.CipherSuites) != 0 && !tls.isValidCiphers() {
+	if len(c.CipherSuites) != 0 && !c.isValidCiphers() {
 		exception.Throw(errors.New("Error ssl.cipherSuites not valid in config"))
 	}
 }
 
-func (tls *TLSConfiguration) isValidMinVersion() bool {
-	if tls.MinVersion == 0 {
+func (c *TLSConfiguration) isValidMinVersion() bool {
+	if c.MinVersion == 0 {
 		return true
 	}
 
-	_, ok := tlsVersionsInverse[tls.MinVersion]
+	_, ok := tlsVersionsInverse[c.MinVersion]
 	return ok
 }
 
-func (tls *TLSConfiguration) isValidMaxVersion() bool {
-	if tls.MaxVersion == 0 {
+func (c *TLSConfiguration) isValidMaxVersion() bool {
+	if c.MaxVersion == 0 {
 		return true
 	}
 
-	_, ok := tlsVersionsInverse[tls.MaxVersion]
+	_, ok := tlsVersionsInverse[c.MaxVersion]
 	return ok
 }
 
-func (tls *TLSConfiguration) isValidCiphers() bool {
-	for _, v := range tls.CipherSuites {
+func (c *TLSConfiguration) isValidCiphers() bool {
+	for _, v := range c.CipherSuites {
 		if _, ok := tlsCipherSuitesInverse[v]; !ok {
 			return false
 		}
