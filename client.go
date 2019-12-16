@@ -61,11 +61,6 @@ type Client struct {
 	apiClient      *coreapi.Client //
 }
 
-// todo temp
-func (c *Client) getHttpClient() *http.Client {
-	return c.apiClient.GetHttpClient()
-}
-
 // New -
 func New(cfg corecfg.CentralConfig) *Client {
 	tokenURL := cfg.GetAuthConfig().GetTokenURL()
@@ -114,7 +109,7 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 		return "", err
 	}
 
-	response, err := c.getHttpClient().Do(request)
+	response, err := c.apiClient.GetHTTPClient().Do(request)
 	if err != nil {
 		return "", err
 	}
