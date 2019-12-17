@@ -3,6 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
