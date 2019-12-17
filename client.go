@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/api"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/api"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
