@@ -80,7 +80,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 	// ssl properties and command flags
 	c.AddStringProperty("central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
-	c.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", true, "Controls whether a client verifies the server's certificate chain and host name")
+	c.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
 	c.AddStringProperty("central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
 	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
@@ -161,7 +161,7 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 			Timeout:    c.DurationPropertyValue("central.auth.timeout"),
 		},
 		TLS: &corecfg.TLSConfiguration{
-			NextProtos:         []string{}, // todo c.StringPropertyValue("central.ssl.nextProtos")
+			NextProtos:         corecfg.StringAsStringArray(c.StringPropertyValue("central.ssl.nextProtos")),
 			InsecureSkipVerify: c.BoolPropertyValue("central.ssl.insecureSkipVerify"),
 			CipherSuites:       corecfg.NewCipherArray(c.StringPropertyValue("central.ssl.cipherSuites")),
 			MinVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.minVersion")),

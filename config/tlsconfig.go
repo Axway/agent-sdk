@@ -192,11 +192,16 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 		MaxVersion:         uint16(c.MaxVersion),
 		InsecureSkipVerify: c.InsecureSkipVerify,
 		CipherSuites:       ciphers,
+		NextProtos:         c.NextProtos,
 	}
 }
 
 // NewCipherArray - create an array of TLSCipherSuite
 func NewCipherArray(ciphers string) []TLSCipherSuite {
+	if len(ciphers) == 0 {
+		return nil
+	}
+
 	cipherArray := strings.Split(ciphers, ",")
 	result := make([]TLSCipherSuite, 0)
 	for _, v := range cipherArray {
@@ -206,9 +211,24 @@ func NewCipherArray(ciphers string) []TLSCipherSuite {
 	return result
 }
 
+// StringAsStringArray - create an array of from a string of comma-separated strings
+func StringAsStringArray(s string) []string {
+	if len(s) == 0 {
+		return nil
+	}
+
+	array := strings.Split(s, ",")
+	result := make([]string, 0)
+	for _, v := range array {
+		trimmedV := strings.TrimSpace(v)
+		result = append(result, trimmedV)
+	}
+	return result
+}
+
 // GetNextProtos -
 func (c *TLSConfiguration) GetNextProtos() []string {
-	return nil
+	return c.NextProtos
 }
 
 // IsInsecureSkipVerify -
