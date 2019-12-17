@@ -150,26 +150,26 @@ type TLSConfig interface {
 // the tls package will also not modify it.
 type TLSConfiguration struct {
 	// NextProtos is a list of supported application level protocols, in order of preference.
-	NextProtos []string
+	NextProtos []string `config:"nextProtos"`
 
 	// InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name.
 	// If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host
 	// name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.
 	// This should be used only for testing.
-	InsecureSkipVerify bool
+	InsecureSkipVerify bool `config:"insecureSkipVerify"`
 
 	// CipherSuites is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites
 	// is nil, a default list of secure cipher suites is used, with a preference order based on hardware
 	// performance. The default cipher suites might change over Go versions. Note that TLS 1.3
 	// ciphersuites are not configurable.
-	CipherSuites []TLSCipherSuite
+	CipherSuites []TLSCipherSuite `config:"cipherSuites"`
 
 	// MinVersion contains the minimum SSL/TLS version that is acceptable. If zero, then TLS 1.0 is taken as the minimum.
-	MinVersion TLSVersion
+	MinVersion TLSVersion `config:"minVersion"`
 
 	// MaxVersion contains the maximum SSL/TLS version that is acceptable. If zero, then the maximum
 	// version supported by this package is used, which is currently TLS 1.3.
-	MaxVersion TLSVersion
+	MaxVersion TLSVersion `config:"maxVersion"`
 }
 
 func newTLSConfig() TLSConfig {

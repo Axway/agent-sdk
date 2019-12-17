@@ -70,7 +70,7 @@ type CentralConfiguration struct {
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
 	Auth                 AuthConfig `config:"auth"`
-	TLS                  TLSConfig  `config:"tls"`
+	TLS                  TLSConfig  `config:"ssl"`
 }
 
 // NewCentralConfig - Creates the default central config
