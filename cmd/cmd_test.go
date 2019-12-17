@@ -31,6 +31,11 @@ func assertStringCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName,
 	assert.Equal(t, defaultVal, viper.GetString(propertyName))
 }
 
+func assertBooleanCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName string, defaultVal bool, description string) {
+	assertCmdFlag(t, cmd, flagName, "bool", description)
+	assert.Equal(t, defaultVal, viper.GetBool(propertyName))
+}
+
 func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName string, defaultVal time.Duration, description string) {
 	assertCmdFlag(t, cmd, flagName, "duration", description)
 	assert.Equal(t, defaultVal, viper.GetDuration(propertyName))
@@ -51,6 +56,11 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
+	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
@@ -64,6 +74,11 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
+	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Log yaml properties and command flags
 	assertStringCmdFlag(t, rootCmd, "log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
