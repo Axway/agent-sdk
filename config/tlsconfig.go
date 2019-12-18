@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/exception"
 )
 
@@ -206,6 +208,10 @@ func NewCipherArray(ciphers string) []TLSCipherSuite {
 	result := make([]TLSCipherSuite, 0)
 	for _, v := range cipherArray {
 		trimmedV := strings.TrimSpace(v)
+		s := cipherAsValue(trimmedV)
+		if s == 0 {
+			log.Errorf("Invalid cipher suite value found: %v", trimmedV)
+		}
 		result = append(result, cipherAsValue(trimmedV))
 	}
 	return result
