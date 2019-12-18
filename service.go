@@ -4,11 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/tidwall/gjson"
+)
+
+type actionType int
+
+const (
+	addAPI    actionType = iota
+	updateAPI            = iota
+	deleteAPI            = iota
 )
 
 type serviceExecution int
@@ -19,6 +27,33 @@ const (
 	addAPIServerInstanceSpec
 	addCatalog
 )
+
+// Methods
+const (
+	MethodGET     = "GET"
+	MethodPOST    = "POST"
+	MethodPUT     = "PUT"
+	MethodDELETE  = "DELETE"
+	MethodOPTIONS = "OPTIONS"
+)
+
+//ServiceBody -
+type ServiceBody struct {
+	NameToPush       string `json:",omitempty"`
+	APIName          string `json:",omitempty"`
+	RestAPIID        string `json:",omitempty"`
+	URL              string `json:",omitempty"`
+	Stage            string `json:",omitempty"`
+	TeamID           string `json:",omitempty"`
+	Description      string `json:",omitempty"`
+	Version          string `json:",omitempty"`
+	AuthPolicy       string `json:",omitempty"`
+	Swagger          []byte `json:",omitempty"`
+	Documentation    []byte `json:",omitempty"`
+	Tags             map[string]interface{}
+	AgentMode        corecfg.AgentMode `json:",omitempty"`
+	ServiceExecution int               `json:"omitempty"`
+}
 
 //CatalogPropertyValue -
 type CatalogPropertyValue struct {
@@ -153,6 +188,56 @@ type EndPoint struct {
 const (
 	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 )
+
+func (c *Client) deployService(serviceBody ServiceBody, method, url string) (string, error) {
+	buffer, err := c.CreateService(serviceBody)
+	if err != nil {
+		log.Error("Error creating service item: ", err)
+		return "", err
+	}
+
+	return c.DeployAPI(method, url, buffer)
+}
+
+// AddToAPICServer -
+func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
+
+	// Verify if the api already exists
+	apiName := c.QueryAPI(strings.ToLower(serviceBody.APIName))
+	serviceBody.APIName = apiName
+
+	// add api
+	serviceBody.ServiceExecution = int(addAPIServerSpec)
+	_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesURL())
+	if err != nil {
+		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+	}
+
+	// add api revision
+	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
+	_, err = c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesRevisionsURL())
+	if err != nil {
+		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+	}
+
+	// add api instance
+	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
+	_, err = c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesInstancesURL())
+	if err != nil {
+		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+	}
+
+}
+
+// AddToAPIC -
+func (c *Client) AddToAPIC(serviceBody ServiceBody) (string, error) {
+	return c.deployService(serviceBody, MethodPOST, c.cfg.GetCatalogItemsURL())
+}
+
+// UpdateToAPIC -
+func (c *Client) UpdateToAPIC(serviceBody ServiceBody, url string) (string, error) {
+	return c.deployService(serviceBody, MethodPUT, url)
+}
 
 // CreateService -
 func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
@@ -301,19 +386,4 @@ func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte
 	}
 
 	return json.Marshal(newCatalogItem)
-}
-
-// ExecuteService - Used for both Adding and Updating catalog item.
-// The Method will either be POST (add) or PUT (update)
-func (c *Client) ExecuteService(service Service) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
-
-	return c.DeployAPI(service)
-}
-
-func isUnitTesting() bool {
-	return strings.HasSuffix(os.Args[0], ".test")
 }

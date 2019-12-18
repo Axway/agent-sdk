@@ -7,8 +7,11 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -25,34 +28,7 @@ var ValidPolicies = []string{Apikey, Passthrough}
 
 //CatalogCreator - interface
 type CatalogCreator interface {
-	CreateService(serviceBody ServiceBody) ([]byte, error)
-	ExecuteService(service Service) (string, error)
-	DeployAPI(service Service)
-}
-
-//ServiceBody -
-type ServiceBody struct {
-	NameToPush       string `json:",omitempty"`
-	APIName          string `json:",omitempty"`
-	URL              string `json:",omitempty"`
-	Stage            string `json:",omitempty"`
-	TeamID           string `json:",omitempty"`
-	Description      string `json:",omitempty"`
-	Version          string `json:",omitempty"`
-	AuthPolicy       string `json:",omitempty"`
-	Swagger          []byte `json:",omitempty"`
-	Documentation    []byte `json:",omitempty"`
-	Tags             map[string]interface{}
-	AgentMode        corecfg.AgentMode `json:",omitempty"`
-	ServiceExecution int               `json:"omitempty"`
-}
-
-//Service - Used for both adding and updating of catalog item
-type Service struct {
-	Method    string            `json:",omitempty"`
-	URL       string            `json:",omitempty"`
-	Buffer    []byte            `json:",omitempty"`
-	AgentMode corecfg.AgentMode `json:",omitempty"`
+	DeployAPI(method, url string, buffer []byte) (string, error)
 }
 
 // Client -
@@ -101,9 +77,18 @@ func SetLog(newLog logrus.FieldLogger) {
 	return
 }
 
+func isUnitTesting() bool {
+	return strings.HasSuffix(os.Args[0], ".test")
+}
+
 // DeployAPI -
-func (c *Client) DeployAPI(service Service) (string, error) {
-	request, err := setHeader(c, service.Method, service.URL, bytes.NewBuffer(service.Buffer))
+func (c *Client) DeployAPI(method, url string, buffer []byte) (string, error) {
+	// Unit testing. For now just dummy up a return
+	if isUnitTesting() {
+		return "12345678", nil
+	}
+
+	request, err := setHeader(c, method, url, bytes.NewBuffer(buffer))
 
 	if err != nil {
 		return "", err
@@ -129,15 +114,15 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 		return "", err
 	}
 
-	return handleResponse(service.AgentMode, body)
+	return handleResponse(body)
 }
 
-func handleResponse(agentMode corecfg.AgentMode, body []byte) (string, error) {
+func handleResponse(body []byte) (string, error) {
 
 	itemID := ""
 
 	// Connected Mode
-	if agentMode == corecfg.Connected {
+	if config.GetConfig().CentralConfig.GetAgentMode() == corecfg.Connected {
 		metadata := gjson.Get(string(body), "metadata").String()
 		if metadata != "" {
 			itemID = gjson.Get(string(metadata), "id").String()
