@@ -151,9 +151,10 @@ func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, er
 	return request, nil
 }
 
-// QueryAPI -
-func (c *Client) QueryAPI(apiName string) string {
+// IsNewAPI -
+func (c *Client) IsNewAPI(serviceBody ServiceBody) bool {
 	var token string
+	apiName := strings.ToLower(serviceBody.APIName)
 	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
 
 	if token, err = c.tokenRequester.GetToken(); err != nil {
@@ -167,18 +168,7 @@ func (c *Client) QueryAPI(apiName string) string {
 	response, _ := http.DefaultClient.Do(request)
 	if response.StatusCode == http.StatusNotFound {
 		log.Debug("New api found to deploy")
-		return apiName
+		return true
 	}
-
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Error("Could not validate if api " + apiName + " exists.")
-	}
-
-	metadata := gjson.Get(string(body), "metadata").String()
-	if metadata != "" {
-		return apiName + gjson.Get(string(metadata), "id").String()
-	}
-	return apiName
+	return false
 }

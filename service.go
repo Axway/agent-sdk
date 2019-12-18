@@ -203,19 +203,18 @@ func (c *Client) deployService(serviceBody ServiceBody, method, url string) (str
 func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
 
 	// Verify if the api already exists
-	apiName := c.QueryAPI(strings.ToLower(serviceBody.APIName))
-	serviceBody.APIName = apiName
-
-	// add api
-	serviceBody.ServiceExecution = int(addAPIServerSpec)
-	_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesURL())
-	if err != nil {
-		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+	if c.IsNewAPI(serviceBody) {
+		// add api
+		serviceBody.ServiceExecution = int(addAPIServerSpec)
+		_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesURL())
+		if err != nil {
+			log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		}
 	}
 
 	// add api revision
 	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
-	_, err = c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesRevisionsURL())
+	_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
 		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
