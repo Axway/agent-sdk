@@ -56,7 +56,6 @@ type CentralConfig interface {
 	GetAPIServerServicesInstancesURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
-	GetTLSConfig() TLSConfig
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -72,7 +71,6 @@ type CentralConfiguration struct {
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
 	Auth                 AuthConfig `config:"auth"`
-	TLS                  TLSConfig  `config:"ssl"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -82,7 +80,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Mode:             Disconnected,
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
-		TLS:              newTLSConfig(),
 	}
 }
 
@@ -166,18 +163,12 @@ func (c *CentralConfiguration) GetAuthConfig() AuthConfig {
 	return c.Auth
 }
 
-// GetTLSConfig - Returns the TLS Config
-func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
-	return c.TLS
-}
-
 // Validate - Validates the config
 func (c *CentralConfiguration) Validate() (err error) {
 	exception.Block{
 		Try: func() {
 			c.validateConfig()
 			c.Auth.validate()
-			c.TLS.Validate()
 		},
 		Catch: func(e error) {
 			err = e
