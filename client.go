@@ -82,18 +82,23 @@ func isUnitTesting() bool {
 }
 
 // DeployAPI -
-func (c *Client) DeployAPI(service Service) (string, error) {
+func (c *Client) DeployAPI(method, url string, buffer []byte) (string, error) {
+	// Unit testing. For now just dummy up a return
+	if isUnitTesting() {
+		return "12345678", nil
+	}
+
 	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
 	}
 
 	request := coreapi.Request{
-		Method:      service.Method,
-		URL:         service.URL,
+		Method:      method,
+		URL:         url,
 		QueryParams: nil,
 		Headers:     headers,
-		Body:        service.Buffer,
+		Body:        buffer,
 	}
 	response, err := c.apiClient.Send(request)
 	if err != nil {
@@ -104,7 +109,7 @@ func (c *Client) DeployAPI(service Service) (string, error) {
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
 
-	return handleResponse(service.AgentMode, response.Body)
+	return handleResponse(response.Body)
 }
 
 type apiErrorResponse map[string][]apiError
