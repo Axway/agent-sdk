@@ -70,7 +70,7 @@ func (c *Client) getURLEncodedQueryParams(queryParams map[string]string) string 
 func (c *Client) prepareAPIRequest(request Request) (*http.Request, error) {
 	requestURL := request.URL
 	if len(request.QueryParams) != 0 {
-		requestURL = "?" + c.getURLEncodedQueryParams(request.QueryParams)
+		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
 	req, err := http.NewRequest(request.Method, requestURL, bytes.NewBuffer(request.Body))
 	if err != nil {
