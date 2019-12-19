@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
@@ -26,15 +27,6 @@ const (
 	addAPIServerRevisionSpec
 	addAPIServerInstanceSpec
 	addCatalog
-)
-
-// Methods
-const (
-	MethodGET     = "GET"
-	MethodPOST    = "POST"
-	MethodPUT     = "PUT"
-	MethodDELETE  = "DELETE"
-	MethodOPTIONS = "OPTIONS"
 )
 
 //ServiceBody -
@@ -206,7 +198,7 @@ func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
 	if c.IsNewAPI(serviceBody) {
 		// add api
 		serviceBody.ServiceExecution = int(addAPIServerSpec)
-		_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesURL())
+		_, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesURL())
 		if err != nil {
 			log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 		}
@@ -214,14 +206,14 @@ func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
 
 	// add api revision
 	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
-	_, err := c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesRevisionsURL())
+	_, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
 		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	// add api instance
 	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
-	_, err = c.deployService(serviceBody, MethodPOST, c.cfg.GetAPIServerServicesInstancesURL())
+	_, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
 	if err != nil {
 		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
@@ -230,12 +222,12 @@ func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
 
 // AddToAPIC -
 func (c *Client) AddToAPIC(serviceBody ServiceBody) (string, error) {
-	return c.deployService(serviceBody, MethodPOST, c.cfg.GetCatalogItemsURL())
+	return c.deployService(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
 }
 
 // UpdateToAPIC -
 func (c *Client) UpdateToAPIC(serviceBody ServiceBody, url string) (string, error) {
-	return c.deployService(serviceBody, MethodPUT, url)
+	return c.deployService(serviceBody, http.MethodPut, url)
 }
 
 // CreateService -
