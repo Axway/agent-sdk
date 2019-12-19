@@ -1,15 +1,14 @@
 package apic
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
+	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/api"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -35,6 +34,7 @@ type CatalogCreator interface {
 type Client struct {
 	tokenRequester *apicauth.PlatformTokenGetter
 	cfg            corecfg.CentralConfig
+	apiClient      *coreapi.Client
 }
 
 // New -
@@ -50,6 +50,7 @@ func New(cfg corecfg.CentralConfig) *Client {
 	return &Client{
 		cfg:            cfg,
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
+		apiClient:      coreapi.NewClient(cfg.GetTLSConfig()),
 	}
 }
 
@@ -68,7 +69,6 @@ func (c *Client) MapToStringArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-var httpClient = http.DefaultClient
 var log logrus.FieldLogger = logrus.WithField("package", "apic")
 
 // SetLog sets the logger for the package.
@@ -82,39 +82,46 @@ func isUnitTesting() bool {
 }
 
 // DeployAPI -
-func (c *Client) DeployAPI(method, url string, buffer []byte) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
-
-	request, err := setHeader(c, method, url, bytes.NewBuffer(buffer))
-
+func (c *Client) DeployAPI(service Service) (string, error) {
+	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
 	}
 
-	response, err := httpClient.Do(request)
+	request := coreapi.Request{
+		Method:      service.Method,
+		URL:         service.URL,
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        service.Buffer,
+	}
+	response, err := c.apiClient.Send(request)
 	if err != nil {
 		return "", err
 	}
-
-	if !(response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
-		detail := make(map[string]*json.RawMessage)
-		json.NewDecoder(response.Body).Decode(&detail)
-		for k, v := range detail {
-			buffer, _ := v.MarshalJSON()
-			log.Debugf("HTTP response key %v: %v", k, string(buffer))
-		}
-		return "", errors.New(response.Status)
-	}
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", err
+	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+		logResponseErrors(response.Body)
+		return "", errors.New(strconv.Itoa(response.Code))
 	}
 
-	return handleResponse(body)
+	return handleResponse(service.AgentMode, response.Body)
+}
+
+type apiErrorResponse map[string][]apiError
+
+type apiError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func logResponseErrors(body []byte) {
+	detail := make(map[string]*json.RawMessage)
+	json.Unmarshal(body, &detail)
+
+	for k, v := range detail {
+		buffer, _ := v.MarshalJSON()
+		log.Debugf("HTTP response %v: %v", k, string(buffer))
+	}
 }
 
 func handleResponse(body []byte) (string, error) {
@@ -136,19 +143,16 @@ func handleResponse(body []byte) (string, error) {
 	return itemID, nil
 }
 
-// SetHeader - set header
-func setHeader(c *Client, method, url string, body io.Reader) (*http.Request, error) {
-	request, err := http.NewRequest(method, url, body)
-	var token string
-
-	if token, err = c.tokenRequester.GetToken(); err != nil {
+func (c *Client) createHeader() (map[string]string, error) {
+	token, err := c.tokenRequester.GetToken()
+	if err != nil {
 		return nil, err
 	}
-
-	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
-	request.Header.Add("Authorization", "Bearer "+token)
-	request.Header.Add("Content-Type", "application/json")
-	return request, nil
+	headers := make(map[string]string)
+	headers["X-Axway-Tenant-Id"] = c.cfg.GetTenantID()
+	headers["Authorization"] = "Bearer " + token
+	headers["Content-Type"] = "application/json"
+	return headers, nil
 }
 
 // IsNewAPI -
