@@ -79,6 +79,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
+
 		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
 		c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	} else {
