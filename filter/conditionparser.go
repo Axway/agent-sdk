@@ -1,0 +1,241 @@
+package filter
+
+import (
+	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strings"
+)
+
+// ConditionParser - Represents the filter condition parser
+type ConditionParser struct {
+	err           error
+	newConditions []Condition
+}
+
+// NewConditionParser - Create a new instance of condition parser
+func NewConditionParser() *ConditionParser {
+	return &ConditionParser{
+		newConditions: make([]Condition, 0),
+	}
+}
+
+// Parse - parses the AST tree to filter condition
+func (f *ConditionParser) Parse(filterConfig string) ([]Condition, error) {
+	parsedConditions, err := f.parseCondition(strings.TrimSpace(filterConfig))
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedConditions, nil
+}
+
+func (f *ConditionParser) parseCondition(filterCodition string) ([]Condition, error) {
+	if filterCodition == "" {
+		return nil, nil
+	}
+	src := "package main\nvar b bool = " + filterCodition
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, "filter_config", []byte(src), parser.AllErrors)
+	// ast.Fprint(os.Stdout, fset, node, nil)
+	if err != nil {
+		errSegments := strings.Split(err.Error(), ":")
+		errMsg := errSegments[len(errSegments)-1]
+		err = errors.New("Error in parsing filter. Syntax error," + errMsg)
+		return nil, err
+	}
+
+	ast.Inspect(node, f.parseConditionExpr)
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.newConditions, f.err
+}
+
+func (f *ConditionParser) parseConditionExpr(node ast.Node) bool {
+	valueSpec, ok := node.(*ast.ValueSpec)
+	if !ok {
+		return true
+	}
+	for _, valueEx := range valueSpec.Values {
+		newCondition, err := f.parseExpr(valueEx)
+		f.newConditions = append(f.newConditions, newCondition)
+		f.err = err
+		if f.err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (f *ConditionParser) isConditionalExpr(expr *ast.BinaryExpr) bool {
+	op := expr.Op
+	opPrecendence := op.Precedence()
+	return (opPrecendence <= 3)
+}
+
+func (f *ConditionParser) isSimpleExpr(expr *ast.BinaryExpr) bool {
+	op := expr.Op
+	opPrecendence := op.Precedence()
+	return (opPrecendence == 3)
+}
+
+func (f *ConditionParser) parseExpr(expr ast.Expr) (Condition, error) {
+	bexpr, ok := expr.(*ast.BinaryExpr)
+	if ok {
+		return f.parseBinaryExpr(bexpr)
+	} else if callExpr, ok := expr.(*ast.CallExpr); ok {
+		ce, err := f.parseCallExpr(callExpr)
+		if err != nil {
+			return nil, err
+		}
+		return &SimpleCondition{
+			LHSExpr: ce,
+		}, nil
+	}
+	return nil, errors.New("Error in parsing filter. Unrecognized expression")
+}
+
+func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (*CallExpr, error) {
+	funcSelectorExprt, ok := expr.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return nil, errors.New("Error in parsing filter. Invalid call expression")
+	}
+	funcSelector, err := f.parseSelectorExpr(funcSelectorExprt)
+	if err != nil {
+		return nil, err
+	}
+	selectorType, selector, err := f.parseSelector(funcSelector)
+	if err != nil {
+		return nil, err
+	}
+	funcName := selector[strings.LastIndex(selector, ".")+1:]
+	callType := EXISTS
+	if strings.ToLower(funcName) == "any" {
+		callType = ANY
+	}
+	name := ""
+	lastSelectorIndex := strings.LastIndex(selector, ".")
+	if lastSelectorIndex != -1 {
+		name = selector[:lastSelectorIndex]
+	}
+	return &CallExpr{
+		Type:       callType,
+		FilterType: selectorType,
+		Name:       name,
+	}, nil
+}
+
+func (f *ConditionParser) parseSelector(selector string) (selectorType, selectorPath string, err error) {
+	selectorType = selector[0:strings.Index(selector, ".")]
+	selectorPath = selector[strings.Index(selector, ".")+1:]
+	if selectorType != "tag" && selectorType != "attr" {
+		err = errors.New("Error in parsing filter. Invalid selector type")
+	}
+	return
+}
+
+func (f *ConditionParser) parseSelectorExpr(expr *ast.SelectorExpr) (string, error) {
+	var xName string
+	var err error
+	x, ok := expr.X.(*ast.Ident)
+	if ok {
+		xName = x.Name
+	} else if x, ok := expr.X.(*ast.SelectorExpr); ok {
+		xName, err = f.parseSelectorExpr(x)
+	} else {
+		err = errors.New("Error in parsing filter. Invalid selector expression")
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return xName + "." + expr.Sel.Name, nil
+}
+
+func (f *ConditionParser) parseBinaryExpr(expr *ast.BinaryExpr) (Condition, error) {
+	if !f.isConditionalExpr(expr) {
+		return nil, errors.New("Error in parsing filter. Invalid operator")
+	}
+
+	if f.isSimpleExpr(expr) {
+		return f.parseSimpleBinaryExpr(expr)
+	}
+	return f.parseCompoundBinaryExpr(expr)
+}
+
+func (f *ConditionParser) parseSimpleLHS(expr *ast.BinaryExpr) (*CallExpr, error) {
+	lhs, ok := expr.X.(*ast.SelectorExpr)
+	if ok {
+		return f.parseSelectorLHS(lhs)
+	} else if lhs, ok := expr.X.(*ast.CallExpr); ok {
+		return f.parseCallLHS(lhs)
+	}
+	return nil, errors.New("Error in parsing filter. Unrecognized condition")
+}
+
+func (f *ConditionParser) parseSelectorLHS(lhs *ast.SelectorExpr) (*CallExpr, error) {
+	s, err := f.parseSelectorExpr(lhs)
+	if err != nil {
+		return nil, err
+	}
+	filterType, filterName, err := f.parseSelector(s)
+	if err != nil {
+		return nil, err
+	}
+	return &CallExpr{
+		Type:       GETVALUE,
+		FilterType: filterType,
+		Name:       filterName,
+	}, nil
+}
+
+func (f *ConditionParser) parseCallLHS(lhs *ast.CallExpr) (*CallExpr, error) {
+	ce, err := f.parseCallExpr(lhs)
+	if err != nil {
+		return nil, err
+	}
+	return ce, nil
+}
+
+func (f *ConditionParser) parseSimpleRHS(expr *ast.BinaryExpr) (filterValue string) {
+	literal, ok := expr.Y.(*ast.BasicLit)
+	if ok {
+		filterValue = strings.Trim(literal.Value, `"`)
+	} else if identVal, ok := expr.Y.(*ast.Ident); ok {
+		filterValue = identVal.Name
+	}
+	return
+}
+
+func (f *ConditionParser) parseSimpleBinaryExpr(expr *ast.BinaryExpr) (Condition, error) {
+	filterNode := &SimpleCondition{
+		Operator: expr.Op.String(),
+	}
+	var err error
+
+	filterNode.LHSExpr, err = f.parseSimpleLHS(expr)
+	if err != nil {
+		return nil, err
+	}
+	filterNode.Value = f.parseSimpleRHS(expr)
+	return filterNode, nil
+}
+
+func (f *ConditionParser) parseCompoundBinaryExpr(expr *ast.BinaryExpr) (Condition, error) {
+	filterNode := &CompoundCondition{
+		Operator: expr.Op.String(),
+	}
+
+	var err error
+	filterNode.LHSCondition, err = f.parseExpr(expr.X)
+	if err != nil {
+		return nil, err
+	}
+	filterNode.RHSCondition, err = f.parseExpr(expr.Y)
+	if err != nil {
+		return nil, err
+	}
+	return filterNode, nil
+}
