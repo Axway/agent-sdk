@@ -192,32 +192,36 @@ func (c *Client) deployService(serviceBody ServiceBody, method, url string) (str
 }
 
 // AddToAPICServer -
-func (c *Client) AddToAPICServer(serviceBody ServiceBody) {
+func (c *Client) AddToAPICServer(serviceBody ServiceBody) (string, error) {
+
+	itemID := ""
 
 	// Verify if the api already exists
 	if c.IsNewAPI(serviceBody) {
 		// add api
 		serviceBody.ServiceExecution = int(addAPIServerSpec)
-		_, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesURL())
+		itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesURL())
 		if err != nil {
 			log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+			return itemID, err
 		}
 	}
 
 	// add api revision
 	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
-	_, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
+	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
 		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	// add api instance
 	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
-	_, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
+	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
 	if err != nil {
 		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
+	return itemID, err
 }
 
 // AddToAPIC -
@@ -327,18 +331,26 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			Definition:    revisionDefinition,
 		}
 	case int(addAPIServerInstanceSpec):
+		endPoints := []EndPoint{}
 		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
 		host := gjson.Get(string(serviceBody.Swagger), "host").String()
-		protocol := gjson.Get(string(serviceBody.Swagger), "schemes").String()
 
-		endPoint := EndPoint{
-			Host:     host,
-			Port:     443, // TODO : this is a hard coded value as of now.  Port is not showing up in swagger at the time of check in
-			Protocol: protocol,
+		// Iterate through protocols and create endpoints for intances
+		protocols := gjson.Get(string(serviceBody.Swagger), "schemes")
+		schemes := make([]string, 0)
+		json.Unmarshal([]byte(protocols.Raw), &schemes)
+		for _, protocol := range schemes {
+			endPoint := EndPoint{
+				Host:     host,
+				Port:     443, // TODO : this is a hard coded value as of now.  Port is not showing up in swagger at the time of check in
+				Protocol: protocol,
+			}
+			endPoints = append(endPoints, endPoint)
 		}
+
 		spec = APIServerInstanceSpec{
 			APIServiceRevisionRef: name,
-			InstanceEndPoint:      []EndPoint{endPoint},
+			InstanceEndPoint:      endPoints,
 		}
 	default:
 		return nil, errors.New("Error getting execution service -- not set")
