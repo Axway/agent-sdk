@@ -31,6 +31,11 @@ func assertStringCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName,
 	assert.Equal(t, defaultVal, viper.GetString(propertyName))
 }
 
+func assertStringSliceCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName string, defaultVal []string, description string) {
+	assertCmdFlag(t, cmd, flagName, "stringSlice", description)
+	assert.Equal(t, defaultVal, viper.GetStringSlice(propertyName))
+}
+
 func assertBooleanCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagName string, defaultVal bool, description string) {
 	assertCmdFlag(t, cmd, flagName, "bool", description)
 	assert.Equal(t, defaultVal, viper.GetBool(propertyName))
@@ -56,10 +61,10 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols")
 	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Traceability Agent
@@ -74,10 +79,10 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols")
 	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Log yaml properties and command flags
@@ -171,6 +176,7 @@ type agentConfig struct {
 	dProp                 time.Duration
 	iProp                 int
 	sProp                 string
+	ssProp                []string
 	agentValidationCalled bool
 }
 
@@ -215,6 +221,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
 				iProp:                 rootCmd.IntPropertyValue("agent.int"),
 				sProp:                 rootCmd.StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -227,6 +234,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
 	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
 	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -253,6 +261,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
 				iProp:                 rootCmd.IntPropertyValue("agent.int"),
 				sProp:                 rootCmd.StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -265,6 +274,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
 	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
 	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -317,6 +327,7 @@ func TestRootCmdHandlers(t *testing.T) {
 				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
 				iProp:                 rootCmd.IntPropertyValue("agent.int"),
 				sProp:                 rootCmd.StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -333,6 +344,7 @@ func TestRootCmdHandlers(t *testing.T) {
 	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
 	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
 	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()

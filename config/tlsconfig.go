@@ -3,7 +3,7 @@ package config
 import (
 	"crypto/tls"
 	"errors"
-	"strings"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -51,31 +51,45 @@ var tlsCipherSuites = map[string]TLSCipherSuite{
 	"TLS-CHACHA20-POLY1305-SHA256": TLSCipherSuite(tls.TLS_CHACHA20_POLY1305_SHA256),
 }
 
-// TLSDefaultCipherSuites - list of suites to use by default
-func TLSDefaultCipherSuites() string {
-	suites := []TLSCipherSuite{
-		TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384),
-		TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384),
-		TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305),
-		TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305),
-		TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
-		TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256),
-		TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
-		TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256),
-	}
+// TLSDefaultCipherSuitesStringSlice - list of suites to use by default
+func TLSDefaultCipherSuitesStringSlice() []string {
+	suites := TLSDefaultCipherSuites
 
-	values := make([]string, 0)
+	var values []string
 	for _, v := range suites {
-		values = append(values, cipherAsString(v))
+		values = append(values, v.String())
 	}
 
-	return strings.Join(values, ",")
+	return values
+}
+
+// TLSDefaultCipherSuites - list of suites to use by default
+var TLSDefaultCipherSuites = []TLSCipherSuite{
+	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384),
+	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384),
+	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305),
+	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305),
+	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
+	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256),
+	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
+	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256),
 }
 
 var tlsCipherSuitesInverse = make(map[TLSCipherSuite]string, len(tlsCipherSuites))
 
-func cipherAsString(cs TLSCipherSuite) string {
-	if s, ok := tlsCipherSuitesInverse[cs]; ok {
+// Unpack - transforms the string into a constant.
+func (cs *TLSCipherSuite) Unpack(s string) error {
+	suite, found := tlsCipherSuites[s]
+	if !found {
+		return fmt.Errorf("invalid tls cipher suite '%v'", s)
+	}
+
+	*cs = suite
+	return nil
+}
+
+func (cs *TLSCipherSuite) String() string {
+	if s, found := tlsCipherSuitesInverse[*cs]; found {
 		return s
 	}
 	return "unknown"
@@ -101,18 +115,13 @@ var tlsVersions = map[string]TLSVersion{
 
 var tlsVersionsInverse = make(map[TLSVersion]string, len(tlsVersions))
 
-// TLSVersionAsString - get the version string
-func TLSVersionAsString(cs TLSVersion) string {
-	if s, ok := tlsVersionsInverse[cs]; ok {
-		return s
-	}
-	return "unknown"
+// TLSDefaultMinVersionString - get the default min version string
+func TLSDefaultMinVersionString() string {
+	return tlsVersionsInverse[TLSDefaultMinVersion]
 }
 
-// TLSDefaultVersionString - default value
-func TLSDefaultVersionString() string {
-	return TLSVersionAsString(tls.VersionTLS12)
-}
+// TLSDefaultMinVersion - get the default min version
+var TLSDefaultMinVersion TLSVersion = tls.VersionTLS12
 
 // TLSVersionAsValue - get the version value
 func TLSVersionAsValue(cs string) TLSVersion {
@@ -152,7 +161,7 @@ type TLSConfig interface {
 // the tls package will also not modify it.
 type TLSConfiguration struct {
 	// NextProtos is a list of supported application level protocols, in order of preference.
-	NextProtos []string `config:"nextProtos"`
+	NextProtos []string `config:"nextProtos,replace"`
 
 	// InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name.
 	// If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host
@@ -164,7 +173,7 @@ type TLSConfiguration struct {
 	// is nil, a default list of secure cipher suites is used, with a preference order based on hardware
 	// performance. The default cipher suites might change over Go versions. Note that TLS 1.3
 	// ciphersuites are not configurable.
-	CipherSuites []TLSCipherSuite `config:"cipherSuites"`
+	CipherSuites []TLSCipherSuite `config:"cipherSuites,replace"`
 
 	// MinVersion contains the minimum SSL/TLS version that is acceptable. If zero, then TLS 1.0 is taken as the minimum.
 	MinVersion TLSVersion `config:"minVersion"`
@@ -174,21 +183,25 @@ type TLSConfiguration struct {
 	MaxVersion TLSVersion `config:"maxVersion"`
 }
 
-func newTLSConfig() TLSConfig {
-	return &TLSConfiguration{}
+// NewTLSConfig - build default config
+func NewTLSConfig() TLSConfig {
+	return &TLSConfiguration{
+		InsecureSkipVerify: false,
+		NextProtos:         []string{"1", "2", "3"},
+		CipherSuites:       TLSDefaultCipherSuites,
+		MinVersion:         TLSDefaultMinVersion,
+		MaxVersion:         0,
+	}
 }
 
-// BuildTLSConfig takes the TLSConfiguration and transform it into a `tls.Config`.
+// BuildTLSConfig takes the TLSConfiguration and transforms it into a `tls.Config`.
 func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	if c == nil {
 		// use default TLS settings, if config is empty.
 		return &tls.Config{}
 	}
 
-	ciphers := make([]uint16, len(c.CipherSuites))
-	for i, num := range c.CipherSuites {
-		ciphers[i] = uint16(num)
-	}
+	ciphers := c.buildUintArrayFromSuites()
 	return &tls.Config{
 		MinVersion:         uint16(c.MinVersion),
 		MaxVersion:         uint16(c.MaxVersion),
@@ -198,36 +211,29 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 }
 
+// buildUintArrayFromSuites -
+func (c *TLSConfiguration) buildUintArrayFromSuites() []uint16 {
+	var ciphers []uint16
+	for _, suite := range c.CipherSuites {
+		ciphers = append(ciphers, uint16(suite))
+	}
+
+	return ciphers
+}
+
 // NewCipherArray - create an array of TLSCipherSuite
-func NewCipherArray(ciphers string) []TLSCipherSuite {
+func NewCipherArray(ciphers []string) []TLSCipherSuite {
 	if len(ciphers) == 0 {
 		return nil
 	}
 
-	cipherArray := strings.Split(ciphers, ",")
-	result := make([]TLSCipherSuite, 0)
-	for _, v := range cipherArray {
-		trimmedV := strings.TrimSpace(v)
-		s := cipherAsValue(trimmedV)
+	var result []TLSCipherSuite
+	for _, v := range ciphers {
+		s := cipherAsValue(v)
 		if s == 0 {
-			log.Errorf("Invalid cipher suite value found: %v", trimmedV)
+			log.Errorf("Invalid cipher suite value found: %v", v)
 		}
-		result = append(result, cipherAsValue(trimmedV))
-	}
-	return result
-}
-
-// StringAsStringArray - create an array of from a string of comma-separated strings
-func StringAsStringArray(s string) []string {
-	if len(s) == 0 {
-		return nil
-	}
-
-	array := strings.Split(s, ",")
-	result := make([]string, 0)
-	for _, v := range array {
-		trimmedV := strings.TrimSpace(v)
-		result = append(result, trimmedV)
+		result = append(result, s)
 	}
 	return result
 }

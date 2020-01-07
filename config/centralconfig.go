@@ -82,7 +82,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Mode:             Disconnected,
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
-		TLS:              newTLSConfig(),
+		TLS:              NewTLSConfig(),
 	}
 }
 

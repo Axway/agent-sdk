@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -29,12 +30,14 @@ type AgentRootCmd interface {
 	AddDurationProperty(name, flagName string, defaultVal time.Duration, description string)
 	AddIntProperty(name, flagName string, defaultVal int, description string)
 	AddBoolProperty(name, flagName string, defaultVal bool, description string)
+	AddStringSliceProperty(name, flagName string, defaultVal []string, description string)
 
 	// Methods to get the configured properties
 	StringPropertyValue(name string) string
 	DurationPropertyValue(name string) time.Duration
 	IntPropertyValue(name string) int
 	BoolPropertyValue(name string) bool
+	StringSlicePropertyValue(name string) []string
 
 	// Get the agentType
 	GetAgentType() corecfg.AgentType
@@ -78,10 +81,10 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	// ssl properties and command flags
-	c.AddStringProperty("central.ssl.nextProtos", "centralSSLNextProtos", "", "List of supported application level protocols")
+	c.AddStringSliceProperty("central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols")
 	c.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	c.AddStringProperty("central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuites(), "List of supported cipher suites")
-	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	c.AddStringSliceProperty("central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites")
+	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
@@ -161,9 +164,9 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 			Timeout:    c.DurationPropertyValue("central.auth.timeout"),
 		},
 		TLS: &corecfg.TLSConfiguration{
-			NextProtos:         corecfg.StringAsStringArray(c.StringPropertyValue("central.ssl.nextProtos")),
+			NextProtos:         c.StringSlicePropertyValue("central.ssl.nextProtos"),
 			InsecureSkipVerify: c.BoolPropertyValue("central.ssl.insecureSkipVerify"),
-			CipherSuites:       corecfg.NewCipherArray(c.StringPropertyValue("central.ssl.cipherSuites")),
+			CipherSuites:       corecfg.NewCipherArray(c.StringSlicePropertyValue("central.ssl.cipherSuites")),
 			MinVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.minVersion")),
 			MaxVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.maxVersion")),
 		},
@@ -252,6 +255,13 @@ func (c *agentRootCommand) AddStringProperty(name, flagName string, defaultVal s
 	}
 }
 
+func (c *agentRootCommand) AddStringSliceProperty(name, flagName string, defaultVal []string, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().StringSlice(flagName, defaultVal, description)
+		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
 func (c *agentRootCommand) AddDurationProperty(name, flagName string, defaultVal time.Duration, description string) {
 	if c.rootCmd != nil {
 		c.rootCmd.Flags().Duration(flagName, defaultVal, description)
@@ -271,6 +281,27 @@ func (c *agentRootCommand) AddBoolProperty(name, flagName string, defaultVal boo
 		c.rootCmd.Flags().Bool(flagName, defaultVal, description)
 		c.bindOrPanic(name, c.rootCmd.Flags().Lookup(flagName))
 	}
+}
+
+func (c *agentRootCommand) StringSlicePropertyValue(name string) []string {
+	val := viper.Get(name)
+
+	// special check to differentiate between yaml and commandline parsing. For commandline, must
+	// turn it into an array ourselves
+	switch val.(type) {
+	case string:
+		return c.convertStringToSlice(fmt.Sprintf("%v", viper.Get(name)))
+	default:
+		return viper.GetStringSlice(name)
+	}
+}
+
+func (c *agentRootCommand) convertStringToSlice(value string) []string {
+	slc := strings.Split(value, ",")
+	for i := range slc {
+		slc[i] = strings.TrimSpace(slc[i])
+	}
+	return slc
 }
 
 func (c *agentRootCommand) StringPropertyValue(name string) string {
