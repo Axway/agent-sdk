@@ -10,7 +10,6 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/api"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -109,7 +108,7 @@ func (c *Client) DeployAPI(method, url string, buffer []byte) (string, error) {
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
 
-	return handleResponse(response.Body)
+	return c.handleResponse(response.Body)
 }
 
 type apiErrorResponse map[string][]apiError
@@ -129,12 +128,12 @@ func logResponseErrors(body []byte) {
 	}
 }
 
-func handleResponse(body []byte) (string, error) {
+func (c *Client) handleResponse(body []byte) (string, error) {
 
 	itemID := ""
 
 	// Connected Mode
-	if config.GetConfig().CentralConfig.GetAgentMode() == corecfg.Connected {
+	if c.cfg.GetAgentMode() == corecfg.Connected {
 		metadata := gjson.Get(string(body), "metadata").String()
 		if metadata != "" {
 			itemID = gjson.Get(string(metadata), "id").String()
