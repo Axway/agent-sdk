@@ -187,7 +187,7 @@ type TLSConfiguration struct {
 func NewTLSConfig() TLSConfig {
 	return &TLSConfiguration{
 		InsecureSkipVerify: false,
-		NextProtos:         []string{"1", "2", "3"},
+		NextProtos:         []string{},
 		CipherSuites:       TLSDefaultCipherSuites,
 		MinVersion:         TLSDefaultMinVersion,
 		MaxVersion:         0,
