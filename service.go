@@ -43,6 +43,7 @@ type ServiceBody struct {
 	Swagger          []byte `json:",omitempty"`
 	Documentation    []byte `json:",omitempty"`
 	Tags             map[string]interface{}
+	Buffer           []byte            `json:",omitempty"`
 	AgentMode        corecfg.AgentMode `json:",omitempty"`
 	ServiceExecution int               `json:"omitempty"`
 }
