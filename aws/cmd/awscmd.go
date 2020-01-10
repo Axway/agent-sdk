@@ -17,9 +17,9 @@ func AddAWSProperties(rootCmd corecmd.AgentRootCmd) {
 	rootCmd.AddStringProperty("aws.auth.secretKey", "awsSecretKey", "", "Secret Key for AWS Authentication")
 
 	if rootCmd.GetAgentType() == corecfg.DiscoveryAgent {
-		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS APIGW Access logs")
-		rootCmd.AddStringProperty("aws.discoveryTags", "awsDiscoveryTags", "PublishToCentral", "Tags on AWS APIGW stages that will be discovered by the agent")
-		rootCmd.AddBoolProperty("aws.pushTags", "awsPushTags", false, "Push the Tags on AWS APIGW stages to API Central")
+		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS API Gateway Access logs")
+		rootCmd.AddStringProperty("aws.discoveryTags", "awsDiscoveryTags", "PublishToCentral", "Tags on AWS API Gateway stages that will be discovered by the agent")
+		rootCmd.AddBoolProperty("aws.pushTags", "awsPushTags", false, "Push the Tags on AWS API Gateway stages to AMPLIFY Central")
 		rootCmd.AddStringProperty("aws.filter", "awsFilter", "", "Filter condition for discovery")
 	}
 }
