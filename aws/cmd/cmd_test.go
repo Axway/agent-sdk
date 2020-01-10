@@ -47,7 +47,7 @@ func TestAWSCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "aws.region", "awsRegion", "", "AWS Region that we are watching for changes")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.accessKey", "awsAccessKey", "", "Access Key for AWS Authentication")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.secretKey", "awsSecretKey", "", "Secret Key for AWS Authentication")
-	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS API GatewayAccess logs")
+	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS API Gateway Access logs")
 	assertStringCmdFlag(t, rootCmd, "aws.discoveryTags", "awsDiscoveryTags", "PublishToCentral", "Tags on AWS API Gateway stages that will be discovered by the agent")
 	assertBoolCmdFlag(t, rootCmd, "aws.pushTags", "awsPushTags", false, "Push the Tags on AWS API Gateway stages to AMPLIFY Central")
 
