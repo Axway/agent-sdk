@@ -212,14 +212,14 @@ func (c *Client) AddToAPICServer(serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
-		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API revision for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	// add api instance
 	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
 	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
 	if err != nil {
-		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API instance for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	return itemID, err
