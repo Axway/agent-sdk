@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"strings"
 )
 
@@ -38,7 +39,7 @@ func (f *ConditionParser) parseCondition(filterCodition string) ([]Condition, er
 	src := "package main\nvar b bool = " + filterCodition
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, "filter_config", []byte(src), parser.AllErrors)
-	// ast.Fprint(os.Stdout, fset, node, nil)
+	ast.Fprint(os.Stdout, fset, node, nil)
 	if err != nil {
 		errSegments := strings.Split(err.Error(), ":")
 		errMsg := errSegments[len(errSegments)-1]
@@ -97,7 +98,7 @@ func (f *ConditionParser) parseExpr(expr ast.Expr) (Condition, error) {
 	return nil, errors.New("Error in parsing filter. Unrecognized expression")
 }
 
-func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (*CallExpr, error) {
+func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 	funcSelectorExprt, ok := expr.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return nil, errors.New("Error in parsing filter. Invalid call expression")
@@ -111,20 +112,43 @@ func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (*CallExpr, error) {
 		return nil, err
 	}
 	funcName := selector[strings.LastIndex(selector, ".")+1:]
-	callType := EXISTS
-	if strings.ToLower(funcName) == "any" {
-		callType = ANY
+
+	callType, err := GetCallType(funcName)
+	if err != nil {
+		return nil, errors.New("Error in parsing filter. " + err.Error())
 	}
+
+	var callArguments []interface{}
+	if expr.Args != nil {
+		callArguments, err = f.parseCallArguments(callType, expr.Args)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	name := ""
 	lastSelectorIndex := strings.LastIndex(selector, ".")
 	if lastSelectorIndex != -1 {
 		name = selector[:lastSelectorIndex]
 	}
-	return &CallExpr{
-		Type:       callType,
-		FilterType: selectorType,
-		Name:       name,
-	}, nil
+	callExpr, err := newCallExpr(callType, selectorType, name, callArguments)
+	if err != nil {
+		return nil, errors.New("Error in parsing filter. " + err.Error())
+	}
+	return callExpr, nil
+}
+
+func (f *ConditionParser) parseCallArguments(callType CallType, args []ast.Expr) ([]interface{}, error) {
+	argsList := make([]interface{}, 0)
+	for _, argExpr := range args {
+		literal, ok := argExpr.(*ast.BasicLit)
+		if !ok {
+			return nil, errors.New("Error in parsing filter. Invalid call argument")
+		}
+		arg := strings.Trim(literal.Value, `"`)
+		argsList = append(argsList, arg)
+	}
+	return argsList, nil
 }
 
 func (f *ConditionParser) parseSelector(selector string) (selectorType, selectorPath string, err error) {
@@ -165,7 +189,7 @@ func (f *ConditionParser) parseBinaryExpr(expr *ast.BinaryExpr) (Condition, erro
 	return f.parseCompoundBinaryExpr(expr)
 }
 
-func (f *ConditionParser) parseSimpleLHS(expr *ast.BinaryExpr) (*CallExpr, error) {
+func (f *ConditionParser) parseSimpleLHS(expr *ast.BinaryExpr) (CallExpr, error) {
 	lhs, ok := expr.X.(*ast.SelectorExpr)
 	if ok {
 		return f.parseSelectorLHS(lhs)
@@ -175,7 +199,7 @@ func (f *ConditionParser) parseSimpleLHS(expr *ast.BinaryExpr) (*CallExpr, error
 	return nil, errors.New("Error in parsing filter. Unrecognized condition")
 }
 
-func (f *ConditionParser) parseSelectorLHS(lhs *ast.SelectorExpr) (*CallExpr, error) {
+func (f *ConditionParser) parseSelectorLHS(lhs *ast.SelectorExpr) (CallExpr, error) {
 	s, err := f.parseSelectorExpr(lhs)
 	if err != nil {
 		return nil, err
@@ -184,14 +208,10 @@ func (f *ConditionParser) parseSelectorLHS(lhs *ast.SelectorExpr) (*CallExpr, er
 	if err != nil {
 		return nil, err
 	}
-	return &CallExpr{
-		Type:       GETVALUE,
-		FilterType: filterType,
-		Name:       filterName,
-	}, nil
+	return newCallExpr(GETVALUE, filterType, filterName, nil)
 }
 
-func (f *ConditionParser) parseCallLHS(lhs *ast.CallExpr) (*CallExpr, error) {
+func (f *ConditionParser) parseCallLHS(lhs *ast.CallExpr) (CallExpr, error) {
 	ce, err := f.parseCallExpr(lhs)
 	if err != nil {
 		return nil, err
@@ -199,12 +219,12 @@ func (f *ConditionParser) parseCallLHS(lhs *ast.CallExpr) (*CallExpr, error) {
 	return ce, nil
 }
 
-func (f *ConditionParser) parseSimpleRHS(expr *ast.BinaryExpr) (filterValue string) {
+func (f *ConditionParser) parseSimpleRHS(expr *ast.BinaryExpr) (filterValue ComparableValue) {
 	literal, ok := expr.Y.(*ast.BasicLit)
 	if ok {
-		filterValue = strings.Trim(literal.Value, `"`)
+		filterValue = newStringRHSValue(strings.Trim(literal.Value, `"`))
 	} else if identVal, ok := expr.Y.(*ast.Ident); ok {
-		filterValue = identVal.Name
+		filterValue = newStringRHSValue(identVal.Name)
 	}
 	return
 }
