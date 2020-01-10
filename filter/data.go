@@ -6,7 +6,7 @@ import (
 
 // Data - Interface representing the data for filter evaluation
 type Data interface {
-	GetValue(filterType string, filterKey string) string
+	GetValue(filterType string, filterKey string) (string, bool)
 	GetKeys(filterType string) []string
 	GetValues(filterType string) []string
 }
@@ -50,7 +50,7 @@ func parseStringSliceFilterData(v reflect.Value) string {
 		vItem := v.Index(i)
 		if vItem.Kind() == reflect.String {
 			if len(val) > 0 {
-				val += ", "
+				val += ","
 			}
 			val += vItem.String()
 		}
@@ -93,7 +93,7 @@ func (ad *AgentFilterData) GetValues(ftype string) []string {
 }
 
 // GetValue - Returns the value for map entry based on the filter data type
-func (ad *AgentFilterData) GetValue(ftype, fName string) string {
+func (ad *AgentFilterData) GetValue(ftype, fName string) (val string, ok bool) {
 	var m map[string]string
 	if ftype == "attr" {
 		m = ad.attr
@@ -101,7 +101,7 @@ func (ad *AgentFilterData) GetValue(ftype, fName string) string {
 		m = ad.tags
 	}
 	if m != nil {
-		return m[fName]
+		val, ok = m[fName]
 	}
-	return ""
+	return
 }

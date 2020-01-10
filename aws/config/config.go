@@ -13,7 +13,6 @@ type AWSConfig interface {
 	GetRegion() string
 	GetQueueName() string
 	GetLogGroupArn() string
-	GetDiscoveryTags() string
 	ShouldPushTags() bool
 	GetAuthConfig() AWSAuthConfig
 	GetFilter() string
@@ -22,14 +21,13 @@ type AWSConfig interface {
 
 // AWSConfiguration - AWS Configuration
 type AWSConfiguration struct {
-	PollInterval  time.Duration
-	Region        string        `config:"region"`
-	QueueName     string        `config:"queueName"`
-	LogGroupArn   string        `config:"logGroupArn"`
-	DiscoveryTags string        `config:"discoveryTags"`
-	Filter        string        `config:"filter"`
-	PushTags      bool          `config:"pushTags"`
-	Auth          AWSAuthConfig `config:"auth"`
+	PollInterval time.Duration
+	Region       string        `config:"region"`
+	QueueName    string        `config:"queueName"`
+	LogGroupArn  string        `config:"logGroupArn"`
+	Filter       string        `config:"filter"`
+	PushTags     bool          `config:"pushTags"`
+	Auth         AWSAuthConfig `config:"auth"`
 }
 
 // NewAWSConfig - Creates the default aws config
@@ -85,11 +83,6 @@ func (a *AWSConfiguration) GetQueueName() string {
 // GetLogGroupArn - Returns the AWS Log Group Arn
 func (a *AWSConfiguration) GetLogGroupArn() string {
 	return a.LogGroupArn
-}
-
-// GetDiscoveryTags - Returns the discovery tags
-func (a *AWSConfiguration) GetDiscoveryTags() string {
-	return a.DiscoveryTags
 }
 
 // ShouldPushTags - should the tags be pushed?
