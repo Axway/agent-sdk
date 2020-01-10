@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 )
 
@@ -39,7 +38,7 @@ func (f *ConditionParser) parseCondition(filterCodition string) ([]Condition, er
 	src := "package main\nvar b bool = " + filterCodition
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, "filter_config", []byte(src), parser.AllErrors)
-	ast.Fprint(os.Stdout, fset, node, nil)
+	// ast.Fprint(os.Stdout, fset, node, nil)
 	if err != nil {
 		errSegments := strings.Split(err.Error(), ":")
 		errMsg := errSegments[len(errSegments)-1]
