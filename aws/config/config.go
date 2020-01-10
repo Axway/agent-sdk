@@ -85,11 +85,6 @@ func (a *AWSConfiguration) GetLogGroupArn() string {
 	return a.LogGroupArn
 }
 
-// GetDiscoveryTags - Returns the discovery tags
-func (a *AWSConfiguration) GetDiscoveryTags() string {
-	return a.DiscoveryTags
-}
-
 // ShouldPushTags - should the tags be pushed?
 func (a *AWSConfiguration) ShouldPushTags() bool {
 	return a.PushTags
