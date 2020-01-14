@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -212,14 +211,14 @@ func (c *Client) AddToAPICServer(serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
-		log.Errorf("Error adding API revision %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API revision for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	// add api instance
 	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
 	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
 	if err != nil {
-		log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API instance for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 	}
 
 	return itemID, err
@@ -264,7 +263,7 @@ func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			},
 		},
 
-		Tags:       c.MapToStringArray(serviceBody.Tags),
+		Tags:       c.MapToTagsArray(serviceBody.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -312,15 +311,6 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 		attributes[key] = *v
 	}
 
-	// Add attributes from config
-	attribsToPublish := config.GetConfig().AWSConfig.GetAttributesToPublish()
-	attribsToPublishArray := strings.Split(attribsToPublish, ",")
-	for _, attrib := range attribsToPublishArray {
-		s := strings.Split(strings.TrimSpace(attrib), "=")
-		left, right := s[0], s[1]
-		attributes[left] = right
-	}
-
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	name := strings.ToLower(serviceBody.APIName) // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
@@ -366,7 +356,7 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 		return nil, errors.New("Error getting execution service -- not set")
 	}
 
-	newtags := c.MapToStringArray(serviceBody.Tags)
+	newtags := c.MapToTagsArray(serviceBody.Tags)
 
 	apiServerService := APIServer{
 		Name:       name,
@@ -389,7 +379,7 @@ func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
-		Tags:               c.MapToStringArray(serviceBody.Tags),
+		Tags:               c.MapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{

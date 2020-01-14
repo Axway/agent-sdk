@@ -54,8 +54,8 @@ func New(cfg corecfg.CentralConfig) *Client {
 	}
 }
 
-// MapToStringArray -
-func (c *Client) MapToStringArray(m map[string]interface{}) []string {
+// MapToTagsArray -
+func (c *Client) MapToTagsArray(m map[string]interface{}) []string {
 	strArr := []string{}
 
 	for key, val := range m {
