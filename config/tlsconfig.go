@@ -115,6 +115,17 @@ var tlsVersions = map[string]TLSVersion{
 
 var tlsVersionsInverse = make(map[TLSVersion]string, len(tlsVersions))
 
+//Unpack transforms the string into a constant.
+func (v *TLSVersion) Unpack(s string) error {
+	version, found := tlsVersions[s]
+	if !found {
+		return fmt.Errorf("invalid tls version '%v'", s)
+	}
+
+	*v = version
+	return nil
+}
+
 // TLSDefaultMinVersionString - get the default min version string
 func TLSDefaultMinVersionString() string {
 	return tlsVersionsInverse[TLSDefaultMinVersion]
