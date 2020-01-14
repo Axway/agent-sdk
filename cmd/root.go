@@ -73,11 +73,11 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for API Central Authentication")
-	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for API Central Authentication")
+	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	c.AddStringProperty("central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "API Central authentication URL")
-	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "API Central authentication Realm")
+	c.AddStringProperty("central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "AMPLIFY Central authentication URL")
+	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
 	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	// ssl properties and command flags
@@ -89,12 +89,12 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 
-		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "API Central")
+		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
 		c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	} else {
 		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
-		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in API Central")
-		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of API Central")
+		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of AMPLIFY Central")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	}
 

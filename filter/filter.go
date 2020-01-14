@@ -39,6 +39,8 @@ func (af *AgentFilter) Evaluate(tags interface{}) (result bool) {
 				return
 			}
 		}
+	} else {
+		result = true
 	}
 	return
 }
