@@ -14,6 +14,8 @@ type AWSConfig interface {
 	GetQueueName() string
 	GetLogGroupArn() string
 	GetDiscoveryTags() string
+	GetTagsToPublish() string
+	GetAttributesToPublish() string
 	ShouldPushTags() bool
 	GetAuthConfig() AWSAuthConfig
 	GetFilter() string
@@ -22,14 +24,16 @@ type AWSConfig interface {
 
 // AWSConfiguration - AWS Configuration
 type AWSConfiguration struct {
-	PollInterval  time.Duration
-	Region        string        `config:"region"`
-	QueueName     string        `config:"queueName"`
-	LogGroupArn   string        `config:"logGroupArn"`
-	DiscoveryTags string        `config:"discoveryTags"`
-	Filter        string        `config:"filter"`
-	PushTags      bool          `config:"pushTags"`
-	Auth          AWSAuthConfig `config:"auth"`
+	PollInterval        time.Duration
+	Region              string        `config:"region"`
+	QueueName           string        `config:"queueName"`
+	LogGroupArn         string        `config:"logGroupArn"`
+	DiscoveryTags       string        `config:"discoveryTags"`
+	TagsToPublish       string        `config:"tagsToPublish"`
+	AttributesToPublish string        `config:"attributesToPublish"`
+	Filter              string        `config:"filter"`
+	PushTags            bool          `config:"pushTags"`
+	Auth                AWSAuthConfig `config:"auth"`
 }
 
 // NewAWSConfig - Creates the default aws config
@@ -90,6 +94,16 @@ func (a *AWSConfiguration) GetLogGroupArn() string {
 // GetDiscoveryTags - Returns the discovery tags
 func (a *AWSConfiguration) GetDiscoveryTags() string {
 	return a.DiscoveryTags
+}
+
+// GetTagsToPublish - Returns the tags to publish
+func (a *AWSConfiguration) GetTagsToPublish() string {
+	return a.TagsToPublish
+}
+
+// GetAttributesToPublish - Returns the attributes to publish
+func (a *AWSConfiguration) GetAttributesToPublish() string {
+	return a.AttributesToPublish
 }
 
 // ShouldPushTags - should the tags be pushed?
