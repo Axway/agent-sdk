@@ -64,7 +64,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	desc := gjson.Get(string(swaggerFile1), "info.description")
 	documentation := desc.Str
 	if documentation == "" {
-		documentation = "API imported from AWS APIGateway"
+		documentation = "API imported from AWS API Gateway"
 	}
 	docBytes, _ := json.Marshal(documentation)
 
@@ -73,7 +73,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		APIName:       "serviceapi1",
 		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
 		TeamID:        config.GetConfig().CentralConfig.GetTeamID(),
-		Description:   "API From AWS APIGateway (RestApiId: restapiID, StageName: stage",
+		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
 		Version:       "1.0.0",
 		AuthPolicy:    authPolicy,
 		Swagger:       swaggerFile1,
@@ -97,7 +97,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	desc = gjson.Get(string(swaggerFile1), "info.description")
 	documentation = desc.Str
 	if documentation == "" {
-		documentation = "API imported from AWS APIGateway"
+		documentation = "API imported from AWS API Gateway"
 	}
 	docBytes, _ = json.Marshal(documentation)
 	serviceBody = ServiceBody{
@@ -105,7 +105,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		APIName:       "serviceapi1",
 		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
 		TeamID:        config.GetConfig().CentralConfig.GetTeamID(),
-		Description:   "API From AWS APIGateway (RestApiId: restapiID, StageName: stage",
+		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
 		Version:       "1.0.0",
 		AuthPolicy:    authPolicy,
 		Swagger:       swaggerFile1,
