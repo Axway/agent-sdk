@@ -10,6 +10,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/api"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -65,6 +66,15 @@ func (c *Client) MapToStringArray(m map[string]interface{}) []string {
 			strArr = append(strArr, key+"_"+*v)
 		}
 	}
+
+	// Add any tags from config
+	tagsToPublish := config.GetConfig().AWSConfig.GetTagsToPublish()
+	tagsToPublishArray := strings.Split(tagsToPublish, ",")
+
+	for _, tag := range tagsToPublishArray {
+		strArr = append(strArr, strings.TrimSpace(tag))
+	}
+
 	return strArr
 }
 

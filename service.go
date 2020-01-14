@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -155,8 +155,8 @@ type APIServiceSpec struct {
 
 // APIServiceRevisionSpec -
 type APIServiceRevisionSpec struct {
-	APIServiceRef string             `json:"apiServiceRef"`
-	Definition    RevisionDefinition `json:"definition"`
+	APIService string             `json:"apiService"`
+	Definition RevisionDefinition `json:"definition"`
 }
 
 // RevisionDefinition -
@@ -167,8 +167,8 @@ type RevisionDefinition struct {
 
 // APIServerInstanceSpec -
 type APIServerInstanceSpec struct {
-	APIServiceRevisionRef string     `json:"apiServiceRevisionRef,omitempty"`
-	InstanceEndPoint      []EndPoint `json:"endpoint,omitempty"`
+	APIServiceRevision string     `json:"apiServiceRevision,omitempty"`
+	InstanceEndPoint   []EndPoint `json:"endpoint,omitempty"`
 }
 
 // EndPoint -
@@ -240,7 +240,7 @@ func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
 		return nil, fmt.Errorf("Unsuppored security policy '%v'. ", serviceBody.AuthPolicy)
 	}
-	if serviceBody.AgentMode == config.Connected {
+	if serviceBody.AgentMode == corecfg.Connected {
 		return createAPIServerBody(c, serviceBody)
 	}
 	return createCatalogBody(c, serviceBody)
@@ -312,6 +312,15 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 		attributes[key] = *v
 	}
 
+	// Add attributes from config
+	attribsToPublish := config.GetConfig().AWSConfig.GetAttributesToPublish()
+	attribsToPublishArray := strings.Split(attribsToPublish, ",")
+	for _, attrib := range attribsToPublishArray {
+		s := strings.Split(strings.TrimSpace(attrib), "=")
+		left, right := s[0], s[1]
+		attributes[left] = right
+	}
+
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	name := strings.ToLower(serviceBody.APIName) // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
@@ -328,8 +337,8 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			Value: serviceBody.Swagger,
 		}
 		spec = APIServiceRevisionSpec{
-			APIServiceRef: strings.ToLower(serviceBody.APIName),
-			Definition:    revisionDefinition,
+			APIService: strings.ToLower(serviceBody.APIName),
+			Definition: revisionDefinition,
 		}
 	case int(addAPIServerInstanceSpec):
 		endPoints := []EndPoint{}
@@ -350,8 +359,8 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 		}
 
 		spec = APIServerInstanceSpec{
-			APIServiceRevisionRef: name,
-			InstanceEndPoint:      endPoints,
+			APIServiceRevision: name,
+			InstanceEndPoint:   endPoints,
 		}
 	default:
 		return nil, errors.New("Error getting execution service -- not set")
