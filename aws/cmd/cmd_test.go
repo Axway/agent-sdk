@@ -47,9 +47,8 @@ func TestAWSCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "aws.region", "awsRegion", "", "AWS Region that we are watching for changes")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.accessKey", "awsAccessKey", "", "Access Key for AWS Authentication")
 	assertStringCmdFlag(t, rootCmd, "aws.auth.secretKey", "awsSecretKey", "", "Secret Key for AWS Authentication")
-	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS APIGW Access logs")
-	assertStringCmdFlag(t, rootCmd, "aws.discoveryTags", "awsDiscoveryTags", "PublishToCentral", "Tags on AWS APIGW stages that will be discovered by the agent")
-	assertBoolCmdFlag(t, rootCmd, "aws.pushTags", "awsPushTags", false, "Push the Tags on AWS APIGW stages to API Central")
+	assertStringCmdFlag(t, rootCmd, "aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS API Gateway Access logs")
+	assertBoolCmdFlag(t, rootCmd, "aws.pushTags", "awsPushTags", false, "Push the Tags on AWS API Gateway stages to AMPLIFY Central")
 
 	// Traceability Agent
 	rootCmd = corecmd.NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
@@ -82,7 +81,6 @@ func TestAWSCmdConfigDefault(t *testing.T) {
 
 	assert.Nil(t, err, "Parsing AWS Config returned error")
 	assert.Equal(t, 20*time.Second, awsConfig.GetPollInterval())
-	assert.Equal(t, "PublishToCentral", awsConfig.GetDiscoveryTags())
 	assert.Equal(t, false, awsConfig.ShouldPushTags())
 	assert.Equal(t, "eu-west-1", awsConfig.GetRegion())
 	assert.Equal(t, "queue", awsConfig.GetQueueName())
