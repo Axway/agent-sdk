@@ -17,19 +17,17 @@ type AWSConfig interface {
 	GetAuthConfig() AWSAuthConfig
 	GetFilter() string
 	Validate() error
-	GetTagsToPublish() string
 }
 
 // AWSConfiguration - AWS Configuration
 type AWSConfiguration struct {
-	PollInterval  time.Duration
-	Region        string        `config:"region"`
-	QueueName     string        `config:"queueName"`
-	LogGroupArn   string        `config:"logGroupArn"`
-	Filter        string        `config:"filter"`
-	PushTags      bool          `config:"pushTags"`
-	TagsToPublish string        `config:"tagsToPublish"`
-	Auth          AWSAuthConfig `config:"auth"`
+	PollInterval time.Duration
+	Region       string        `config:"region"`
+	QueueName    string        `config:"queueName"`
+	LogGroupArn  string        `config:"logGroupArn"`
+	Filter       string        `config:"filter"`
+	PushTags     bool          `config:"pushTags"`
+	Auth         AWSAuthConfig `config:"auth"`
 }
 
 // NewAWSConfig - Creates the default aws config
@@ -85,11 +83,6 @@ func (a *AWSConfiguration) GetQueueName() string {
 // GetLogGroupArn - Returns the AWS Log Group Arn
 func (a *AWSConfiguration) GetLogGroupArn() string {
 	return a.LogGroupArn
-}
-
-// GetTagsToPublish - Returns the tags to publish
-func (a *AWSConfiguration) GetTagsToPublish() string {
-	return a.TagsToPublish
 }
 
 // ShouldPushTags - should the tags be pushed?

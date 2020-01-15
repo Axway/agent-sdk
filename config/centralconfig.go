@@ -57,6 +57,7 @@ type CentralConfig interface {
 	Validate() error
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
+	GetTagsToPublish() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -71,6 +72,7 @@ type CentralConfiguration struct {
 	EnvironmentID        string     `config:"environmentID"`
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
+	TagsToPublish        string     `config:"tagsToPublish"`
 	Auth                 AuthConfig `config:"auth"`
 	TLS                  TLSConfig  `config:"ssl"`
 }
@@ -169,6 +171,11 @@ func (c *CentralConfiguration) GetAuthConfig() AuthConfig {
 // GetTLSConfig - Returns the TLS Config
 func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 	return c.TLS
+}
+
+// GetTagsToPublish - Returns tags to publish
+func (c *CentralConfiguration) GetTagsToPublish() string {
+	return c.TagsToPublish
 }
 
 // Validate - Validates the config

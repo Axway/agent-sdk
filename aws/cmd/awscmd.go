@@ -20,7 +20,6 @@ func AddAWSProperties(rootCmd corecmd.AgentRootCmd) {
 		rootCmd.AddStringProperty("aws.logGroupArn", "awsLogGroupArn", "", "AWS Log Group ARN for AWS API Gateway Access logs")
 		rootCmd.AddBoolProperty("aws.pushTags", "awsPushTags", false, "Push the Tags on AWS API Gateway stages to AMPLIFY Central")
 		rootCmd.AddStringProperty("aws.filter", "awsFilter", "", "Filter condition for discovery")
-		rootCmd.AddStringProperty("aws.tagsToPublish", "awsTagsToPublish", "", "Tags on AWS APIGW stages that will be in discovery configuration")
 	}
 }
 
@@ -40,7 +39,6 @@ func ParseAWSConfig(rootCmd corecmd.AgentRootCmd) (awsconfig.AWSConfig, error) {
 		cfg.LogGroupArn = rootCmd.StringPropertyValue("aws.logGroupArn")
 		cfg.PushTags = rootCmd.BoolPropertyValue("aws.pushTags")
 		cfg.Filter = rootCmd.StringPropertyValue("aws.filter")
-		cfg.TagsToPublish = rootCmd.StringPropertyValue("aws.tagsToPublish")
 	}
 
 	if err := cfg.Validate(); err != nil {

@@ -181,6 +181,7 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 		cfg.APIServerEnvironment = c.StringPropertyValue("central.apiServerEnvironment")
 		cfg.APIServerVersion = c.StringPropertyValue("central.apiServerVersion")
 		cfg.TeamID = c.StringPropertyValue("central.teamId")
+		cfg.TagsToPublish = c.StringPropertyValue("central.tagsToPublish")
 	}
 
 	if err := cfg.Validate(); err != nil {
