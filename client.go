@@ -59,11 +59,20 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	strArr := []string{}
 
 	for key, val := range m {
-		v := val.(*string)
-		if *v == "" {
+		var value string
+		v, ok := val.(*string)
+		if ok {
+			value = *v
+		} else {
+			v, ok := val.(string)
+			if ok {
+				value = v
+			}
+		}
+		if value == "" {
 			strArr = append(strArr, key)
 		} else {
-			strArr = append(strArr, key+"_"+*v)
+			strArr = append(strArr, key+"_"+value)
 		}
 	}
 

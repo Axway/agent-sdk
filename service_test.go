@@ -50,10 +50,17 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
+func createServiceClient() *ServiceClient {
+	return &ServiceClient{
+		cfg: &corecfg.CentralConfiguration{
+			TeamID: "test",
+		},
+	}
+}
+func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	// set the config values
 	setConfig()
-
+	c := createServiceClient()
 	tags := make(map[string]interface{})
 	tags["key1"] = "val1"
 	tags["key2"] = "val2"
@@ -81,7 +88,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes1, _ := c.CreateService(serviceBody)
+	catalogBytes1, _ := c.marshalCatalogItemInit(serviceBody)
 
 	var catalogItem1 CatalogItemInit
 	json.Unmarshal(catalogBytes1, &catalogItem1)
@@ -113,7 +120,7 @@ func (c *Client) TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes2, _ := c.CreateService(serviceBody)
+	catalogBytes2, _ := c.marshalCatalogItemInit(serviceBody)
 
 	var catalogItem2 CatalogItemInit
 	json.Unmarshal(catalogBytes2, &catalogItem2)
