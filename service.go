@@ -26,6 +26,8 @@ const (
 	addAPIServerRevisionSpec
 	addAPIServerInstanceSpec
 	addCatalog
+	addCatalogImage
+	updateCatalog
 )
 
 //ServiceBody -
@@ -44,7 +46,9 @@ type ServiceBody struct {
 	Tags             map[string]interface{}
 	Buffer           []byte            `json:",omitempty"`
 	AgentMode        corecfg.AgentMode `json:",omitempty"`
-	ServiceExecution int               `json:"omitempty"`
+	ServiceExecution serviceExecution  `json:"omitempty"`
+	Image            string
+	ImageContentType string
 }
 
 //CatalogPropertyValue -
@@ -181,71 +185,111 @@ const (
 	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
 )
 
-func (c *Client) deployService(serviceBody ServiceBody, method, url string) (string, error) {
-	buffer, err := c.CreateService(serviceBody)
+func (c *ServiceClient) deployService(serviceBody ServiceBody, method, url string) (string, error) {
+	buffer, err := c.marshalServiceBody(serviceBody)
 	if err != nil {
 		log.Error("Error creating service item: ", err)
 		return "", err
 	}
 
-	return c.DeployAPI(method, url, buffer)
+	return c.deployAPI(method, url, buffer)
+}
+
+// CreateService - Creates a catalog item or API service for the definition based on the agent mode
+func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
+	if c.cfg.GetAgentMode() == corecfg.Connected {
+		return c.addAPICService(serviceBody)
+	}
+	return c.addCatalog(serviceBody)
 }
 
 // AddToAPICServer -
-func (c *Client) AddToAPICServer(serviceBody ServiceBody) (string, error) {
+func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) {
 
 	itemID := ""
-
 	// Verify if the api already exists
-	if c.IsNewAPI(serviceBody) {
+	if c.isNewAPI(serviceBody) {
 		// add api
-		serviceBody.ServiceExecution = int(addAPIServerSpec)
+		serviceBody.ServiceExecution = addAPIServerSpec
 		itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesURL())
 		if err != nil {
-			log.Errorf("Error adding API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
 			return itemID, err
 		}
 	}
 
 	// add api revision
-	serviceBody.ServiceExecution = int(addAPIServerRevisionSpec)
+	serviceBody.ServiceExecution = addAPIServerRevisionSpec
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
 	if err != nil {
-		log.Errorf("Error adding API revision for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
+		return "", err
 	}
 
 	// add api instance
-	serviceBody.ServiceExecution = int(addAPIServerInstanceSpec)
+	serviceBody.ServiceExecution = addAPIServerInstanceSpec
 	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
 	if err != nil {
-		log.Errorf("Error adding API instance for API %v, stage %v", serviceBody.APIName, serviceBody.Stage)
+		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
+		return "", err
 	}
 
 	return itemID, err
 }
 
 // AddToAPIC -
-func (c *Client) AddToAPIC(serviceBody ServiceBody) (string, error) {
-	return c.deployService(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
+func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
+	serviceBody.ServiceExecution = addCatalog
+	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
+	if err != nil {
+		return "", err
+	}
+	if serviceBody.Image != "" {
+		serviceBody.ServiceExecution = addCatalogImage
+		_, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(itemID))
+		if err != nil {
+			log.Warn("Unable to add image to the catalog item. " + err.Error())
+		}
+	}
+	return itemID, nil
 }
 
-// UpdateToAPIC -
-func (c *Client) UpdateToAPIC(serviceBody ServiceBody, url string) (string, error) {
-	return c.deployService(serviceBody, http.MethodPut, url)
+// UpdateService -
+func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
+	serviceBody.ServiceExecution = updateCatalog
+	return c.deployService(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+ID)
 }
 
 // CreateService -
-func (c *Client) CreateService(serviceBody ServiceBody) ([]byte, error) {
+func (c *ServiceClient) marshalServiceBody(serviceBody ServiceBody) ([]byte, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
 		return nil, fmt.Errorf("Unsuppored security policy '%v'. ", serviceBody.AuthPolicy)
 	}
 	if serviceBody.AgentMode == corecfg.Connected {
-		return createAPIServerBody(c, serviceBody)
+		return c.createAPIServerBody(serviceBody)
 	}
-	return createCatalogBody(c, serviceBody)
+	return c.createCatalogBody(serviceBody)
 }
 
-func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
+func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, error) {
+	var spec []byte
+	var err error
+	switch serviceBody.ServiceExecution {
+	case addCatalog:
+		spec, err = c.marshalCatalogItemInit(serviceBody)
+	case addCatalogImage:
+		spec, err = c.marshalCatalogItemImage(serviceBody)
+	case updateCatalog:
+		spec, err = c.marshalCatalogItem(serviceBody)
+	default:
+		return nil, errors.New("Invalid catalog operation")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return spec, nil
+}
+
+func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
@@ -263,7 +307,7 @@ func createCatalogBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			},
 		},
 
-		Tags:       c.MapToTagsArray(serviceBody.Tags),
+		Tags:       c.mapToTagsArray(serviceBody.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         true,
@@ -303,7 +347,7 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 // createAPIServerBody - This function is being used by both the api server creation and api server revision creation
-func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
+func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, error) {
 	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
 	attributes := make(map[string]interface{})
 	for key, val := range serviceBody.Tags {
@@ -316,12 +360,12 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 	name := strings.ToLower(serviceBody.APIName) // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
 
 	switch serviceBody.ServiceExecution {
-	case int(addAPIServerSpec):
+	case addAPIServerSpec:
 		spec = APIServiceSpec{
 			Description: serviceBody.Description,
 		}
-	case int(addAPIServerRevisionSpec):
-		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
+	case addAPIServerRevisionSpec:
+		name += strings.ToLower(serviceBody.Stage)
 		revisionDefinition := RevisionDefinition{
 			Type:  "swagger2",
 			Value: serviceBody.Swagger,
@@ -330,9 +374,9 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 			APIService: strings.ToLower(serviceBody.APIName),
 			Definition: revisionDefinition,
 		}
-	case int(addAPIServerInstanceSpec):
+	case addAPIServerInstanceSpec:
 		endPoints := []EndPoint{}
-		name = strings.ToLower(serviceBody.APIName) + strings.ToLower(serviceBody.Stage)
+		name += strings.ToLower(serviceBody.Stage)
 		host := gjson.Get(string(serviceBody.Swagger), "host").String()
 
 		// Iterate through protocols and create endpoints for intances
@@ -356,7 +400,7 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 		return nil, errors.New("Error getting execution service -- not set")
 	}
 
-	newtags := c.MapToTagsArray(serviceBody.Tags)
+	newtags := c.mapToTagsArray(serviceBody.Tags)
 
 	apiServerService := APIServer{
 		Name:       name,
@@ -370,7 +414,7 @@ func createAPIServerBody(c *Client, serviceBody ServiceBody) ([]byte, error) {
 }
 
 // CreateCatalogItemBodyForUpdate -
-func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte, error) {
+func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
 	newCatalogItem := CatalogItem{
 		DefinitionType:    "API",
 		DefinitionSubType: "swaggerv2",
@@ -379,7 +423,7 @@ func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
-		Tags:               c.MapToTagsArray(serviceBody.Tags),
+		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED",  // default value
 		State:              "UNPUBLISHED", //default
 		LatestVersionDetails: CatalogItemRevision{
@@ -389,4 +433,13 @@ func (c *Client) CreateCatalogItemBodyForUpdate(serviceBody ServiceBody) ([]byte
 	}
 
 	return json.Marshal(newCatalogItem)
+}
+
+// marshals the catalog image body
+func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte, error) {
+	catalogImage := CatalogItemImage{
+		DataType:      serviceBody.ImageContentType,
+		Base64Content: serviceBody.Image,
+	}
+	return json.Marshal(catalogImage)
 }

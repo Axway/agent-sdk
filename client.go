@@ -24,20 +24,21 @@ const (
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough}
 
-//CatalogCreator - interface
-type CatalogCreator interface {
-	DeployAPI(method, url string, buffer []byte) (string, error)
+// Client - interface
+type Client interface {
+	CreateService(serviceBody ServiceBody) (string, error)
+	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 }
 
-// Client -
-type Client struct {
+// ServiceClient -
+type ServiceClient struct {
 	tokenRequester *apicauth.PlatformTokenGetter
 	cfg            corecfg.CentralConfig
 	apiClient      *coreapi.Client
 }
 
 // New -
-func New(cfg corecfg.CentralConfig) *Client {
+func New(cfg corecfg.CentralConfig) Client {
 	tokenURL := cfg.GetAuthConfig().GetTokenURL()
 	aud := cfg.GetAuthConfig().GetAudience()
 	priKey := cfg.GetAuthConfig().GetPrivateKey()
@@ -46,15 +47,15 @@ func New(cfg corecfg.CentralConfig) *Client {
 	clientID := cfg.GetAuthConfig().GetClientID()
 	authTimeout := cfg.GetAuthConfig().GetTimeout()
 
-	return &Client{
+	return &ServiceClient{
 		cfg:            cfg,
 		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 		apiClient:      coreapi.NewClient(cfg.GetTLSConfig()),
 	}
 }
 
-// MapToTagsArray -
-func (c *Client) MapToTagsArray(m map[string]interface{}) []string {
+// mapToTagsArray -
+func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	strArr := []string{}
 
 	for key, val := range m {
@@ -91,8 +92,8 @@ func isUnitTesting() bool {
 	return strings.HasSuffix(os.Args[0], ".test")
 }
 
-// DeployAPI -
-func (c *Client) DeployAPI(method, url string, buffer []byte) (string, error) {
+// deployAPI -
+func (c *ServiceClient) deployAPI(method, url string, buffer []byte) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
@@ -139,7 +140,7 @@ func logResponseErrors(body []byte) {
 	}
 }
 
-func (c *Client) handleResponse(body []byte) (string, error) {
+func (c *ServiceClient) handleResponse(body []byte) (string, error) {
 
 	itemID := ""
 
@@ -158,7 +159,7 @@ func (c *Client) handleResponse(body []byte) (string, error) {
 	return itemID, nil
 }
 
-func (c *Client) createHeader() (map[string]string, error) {
+func (c *ServiceClient) createHeader() (map[string]string, error) {
 	token, err := c.tokenRequester.GetToken()
 	if err != nil {
 		return nil, err
@@ -171,7 +172,7 @@ func (c *Client) createHeader() (map[string]string, error) {
 }
 
 // IsNewAPI -
-func (c *Client) IsNewAPI(serviceBody ServiceBody) bool {
+func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
 	apiName := strings.ToLower(serviceBody.APIName)
 	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
