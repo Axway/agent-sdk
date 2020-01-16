@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
@@ -357,7 +358,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 
 	// spec needs to adhere to environment schema
 	var spec interface{}
-	name := strings.ToLower(serviceBody.APIName) // name needs to be path friendly and follows this regex "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\
+	name := sanitizeAPIName(serviceBody.APIName)
 
 	switch serviceBody.ServiceExecution {
 	case addAPIServerSpec:
@@ -365,18 +366,18 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 			Description: serviceBody.Description,
 		}
 	case addAPIServerRevisionSpec:
-		name += strings.ToLower(serviceBody.Stage)
 		revisionDefinition := RevisionDefinition{
 			Type:  "swagger2",
 			Value: serviceBody.Swagger,
 		}
 		spec = APIServiceRevisionSpec{
-			APIService: strings.ToLower(serviceBody.APIName),
+			APIService: name,
 			Definition: revisionDefinition,
 		}
+		// reset the name here to include the stage
+		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
 	case addAPIServerInstanceSpec:
 		endPoints := []EndPoint{}
-		name += strings.ToLower(serviceBody.Stage)
 		host := gjson.Get(string(serviceBody.Swagger), "host").String()
 
 		// Iterate through protocols and create endpoints for intances
@@ -392,6 +393,8 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 			endPoints = append(endPoints, endPoint)
 		}
 
+		// reset the name here to include the stage
+		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
 		spec = APIServerInstanceSpec{
 			APIServiceRevision: name,
 			InstanceEndPoint:   endPoints,
@@ -411,6 +414,26 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	}
 
 	return json.Marshal(apiServerService)
+}
+
+// Sanitize name to be path friendly and follow this regex: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*
+func sanitizeAPIName(name string) string {
+	// convert all letters to lower first
+	newName := strings.ToLower(name)
+	// fmt.Println(name)
+
+	// parse name out. All valid parts must be '-', '.', a-z, or 0-9
+	re := regexp.MustCompile(`[-\.a-z0-9]*`)
+	matches := re.FindAllString(newName, -1)
+
+	// join all of the parts, separated with '-'. This in effect is substituting all illegal chars with a '-'
+	newName = strings.Join(matches, "-")
+
+	// The regex rule says that the name must not begin or end with a '-' or '.', so trim them off
+	newName = strings.TrimLeft(strings.TrimRight(newName, "-."), "-.")
+
+	// The regex rule also says that the name must not have a sequence of ".-" or "-.", so replace them
+	return strings.ReplaceAll(strings.ReplaceAll(newName, "-.", "--"), ".-", "--")
 }
 
 // CreateCatalogItemBodyForUpdate -
