@@ -77,11 +77,11 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	// Add any tags from config
-	tagsToPublish := c.cfg.GetTagsToPublish()
-	if tagsToPublish != "" {
-		tagsToPublishArray := strings.Split(tagsToPublish, ",")
+	additionalTags := c.cfg.GetTagsToPublish()
+	if additionalTags != "" {
+		additionalTagsArray := strings.Split(additionalTags, ",")
 
-		for _, tag := range tagsToPublishArray {
+		for _, tag := range additionalTagsArray {
 			strArr = append(strArr, strings.TrimSpace(tag))
 		}
 	}
