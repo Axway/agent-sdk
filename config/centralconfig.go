@@ -72,7 +72,7 @@ type CentralConfiguration struct {
 	EnvironmentID        string     `config:"environmentID"`
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
-	TagsToPublish        string     `config:"tagsToPublish"`
+	TagsToPublish        string     `config:"additionalTags"`
 	Auth                 AuthConfig `config:"auth"`
 	TLS                  TLSConfig  `config:"ssl"`
 }
