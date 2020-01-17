@@ -432,8 +432,12 @@ func sanitizeAPIName(name string) string {
 	// The regex rule says that the name must not begin or end with a '-' or '.', so trim them off
 	newName = strings.TrimLeft(strings.TrimRight(newName, "-."), "-.")
 
-	// The regex rule also says that the name must not have a sequence of ".-" or "-.", so replace them
-	return strings.ReplaceAll(strings.ReplaceAll(newName, "-.", "--"), ".-", "--")
+	// The regex rule also says that the name must not have a sequence of ".-", "-.", or "..", so replace them
+	r1 := strings.ReplaceAll(newName, "-.", "--")
+	r2 := strings.ReplaceAll(r1, ".-", "--")
+	r3 := strings.ReplaceAll(r2, "..", "--")
+
+	return r3
 }
 
 // CreateCatalogItemBodyForUpdate -
