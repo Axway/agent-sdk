@@ -164,7 +164,7 @@ type TLSConfig interface {
 	GetMinVersion() TLSVersion
 	GetMaxVersion() TLSVersion
 	BuildTLSConfig() *tls.Config
-	Validate()
+	Validate() error
 }
 
 // TLSConfiguration - A Config structure is used to configure a TLS client or server.
@@ -274,18 +274,32 @@ func (c *TLSConfiguration) GetMaxVersion() TLSVersion {
 	return c.MaxVersion
 }
 
+// Validate - Validates the config
+func (c *TLSConfiguration) Validate() (err error) {
+	exception.Block{
+		Try: func() {
+			c.validateConfig()
+		},
+		Catch: func(e error) {
+			err = e
+		},
+	}.Do()
+
+	return
+}
+
 // Validate -
-func (c *TLSConfiguration) Validate() {
+func (c *TLSConfiguration) validateConfig() {
 	if c.MinVersion != 0 && !c.isValidMinVersion() {
-		exception.Throw(errors.New("Error ssl.minVersion not valid in config"))
+		exception.Throw(errors.New("Error: ssl.minVersion not valid in config"))
 	}
 
 	if c.MaxVersion != 0 && !c.isValidMaxVersion() {
-		exception.Throw(errors.New("Error ssl.maxVersion not valid in config"))
+		exception.Throw(errors.New("Error: ssl.maxVersion not valid in config"))
 	}
 
 	if len(c.CipherSuites) != 0 && !c.isValidCiphers() {
-		exception.Throw(errors.New("Error ssl.cipherSuites not valid in config"))
+		exception.Throw(errors.New("Error: ssl.cipherSuites not valid in config"))
 	}
 }
 
