@@ -391,6 +391,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		spec = APIServiceSpec{
 			Description: serviceBody.Description,
 		}
+		return nil, nil
 	case addAPIServerRevisionSpec:
 		revisionDefinition := RevisionDefinition{
 			Type:  "oas2",
