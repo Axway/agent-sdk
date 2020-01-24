@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/tidwall/gjson"
@@ -26,6 +27,7 @@ const (
 	addAPIServerSpec serviceExecution = iota + 1
 	addAPIServerRevisionSpec
 	addAPIServerInstanceSpec
+	deleteAPIServerSpec
 	addCatalog
 	addCatalogImage
 	updateCatalog
@@ -206,7 +208,7 @@ func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
 
 // AddToAPICServer -
 func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) {
-
+	rollbackAPIProcess := c.cfg.GetRollbackAPIProcess()
 	itemID := ""
 	// Verify if the api already exists
 	if c.isNewAPI(serviceBody) {
@@ -221,20 +223,44 @@ func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) 
 	// add api revision
 	serviceBody.ServiceExecution = addAPIServerRevisionSpec
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
+	// this will be removed after QA tests (START)
+	if rollbackAPIProcess == "revision" {
+		log.Debug("Sleeping for 30 seconds to verify API and API revisions")
+		time.Sleep(30 * time.Second)
+		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
+		return c.rollbackAPIService(serviceBody)
+	}
+	// this will be removed after QA tests (END)
 	if err != nil {
 		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
-		return "", err
+		return c.rollbackAPIService(serviceBody)
 	}
 
 	// add api instance
 	serviceBody.ServiceExecution = addAPIServerInstanceSpec
 	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
+
+	// this will be removed after QA tests (START)
+	if rollbackAPIProcess == "instance" {
+		log.Debug("Sleeping for 30 seconds to verify API, API revisions, and API instance")
+		time.Sleep(30 * time.Second)
+		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
+		return c.rollbackAPIService(serviceBody)
+	}
+	// this will be removed after QA tests (END)
 	if err != nil {
 		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
-		return "", err
+		return c.rollbackAPIService(serviceBody)
 	}
 
 	return itemID, err
+}
+
+// rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
+func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody) (string, error) {
+	// rollback and remove the API service
+	serviceBody.ServiceExecution = deleteAPIServerSpec
+	return c.deployService(serviceBody, http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+strings.ToLower(serviceBody.APIName))
 }
 
 // AddToAPIC -
@@ -349,12 +375,8 @@ func isValidAuthPolicy(auth string) bool {
 
 // createAPIServerBody - This function is being used by both the api server creation and api server revision creation
 func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, error) {
-	// Set tags as Attributes to retain key value pairs.  Add other pertinent data.
 	attributes := make(map[string]interface{})
-	for key, val := range serviceBody.Tags {
-		v := val.(*string)
-		attributes[key] = *v
-	}
+	attributes["externalAPIID"] = serviceBody.RestAPIID
 
 	// spec needs to adhere to environment schema
 	var spec interface{}
@@ -365,9 +387,13 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		spec = APIServiceSpec{
 			Description: serviceBody.Description,
 		}
+	case deleteAPIServerSpec:
+		spec = APIServiceSpec{
+			Description: serviceBody.Description,
+		}
 	case addAPIServerRevisionSpec:
 		revisionDefinition := RevisionDefinition{
-			Type:  "swagger2",
+			Type:  "oas2",
 			Value: serviceBody.Swagger,
 		}
 		spec = APIServiceRevisionSpec{
@@ -378,7 +404,10 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
 	case addAPIServerInstanceSpec:
 		endPoints := []EndPoint{}
-		host := gjson.Get(string(serviceBody.Swagger), "host").String()
+		name += strings.ToLower(serviceBody.Stage)
+		swaggerHost := strings.Split(gjson.Get(string(serviceBody.Swagger), "host").String(), ":")
+		host := swaggerHost[0]
+		port := 443
 
 		// Iterate through protocols and create endpoints for intances
 		protocols := gjson.Get(string(serviceBody.Swagger), "schemes")
@@ -387,7 +416,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		for _, protocol := range schemes {
 			endPoint := EndPoint{
 				Host:     host,
-				Port:     443, // TODO : this is a hard coded value as of now.  Port is not showing up in swagger at the time of check in
+				Port:     port,
 				Protocol: protocol,
 			}
 			endPoints = append(endPoints, endPoint)
