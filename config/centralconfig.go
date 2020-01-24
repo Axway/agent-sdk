@@ -54,10 +54,12 @@ type CentralConfig interface {
 	GetAPIServerServicesURL() string
 	GetAPIServerServicesRevisionsURL() string
 	GetAPIServerServicesInstancesURL() string
+	DeleteAPIServerServicesURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
+	GetRollbackAPIProcess() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -73,6 +75,7 @@ type CentralConfiguration struct {
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
 	TagsToPublish        string     `config:"additionalTags"`
+	RollbackAPIProcess   string     `config:"rollbackAPIProcess"`
 	Auth                 AuthConfig `config:"auth"`
 	TLS                  TLSConfig  `config:"ssl"`
 }
@@ -163,6 +166,11 @@ func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
 	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiserviceinstances"
 }
 
+// DeleteAPIServerServicesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiservices"
+}
+
 // GetAuthConfig - Returns the Auth Config
 func (c *CentralConfiguration) GetAuthConfig() AuthConfig {
 	return c.Auth
@@ -176,6 +184,11 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
+}
+
+// GetRollbackAPIProcess - Returns tags to publish
+func (c *CentralConfiguration) GetRollbackAPIProcess() string {
+	return c.RollbackAPIProcess
 }
 
 // Validate - Validates the config
