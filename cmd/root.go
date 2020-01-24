@@ -182,6 +182,8 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 		cfg.APIServerVersion = c.StringPropertyValue("central.apiServerVersion")
 		cfg.TeamID = c.StringPropertyValue("central.teamId")
 		cfg.TagsToPublish = c.StringPropertyValue("central.additionalTags")
+		// Will be removed after QA testing
+		cfg.RollbackAPIProcess = c.StringPropertyValue("central.rollbackAPIProcess")
 	}
 
 	if err := cfg.Validate(); err != nil {
