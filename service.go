@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
 	"github.com/tidwall/gjson"
@@ -208,7 +207,6 @@ func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
 
 // AddToAPICServer -
 func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) {
-	rollbackAPIProcess := c.cfg.GetRollbackAPIProcess()
 	itemID := ""
 	// Verify if the api already exists
 	if c.isNewAPI(serviceBody) {
@@ -223,14 +221,6 @@ func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) 
 	// add api revision
 	serviceBody.ServiceExecution = addAPIServerRevisionSpec
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL())
-	// this will be removed after QA tests (START)
-	if rollbackAPIProcess == "revision" {
-		log.Debug("Sleeping for 30 seconds to verify API and API revisions")
-		time.Sleep(30 * time.Second)
-		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
-		return c.rollbackAPIService(serviceBody)
-	}
-	// this will be removed after QA tests (END)
 	if err != nil {
 		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
 		return c.rollbackAPIService(serviceBody)
@@ -239,15 +229,6 @@ func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) 
 	// add api instance
 	serviceBody.ServiceExecution = addAPIServerInstanceSpec
 	itemID, err = c.deployService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL())
-
-	// this will be removed after QA tests (START)
-	if rollbackAPIProcess == "instance" {
-		log.Debug("Sleeping for 30 seconds to verify API, API revisions, and API instance")
-		time.Sleep(30 * time.Second)
-		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
-		return c.rollbackAPIService(serviceBody)
-	}
-	// this will be removed after QA tests (END)
 	if err != nil {
 		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
 		return c.rollbackAPIService(serviceBody)
