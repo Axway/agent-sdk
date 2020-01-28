@@ -260,7 +260,7 @@ func (c *ServiceClient) addAPICService(serviceBody ServiceBody) (string, error) 
 func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody) (string, error) {
 	// rollback and remove the API service
 	serviceBody.ServiceExecution = deleteAPIServerSpec
-	return c.deployService(serviceBody, http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+strings.ToLower(serviceBody.APIName))
+	return c.deployService(serviceBody, http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName))
 }
 
 // AddToAPIC -
