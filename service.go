@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -409,6 +410,12 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		swaggerHost := strings.Split(gjson.Get(string(serviceBody.Swagger), "host").String(), ":")
 		host := swaggerHost[0]
 		port := 443
+		if len(swaggerHost) > 1 {
+			swaggerPort, err := strconv.Atoi(swaggerHost[1])
+			if err == nil {
+				port = swaggerPort
+			}
+		}
 
 		// Iterate through protocols and create endpoints for intances
 		protocols := gjson.Get(string(serviceBody.Swagger), "schemes")
