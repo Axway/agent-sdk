@@ -59,7 +59,6 @@ type CentralConfig interface {
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
-	GetRollbackAPIProcess() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -75,7 +74,6 @@ type CentralConfiguration struct {
 	URL                  string     `config:"url"`
 	APIServerVersion     string     `config:"apiServerVersion"`
 	TagsToPublish        string     `config:"additionalTags"`
-	RollbackAPIProcess   string     `config:"rollbackAPIProcess"`
 	Auth                 AuthConfig `config:"auth"`
 	TLS                  TLSConfig  `config:"ssl"`
 }
@@ -184,11 +182,6 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
-}
-
-// GetRollbackAPIProcess - Returns tags to publish
-func (c *CentralConfiguration) GetRollbackAPIProcess() string {
-	return c.RollbackAPIProcess
 }
 
 // Validate - Validates the config
