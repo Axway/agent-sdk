@@ -34,7 +34,7 @@ type Client interface {
 type ServiceClient struct {
 	tokenRequester *apicauth.PlatformTokenGetter
 	cfg            corecfg.CentralConfig
-	apiClient      *coreapi.Client
+	apiClient      coreapi.Client
 }
 
 // New -
