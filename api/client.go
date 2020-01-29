@@ -34,13 +34,18 @@ type Response struct {
 	Headers map[string][]string
 }
 
-// Client - the http client to use when communicating to an API
-type Client struct {
+// Client -
+type Client interface {
+	Send(request Request) (*Response, error)
+}
+
+type httpClient struct {
+	Client
 	httpClient *http.Client
 }
 
 // NewClient - creates a new API client using the http client sent in
-func NewClient(cfg config.TLSConfig) *Client {
+func NewClient(cfg config.TLSConfig) Client {
 	var httpCli *http.Client
 
 	if cfg == nil {
@@ -54,12 +59,12 @@ func NewClient(cfg config.TLSConfig) *Client {
 	}
 
 	httpCli.Timeout = time.Second * 10
-	return &Client{
+	return &httpClient{
 		httpClient: httpCli,
 	}
 }
 
-func (c *Client) getURLEncodedQueryParams(queryParams map[string]string) string {
+func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) string {
 	params := url.Values{}
 	for key, value := range queryParams {
 		params.Add(key, value)
@@ -67,7 +72,7 @@ func (c *Client) getURLEncodedQueryParams(queryParams map[string]string) string 
 	return params.Encode()
 }
 
-func (c *Client) prepareAPIRequest(request Request) (*http.Request, error) {
+func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
 	requestURL := request.URL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
@@ -82,7 +87,7 @@ func (c *Client) prepareAPIRequest(request Request) (*http.Request, error) {
 	return req, err
 }
 
-func (c *Client) prepareAPIResponse(res *http.Response) (*Response, error) {
+func (c *httpClient) prepareAPIResponse(res *http.Response) (*Response, error) {
 	body, err := ioutil.ReadAll(res.Body)
 	response := Response{
 		Code:    res.StatusCode,
@@ -93,7 +98,7 @@ func (c *Client) prepareAPIResponse(res *http.Response) (*Response, error) {
 }
 
 // Send - send the http request and returns the API Response
-func (c *Client) Send(request Request) (*Response, error) {
+func (c *httpClient) Send(request Request) (*Response, error) {
 	req, err := c.prepareAPIRequest(request)
 	if err != nil {
 		return nil, err
