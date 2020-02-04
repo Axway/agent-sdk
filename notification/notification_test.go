@@ -211,23 +211,25 @@ func TestStopUnsubscribe(t *testing.T) {
 	assert.NotEqual(t, "", subscriber3.GetID(), "An ID was not returned by the subscribe call")
 	assert.Nil(t, err, "An error was returned from Subscribe, when it was not expected")
 	assert.Len(t, notifier1.(*channelNotifier).subscribers, 3, " Expected the notifier to have 3 subscribers")
-	// Validate that the channels are open
 
 	// Unsubscribe output3
+	err = Unsubscribe("fakeName", subscriber3.GetID())
+	assert.NotNil(t, err, "Expected an error to be returned when unsubscribing from a non-existent notifier")
+	err = notifier1.Unsubscribe("fakeID")
+	assert.NotNil(t, err, "Expected an error to be returned when unsubscribing with an ID that does not exist")
 	err = Unsubscribe(serv1Name, subscriber3.GetID())
 	assert.Nil(t, err, "An error was returned from Unsubscribe, when it was not expected")
 	assert.Len(t, notifier1.(*channelNotifier).subscribers, 2, " Expected the notifier to have 2 subscribers")
 
+	// Unsubscribe subscriber2
+	subscriber2.Close()
+	assert.Len(t, notifier1.(*channelNotifier).subscribers, 1, " Expected the notifier to have 1 subscribers")
+
 	// Close the notifier, the subscribers should close too
 	notifier1.Stop()
-
 	val1, ok1 := <-output1ChanData.msgChan
 	assert.Nil(t, val1, "Didn't expect a message on the channel")
 	assert.False(t, ok1, "Expected the message channel to be closed")
-
-	val2, ok2 := <-output2ChanData.msgChan
-	assert.Nil(t, val2, "Didn't expect a message on the channel")
-	assert.False(t, ok2, "Expected the message channel to be closed")
 
 	assert.Len(t, notifier1.(*channelNotifier).subscribers, 0, " Expected the notifier to have 0 subscribers")
 

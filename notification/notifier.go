@@ -17,7 +17,7 @@ type Notifier interface {
 	GetName() string
 	Stop()
 	Subscribe(Subscriber)
-	Unsubscribe(string)
+	Unsubscribe(string) error
 	Start()
 }
 
@@ -75,8 +75,7 @@ func Unsubscribe(name string, id string) error {
 	pubLock.RLock() // reading the notifiers
 	defer pubLock.RUnlock()
 	if notifier, ok := notifiers[name]; ok {
-		notifier.Unsubscribe(id)
-		return nil
+		return notifier.Unsubscribe(id)
 	}
 
 	return fmt.Errorf("Could not find notifier %s to unsubscribe from", name)
@@ -108,17 +107,20 @@ func (s *channelNotifier) subscribe(newSub Subscriber) {
 }
 
 // Unsubscribe - remove the subscriber identified with id from the notifier list
-func (s *channelNotifier) Unsubscribe(id string) {
-	s.unsubscribe(id)
+func (s *channelNotifier) Unsubscribe(id string) error {
+	return s.unsubscribe(id)
 }
 
 // remove the subscriber identified with id from the notifier list
-func (s *channelNotifier) unsubscribe(id string) {
+func (s *channelNotifier) unsubscribe(id string) error {
 	s.subLock.Lock() // Removing a dubscriber
 	defer s.subLock.Unlock()
-	sub := s.subscribers[id]
-	delete(s.subscribers, id)
-	sub.close()
+	if sub, ok := s.subscribers[id]; ok {
+		delete(s.subscribers, id)
+		sub.close()
+		return nil
+	}
+	return fmt.Errorf("Could not find subscriber with id: %s", id)
 }
 
 func (s *channelNotifier) unsubscribeAll() {

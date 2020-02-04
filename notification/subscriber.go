@@ -32,7 +32,6 @@ func (s *notifierSubscriber) SendMsg(data interface{}) {
 // Close - used to unsubscribe this Subscriber from its notifier and close the channel
 func (s *notifierSubscriber) Close() {
 	Unsubscribe(s.notifier, s.id)
-	s.close()
 }
 
 // Close - used to unsubscribe this Subscriber from its notifier and close the channel
