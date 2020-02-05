@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

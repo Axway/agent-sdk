@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	"git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
 )
 
 // HTTP const definitions
