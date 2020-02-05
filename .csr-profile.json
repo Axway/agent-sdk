@@ -1,0 +1,16 @@
+{
+  "project": "AWS Discovery Agent",
+  "requirements": {
+    "dependency-check": true,
+    "fortify": false,
+    "irius-risk": true,
+    "npm-audit": false,
+    "pentest": false,
+    "retirejs": false,
+    "twistlock": true,
+    "zap": false,
+    "yarn": false,
+    "gosec": true
+  },
+  "suppressions": []
+}
