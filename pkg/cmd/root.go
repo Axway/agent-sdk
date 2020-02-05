@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
 	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"

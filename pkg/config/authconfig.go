@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/exception"
+	"git.ecd.axway.int/apigov/apic_agents_core/pkg/exception"
 )
 
 const tokenEndpoint = "/protocol/openid-connect/token"
