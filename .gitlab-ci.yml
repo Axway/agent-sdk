@@ -163,13 +163,10 @@ include:
     file: "/.gitlab-ci-iriusrisk.yml"
   - project: "scurity/gitlabci"
     ref: master
-    file: "/.gitlab-ci-twistlock.yml"
-  - project: "scurity/gitlabci"
-    ref: master
     file: "/.gitlab-ci-gosec.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-csr.yml"
+  # - project: "scurity/gitlabci"
+  #   ref: master
+  #   file: "/.gitlab-ci-csr.yml"
 
 gosec:
   retry: 0
