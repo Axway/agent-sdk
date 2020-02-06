@@ -9,16 +9,10 @@ variables:
   IRIUS_PROJECT: "apicagentscore"
   IRIUSRISK_COMPONENT_NAME: "apic-agents-core"
 
-  # These vars are for twistlock
-  DOCKER_DAEMON: "/var/run/docker.sock"
-  VULNERABILITY_THRESHOLD: medium
-  COMPLIANCE_THRESHOLD: medium
-
 stages:
   - test
   - sonar
   - security-scans
-  - security-review
   - release
 
 ############################################################

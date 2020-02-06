@@ -2,12 +2,28 @@
 
 
 [[projects]]
+  digest = "1:82c0b17bf37defc4e1b9785866c9d0254576a9cb38641d16ef6c3fb707f2a2dd"
+  name = "git.ecd.axway.int/apigov/service-mesh-agent"
+  packages = ["pkg/apicauth"]
+  pruneopts = "UT"
+  revision = "da81430877d3914127ce10198f022ff97b6534ac"
+  version = "0.9.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   pruneopts = "UT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:76dc72490af7174349349838f2fe118996381b31ea83243812a97e5a0fd5ed55"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -168,6 +184,30 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:fcea9aca14ce388baeb3afd42bc3302089393f78f9531212aed88d60a134a921"
+  name = "github.com/tidwall/gjson"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d10932a0d0b5f1618759b6259b05f7cb7bea0c25"
+  version = "v1.4.0"
+
+[[projects]]
+  digest = "1:8453ddbed197809ee8ca28b06bd04e127bec9912deb4ba451fea7a1eca578328"
+  name = "github.com/tidwall/match"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "33827db735fff6510490d69a8622612558a557ed"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:f63bab79e68e805cdd9bf70daa09e8c430cfbddf29d14b567a92fb12581b9b95"
+  name = "github.com/tidwall/pretty"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b2475501f89994f7ea30b3c94ba86b49079961fe"
+  version = "v1.0.1"
+
+[[projects]]
   branch = "master"
   digest = "1:72b7c210f8cfe1431d2f300fbf37f25e52aa77324b05ab6b698483054033803e"
   name = "golang.org/x/sys"
@@ -210,12 +250,14 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
+    "github.com/tidwall/gjson",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

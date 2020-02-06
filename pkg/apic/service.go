@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
 	"github.com/tidwall/gjson"
 )
 

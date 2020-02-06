@@ -7,23 +7,9 @@ import (
 	"os"
 	"testing"
 
-	awsconfig "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/aws/config"
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/pkg/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
 	"github.com/tidwall/gjson"
 )
-
-func setConfig() {
-	cfg := &config.Configuration{
-		AWSConfig: &awsconfig.AWSConfiguration{
-			Region: "eu-west-1",
-		},
-		CentralConfig: &corecfg.CentralConfiguration{
-			TeamID: "test",
-		},
-	}
-	config.SetConfig(cfg)
-}
 
 var methods = [5]string{"get", "post", "put", "patch", "delete"} // RestAPI methods
 
@@ -59,7 +45,6 @@ func createServiceClient() *ServiceClient {
 }
 func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	// set the config values
-	setConfig()
 	c := createServiceClient()
 	tags := make(map[string]interface{})
 	tags["key1"] = "val1"
@@ -79,7 +64,6 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		NameToPush:    "Beano",
 		APIName:       "serviceapi1",
 		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		TeamID:        config.GetConfig().CentralConfig.GetTeamID(),
 		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
 		Version:       "1.0.0",
 		AuthPolicy:    authPolicy,
@@ -111,7 +95,6 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		NameToPush:    "Beano",
 		APIName:       "serviceapi1",
 		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		TeamID:        config.GetConfig().CentralConfig.GetTeamID(),
 		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
 		Version:       "1.0.0",
 		AuthPolicy:    authPolicy,

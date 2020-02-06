@@ -3,11 +3,11 @@
   "requirements": {
     "dependency-check": true,
     "fortify": false,
-    "irius-risk": true,
+    "irius-risk": false,
     "npm-audit": false,
     "pentest": false,
     "retirejs": false,
-    "twistlock": true,
+    "twistlock": false,
     "zap": false,
     "yarn": false,
     "gosec": true
