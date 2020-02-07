@@ -38,6 +38,42 @@
       ]
     },
     {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "",
+      "component": "go-sysinfo",
+      "version": "v1.3.0",
+      "ids": [
+        "CVE-2016-9274"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "",
+      "component": "go-windows",
+      "version": "v1.0.1",
+      "ids": [
+        "CVE-2016-9274"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "",
+      "component": "tools",
+      "version": "*",
+      "ids": [
+        "CVE-2018-18749"
+      ]
+    },
+    {
       "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
       "regex": true,
       "scanner": "dependency-check",
