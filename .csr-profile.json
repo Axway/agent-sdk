@@ -42,9 +42,9 @@
       "regex": true,
       "scanner": "dependency-check",
       "classification": "False Positive",
-      "justification": "",
-      "component": "go-sysinfo",
-      "version": "v1.3.0",
+      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
+      "component": "go-windows",
+      "version": "v1.0.1",
       "ids": [
         "CVE-2016-9274"
       ]
@@ -54,9 +54,9 @@
       "regex": true,
       "scanner": "dependency-check",
       "classification": "False Positive",
-      "justification": "",
-      "component": "go-windows",
-      "version": "v1.0.1",
+      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
+      "component": "go-sysinfo",
+      "version": "v1.3.0",
       "ids": [
         "CVE-2016-9274"
       ]
