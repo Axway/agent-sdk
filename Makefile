@@ -28,9 +28,9 @@ sonar: test-sonar
 	sonar-scanner -X \
 		-Dsonar.host.url=http://quality1.ecd.axway.int \
 		-Dsonar.language=go \
-		-Dsonar.projectName=APIC_AGENTS_CORE \
+		-Dsonar.projectName=APIC_AGENTS_SDK \
 		-Dsonar.projectVersion=1.0 \
-		-Dsonar.projectKey=APIC_AGENTS_CORE \
+		-Dsonar.projectKey=APIC_AGENTS_SDK \
 		-Dsonar.sourceEncoding=UTF-8 \
 		-Dsonar.projectBaseDir=${WORKSPACE} \
 		-Dsonar.sources=. \
