@@ -198,14 +198,12 @@ dependencycheck:on-schedule:
 run-csr:
   dependencies:
     - dependencycheck
-    - fetch-iriusrisk
     - gosec
   <<: *only-feature
 
 update-csr:
   dependencies:
     - dependencycheck:on-schedule
-    - fetch-iriusrisk
     - gosec:on-schedule
 
 ############################################################
