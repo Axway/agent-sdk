@@ -3,9 +3,9 @@ package cmd
 import (
 	"time"
 
-	awsconfig "git.ecd.axway.int/apigov/apic_agents_core/pkg/aws/config"
-	corecmd "git.ecd.axway.int/apigov/apic_agents_core/pkg/cmd"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
+	awsconfig "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/aws/config"
+	corecmd "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
 //AddAWSProperties - Add AWS properties and command line flag

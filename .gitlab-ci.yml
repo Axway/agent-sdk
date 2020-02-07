@@ -90,8 +90,8 @@ stages:
 .prepare-path: &prepare-path |
   mkdir -p ${GOPATH}/src/git.ecd.axway.int/apigov
   cd ${GOPATH}/src/git.ecd.axway.int/apigov
-  ln -s ${CI_PROJECT_DIR} apic_agents_core
-  cd ${GOPATH}/src/git.ecd.axway.int/apigov/apic_agents_core
+  ln -s ${CI_PROJECT_DIR} apic_agents_sdk
+  cd ${GOPATH}/src/git.ecd.axway.int/apigov/apic_agents_sdk
 
 .get-latest-version: &get-latest-version |
   export IMAGE_NAME=${PROJECT}/${PACKAGE_NAME}

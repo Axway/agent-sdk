@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	corecmd "git.ecd.axway.int/apigov/apic_agents_core/pkg/cmd"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
+	corecmd "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

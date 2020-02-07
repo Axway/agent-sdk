@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_core/pkg/exception"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
 
 // AWSConfig - Interface for aws config

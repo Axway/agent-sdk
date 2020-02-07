@@ -3,7 +3,7 @@ package cache
 import (
 	"fmt"
 
-	"git.ecd.axway.int/apigov/apic_agents_core/pkg/notification"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
 )
 
 var topics map[string]*cachePubSub

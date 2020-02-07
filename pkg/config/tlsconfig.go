@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"git.ecd.axway.int/apigov/apic_agents_core/pkg/exception"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
 
 // TLSCipherSuite - defined type

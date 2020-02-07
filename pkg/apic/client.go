@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_core/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
+	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"

@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_core/pkg/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/tidwall/gjson"
 )
 
