@@ -50,7 +50,7 @@
       ]
     },
     {
-      "path": ".*core\\/config\\/tlsconfig\\.go:.*",
+      "path": ".*pkg\\/config\\/tlsconfig\\.go:.*",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
