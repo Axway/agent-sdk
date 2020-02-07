@@ -68,7 +68,7 @@
       "classification": "False Positive",
       "justification": "",
       "component": "tools",
-      "version": "*",
+      "version": ".*",
       "ids": [
         "CVE-2018-18749"
       ]
