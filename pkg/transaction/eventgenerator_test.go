@@ -8,13 +8,16 @@ import (
 	"testing"
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/config"
-	"git.ecd.axway.int/apigov/aws_apigw_traceability_agent/pkg/agent/config"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func createMapperTestConfig(authURL, tenantID, env, envID string) *config.Config {
-	return &config.Config{
+type Config struct {
+	Central corecfg.CentralConfig `config:"central"`
+}
+
+func createMapperTestConfig(authURL, tenantID, env, envID string) *Config {
+	return &Config{
 		Central: &corecfg.CentralConfiguration{
 			TenantID:       tenantID,
 			APICDeployment: env,

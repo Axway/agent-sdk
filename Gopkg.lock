@@ -10,6 +10,14 @@
   version = "0.9.0"
 
 [[projects]]
+  digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -26,12 +34,76 @@
   version = "v3.2.0"
 
 [[projects]]
+  digest = "1:dac871c05242b38e8c1b26dd98beeafe9362821d765f1a58280f01191e4ec95d"
+  name = "github.com/elastic/beats"
+  packages = [
+    "libbeat/beat",
+    "libbeat/common",
+    "libbeat/common/file",
+    "libbeat/common/reload",
+    "libbeat/feature",
+    "libbeat/logp",
+    "libbeat/management",
+    "libbeat/paths",
+  ]
+  pruneopts = "UT"
+  revision = "a9c141434cd6b25d7a74a9c770be6b70643dc767"
+  version = "v7.5.2"
+
+[[projects]]
+  digest = "1:96f3c9624f041706c3e35d2b7e7aa4931e394a6125ab2c5da8b99ff7c2e4723c"
+  name = "github.com/elastic/go-sysinfo"
+  packages = [
+    ".",
+    "internal/registry",
+    "providers/darwin",
+    "providers/linux",
+    "providers/shared",
+    "providers/windows",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "b719bc42e40963c707571af208683a049e61f07f"
+  version = "v1.3.0"
+
+[[projects]]
+  digest = "1:5c312b911008fc0d1d891637ae20012fbb893d97d22c7adbc1a40189c48f9856"
+  name = "github.com/elastic/go-ucfg"
+  packages = [
+    ".",
+    "cfgutil",
+    "flag",
+    "json",
+    "parse",
+    "yaml",
+  ]
+  pruneopts = "UT"
+  revision = "093a6898c440d2e5e93abf09850068c60428b2cd"
+  version = "v0.8.1"
+
+[[projects]]
+  digest = "1:1ccb0a9b1971646dcaa9537cce0423a14aaf0643311abb8da753cd59372915d5"
+  name = "github.com/elastic/go-windows"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8c929792e70203792e3baf128c380e28754ae8b5"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   pruneopts = "UT"
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
+
+[[projects]]
+  digest = "1:bed9d72d596f94e65fff37f4d6c01398074a6bb1c3f3ceff963516bd01db6ff5"
+  name = "github.com/gofrs/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6b08a5c5172ba18946672b49749cde22873dd7c2"
+  version = "v3.2.0"
 
 [[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
@@ -69,6 +141,14 @@
   version = "v1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ca41e6bafdc8d60c47dba38e9adfc75219a2892b09e5c2160161e7b6bf9562c2"
+  name = "github.com/joeshaw/multierror"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "69b34d4ec901851247ae7e77d33909caf9df99ed"
+
+[[projects]]
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -101,12 +181,32 @@
   version = "v1.6.0"
 
 [[projects]]
+  digest = "1:9e1d37b58d17113ec3cb5608ac0382313c5b59470b94ed97d0976e69c7022314"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "614d223910a179a466c1767a985424175c39b465"
+  version = "v0.9.1"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:ec0ff4bd619a67065e34d6477711ed0117e335f99059a4c508e0fe21cfe7b304"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "internal/fs",
+    "internal/util",
+  ]
+  pruneopts = "UT"
+  revision = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f"
+  version = "v0.0.8"
 
 [[projects]]
   digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
@@ -208,10 +308,66 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:c708d00d1097e62bf4f3a72f239efa7dafc257581421b0b7d3789e1ff5299f30"
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "40ae6a40a970ef4cdbffa7b24b280e316db8accc"
+  version = "v1.5.1"
+
+[[projects]]
+  digest = "1:e6d88834deb4e35eb998c74f4d042db6ccecaaf62c0f6d57905852800994af00"
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "824d08f79702fe5f54aca8400aa0d754318786e7"
+  version = "v1.4.0"
+
+[[projects]]
   branch = "master"
-  digest = "1:72b7c210f8cfe1431d2f300fbf37f25e52aa77324b05ab6b698483054033803e"
+  digest = "1:3032e90a153750ea149f68bf081f97ca738f041fba45c41c80737f572ffdf2f4"
+  name = "go.uber.org/tools"
+  packages = ["update-license"]
+  pruneopts = "UT"
+  revision = "2cfd321de3ee5d5f8a5fda2521d1703478334d98"
+
+[[projects]]
+  digest = "1:4870c2cd8806c1545fe85387bdc01d61d43bc2bf5ee3f91795a853084e508309"
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore",
+    "zaptest/observer",
+  ]
+  pruneopts = "UT"
+  revision = "33e58d4d0120aa28d4df84cd244838c490846c9d"
+  version = "v1.13.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:802fc3c45ff4507b6e4a5c0c5ea55836242aeac3b8eddfe31d5d80a3cac50731"
+  name = "golang.org/x/lint"
+  packages = [
+    ".",
+    "golint",
+  ]
+  pruneopts = "UT"
+  revision = "910be7a94367618fd0fd25eaabbee4fdc0ac7092"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e1ae0149d60eec6ffb98faa6a5ab7c3218acb48f9409542fd951e6733d2afd17"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows",
+    "windows/registry",
+    "windows/svc/eventlog",
+  ]
   pruneopts = "UT"
   revision = "d101bd2416d505c0448a6ce8a282482678040a89"
 
@@ -231,6 +387,27 @@
   version = "v0.3.2"
 
 [[projects]]
+  branch = "master"
+  digest = "1:048c2d9968a02665e815995397497caf0427a29789473b30cd21e209d5652328"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/analysis",
+    "go/analysis/passes/inspect",
+    "go/ast/astutil",
+    "go/ast/inspector",
+    "go/buildutil",
+    "go/gcexportdata",
+    "go/internal/gcimporter",
+    "go/internal/packagesdriver",
+    "go/packages",
+    "go/types/objectpath",
+    "go/types/typeutil",
+    "internal/packagesinternal",
+  ]
+  pruneopts = "UT"
+  revision = "533eb2654509910257b8e03689c4b73df431b2f3"
+
+[[projects]]
   digest = "1:ef4bd1cd2563d93d3f48352fc24d499a4a2b54c11932814173653ece7db13800"
   name = "gopkg.in/ini.v1"
   packages = ["."]
@@ -246,11 +423,55 @@
   revision = "53403b58ad1b561927d19068c655246f2db79d48"
   version = "v2.2.8"
 
+[[projects]]
+  digest = "1:131158a88aad1f94854d0aa21a64af2802d0a470fb0f01cb33c04fafd2047111"
+  name = "honnef.co/go/tools"
+  packages = [
+    "arg",
+    "cmd/staticcheck",
+    "config",
+    "deprecated",
+    "facts",
+    "functions",
+    "go/types/typeutil",
+    "internal/cache",
+    "internal/passes/buildssa",
+    "internal/renameio",
+    "internal/sharedcheck",
+    "lint",
+    "lint/lintdsl",
+    "lint/lintutil",
+    "lint/lintutil/format",
+    "loader",
+    "printf",
+    "simple",
+    "ssa",
+    "ssautil",
+    "staticcheck",
+    "staticcheck/vrp",
+    "stylecheck",
+    "unused",
+    "version",
+  ]
+  pruneopts = "UT"
+  revision = "afd67930eec2a9ed3e9b19f684d17a062285f16a"
+  version = "2019.2.3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c10265d5a71326618d37e97169eddb3582f78e8ac7dcf87403b4cf619efd519a"
+  name = "howett.net/plist"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "591f970eefbbeb04d7b37f334a0c4c3256e32876"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth",
+    "github.com/elastic/beats/libbeat/beat",
+    "github.com/elastic/beats/libbeat/common",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
