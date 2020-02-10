@@ -101,7 +101,7 @@ func (c *itemCache) hasItemChanged(key string, data interface{}) (bool, error) {
 	// Get the current item by key
 	item, err := c.get(key)
 	if err != nil {
-		return false, err
+		return true, err
 	}
 
 	// Get the hash of the new data
