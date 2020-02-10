@@ -265,7 +265,7 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 // UpdateService -
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalog
-	return c.deployService(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+ID)
+	return c.deployService(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+ID)
 }
 
 // CreateService -
