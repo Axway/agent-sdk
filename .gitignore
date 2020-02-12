@@ -1,0 +1,28 @@
+# IDE project directories
+.vscode/
+
+# Go lang dependencies, Use 'dep ensure --vendor-only' to fetch the package dependencies
+*.code-workspace
+
+# Build artifacts
+bin/
+__debug_bin
+debug
+*.log
+
+# Ignore key files in root
+private_key.pem
+public_key*
+
+# ignores if running sonarscanner locally
+.scannerwork
+
+# Test artifacts
+gocoverage.out
+twistcli
+goreport.json
+results.json
+analysis.json
+*cover.out
+coverage.html
+cache_save_file.json

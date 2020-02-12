@@ -1,0 +1,101 @@
+{
+  "project": "AWS Discovery Agent",
+  "requirements": {
+    "dependency-check": true,
+    "fortify": false,
+    "irius-risk": false,
+    "npm-audit": false,
+    "pentest": false,
+    "retirejs": false,
+    "twistlock": false,
+    "zap": false,
+    "yarn": false,
+    "gosec": true
+  },
+  "suppressions": [
+    {
+      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/coreos\\/etcd\\/3\\.3\\.10.*",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Originally: APIGOV-12765. The vulnerable package not used by agent. ",
+      "component": "etcd",
+      "version": "3.3.10.*",
+      "ids": [
+        "CVE-2018-16886"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.2, which is incorrect (@rconan)",
+      "component": "go-windows-terminal-sequences",
+      "version": "v1.0.2",
+      "ids": [
+        "CVE-2016-9274"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
+      "component": "go-windows",
+      "version": "v1.0.1",
+      "ids": [
+        "CVE-2016-9274"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
+      "component": "go-sysinfo",
+      "version": "v1.3.0",
+      "ids": [
+        "CVE-2016-9274"
+      ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "",
+      "component": "tools",
+      "version": ".*",
+      "ids": [
+        "CVE-2018-18749"
+      ]
+    },
+    {
+      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Originally: APIGOV-12766. Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent. Also the vulnerable package is incorrectly reported (Vulnerablity in  github.com/prometheus/prometheus package and not github.com/grpc-ecosystem/go-grpc-prometheus).",
+      "component": "go-grpc-prometheus",
+      "version": "1.2.0",
+      "ids": [
+        "CVE-2019-3826"
+      ]
+    },
+    {
+      "path": ".*pkg\\/config\\/tlsconfig\\.go:.*",
+      "regex": true,
+      "scanner": "GoSec",
+      "classification": "False Positive",
+      "justification": "InsecureSkipVerify is configurable, and the default value is set to false.",
+      "component": "InsecureSkipVerify: c.InsecureSkipVerify",
+      "version": "",
+      "ids": [
+        "G402"
+      ]
+    }
+  ]
+}

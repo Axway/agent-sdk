@@ -155,7 +155,7 @@ func TestHasItemChangedCache(t *testing.T) {
 	newVal1 := "key1 val1 2"
 	changed, err := cache.HasItemChanged(badKey, newVal1)
 	assert.NotNil(t, err, "An error was expected from HasItemChanged with a bad key")
-	assert.False(t, changed, "Expected false since HasItemChanged returned an error")
+	assert.True(t, changed, "Expected true since the item will not have been found in HasItemChanged")
 	changed, err = cache.HasItemChanged(key1, map[string]interface{}{"foo": make(chan int)})
 	assert.NotNil(t, err, "An error was expected from HasItemChanged with a value that can't be marshaled to json")
 	assert.False(t, changed, "Expected false since HasItemChanged returned an error")

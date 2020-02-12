@@ -3,7 +3,7 @@ package cache
 import (
 	"testing"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/notification"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
 
 	"github.com/stretchr/testify/assert"
 )

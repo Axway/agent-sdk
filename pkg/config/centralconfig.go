@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	"git.ecd.axway.int/apigov/aws_apigw_discovery_agent/core/exception"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
 
 // AgentType - Defines the type of agent
