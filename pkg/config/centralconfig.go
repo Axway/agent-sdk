@@ -55,6 +55,7 @@ type CentralConfig interface {
 	GetAPIServerServicesRevisionsURL() string
 	GetAPIServerServicesInstancesURL() string
 	DeleteAPIServerServicesURL() string
+	GetAPIServerSubscriptionDefinitionURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
@@ -167,6 +168,11 @@ func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
 // DeleteAPIServerServicesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
 	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiservices"
+}
+
+// GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/consumersubscriptiondefs"
 }
 
 // GetAuthConfig - Returns the Auth Config

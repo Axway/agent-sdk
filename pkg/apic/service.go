@@ -184,10 +184,6 @@ type EndPoint struct {
 	Protocol string `json:"protocol,omitempty"`
 }
 
-const (
-	subscriptionSchema = "{\"type\": \"object\", \"$schema\": \"http://json-schema.org/draft-04/schema#\", \"description\": \"Subscription specification for API Key authentication\", \"x-axway-unique-keys\": \"APIC_APPLICATION_ID\", \"properties\": {\"applicationId\": {\"type\": \"string\", \"description\": \"Select an application\", \"x-axway-ref-apic\": \"APIC_APPLICATION_ID\"}}, \"required\":[\"applicationId\"]}"
-)
-
 func (c *ServiceClient) deployService(serviceBody ServiceBody, method, url string) (string, error) {
 	buffer, err := c.marshalServiceBody(serviceBody)
 	if err != nil {
@@ -299,6 +295,17 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 }
 
 func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
+	enableSubscription := (serviceBody.AuthPolicy != Passthrough)
+	subSchema, ok := c.SubscriptionSchemaMap[serviceBody.AuthPolicy]
+	if !ok {
+		enableSubscription = false
+		subSchema = c.SubscriptionSchemaMap[Passthrough]
+	}
+	catalogSubscriptionSchema, err := subSchema.rawJSON()
+	if err != nil {
+		return nil, err
+	}
+
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
 		DefinitionSubType:  "swaggerv2",
@@ -319,17 +326,17 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		Tags:       c.mapToTagsArray(serviceBody.Tags),
 		Visibility: "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
-			Enabled:         true,
+			Enabled:         enableSubscription,
 			AutoSubscribe:   true,
-			AutoUnsubscribe: true,
+			AutoUnsubscribe: false,
 			Properties: []CatalogRevisionProperty{{
 				Key:   "profile",
-				Value: json.RawMessage([]byte(subscriptionSchema)),
+				Value: catalogSubscriptionSchema,
 			}},
 		},
 		Revision: CatalogItemInitRevision{
 			Version: serviceBody.Version,
-			State:   "PUBLISHED",
+			State:   "UNPUBLISHED",
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",

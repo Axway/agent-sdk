@@ -28,13 +28,15 @@ var ValidPolicies = []string{Apikey, Passthrough}
 type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
+	RegisterSubscriptionSchema(authType string, subscriptionSchema SubscriptionSchema) error
 }
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester *apicauth.PlatformTokenGetter
-	cfg            corecfg.CentralConfig
-	apiClient      coreapi.Client
+	tokenRequester        *apicauth.PlatformTokenGetter
+	cfg                   corecfg.CentralConfig
+	apiClient             coreapi.Client
+	SubscriptionSchemaMap map[string]SubscriptionSchema
 }
 
 // New -
@@ -47,11 +49,14 @@ func New(cfg corecfg.CentralConfig) Client {
 	clientID := cfg.GetAuthConfig().GetClientID()
 	authTimeout := cfg.GetAuthConfig().GetTimeout()
 
-	return &ServiceClient{
-		cfg:            cfg,
-		tokenRequester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
-		apiClient:      coreapi.NewClient(cfg.GetTLSConfig()),
+	serviceClient := &ServiceClient{
+		cfg:                   cfg,
+		tokenRequester:        apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
+		apiClient:             coreapi.NewClient(cfg.GetTLSConfig()),
+		SubscriptionSchemaMap: make(map[string]SubscriptionSchema),
 	}
+	serviceClient.RegisterSubscriptionSchema(Passthrough, NewSubscriptionSchema())
+	return serviceClient
 }
 
 // mapToTagsArray -
