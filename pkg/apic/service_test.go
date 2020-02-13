@@ -37,11 +37,16 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 }
 
 func createServiceClient() *ServiceClient {
-	return &ServiceClient{
-		cfg: &corecfg.CentralConfiguration{
-			TeamID: "test",
+	cfg := &corecfg.CentralConfiguration{
+		TeamID: "test",
+		Auth: &corecfg.AuthConfiguration{
+			URL:      "http://localhost:8888",
+			Realm:    "Broker",
+			ClientID: "dummy",
 		},
 	}
+	c := New(cfg)
+	return c.(*ServiceClient)
 }
 func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	// set the config values
