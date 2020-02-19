@@ -24,19 +24,39 @@ const (
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough}
 
+// SubscriptionProcessor - callback method type to process subscriptions
+type SubscriptionProcessor func(subscription Subscription)
+
+// SubscriptionValidator - callback method type to validate subscription for processing
+type SubscriptionValidator func(subscription Subscription) bool
+
 // Client - interface
 type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionSchema(authType string, subscriptionSchema SubscriptionSchema) error
+	GetSubscriptionManager() SubscriptionManager
+}
+
+type tokenGetter interface {
+	GetToken() (string, error)
+}
+
+type platformTokenGetter struct {
+	requester *apicauth.PlatformTokenGetter
+}
+
+func (p *platformTokenGetter) GetToken() (string, error) {
+	return p.requester.GetToken()
 }
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester        *apicauth.PlatformTokenGetter
+	tokenRequester        tokenGetter
 	cfg                   corecfg.CentralConfig
 	apiClient             coreapi.Client
 	SubscriptionSchemaMap map[string]SubscriptionSchema
+	subscriptionMgr       SubscriptionManager
 }
 
 // New -
@@ -48,13 +68,16 @@ func New(cfg corecfg.CentralConfig) Client {
 	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
 	clientID := cfg.GetAuthConfig().GetClientID()
 	authTimeout := cfg.GetAuthConfig().GetTimeout()
-
+	platformTokenGetter := &platformTokenGetter{
+		requester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
+	}
 	serviceClient := &ServiceClient{
 		cfg:                   cfg,
-		tokenRequester:        apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
+		tokenRequester:        platformTokenGetter,
 		apiClient:             coreapi.NewClient(cfg.GetTLSConfig()),
 		SubscriptionSchemaMap: make(map[string]SubscriptionSchema),
 	}
+	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 	serviceClient.RegisterSubscriptionSchema(Passthrough, NewSubscriptionSchema())
 	return serviceClient
 }
@@ -212,4 +235,9 @@ func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 		return true
 	}
 	return false
+}
+
+// GetSubscriptionManager -
+func (c *ServiceClient) GetSubscriptionManager() SubscriptionManager {
+	return c.subscriptionMgr
 }
