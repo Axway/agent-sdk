@@ -98,9 +98,9 @@ func TestSubscriptionManagerPollDisconnectedMode(t *testing.T) {
 	defer server.Close()
 
 	cfg := &corecfg.CentralConfiguration{
-		TeamID:                   "test",
-		URL:                      server.URL,
-		SubscriptionPollInterval: 1 * time.Second,
+		TeamID:       "test",
+		URL:          server.URL,
+		PollInterval: 1 * time.Second,
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost",
 			Realm:    "Broker",
@@ -219,11 +219,11 @@ func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
 	defer server.Close()
 
 	cfg := &corecfg.CentralConfiguration{
-		Mode:                     corecfg.Connected,
-		TeamID:                   "test",
-		URL:                      server.URL,
-		SubscriptionPollInterval: 1 * time.Second,
-		APIServerEnvironment:     "test",
+		Mode:                 corecfg.Connected,
+		TeamID:               "test",
+		URL:                  server.URL,
+		PollInterval:         1 * time.Second,
+		APIServerEnvironment: "test",
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost",
 			Realm:    "Broker",
