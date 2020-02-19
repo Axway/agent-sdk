@@ -9,6 +9,21 @@ import (
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 )
 
+// SubscriptionState - Type definition for subscription state
+type SubscriptionState string
+
+// SubscriptionState
+const (
+	SubscriptionApproved             = SubscriptionState("APPROVED")
+	SubscriptionRequested            = SubscriptionState("REQUESTED")
+	SubscriptionRejected             = SubscriptionState("REJECTED")
+	SubscriptionActive               = SubscriptionState("ACTIVE")
+	SubscriptionUnsubscribed         = SubscriptionState("UNSUBSCRIBED")
+	SubscriptionUnsubscribeInitiated = SubscriptionState("UNSUBSCRIBE_INITIATED")
+	SubscriptionFailedToSubscribe    = SubscriptionState("FAILED_TO_SUBSCRIBE")
+	SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
+)
+
 // SubscriptionProperties -
 type SubscriptionProperties struct {
 	Key    string            `json:"key"`

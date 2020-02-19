@@ -9,12 +9,12 @@ import (
 
 // SubscriptionManager - Interface for subscription manager
 type SubscriptionManager interface {
-	RegisterProcessor(state string, processor SubscriptionProcessor)
+	RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor)
 	RegisterValidator(validator SubscriptionValidator)
 	Start()
 	Stop()
 	getPublisher() notification.Notifier
-	getProcessorMap() map[string][]SubscriptionProcessor
+	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
 }
 
 // subscriptionManager -
@@ -25,7 +25,7 @@ type subscriptionManager struct {
 	receiveChannel      chan interface{}
 	publishQuitChannel  chan bool
 	receiverQuitChannel chan bool
-	processorMap        map[string][]SubscriptionProcessor
+	processorMap        map[SubscriptionState][]SubscriptionProcessor
 	validator           SubscriptionValidator
 	statesToQuery       []string
 	apicClient          *ServiceClient
@@ -36,7 +36,7 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
 		isRunning:     false,
 		apicClient:    apicClient,
-		processorMap:  make(map[string][]SubscriptionProcessor),
+		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
 		statesToQuery: make([]string, 0),
 	}
 
@@ -44,12 +44,12 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 }
 
 // RegisterCallback - Register subscription processor callback for specified state
-func (sm *subscriptionManager) RegisterProcessor(state string, processor SubscriptionProcessor) {
+func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	processorList, ok := sm.processorMap[state]
 	if !ok {
 		processorList = make([]SubscriptionProcessor, 0)
 	}
-	sm.statesToQuery = append(sm.statesToQuery, state)
+	sm.statesToQuery = append(sm.statesToQuery, string(state))
 	sm.processorMap[state] = append(processorList, processor)
 }
 
@@ -67,27 +67,7 @@ func (sm *subscriptionManager) pollSubscriptions() {
 			subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 			if err == nil {
 				for _, subscription := range subscriptions {
-					if sm.apicClient.cfg.GetAgentMode() == corecfg.Connected {
-						// Get API Service info
-						// Get Consumer Instance
-						// Assign subscription ApicID with ApiServiceInstanceId
-						apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
-						if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-							consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name)
-							if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
-								for _, references := range consumerInstance.Metadata.References {
-									if references.Kind == "APIServiceInstance" {
-										subscription.ApicID = references.ID
-									}
-								}
-							}
-						}
-					} else {
-						// Use catalog item id as ApicID
-						subscription.ApicID = subscription.CatalogItemID
-					}
 					sm.publishChannel <- subscription
-
 				}
 			}
 		case <-sm.publishQuitChannel:
@@ -102,22 +82,49 @@ func (sm *subscriptionManager) processSubscriptions() {
 		case msg, ok := <-sm.receiveChannel:
 			if ok {
 				subscription, _ := msg.(Subscription)
-				invokeProcessor := true
-				if sm.validator != nil {
-					invokeProcessor = sm.validator(subscription)
-				}
-
-				if invokeProcessor {
-					processorList, ok := sm.processorMap[subscription.State]
-					if ok {
-						for _, processor := range processorList {
-							processor(subscription)
-						}
-					}
+				sm.processAPICID(&subscription)
+				if subscription.ApicID != "" {
+					sm.invokeProcessor(subscription)
 				}
 			}
 		case <-sm.receiverQuitChannel:
 			return
+		}
+	}
+}
+
+func (sm *subscriptionManager) processAPICID(subscription *Subscription) {
+	// Use catalog item id as ApicID for Disconnected mode
+	subscription.ApicID = subscription.CatalogItemID
+	if sm.apicClient.cfg.GetAgentMode() == corecfg.Connected {
+		// Get API Service info
+		// Get Consumer Instance
+		// Assign subscription ApicID with ApiServiceInstanceId
+		apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
+		if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
+			consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name)
+			if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+				for _, reference := range consumerInstance.Metadata.References {
+					if reference.Kind == "APIServiceInstance" {
+						subscription.ApicID = reference.ID
+					}
+				}
+			}
+		}
+	}
+}
+
+func (sm *subscriptionManager) invokeProcessor(subscription Subscription) {
+	invokeProcessor := true
+	if sm.validator != nil {
+		invokeProcessor = sm.validator(subscription)
+	}
+	if invokeProcessor {
+		processorList, ok := sm.processorMap[SubscriptionState(subscription.State)]
+		if ok {
+			for _, processor := range processorList {
+				processor(subscription)
+			}
 		}
 	}
 }
@@ -155,6 +162,6 @@ func (sm *subscriptionManager) getPublisher() notification.Notifier {
 	return sm.publisher
 }
 
-func (sm *subscriptionManager) getProcessorMap() map[string][]SubscriptionProcessor {
+func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]SubscriptionProcessor {
 	return sm.processorMap
 }

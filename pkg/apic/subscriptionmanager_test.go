@@ -39,19 +39,19 @@ func TestProcessorRegistration(t *testing.T) {
 	approvedProcessor := func(subscription Subscription) {}
 	unsubscribeProcessor := func(subscription Subscription) {}
 
-	client.GetSubscriptionManager().RegisterProcessor("APPROVED", approvedProcessor)
-	client.GetSubscriptionManager().RegisterProcessor("UNSUBSCRIBE_INITIATED", unsubscribeProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribeProcessor)
 
 	processorMap := serviceClient.subscriptionMgr.getProcessorMap()
 
-	registeredApprovedProcessor := processorMap["APPROVED"]
+	registeredApprovedProcessor := processorMap[SubscriptionApproved]
 	assert.NotNil(t, registeredApprovedProcessor)
 	assert.NotEqual(t, 0, len(registeredApprovedProcessor))
 	sf1 := reflect.ValueOf(approvedProcessor)
 	sf2 := reflect.ValueOf(registeredApprovedProcessor[0])
 	assert.Equal(t, sf1.Pointer(), sf2.Pointer(), "Verify registered approved subscription processor")
 
-	registeredUnsubscribeProcessor := processorMap["UNSUBSCRIBE_INITIATED"]
+	registeredUnsubscribeProcessor := processorMap[SubscriptionUnsubscribeInitiated]
 	assert.NotNil(t, registeredUnsubscribeProcessor)
 	assert.NotEqual(t, 0, len(registeredUnsubscribeProcessor))
 	sf1 = reflect.ValueOf(unsubscribeProcessor)
@@ -130,8 +130,8 @@ func TestSubscriptionManagerPollDisconnectedMode(t *testing.T) {
 		return api != nil
 	}
 
-	client.GetSubscriptionManager().RegisterProcessor("APPROVED", approvedProcessor)
-	client.GetSubscriptionManager().RegisterProcessor("UNSUBSCRIBE_INITIATED", unsubscribedProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
 	client.GetSubscriptionManager().RegisterValidator(subscriptionValidator)
 	client.GetSubscriptionManager().Start()
 
@@ -245,8 +245,8 @@ func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
 	unsubscribedProcessor := func(subscription Subscription) {
 		unsubscribedSubscriptions[subscription.ID] = &subscription
 	}
-	client.GetSubscriptionManager().RegisterProcessor("APPROVED", approvedProcessor)
-	client.GetSubscriptionManager().RegisterProcessor("UNSUBSCRIBE_INITIATED", unsubscribedProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
+	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
 	client.GetSubscriptionManager().Start()
 
 	time.Sleep(2 * time.Second)
