@@ -60,6 +60,7 @@ type CentralConfig interface {
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
+	GetProxyURL() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -77,6 +78,7 @@ type CentralConfiguration struct {
 	TagsToPublish        string     `config:"additionalTags"`
 	Auth                 AuthConfig `config:"auth"`
 	TLS                  TLSConfig  `config:"ssl"`
+	ProxyURL             string     `config:"proxyUrl"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -133,6 +135,11 @@ func (c *CentralConfiguration) GetTeamID() string {
 // GetURL - Returns the central base URL
 func (c *CentralConfiguration) GetURL() string {
 	return c.URL
+}
+
+// GetProxyURL - Returns the central Proxy URL
+func (c *CentralConfiguration) GetProxyURL() string {
+	return c.ProxyURL
 }
 
 // GetCatalogItemsURL - Returns the URL for catalog items API

@@ -52,7 +52,7 @@ func New(cfg corecfg.CentralConfig) Client {
 	serviceClient := &ServiceClient{
 		cfg:                   cfg,
 		tokenRequester:        apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
-		apiClient:             coreapi.NewClient(cfg.GetTLSConfig()),
+		apiClient:             coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
 		SubscriptionSchemaMap: make(map[string]SubscriptionSchema),
 	}
 	serviceClient.RegisterSubscriptionSchema(Passthrough, NewSubscriptionSchema())

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
@@ -45,9 +47,8 @@ type httpClient struct {
 }
 
 // NewClient - creates a new API client using the http client sent in
-func NewClient(cfg config.TLSConfig) Client {
+func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 	var httpCli *http.Client
-
 	if cfg == nil {
 		httpCli = http.DefaultClient
 	} else {
@@ -55,6 +56,14 @@ func NewClient(cfg config.TLSConfig) Client {
 			Transport: &http.Transport{
 				TLSClientConfig: cfg.BuildTLSConfig(),
 			},
+		}
+
+		if proxyURL != "" {
+			url, err := url.Parse(proxyURL)
+			if err != nil {
+				log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
+			}
+			httpCli.Transport.(*http.Transport).Proxy = http.ProxyURL(url)
 		}
 	}
 
