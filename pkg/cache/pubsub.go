@@ -75,17 +75,18 @@ func GetPubSub(topic string) (notification.PubSub, error) {
 }
 
 // Publish - send in data to publish, if it has changed update cache and notify subscribers
-func (c *cachePubSub) Publish(data interface{}) error {
-	changed, err := globalCache.HasItemChanged(c.topic, data)
-	if err != nil {
-		return fmt.Errorf("Could not check if the data changed %s", err.Error())
+func (c *cachePubSub) Publish(key, secondarykey string, data interface{}) error {
+	changed, err := globalCache.HasItemChanged(key, data)
+	if !changed && err != nil {
+		return err
 	}
 	if !changed {
 		return nil
 	}
 
 	// Data has changed
-	globalCache.Set(c.topic, data)
+	globalCache.Set(key, data)
+	globalCache.SetSecondaryKey(key, secondarykey)
 	c.channel <- data
 	return nil
 }

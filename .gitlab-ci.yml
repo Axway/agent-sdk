@@ -6,6 +6,10 @@ variables:
   BINTRAY_NAMESPACE: agent
   DOCKER_DRIVER: overlay2
   DEPENDENCY_CHECK_FLAGS: "--scan=**/*"
+  AWS_DISCOVERY_PROJECT_ID: 7397
+  AWS_TRACEABILITY_PROJECT_ID: 7441
+  V7_DISCOVERY_PROJECT_ID: 7540
+  V7_TRACEABILITY_PROJECT_ID: 7558
 
 stages:
   - test
@@ -13,6 +17,7 @@ stages:
   - security-scans
   - security-review
   - release
+  - update-dep
 
 ############################################################
 # Section for restrictions
@@ -57,6 +62,13 @@ stages:
     - web
     - triggers
 
+.only-master: &only-master
+  only:
+    - master
+  except:
+    - web
+    - triggers
+
 .only-tags: &only-tags
   only:
     - tags
@@ -84,6 +96,10 @@ stages:
   git config --global user.name "builder-lphxmjtnt11"
   git config --global push.followTags true
   git remote set-url --push origin "git@git.ecd.axway.int:${CI_PROJECT_PATH}.git"
+
+.configure-artifactory-curl: &configure-artifactory-curl |
+  cp ./build/security/Axway-CA.crt /usr/local/share/ca-certificates/
+  update-ca-certificates
 
 .prepare-path: &prepare-path |
   mkdir -p ${GOPATH}/src/git.ecd.axway.int/apigov
@@ -205,6 +221,49 @@ update-csr:
   dependencies:
     - dependencycheck:on-schedule
     - gosec:on-schedule
+
+############################################################
+# Section for triggering agent updates
+############################################################
+trigger-aws-apigw-discovery-agent:
+  stage: update-dep
+  when: manual
+  before_script:
+    - apk update && apk add curl ca-certificates
+    - *configure-artifactory-curl
+  script:
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
+  <<: *only-master
+
+trigger-aws-apigw-traceability-agent:
+  stage: update-dep
+  when: manual
+  before_script:
+    - apk update && apk add curl ca-certificates
+    - *configure-artifactory-curl
+  script:
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${AWS_TRACEABILITY_PROJECT_ID}/trigger/pipeline
+  <<: *only-master
+
+trigger-v7-discovery-agent:
+  stage: update-dep
+  when: manual
+  before_script:
+    - apk update && apk add curl ca-certificates
+    - *configure-artifactory-curl
+  script:
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
+  <<: *only-master
+
+trigger-v7-traceability-agent:
+  stage: update-dep
+  when: manual
+  before_script:
+    - apk update && apk add curl ca-certificates
+    - *configure-artifactory-curl
+  script:
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${V7_TRACEABILITY_PROJECT_ID}/trigger/pipeline
+  <<: *only-master
 
 ############################################################
 # Section for release stage
