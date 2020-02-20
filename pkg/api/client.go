@@ -57,19 +57,28 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 				TLSClientConfig: cfg.BuildTLSConfig(),
 			},
 		}
-
-		if proxyURL != "" {
-			url, err := url.Parse(proxyURL)
-			if err != nil {
-				log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
-			}
-			httpCli.Transport.(*http.Transport).Proxy = http.ProxyURL(url)
-		}
 	}
+
+	url, err := url.Parse(proxyURL)
+	if err != nil {
+		log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
+	}
+	httpCli.Transport.(*http.Transport).Proxy = getProxyURL(url)
 
 	httpCli.Timeout = time.Second * 10
 	return &httpClient{
 		httpClient: httpCli,
+	}
+}
+
+// need to provide my own function (instead of http.ProxyURL()) to handle empty url. Returning nil
+// means "no proxy"
+func getProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
+	return func(*http.Request) (*url.URL, error) {
+		if fixedURL.Host == "" {
+			return nil, nil
+		}
+		return fixedURL, nil
 	}
 }
 
