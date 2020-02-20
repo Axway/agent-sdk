@@ -74,7 +74,7 @@ func New(cfg corecfg.CentralConfig) Client {
 	serviceClient := &ServiceClient{
 		cfg:                   cfg,
 		tokenRequester:        platformTokenGetter,
-		apiClient:             coreapi.NewClient(cfg.GetTLSConfig()),
+		apiClient:             coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
 		SubscriptionSchemaMap: make(map[string]SubscriptionSchema),
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)

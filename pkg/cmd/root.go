@@ -172,6 +172,7 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 			MinVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.minVersion")),
 			MaxVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.maxVersion")),
 		},
+		ProxyURL: c.StringPropertyValue("central.proxyUrl"),
 	}
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {

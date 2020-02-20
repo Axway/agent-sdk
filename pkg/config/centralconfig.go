@@ -63,6 +63,7 @@ type CentralConfig interface {
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
+	GetProxyURL() string
 	GetPollInterval() time.Duration
 }
 
@@ -82,6 +83,7 @@ type CentralConfiguration struct {
 	Auth                 AuthConfig    `config:"auth"`
 	TLS                  TLSConfig     `config:"ssl"`
 	PollInterval         time.Duration `config:"pollInterval"`
+	ProxyURL             string        `config:"proxyUrl"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -139,6 +141,11 @@ func (c *CentralConfiguration) GetTeamID() string {
 // GetURL - Returns the central base URL
 func (c *CentralConfiguration) GetURL() string {
 	return c.URL
+}
+
+// GetProxyURL - Returns the central Proxy URL
+func (c *CentralConfiguration) GetProxyURL() string {
+	return c.ProxyURL
 }
 
 // GetCatalogItemsURL - Returns the URL for catalog items API
