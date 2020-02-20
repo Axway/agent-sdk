@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
@@ -55,28 +56,32 @@ type CentralConfig interface {
 	GetAPIServerServicesRevisionsURL() string
 	GetAPIServerServicesInstancesURL() string
 	DeleteAPIServerServicesURL() string
+	GetAPIServerConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
+	GetSubscriptionURL() string
 	Validate() error
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
+	GetPollInterval() time.Duration
 }
 
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
 	AgentType            AgentType
-	Mode                 AgentMode  `config:"mode"`
-	TenantID             string     `config:"tenantID"`
-	TeamID               string     `config:"teamID" `
-	APICDeployment       string     `config:"deployment"`
-	APIServerEnvironment string     `config:"apiServerEnvironment"`
-	EnvironmentID        string     `config:"environmentID"`
-	URL                  string     `config:"url"`
-	APIServerVersion     string     `config:"apiServerVersion"`
-	TagsToPublish        string     `config:"additionalTags"`
-	Auth                 AuthConfig `config:"auth"`
-	TLS                  TLSConfig  `config:"ssl"`
+	Mode                 AgentMode     `config:"mode"`
+	TenantID             string        `config:"tenantID"`
+	TeamID               string        `config:"teamID" `
+	APICDeployment       string        `config:"deployment"`
+	APIServerEnvironment string        `config:"apiServerEnvironment"`
+	EnvironmentID        string        `config:"environmentID"`
+	URL                  string        `config:"url"`
+	APIServerVersion     string        `config:"apiServerVersion"`
+	TagsToPublish        string        `config:"additionalTags"`
+	Auth                 AuthConfig    `config:"auth"`
+	TLS                  TLSConfig     `config:"ssl"`
+	PollInterval         time.Duration `config:"pollInterval"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -87,6 +92,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
+		PollInterval:     60 * time.Second,
 	}
 }
 
@@ -170,9 +176,19 @@ func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
 	return c.getAPIServerURL() + c.APIServerEnvironment + "/apiservices"
 }
 
+// GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instance representing the catalog item
+func (c *CentralConfiguration) GetAPIServerConsumerInstancesURL() string {
+	return c.getAPIServerURL() + c.APIServerEnvironment + "/consumerinstances"
+}
+
 // GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 	return c.getAPIServerURL() + c.APIServerEnvironment + "/consumersubscriptiondefs"
+}
+
+// GetSubscriptionURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) GetSubscriptionURL() string {
+	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
 }
 
 // GetAuthConfig - Returns the Auth Config
@@ -188,6 +204,11 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
+}
+
+// GetPollInterval - Returns the interval for polling subscriptions
+func (c *CentralConfiguration) GetPollInterval() time.Duration {
+	return c.PollInterval
 }
 
 // Validate - Validates the config
@@ -229,6 +250,10 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 
 	if c.GetAgentMode() == Connected {
 		c.validateConnectedModeConfig()
+	}
+
+	if c.GetPollInterval() <= 0 {
+		exception.Throw(errors.New("Error central.pollInterval not set in config"))
 	}
 }
 

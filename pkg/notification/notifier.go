@@ -86,9 +86,22 @@ func (s *channelNotifier) GetName() string {
 	return s.name
 }
 
+// safeCloseChannel - Recovers from panic on close of closed channel
+func safeCloseChannel(ch chan struct{}) (closedRes bool) {
+	defer func() {
+		if recover() != nil {
+			// The return result can be altered
+			// in a defer function call.
+			closedRes = false
+		}
+	}()
+	close(ch)
+	return true
+}
+
 // Stop - closes all subscribers and stops the subscription loop
 func (s *channelNotifier) Stop() {
-	close(s.endNotifier)
+	safeCloseChannel(s.endNotifier)
 	pubLock.Lock() // removing a notifier
 	defer pubLock.Unlock()
 	delete(notifiers, s.GetName())

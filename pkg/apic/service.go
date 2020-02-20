@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/tidwall/gjson"
 )
@@ -145,6 +146,40 @@ type CatalogItem struct {
 	// categories
 }
 
+// APIServerInfoProperty -
+type APIServerInfoProperty struct {
+	Name string `json:"name,omitempty"`
+	ID   string `json:"id,omitempty"`
+}
+
+// APIServerInfo -
+type APIServerInfo struct {
+	ConsumerInstance APIServerInfoProperty `json:"consumerInstance,omitempty"`
+	Environment      APIServerInfoProperty `json:"environment,omitempty"`
+}
+
+// APIServerScope -
+type APIServerScope struct {
+	ID   string `json:"id,omitempty"`
+	Kind string `json:"kind,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// APIServerReference -
+type APIServerReference struct {
+	ID   string `json:"id,omitempty"`
+	Kind string `json:"kind,omitempty"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
+}
+
+// APIServerMetadata -
+type APIServerMetadata struct {
+	ID         string               `json:"id,omitempty"`
+	Scope      *APIServerScope      `json:"scope,omitempty"`
+	References []APIServerReference `json:"references,omitempty"`
+}
+
 // APIServer -
 type APIServer struct {
 	Name       string                 `json:"name"`
@@ -152,6 +187,7 @@ type APIServer struct {
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Spec       interface{}            `json:"spec"`
+	Metadata   *APIServerMetadata     `json:"metadata,omitempty"`
 }
 
 // APIServiceSpec -
@@ -494,4 +530,61 @@ func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte
 		Base64Content: serviceBody.Image,
 	}
 	return json.Marshal(catalogImage)
+}
+
+// getCatalogItemAPIServerInfoProperty -
+func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*APIServerInfo, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	apiServerInfoURL := c.cfg.GetCatalogItemsURL() + "/" + catalogID + "/properties/apiServerInfo"
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     apiServerInfoURL,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+
+	apiserverInfo := new(APIServerInfo)
+	json.Unmarshal(response.Body, apiserverInfo)
+	return apiserverInfo, nil
+}
+
+// getAPIServerConsumerInstance -
+func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	consumerInstanceURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + consumerInstanceName
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     consumerInstanceURL,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+	consumerInstance := new(APIServer)
+	json.Unmarshal(response.Body, consumerInstance)
+	return consumerInstance, nil
 }
