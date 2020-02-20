@@ -82,7 +82,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 		case msg, ok := <-sm.receiveChannel:
 			if ok {
 				subscription, _ := msg.(Subscription)
-				sm.processAPICID(&subscription)
+				sm.preprocessSubscription(&subscription)
 				if subscription.ApicID != "" {
 					sm.invokeProcessor(subscription)
 				}
@@ -93,9 +93,10 @@ func (sm *subscriptionManager) processSubscriptions() {
 	}
 }
 
-func (sm *subscriptionManager) processAPICID(subscription *Subscription) {
+func (sm *subscriptionManager) preprocessSubscription(subscription *Subscription) {
 	// Use catalog item id as ApicID for Disconnected mode
 	subscription.ApicID = subscription.CatalogItemID
+	subscription.apicClient = sm.apicClient
 	if sm.apicClient.cfg.GetAgentMode() == corecfg.Connected {
 		// Get API Service info
 		// Get Consumer Instance
