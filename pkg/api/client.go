@@ -52,18 +52,17 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 	if cfg == nil {
 		httpCli = http.DefaultClient
 	} else {
+		url, err := url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
+		}
 		httpCli = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: cfg.BuildTLSConfig(),
+				Proxy:           getProxyURL(url),
 			},
 		}
 	}
-
-	url, err := url.Parse(proxyURL)
-	if err != nil {
-		log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
-	}
-	httpCli.Transport.(*http.Transport).Proxy = getProxyURL(url)
 
 	httpCli.Timeout = time.Second * 10
 	return &httpClient{
