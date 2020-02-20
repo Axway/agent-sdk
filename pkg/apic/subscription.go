@@ -43,6 +43,7 @@ type Subscription struct {
 	NextPossibleStates      []string                 `json:"nextPossibleStates"`
 	AllowedTransitionStates []string                 `json:"allowedTransitionStates"`
 	ApicID                  string                   `json:"-"`
+	apicClient              *ServiceClient
 }
 
 // GetPropertyValue - Returns subscription Property value based on the key
@@ -55,6 +56,45 @@ func (s *Subscription) GetPropertyValue(key string) string {
 		}
 	}
 	return ""
+}
+
+// UpdateState - Updates the state of subscription
+func (s *Subscription) UpdateState(newState SubscriptionState) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	subStateURL := s.getServiceClient().cfg.GetCatalogItemsURL() + "/" + s.CatalogItemID + "/subscriptions/" + s.ID + "/states"
+	subState := make(map[string]string)
+	subState["state"] = string(newState)
+
+	statePostBody, err := json.Marshal(subState)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.POST,
+		URL:         subStateURL,
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        statePostBody,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+		logResponseErrors(response.Body)
+		return errors.New(strconv.Itoa(response.Code))
+	}
+	return nil
+}
+
+func (s *Subscription) getServiceClient() *ServiceClient {
+	return s.apicClient
 }
 
 // getSubscriptions -
