@@ -96,6 +96,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of AMPLIFY Central")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
+		c.AddDurationProperty("central.pollInterval", "centralPollInterval", 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 	}
 
 	// Log yaml properties and command flags
@@ -152,8 +153,9 @@ func (c *agentRootCommand) initConfig() error {
 
 func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 	cfg := &corecfg.CentralConfiguration{
-		AgentType: c.agentType,
-		TenantID:  c.StringPropertyValue("central.tenantId"),
+		AgentType:    c.agentType,
+		TenantID:     c.StringPropertyValue("central.tenantId"),
+		PollInterval: c.DurationPropertyValue("central.pollInterval"),
 		Auth: &corecfg.AuthConfiguration{
 			URL:        c.StringPropertyValue("central.auth.url"),
 			Realm:      c.StringPropertyValue("central.auth.realm"),

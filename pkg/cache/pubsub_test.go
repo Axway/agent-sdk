@@ -80,13 +80,13 @@ func TestPubSub(t *testing.T) {
 		}
 	}()
 
-	err = pubsub2.Publish(map[string]interface{}{"foo": make(chan int)})
+	err = pubsub2.Publish("topic2", "", map[string]interface{}{"foo": make(chan int)})
 	assert.NotNil(t, err, "Expected error since data can't be marshaled")
-	err = pubsub2.Publish(data2)
+	err = pubsub2.Publish("topic2", "", data2)
 	assert.Nil(t, err, "Unexpected error hit in Publish")
 	assert.Equal(t, "", dataReceived, "Data changed unexpectedly")
 	data2a := "topic2 data2"
-	err = pubsub2.Publish(data2a)
+	err = pubsub2.Publish("topic2", "", data2a)
 	<-dataChan // Wait for the go function to have been executed
 	assert.Nil(t, err, "Unexpected error hit in Publish")
 	assert.Equal(t, data2a, dataReceived, "Data changed successfully")
@@ -105,13 +105,13 @@ func TestPubSub(t *testing.T) {
 	subID := pubsub3.SubscribeWithCallback(cbFunc)
 	assert.NotNil(t, subID, "Expected an ID to be returned from Subscribe")
 
-	err = pubsub3.Publish(map[string]interface{}{"foo": make(chan int)})
+	err = pubsub3.Publish("topic3", "", map[string]interface{}{"foo": make(chan int)})
 	assert.NotNil(t, err, "Expected error since data can't be marshaled")
-	err = pubsub3.Publish(data3)
+	err = pubsub3.Publish("topic3", "", data3)
 	assert.Nil(t, err, "Unexpected error hit in Publish")
 	assert.Equal(t, "", dataReceived, "Data changed unexpectedly")
 	data3a := "topic3 data3"
-	err = pubsub3.Publish(data3a)
+	err = pubsub3.Publish("topic3", "", data3a)
 	<-cbCalled // Wait for the callback function to have been executed
 	assert.Nil(t, err, "Unexpected error hit in Publish")
 	assert.Equal(t, data3a, dataReceived, "Data changed successfully")
