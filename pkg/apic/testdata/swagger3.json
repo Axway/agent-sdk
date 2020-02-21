@@ -1,0 +1,1019 @@
+{
+  "swagger": "2.0",
+  "host": "apiv7:8065",
+  "basePath": "/petstore",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/pet": {
+      "put": {
+        "description": "",
+        "operationId": "updatePet",
+        "summary": "Update an existing pet",
+        "tags": [
+          "pet"
+        ],
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "Pet object that needs to be added to the store",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "405": {
+            "description": "Validation exception"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "operationId": "addPet",
+        "summary": "Add a new pet to the store",
+        "tags": [
+          "pet"
+        ],
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "Pet object that needs to be added to the store",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/user/{username}": {
+      "get": {
+        "description": "",
+        "operationId": "getUserByName",
+        "summary": "Get user by user name",
+        "tags": [
+          "user"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The name that needs to be fetched. Use user1 for testing. ",
+            "required": true,
+            "in": "path",
+            "name": "username",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "400": {
+            "description": "Invalid username supplied"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "put": {
+        "description": "This can only be done by the logged in user.",
+        "operationId": "updateUser",
+        "summary": "Updated user",
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "name that need to be updated",
+            "required": true,
+            "in": "path",
+            "name": "username",
+            "type": "string"
+          },
+          {
+            "description": "Updated user object",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid user supplied"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "description": "This can only be done by the logged in user.",
+        "operationId": "deleteUser",
+        "summary": "Delete user",
+        "tags": [
+          "user"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The name that needs to be deleted",
+            "required": true,
+            "in": "path",
+            "name": "username",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid username supplied"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/pet/findByStatus": {
+      "get": {
+        "description": "Multiple status values can be provided with comma separated strings",
+        "operationId": "findPetsByStatus",
+        "summary": "Finds Pets by status",
+        "tags": [
+          "pet"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "Status values that need to be considered for filter",
+            "required": true,
+            "items": {
+              "default": "available",
+              "type": "string",
+              "enum": [
+                "available",
+                "pending",
+                "sold"
+              ]
+            },
+            "collectionFormat": "multi",
+            "in": "query",
+            "name": "status",
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Pet",
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Invalid status value"
+          }
+        }
+      }
+    },
+    "/user/createWithList": {
+      "post": {
+        "description": "",
+        "operationId": "createUsersWithListInput",
+        "summary": "Creates list of users with given input array",
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "List of user object",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/User",
+                "type": "object"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/pet/{petId}/uploadImage": {
+      "post": {
+        "description": "",
+        "operationId": "uploadFile",
+        "summary": "uploads an image",
+        "tags": [
+          "pet"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "ID of pet to update",
+            "format": "int64",
+            "required": true,
+            "in": "path",
+            "name": "petId",
+            "type": "integer"
+          },
+          {
+            "description": "Additional data to pass to server",
+            "required": false,
+            "in": "formData",
+            "name": "additionalMetadata",
+            "type": "string"
+          },
+          {
+            "description": "file to upload",
+            "required": false,
+            "in": "formData",
+            "name": "file",
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        }
+      }
+    },
+    "/user/login": {
+      "get": {
+        "description": "",
+        "operationId": "loginUser",
+        "summary": "Logs user into the system",
+        "tags": [
+          "user"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The user name for login",
+            "required": true,
+            "in": "query",
+            "name": "username",
+            "type": "string"
+          },
+          {
+            "description": "The password for login in clear text",
+            "required": true,
+            "in": "query",
+            "name": "password",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "string"
+            },
+            "headers": {
+              "X-Expires-After": {
+                "description": "date in UTC when token expires",
+                "format": "date-time",
+                "type": "string"
+              },
+              "X-Rate-Limit": {
+                "description": "calls per hour allowed by the user",
+                "format": "int32",
+                "type": "integer"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid username/password supplied"
+          }
+        }
+      }
+    },
+    "/store/inventory": {
+      "get": {
+        "description": "Returns a map of status codes to quantities",
+        "operationId": "getInventory",
+        "summary": "Returns pet inventories by status",
+        "tags": [
+          "store"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/user": {
+      "post": {
+        "description": "This can only be done by the logged in user.",
+        "operationId": "createUser",
+        "summary": "Create user",
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "Created user object",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/user/createWithArray": {
+      "post": {
+        "description": "",
+        "operationId": "createUsersWithArrayInput",
+        "summary": "Creates list of users with given input array",
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "List of user object",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/User",
+                "type": "object"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/pet/findByTags": {
+      "get": {
+        "description": "Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.",
+        "operationId": "findPetsByTags",
+        "summary": "Finds Pets by tags",
+        "tags": [
+          "pet"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "Tags to filter by",
+            "required": true,
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "in": "query",
+            "name": "tags",
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Pet",
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Invalid tag value"
+          }
+        }
+      }
+    },
+    "/store/order": {
+      "post": {
+        "description": "",
+        "operationId": "placeOrder",
+        "summary": "Place an order for a pet",
+        "tags": [
+          "store"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "order placed for purchasing the pet",
+            "required": true,
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          },
+          "400": {
+            "description": "Invalid Order"
+          }
+        }
+      }
+    },
+    "/user/logout": {
+      "get": {
+        "description": "",
+        "operationId": "logoutUser",
+        "summary": "Logs out current logged in user session",
+        "tags": [
+          "user"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/pet/{petId}": {
+      "get": {
+        "description": "Returns a single pet",
+        "operationId": "getPetById",
+        "summary": "Find pet by ID",
+        "tags": [
+          "pet"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "ID of pet to return",
+            "format": "int64",
+            "required": true,
+            "in": "path",
+            "name": "petId",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "operationId": "updatePetWithForm",
+        "summary": "Updates a pet in the store with form data",
+        "tags": [
+          "pet"
+        ],
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "ID of pet that needs to be updated",
+            "format": "int64",
+            "required": true,
+            "in": "path",
+            "name": "petId",
+            "type": "integer"
+          },
+          {
+            "description": "Updated name of the pet",
+            "required": false,
+            "in": "formData",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "description": "Updated status of the pet",
+            "required": false,
+            "in": "formData",
+            "name": "status",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "operationId": "deletePet",
+        "summary": "Deletes a pet",
+        "tags": [
+          "pet"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "required": false,
+            "in": "header",
+            "name": "api_key",
+            "type": "string"
+          },
+          {
+            "description": "Pet id to delete",
+            "format": "int64",
+            "required": true,
+            "in": "path",
+            "name": "petId",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Pet not found"
+          }
+        }
+      }
+    },
+    "/store/order/{orderId}": {
+      "get": {
+        "description": "For valid response try integer IDs with value >= 1 and <= 10. Other values will generated exceptions",
+        "operationId": "getOrderById",
+        "summary": "Find purchase order by ID",
+        "tags": [
+          "store"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "ID of pet that needs to be fetched",
+            "format": "int64",
+            "required": true,
+            "minimum": 1,
+            "maximum": 10,
+            "in": "path",
+            "name": "orderId",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      },
+      "delete": {
+        "description": "For valid response try integer IDs with positive integer value. Negative or non-integer values will generate API errors",
+        "operationId": "deleteOrder",
+        "summary": "Delete purchase order by ID",
+        "tags": [
+          "store"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "ID of the order that needs to be deleted",
+            "format": "int64",
+            "required": true,
+            "minimum": 1,
+            "in": "path",
+            "name": "orderId",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Order": {
+      "properties": {
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "petId": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "quantity": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "shipDate": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "status": {
+          "description": "Order Status",
+          "type": "string"
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "User": {
+      "properties": {
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "username": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "userStatus": {
+          "description": "User Status",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "Category": {
+      "properties": {
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Tag": {
+      "properties": {
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ApiResponse": {
+      "properties": {
+        "code": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Pet": {
+      "required": [
+        "name",
+        "photoUrls"
+      ],
+      "properties": {
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "name": {
+          "example": "doggie",
+          "type": "string"
+        },
+        "photoUrls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "$ref": "#/definitions/Tag"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "pet status in the store",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "securityDefinitions": {
+    "OAuthImplicit": {
+      "type": "oauth2",
+      "description": "OAuth",
+      "flow": "implicit",
+      "scopes": {
+        "resource.WRITE": "",
+        "resource.READ": ""
+      },
+      "authorizationUrl": "https://localhost:8089/api/oauth/authorize",
+      "x-axway": {
+        "typeDisplayName": "OAuth 2.0",
+        "scopesMatching": "Any",
+        "accessTokenLocation": "HEADER",
+        "accessTokenLocationQueryString": "",
+        "authorizationHeaderPrefix": "Bearer",
+        "tokenName": "access_token"
+      }
+    },
+    "OAuthAccessCode": {
+      "type": "oauth2",
+      "description": "OAuth",
+      "flow": "accessCode",
+      "scopes": {
+        "resource.WRITE": "",
+        "resource.READ": ""
+      },
+      "authorizationUrl": "https://localhost:8089/api/oauth/authorize",
+      "tokenUrl": "https://localhost:8089/api/oauth/token",
+      "x-axway": {
+        "typeDisplayName": "OAuth 2.0",
+        "scopesMatching": "Any",
+        "accessTokenLocation": "HEADER",
+        "accessTokenLocationQueryString": "",
+        "authorizationHeaderPrefix": "Bearer",
+        "clientIdName": "client_id",
+        "clientSecretName": "client_secret",
+        "tokenName": "access_code"
+      }
+    }
+  },
+  "security": [
+    {
+      "OAuthImplicit": [
+        "resource.WRITE",
+        "resource.READ"
+      ]
+    },
+    {
+      "OAuthAccessCode": [
+        "resource.WRITE",
+        "resource.READ"
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "pet",
+      "description": "Everything about your Pets",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "http://swagger.io"
+      }
+    },
+    {
+      "name": "store",
+      "description": "Access to Petstore orders"
+    },
+    {
+      "name": "user",
+      "description": "Operations about user",
+      "externalDocs": {
+        "description": "Find out more about our store",
+        "url": "http://swagger.io"
+      }
+    }
+  ],
+  "info": {
+    "title": "PetStore HTTP",
+    "description": "This is a sample server Petstore server.  You can find out more about Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For this sample, you can use the api key `special-key` to test the authorization filters.",
+    "version": "1.0.3",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "email": "apiteam@swagger.io"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "x-axway": {
+    "corsEnabled": true,
+    "basePaths": [
+      ""
+    ],
+    "serviceType": "rest",
+    "deprecated": false,
+    "tags": {},
+    "availableSDK": {
+      "ios-swift": "/discovery/sdk/e604f27c-fcf3-4023-a244-1aa96adbea47/ios-swift",
+      "titanium": "/discovery/sdk/e604f27c-fcf3-4023-a244-1aa96adbea47/titanium",
+      "android": "/discovery/sdk/e604f27c-fcf3-4023-a244-1aa96adbea47/android",
+      "nodejs": "/discovery/sdk/e604f27c-fcf3-4023-a244-1aa96adbea47/nodejs"
+    },
+    "customProperties": {}
+  }
+}
