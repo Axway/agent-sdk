@@ -15,14 +15,15 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// consts for auth policy types
+// constants for auth policy types
 const (
 	Apikey      = "verify-api-key"
 	Passthrough = "pass-through"
+	Oauth       = "verify-oauth-token"
 )
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
-var ValidPolicies = []string{Apikey, Passthrough}
+var ValidPolicies = []string{Apikey, Passthrough, Oauth}
 
 // SubscriptionProcessor - callback method type to process subscriptions
 type SubscriptionProcessor func(subscription Subscription)

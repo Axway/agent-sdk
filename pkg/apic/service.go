@@ -303,7 +303,7 @@ func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (strin
 // CreateService -
 func (c *ServiceClient) marshalServiceBody(serviceBody ServiceBody) ([]byte, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return nil, fmt.Errorf("Unsuppored security policy '%v'. ", serviceBody.AuthPolicy)
+		return nil, fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
 	}
 	if serviceBody.AgentMode == corecfg.Connected {
 		return c.createAPIServerBody(serviceBody)
@@ -441,7 +441,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 			}
 		}
 
-		// Iterate through protocols and create endpoints for intances
+		// Iterate through protocols and create endpoints for instances
 		protocols := gjson.Get(string(serviceBody.Swagger), "schemes")
 		schemes := make([]string, 0)
 		json.Unmarshal([]byte(protocols.Raw), &schemes)
