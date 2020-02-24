@@ -232,7 +232,7 @@ func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 
 	response, _ := http.DefaultClient.Do(request)
 	if response.StatusCode == http.StatusNotFound {
-		log.Debug("New api found to deploy")
+		log.Debugf("New api found to deploy: %s", apiName)
 		return true
 	}
 	return false
