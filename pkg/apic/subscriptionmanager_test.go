@@ -61,7 +61,7 @@ func TestProcessorRegistration(t *testing.T) {
 }
 
 func createSubscription(ID, state, catalogID string, subscriptionProps map[string]string) Subscription {
-	return Subscription{
+	return &CentralSubscription{
 		ID:    ID,
 		State: state,
 		Properties: []SubscriptionProperties{
@@ -115,17 +115,17 @@ func TestSubscriptionManagerPollDisconnectedMode(t *testing.T) {
 	serviceClient.tokenRequester = &mockTokenGetter{
 		token: "testToken",
 	}
-	approvedSubscriptions := make(map[string]*Subscription)
-	unsubscribedSubscriptions := make(map[string]*Subscription)
+	approvedSubscriptions := make(map[string]Subscription)
+	unsubscribedSubscriptions := make(map[string]Subscription)
 	approvedProcessor := func(subscription Subscription) {
-		approvedSubscriptions[subscription.ID] = &subscription
+		approvedSubscriptions[subscription.GetID()] = subscription
 	}
 	unsubscribedProcessor := func(subscription Subscription) {
-		unsubscribedSubscriptions[subscription.ID] = &subscription
+		unsubscribedSubscriptions[subscription.GetID()] = subscription
 	}
 	subscriptionValidator := func(subscription Subscription) bool {
 		apiCache := cache.GetCache()
-		api, _ := apiCache.GetBySecondaryKey(subscription.ApicID)
+		api, _ := apiCache.GetBySecondaryKey(subscription.GetApicID())
 		return api != nil
 	}
 
@@ -236,13 +236,13 @@ func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
 	serviceClient.tokenRequester = &mockTokenGetter{
 		token: "testToken",
 	}
-	approvedSubscriptions := make(map[string]*Subscription)
-	unsubscribedSubscriptions := make(map[string]*Subscription)
+	approvedSubscriptions := make(map[string]Subscription)
+	unsubscribedSubscriptions := make(map[string]Subscription)
 	approvedProcessor := func(subscription Subscription) {
-		approvedSubscriptions[subscription.ID] = &subscription
+		approvedSubscriptions[subscription.GetID()] = subscription
 	}
 	unsubscribedProcessor := func(subscription Subscription) {
-		unsubscribedSubscriptions[subscription.ID] = &subscription
+		unsubscribedSubscriptions[subscription.GetID()] = subscription
 	}
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
@@ -263,18 +263,16 @@ func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
 
 func TestSubscriptionUpdate(t *testing.T) {
 	// Start a local HTTP server
-	subscriptionMap := make(map[string]*Subscription)
-	sub1 := createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"})
-	sub2 := createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]string{"orgId": "22222"})
-	subscriptionMap["11111"] = &sub1
-	subscriptionMap["22222"] = &sub2
+	subscriptionMap := make(map[string]Subscription)
+	subscriptionMap["11111"] = createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"})
+	subscriptionMap["22222"] = createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]string{"orgId": "22222"})
 
 	sendList := true
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		b := []byte("")
 		if strings.Contains(req.RequestURI, "/subscriptions") {
 			if sendList {
-				subscriptionList := make([]*Subscription, 0)
+				subscriptionList := make([]Subscription, 0)
 				for _, subscription := range subscriptionMap {
 					subscriptionList = append(subscriptionList, subscription)
 				}
@@ -288,13 +286,13 @@ func TestSubscriptionUpdate(t *testing.T) {
 			subState := make(map[string]string)
 			json.NewDecoder(req.Body).Decode(&subState)
 			subscription := subscriptionMap["11111"]
-			subscription.State = subState["state"]
+			(subscription.(*CentralSubscription)).State = subState["state"]
 		}
 		if strings.Contains(req.RequestURI, "/22222/subscriptions/22222/state") {
 			subState := make(map[string]string)
 			json.NewDecoder(req.Body).Decode(&subState)
 			subscription := subscriptionMap["22222"]
-			subscription.State = subState["state"]
+			(subscription.(*CentralSubscription)).State = subState["state"]
 		}
 		// Send response to be tested
 		rw.Write(b)
@@ -334,6 +332,6 @@ func TestSubscriptionUpdate(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	client.GetSubscriptionManager().Stop()
 
-	assert.Equal(t, string(SubscriptionActive), subscriptionMap["11111"].State)
-	assert.Equal(t, string(SubscriptionUnsubscribed), subscriptionMap["22222"].State)
+	assert.Equal(t, SubscriptionActive, subscriptionMap["11111"].GetState())
+	assert.Equal(t, SubscriptionUnsubscribed, subscriptionMap["22222"].GetState())
 }
