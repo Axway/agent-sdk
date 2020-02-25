@@ -192,7 +192,8 @@ type APIServer struct {
 
 // APIServiceSpec -
 type APIServiceSpec struct {
-	Description string `json:"description"`
+	Description string         `json:"description"`
+	Icon        APIServiceIcon `json:"icon"`
 }
 
 // APIServiceRevisionSpec -
@@ -205,6 +206,12 @@ type APIServiceRevisionSpec struct {
 type RevisionDefinition struct {
 	Type  string `json:"type,omitempty"`
 	Value []byte `json:"value,omitempty"`
+}
+
+// APIServiceIcon -
+type APIServiceIcon struct {
+	ContentType string `json:"contentType"`
+	Data        string `json:"data"`
 }
 
 // APIServerInstanceSpec -
@@ -411,11 +418,13 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	case addAPIServerSpec:
 		spec = APIServiceSpec{
 			Description: serviceBody.Description,
+			Icon: APIServiceIcon{
+				ContentType: serviceBody.ImageContentType,
+				Data:        serviceBody.Image,
+			},
 		}
 	case deleteAPIServerSpec:
-		spec = APIServiceSpec{
-			Description: serviceBody.Description,
-		}
+		spec = APIServiceSpec{}
 		return nil, nil
 	case addAPIServerRevisionSpec:
 		revisionDefinition := RevisionDefinition{
