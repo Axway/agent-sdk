@@ -195,8 +195,8 @@ type APIServer struct {
 
 // APIServiceSpec -
 type APIServiceSpec struct {
-	Description string         `json:"description"`
-	Icon        APIServiceIcon `json:"icon"`
+	Description string          `json:"description"`
+	Icon        *APIServiceIcon `json:"icon,omitempty"`
 }
 
 // APIServiceRevisionSpec -
@@ -471,12 +471,18 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 
 	switch serviceBody.ServiceExecution {
 	case addAPIServerSpec:
-		spec = APIServiceSpec{
-			Description: serviceBody.Description,
-			Icon: APIServiceIcon{
-				ContentType: serviceBody.ImageContentType,
-				Data:        serviceBody.Image,
-			},
+		if serviceBody.Image != "" {
+			spec = APIServiceSpec{
+				Description: serviceBody.Description,
+				Icon: &APIServiceIcon{
+					ContentType: serviceBody.ImageContentType,
+					Data:        serviceBody.Image,
+				},
+			}
+		} else {
+			spec = APIServiceSpec{
+				Description: serviceBody.Description,
+			}
 		}
 	case deleteAPIServerSpec:
 		spec = APIServiceSpec{}
