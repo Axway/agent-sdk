@@ -81,7 +81,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 		select {
 		case msg, ok := <-sm.receiveChannel:
 			if ok {
-				subscription, _ := msg.(Subscription)
+				subscription, _ := msg.(CentralSubscription)
 				sm.preprocessSubscription(&subscription)
 				if subscription.ApicID != "" {
 					sm.invokeProcessor(subscription)
@@ -93,7 +93,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscription(subscription *Subscription) {
+func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
 	// Use catalog item id as ApicID for Disconnected mode
 	subscription.ApicID = subscription.CatalogItemID
 	subscription.apicClient = sm.apicClient
@@ -115,16 +115,16 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *Subscription
 	}
 }
 
-func (sm *subscriptionManager) invokeProcessor(subscription Subscription) {
+func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription) {
 	invokeProcessor := true
 	if sm.validator != nil {
-		invokeProcessor = sm.validator(subscription)
+		invokeProcessor = sm.validator(&subscription)
 	}
 	if invokeProcessor {
 		processorList, ok := sm.processorMap[SubscriptionState(subscription.State)]
 		if ok {
 			for _, processor := range processorList {
-				processor(subscription)
+				processor(&subscription)
 			}
 		}
 	}

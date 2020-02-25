@@ -31,7 +31,16 @@ type SubscriptionProperties struct {
 }
 
 // Subscription -
-type Subscription struct {
+type Subscription interface {
+	GetID() string
+	GetApicID() string
+	GetState() SubscriptionState
+	GetPropertyValue(key string) string
+	UpdateState(newState SubscriptionState) error
+}
+
+// CentralSubscription -
+type CentralSubscription struct {
 	ID                      string                   `json:"id"`
 	Properties              []SubscriptionProperties `json:"properties"`
 	State                   string                   `json:"state"`
@@ -46,8 +55,23 @@ type Subscription struct {
 	apicClient              *ServiceClient
 }
 
+// GetID - Returns ID of the subscription
+func (s *CentralSubscription) GetID() string {
+	return s.ID
+}
+
+// GetApicID - Returns ID of the Catalog Item or API Service instance
+func (s *CentralSubscription) GetApicID() string {
+	return s.ApicID
+}
+
+// GetState - Returns subscription state
+func (s *CentralSubscription) GetState() SubscriptionState {
+	return SubscriptionState(s.State)
+}
+
 // GetPropertyValue - Returns subscription Property value based on the key
-func (s *Subscription) GetPropertyValue(key string) string {
+func (s *CentralSubscription) GetPropertyValue(key string) string {
 	if len(s.Properties) > 0 {
 		subscriptionProperties := s.Properties[0]
 		value, ok := subscriptionProperties.Values[key]
@@ -59,7 +83,7 @@ func (s *Subscription) GetPropertyValue(key string) string {
 }
 
 // UpdateState - Updates the state of subscription
-func (s *Subscription) UpdateState(newState SubscriptionState) error {
+func (s *CentralSubscription) UpdateState(newState SubscriptionState) error {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return err
@@ -93,12 +117,12 @@ func (s *Subscription) UpdateState(newState SubscriptionState) error {
 	return nil
 }
 
-func (s *Subscription) getServiceClient() *ServiceClient {
+func (s *CentralSubscription) getServiceClient() *ServiceClient {
 	return s.apicClient
 }
 
 // getSubscriptions -
-func (c *ServiceClient) getSubscriptions(states []string) ([]Subscription, error) {
+func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -132,7 +156,7 @@ func (c *ServiceClient) getSubscriptions(states []string) ([]Subscription, error
 		logResponseErrors(response.Body)
 		return nil, errors.New(strconv.Itoa(response.Code))
 	}
-	subscriptions := make([]Subscription, 0)
+	subscriptions := make([]CentralSubscription, 0)
 	json.Unmarshal(response.Body, &subscriptions)
 	return subscriptions, nil
 }
