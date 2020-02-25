@@ -65,6 +65,8 @@ type CentralConfig interface {
 	GetTagsToPublish() string
 	GetProxyURL() string
 	GetPollInterval() time.Duration
+	UpdateCatalogItemRevisions(catalogItemID string) string
+	GetCatalogItemByID(catalogItemID string) string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -211,6 +213,16 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
+}
+
+// UpdateCatalogItemRevisions - Returns URL to update catalog revision
+func (c *CentralConfiguration) UpdateCatalogItemRevisions(catalogItemID string) string {
+	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/revisions"
+}
+
+// GetCatalogItemByID - Returns URL to get catalog item by id
+func (c *CentralConfiguration) GetCatalogItemByID(catalogItemID string) string {
+	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID
 }
 
 // GetPollInterval - Returns the interval for polling subscriptions

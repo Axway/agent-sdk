@@ -32,6 +32,8 @@ const (
 	addCatalog
 	addCatalogImage
 	updateCatalog
+	updateCatalogRevision
+	getCatalogItem
 )
 
 //ServiceBody -
@@ -53,6 +55,7 @@ type ServiceBody struct {
 	ServiceExecution serviceExecution  `json:"omitempty"`
 	Image            string
 	ImageContentType string
+	SwaggerUpdated   bool
 }
 
 //CatalogPropertyValue -
@@ -304,7 +307,57 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 // UpdateService -
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalog
-	return c.deployService(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+ID)
+	_, err := c.deployService(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+ID)
+	if err != nil {
+		return "", err
+	}
+
+	if serviceBody.SwaggerUpdated {
+		version, err := c.GetCatalogItemRevision(ID)
+		i, err := strconv.Atoi(version)
+
+		serviceBody.Version = strconv.Itoa(i + 1)
+		_, err = c.UpdateCatalogItemRevisions(ID, serviceBody)
+		if err != nil {
+			return "", err
+		}
+	}
+	return ID, nil
+}
+
+// UpdateCatalogItemRevisions -
+func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
+	serviceBody.ServiceExecution = updateCatalogRevision
+	return c.deployService(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisions(ID))
+}
+
+// GetCatalogItemRevision -
+func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return "", err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetCatalogItemByID(ID),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return "", err
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return "", errors.New(strconv.Itoa(response.Code))
+	}
+
+	revisions := gjson.Get(string(response.Body), "availableRevisions")
+	availableRevisions := make([]int, 0)
+	json.Unmarshal([]byte(revisions.Raw), &availableRevisions)
+	revision := availableRevisions[len(availableRevisions)-1] // get the latest revsions
+	return strconv.Itoa(revision), nil
 }
 
 // CreateService -
@@ -328,6 +381,8 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 		spec, err = c.marshalCatalogItemImage(serviceBody)
 	case updateCatalog:
 		spec, err = c.marshalCatalogItem(serviceBody)
+	case updateCatalogRevision:
+		spec, err = c.marshalCatalogItemRevision(serviceBody)
 	default:
 		return nil, errors.New("Invalid catalog operation")
 	}
@@ -530,6 +585,27 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 	}
 
 	return json.Marshal(newCatalogItem)
+}
+
+// CreateCatalogItemBodyForRevision -
+func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
+
+	catalogItemRevision := CatalogItemInitRevision{
+		Version: serviceBody.Version,
+		State:   "UNPUBLISHED",
+		Properties: []CatalogRevisionProperty{
+			{
+				Key:   "documentation",
+				Value: json.RawMessage(string(serviceBody.Documentation)),
+			},
+			{
+				Key:   "swagger",
+				Value: json.RawMessage(serviceBody.Swagger),
+			},
+		},
+	}
+
+	return json.Marshal(catalogItemRevision)
 }
 
 // marshals the catalog image body
