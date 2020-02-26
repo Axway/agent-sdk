@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -152,6 +154,7 @@ func (c *agentRootCommand) initConfig() error {
 }
 
 func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
+	proxyURL := c.StringPropertyValue("central.proxyUrl")
 	cfg := &corecfg.CentralConfiguration{
 		AgentType:    c.agentType,
 		TenantID:     c.StringPropertyValue("central.tenantId"),
@@ -172,7 +175,19 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 			MinVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.minVersion")),
 			MaxVersion:         corecfg.TLSVersionAsValue(c.StringPropertyValue("central.ssl.maxVersion")),
 		},
-		ProxyURL: c.StringPropertyValue("central.proxyUrl"),
+		ProxyURL: proxyURL,
+	}
+
+	// Set the proxy environment variable so the APIC auth uses the same proxy
+	if proxyURL != "" {
+		urlInfo, err := url.Parse(proxyURL)
+		if err == nil {
+			if urlInfo.Scheme == "https" {
+				os.Setenv("HTTPS_PROXY", proxyURL)
+			} else if urlInfo.Scheme == "http" {
+				os.Setenv("HTTP_PROXY", proxyURL)
+			}
+		}
 	}
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
