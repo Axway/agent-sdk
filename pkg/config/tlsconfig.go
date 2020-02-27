@@ -79,6 +79,9 @@ var tlsCipherSuitesInverse = make(map[TLSCipherSuite]string, len(tlsCipherSuites
 
 // Unpack - transforms the string into a constant.
 func (cs *TLSCipherSuite) Unpack(s string) error {
+	if s == "" {
+		return nil
+	}
 	suite, found := tlsCipherSuites[s]
 	if !found {
 		return fmt.Errorf("invalid tls cipher suite '%v'", s)
@@ -117,6 +120,9 @@ var tlsVersionsInverse = make(map[TLSVersion]string, len(tlsVersions))
 
 //Unpack transforms the string into a constant.
 func (v *TLSVersion) Unpack(s string) error {
+	if s == "" {
+		return nil
+	}
 	version, found := tlsVersions[s]
 	if !found {
 		return fmt.Errorf("invalid tls version '%v'", s)
