@@ -404,9 +404,18 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
+	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+	definitionSubType := "swaggerv2"
+	revisionPropertyKey := "swagger"
+	if oasVer.Exists() {
+		// OAS v3
+		definitionSubType = "oas3"
+		revisionPropertyKey = "specification"
+	}
+
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
-		DefinitionSubType:  "swaggerv2",
+		DefinitionSubType:  definitionSubType,
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
@@ -441,7 +450,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 					Value: json.RawMessage(string(serviceBody.Documentation)),
 				},
 				{
-					Key:   "swagger",
+					Key:   revisionPropertyKey,
 					Value: json.RawMessage(serviceBody.Swagger),
 				},
 			},
