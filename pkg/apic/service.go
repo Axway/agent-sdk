@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -504,36 +505,24 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 	case "oas3":
 		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
 
-		var urls []string // append all possible urls here then loop through this to create the endpoints
 		for _, server := range openAPI.Servers {
-			// Check if the server.URL uses a variable for the protocol
-			if strings.HasPrefix(server.URL, "{") {
-				endVar := strings.IndexAny(server.URL, "}") // End of the variable name
-				if endVar == -1 {
-					err := fmt.Errorf("Invalid protocol found in server url: %s", server.URL)
-					log.Errorf(err.Error())
-					return nil, err
-				}
-				varName := server.URL[1:endVar]
-				// loop through all values of the protocol variable
-				for _, protocol := range server.Variables[varName].Enum {
-					urls = append(urls, strings.Replace(server.URL, fmt.Sprintf("{%s}", varName), protocol.(string), 1))
-				}
-			} else {
-				urls = append(urls, server.URL)
-			}
-		}
-		// Loop URLs, parse them and set up the endpoints
-		for _, urlStr := range urls {
-			urlObj, err := url.Parse(urlStr)
+			urlObj, err := url.Parse(server.URL)
 			if err != nil {
-				err := fmt.Errorf("Could not parse url: %s", urlStr)
+				err := fmt.Errorf("Could not parse url: %s", server.URL)
 				log.Errorf(err.Error())
 				return nil, err
 			}
-			port, _ := strconv.Atoi(urlObj.Port())
+
+			// If a port is not given, use lookup the default
+			var port int
+			if urlObj.Port() == "" {
+				port, _ = net.LookupPort("tcp", urlObj.Scheme)
+			} else {
+				port, _ = strconv.Atoi(urlObj.Port())
+			}
+
 			endPoint := EndPoint{
-				Host:     urlObj.Host,
+				Host:     urlObj.Hostname(),
 				Port:     port,
 				Protocol: urlObj.Scheme,
 			}
