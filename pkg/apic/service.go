@@ -503,7 +503,6 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 		}
 	case "oas3":
 		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
-		fmt.Sprintf("%v", openAPI)
 
 		var urls []string // append all possible urls here then loop through this to create the endpoints
 		for _, server := range openAPI.Servers {
