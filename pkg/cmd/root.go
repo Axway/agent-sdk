@@ -68,7 +68,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.rootCmd = &cobra.Command{
 		Use:     c.agentName,
 		Short:   desc,
-		Version: BuildVersion,
+		Version: fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha),
 		RunE:    c.run,
 		PreRun:  c.initialize,
 	}
