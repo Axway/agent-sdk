@@ -98,6 +98,25 @@
   version = "v1.4.7"
 
 [[projects]]
+  digest = "1:1bc05108527c7941ba26861f769912a4c587d6a46a12dc1fa78ded6e87cecfbb"
+  name = "github.com/getkin/kin-openapi"
+  packages = [
+    "jsoninfo",
+    "openapi3",
+  ]
+  pruneopts = "UT"
+  revision = "90a7df014b4e7699507bf82aa5601503a9ba85da"
+  version = "v0.2.0"
+
+[[projects]]
+  digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:bed9d72d596f94e65fff37f4d6c01398074a6bb1c3f3ceff963516bd01db6ff5"
   name = "github.com/gofrs/uuid"
   packages = ["."]
@@ -472,6 +491,7 @@
     "git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth",
     "github.com/elastic/beats/libbeat/beat",
     "github.com/elastic/beats/libbeat/common",
+    "github.com/getkin/kin-openapi/openapi3",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",

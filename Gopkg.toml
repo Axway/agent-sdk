@@ -51,3 +51,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/getkin/kin-openapi"
+  version = "0.2.0"

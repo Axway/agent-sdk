@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
 )
 
@@ -404,9 +407,18 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
+	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+	definitionSubType := "swaggerv2"
+	revisionPropertyKey := "swagger"
+	if oasVer.Exists() {
+		// OAS v3
+		definitionSubType = "oas3"
+		revisionPropertyKey = "specification"
+	}
+
 	newCatalogItem := CatalogItemInit{
 		DefinitionType:     "API",
-		DefinitionSubType:  "swaggerv2",
+		DefinitionSubType:  definitionSubType,
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
@@ -441,7 +453,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 					Value: json.RawMessage(string(serviceBody.Documentation)),
 				},
 				{
-					Key:   "swagger",
+					Key:   revisionPropertyKey,
 					Value: json.RawMessage(serviceBody.Swagger),
 				},
 			},
@@ -460,6 +472,67 @@ func isValidAuthPolicy(auth string) bool {
 	return false
 }
 
+func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+
+	switch revisionDefinitionType {
+	case "oas2":
+		swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
+		host := swaggerHost[0]
+		port := 443
+		if len(swaggerHost) > 1 {
+			swaggerPort, err := strconv.Atoi(swaggerHost[1])
+			if err == nil {
+				port = swaggerPort
+			}
+		}
+
+		schemes := make([]string, 0)
+		protocols := gjson.Get(string(swagger), "schemes")
+		err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+		if err != nil {
+			log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+			return nil, err
+		}
+		for _, protocol := range schemes {
+			endPoint := EndPoint{
+				Host:     host,
+				Port:     port,
+				Protocol: protocol,
+			}
+			endPoints = append(endPoints, endPoint)
+		}
+	case "oas3":
+		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
+
+		for _, server := range openAPI.Servers {
+			urlObj, err := url.Parse(server.URL)
+			if err != nil {
+				err := fmt.Errorf("Could not parse url: %s", server.URL)
+				log.Errorf(err.Error())
+				return nil, err
+			}
+
+			// If a port is not given, use lookup the default
+			var port int
+			if urlObj.Port() == "" {
+				port, _ = net.LookupPort("tcp", urlObj.Scheme)
+			} else {
+				port, _ = strconv.Atoi(urlObj.Port())
+			}
+
+			endPoint := EndPoint{
+				Host:     urlObj.Hostname(),
+				Port:     port,
+				Protocol: urlObj.Scheme,
+			}
+			endPoints = append(endPoints, endPoint)
+		}
+	}
+
+	return endPoints, nil
+}
+
 // createAPIServerBody - This function is being used by both the api server creation and api server revision creation
 func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, error) {
 	attributes := make(map[string]interface{})
@@ -468,6 +541,13 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	name := sanitizeAPIName(serviceBody.APIName)
+
+	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+	revisionDefinitionType := "oas2"
+	if oasVer.Exists() {
+		// OAS v3
+		revisionDefinitionType = "oas3"
+	}
 
 	switch serviceBody.ServiceExecution {
 	case addAPIServerSpec:
@@ -489,7 +569,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		return nil, nil
 	case addAPIServerRevisionSpec:
 		revisionDefinition := RevisionDefinition{
-			Type:  "oas2",
+			Type:  revisionDefinitionType,
 			Value: serviceBody.Swagger,
 		}
 		spec = APIServiceRevisionSpec{
@@ -499,30 +579,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		// reset the name here to include the stage
 		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
 	case addAPIServerInstanceSpec:
-		endPoints := []EndPoint{}
-		name += strings.ToLower(serviceBody.Stage)
-		swaggerHost := strings.Split(gjson.Get(string(serviceBody.Swagger), "host").String(), ":")
-		host := swaggerHost[0]
-		port := 443
-		if len(swaggerHost) > 1 {
-			swaggerPort, err := strconv.Atoi(swaggerHost[1])
-			if err == nil {
-				port = swaggerPort
-			}
-		}
-
-		// Iterate through protocols and create endpoints for instances
-		protocols := gjson.Get(string(serviceBody.Swagger), "schemes")
-		schemes := make([]string, 0)
-		json.Unmarshal([]byte(protocols.Raw), &schemes)
-		for _, protocol := range schemes {
-			endPoint := EndPoint{
-				Host:     host,
-				Port:     port,
-				Protocol: protocol,
-			}
-			endPoints = append(endPoints, endPoint)
-		}
+		endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, revisionDefinitionType)
 
 		// reset the name here to include the stage
 		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
