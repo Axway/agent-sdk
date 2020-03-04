@@ -393,7 +393,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	json.Unmarshal([]byte(out), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	assert.Equal(t, "Starting test_with_non_defaults ()", logData["msg"])
+	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
@@ -423,7 +423,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	json.Unmarshal([]byte(dat), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	assert.Equal(t, "Starting test_with_non_defaults ()", logData["msg"])
+	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
