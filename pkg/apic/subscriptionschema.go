@@ -48,7 +48,7 @@ func NewSubscriptionSchema() SubscriptionSchema {
 	return &subscriptionSchema{
 		SchemaType:        "object",
 		SchemaVersion:     "http://json-schema.org/draft-04/schema#",
-		SchemaDescription: "Subscription specification for API Key authentication",
+		SchemaDescription: "Subscription specification for authentication",
 		Properties:        make(map[string]subscriptionSchemaPropertyDefinition),
 		Required:          make([]string, 0),
 	}
@@ -82,11 +82,11 @@ func (ss *subscriptionSchema) rawJSON() (json.RawMessage, error) {
 
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In connected mode
 // creates a API Server resource for subscription definition
-func (c *ServiceClient) RegisterSubscriptionSchema(authType string, subscriptionSchema SubscriptionSchema) error {
-	c.SubscriptionSchemaMap[authType] = subscriptionSchema
-	if c.cfg.GetAgentMode() == corecfg.Connected && authType != Passthrough {
+func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	c.RegisteredSubscriptionSchema = subscriptionSchema
+	if c.cfg.GetAgentMode() == corecfg.Connected {
 		// Add API Server resource - SubscriptionDefinition
-		buffer, err := c.marshalSubsciptionDefinition(authType, subscriptionSchema)
+		buffer, err := c.marshalSubsciptionDefinition(subscriptionSchema)
 
 		headers, err := c.createHeader()
 		if err != nil {
@@ -112,7 +112,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(authType string, subscription
 	return nil
 }
 
-func (c *ServiceClient) marshalSubsciptionDefinition(authType string, subscriptionSchema SubscriptionSchema) ([]byte, error) {
+func (c *ServiceClient) marshalSubsciptionDefinition(subscriptionSchema SubscriptionSchema) ([]byte, error) {
 	catalogSubscriptionSchema, err := subscriptionSchema.rawJSON()
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (c *ServiceClient) marshalSubsciptionDefinition(authType string, subscripti
 	}
 
 	apiServerService := APIServer{
-		Name:       c.cfg.GetEnvironmentName() + "." + authType,
+		Name:       c.cfg.GetEnvironmentName() + "." + "authsubscription",
 		Title:      "Subscription definition created by agent",
 		Attributes: nil,
 		Spec:       spec,

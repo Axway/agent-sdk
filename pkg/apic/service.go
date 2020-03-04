@@ -394,11 +394,17 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 
 func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
 	enableSubscription := (serviceBody.AuthPolicy != Passthrough)
-	subSchema, ok := c.SubscriptionSchemaMap[serviceBody.AuthPolicy]
-	if !ok {
-		enableSubscription = false
-		subSchema = c.SubscriptionSchemaMap[Passthrough]
+
+	// assume that we use the default schema unless it one is enabled and registered
+	subSchema := c.DefaultSubscriptionSchema
+	if enableSubscription {
+		if c.RegisteredSubscriptionSchema != nil {
+			subSchema = c.RegisteredSubscriptionSchema
+		} else {
+			enableSubscription = false
+		}
 	}
+
 	catalogSubscriptionSchema, err := subSchema.rawJSON()
 	if err != nil {
 		return nil, err
