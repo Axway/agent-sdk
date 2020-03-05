@@ -98,7 +98,8 @@ stages:
   git remote set-url --push origin "git@git.ecd.axway.int:${CI_PROJECT_PATH}.git"
 
 .configure-artifactory-curl: &configure-artifactory-curl |
-  cp ./build/security/Axway-CA.crt /usr/local/share/ca-certificates/
+  cp /AxwayRootCA.crt /usr/local/share/ca-certificates/AxwayRootCA.crt
+  cp /AxwayRootCANew.crt /usr/local/share/ca-certificates/AxwayRootCANew.crt
   update-ca-certificates
 
 .prepare-path: &prepare-path |
@@ -119,6 +120,12 @@ stages:
     else export IMAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
     fi
   fi
+
+.get-ca-certs: &get-ca-certs |
+  cat $AXWAY_ROOT_CA > /AxwayRootCA.crt
+  echo "" >> /AxwayRootCA.crt
+  cat $AXWAY_ROOT_CA_NEW > /AxwayRootCANew.crt
+  echo "" >> /AxwayRootCANew.crt
 
 ############################################################
 # Section for test and sonar
@@ -230,6 +237,7 @@ trigger-aws-apigw-discovery-agent:
   when: manual
   before_script:
     - apk update && apk add curl ca-certificates
+    - *get-ca-certs
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
@@ -240,6 +248,7 @@ trigger-aws-apigw-traceability-agent:
   when: manual
   before_script:
     - apk update && apk add curl ca-certificates
+    - *get-ca-certs
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${AWS_TRACEABILITY_PROJECT_ID}/trigger/pipeline
@@ -250,6 +259,7 @@ trigger-v7-discovery-agent:
   when: manual
   before_script:
     - apk update && apk add curl ca-certificates
+    - *get-ca-certs
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
@@ -260,6 +270,7 @@ trigger-v7-traceability-agent:
   when: manual
   before_script:
     - apk update && apk add curl ca-certificates
+    - *get-ca-certs
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.int/api/v4/projects/${V7_TRACEABILITY_PROJECT_ID}/trigger/pipeline
