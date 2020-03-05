@@ -21,16 +21,16 @@ func TestSubscriptionSchemaRegistration(t *testing.T) {
 	assert.NotNil(t, client)
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
-	assert.NotEqual(t, 0, len(serviceClient.SubscriptionSchemaMap))
-	passthruSchema := serviceClient.SubscriptionSchemaMap[Passthrough]
+	assert.NotNil(t, serviceClient.DefaultSubscriptionSchema)
+	passthruSchema := serviceClient.DefaultSubscriptionSchema
 	assert.NotNil(t, passthruSchema)
 
 	apiKeySchema := NewSubscriptionSchema()
 	apiKeySchema.AddProperty("prop1", "string", "someproperty", "", true)
 	apiKeySchema.AddProperty("prop2", "int", "someproperty2", "", false)
-	client.RegisterSubscriptionSchema(Apikey, apiKeySchema)
+	client.RegisterSubscriptionSchema(apiKeySchema)
 
-	registeredAPIKeySchema := serviceClient.SubscriptionSchemaMap[Apikey]
+	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
 	assert.NotNil(t, registeredAPIKeySchema)
 	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
 

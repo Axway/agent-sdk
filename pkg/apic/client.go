@@ -35,7 +35,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
-	RegisterSubscriptionSchema(authType string, subscriptionSchema SubscriptionSchema) error
+	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 }
 
@@ -53,11 +53,12 @@ func (p *platformTokenGetter) GetToken() (string, error) {
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester        tokenGetter
-	cfg                   corecfg.CentralConfig
-	apiClient             coreapi.Client
-	SubscriptionSchemaMap map[string]SubscriptionSchema
-	subscriptionMgr       SubscriptionManager
+	tokenRequester tokenGetter
+	cfg            corecfg.CentralConfig
+	apiClient      coreapi.Client
+	DefaultSubscriptionSchema    SubscriptionSchema
+	RegisteredSubscriptionSchema SubscriptionSchema
+	subscriptionMgr              SubscriptionManager
 }
 
 // New -
@@ -73,13 +74,12 @@ func New(cfg corecfg.CentralConfig) Client {
 		requester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
 	serviceClient := &ServiceClient{
-		cfg:                   cfg,
-		tokenRequester:        platformTokenGetter,
-		apiClient:             coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
-		SubscriptionSchemaMap: make(map[string]SubscriptionSchema),
+		cfg:                       cfg,
+		tokenRequester:            platformTokenGetter,
+		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
+		DefaultSubscriptionSchema: NewSubscriptionSchema(),
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
-	serviceClient.RegisterSubscriptionSchema(Passthrough, NewSubscriptionSchema())
 	return serviceClient
 }
 
