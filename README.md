@@ -9,5 +9,5 @@
 | cmd          | This package has all of the root command for launching agents from the command line                              |
 | config       | This package has the base config structs for creating agents                                                     |
 | exception    | This package contains common exceptions for agents                                                               |
-| filter       | This package contains the filtering mechanism for determining what endpoints are sent to API Central             |
+| filter       | This package contains the filtering mechanism for determining what endpoints are sent to AMPLIFY Central         |
 | notification | This package contains structs that can be used for creating notifications and subscribers to those notifications |
