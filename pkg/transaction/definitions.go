@@ -6,6 +6,9 @@ const TypeTransactionSummary = "transactionSummary"
 // TypeTransactionEvent - Transaction Event type
 const TypeTransactionEvent = "transactionEvent"
 
+// SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
+const SummaryEventProxyIDPrefix = "remoteApiId_"
+
 // LogEvent - Log event to be sent to Condor
 type LogEvent struct {
 	Version            string   `json:"version"`
