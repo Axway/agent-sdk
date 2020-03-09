@@ -58,7 +58,6 @@ type ServiceBody struct {
 	ServiceExecution serviceExecution  `json:"omitempty"`
 	Image            string
 	ImageContentType string
-	SwaggerUpdated   bool
 }
 
 //CatalogPropertyValue -
@@ -315,16 +314,15 @@ func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (strin
 		return "", err
 	}
 
-	if serviceBody.SwaggerUpdated {
-		version, err := c.GetCatalogItemRevision(ID)
-		i, err := strconv.Atoi(version)
+	version, err := c.GetCatalogItemRevision(ID)
+	i, err := strconv.Atoi(version)
 
-		serviceBody.Version = strconv.Itoa(i + 1)
-		_, err = c.UpdateCatalogItemRevisions(ID, serviceBody)
-		if err != nil {
-			return "", err
-		}
+	serviceBody.Version = strconv.Itoa(i + 1)
+	_, err = c.UpdateCatalogItemRevisions(ID, serviceBody)
+	if err != nil {
+		return "", err
 	}
+
 	return ID, nil
 }
 
