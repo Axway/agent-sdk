@@ -252,7 +252,7 @@ func (c *ServiceClient) CheckHealth() error {
 		return err
 	}
 
-	return c.checkCentralHealth()
+	return c.checkAPIServerHealth()
 }
 
 func (c *ServiceClient) checkPlatformHealth() error {
@@ -263,7 +263,7 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) checkCentralHealth() error {
+func (c *ServiceClient) checkAPIServerHealth() error {
 	// do a request for catalog items
 	headers, err := c.createHeader()
 	if err != nil {
@@ -271,43 +271,37 @@ func (c *ServiceClient) checkCentralHealth() error {
 	}
 
 	if c.cfg.GetAgentMode() == corecfg.Disconnected {
-		request := coreapi.Request{
-			Method:  coreapi.GET,
-			URL:     c.cfg.GetCatalogItemsURL(),
-			Headers: headers,
-		}
+		sendErr := fmt.Errorf("error sending request to API Server: %s. Check AMPLIFY Central configuration for URL")
+		statusErr := fmt.Errorf("error sending request to API Server - status code %d. Check AMPLIFY Central configuration")
 
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return fmt.Errorf("error sending request to AMPLIFY Central: %s. Check AMPLIFY Central configuration for URL", err.Error())
-		}
-		if response.Code != http.StatusOK {
-			logResponseErrors(response.Body)
-			return fmt.Errorf("error sending request to AMPLIFY Central - status code %d. Check AMPLIFY Central configuration", response.Code)
-		}
+		// do a request for catalog items
+		return c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, sendErr, statusErr)
 	}
 
 	if c.cfg.GetAgentMode() == corecfg.Connected {
-		// do a request for the environment
-		headers, err := c.createHeader()
-		if err != nil {
-			return err
-		}
+		sendErr := fmt.Errorf("error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and APISERVERENVIRONMENT")
+		statusErr := fmt.Errorf("error sending request to API Server - status code %d. Check AMPLIFY Central configuration for APISERVERENVIRONMENT")
 
-		request := coreapi.Request{
-			Method:  coreapi.GET,
-			URL:     c.cfg.GetAPIServerURL() + c.cfg.GetEnvironmentName(),
-			Headers: headers,
-		}
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return fmt.Errorf("error sending request to AMPLIFY Central: %s. Check AMPLIFY Central configuration for URL and APISERVERENVIRONMENT", err.Error())
-		}
-		if response.Code != http.StatusOK {
-			logResponseErrors(response.Body)
-			return fmt.Errorf("error sending request to AMPLIFY Central - status code %d. Check AMPLIFY Central configuration for APISERVERENVIRONMENT", response.Code)
-		}
+		// do a request for the environment
+		return c.sendServerRequest(c.cfg.GetAPIServerURL()+c.cfg.GetEnvironmentName(), headers, sendErr, statusErr)
 	}
 
+	return nil
+}
+
+func (c *ServiceClient) sendServerRequest(url string, headers map[string]string, sendErr, statusErr error) error {
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     url,
+		Headers: headers,
+	}
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return sendErr
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return statusErr
+	}
 	return nil
 }
