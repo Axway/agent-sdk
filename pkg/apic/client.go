@@ -271,16 +271,16 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	}
 
 	if c.cfg.GetAgentMode() == corecfg.Disconnected {
-		sendErr := fmt.Errorf("error sending request to API Server: %s. Check AMPLIFY Central configuration for URL")
-		statusErr := fmt.Errorf("error sending request to API Server - status code %d. Check AMPLIFY Central configuration")
+		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
+		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration"
 
 		// do a request for catalog items
 		return c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, sendErr, statusErr)
 	}
 
 	if c.cfg.GetAgentMode() == corecfg.Connected {
-		sendErr := fmt.Errorf("error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and APISERVERENVIRONMENT")
-		statusErr := fmt.Errorf("error sending request to API Server - status code %d. Check AMPLIFY Central configuration for APISERVERENVIRONMENT")
+		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and APISERVERENVIRONMENT"
+		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for APISERVERENVIRONMENT"
 
 		// do a request for the environment
 		return c.sendServerRequest(c.cfg.GetAPIServerURL()+c.cfg.GetEnvironmentName(), headers, sendErr, statusErr)
@@ -289,7 +289,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers map[string]string, sendErr, statusErr error) error {
+func (c *ServiceClient) sendServerRequest(url string, headers map[string]string, sendErr, statusErr string) error {
 	request := coreapi.Request{
 		Method:  coreapi.GET,
 		URL:     url,
@@ -297,11 +297,11 @@ func (c *ServiceClient) sendServerRequest(url string, headers map[string]string,
 	}
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return sendErr
+		return fmt.Errorf(sendErr, err.Error())
 	}
 	if response.Code != http.StatusOK {
 		logResponseErrors(response.Body)
-		return statusErr
+		return fmt.Errorf(statusErr, response.Code)
 	}
 	return nil
 }
