@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	util "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util"
 )
 
 var globalCache Cache
@@ -81,18 +82,6 @@ func Load(path string) Cache {
 	return newCache
 }
 
-// get the hash of the byte array sent in
-func computeHash(data interface{}) (uint64, error) {
-	dataB, err := json.Marshal(data)
-	if err != nil {
-		return 0, fmt.Errorf("Could not marshal data to bytes")
-	}
-
-	h := fnv.New64a()
-	h.Write(dataB)
-	return h.Sum64(), nil
-}
-
 // check the current hash vs the newHash, return true if it has changed
 func (c *itemCache) hasItemChanged(key string, data interface{}) (bool, error) {
 	c.itemsLock.RLock()
@@ -105,7 +94,7 @@ func (c *itemCache) hasItemChanged(key string, data interface{}) (bool, error) {
 	}
 
 	// Get the hash of the new data
-	newHash, err := computeHash(data)
+	newHash, err := util.ComputeHash(data)
 	if err != nil {
 		return false, err
 	}
@@ -145,7 +134,7 @@ func (c *itemCache) set(key string, data interface{}) error {
 	c.itemsLock.Lock()
 	defer c.itemsLock.Unlock()
 
-	hash, err := computeHash(data)
+	hash, err := util.ComputeHash(data)
 	if err != nil {
 		return err
 	}
