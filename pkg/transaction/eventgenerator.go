@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -12,6 +13,7 @@ import (
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, privateData interface{}) (event beat.Event, err error)
+	CheckHealth() error
 }
 
 // Generator - Create the events to be published to Condor
@@ -45,6 +47,15 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 		Fields:    eventData,
 	}
 	return
+}
+
+// CheckHealth -
+func (e *Generator) CheckHealth() error {
+	_, err := e.tokenRequester.GetToken()
+	if err != nil {
+		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
+	}
+	return nil
 }
 
 func (e *Generator) createEventData(message []byte) (eventData map[string]interface{}, err error) {
