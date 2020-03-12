@@ -153,7 +153,7 @@ func (c *CentralConfiguration) GetProxyURL() string {
 
 // GetCatalogItemsURL - Returns the URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
-	return c.URL + baseCatalogItemsURL
+	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
 // GetCatalogItemImageURL - Returns the image based on catalogItemID
