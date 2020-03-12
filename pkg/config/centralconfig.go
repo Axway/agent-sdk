@@ -153,12 +153,12 @@ func (c *CentralConfiguration) GetProxyURL() string {
 
 // GetCatalogItemsURL - Returns the URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
-	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
+	return c.URL + baseCatalogItemsURL
 }
 
 // GetCatalogItemImageURL - Returns the image based on catalogItemID
 func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
-	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/image"
+	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
 }
 
 // GetAPIServerURL - Returns the base path for the API server
@@ -218,12 +218,12 @@ func (c *CentralConfiguration) GetTagsToPublish() string {
 
 // UpdateCatalogItemRevisions - Returns URL to update catalog revision
 func (c *CentralConfiguration) UpdateCatalogItemRevisions(catalogItemID string) string {
-	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID + "/revisions"
+	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
 // GetCatalogItemByID - Returns URL to get catalog item by id
 func (c *CentralConfiguration) GetCatalogItemByID(catalogItemID string) string {
-	return c.URL + "/api/unifiedCatalog/v1/catalogItems/" + catalogItemID
+	return c.GetCatalogItemsURL() + "/" + catalogItemID
 }
 
 // GetPollInterval - Returns the interval for polling subscriptions

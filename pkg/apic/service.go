@@ -27,6 +27,9 @@ const (
 
 type serviceExecution int
 
+const unpublishedState = "UNPUBLISHED"
+const publishedState = "PUBLISHED"
+
 const (
 	addAPIServerSpec serviceExecution = iota + 1
 	addAPIServerRevisionSpec
@@ -450,7 +453,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		},
 		Revision: CatalogItemInitRevision{
 			Version: serviceBody.Version,
-			State:   "UNPUBLISHED",
+			State:   unpublishedState,
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
@@ -643,11 +646,11 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
-		Visibility:         "RESTRICTED",  // default value
-		State:              "UNPUBLISHED", //default
+		Visibility:         "RESTRICTED",     // default value
+		State:              unpublishedState, //default
 		LatestVersionDetails: CatalogItemRevision{
 			Version: serviceBody.Version,
-			State:   "PUBLISHED",
+			State:   publishedState,
 		},
 	}
 
@@ -659,7 +662,7 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 
 	catalogItemRevision := CatalogItemInitRevision{
 		Version: serviceBody.Version,
-		State:   "UNPUBLISHED",
+		State:   unpublishedState,
 		Properties: []CatalogRevisionProperty{
 			{
 				Key:   "documentation",
