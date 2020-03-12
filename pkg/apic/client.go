@@ -258,7 +258,7 @@ func (c *ServiceClient) CheckHealth() error {
 func (c *ServiceClient) checkPlatformHealth() error {
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
-		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for URL, AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
+		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
 	}
 	return nil
 }
