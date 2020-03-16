@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )

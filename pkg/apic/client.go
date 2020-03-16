@@ -11,8 +11,8 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
 
@@ -118,14 +118,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	return strArr
-}
-
-var log logrus.FieldLogger = logrus.WithField("package", "apic")
-
-// SetLog sets the logger for the package.
-func SetLog(newLog logrus.FieldLogger) {
-	log = newLog
-	return
 }
 
 func isUnitTesting() bool {

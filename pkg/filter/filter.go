@@ -1,8 +1,9 @@
 package filter
 
 import (
-	log "github.com/sirupsen/logrus"
 	"strconv"
+
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
 )
 
 // Filter - Interface for filter

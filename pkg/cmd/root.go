@@ -11,7 +11,7 @@ import (
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/spf13/cobra"
 
-	log "github.com/sirupsen/logrus"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -135,7 +135,7 @@ func (c *agentRootCommand) initConfig() error {
 	logFormat := c.StringPropertyValue("log.format")
 	logOutput := c.StringPropertyValue("log.output")
 	logPath := c.StringPropertyValue("log.path")
-	SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
+	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 
 	// Init Central Config
 	centralCfg, err := c.parseCentralConfig()
@@ -254,6 +254,9 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	if err == nil {
 		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 		err = c.commandHandler()
+		if err != nil {
+			log.Error(err.Error())
+		}
 	}
 
 	return
