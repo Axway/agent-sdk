@@ -13,6 +13,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
 )
