@@ -11,7 +11,7 @@ import (
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/spf13/cobra"
 
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )

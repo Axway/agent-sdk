@@ -6,7 +6,7 @@ import (
 
 	guuid "github.com/google/uuid"
 
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 var notifiers map[string]Notifier

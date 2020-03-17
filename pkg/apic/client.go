@@ -11,7 +11,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/log"
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/tidwall/gjson"
 )
