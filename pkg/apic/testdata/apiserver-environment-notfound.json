@@ -1,0 +1,15 @@
+{
+  "errors": [
+    {
+      "status": 404,
+      "title": "Not found error",
+      "detail": "Resource env_name of kind Environment not found.",
+      "meta": {
+        "instanceId": "e4e084b66fcf325a016fcf5465160000",
+        "tenantId": "456890395787279",
+        "authenticatedUserId": "024363c8-ab01-47ec-87f8-065f29dffc63",
+        "transactionId": "1O3zrhFs2J@ZvBgp3bDL"
+      }
+    }
+  ]
+}

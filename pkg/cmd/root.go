@@ -88,14 +88,13 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringSliceProperty("central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
 	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	c.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 
 		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
-		c.AddStringProperty("central.environmentId", "centralEnvironmentId", "", "Environment ID for the current environment")
 	} else {
 		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
-		c.AddStringProperty("central.apiServerEnvironment", "apiServerEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of AMPLIFY Central")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 		c.AddDurationProperty("central.pollInterval", "centralPollInterval", 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
@@ -159,6 +158,7 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 		AgentType:    c.agentType,
 		TenantID:     c.StringPropertyValue("central.tenantId"),
 		PollInterval: c.DurationPropertyValue("central.pollInterval"),
+		Environment:  c.StringPropertyValue("central.environment"),
 		Auth: &corecfg.AuthConfiguration{
 			URL:        c.StringPropertyValue("central.auth.url"),
 			Realm:      c.StringPropertyValue("central.auth.realm"),
@@ -192,11 +192,9 @@ func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 		cfg.APICDeployment = c.StringPropertyValue("central.deployment")
-		cfg.EnvironmentID = c.StringPropertyValue("central.environmentId")
 	} else {
 		cfg.URL = c.StringPropertyValue("central.url")
 		cfg.Mode = corecfg.StringAgentModeMap[strings.ToLower(c.StringPropertyValue("central.mode"))]
-		cfg.APIServerEnvironment = c.StringPropertyValue("central.apiServerEnvironment")
 		cfg.APIServerVersion = c.StringPropertyValue("central.apiServerVersion")
 		cfg.TeamID = c.StringPropertyValue("central.teamId")
 		cfg.TagsToPublish = c.StringPropertyValue("central.additionalTags")
