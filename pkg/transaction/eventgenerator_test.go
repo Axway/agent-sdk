@@ -16,12 +16,12 @@ type Config struct {
 	Central corecfg.CentralConfig `config:"central"`
 }
 
-func createMapperTestConfig(authURL, tenantID, env, envID string) *Config {
+func createMapperTestConfig(authURL, tenantID, env, envName string) *Config {
 	return &Config{
 		Central: &corecfg.CentralConfiguration{
 			TenantID:       tenantID,
 			APICDeployment: env,
-			EnvironmentID:  envID,
+			Environment:    envName,
 			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
 				ClientID:   "test",

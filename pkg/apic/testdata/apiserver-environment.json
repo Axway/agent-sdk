@@ -1,0 +1,22 @@
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "Environment",
+  "name": "apiserverenv",
+  "title": "apiserverenv",
+  "metadata": {
+    "id": "e4e085bf70638a1d0170639297610000",
+    "audit": {
+      "createTimestamp": "2020-02-20T17:08:36.402+0000",
+      "createUserId": "DOSA_ef0ce390d6fb42398a2d5e001ca4d33d",
+      "modifyTimestamp": "2020-02-20T17:17:10.875+0000",
+      "modifyUserId": "DOSA_ef0ce390d6fb42398a2d5e001ca4d33d"
+    },
+    "resourceVersion": "175",
+    "references": [],
+    "state": "DELETING"
+  },
+  "attributes": {},
+  "tags": [],
+  "spec": {}
+}

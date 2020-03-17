@@ -47,12 +47,15 @@ type CentralConfig interface {
 	GetTenantID() string
 	GetAPICDeployment() string
 	GetEnvironmentID() string
+	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
 	GetTeamID() string
 	GetURL() string
 	GetCatalogItemsURL() string
 	GetCatalogItemImageURL(catalogItemID string) string
+	GetEnvironmentURL() string
 	GetAPIServerURL() string
+	GetAPIServerEnvironmentURL() string
 	GetAPIServerServicesURL() string
 	GetAPIServerServicesRevisionsURL() string
 	GetAPIServerServicesInstancesURL() string
@@ -73,20 +76,20 @@ type CentralConfig interface {
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
-	AgentType            AgentType
-	Mode                 AgentMode     `config:"mode"`
-	TenantID             string        `config:"tenantID"`
-	TeamID               string        `config:"teamID" `
-	APICDeployment       string        `config:"deployment"`
-	APIServerEnvironment string        `config:"apiServerEnvironment"`
-	EnvironmentID        string        `config:"environmentID"`
-	URL                  string        `config:"url"`
-	APIServerVersion     string        `config:"apiServerVersion"`
-	TagsToPublish        string        `config:"additionalTags"`
-	Auth                 AuthConfig    `config:"auth"`
-	TLS                  TLSConfig     `config:"ssl"`
-	PollInterval         time.Duration `config:"pollInterval"`
-	ProxyURL             string        `config:"proxyUrl"`
+	AgentType        AgentType
+	Mode             AgentMode     `config:"mode"`
+	TenantID         string        `config:"tenantID"`
+	TeamID           string        `config:"teamID" `
+	APICDeployment   string        `config:"deployment"`
+	Environment      string        `config:"environment"`
+	URL              string        `config:"url"`
+	APIServerVersion string        `config:"apiServerVersion"`
+	TagsToPublish    string        `config:"additionalTags"`
+	Auth             AuthConfig    `config:"auth"`
+	TLS              TLSConfig     `config:"ssl"`
+	PollInterval     time.Duration `config:"pollInterval"`
+	ProxyURL         string        `config:"proxyUrl"`
+	environmentID    string
 }
 
 // NewCentralConfig - Creates the default central config
@@ -128,12 +131,17 @@ func (c *CentralConfiguration) GetAPICDeployment() string {
 
 // GetEnvironmentID - Returns the environment ID
 func (c *CentralConfiguration) GetEnvironmentID() string {
-	return c.EnvironmentID
+	return c.environmentID
+}
+
+// SetEnvironmentID - Sets the environment ID
+func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
+	c.environmentID = environmentID
 }
 
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
-	return c.APIServerEnvironment
+	return c.Environment
 }
 
 // GetTeamID - Returns the team ID
@@ -161,39 +169,49 @@ func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) stri
 	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
 }
 
+// GetEnvironmentURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetEnvironmentURL() string {
+	return c.URL + "/api/v1/environments"
+}
+
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
 }
 
+// GetAPIServerEnvironmentURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetAPIServerEnvironmentURL() string {
+	return c.GetAPIServerURL() + c.Environment
+}
+
 // GetAPIServerServicesURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetAPIServerServicesURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/apiservices"
+	return c.GetAPIServerEnvironmentURL() + "/apiservices"
 }
 
 // GetAPIServerServicesRevisionsURL - Returns the APIServer URL for services API revisions
 func (c *CentralConfiguration) GetAPIServerServicesRevisionsURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/apiservicerevisions"
+	return c.GetAPIServerEnvironmentURL() + "/apiservicerevisions"
 }
 
 // GetAPIServerServicesInstancesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/apiserviceinstances"
+	return c.GetAPIServerEnvironmentURL() + "/apiserviceinstances"
 }
 
 // DeleteAPIServerServicesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/apiservices"
+	return c.GetAPIServerEnvironmentURL() + "/apiservices"
 }
 
 // GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instance representing the catalog item
 func (c *CentralConfiguration) GetAPIServerConsumerInstancesURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/consumerinstances"
+	return c.GetAPIServerEnvironmentURL() + "/consumerinstances"
 }
 
 // GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
-	return c.GetAPIServerURL() + c.APIServerEnvironment + "/consumersubscriptiondefs"
+	return c.GetAPIServerEnvironmentURL() + "/consumersubscriptiondefs"
 }
 
 // GetSubscriptionURL - Returns the APIServer URL for services API instances
@@ -279,7 +297,7 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 
 func (c *CentralConfiguration) validateConnectedModeConfig() {
 	if c.GetEnvironmentName() == "" {
-		exception.Throw(errors.New("Error central.apiServerEnvironment not set in config"))
+		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
 
 	if c.APIServerVersion == "" {
@@ -291,8 +309,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetAPICDeployment() == "" {
 		exception.Throw(errors.New("Error central.apicDeployment not set in config"))
 	}
-
-	if c.GetEnvironmentID() == "" {
-		exception.Throw(errors.New("Error central.environmentID not set in config"))
+	if c.GetEnvironmentName() == "" {
+		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
 }

@@ -42,9 +42,9 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	centralConfig.Mode = Connected
 	err = cfg.Validate()
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.apiServerEnvironment not set in config", err.Error())
+	assert.Equal(t, "Error central.environment not set in config", err.Error())
 
-	centralConfig.APIServerEnvironment = "eee"
+	centralConfig.Environment = "eee"
 	err = cfg.Validate()
 	assert.Nil(t, err)
 
@@ -86,9 +86,10 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfg.Validate()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.environmentID not set in config", err.Error())
+	assert.Equal(t, "Error central.environment not set in config", err.Error())
 
-	centralConfig.EnvironmentID = "aaa"
+	centralConfig.Environment = "111111"
 	err = cfg.Validate()
+
 	assert.Nil(t, err)
 }

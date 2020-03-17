@@ -47,7 +47,7 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func createServiceClient() *ServiceClient {
+func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamID: "test",
 		Auth: &corecfg.AuthConfiguration{
@@ -57,11 +57,11 @@ func createServiceClient() *ServiceClient {
 		},
 	}
 	c := New(cfg)
-	return c.(*ServiceClient)
+	return c.(*ServiceClient), cfg
 }
 func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	// set the config values
-	c := createServiceClient()
+	c, _ := createServiceClient()
 	tags := make(map[string]interface{})
 	tags["key1"] = "val1"
 	tags["key2"] = "val2"
@@ -163,7 +163,7 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
-	c := createServiceClient()
+	c, _ := createServiceClient()
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2

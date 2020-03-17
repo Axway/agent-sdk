@@ -53,16 +53,6 @@ func (p *platformTokenGetter) GetToken() (string, error) {
 	return p.requester.GetToken()
 }
 
-// ServiceClient -
-type ServiceClient struct {
-	tokenRequester               tokenGetter
-	cfg                          corecfg.CentralConfig
-	apiClient                    coreapi.Client
-	DefaultSubscriptionSchema    SubscriptionSchema
-	RegisteredSubscriptionSchema SubscriptionSchema
-	subscriptionMgr              SubscriptionManager
-}
-
 // New -
 func New(cfg corecfg.CentralConfig) Client {
 	tokenURL := cfg.GetAuthConfig().GetTokenURL()
@@ -162,13 +152,6 @@ func (c *ServiceClient) deployAPI(method, url string, buffer []byte) (string, er
 	return c.handleResponse(response.Body)
 }
 
-type apiErrorResponse map[string][]apiError
-
-type apiError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
 func logResponseErrors(body []byte) {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
@@ -262,38 +245,61 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	if c.cfg.GetAgentMode() == corecfg.Disconnected {
+	if c.cfg.GetAgentMode() == corecfg.Disconnected && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
 		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
 		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration"
 
 		// do a request for catalog items
-		return c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, sendErr, statusErr)
+		_, err := c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
+		return err
 	}
 
-	if c.cfg.GetAgentMode() == corecfg.Connected {
-		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and APISERVERENVIRONMENT"
-		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for APISERVERENVIRONMENT"
+	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and ENVIRONMENT"
+	statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for ENVIRONMENT"
 
-		// do a request for the environment
-		return c.sendServerRequest(c.cfg.GetAPIServerURL()+c.cfg.GetEnvironmentName(), headers, sendErr, statusErr)
+	// do a request for the environment
+	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, make(map[string]string, 0), sendErr, statusErr)
+	if err != nil {
+		queryParams := map[string]string{
+			"query": fmt.Sprintf("name==\"%s\"", c.cfg.GetEnvironmentName()),
+		}
+		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams, sendErr, statusErr)
+		if err == nil {
+			var envList []EnvironmentSpec
+			err := json.Unmarshal(envListByte, &envList)
+			if err != nil || len(envList) == 0 {
+				return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+			}
+			c.cfg.SetEnvironmentID(envList[0].ID)
+			return nil
+		}
+		return err
 	}
 
+	// Get end id from apiServerEnvByte
+	var apiServerEnv APIServer
+	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
+	if err != nil {
+		return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+	}
+	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers map[string]string, sendErr, statusErr string) error {
+func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string, sendErr, statusErr string) ([]byte, error) {
 	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     url,
-		Headers: headers,
+		Method:      coreapi.GET,
+		URL:         url,
+		QueryParams: query,
+		Headers:     headers,
 	}
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return fmt.Errorf(sendErr, err.Error())
+		return nil, fmt.Errorf(sendErr, err.Error())
 	}
 	if response.Code != http.StatusOK {
 		logResponseErrors(response.Body)
-		return fmt.Errorf(statusErr, response.Code)
+		return nil, fmt.Errorf(statusErr, response.Code)
 	}
-	return nil
+	return response.Body, nil
 }
