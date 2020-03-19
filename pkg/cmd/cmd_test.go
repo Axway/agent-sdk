@@ -50,7 +50,7 @@ func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
 	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "disconnected", "Agent Mode")
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of AMPLIFY Central")
+	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
@@ -70,6 +70,7 @@ func TestRootCmdFlags(t *testing.T) {
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
+	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
@@ -115,7 +116,7 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 func TestRootCmdConfigDefault(t *testing.T) {
 	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		assert.Equal(t, corecfg.Disconnected, centralConfig.GetAgentMode())
-		assert.Equal(t, "https://apicentral.preprod.k8s.axwayamplify.com", centralConfig.GetURL())
+		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamID())
 		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
 		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())

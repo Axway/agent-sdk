@@ -75,7 +75,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	c.AddStringProperty("central.url", "centralUrl", "https://platform.axway.com", "URL of AMPLIFY Central")
+	c.AddStringProperty("central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
