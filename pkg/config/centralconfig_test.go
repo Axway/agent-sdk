@@ -80,6 +80,12 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfg.Validate()
 
 	assert.NotNil(t, err)
+	assert.Equal(t, "Error central.url not set in config", err.Error())
+
+	centralConfig.URL = "aaa"
+	err = cfg.Validate()
+
+	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.apicDeployment not set in config", err.Error())
 
 	centralConfig.APICDeployment = "aaa"

@@ -75,6 +75,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
+	c.AddStringProperty("central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
@@ -91,11 +92,9 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
-
 		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
 	} else {
 		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
-		c.AddStringProperty("central.url", "centralUrl", "https://apicentral.preprod.k8s.axwayamplify.com", "URL of AMPLIFY Central")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 		c.AddDurationProperty("central.pollInterval", "centralPollInterval", 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 	}

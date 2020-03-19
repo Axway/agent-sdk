@@ -270,6 +270,10 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.tenantID not set in config"))
 	}
 
+	if c.GetURL() == "" {
+		exception.Throw(errors.New("Error central.url not set in config"))
+	}
+
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
@@ -278,10 +282,6 @@ func (c *CentralConfiguration) validateConfig() {
 }
 
 func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
-	if c.GetURL() == "" {
-		exception.Throw(errors.New("Error central.url not set in config"))
-	}
-
 	if c.GetTeamID() == "" {
 		exception.Throw(errors.New("Error central.teamID not set in config"))
 	}
