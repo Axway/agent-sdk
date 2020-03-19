@@ -89,6 +89,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+	c.AddStringProperty("path.config", "pathConfig", "", "Configuration file path for the agent")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 
@@ -109,9 +110,12 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
+	configFilePath := c.StringPropertyValue("path.config")
+	log.Info("Config File: " + configFilePath)
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(c.configPath)
+	viper.AddConfigPath(configFilePath)
+	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
