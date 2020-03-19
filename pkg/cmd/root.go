@@ -109,7 +109,6 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	configFilePath := c.StringPropertyValue("path.config")
-	log.Info("Config File: " + configFilePath)
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(configFilePath)
