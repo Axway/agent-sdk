@@ -40,7 +40,7 @@ type Summary struct {
 // Proxy - Represents the proxy definition in summary event
 type Proxy struct {
 	ID       string `json:"id,omitempty"`
-	Revision string `json:"revision,omitempty"`
+	Revision int    `json:"revision,omitempty"`
 	Name     string `json:"name,omitempty"`
 }
 
