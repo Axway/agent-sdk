@@ -47,7 +47,6 @@ type AgentRootCmd interface {
 
 // agentRootCommand - Represents the agent root command
 type agentRootCommand struct {
-	configPath        string
 	agentName         string
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
@@ -58,7 +57,6 @@ type agentRootCommand struct {
 // NewRootCmd - Creates a new Agent Root Command
 func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
 	c := &agentRootCommand{
-		configPath:        ".",
 		agentName:         exeName,
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
@@ -104,13 +102,16 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("log.format", "logFormat", "json", "Log format (json, line, package)")
 	c.AddStringProperty("log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
 	c.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
+	c.AddStringProperty("path.config", "pathConfig", ".", "Configuration file path for the agent")
 	return c
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
+	configFilePath := c.StringPropertyValue("path.config")
 	viper.SetConfigName(c.agentName)
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(c.configPath)
+	viper.AddConfigPath(configFilePath)
+	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
