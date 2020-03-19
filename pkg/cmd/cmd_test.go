@@ -89,7 +89,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line, package)")
 	assertStringCmdFlag(t, rootCmd, "log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
 	assertStringCmdFlag(t, rootCmd, "log.path", "logPath", "logs", "Log file path if output type is file or both")
-
+	assertStringCmdFlag(t, rootCmd, "path.Config", "pathConfig", "", "Configuration file path for the agent")
 }
 
 func TestRootCmdConfigFileLoad(t *testing.T) {

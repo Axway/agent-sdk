@@ -89,7 +89,6 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 	c.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
-	c.AddStringProperty("path.config", "pathConfig", "", "Configuration file path for the agent")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 
@@ -106,6 +105,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("log.format", "logFormat", "json", "Log format (json, line, package)")
 	c.AddStringProperty("log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
 	c.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
+	c.AddStringProperty("path.config", "pathConfig", "", "Configuration file path for the agent")
 	return c
 }
 
