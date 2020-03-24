@@ -57,7 +57,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
@@ -69,13 +69,13 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
-	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
+	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
@@ -117,8 +117,8 @@ func TestRootCmdConfigDefault(t *testing.T) {
 		assert.Equal(t, corecfg.Disconnected, centralConfig.GetAgentMode())
 		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamID())
-		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
-		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
+		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
+		assert.Equal(t, "https://login.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
 		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
 		assert.Equal(t, "Broker", centralConfig.GetAuthConfig().GetRealm())
 		assert.Equal(t, "/etc/private_key.pem", centralConfig.GetAuthConfig().GetPrivateKey())
@@ -129,9 +129,9 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	}
 
 	traceabilityInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		assert.Equal(t, "preprod", centralConfig.GetAPICDeployment())
-		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
-		assert.Equal(t, "https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
+		assert.Equal(t, "prod", centralConfig.GetAPICDeployment())
+		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
+		assert.Equal(t, "https://login.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
 		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
 		assert.Equal(t, "Broker", centralConfig.GetAuthConfig().GetRealm())
 		assert.Equal(t, "/etc/private_key.pem", centralConfig.GetAuthConfig().GetPrivateKey())
