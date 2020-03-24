@@ -109,7 +109,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	configFilePath := c.StringPropertyValue("path.config")
 	viper.SetConfigName(c.agentName)
-	viper.SetConfigType("yaml")
+	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)
 	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
