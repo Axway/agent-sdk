@@ -77,7 +77,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	c.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	c.AddStringProperty("central.auth.url", "authUrl", "https://login-preprod.axway.com/auth", "AMPLIFY Central authentication URL")
+	c.AddStringProperty("central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
 	c.AddStringProperty("central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
 	c.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
 	c.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
@@ -90,7 +90,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
-		c.AddStringProperty("central.deployment", "centralDeployment", "preprod", "AMPLIFY Central")
+		c.AddStringProperty("central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	} else {
 		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
