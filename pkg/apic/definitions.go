@@ -33,6 +33,7 @@ type ServiceBody struct {
 	ServiceExecution serviceExecution  `json:"omitempty"`
 	Image            string
 	ImageContentType string
+	CreatedBy        string
 }
 
 // ServiceClient -

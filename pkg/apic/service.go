@@ -102,6 +102,9 @@ func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody) (string, err
 
 // AddToAPIC -
 func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
+	// add createdBy as a tag
+	serviceBody.Tags["createdBy_"+serviceBody.CreatedBy] = ""
+
 	serviceBody.ServiceExecution = addCatalog
 	itemID, err := c.deployService(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
 	if err != nil {
@@ -352,6 +355,7 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, error) {
 	attributes := make(map[string]interface{})
 	attributes["externalAPIID"] = serviceBody.RestAPIID
+	attributes["createdBy"] = serviceBody.CreatedBy
 
 	// spec needs to adhere to environment schema
 	var spec interface{}
