@@ -8,3 +8,6 @@ var BuildVersion string
 
 // BuildCommitSha -
 var BuildCommitSha string
+
+// BuildAgentName -
+var BuildAgentName string
