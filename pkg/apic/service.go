@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -194,6 +195,7 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 		spec, err = c.marshalCatalogItemInit(serviceBody)
 	case addCatalogImage:
 		spec, err = c.marshalCatalogItemImage(serviceBody)
+		// todo - new crap for these 2 to set the subType and key
 	case updateCatalog:
 		spec, err = c.marshalCatalogItem(serviceBody)
 	case updateCatalogRevision:
@@ -225,13 +227,44 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
-	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-	definitionSubType := "swaggerv2"
-	revisionPropertyKey := "swagger"
-	if oasVer.Exists() {
-		// OAS v3
-		definitionSubType = "oas3"
+	version := serviceBody.Version
+	var definitionSubType string
+	var revisionPropertyKey string
+
+	if serviceBody.ResourceType == "wsdl" {
+		definitionSubType = "wsdl"
 		revisionPropertyKey = "specification"
+		version = "1.0.0"
+	} else {
+		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+		definitionSubType = "swaggerv2"
+		revisionPropertyKey = "swagger"
+		if oasVer.Exists() {
+			// OAS v3
+			definitionSubType = "oas3"
+			revisionPropertyKey = "specification"
+		}
+	}
+
+	var rawMsg json.RawMessage
+	if definitionSubType == "wsdl" {
+		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
+		rawMsg = json.RawMessage(strconv.Quote(str))
+	} else {
+		rawMsg = json.RawMessage(serviceBody.Swagger)
+	}
+
+	catalogProperties := []CatalogProperty{}
+	if definitionSubType != "wsdl" {
+		catalogProperties = []CatalogProperty{
+			{
+				Key: "accessInfo",
+				Value: CatalogPropertyValue{
+					AuthPolicy: serviceBody.AuthPolicy,
+					URL:        serviceBody.URL,
+				},
+			},
+		}
 	}
 
 	newCatalogItem := CatalogItemInit{
@@ -241,18 +274,9 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
-		Properties: []CatalogProperty{
-			{
-				Key: "accessInfo",
-				Value: CatalogPropertyValue{
-					AuthPolicy: serviceBody.AuthPolicy,
-					URL:        serviceBody.URL,
-				},
-			},
-		},
-
-		Tags:       c.mapToTagsArray(serviceBody.Tags),
-		Visibility: "RESTRICTED", // default value
+		Properties:         catalogProperties,
+		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Visibility:         "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         enableSubscription,
 			AutoSubscribe:   true,
@@ -263,7 +287,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 			}},
 		},
 		Revision: CatalogItemInitRevision{
-			Version: serviceBody.Version,
+			Version: version,
 			State:   unpublishedState,
 			Properties: []CatalogRevisionProperty{
 				{
@@ -272,7 +296,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 				},
 				{
 					Key:   revisionPropertyKey,
-					Value: json.RawMessage(serviceBody.Swagger),
+					Value: rawMsg,
 				},
 			},
 		},
@@ -362,6 +386,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	name := sanitizeAPIName(serviceBody.APIName)
 
 	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+	// todo - need to do something here for wsdl
 	revisionDefinitionType := "oas2"
 	if oasVer.Exists() {
 		// OAS v3
@@ -447,8 +472,10 @@ func sanitizeAPIName(name string) string {
 	return r3
 }
 
-// CreateCatalogItemBodyForUpdate -
+// marshal the CatalogItem -
 func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
+
+	// todo - add wsdl and OAS3 stuff
 	newCatalogItem := CatalogItem{
 		DefinitionType:    "API",
 		DefinitionSubType: "swaggerv2",
@@ -469,7 +496,7 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 	return json.Marshal(newCatalogItem)
 }
 
-// CreateCatalogItemBodyForRevision -
+// marshal the CatalogItem revision
 func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
 
 	catalogItemRevision := CatalogItemInitRevision{

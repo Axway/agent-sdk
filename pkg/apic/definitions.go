@@ -34,6 +34,7 @@ type ServiceBody struct {
 	Image            string
 	ImageContentType string
 	CreatedBy        string
+	ResourceType     string
 }
 
 // ServiceClient -
@@ -63,6 +64,12 @@ type CatalogRevisionProperty struct {
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
+
+// RevisionProperyKey values
+const (
+	SPECIFICATION = "specification"
+	SWAGGER       = "swagger"
+)
 
 //CatalogItemInitRevision -
 type CatalogItemInitRevision struct {
@@ -107,6 +114,19 @@ type CatalogItemInit struct {
 	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
 	CategoryReferences string                  `json:"categoryReferences,omitempty"`
 }
+
+// DefinitionType values
+const (
+	API string = "API"
+)
+
+// DefinitionSubType values
+const (
+	WSDL      string = "wsdl"
+	SWAGGERV2 string = "swaggerv2"
+	OAS2      string = "oas2"
+	OAS3      string = "oas3"
+)
 
 // CatalogItemImage -
 type CatalogItemImage struct {
