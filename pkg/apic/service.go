@@ -231,23 +231,23 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 	var definitionSubType string
 	var revisionPropertyKey string
 
-	if serviceBody.ResourceType == "wsdl" {
-		definitionSubType = "wsdl"
-		revisionPropertyKey = "specification"
+	if serviceBody.ResourceType == Wsdl {
+		definitionSubType = Wsdl
+		revisionPropertyKey = Specification
 		version = "1.0.0"
 	} else {
 		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-		definitionSubType = "swaggerv2"
-		revisionPropertyKey = "swagger"
+		definitionSubType = SwaggerV2
+		revisionPropertyKey = Swagger
 		if oasVer.Exists() {
 			// OAS v3
-			definitionSubType = "oas3"
-			revisionPropertyKey = "specification"
+			definitionSubType = Oas3
+			revisionPropertyKey = Specification
 		}
 	}
 
 	var rawMsg json.RawMessage
-	if definitionSubType == "wsdl" {
+	if definitionSubType == Wsdl {
 		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
 		rawMsg = json.RawMessage(strconv.Quote(str))
 	} else {
@@ -255,7 +255,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 	}
 
 	catalogProperties := []CatalogProperty{}
-	if definitionSubType != "wsdl" {
+	if definitionSubType != Wsdl {
 		catalogProperties = []CatalogProperty{
 			{
 				Key: "accessInfo",
@@ -268,7 +268,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 	}
 
 	newCatalogItem := CatalogItemInit{
-		DefinitionType:     "API",
+		DefinitionType:     API,
 		DefinitionSubType:  definitionSubType,
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
@@ -318,7 +318,7 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 	endPoints := []EndPoint{}
 
 	switch revisionDefinitionType {
-	case "oas2":
+	case Oas2:
 		swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
 		host := swaggerHost[0]
 		port := 443
@@ -344,7 +344,7 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 			}
 			endPoints = append(endPoints, endPoint)
 		}
-	case "oas3":
+	case Oas3:
 		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
 
 		for _, server := range openAPI.Servers {
@@ -387,10 +387,10 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 
 	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
 	// todo - need to do something here for wsdl
-	revisionDefinitionType := "oas2"
+	revisionDefinitionType := Oas2
 	if oasVer.Exists() {
 		// OAS v3
-		revisionDefinitionType = "oas3"
+		revisionDefinitionType = Oas3
 	}
 
 	switch serviceBody.ServiceExecution {
@@ -477,8 +477,8 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 
 	// todo - add wsdl and OAS3 stuff
 	newCatalogItem := CatalogItem{
-		DefinitionType:    "API",
-		DefinitionSubType: "swaggerv2",
+		DefinitionType:    API,
+		DefinitionSubType: SwaggerV2,
 
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
@@ -508,7 +508,7 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 				Value: json.RawMessage(string(serviceBody.Documentation)),
 			},
 			{
-				Key:   "swagger",
+				Key:   Swagger,
 				Value: json.RawMessage(serviceBody.Swagger),
 			},
 		},

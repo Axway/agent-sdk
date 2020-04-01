@@ -169,7 +169,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, "oas2")
+	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, Oas2)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -181,7 +181,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
 	oas3Bytes, _ := ioutil.ReadAll(oas3Json)
 
-	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, "oas3")
+	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 1 endpoint")

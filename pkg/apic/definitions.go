@@ -7,6 +7,17 @@ import (
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
+// Various consts for use
+const (
+	API            = "API"
+	Wsdl           = "wsdl"
+	SwaggerV2      = "swaggerv2"
+	Oas2           = "oas2"
+	Oas3           = "oas3"
+	Specification = "specification"
+	Swagger        = "swagger"
+)
+
 type apiErrorResponse map[string][]apiError
 
 type apiError struct {
@@ -64,17 +75,6 @@ type CatalogRevisionProperty struct {
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
-
-// Various consts for use
-const (
-	API            = "API"
-	Wsdl           = "wsdl"
-	SwaggerV2      = "swaggerv2"
-	Oas2           = "oas2"
-	Oas3           = "oas3"
-	Sspecification = "specification"
-	Swagger        = "swagger"
-)
 
 //CatalogItemInitRevision -
 type CatalogItemInitRevision struct {
