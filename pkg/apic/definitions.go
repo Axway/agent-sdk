@@ -65,10 +65,15 @@ type CatalogRevisionProperty struct {
 	Value json.RawMessage `json:"value"`
 }
 
-// RevisionProperyKey values
+// Various consts for use
 const (
-	SPECIFICATION = "specification"
-	SWAGGER       = "swagger"
+	API            = "API"
+	Wsdl           = "wsdl"
+	SwaggerV2      = "swaggerv2"
+	Oas2           = "oas2"
+	Oas3           = "oas3"
+	Sspecification = "specification"
+	Swagger        = "swagger"
 )
 
 //CatalogItemInitRevision -
@@ -114,19 +119,6 @@ type CatalogItemInit struct {
 	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
 	CategoryReferences string                  `json:"categoryReferences,omitempty"`
 }
-
-// DefinitionType values
-const (
-	API string = "API"
-)
-
-// DefinitionSubType values
-const (
-	WSDL      string = "wsdl"
-	SWAGGERV2 string = "swaggerv2"
-	OAS2      string = "oas2"
-	OAS3      string = "oas3"
-)
 
 // CatalogItemImage -
 type CatalogItemImage struct {
