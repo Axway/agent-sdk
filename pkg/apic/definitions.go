@@ -9,13 +9,13 @@ import (
 
 // Various consts for use
 const (
-	API            = "API"
-	Wsdl           = "wsdl"
-	SwaggerV2      = "swaggerv2"
-	Oas2           = "oas2"
-	Oas3           = "oas3"
+	API           = "API"
+	Wsdl          = "wsdl"
+	SwaggerV2     = "swaggerv2"
+	Oas2          = "oas2"
+	Oas3          = "oas3"
 	Specification = "specification"
-	Swagger        = "swagger"
+	Swagger       = "swagger"
 )
 
 type apiErrorResponse map[string][]apiError

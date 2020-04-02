@@ -15,6 +15,7 @@ import (
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
 )
@@ -234,7 +235,9 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 	if serviceBody.ResourceType == Wsdl {
 		definitionSubType = Wsdl
 		revisionPropertyKey = Specification
-		version = "1.0.0"
+		if version == "" {
+			version = "0.0.0" // version must be set to something
+		}
 	} else {
 		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
 		definitionSubType = SwaggerV2
@@ -315,61 +318,127 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
-	endPoints := []EndPoint{}
-
 	switch revisionDefinitionType {
+	case Wsdl:
+		return c.getWsdlEndpoints(swagger)
 	case Oas2:
-		swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
-		host := swaggerHost[0]
-		port := 443
-		if len(swaggerHost) > 1 {
-			swaggerPort, err := strconv.Atoi(swaggerHost[1])
-			if err == nil {
-				port = swaggerPort
-			}
-		}
+		return c.getOas2Endpoints(swagger)
+	case Oas3:
+		return c.getOas3Endpoints(swagger)
+	}
 
-		schemes := make([]string, 0)
-		protocols := gjson.Get(string(swagger), "schemes")
-		err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+	return nil, fmt.Errorf("Unable to get endpoints from swagger; invalid definition type: %v", revisionDefinitionType)
+}
+
+func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	def, err := wsdl.Unmarshal(swagger)
+	if err != nil {
+		log.Errorf("Error unmarshalling WSDL to get endpoints: %v", err.Error())
+		return nil, err
+	}
+
+	ports := def.Service.Ports
+	for _, val := range ports {
+		loc := val.Address.Location
+		fixed, err := url.Parse(loc)
 		if err != nil {
-			log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+			log.Errorf("Error parsing service location in WSDL to get endpoints: %v", err.Error())
 			return nil, err
 		}
-		for _, protocol := range schemes {
-			endPoint := EndPoint{
-				Host:     host,
-				Port:     port,
-				Protocol: protocol,
+		protocol := fixed.Scheme
+		host := fixed.Hostname()
+		portStr := fixed.Port()
+		if portStr == "" {
+			switch protocol {
+			case "https":
+				portStr = "443"
+			case "http":
+				portStr = "80"
 			}
+
+		}
+		port, _ := strconv.Atoi(portStr)
+
+		endPoint := EndPoint{
+			Host:     host,
+			Port:     port,
+			Protocol: protocol,
+		}
+		if !contains(endPoints, endPoint) {
 			endPoints = append(endPoints, endPoint)
 		}
-	case Oas3:
-		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
+	}
 
-		for _, server := range openAPI.Servers {
-			urlObj, err := url.Parse(server.URL)
-			if err != nil {
-				err := fmt.Errorf("Could not parse url: %s", server.URL)
-				log.Errorf(err.Error())
-				return nil, err
-			}
+	return endPoints, nil
+}
 
-			// If a port is not given, use lookup the default
-			var port int
-			if urlObj.Port() == "" {
-				port, _ = net.LookupPort("tcp", urlObj.Scheme)
-			} else {
-				port, _ = strconv.Atoi(urlObj.Port())
-			}
-
-			endPoint := EndPoint{
-				Host:     urlObj.Hostname(),
-				Port:     port,
-				Protocol: urlObj.Scheme,
-			}
-			endPoints = append(endPoints, endPoint)
+func contains(endpts []EndPoint, endpt EndPoint) bool {
+	for _, pt := range endpts {
+		if pt == endpt {
+			return true
 		}
+	}
+	return false
+}
+
+func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
+	host := swaggerHost[0]
+	port := 443
+	if len(swaggerHost) > 1 {
+		swaggerPort, err := strconv.Atoi(swaggerHost[1])
+		if err == nil {
+			port = swaggerPort
+		}
+	}
+
+	schemes := make([]string, 0)
+	protocols := gjson.Get(string(swagger), "schemes")
+	err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+	if err != nil {
+		log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+		return nil, err
+	}
+	for _, protocol := range schemes {
+		endPoint := EndPoint{
+			Host:     host,
+			Port:     port,
+			Protocol: protocol,
+		}
+		endPoints = append(endPoints, endPoint)
+	}
+
+	return endPoints, nil
+}
+
+func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
+
+	for _, server := range openAPI.Servers {
+		urlObj, err := url.Parse(server.URL)
+		if err != nil {
+			err := fmt.Errorf("Could not parse url: %s", server.URL)
+			log.Errorf(err.Error())
+			return nil, err
+		}
+
+		// If a port is not given, use lookup the default
+		var port int
+		if urlObj.Port() == "" {
+			port, _ = net.LookupPort("tcp", urlObj.Scheme)
+		} else {
+			port, _ = strconv.Atoi(urlObj.Port())
+		}
+
+		endPoint := EndPoint{
+			Host:     urlObj.Hostname(),
+			Port:     port,
+			Protocol: urlObj.Scheme,
+		}
+		endPoints = append(endPoints, endPoint)
 	}
 
 	return endPoints, nil
@@ -385,12 +454,17 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	var spec interface{}
 	name := sanitizeAPIName(serviceBody.APIName)
 
-	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-	// todo - need to do something here for wsdl
-	revisionDefinitionType := Oas2
-	if oasVer.Exists() {
-		// OAS v3
-		revisionDefinitionType = Oas3
+	var revisionDefinitionType string
+
+	if serviceBody.ResourceType == Wsdl {
+		revisionDefinitionType = Wsdl
+	} else {
+		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+		revisionDefinitionType = Oas2
+		if oasVer.Exists() {
+			// OAS v3
+			revisionDefinitionType = Oas3
+		}
 	}
 
 	switch serviceBody.ServiceExecution {
