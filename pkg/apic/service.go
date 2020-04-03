@@ -228,33 +228,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
-	var definitionSubType string
-	var revisionPropertyKey string
-
-	if serviceBody.ResourceType == Wsdl {
-		definitionSubType = Wsdl
-		revisionPropertyKey = Specification
-		if serviceBody.Version == "" {
-			serviceBody.Version = "0.0.0" // version must be set to something
-		}
-	} else {
-		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-		definitionSubType = SwaggerV2
-		revisionPropertyKey = Swagger
-		if oasVer.Exists() {
-			// OAS v3
-			definitionSubType = Oas3
-			revisionPropertyKey = Specification
-		}
-	}
-
-	var rawMsg json.RawMessage
-	if definitionSubType == Wsdl {
-		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
-		rawMsg = json.RawMessage(strconv.Quote(str))
-	} else {
-		rawMsg = json.RawMessage(serviceBody.Swagger)
-	}
+	definitionSubType, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
 	catalogProperties := []CatalogProperty{}
 	if definitionSubType != Wsdl {
@@ -298,7 +272,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 				},
 				{
 					Key:   revisionPropertyKey,
-					Value: rawMsg,
+					Value: c.getRawMessageFromSwagger(serviceBody),
 				},
 			},
 		},
@@ -314,6 +288,33 @@ func isValidAuthPolicy(auth string) bool {
 		}
 	}
 	return false
+}
+
+func (c *ServiceClient) getDefinitionSubtypeAndRevisionKey(serviceBody ServiceBody) (definitionSubType, revisionPropertyKey string) {
+	if serviceBody.ResourceType == Wsdl {
+		definitionSubType = Wsdl
+		revisionPropertyKey = Specification
+	} else {
+		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+		definitionSubType = SwaggerV2
+		revisionPropertyKey = Swagger
+		if oasVer.Exists() {
+			// OAS v3
+			definitionSubType = Oas3
+			revisionPropertyKey = Specification
+		}
+	}
+	return
+}
+
+func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMsg json.RawMessage) {
+	if serviceBody.ResourceType == Wsdl {
+		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
+		rawMsg = json.RawMessage(strconv.Quote(str))
+	} else {
+		rawMsg = json.RawMessage(serviceBody.Swagger)
+	}
+	return
 }
 
 func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
@@ -354,7 +355,7 @@ func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 				log.Errorf("Error finding port for endpoint: %v", err.Error())
 				return nil, err
 			}
-			portStr = string(p)
+			portStr = strconv.Itoa(p)
 		}
 		port, _ := strconv.Atoi(portStr)
 
@@ -547,10 +548,12 @@ func sanitizeAPIName(name string) string {
 // marshal the CatalogItem -
 func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
 
+	definitionSubType, _ := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
+
 	// todo - add wsdl and OAS3 stuff
 	newCatalogItem := CatalogItem{
 		DefinitionType:    API,
-		DefinitionSubType: SwaggerV2,
+		DefinitionSubType: definitionSubType,
 
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
@@ -571,6 +574,8 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 // marshal the CatalogItem revision
 func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
 
+	_, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
+
 	catalogItemRevision := CatalogItemInitRevision{
 		Version: serviceBody.Version,
 		State:   unpublishedState,
@@ -580,8 +585,8 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 				Value: json.RawMessage(string(serviceBody.Documentation)),
 			},
 			{
-				Key:   Swagger,
-				Value: json.RawMessage(serviceBody.Swagger),
+				Key:   revisionPropertyKey,
+				Value: c.getRawMessageFromSwagger(serviceBody),
 			},
 		},
 	}
