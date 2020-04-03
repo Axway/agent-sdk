@@ -4,6 +4,7 @@ package apicauth
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -202,8 +203,24 @@ func (kr *keyReader) getPublicKey() ([]byte, error) {
 	return keyBytes, nil
 }
 
+func parseDER(publicKey []byte) ([]byte, error) {
+	if b64key, err := base64.StdEncoding.DecodeString(string(publicKey)); err == nil {
+		return b64key, nil
+	}
+
+	_, err := x509.ParsePKIXPublicKey(publicKey)
+	if err != nil {
+		pemBlock, _ := pem.Decode(publicKey)
+		if pemBlock.Type != "PUBLIC KEY" {
+			return nil, errors.New("unsupported key type")
+		}
+		return pemBlock.Bytes, nil
+	}
+	return publicKey, nil
+}
+
 func computeKIDFromDER(publicKey []byte) (kid string, err error) {
-	b64key, err := base64.StdEncoding.DecodeString(string(publicKey))
+	b64key, err := parseDER(publicKey)
 	if err != nil {
 		return "", err
 	}
@@ -218,6 +235,7 @@ func computeKIDFromDER(publicKey []byte) (kid string, err error) {
 	kid = strings.Replace(kid, "/", "_", -1)
 	return
 }
+
 func (kr *keyReader) getPassword() ([]byte, error) {
 	return ioutil.ReadFile(kr.password)
 }

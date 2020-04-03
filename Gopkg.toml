@@ -55,3 +55,8 @@
 [[constraint]]
   name = "github.com/getkin/kin-openapi"
   version = "0.2.0"
+
+
+[[constraint]]
+  name = "git.ecd.axway.int/apigov/service-mesh-agent"
+  branch = "master"

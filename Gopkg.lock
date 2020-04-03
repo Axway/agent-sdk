@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:82c0b17bf37defc4e1b9785866c9d0254576a9cb38641d16ef6c3fb707f2a2dd"
+  branch = "master"
+  digest = "1:06b93fa16661a69ec306fc1272fa125141897f32d1367ef9f4308c8034c3bf09"
   name = "git.ecd.axway.int/apigov/service-mesh-agent"
   packages = ["pkg/apicauth"]
   pruneopts = "UT"
-  revision = "da81430877d3914127ce10198f022ff97b6534ac"
-  version = "0.9.0"
+  revision = "0ed253ddefa8d2e7ab63e9e95f623d02926908c7"
 
 [[projects]]
   digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
