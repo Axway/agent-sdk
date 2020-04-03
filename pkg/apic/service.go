@@ -228,15 +228,14 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
-	version := serviceBody.Version
 	var definitionSubType string
 	var revisionPropertyKey string
 
 	if serviceBody.ResourceType == Wsdl {
 		definitionSubType = Wsdl
 		revisionPropertyKey = Specification
-		if version == "" {
-			version = "0.0.0" // version must be set to something
+		if serviceBody.Version == "" {
+			serviceBody.Version = "0.0.0" // version must be set to something
 		}
 	} else {
 		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
@@ -290,7 +289,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 			}},
 		},
 		Revision: CatalogItemInitRevision{
-			Version: version,
+			Version: serviceBody.Version,
 			State:   unpublishedState,
 			Properties: []CatalogRevisionProperty{
 				{
@@ -350,13 +349,12 @@ func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 		host := fixed.Hostname()
 		portStr := fixed.Port()
 		if portStr == "" {
-			switch protocol {
-			case "https":
-				portStr = "443"
-			case "http":
-				portStr = "80"
+			p, err := net.LookupPort("tcp", protocol)
+			if err != nil {
+				log.Errorf("Error finding port for endpoint: %v", err.Error())
+				return nil, err
 			}
-
+			portStr = string(p)
 		}
 		port, _ := strconv.Atoi(portStr)
 
