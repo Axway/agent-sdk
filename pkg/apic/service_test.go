@@ -159,6 +159,32 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 	if catalogItem3.Properties[0].Value.AuthPolicy != "verify-oauth-token" {
 		t.Error("swagger3.json has security, therefore the AuthPolicy should have been verify-oauth-token. Found: ", catalogItem3.Properties[0].Value.AuthPolicy)
 	}
+
+	wsdlFile, _ := os.Open("./testdata/weather.xml") // WSDL
+	wsdlFileBytes, _ := ioutil.ReadAll(wsdlFile)
+	documentation = "API imported from Axway API Gateway"
+
+	docBytes, _ = json.Marshal(documentation)
+	serviceBody = ServiceBody{
+		NameToPush:    "Beano",
+		APIName:       "serviceapi1",
+		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
+		Description:   "API From Axway API Gateway (RestApiId: restapiID, StageName: stage",
+		Version:       "1.0.0",
+		AuthPolicy:    Passthrough,
+		Swagger:       wsdlFileBytes,
+		Documentation: docBytes,
+		Tags:          tags,
+		ResourceType:  Wsdl,
+	}
+
+	catalogBytes3, _ = c.marshalCatalogItemInit(serviceBody)
+
+	json.Unmarshal(catalogBytes3, &catalogItem3)
+
+	// Validate the security is verify-api-key
+	assert.Equal(t, Specification, catalogItem3.Revision.Properties[1].Key)
+	assert.Equal(t, Wsdl, catalogItem3.DefinitionSubType)
 }
 
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
@@ -169,7 +195,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, "oas2")
+	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, Oas2)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -181,7 +207,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
 	oas3Bytes, _ := ioutil.ReadAll(oas3Json)
 
-	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, "oas3")
+	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 1 endpoint")
@@ -194,4 +220,17 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
 	assert.Equal(t, 443, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
+
+	// Test wsdl object
+	wsdlFile, _ := os.Open("./testdata/weather.xml") // wsdl
+	wsdlBytes, _ := ioutil.ReadAll(wsdlFile)
+
+	endPoints, err = c.getEndpointsBasedOnSwagger(wsdlBytes, Wsdl)
+
+	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
+	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
+	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
+	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+
 }

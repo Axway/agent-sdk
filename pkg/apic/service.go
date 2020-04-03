@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
 )
@@ -194,6 +196,7 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 		spec, err = c.marshalCatalogItemInit(serviceBody)
 	case addCatalogImage:
 		spec, err = c.marshalCatalogItemImage(serviceBody)
+		// todo - new crap for these 2 to set the subType and key
 	case updateCatalog:
 		spec, err = c.marshalCatalogItem(serviceBody)
 	case updateCatalogRevision:
@@ -225,23 +228,37 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		return nil, err
 	}
 
-	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-	definitionSubType := "swaggerv2"
-	revisionPropertyKey := "swagger"
-	if oasVer.Exists() {
-		// OAS v3
-		definitionSubType = "oas3"
-		revisionPropertyKey = "specification"
+	var definitionSubType string
+	var revisionPropertyKey string
+
+	if serviceBody.ResourceType == Wsdl {
+		definitionSubType = Wsdl
+		revisionPropertyKey = Specification
+		if serviceBody.Version == "" {
+			serviceBody.Version = "0.0.0" // version must be set to something
+		}
+	} else {
+		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+		definitionSubType = SwaggerV2
+		revisionPropertyKey = Swagger
+		if oasVer.Exists() {
+			// OAS v3
+			definitionSubType = Oas3
+			revisionPropertyKey = Specification
+		}
 	}
 
-	newCatalogItem := CatalogItemInit{
-		DefinitionType:     "API",
-		DefinitionSubType:  definitionSubType,
-		DefinitionRevision: 1,
-		Name:               serviceBody.NameToPush,
-		OwningTeamID:       serviceBody.TeamID,
-		Description:        serviceBody.Description,
-		Properties: []CatalogProperty{
+	var rawMsg json.RawMessage
+	if definitionSubType == Wsdl {
+		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
+		rawMsg = json.RawMessage(strconv.Quote(str))
+	} else {
+		rawMsg = json.RawMessage(serviceBody.Swagger)
+	}
+
+	catalogProperties := []CatalogProperty{}
+	if definitionSubType != Wsdl {
+		catalogProperties = []CatalogProperty{
 			{
 				Key: "accessInfo",
 				Value: CatalogPropertyValue{
@@ -249,10 +266,19 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 					URL:        serviceBody.URL,
 				},
 			},
-		},
+		}
+	}
 
-		Tags:       c.mapToTagsArray(serviceBody.Tags),
-		Visibility: "RESTRICTED", // default value
+	newCatalogItem := CatalogItemInit{
+		DefinitionType:     API,
+		DefinitionSubType:  definitionSubType,
+		DefinitionRevision: 1,
+		Name:               serviceBody.NameToPush,
+		OwningTeamID:       serviceBody.TeamID,
+		Description:        serviceBody.Description,
+		Properties:         catalogProperties,
+		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Visibility:         "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         enableSubscription,
 			AutoSubscribe:   true,
@@ -272,7 +298,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 				},
 				{
 					Key:   revisionPropertyKey,
-					Value: json.RawMessage(serviceBody.Swagger),
+					Value: rawMsg,
 				},
 			},
 		},
@@ -291,61 +317,126 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
-	endPoints := []EndPoint{}
-
 	switch revisionDefinitionType {
-	case "oas2":
-		swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
-		host := swaggerHost[0]
-		port := 443
-		if len(swaggerHost) > 1 {
-			swaggerPort, err := strconv.Atoi(swaggerHost[1])
-			if err == nil {
-				port = swaggerPort
-			}
-		}
+	case Wsdl:
+		return c.getWsdlEndpoints(swagger)
+	case Oas2:
+		return c.getOas2Endpoints(swagger)
+	case Oas3:
+		return c.getOas3Endpoints(swagger)
+	}
 
-		schemes := make([]string, 0)
-		protocols := gjson.Get(string(swagger), "schemes")
-		err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+	return nil, fmt.Errorf("Unable to get endpoints from swagger; invalid definition type: %v", revisionDefinitionType)
+}
+
+func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	def, err := wsdl.Unmarshal(swagger)
+	if err != nil {
+		log.Errorf("Error unmarshalling WSDL to get endpoints: %v", err.Error())
+		return nil, err
+	}
+
+	ports := def.Service.Ports
+	for _, val := range ports {
+		loc := val.Address.Location
+		fixed, err := url.Parse(loc)
 		if err != nil {
-			log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+			log.Errorf("Error parsing service location in WSDL to get endpoints: %v", err.Error())
 			return nil, err
 		}
-		for _, protocol := range schemes {
-			endPoint := EndPoint{
-				Host:     host,
-				Port:     port,
-				Protocol: protocol,
-			}
-			endPoints = append(endPoints, endPoint)
-		}
-	case "oas3":
-		openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
-
-		for _, server := range openAPI.Servers {
-			urlObj, err := url.Parse(server.URL)
+		protocol := fixed.Scheme
+		host := fixed.Hostname()
+		portStr := fixed.Port()
+		if portStr == "" {
+			p, err := net.LookupPort("tcp", protocol)
 			if err != nil {
-				err := fmt.Errorf("Could not parse url: %s", server.URL)
-				log.Errorf(err.Error())
+				log.Errorf("Error finding port for endpoint: %v", err.Error())
 				return nil, err
 			}
+			portStr = string(p)
+		}
+		port, _ := strconv.Atoi(portStr)
 
-			// If a port is not given, use lookup the default
-			var port int
-			if urlObj.Port() == "" {
-				port, _ = net.LookupPort("tcp", urlObj.Scheme)
-			} else {
-				port, _ = strconv.Atoi(urlObj.Port())
-			}
-
-			endPoint := EndPoint{
-				Host:     urlObj.Hostname(),
-				Port:     port,
-				Protocol: urlObj.Scheme,
-			}
+		endPoint := EndPoint{
+			Host:     host,
+			Port:     port,
+			Protocol: protocol,
+		}
+		if !contains(endPoints, endPoint) {
 			endPoints = append(endPoints, endPoint)
 		}
+	}
+
+	return endPoints, nil
+}
+
+func contains(endpts []EndPoint, endpt EndPoint) bool {
+	for _, pt := range endpts {
+		if pt == endpt {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
+	host := swaggerHost[0]
+	port := 443
+	if len(swaggerHost) > 1 {
+		swaggerPort, err := strconv.Atoi(swaggerHost[1])
+		if err == nil {
+			port = swaggerPort
+		}
+	}
+
+	schemes := make([]string, 0)
+	protocols := gjson.Get(string(swagger), "schemes")
+	err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+	if err != nil {
+		log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+		return nil, err
+	}
+	for _, protocol := range schemes {
+		endPoint := EndPoint{
+			Host:     host,
+			Port:     port,
+			Protocol: protocol,
+		}
+		endPoints = append(endPoints, endPoint)
+	}
+
+	return endPoints, nil
+}
+
+func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
+
+	for _, server := range openAPI.Servers {
+		urlObj, err := url.Parse(server.URL)
+		if err != nil {
+			err := fmt.Errorf("Could not parse url: %s", server.URL)
+			log.Errorf(err.Error())
+			return nil, err
+		}
+
+		// If a port is not given, use lookup the default
+		var port int
+		if urlObj.Port() == "" {
+			port, _ = net.LookupPort("tcp", urlObj.Scheme)
+		} else {
+			port, _ = strconv.Atoi(urlObj.Port())
+		}
+
+		endPoint := EndPoint{
+			Host:     urlObj.Hostname(),
+			Port:     port,
+			Protocol: urlObj.Scheme,
+		}
+		endPoints = append(endPoints, endPoint)
 	}
 
 	return endPoints, nil
@@ -361,11 +452,17 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 	var spec interface{}
 	name := sanitizeAPIName(serviceBody.APIName)
 
-	oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-	revisionDefinitionType := "oas2"
-	if oasVer.Exists() {
-		// OAS v3
-		revisionDefinitionType = "oas3"
+	var revisionDefinitionType string
+
+	if serviceBody.ResourceType == Wsdl {
+		revisionDefinitionType = Wsdl
+	} else {
+		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
+		revisionDefinitionType = Oas2
+		if oasVer.Exists() {
+			// OAS v3
+			revisionDefinitionType = Oas3
+		}
 	}
 
 	switch serviceBody.ServiceExecution {
@@ -447,11 +544,13 @@ func sanitizeAPIName(name string) string {
 	return r3
 }
 
-// CreateCatalogItemBodyForUpdate -
+// marshal the CatalogItem -
 func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
+
+	// todo - add wsdl and OAS3 stuff
 	newCatalogItem := CatalogItem{
-		DefinitionType:    "API",
-		DefinitionSubType: "swaggerv2",
+		DefinitionType:    API,
+		DefinitionSubType: SwaggerV2,
 
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
@@ -469,7 +568,7 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 	return json.Marshal(newCatalogItem)
 }
 
-// CreateCatalogItemBodyForRevision -
+// marshal the CatalogItem revision
 func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
 
 	catalogItemRevision := CatalogItemInitRevision{
@@ -481,7 +580,7 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 				Value: json.RawMessage(string(serviceBody.Documentation)),
 			},
 			{
-				Key:   "swagger",
+				Key:   Swagger,
 				Value: json.RawMessage(serviceBody.Swagger),
 			},
 		},
