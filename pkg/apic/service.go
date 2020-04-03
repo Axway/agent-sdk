@@ -196,7 +196,6 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 		spec, err = c.marshalCatalogItemInit(serviceBody)
 	case addCatalogImage:
 		spec, err = c.marshalCatalogItemImage(serviceBody)
-		// todo - new crap for these 2 to set the subType and key
 	case updateCatalog:
 		spec, err = c.marshalCatalogItem(serviceBody)
 	case updateCatalogRevision:
@@ -550,7 +549,6 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 
 	definitionSubType, _ := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
-	// todo - add wsdl and OAS3 stuff
 	newCatalogItem := CatalogItem{
 		DefinitionType:    API,
 		DefinitionSubType: definitionSubType,
