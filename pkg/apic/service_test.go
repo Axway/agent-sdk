@@ -203,14 +203,14 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, 443, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 
-	// Test oas2 object
+	// Test oas3 object
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
 	oas3Bytes, _ := ioutil.ReadAll(oas3Json)
 
 	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
-	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 1 endpoint")
+	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
 	assert.Equal(t, 8080, endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
@@ -220,6 +220,33 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
 	assert.Equal(t, 443, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
+
+	// Test oas3 object, with templated server URLs
+	oas3Json2, _ := os.Open("./testdata/petstore-openapi3-template-urls.json") // OAS3
+	oas3Bytes2, _ := ioutil.ReadAll(oas3Json2)
+
+	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes2, Oas3)
+
+	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3 and templated URLs")
+	assert.Len(t, endPoints, 6, "The returned end points array did not have exactly 6 endpoints")
+	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
+	assert.Equal(t, 443, endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
+	assert.Equal(t, "https", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "petstore.swagger.io", endPoints[1].Host, "The second returned end point had an unexpected value for it's host")
+	assert.Equal(t, 80, endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
+	assert.Equal(t, "http", endPoints[1].Protocol, "The second returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "petstore-preprod.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
+	assert.Equal(t, 80, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
+	assert.Equal(t, "http", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "petstore-test.swagger.io", endPoints[3].Host, "The forth returned end point had an unexpected value for it's host")
+	assert.Equal(t, 80, endPoints[3].Port, "The forth returned end point had an unexpected value for it's port")
+	assert.Equal(t, "http", endPoints[3].Protocol, "The forth returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "petstore-preprod.swagger.io", endPoints[4].Host, "The fifth returned end point had an unexpected value for it's host")
+	assert.Equal(t, 443, endPoints[4].Port, "The fifth returned end point had an unexpected value for it's port")
+	assert.Equal(t, "https", endPoints[4].Protocol, "The fifth returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "petstore-test.swagger.io", endPoints[5].Host, "The sixth returned end point had an unexpected value for it's host")
+	assert.Equal(t, 443, endPoints[5].Port, "The sixth returned end point had an unexpected value for it's port")
+	assert.Equal(t, "https", endPoints[5].Protocol, "The sixth returned end point had an unexpected value for it's protocol")
 
 	// Test wsdl object
 	wsdlFile, _ := os.Open("./testdata/weather.xml") // wsdl
