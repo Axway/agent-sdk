@@ -416,27 +416,71 @@ func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 	openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
 
 	for _, server := range openAPI.Servers {
-		urlObj, err := url.Parse(server.URL)
-		if err != nil {
-			err := fmt.Errorf("Could not parse url: %s", server.URL)
-			log.Errorf(err.Error())
-			return nil, err
+		// Add the URL string to the array
+		allURLs := []string{
+			server.URL,
 		}
 
-		// If a port is not given, use lookup the default
-		var port int
-		if urlObj.Port() == "" {
-			port, _ = net.LookupPort("tcp", urlObj.Scheme)
-		} else {
-			port, _ = strconv.Atoi(urlObj.Port())
+		defaultURL := ""
+
+		if server.Variables != nil {
+			defaultURL = server.URL
+			// Handle substitutions
+			for serverKey, serverVar := range server.Variables {
+				newURLs := []string{}
+				if serverVar.Default == nil {
+					err := fmt.Errorf("Server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
+					log.Errorf(err.Error())
+					return nil, err
+				}
+				defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
+				if len(serverVar.Enum) == 0 {
+					for _, template := range allURLs {
+						newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string)))
+					}
+				} else {
+					for _, enumVal := range serverVar.Enum {
+						for _, template := range allURLs {
+							newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), enumVal.(string)))
+						}
+					}
+				}
+				allURLs = newURLs
+			}
 		}
 
-		endPoint := EndPoint{
-			Host:     urlObj.Hostname(),
-			Port:     port,
-			Protocol: urlObj.Scheme,
+		for _, urlStr := range allURLs {
+			urlObj, err := url.Parse(urlStr)
+			if err != nil {
+				err := fmt.Errorf("Could not parse url: %s", urlStr)
+				log.Errorf(err.Error())
+				return nil, err
+			}
+			// If a port is not given, use lookup the default
+			var port int
+			if urlObj.Port() == "" {
+				port, _ = net.LookupPort("tcp", urlObj.Scheme)
+			} else {
+				port, _ = strconv.Atoi(urlObj.Port())
+			}
+
+			endPoint := EndPoint{
+				Host:     urlObj.Hostname(),
+				Port:     port,
+				Protocol: urlObj.Scheme,
+			}
+
+			// If the URL is the default URL put it at the front of the array
+			if urlStr == defaultURL {
+				newEndPoints := []EndPoint{endPoint}
+				for _, oldEndpoint := range endPoints {
+					newEndPoints = append(newEndPoints, oldEndpoint)
+				}
+				endPoints = newEndPoints
+			} else {
+				endPoints = append(endPoints, endPoint)
+			}
 		}
-		endPoints = append(endPoints, endPoint)
 	}
 
 	return endPoints, nil
