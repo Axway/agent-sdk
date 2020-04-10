@@ -162,13 +162,13 @@ func (s *channelNotifier) start() {
 	for {
 		select {
 		case <-s.endNotifier: // notifier is closing, close all of its subscribers
-			log.Debugf("Received close for notifier %s\n", s.GetName())
+			log.Debugf("Received close for notifier %s", s.GetName())
 			s.unsubscribeAll()
 			close(s.source)
 			return
 		case msg, ok := <-s.source: // message received, send to all of it's subscribers
 			if ok {
-				log.Debugf("Received message for notifier %s: sending to %d subscribers\n", s.GetName(), len(s.subscribers))
+				log.Debugf("Received message for notifier %s: sending to %d subscribers", s.GetName(), len(s.subscribers))
 				s.sendMsgs(msg)
 			}
 		}
