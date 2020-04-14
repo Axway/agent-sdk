@@ -2,18 +2,15 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"github.com/tidwall/gjson"
 )
 
 // constants for auth policy types
@@ -114,44 +111,6 @@ func isUnitTesting() bool {
 	return strings.HasSuffix(os.Args[0], ".test")
 }
 
-// deployAPI -
-func (c *ServiceClient) deployAPI(method, url string, buffer []byte) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
-
-	headers, err := c.createHeader()
-	if err != nil {
-		return "", err
-	}
-
-	request := coreapi.Request{
-		Method:      method,
-		URL:         url,
-		QueryParams: nil,
-		Headers:     headers,
-		Body:        buffer,
-	}
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return "", err
-	}
-	//  Check to see if rollback was processed
-	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		log.Error("Rollback API service.  API has been removed.")
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
-	}
-
-	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
-	}
-
-	return c.handleResponse(response.Body)
-}
-
 func logResponseErrors(body []byte) {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
@@ -160,25 +119,6 @@ func logResponseErrors(body []byte) {
 		buffer, _ := v.MarshalJSON()
 		log.Debugf("HTTP response %v: %v", k, string(buffer))
 	}
-}
-
-func (c *ServiceClient) handleResponse(body []byte) (string, error) {
-
-	itemID := ""
-
-	// Connected Mode
-	if c.cfg.GetAgentMode() == corecfg.Connected {
-		metadata := gjson.Get(string(body), "metadata").String()
-		if metadata != "" {
-			itemID = gjson.Get(string(metadata), "id").String()
-		}
-		// Disconnected Mode
-	} else {
-		itemID = gjson.Get(string(body), "id").String()
-	}
-
-	log.Debugf("HTTP response returning itemID: [%v]", itemID)
-	return itemID, nil
 }
 
 func (c *ServiceClient) createHeader() (map[string]string, error) {
@@ -191,28 +131,6 @@ func (c *ServiceClient) createHeader() (map[string]string, error) {
 	headers["Authorization"] = "Bearer " + token
 	headers["Content-Type"] = "application/json"
 	return headers, nil
-}
-
-// IsNewAPI -
-func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
-	var token string
-	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
-
-	if token, err = c.tokenRequester.GetToken(); err != nil {
-		log.Error("Could not get token")
-	}
-
-	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
-	request.Header.Add("Authorization", "Bearer "+token)
-	request.Header.Add("Content-Type", "application/json")
-
-	response, _ := http.DefaultClient.Do(request)
-	if response.StatusCode == http.StatusNotFound {
-		log.Debugf("New api found to deploy: %s", apiName)
-		return true
-	}
-	return false
 }
 
 // GetSubscriptionManager -
