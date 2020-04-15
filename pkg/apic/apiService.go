@@ -22,10 +22,16 @@ import (
 // If the api doesn't exist, it will add the service, revision, and instance.
 // If the api does exist, it will update the revision and instance
 func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, error) {
+	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
+		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
+	}
+
 	itemID := ""
+	var err error
 	httpMethod := http.MethodPut
-	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizeAPIName(serviceBody.APIName)
-	instancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizeAPIName(serviceBody.APIName)
+	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
+	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
+	instancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
 
 	// Verify if the api already exists
 	if c.isNewAPI(serviceBody) {
@@ -33,48 +39,116 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 		httpMethod = http.MethodPost
 		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
 		instancesURL = c.cfg.GetAPIServerServicesInstancesURL()
-		serviceBody.ServiceExecution = addAPIServerSpec
-		itemID, err := c.deployService(serviceBody, httpMethod, c.cfg.GetAPIServerServicesURL())
+		itemID, err = c.processAPIServerService(serviceBody, sanitizedName)
 		if err != nil {
-			return itemID, err
+			return "", err
 		}
 	}
 
 	// add/update api revision
-	serviceBody.ServiceExecution = addAPIServerRevisionSpec
-	itemID, err := c.deployService(serviceBody, httpMethod, revisionsURL)
+	itemID, err = c.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
 	if err != nil {
-		log.Errorf("Error adding API revision for API %v", serviceBody.NameToPush)
-		if httpMethod == http.MethodPost {
-			return c.rollbackAPIService(serviceBody)
+		return "", err
+	}
+	// add/update api instance
+	itemID, err = c.processAPIServerInstance(serviceBody, httpMethod, instancesURL, sanitizedName)
+	if err != nil {
+		return "", err
+	}
+
+	return itemID, err
+}
+
+//processAPIServerService -
+func (c *ServiceClient) processAPIServerService(serviceBody ServiceBody, name string) (string, error) {
+	// spec needs to adhere to environment schema
+	var spec interface{}
+	if serviceBody.Image != "" {
+		spec = APIServiceSpec{
+			Description: serviceBody.Description,
+			Icon: &APIServiceIcon{
+				ContentType: serviceBody.ImageContentType,
+				Data:        serviceBody.Image,
+			},
+		}
+	} else {
+		spec = APIServiceSpec{
+			Description: serviceBody.Description,
 		}
 	}
 
-	// add/update api instance
-	serviceBody.ServiceExecution = addAPIServerInstanceSpec
-	itemID, err = c.deployService(serviceBody, httpMethod, instancesURL)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
-		log.Errorf("Error adding API instance for API %v", serviceBody.NameToPush)
-		if httpMethod == http.MethodPost {
-			return c.rollbackAPIService(serviceBody)
-		}
+		return "", err
+	}
+
+	return c.apiServiceDeployAPI(http.MethodPost, c.cfg.GetAPIServerServicesURL(), buffer)
+
+}
+
+//processAPIServerRevision -
+func (c *ServiceClient) processAPIServerRevision(serviceBody ServiceBody, httpMethod, revisionsURL, name string) (string, error) {
+	revisionDefinition := RevisionDefinition{
+		Type:  c.getRevisionDefinitionType(serviceBody),
+		Value: serviceBody.Swagger,
+	}
+	spec := APIServiceRevisionSpec{
+		APIService: name,
+		Definition: revisionDefinition,
+	}
+
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
+	if err != nil {
+		return "", err
+	}
+
+	itemID, err := c.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
+	if err != nil {
+		return c.rollbackAPIService(serviceBody, name)
+	}
+
+	return itemID, err
+}
+
+//processAPIServerInstance -
+func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
+	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(serviceBody))
+
+	// reset the name here to include the stage
+	spec := APIServerInstanceSpec{
+		APIServiceRevision: name,
+		InstanceEndPoint:   endPoints,
+	}
+
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
+	if err != nil {
+		return "", err
+	}
+
+	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
+	if err != nil {
+		return c.rollbackAPIService(serviceBody, name)
 	}
 
 	return itemID, err
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody) (string, error) {
-	// rollback and remove the API service
-	serviceBody.ServiceExecution = deleteAPIServerSpec
-	return c.deployService(serviceBody, http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName))
+func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
+	spec := APIServiceSpec{}
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
+	if err != nil {
+		return "", err
+	}
+	c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+name, buffer)
+	return "", nil
 }
 
-// IsNewAPI -
+// isNewAPI -
 func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
 	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+apiName, nil)
+	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
 
 	if token, err = c.tokenRequester.GetToken(); err != nil {
 		log.Error("Could not get token")
@@ -92,31 +166,9 @@ func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	return false
 }
 
-func (c *ServiceClient) deployService(serviceBody ServiceBody, method, url string) (string, error) {
-	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
-	}
-	buffer, err := c.createAPIServerBody(serviceBody)
-	if err != nil {
-		log.Error("Error creating service item: ", err)
-		return "", err
-	}
-
-	return c.apiServiceDeployAPI(method, url, buffer)
-}
-
-// createAPIServerBody - This function is being used by both the api server creation and api server revision creation
-func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, error) {
-	attributes := make(map[string]interface{})
-	attributes["externalAPIID"] = serviceBody.RestAPIID
-	attributes["createdBy"] = serviceBody.CreatedBy
-
-	// spec needs to adhere to environment schema
-	var spec interface{}
-	name := sanitizeAPIName(serviceBody.APIName)
-
+//getRevisionDefinitionType -
+func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
 	var revisionDefinitionType string
-
 	if serviceBody.ResourceType == Wsdl {
 		revisionDefinitionType = Wsdl
 	} else {
@@ -127,52 +179,18 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 			revisionDefinitionType = Oas3
 		}
 	}
+	return revisionDefinitionType
+}
 
-	switch serviceBody.ServiceExecution {
-	case addAPIServerSpec:
-		if serviceBody.Image != "" {
-			spec = APIServiceSpec{
-				Description: serviceBody.Description,
-				Icon: &APIServiceIcon{
-					ContentType: serviceBody.ImageContentType,
-					Data:        serviceBody.Image,
-				},
-			}
-		} else {
-			spec = APIServiceSpec{
-				Description: serviceBody.Description,
-			}
-		}
-	case deleteAPIServerSpec:
-		spec = APIServiceSpec{}
-		return nil, nil
-	case addAPIServerRevisionSpec:
-		revisionDefinition := RevisionDefinition{
-			Type:  revisionDefinitionType,
-			Value: serviceBody.Swagger,
-		}
-		spec = APIServiceRevisionSpec{
-			APIService: name,
-			Definition: revisionDefinition,
-		}
-		// reset the name here to include the stage
-		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
-	case addAPIServerInstanceSpec:
-		endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, revisionDefinitionType)
-
-		// reset the name here to include the stage
-		name = sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
-		spec = APIServerInstanceSpec{
-			APIServiceRevision: name,
-			InstanceEndPoint:   endPoints,
-		}
-	default:
-		return nil, errors.New("Error getting execution service -- not set")
-	}
+// createAPIServerBody - create APIServer for server, revision, and instance
+func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interface{}, name string) ([]byte, error) {
+	attributes := make(map[string]interface{})
+	attributes["externalAPIID"] = serviceBody.RestAPIID
+	attributes["createdBy"] = serviceBody.CreatedBy
 
 	newtags := c.mapToTagsArray(serviceBody.Tags)
 
-	apiServerService := APIServer{
+	apiServer := APIServer{
 		Name:       name,
 		Title:      serviceBody.NameToPush,
 		Attributes: attributes,
@@ -180,7 +198,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody) ([]byte, er
 		Tags:       newtags,
 	}
 
-	return json.Marshal(apiServerService)
+	return json.Marshal(apiServer)
 }
 
 func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
