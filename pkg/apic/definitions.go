@@ -236,3 +236,29 @@ type EnvironmentSpec struct {
 	Name     string      `json:"name,omitempty"`
 	Metadata interface{} `json:"metadata,omitempty"`
 }
+
+// ConsumerInstanceSpec -
+type ConsumerInstanceSpec struct {
+	Name               string          `json:"name,omitempty"`
+	APIServiceInstance string          `json:"apiServiceInstance"`
+	OwningTeam         string          `json:"owningTeam,omitempty"`
+	Description        string          `json:"description,omitempty"`
+	Visibility         string          `json:"visibility,omitempty"` // default: RESTRICTED
+	Version            string          `json:"version,omitempty"`
+	State              string          `json:"state,omitempty"` // default: UNPUBLISHED
+	Status             string          `json:"status,omitempty"`
+	Tags               []string        `json:"tags,omitempty"`
+	Icon               *APIServiceIcon `json:"icon,omitempty"`
+	Documentation      string          `json:"documentation,omitempty"`
+
+	// UnstructuredDataProperties *APIServiceSubscription `json:"subscription"`
+	// AdditionalDataProperties *APIServiceSubscription `json:"subscription"`
+	Subscription *APIServiceSubscription `json:"subscription"`
+}
+
+//APIServiceSubscription -
+type APIServiceSubscription struct {
+	Enabled                bool   `json:"enabled,omitempty"`       // default: false
+	AutoSubscribe          bool   `json:"autoSubscribe,omitempty"` // default: true
+	SubscriptionDefinition string `json:"subscriptionDefinition"`
+}

@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
 type actionType int
@@ -37,7 +36,7 @@ const (
 
 // CreateService - Creates a catalog item or API service for the definition based on the agent mode
 func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
-	if c.cfg.GetAgentMode() == corecfg.Connected {
+	if c.cfg.IsPublishToEnvironmentMode() {
 		return c.processAPIService(serviceBody)
 	}
 	return c.addCatalog(serviceBody)
@@ -45,7 +44,7 @@ func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
 
 // UpdateService -
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
-	if c.cfg.GetAgentMode() == corecfg.Connected {
+	if c.cfg.IsPublishToEnvironmentMode() {
 		return c.processAPIService(serviceBody)
 	}
 	return c.updateCatalog(ID, serviceBody)

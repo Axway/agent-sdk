@@ -21,29 +21,37 @@ const (
 type AgentMode int
 
 const (
-	// Disconnected - Mode definition for disconnected mode
-	Disconnected AgentMode = iota + 1
-	// Connected - Mode definition for connected mode
-	Connected
+	// PublishToCatalog (formerly Disconnected) - publish items to Catalog
+	PublishToCatalog AgentMode = iota + 1
+	// PublishToEnvironment (formerly Connected) - publish items to Environment
+	PublishToEnvironment
+	// PublishToEnvironmentAndCatalog - publish items to both Catalog and Environment
+	PublishToEnvironmentAndCatalog
 )
 
 // AgentModeStringMap - Map the Agent Mode constant to a string
 var AgentModeStringMap = map[AgentMode]string{
-	Connected:    "connected",
-	Disconnected: "disconnected",
+	PublishToCatalog:               "publishToCatalog",
+	PublishToEnvironment:           "publishToEnvironment",
+	PublishToEnvironmentAndCatalog: "publishToEnvironmentAndCatalog",
 }
 
-// StringAgentModeMap - Map the string to the Agent Mode constant
+// StringAgentModeMap - Map the string to the Agent Mode constant. Note that the strings are lowercased. In the config parser
+// we change the string to all lowers to all for mis-typing of the case
 var StringAgentModeMap = map[string]AgentMode{
-	"connected":    Connected,
-	"disconnected": Disconnected,
+	"publishtocatalog":               PublishToCatalog,
+	"publishtoenvironment":           PublishToEnvironment,
+	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
 }
 
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
+	IsPublishToCatalogMode() bool
+	IsPublishToEnvironmentMode() bool
+	IsPublishToEnvironmentAndCatalogMode() bool
 	GetAgentMode() AgentMode
-	GetAgentModeString() string
+	GetAgentModeAsString() string
 	GetTenantID() string
 	GetAPICDeployment() string
 	GetEnvironmentID() string
@@ -96,7 +104,7 @@ type CentralConfiguration struct {
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
 		AgentType:        agentType,
-		Mode:             Disconnected,
+		Mode:             PublishToCatalog,
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
@@ -109,13 +117,28 @@ func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
 }
 
+// IsPublishToCatalogMode -
+func (c *CentralConfiguration) IsPublishToCatalogMode() bool {
+	return c.Mode == PublishToCatalog
+}
+
+// IsPublishToEnvironmentMode -
+func (c *CentralConfiguration) IsPublishToEnvironmentMode() bool {
+	return c.Mode == PublishToEnvironment || c.IsPublishToEnvironmentAndCatalogMode()
+}
+
+// IsPublishToEnvironmentAndCatalogMode -
+func (c *CentralConfiguration) IsPublishToEnvironmentAndCatalogMode() bool {
+	return c.Mode == PublishToEnvironmentAndCatalog
+}
+
 // GetAgentMode - Returns the agent mode
 func (c *CentralConfiguration) GetAgentMode() AgentMode {
 	return c.Mode
 }
 
-// GetAgentModeString - Returns the agent mode
-func (c *CentralConfiguration) GetAgentModeString() string {
+// GetAgentModeAsString - Returns the agent mode
+func (c *CentralConfiguration) GetAgentModeAsString() string {
 	return AgentModeStringMap[c.Mode]
 }
 
@@ -204,7 +227,7 @@ func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instance representing the catalog item
+// GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
 func (c *CentralConfiguration) GetAPIServerConsumerInstancesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/consumerinstances"
 }
@@ -286,8 +309,8 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 		exception.Throw(errors.New("Error central.teamID not set in config"))
 	}
 
-	if c.GetAgentMode() == Connected {
-		c.validateConnectedModeConfig()
+	if c.IsPublishToEnvironmentMode() {
+		c.validatePublishToEnvironmentModeConfig()
 	}
 
 	if c.GetPollInterval() <= 0 {
@@ -295,7 +318,7 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	}
 }
 
-func (c *CentralConfiguration) validateConnectedModeConfig() {
+func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(errors.New("Error central.environment not set in config"))
 	}

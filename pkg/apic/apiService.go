@@ -31,29 +31,40 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 	httpMethod := http.MethodPut
 	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
 	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
-	instancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
+	serviceInstancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
+	consumerInstancesURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + sanitizedName
 
 	// Verify if the api already exists
 	if c.isNewAPI(serviceBody) {
 		// add api
 		httpMethod = http.MethodPost
 		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
-		instancesURL = c.cfg.GetAPIServerServicesInstancesURL()
-		itemID, err = c.processAPIServerService(serviceBody, sanitizedName)
+		serviceInstancesURL = c.cfg.GetAPIServerServicesInstancesURL()
+		consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
+		_, err = c.processAPIServerService(serviceBody, sanitizedName)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	// add/update api revision
-	itemID, err = c.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
+	_, err = c.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
 	if err != nil {
 		return "", err
 	}
+
 	// add/update api instance
-	itemID, err = c.processAPIServerInstance(serviceBody, httpMethod, instancesURL, sanitizedName)
+	itemID, err = c.processAPIServerInstance(serviceBody, httpMethod, serviceInstancesURL, sanitizedName)
 	if err != nil {
 		return "", err
+	}
+
+	// add/update consumer instance
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		itemID, err = c.processAPIConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return itemID, err
@@ -118,6 +129,42 @@ func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMe
 	spec := APIServerInstanceSpec{
 		APIServiceRevision: name,
 		InstanceEndPoint:   endPoints,
+	}
+
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
+	if err != nil {
+		return "", err
+	}
+
+	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
+	if err != nil {
+		return c.rollbackAPIService(serviceBody, name)
+	}
+
+	return itemID, err
+}
+
+//processAPIConsumerInstance -
+func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
+	doc, err := strconv.Unquote(string(serviceBody.Documentation))
+	if err != nil {
+		return "", err
+	}
+	spec := ConsumerInstanceSpec{
+		Name:               serviceBody.NameToPush,
+		APIServiceInstance: name,
+		Description:        serviceBody.Description,
+		Visibility:         "RESTRICTED",
+		Version:            serviceBody.Version,
+		State:              "UNPUBLISHED",
+		Status:             "GA",
+		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Documentation:      doc, //"Catalog for API service instance",
+		Subscription: &APIServiceSubscription{
+			Enabled:                true,
+			AutoSubscribe:          true,
+			SubscriptionDefinition: c.cfg.GetEnvironmentName() + "." + "authsubscription",
+		},
 	}
 
 	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
@@ -437,5 +484,4 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 
 	log.Debugf("HTTP response returning itemID: [%v]", itemID)
 	return itemID, nil
-
 }
