@@ -353,64 +353,84 @@ func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 		}
 
 		defaultURL := ""
-
+		var err error
 		if server.Variables != nil {
-			defaultURL = server.URL
-			// Handle substitutions
-			for serverKey, serverVar := range server.Variables {
-				newURLs := []string{}
-				if serverVar.Default == nil {
-					err := fmt.Errorf("Server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
-					log.Errorf(err.Error())
-					return nil, err
-				}
-				defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
-				if len(serverVar.Enum) == 0 {
-					for _, template := range allURLs {
-						newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string)))
-					}
-				} else {
-					for _, enumVal := range serverVar.Enum {
-						for _, template := range allURLs {
-							newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), enumVal.(string)))
-						}
-					}
-				}
-				allURLs = newURLs
+			defaultURL, allURLs, err = c.handleURLSubstitutions(server, allURLs)
+			if err != nil {
+				return nil, err
 			}
 		}
 
-		for _, urlStr := range allURLs {
-			urlObj, err := url.Parse(urlStr)
-			if err != nil {
-				err := fmt.Errorf("Could not parse url: %s", urlStr)
-				log.Errorf(err.Error())
-				return nil, err
-			}
-			// If a port is not given, use lookup the default
-			var port int
-			if urlObj.Port() == "" {
-				port, _ = net.LookupPort("tcp", urlObj.Scheme)
-			} else {
-				port, _ = strconv.Atoi(urlObj.Port())
-			}
+		parsedEndPoints, err := c.parseURLsIntoEndpoints(defaultURL, allURLs)
+		if err != nil {
+			return nil, err
+		}
+		endPoints = append(endPoints, parsedEndPoints...)
+	}
 
-			endPoint := EndPoint{
-				Host:     urlObj.Hostname(),
-				Port:     port,
-				Protocol: urlObj.Scheme,
-			}
+	return endPoints, nil
+}
 
-			// If the URL is the default URL put it at the front of the array
-			if urlStr == defaultURL {
-				newEndPoints := []EndPoint{endPoint}
-				for _, oldEndpoint := range endPoints {
-					newEndPoints = append(newEndPoints, oldEndpoint)
+func (c *ServiceClient) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
+	defaultURL := server.URL
+	// Handle substitutions
+	for serverKey, serverVar := range server.Variables {
+		newURLs := []string{}
+		if serverVar.Default == nil {
+			err := fmt.Errorf("Server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
+			log.Errorf(err.Error())
+			return "", nil, err
+		}
+		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
+		if len(serverVar.Enum) == 0 {
+			for _, template := range allURLs {
+				newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string)))
+			}
+		} else {
+			for _, enumVal := range serverVar.Enum {
+				for _, template := range allURLs {
+					newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), enumVal.(string)))
 				}
-				endPoints = newEndPoints
-			} else {
-				endPoints = append(endPoints, endPoint)
 			}
+		}
+		allURLs = newURLs
+	}
+
+	return defaultURL, allURLs, nil
+}
+
+func (c *ServiceClient) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndPoint, error) {
+	endPoints := []EndPoint{}
+	for _, urlStr := range allURLs {
+		urlObj, err := url.Parse(urlStr)
+		if err != nil {
+			err := fmt.Errorf("Could not parse url: %s", urlStr)
+			log.Errorf(err.Error())
+			return nil, err
+		}
+		// If a port is not given, use lookup the default
+		var port int
+		if urlObj.Port() == "" {
+			port, _ = net.LookupPort("tcp", urlObj.Scheme)
+		} else {
+			port, _ = strconv.Atoi(urlObj.Port())
+		}
+
+		endPoint := EndPoint{
+			Host:     urlObj.Hostname(),
+			Port:     port,
+			Protocol: urlObj.Scheme,
+		}
+
+		// If the URL is the default URL put it at the front of the array
+		if urlStr == defaultURL {
+			newEndPoints := []EndPoint{endPoint}
+			for _, oldEndpoint := range endPoints {
+				newEndPoints = append(newEndPoints, oldEndpoint)
+			}
+			endPoints = newEndPoints
+		} else {
+			endPoints = append(endPoints, endPoint)
 		}
 	}
 
