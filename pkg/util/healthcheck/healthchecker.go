@@ -24,7 +24,11 @@ func init() {
 }
 
 // RegisterHealthcheck - register a new dependency with this service
-func RegisterHealthcheck(name, endpoint string, check CheckStatus) string {
+func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
+	if _, ok := globalHealthChecker.Checks[endpoint]; ok {
+		return "", fmt.Errorf("A check with the endpoint of %s already exists", endpoint)
+	}
+
 	newID, _ := uuid.NewUUID()
 	newChecker := &statusCheck{
 		Name:     name,
@@ -38,7 +42,17 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) string {
 
 	http.HandleFunc(fmt.Sprintf("/status/%s", endpoint), checkHandler)
 
-	return newID.String()
+	return newID.String(), nil
+}
+
+// WaitForReady - creates an infinite check on all healthchecks, returns once ready
+func WaitForReady() {
+	for {
+		if RunChecks() == OK {
+			log.Info("Services are Ready")
+			break
+		}
+	}
 }
 
 //RunChecks - loop through all
@@ -99,7 +113,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get teh check object
+	// Get the check object
 	endpoint := path[1]
 	thisCheck, ok := globalHealthChecker.Checks[endpoint]
 	if !ok {
@@ -119,14 +133,4 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	// Return data
 	data, _ := json.Marshal(globalHealthChecker.Checks[endpoint].Status)
 	io.WriteString(w, string(data))
-}
-
-// WaitForReady - creates an infinite check on all healthchecks, returns once ready
-func WaitForReady() {
-	for {
-		if RunChecks() == OK {
-			log.Info("Services are Ready")
-			break
-		}
-	}
 }
