@@ -361,10 +361,11 @@ func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 			}
 		}
 
-		endPoints, err = c.parseURLsIntoEndpoints(defaultURL, allURLs)
+		parsedEndPoints, err := c.parseURLsIntoEndpoints(defaultURL, allURLs)
 		if err != nil {
 			return nil, err
 		}
+		endPoints = append(endPoints, parsedEndPoints...)
 	}
 
 	return endPoints, nil
