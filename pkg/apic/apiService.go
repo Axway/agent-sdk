@@ -151,7 +151,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		return "", err
 	}
 	spec := ConsumerInstanceSpec{
-		Name:               serviceBody.NameToPush,
+		Name:               name,
 		APIServiceInstance: name,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
@@ -159,7 +159,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		State:              "UNPUBLISHED",
 		Status:             "GA",
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
-		Documentation:      doc, //"Catalog for API service instance",
+		Documentation:      doc,
 		Subscription: &APIServiceSubscription{
 			Enabled:                true,
 			AutoSubscribe:          true,
