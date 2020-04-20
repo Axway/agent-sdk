@@ -151,7 +151,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		return "", err
 	}
 	spec := ConsumerInstanceSpec{
-		Name:               name,
+		Name:               serviceBody.NameToPush,
 		APIServiceInstance: name,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
