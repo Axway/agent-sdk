@@ -1,0 +1,4 @@
+#.csr-profile.json requires SPOC approval for any modifications
+# @dfeldick - Primary SPOC
+# @vchauhan- Secondary SPOC
+.csr-profile.json @dfeldick @vchauhan @mdenihan @rconan 
