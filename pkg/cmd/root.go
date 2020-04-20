@@ -92,7 +92,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	if c.GetAgentType() == corecfg.TraceabilityAgent {
 		c.AddStringProperty("central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	} else {
-		c.AddStringProperty("central.mode", "centralMode", "disconnected", "Agent Mode")
+		c.AddStringProperty("central.mode", "centralMode", "publishToCatalog", "Agent Mode")
 		c.AddStringProperty("central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 		c.AddDurationProperty("central.pollInterval", "centralPollInterval", 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 	}

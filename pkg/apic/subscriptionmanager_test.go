@@ -74,7 +74,7 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 	}
 }
 
-func TestSubscriptionManagerPollDisconnectedMode(t *testing.T) {
+func TestSubscriptionManagerPollPublishToCatalogMode(t *testing.T) {
 	// Start a local HTTP server
 	subscriptionList := make([]Subscription, 0)
 	subscriptionList = append(subscriptionList, createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"}))
@@ -149,7 +149,7 @@ func TestSubscriptionManagerPollDisconnectedMode(t *testing.T) {
 	assert.Equal(t, "22222", unsubscribedSubscriptions["22222"].GetPropertyValue("orgId"))
 }
 
-func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
+func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	// Start a local HTTP server
 	subscriptionList := make([]Subscription, 0)
 	subscriptionList = append(subscriptionList, createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"}))
@@ -218,7 +218,7 @@ func TestSubscriptionManagerPollConnectedMode(t *testing.T) {
 	defer server.Close()
 
 	cfg := &corecfg.CentralConfiguration{
-		Mode:         corecfg.Connected,
+		Mode:         corecfg.PublishToEnvironment,
 		TeamID:       "test",
 		URL:          server.URL,
 		PollInterval: 1 * time.Second,

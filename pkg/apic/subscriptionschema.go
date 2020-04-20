@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
 // APIServerSubscriptionSchema -
@@ -80,11 +79,11 @@ func (ss *subscriptionSchema) rawJSON() (json.RawMessage, error) {
 	return json.RawMessage(schemaBuffer), nil
 }
 
-// RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In connected mode
+// RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
 	c.RegisteredSubscriptionSchema = subscriptionSchema
-	if c.cfg.GetAgentMode() == corecfg.Connected {
+	if c.cfg.IsPublishToEnvironmentMode() {
 		// Add API Server resource - SubscriptionDefinition
 		buffer, err := c.marshalSubsciptionDefinition(subscriptionSchema)
 

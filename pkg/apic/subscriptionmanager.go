@@ -3,7 +3,6 @@ package apic
 import (
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
 )
 
@@ -94,20 +93,26 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
-	// Use catalog item id as ApicID for Disconnected mode
+	// Use catalog item id as ApicID for publishToCatalog mode
 	subscription.ApicID = subscription.CatalogItemID
 	subscription.apicClient = sm.apicClient
-	if sm.apicClient.cfg.GetAgentMode() == corecfg.Connected {
+	if sm.apicClient.cfg.IsPublishToEnvironmentMode() {
 		// Get API Service info
 		// Get Consumer Instance
 		// Assign subscription ApicID with ApiServiceInstanceId
 		apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
 		if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
 			consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name)
-			if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
-				for _, reference := range consumerInstance.Metadata.References {
-					if reference.Kind == "APIServiceInstance" {
-						subscription.ApicID = reference.ID
+			if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
+				if err == nil && consumerInstance.Metadata != nil {
+					subscription.ApicID = consumerInstance.Metadata.ID
+				}
+			} else {
+				if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+					for _, reference := range consumerInstance.Metadata.References {
+						if reference.Kind == "APIServiceInstance" {
+							subscription.ApicID = reference.ID
+						}
 					}
 				}
 			}

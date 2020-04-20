@@ -96,6 +96,18 @@
       "ids": [
         "G402"
       ]
+    },
+    {
+      "path": ".*Gopkg\\.lock",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "We do not use this library to do any serialization or deserialization.",
+      "component": "multierror",
+      "version": "",
+      "ids": [
+        "CVE-2017-18365"
+      ]
     }
   ]
 }

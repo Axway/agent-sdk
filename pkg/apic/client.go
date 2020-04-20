@@ -163,7 +163,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	if c.cfg.GetAgentMode() == corecfg.Disconnected && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
+	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
 		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
 		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration"
 
