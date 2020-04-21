@@ -60,3 +60,7 @@
 [[constraint]]
   name = "git.ecd.axway.int/apigov/service-mesh-agent"
   branch = "master"
+
+[[constraint]]
+  name =  "github.com/elastic/beats"
+  version = "=v7.5.2"
