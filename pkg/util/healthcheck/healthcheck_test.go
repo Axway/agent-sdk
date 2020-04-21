@@ -9,16 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd"
 	"github.com/stretchr/testify/assert"
 )
 
 func resetGlobalHealthChecker() {
-	globalHealthChecker = healthChecker{
-		Name:    cmd.BuildAgentName,
-		Version: fmt.Sprintf("%s-%s", cmd.BuildVersion, cmd.BuildCommitSha),
-		Checks:  make(map[string]*statusCheck, 0),
-		Status:  FAIL,
+	globalHealthChecker = &healthChecker{
+		Checks: make(map[string]*statusCheck, 0),
+		Status: FAIL,
 	}
 }
 
@@ -178,6 +175,9 @@ func TestHTTPRequests(t *testing.T) {
 	//########################## statusHandler ################################
 	server = httptest.NewServer(http.HandlerFunc(statusHandler))
 
+	hcValues["hc1"] = false
+	hcValues["hc2"] = false
+
 	// Marshall the body to the healthChecker struct
 	var result healthChecker
 	resp := getRequest("/status", &result, false)
@@ -186,7 +186,7 @@ func TestHTTPRequests(t *testing.T) {
 	assert.Equal(t, FAIL, result.Status, "Expected FAIL to be the overall result")
 	assert.Equal(t, FAIL, result.Checks["hc1"].Status.Result, "hc1 should have failed")
 	assert.Equal(t, FAIL, result.Checks["hc2"].Status.Result, "hc2 should have failed")
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
 	// set all healthchecks to pass
 	hcValues["hc1"] = true
@@ -200,6 +200,15 @@ func TestHTTPRequests(t *testing.T) {
 	assert.Equal(t, OK, result.Checks["hc1"].Status.Result, "hc1 should have passed")
 	assert.Equal(t, OK, result.Checks["hc2"].Status.Result, "hc2 should have passed")
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	//########################## GetHealthcheckOutput ################################
+
+	// Marshall the previous response to the same marshall indented expected from GetHealthcheckOutput
+	indentResult, _ := json.MarshalIndent(result, "", "  ")
+
+	output, err := GetHealthcheckOutput(server.URL)
+	assert.Nil(t, err)
+	assert.Equal(t, string(indentResult), output)
 
 	//########################## checkHandler ################################
 	server = httptest.NewServer(http.HandlerFunc(checkHandler))
@@ -219,7 +228,7 @@ func TestHTTPRequests(t *testing.T) {
 
 	// assert response values
 	assert.Equal(t, FAIL, checkRes.Result, "hc1 should have failed")
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
 	// Set hc1 to fail
 	hcValues["hc1"] = true

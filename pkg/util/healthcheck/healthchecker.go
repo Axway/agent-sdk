@@ -4,23 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 
-var globalHealthChecker healthChecker
+var globalHealthChecker *healthChecker
 
 func init() {
-	globalHealthChecker = healthChecker{
-		Name:    cmd.BuildAgentName,
-		Version: fmt.Sprintf("%s-%s", cmd.BuildVersion, cmd.BuildCommitSha),
-		Checks:  make(map[string]*statusCheck, 0),
-		Status:  FAIL,
+	globalHealthChecker = &healthChecker{
+		Checks: make(map[string]*statusCheck, 0),
+		Status: FAIL,
 	}
+}
+
+// SetNameAndVersion - sets the name and version of the globalHealthChecker
+func SetNameAndVersion(name, version string) {
+	globalHealthChecker.Name = name
+	globalHealthChecker.Version = version
 }
 
 // RegisterHealthcheck - register a new dependency with this service
@@ -80,12 +84,46 @@ func executeCheck(check *statusCheck) {
 
 //HandleRequests - starts the http server
 func HandleRequests(port int) {
-	http.HandleFunc("/status", statusHandler)
-	http.HandleFunc("/status/", statusHandler)
+	if !globalHealthChecker.registered {
+		http.HandleFunc("/status", statusHandler)
+		http.HandleFunc("/status/", statusHandler)
+		globalHealthChecker.registered = true
+	}
 
 	if port > 0 {
 		go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	}
+}
+
+//GetHealthcheckOutput - query the http endpoint and return the body
+func GetHealthcheckOutput(url string) (string, error) {
+	client := http.DefaultClient
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("Could not query for the status")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Could not read the body of the response")
+	}
+
+	// Marshall the body to the interface sent in
+	var statusResp healthChecker
+	err = json.Unmarshal(body, &statusResp)
+	if err != nil {
+		return "", fmt.Errorf("Could not marshall into the expected type")
+	}
+	// Close the response body and the server
+	resp.Body.Close()
+
+	output, err := json.MarshalIndent(statusResp, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("Error formatting the Status Check into Indented JSON")
+	}
+
+	return string(output), nil
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -93,13 +131,21 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	RunChecks()
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// If any of the checks failed change the return code to 500
-	if globalHealthChecker.Status == FAIL {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 
 	// Return the data
-	data, _ := json.Marshal(globalHealthChecker)
+	data, err := json.Marshal(globalHealthChecker)
+	if err != nil {
+		log.Errorf("Error hit marshalling the health check data to json: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		// If any of the checks failed change the return code to 500
+		if globalHealthChecker.Status == FAIL {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}
+
 	io.WriteString(w, string(data))
 }
 
@@ -127,7 +173,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// If check failed change return code to 500
 	if thisCheck.Status.Result == FAIL {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
 	// Return data

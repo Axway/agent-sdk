@@ -9,7 +9,8 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
 
@@ -69,6 +70,8 @@ func New(cfg corecfg.CentralConfig) Client {
 		DefaultSubscriptionSchema: NewSubscriptionSchema(),
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
+
+	hc.RegisterHealthcheck("AMPLIFY Central", "central", serviceClient.healthcheck)
 	return serviceClient
 }
 
@@ -136,6 +139,34 @@ func (c *ServiceClient) createHeader() (map[string]string, error) {
 // GetSubscriptionManager -
 func (c *ServiceClient) GetSubscriptionManager() SubscriptionManager {
 	return c.subscriptionMgr
+}
+
+func (c *ServiceClient) healthcheck(name string) *hc.Status {
+	// Set a default response
+	s := hc.Status{
+		Result: hc.OK,
+	}
+
+	// Check that we can reach the platform
+	err := c.checkPlatformHealth()
+	if err != nil {
+		s = hc.Status{
+			Result:  hc.FAIL,
+			Details: err.Error(),
+		}
+	}
+
+	// Check that appropriate settings for the API server are set
+	err = c.checkAPIServerHealth()
+	if err != nil {
+		s = hc.Status{
+			Result:  hc.FAIL,
+			Details: err.Error(),
+		}
+	}
+
+	// Return our response
+	return &s
 }
 
 // CheckHealth -
