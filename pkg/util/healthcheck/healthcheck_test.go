@@ -13,7 +13,7 @@ import (
 )
 
 func resetGlobalHealthChecker() {
-	globalHealthChecker = healthChecker{
+	globalHealthChecker = &healthChecker{
 		Checks: make(map[string]*statusCheck, 0),
 		Status: FAIL,
 	}

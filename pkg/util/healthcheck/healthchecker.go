@@ -128,18 +128,19 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	RunChecks()
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// If any of the checks failed change the return code to 500
-	if globalHealthChecker.Status == FAIL {
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
 
 	// Return the data
 	data, err := json.Marshal(globalHealthChecker)
 	if err != nil {
 		log.Errorf("Error hit marshalling the health check data to json: %s", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		// If any of the checks failed change the return code to 500
+		if globalHealthChecker.Status == FAIL {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
 	}
 
 	io.WriteString(w, string(data))
