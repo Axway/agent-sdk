@@ -11,6 +11,7 @@ import (
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/spf13/cobra"
 
+	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -70,6 +71,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		RunE:    c.run,
 		PreRun:  c.initialize,
 	}
+	hc.SetNameAndVersion(BuildAgentName, c.rootCmd.Version)
 
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
@@ -103,6 +105,8 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
 	c.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
 	c.AddStringProperty("path.config", "pathConfig", ".", "Configuration file path for the agent")
+	c.AddIntProperty("status.port", "statusPort", 8989, "The port that will serve the status endpoints")
+	c.AddBoolFlag("status", "Get the status of all the Health Checks")
 	return c
 }
 
@@ -118,6 +122,21 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(err.Error())
+	}
+	c.checkStatusFlag()
+}
+
+func (c *agentRootCommand) checkStatusFlag() {
+	statusPort := c.IntPropertyValue("status.port")
+	if c.BoolFlagValue("status") {
+		urlObj := url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("localhost:%d", statusPort),
+			Path:   "status",
+		}
+		statusOut, _ := hc.GetHealthcheckOutput(urlObj.String())
+		fmt.Println(statusOut)
+		os.Exit(0)
 	}
 }
 
@@ -135,6 +154,10 @@ func (c *agentRootCommand) initConfig() error {
 	logOutput := c.StringPropertyValue("log.output")
 	logPath := c.StringPropertyValue("log.path")
 	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
+
+	// Init the healthcheck API
+	statusPort := c.IntPropertyValue("status.port")
+	hc.HandleRequests(statusPort)
 
 	// Init Central Config
 	centralCfg, err := c.parseCentralConfig()
@@ -303,6 +326,12 @@ func (c *agentRootCommand) AddBoolProperty(name, flagName string, defaultVal boo
 	}
 }
 
+func (c *agentRootCommand) AddBoolFlag(flagName string, description string) {
+	if c.rootCmd != nil {
+		c.rootCmd.Flags().Bool(flagName, false, description)
+	}
+}
+
 func (c *agentRootCommand) StringSlicePropertyValue(name string) []string {
 	val := viper.Get(name)
 
@@ -338,6 +367,17 @@ func (c *agentRootCommand) IntPropertyValue(name string) int {
 
 func (c *agentRootCommand) BoolPropertyValue(name string) bool {
 	return viper.GetBool(name)
+}
+
+func (c *agentRootCommand) BoolFlagValue(name string) bool {
+	flag := c.rootCmd.Flag(name)
+	if flag == nil {
+		return false
+	}
+	if flag.Value.String() == "true" {
+		return true
+	}
+	return false
 }
 
 func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
