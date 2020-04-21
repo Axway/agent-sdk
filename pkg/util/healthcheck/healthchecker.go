@@ -140,7 +140,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// If any of the checks failed change the return code to 500
 		if globalHealthChecker.Status == FAIL {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusServiceUnavailable)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
@@ -173,7 +173,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// If check failed change return code to 500
 	if thisCheck.Status.Result == FAIL {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
 	// Return data

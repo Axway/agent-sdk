@@ -186,7 +186,7 @@ func TestHTTPRequests(t *testing.T) {
 	assert.Equal(t, FAIL, result.Status, "Expected FAIL to be the overall result")
 	assert.Equal(t, FAIL, result.Checks["hc1"].Status.Result, "hc1 should have failed")
 	assert.Equal(t, FAIL, result.Checks["hc2"].Status.Result, "hc2 should have failed")
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
 	// set all healthchecks to pass
 	hcValues["hc1"] = true
@@ -228,7 +228,7 @@ func TestHTTPRequests(t *testing.T) {
 
 	// assert response values
 	assert.Equal(t, FAIL, checkRes.Result, "hc1 should have failed")
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
 	// Set hc1 to fail
 	hcValues["hc1"] = true
