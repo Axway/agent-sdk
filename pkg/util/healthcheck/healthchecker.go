@@ -84,8 +84,11 @@ func executeCheck(check *statusCheck) {
 
 //HandleRequests - starts the http server
 func HandleRequests(port int) {
-	http.HandleFunc("/status", statusHandler)
-	http.HandleFunc("/status/", statusHandler)
+	if !globalHealthChecker.registered {
+		http.HandleFunc("/status", statusHandler)
+		http.HandleFunc("/status/", statusHandler)
+		globalHealthChecker.registered = true
+	}
 
 	if port > 0 {
 		go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

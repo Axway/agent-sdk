@@ -2,10 +2,11 @@ package healthcheck
 
 // HealthChecker - info about the service
 type healthChecker struct {
-	Name    string                  `json:"name"`
-	Version string                  `json:"version,omitempty"`
-	Status  StatusLevel             `json:"status"`
-	Checks  map[string]*statusCheck `json:"statusChecks"`
+	Name       string                  `json:"name"`
+	Version    string                  `json:"version,omitempty"`
+	Status     StatusLevel             `json:"status"`
+	Checks     map[string]*statusCheck `json:"statusChecks"`
+	registered bool
 }
 
 // Status - the status of this healthcheck
