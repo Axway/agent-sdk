@@ -63,4 +63,4 @@
 
 [[constraint]]
   name =  "github.com/elastic/beats"
-  version = "=v7.5.2"
+  version = "=v7.4.1"

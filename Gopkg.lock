@@ -34,7 +34,7 @@
   version = "v3.2.0"
 
 [[projects]]
-  digest = "1:dac871c05242b38e8c1b26dd98beeafe9362821d765f1a58280f01191e4ec95d"
+  digest = "1:7927977c6c0c79396772688da2d31df3b35a2d124ed109e75ba44f13449f263d"
   name = "github.com/elastic/beats"
   packages = [
     "libbeat/beat",
@@ -47,8 +47,8 @@
     "libbeat/paths",
   ]
   pruneopts = "UT"
-  revision = "a9c141434cd6b25d7a74a9c770be6b70643dc767"
-  version = "v7.5.2"
+  revision = "12ee6cd05c1bfdc69721ddab1f473417b1514576"
+  version = "v7.4.1"
 
 [[projects]]
   digest = "1:96f3c9624f041706c3e35d2b7e7aa4931e394a6125ab2c5da8b99ff7c2e4723c"
