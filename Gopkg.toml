@@ -56,11 +56,10 @@
   name = "github.com/getkin/kin-openapi"
   version = "0.2.0"
 
-
 [[constraint]]
   name = "git.ecd.axway.int/apigov/service-mesh-agent"
   branch = "master"
 
 [[constraint]]
-  name =  "github.com/elastic/beats"
-  version = "=v7.4.1"
+  name = "github.com/elastic/beats"
+  version = "=7.4.1"
