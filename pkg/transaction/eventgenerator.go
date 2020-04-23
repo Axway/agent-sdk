@@ -14,6 +14,7 @@ import (
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, privateData interface{}) (event beat.Event, err error)
+	healthcheck(name string) *hc.Status
 }
 
 // Generator - Create the events to be published to Condor
@@ -23,9 +24,11 @@ type Generator struct {
 
 // NewEventGenerator - Create a new event generator
 func NewEventGenerator(tokenURL, aud, privKey, pubKey, keyPwd, clientID string, authTimeout time.Duration) EventGenerator {
-	return &Generator{
+	eventGen := &Generator{
 		tokenRequester: apicauth.NewPlatformTokenGetter(privKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
+	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
+	return eventGen
 }
 
 // CreateEvent - Creates a new event to be sent to Condor
@@ -47,7 +50,6 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 		Fields:    eventData,
 	}
 
-	hc.RegisterHealthcheck("Event Generator", "eventgen", event.healthcheck)
 	return
 }
 
@@ -61,7 +63,7 @@ func (e *Generator) healthcheck(name string) (status *hc.Status) {
 
 	_, err := e.tokenRequester.GetToken()
 	if err != nil {
-		status := &hc.Status{
+		status = &hc.Status{
 			Result:  hc.FAIL,
 			Details: fmt.Sprintf("%s not ready.  Error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", name, err.Error()),
 		}
