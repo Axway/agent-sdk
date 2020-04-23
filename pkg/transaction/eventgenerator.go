@@ -14,7 +14,6 @@ import (
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, privateData interface{}) (event beat.Event, err error)
-	healthcheck(name string) *hc.Status
 }
 
 // Generator - Create the events to be published to Condor
