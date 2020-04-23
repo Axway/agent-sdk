@@ -71,7 +71,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		RunE:    c.run,
 		PreRun:  c.initialize,
 	}
-	hc.SetNameAndVersion(BuildAgentName, c.rootCmd.Version)
+	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
 	// APIC yaml properties and command flags
 	c.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
