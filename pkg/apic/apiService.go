@@ -45,6 +45,11 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 		if err != nil {
 			return "", err
 		}
+	} else {
+		_, err = c.processAPIServerService(serviceBody, sanitizedName)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// add/update api revision
@@ -114,7 +119,7 @@ func (c *ServiceClient) processAPIServerRevision(serviceBody ServiceBody, httpMe
 	}
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
-	if err != nil {
+	if err != nil && httpMethod != http.MethodPut {
 		return c.rollbackAPIService(serviceBody, name)
 	}
 
@@ -137,7 +142,7 @@ func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMe
 	}
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
-	if err != nil {
+	if err != nil && httpMethod != http.MethodPut {
 		return c.rollbackAPIService(serviceBody, name)
 	}
 
@@ -173,7 +178,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 	}
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
-	if err != nil {
+	if err != nil && httpMethod != http.MethodPut {
 		return c.rollbackAPIService(serviceBody, name)
 	}
 
