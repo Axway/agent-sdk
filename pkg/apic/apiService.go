@@ -30,6 +30,7 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 	var err error
 	httpMethod := http.MethodPut
 	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
+	servicesURL := c.cfg.GetAPIServerServicesURL() + "/" + sanitizedName
 	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
 	serviceInstancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
 	consumerInstancesURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + sanitizedName
@@ -38,15 +39,16 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 	if c.isNewAPI(serviceBody) {
 		// add api
 		httpMethod = http.MethodPost
+		servicesURL := c.cfg.GetAPIServerServicesURL()
 		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
 		serviceInstancesURL = c.cfg.GetAPIServerServicesInstancesURL()
 		consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
-		_, err = c.processAPIServerService(serviceBody, sanitizedName)
+		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		_, err = c.processAPIServerService(serviceBody, sanitizedName)
+		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
@@ -76,7 +78,7 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 }
 
 //processAPIServerService -
-func (c *ServiceClient) processAPIServerService(serviceBody ServiceBody, name string) (string, error) {
+func (c *ServiceClient) processAPIServerService(serviceBody ServiceBody, httpMethod, servicesURL, name string) (string, error) {
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	if serviceBody.Image != "" {
@@ -98,7 +100,7 @@ func (c *ServiceClient) processAPIServerService(serviceBody ServiceBody, name st
 		return "", err
 	}
 
-	return c.apiServiceDeployAPI(http.MethodPost, c.cfg.GetAPIServerServicesURL(), buffer)
+	return c.apiServiceDeployAPI(httpMethod, servicesURL, buffer)
 
 }
 
