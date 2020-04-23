@@ -19,9 +19,6 @@ const (
 
 type serviceExecution int
 
-const unpublishedState = "UNPUBLISHED"
-const publishedState = "PUBLISHED"
-
 const (
 	addAPIServerSpec serviceExecution = iota + 1
 	addAPIServerRevisionSpec

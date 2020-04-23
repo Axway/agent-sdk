@@ -25,6 +25,12 @@ type apiError struct {
 	Message string `json:"message"`
 }
 
+// consts for state
+const (
+	UnpublishedState = "UNPUBLISHED"
+	PublishedState   = "PUBLISHED"
+)
+
 //ServiceBody -
 type ServiceBody struct {
 	NameToPush       string `json:",omitempty"`

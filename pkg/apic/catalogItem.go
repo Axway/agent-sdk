@@ -122,7 +122,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		},
 		Revision: CatalogItemInitRevision{
 			Version: serviceBody.Version,
-			State:   unpublishedState,
+			State:   PublishedState,
 			Properties: []CatalogRevisionProperty{
 				{
 					Key:   "documentation",
@@ -153,11 +153,11 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
-		Visibility:         "RESTRICTED",     // default value
-		State:              unpublishedState, //default
+		Visibility:         "RESTRICTED",   // default value
+		State:              PublishedState, //default
 		LatestVersionDetails: CatalogItemRevision{
 			Version: serviceBody.Version,
-			State:   publishedState,
+			State:   PublishedState,
 		},
 	}
 
@@ -171,7 +171,7 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 
 	catalogItemRevision := CatalogItemInitRevision{
 		Version: serviceBody.Version,
-		State:   unpublishedState,
+		State:   PublishedState,
 		Properties: []CatalogRevisionProperty{
 			{
 				Key:   "documentation",
