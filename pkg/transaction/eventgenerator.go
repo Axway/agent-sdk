@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
@@ -13,7 +14,6 @@ import (
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, privateData interface{}) (event beat.Event, err error)
-	CheckHealth() error
 }
 
 // Generator - Create the events to be published to Condor
@@ -46,16 +46,28 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 		Private:   privateData,
 		Fields:    eventData,
 	}
+
+	hc.RegisterHealthcheck("Event Generator", "eventgen", event.healthcheck)
 	return
 }
 
-// CheckHealth -
-func (e *Generator) CheckHealth() error {
+// healthcheck -
+func (e *Generator) healthcheck(name string) (status *hc.Status) {
+	// Create the default return
+	status = &hc.Status{
+		Result:  hc.OK,
+		Details: "",
+	}
+
 	_, err := e.tokenRequester.GetToken()
 	if err != nil {
-		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
+		status := &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s not ready.  Error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", name, err.Error()),
+		}
 	}
-	return nil
+
+	return
 }
 
 func (e *Generator) createEventData(message []byte) (eventData map[string]interface{}, err error) {
