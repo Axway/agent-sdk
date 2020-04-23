@@ -156,7 +156,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
-		State:              "PUBLISHED",
+		State:              PublishedState,
 		Status:             "GA",
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
