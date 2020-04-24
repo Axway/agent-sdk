@@ -275,6 +275,14 @@ func (c *ServiceClient) updateCatalog(ID string, serviceBody ServiceBody) (strin
 		return "", err
 	}
 
+	if serviceBody.Image != "" {
+		serviceBody.ServiceExecution = addCatalogImage
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(ID))
+		if err != nil {
+			log.Warn("Unable to add image to the catalog item. " + err.Error())
+		}
+	}
+
 	version, err := c.GetCatalogItemRevision(ID)
 	i, err := strconv.Atoi(version)
 
