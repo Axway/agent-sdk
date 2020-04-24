@@ -156,8 +156,8 @@ func (c *agentRootCommand) initConfig() error {
 	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 
 	// Init the healthcheck API
-	statusPort := c.IntPropertyValue("status.port")
-	hc.HandleRequests(statusPort)
+	statusCfg, err := c.parseStatusConfig()
+	hc.HandleRequests(statusCfg.GetPort())
 
 	// Init Central Config
 	centralCfg, err := c.parseCentralConfig()
@@ -173,6 +173,13 @@ func (c *agentRootCommand) initConfig() error {
 
 	// Validate Agent Config
 	return c.validateAgentConfig(agentCfg)
+}
+
+func (c *agentRootCommand) parseStatusConfig() (corecfg.StatusConfig, error) {
+	cfg := &corecfg.StatusConfiguration{
+		Port: c.IntPropertyValue("status.port"),
+	}
+	return cfg, nil
 }
 
 func (c *agentRootCommand) parseCentralConfig() (corecfg.CentralConfig, error) {
