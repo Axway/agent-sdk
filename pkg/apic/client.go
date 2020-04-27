@@ -36,7 +36,6 @@ type Client interface {
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
-	CheckHealth() error
 }
 
 type tokenGetter interface {
@@ -167,16 +166,6 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 
 	// Return our response
 	return &s
-}
-
-// CheckHealth -
-func (c *ServiceClient) CheckHealth() error {
-	err := c.checkPlatformHealth()
-	if err != nil {
-		return err
-	}
-
-	return c.checkAPIServerHealth()
 }
 
 func (c *ServiceClient) checkPlatformHealth() error {

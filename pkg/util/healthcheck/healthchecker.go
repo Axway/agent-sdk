@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -179,4 +180,19 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	// Return data
 	data, _ := json.Marshal(globalHealthChecker.Checks[endpoint].Status)
 	io.WriteString(w, string(data))
+}
+
+//QueryForStatus - create a URL string and call teh GetHealthcheckOutput func
+func QueryForStatus(port int) (statusOut string) {
+	var err error
+	urlObj := url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("localhost:%d", port),
+		Path:   "status",
+	}
+	statusOut, err = GetHealthcheckOutput(urlObj.String())
+	if err != nil {
+		statusOut = fmt.Sprintf("Error querying for the status: %v", err.Error())
+	}
+	return
 }
