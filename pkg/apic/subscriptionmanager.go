@@ -2,7 +2,6 @@ package apic
 
 import (
 	"time"
-	"fmt"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
 )
@@ -83,7 +82,6 @@ func (sm *subscriptionManager) processSubscriptions() {
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
 				sm.preprocessSubscription(&subscription)
-				fmt.Println("Sub: ",subscription)				
 				if subscription.ApicID != "" {
 					sm.invokeProcessor(subscription)
 				}
