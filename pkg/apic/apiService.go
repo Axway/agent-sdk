@@ -297,10 +297,15 @@ func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 		}
 		port, _ := strconv.Atoi(portStr)
 
+		basePath := BasePath{
+			Path: gjson.Get(string(swagger), "basePath").String(),
+		}
+
 		endPoint := EndPoint{
 			Host:     host,
 			Port:     port,
 			Protocol: protocol,
+			Routing:  basePath,
 		}
 		if !contains(endPoints, endPoint) {
 			endPoints = append(endPoints, endPoint)
@@ -337,11 +342,17 @@ func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
 		log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
 		return nil, err
 	}
+
+	basePath := BasePath{
+		Path: gjson.Get(string(swagger), "basePath").String(),
+	}
+
 	for _, protocol := range schemes {
 		endPoint := EndPoint{
 			Host:     host,
 			Port:     port,
 			Protocol: protocol,
+			Routing:  basePath,
 		}
 		endPoints = append(endPoints, endPoint)
 	}
@@ -423,10 +434,15 @@ func (c *ServiceClient) parseURLsIntoEndpoints(defaultURL string, allURLs []stri
 			port, _ = strconv.Atoi(urlObj.Port())
 		}
 
+		basePath := BasePath{
+			Path: urlObj.Path,
+		}
+
 		endPoint := EndPoint{
 			Host:     urlObj.Hostname(),
 			Port:     port,
 			Protocol: urlObj.Scheme,
+			Routing:  basePath,
 		}
 
 		// If the URL is the default URL put it at the front of the array
