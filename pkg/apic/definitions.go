@@ -52,6 +52,7 @@ type ServiceBody struct {
 	ImageContentType string
 	CreatedBy        string
 	ResourceType     string
+	PubState         string
 }
 
 // ServiceClient -

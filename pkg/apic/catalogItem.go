@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -23,6 +24,9 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	log.Debugf("Catalog item with ID '%v' added", itemID)
+
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
 		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(itemID))
@@ -35,7 +39,7 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 
 func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
+		return "", fmt.Errorf("Unsupported security policy '%v' for FrontEndProxy '%s'. ", serviceBody.AuthPolicy, serviceBody.APIName)
 	}
 
 	buffer, err := c.createCatalogBody(serviceBody)
@@ -292,7 +296,21 @@ func (c *ServiceClient) updateCatalog(ID string, serviceBody ServiceBody) (strin
 		return "", err
 	}
 
+	err = c.updateCatalogSubscription(ID, serviceBody)
+	if err != nil {
+		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", ID, err.Error())
+	}
 	return ID, nil
+}
+
+// updateCatalogSubscription -
+func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
+	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
+	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
+	if strings.ToLower(serviceBody.PubState) == strings.ToLower(UnpublishedState) {
+		c.GetSubscriptionManager().UnsubscribeCatalogItem(catalogID)
+	}
+	return nil
 }
 
 // catalogDeployAPI -
@@ -325,8 +343,6 @@ func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (str
 	}
 
 	itemID := gjson.Get(string(response.Body), "id").String()
-
-	log.Debugf("HTTP response returning itemID: [%v]", itemID)
 	return itemID, nil
 
 }

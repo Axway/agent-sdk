@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
@@ -71,6 +72,7 @@ type CentralConfig interface {
 	GetAPIServerConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
 	GetSubscriptionURL() string
+	GetCatalogItemSubscriptionsURL(string) string
 	Validate() error
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
@@ -240,6 +242,11 @@ func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 // GetSubscriptionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetSubscriptionURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
+}
+
+// GetCatalogItemSubscriptionsURL - Returns the APIServer URL for catalog item subscriptions
+func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
+	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
 }
 
 // GetAuthConfig - Returns the Auth Config
