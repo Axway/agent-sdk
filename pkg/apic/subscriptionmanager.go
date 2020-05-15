@@ -1,11 +1,9 @@
 package apic
 
 import (
-	"fmt"
 	"time"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // SubscriptionManager - Interface for subscription manager
