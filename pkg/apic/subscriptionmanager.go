@@ -16,7 +16,6 @@ type SubscriptionManager interface {
 	Stop()
 	getPublisher() notification.Notifier
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
-	UnsubscribeCatalogItem(catalogItemID string) error
 }
 
 // subscriptionManager -
@@ -173,30 +172,4 @@ func (sm *subscriptionManager) getPublisher() notification.Notifier {
 
 func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]SubscriptionProcessor {
 	return sm.processorMap
-}
-
-// UnsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (sm *subscriptionManager) UnsubscribeCatalogItem(catalogItemID string) error {
-	if sm.apicClient.cfg.IsPublishToEnvironmentMode() {
-		fmt.Println("unsubscript environment mode")
-	} else {
-		subscriptions, err := sm.apicClient.getActiveSubscriptionsForCatalogItem(catalogItemID)
-		if err != nil {
-			return err
-		}
-
-		for _, subscription := range subscriptions {
-			if subscription.State == string(SubscriptionActive) {
-				// just initiate the unsubscibe, and let the poller handle finishing it all up
-				log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
-				subscription.apicClient = sm.apicClient
-				err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
 }

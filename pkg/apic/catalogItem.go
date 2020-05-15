@@ -308,8 +308,34 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
 	if strings.ToLower(serviceBody.PubState) == strings.ToLower(UnpublishedState) {
-		c.GetSubscriptionManager().UnsubscribeCatalogItem(catalogID)
+		c.unsubscribeCatalogItem(catalogID)
 	}
+	return nil
+}
+
+// unsubscribeCatalogItem - move the catalog item to unsubscribed state
+func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
+	if c.cfg.IsPublishToEnvironmentMode() {
+		fmt.Println("unsubscript environment mode")
+	} else {
+		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
+		if err != nil {
+			return err
+		}
+
+		for _, subscription := range subscriptions {
+			if subscription.State == string(SubscriptionActive) {
+				// just initiate the unsubscibe, and let the poller handle finishing it all up
+				log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
+				subscription.apicClient = c
+				err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -344,5 +370,4 @@ func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (str
 
 	itemID := gjson.Get(string(response.Body), "id").String()
 	return itemID, nil
-
 }
