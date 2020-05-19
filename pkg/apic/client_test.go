@@ -62,7 +62,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	// Test DiscoveryAgent, PublishToCatalog
 	cfg.AgentType = corecfg.DiscoveryAgent
 	cfg.Mode = corecfg.PublishToCatalog
-	err := c.checkAPIServerHealth()
+	err := c.checkCatalogHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToCatalog mode")
 
 	// Test DiscoveryAgent, PublishToEnvironment
