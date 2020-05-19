@@ -144,7 +144,8 @@ sonar:
     - *prepare-path
   script:
     - make sonar
-  <<: *only-protected
+  # <<: *only-protected
+  <<: *only-feature
 
 ############################################################
 # Section for lint builds stage
