@@ -448,7 +448,6 @@ func (c *ServiceClient) parseURLsIntoEndpoints(defaultURL string, allURLs []stri
 func sanitizeAPIName(name string) string {
 	// convert all letters to lower first
 	newName := strings.ToLower(name)
-	// fmt.Println(name)
 
 	// parse name out. All valid parts must be '-', '.', a-z, or 0-9
 	re := regexp.MustCompile(`[-\.a-z0-9]*`)
