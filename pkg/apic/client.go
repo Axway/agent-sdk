@@ -154,6 +154,19 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
+	// Check that we can reach the API Manager catalog
+	// only concerned if mode: PublishToCatalog
+	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
+		err := c.checkCatalogHealth()
+		if err != nil {
+			s = hc.Status{
+				Result:  hc.FAIL,
+				Details: err.Error(),
+			}
+		}
+		// Return our response
+		return &s
+	}
 
 	// Check that appropriate settings for the API server are set
 	err = c.checkAPIServerHealth()
@@ -163,7 +176,6 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
-
 	// Return our response
 	return &s
 }
@@ -175,21 +187,26 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	}
 	return nil
 }
-
-func (c *ServiceClient) checkAPIServerHealth() error {
+func (c *ServiceClient) checkCatalogHealth() error {
 	// do a request for catalog items
 	headers, err := c.createHeader()
 	if err != nil {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
-		sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
-		statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration"
+	sendErr := "error sending request to API Manager: %s. Check API Manager for URL and CONNECTION"
+	statusErr := "error sending request to API Manager - status code %d. Check API Manager and CONNECTION"
 
-		// do a request for catalog items
-		_, err := c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
-		return err
+	// do a request for catalog items
+	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
+	return err
+}
+
+func (c *ServiceClient) checkAPIServerHealth() error {
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
 	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and ENVIRONMENT"
