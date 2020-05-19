@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -19,23 +20,26 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 	serviceBody.Tags["createdBy_"+serviceBody.CreatedBy] = ""
 
 	serviceBody.ServiceExecution = addCatalog
-	itemID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
+	catalogID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
 	if err != nil {
 		return "", err
 	}
+
+	log.Debugf("Catalog item with ID '%v' added", catalogID)
+
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(itemID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
 	}
-	return itemID, nil
+	return catalogID, nil
 }
 
 func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
+		return "", fmt.Errorf("Unsupported security policy '%v' for FrontEndProxy '%s'. ", serviceBody.AuthPolicy, serviceBody.APIName)
 	}
 
 	buffer, err := c.createCatalogBody(serviceBody)
@@ -268,31 +272,69 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 // updateCatalog -
-func (c *ServiceClient) updateCatalog(ID string, serviceBody ServiceBody) (string, error) {
+func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalog
-	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+ID)
+	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
 	if err != nil {
 		return "", err
 	}
 
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(ID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
 	}
 
-	version, err := c.GetCatalogItemRevision(ID)
+	version, err := c.GetCatalogItemRevision(catalogID)
 	i, err := strconv.Atoi(version)
 
 	serviceBody.Version = strconv.Itoa(i + 1)
-	_, err = c.UpdateCatalogItemRevisions(ID, serviceBody)
+	_, err = c.UpdateCatalogItemRevisions(catalogID, serviceBody)
 	if err != nil {
 		return "", err
 	}
 
-	return ID, nil
+	err = c.updateCatalogSubscription(catalogID, serviceBody)
+	if err != nil {
+		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", catalogID, err.Error())
+	}
+	return catalogID, nil
+}
+
+// updateCatalogSubscription -
+func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
+	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
+	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
+	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
+		c.unsubscribeCatalogItem(catalogID)
+	}
+	return nil
+}
+
+// unsubscribeCatalogItem - move the catalog item to unsubscribed state
+func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
+	if c.cfg.IsPublishToEnvironmentMode() {
+		// TODO
+	} else {
+		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
+		if err != nil {
+			return err
+		}
+
+		for _, subscription := range subscriptions {
+			// just initiate the unsubscibe, and let the poller handle finishing it all up
+			log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
+			subscription.apicClient = c
+			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // catalogDeployAPI -
@@ -325,8 +367,5 @@ func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (str
 	}
 
 	itemID := gjson.Get(string(response.Body), "id").String()
-
-	log.Debugf("HTTP response returning itemID: [%v]", itemID)
 	return itemID, nil
-
 }

@@ -145,6 +145,7 @@ sonar:
   script:
     - make sonar
   <<: *only-protected
+  # <<: *only-feature
 
 ############################################################
 # Section for lint builds stage

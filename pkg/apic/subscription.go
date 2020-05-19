@@ -123,11 +123,6 @@ func (s *CentralSubscription) getServiceClient() *ServiceClient {
 
 // getSubscriptions -
 func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
 	queryParams := make(map[string]string)
 
 	searchQuery := ""
@@ -139,10 +134,26 @@ func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription
 	}
 
 	queryParams["query"] = searchQuery
+	return c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+}
+
+func (c *ServiceClient) getActiveSubscriptionsForCatalogItem(catalogItemID string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+	searchQuery := "state==" + string(SubscriptionActive)
+	queryParams["query"] = searchQuery
+
+	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+}
+
+func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]CentralSubscription, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
 
 	request := coreapi.Request{
 		Method:      coreapi.GET,
-		URL:         c.cfg.GetSubscriptionURL(),
+		URL:         url,
 		QueryParams: queryParams,
 		Headers:     headers,
 		Body:        nil,
