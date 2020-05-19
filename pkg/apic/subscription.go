@@ -138,11 +138,9 @@ func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription
 }
 
 func (c *ServiceClient) getActiveSubscriptionsForCatalogItem(catalogItemID string) ([]CentralSubscription, error) {
-	queryParams := map[string]string{
-		"field": "state",
-		"op":    "eq",
-		"value": string(SubscriptionActive),
-	}
+	queryParams := make(map[string]string)
+	searchQuery := "state==" + string(SubscriptionActive)
+	queryParams["query"] = searchQuery
 
 	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
 }
