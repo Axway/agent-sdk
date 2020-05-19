@@ -232,9 +232,15 @@ type APIServerInstanceSpec struct {
 
 // EndPoint -
 type EndPoint struct {
-	Host     string `json:"host,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	Protocol string `json:"protocol,omitempty"`
+	Host     string   `json:"host,omitempty"`
+	Port     int      `json:"port,omitempty"`
+	Protocol string   `json:"protocol,omitempty"`
+	Routing  BasePath `json:"routing,omitempty"`
+}
+
+// BasePath -
+type BasePath struct {
+	Path string `json:"basePath,omitempty"`
 }
 
 //EnvironmentSpec - structure of environment returned when not using API Server
