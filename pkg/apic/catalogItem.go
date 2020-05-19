@@ -20,21 +20,21 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 	serviceBody.Tags["createdBy_"+serviceBody.CreatedBy] = ""
 
 	serviceBody.ServiceExecution = addCatalog
-	itemID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
+	catalogID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
 	if err != nil {
 		return "", err
 	}
 
-	log.Debugf("Catalog item with ID '%v' added", itemID)
+	log.Debugf("Catalog item with ID '%v' added", catalogID)
 
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(itemID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
 	}
-	return itemID, nil
+	return catalogID, nil
 }
 
 func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
@@ -272,42 +272,42 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 // updateCatalog -
-func (c *ServiceClient) updateCatalog(ID string, serviceBody ServiceBody) (string, error) {
+func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalog
-	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+ID)
+	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
 	if err != nil {
 		return "", err
 	}
 
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(ID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
 	}
 
-	version, err := c.GetCatalogItemRevision(ID)
+	version, err := c.GetCatalogItemRevision(catalogID)
 	i, err := strconv.Atoi(version)
 
 	serviceBody.Version = strconv.Itoa(i + 1)
-	_, err = c.UpdateCatalogItemRevisions(ID, serviceBody)
+	_, err = c.UpdateCatalogItemRevisions(catalogID, serviceBody)
 	if err != nil {
 		return "", err
 	}
 
-	err = c.updateCatalogSubscription(ID, serviceBody)
+	err = c.updateCatalogSubscription(catalogID, serviceBody)
 	if err != nil {
-		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", ID, err.Error())
+		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", catalogID, err.Error())
 	}
-	return ID, nil
+	return catalogID, nil
 }
 
 // updateCatalogSubscription -
 func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
-	if strings.ToLower(serviceBody.PubState) == strings.ToLower(UnpublishedState) {
+	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
 		c.unsubscribeCatalogItem(catalogID)
 	}
 	return nil
@@ -316,7 +316,7 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 // unsubscribeCatalogItem - move the catalog item to unsubscribed state
 func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
 	if c.cfg.IsPublishToEnvironmentMode() {
-		fmt.Println("unsubscript environment mode")
+		// TODO
 	} else {
 		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
 		if err != nil {
@@ -324,14 +324,12 @@ func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
 		}
 
 		for _, subscription := range subscriptions {
-			if subscription.State == string(SubscriptionActive) {
-				// just initiate the unsubscibe, and let the poller handle finishing it all up
-				log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
-				subscription.apicClient = c
-				err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
-				if err != nil {
-					return err
-				}
+			// just initiate the unsubscibe, and let the poller handle finishing it all up
+			log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
+			subscription.apicClient = c
+			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
+			if err != nil {
+				return err
 			}
 		}
 	}
