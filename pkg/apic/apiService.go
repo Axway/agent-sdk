@@ -72,9 +72,39 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 		if err != nil {
 			return "", err
 		}
+
+		// only modify the catalog subscription if this is an update
+		if httpMethod == http.MethodPut {
+			c.processSubscription(sanitizedName, serviceBody)
+		}
+	}
+	return itemID, err
+}
+
+func (c *ServiceClient) processSubscription(consumerInstanceName string, serviceBody ServiceBody) error {
+	// if not publishing to catalog also, ignore
+	if !c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		return nil
+
+	}
+	consumerInstance, err := c.getAPIServerConsumerInstance(consumerInstanceName)
+	if err != nil {
+		log.Errorf("Unable to update catalogItem subscription for consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
 	}
 
-	return itemID, err
+	catalogItemID, err := c.getCatalogItemIDForConsumerInstance(consumerInstance.Name)
+	if err != nil {
+		log.Errorf("Unable to find catalogItem for consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
+	}
+
+	err = c.updateCatalogSubscription(catalogItemID, serviceBody)
+	if err != nil {
+		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", catalogItemID, err.Error())
+	}
+
+	return nil
 }
 
 //processAPIServerService -
