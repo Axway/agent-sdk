@@ -106,6 +106,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
 	c.AddStringProperty("path.config", "pathConfig", ".", "Configuration file path for the agent")
 	c.AddIntProperty("status.port", "statusPort", 8989, "The port that will serve the status endpoints")
+	c.AddDurationProperty("status.healthCheckPeriod", "statusHealthCheckPeriod", 3*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
 	c.AddBoolFlag("status", "Get the status of all the Health Checks")
 	return c
 }
@@ -157,7 +158,8 @@ func (c *agentRootCommand) initConfig() error {
 
 	// Init the healthcheck API
 	statusCfg, err := c.parseStatusConfig()
-	hc.HandleRequests(statusCfg.GetPort())
+	hc.SetStatusConfig(statusCfg)
+	hc.HandleRequests()
 
 	// Init Central Config
 	centralCfg, err := c.parseCentralConfig()
@@ -177,7 +179,8 @@ func (c *agentRootCommand) initConfig() error {
 
 func (c *agentRootCommand) parseStatusConfig() (corecfg.StatusConfig, error) {
 	cfg := &corecfg.StatusConfiguration{
-		Port: c.IntPropertyValue("status.port"),
+		Port:              c.IntPropertyValue("status.port"),
+		HealthCheckPeriod: c.DurationPropertyValue("status.healthCheckPeriod"),
 	}
 	return cfg, nil
 }
