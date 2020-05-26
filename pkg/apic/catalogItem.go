@@ -262,6 +262,53 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 	return strconv.Itoa(revision), nil
 }
 
+// getCatalogItemForConsumerInstance -
+func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceName string) (string, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return "", err
+	}
+
+	params := map[string]string{
+		"query": fmt.Sprintf("relationships.type==API_SERVER_CONSUMER_INSTANCE_NAME;relationships.value==%s", instanceName),
+	}
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         c.cfg.GetCatalogItemsURL(),
+		Headers:     headers,
+		QueryParams: params,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return "", err
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return "", errors.New(strconv.Itoa(response.Code))
+	}
+
+	// the response is an array of IDs
+	ids := gjson.Get(string(response.Body), "#.id")
+	if !ids.Exists() {
+		return "", nil
+	}
+
+	// the array should only contain 1 item,
+	// since we have asked for a specific one
+	catalogIDs := make([]string, 0)
+	json.Unmarshal([]byte(ids.Raw), &catalogIDs)
+	fmt.Println(catalogIDs[0])
+	catalogItems := make([]CatalogItem, 0)
+
+	err = json.Unmarshal(response.Body, &catalogItems)
+	if err != nil {
+		return "", err
+	}
+
+	return catalogIDs[0], nil
+}
+
 func isValidAuthPolicy(auth string) bool {
 	for _, item := range ValidPolicies {
 		if item == auth {
@@ -315,9 +362,7 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 
 // unsubscribeCatalogItem - move the catalog item to unsubscribed state
 func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
-	if c.cfg.IsPublishToEnvironmentMode() {
-		// TODO
-	} else {
+	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
 		if err != nil {
 			return err
