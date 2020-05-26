@@ -135,25 +135,45 @@ type CatalogItemImage struct {
 
 //CatalogItem -
 type CatalogItem struct {
-	ID                 string `json:"id"`
-	OwningTeamID       string `json:"owningTeamId"`
-	DefinitionType     string `json:"definitionType"`
-	DefinitionSubType  string `json:"definitionSubType"`
-	DefinitionRevision int    `json:"definitionRevision"`
-	Name               string `json:"name"`
-	// relationships
-	Description string   `json:"description,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	// metadata
-	Visibility string `json:"visibility"` // default: RESTRICTED
-	State      string `json:"state"`      // default: UNPUBLISHED
-	Access     string `json:"access,omitempty"`
-	// availableRevisions
-	LatestVersion        int                 `json:"latestVersion,omitempty"`
+	ID                 string             `json:"id"`
+	OwningTeamID       string             `json:"owningTeamId"`
+	DefinitionType     string             `json:"definitionType"`
+	DefinitionSubType  string             `json:"definitionSubType"`
+	DefinitionRevision int                `json:"definitionRevision"`
+	Name               string             `json:"name"`
+	EntityRelationship EntityRelationship `json:"entityRelationship:omitempty"`
+	Description        string             `json:"description,omitempty"`
+	Tags               []string           `json:"tags,omitempty"`
+	Metadata           *AuditMetadata     `json:"metadata,omitempty"`
+
+	Visibility           string              `json:"visibility"` // default: RESTRICTED
+	State                string              `json:"state"`      // default: UNPUBLISHED
+	Access               string              `json:"access,omitempty"`
+	AvailableRevisions   []int               `json:"availableRevisions,omitempty"`
+	LatestVersion        string              `json:"latestVersion,omitempty"`
 	TotalSubscriptions   int                 `json:"totalSubscriptions,omitempty"`
 	LatestVersionDetails CatalogItemRevision `json:"latestVersionDetails,omitempty"`
 	Image                *CatalogItemImage   `json:"image,omitempty"`
 	// categories
+}
+
+// EntityRelationship -
+type EntityRelationship struct {
+	Type            string `json:"type,omitempty"`
+	Value           string `json:"value,omitempty"`
+	Path            string `json:"path,omitempty"`
+	Key             string `json:"key,omitempty"`
+	Spec            string `json:"spec,omitempty"`
+	FromCompositKey bool   `json:"fromCompositKey,omitempty"`
+}
+
+// AuditMetadata -
+type AuditMetadata struct {
+	Description     string `json:"description,omitempty"`
+	CreateTimestamp string `json:"createTimestamp,omitempty"`
+	CreateUserID    string `json:"createUserId,omitempty"`
+	ModifyTimestamp string `json:"modifyTimestamp,omitempty"`
+	ModifyUserID    string `json:"modifyUserId,omitempty"`
 }
 
 // APIServerInfoProperty -
