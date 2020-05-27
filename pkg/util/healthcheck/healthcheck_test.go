@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,11 +69,16 @@ func TestRunChecks(t *testing.T) {
 	}
 
 	isReady := false
+	cfg := corecfg.NewStatusConfig()
+	SetStatusConfig(cfg)
 	// Start a go func to watch WaitForReady
 	go func() {
 		// Set isReady to true on return
-		WaitForReady()
-		isReady = true
+		err := WaitForReady()
+		if err == nil {
+			isReady = true
+		}
+
 	}()
 
 	// Register healthchecks
