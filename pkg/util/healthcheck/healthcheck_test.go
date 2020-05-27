@@ -74,7 +74,7 @@ func TestRunChecks(t *testing.T) {
 	// Start a go func to watch WaitForReady
 	go func() {
 		// Set isReady to true on return
-		_, err := WaitForReady()
+		err := WaitForReady()
 		if err == nil {
 			isReady = true
 		}

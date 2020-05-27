@@ -59,8 +59,8 @@ func SetStatusConfig(statusCfg corecfg.StatusConfig) {
 	statusConfig = statusCfg
 }
 
-// WaitForReady - creates an infinite check on all healthchecks, returns OK once ready or returns Fail if timeout is reached
-func WaitForReady() (bool, error) {
+// WaitForReady - Iterate through all healthchecks, returns OK once ready or returns Fail if timeout is reached
+func WaitForReady() error {
 	timeout := time.After(statusConfig.GetHealthCheckPeriod())
 	tick := time.Tick(500 * time.Millisecond)
 	// Keep trying until we have timed out or got a good result
@@ -68,12 +68,12 @@ func WaitForReady() (bool, error) {
 		select {
 		// Got a timeout! Fail with a timeout error
 		case <-timeout:
-			return false, errors.New("Failed with timeout error.  Services are not ready")
+			return errors.New("Failed with timeout error.  Services are not ready")
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {
 				log.Info("Services are Ready")
-				return true, nil
+				return nil
 			}
 		}
 	}
