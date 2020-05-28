@@ -27,6 +27,7 @@ const (
 	addCatalog
 	addCatalogImage
 	updateCatalog
+	deleteCatalog
 	updateCatalogRevision
 	getCatalogItem
 )

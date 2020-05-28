@@ -135,16 +135,16 @@ type CatalogItemImage struct {
 
 //CatalogItem -
 type CatalogItem struct {
-	ID                 string             `json:"id"`
-	OwningTeamID       string             `json:"owningTeamId"`
-	DefinitionType     string             `json:"definitionType"`
-	DefinitionSubType  string             `json:"definitionSubType"`
-	DefinitionRevision int                `json:"definitionRevision"`
-	Name               string             `json:"name"`
-	EntityRelationship EntityRelationship `json:"entityRelationship:omitempty"`
-	Description        string             `json:"description,omitempty"`
-	Tags               []string           `json:"tags,omitempty"`
-	Metadata           *AuditMetadata     `json:"metadata,omitempty"`
+	ID                 string `json:"id"`
+	OwningTeamID       string `json:"owningTeamId"`
+	DefinitionType     string `json:"definitionType"`
+	DefinitionSubType  string `json:"definitionSubType"`
+	DefinitionRevision int    `json:"definitionRevision"`
+	Name               string `json:"name"`
+	// EntityRelationship EntityRelationship `json:"relationships:omitempty"`  // can't get this to work
+	Description string         `json:"description,omitempty"`
+	Tags        []string       `json:"tags,omitempty"`
+	Metadata    *AuditMetadata `json:"metadata,omitempty"`
 
 	Visibility           string              `json:"visibility"` // default: RESTRICTED
 	State                string              `json:"state"`      // default: UNPUBLISHED
@@ -159,12 +159,12 @@ type CatalogItem struct {
 
 // EntityRelationship -
 type EntityRelationship struct {
-	Type            string `json:"type,omitempty"`
-	Value           string `json:"value,omitempty"`
-	Path            string `json:"path,omitempty"`
-	Key             string `json:"key,omitempty"`
-	Spec            string `json:"spec,omitempty"`
-	FromCompositKey bool   `json:"fromCompositKey,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Value            string `json:"value,omitempty"`
+	Path             string `json:"path,omitempty"`
+	Key              string `json:"key,omitempty"`
+	Spec             string `json:"spec,omitempty"`
+	FromCompositeKey bool   `json:"fromCompositeKey,omitempty"`
 }
 
 // AuditMetadata -

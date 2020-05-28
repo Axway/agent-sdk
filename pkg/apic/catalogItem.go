@@ -63,6 +63,8 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 		spec, err = c.marshalCatalogItem(serviceBody)
 	case updateCatalogRevision:
 		spec, err = c.marshalCatalogItemRevision(serviceBody)
+	case deleteCatalog:
+		break // empty spec for delete
 	default:
 		return nil, errors.New("Invalid catalog operation")
 	}
@@ -263,14 +265,14 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 }
 
 // getCatalogItemForConsumerInstance -
-func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceName string) (string, error) {
+func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
 	}
 
 	params := map[string]string{
-		"query": fmt.Sprintf("relationships.type==API_SERVER_CONSUMER_INSTANCE_NAME;relationships.value==%s", instanceName),
+		"query": fmt.Sprintf("relationships.type==API_SERVER_CONSUMER_INSTANCE_ID;relationships.value==%s", instanceID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -298,7 +300,6 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceName string)
 	// since we have asked for a specific one
 	catalogIDs := make([]string, 0)
 	json.Unmarshal([]byte(ids.Raw), &catalogIDs)
-	fmt.Println(catalogIDs[0])
 	catalogItems := make([]CatalogItem, 0)
 
 	err = json.Unmarshal(response.Body, &catalogItems)
@@ -355,7 +356,10 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
 	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
-		c.unsubscribeCatalogItem(catalogID)
+		err := c.unsubscribeCatalogItem(catalogID)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -406,11 +410,22 @@ func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (str
 		return "", err
 	}
 
-	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated || response.Code == http.StatusNoContent) {
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
 
 	itemID := gjson.Get(string(response.Body), "id").String()
 	return itemID, nil
+}
+
+// deleteCatalogItem -
+func (c *ServiceClient) deleteCatalogItem(catalogID string, serviceBody ServiceBody) error {
+	serviceBody.ServiceExecution = deleteCatalog
+	_, err := c.deployCatalog(serviceBody, http.MethodDelete, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
