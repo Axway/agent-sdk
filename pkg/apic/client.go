@@ -36,6 +36,10 @@ type Client interface {
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
+	DeleteCatalogItem(itemID string) error
+	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
+	DeleteConsumerInstance(instanceName string) error
+	DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error)
 }
 
 type tokenGetter interface {
@@ -257,4 +261,28 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, fmt.Errorf(statusErr, response.Code)
 	}
 	return response.Body, nil
+}
+
+// DeleteCatalogItem -
+func (c *ServiceClient) DeleteCatalogItem(itemID string) error {
+	// delete doesn't need a service body
+	serviceBody := ServiceBody{
+		AuthPolicy: Passthrough,
+	}
+	return c.deleteCatalogItem(itemID, serviceBody)
+}
+
+// GetConsumerInstanceForCatalogItem -
+func (c *ServiceClient) GetConsumerInstanceForCatalogItem(itemID string) (*APIServer, error) {
+	return c.getConsumerInstanceForCatalogItem(itemID)
+}
+
+// DeleteConsumerInstance -
+func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
+	return c.deleteConsumerInstance(instanceName)
+}
+
+// DoesCatalogItemForServiceHaveActiveSubscriptions -
+func (c *ServiceClient) DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
+	return c.doesCatalogItemForServiceHaveActiveSubscriptions(instanceID)
 }

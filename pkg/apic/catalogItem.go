@@ -264,7 +264,7 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 	return strconv.Itoa(revision), nil
 }
 
-// getCatalogItemForConsumerInstance -
+// getCatalogItemIDForConsumerInstance -
 func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	headers, err := c.createHeader()
 	if err != nil {
@@ -301,6 +301,9 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	catalogIDs := make([]string, 0)
 	json.Unmarshal([]byte(ids.Raw), &catalogIDs)
 	catalogItems := make([]CatalogItem, 0)
+	if len(catalogIDs) == 0 {
+		return "", errors.New("Unable to find catalogID for consumerInstance " + instanceID)
+	}
 
 	err = json.Unmarshal(response.Body, &catalogItems)
 	if err != nil {
@@ -308,6 +311,44 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	}
 
 	return catalogIDs[0], nil
+}
+
+// getConsumerInstanceForCatalogItem -
+func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	params := map[string]string{
+		"query": "type==API_SERVER_CONSUMER_INSTANCE_NAME",
+	}
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         c.cfg.GetCatalogItemRelationshipsURL(itemID),
+		Headers:     headers,
+		QueryParams: params,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+
+	relationships := make([]EntityRelationship, 0)
+	err = json.Unmarshal(response.Body, &relationships)
+	if err != nil {
+		return nil, err
+	}
+	if len(relationships) == 0 {
+		return nil, errors.New("No relationships found")
+	}
+
+	return c.getAPIServerConsumerInstance(relationships[0].Value)
 }
 
 func isValidAuthPolicy(auth string) bool {
@@ -356,7 +397,7 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
 	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
-		err := c.unsubscribeCatalogItem(catalogID)
+		_, err := c.unsubscribeCatalogItem(catalogID)
 		if err != nil {
 			return err
 		}
@@ -365,25 +406,27 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 }
 
 // unsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
+func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
+		log.Debugf("Unsubscribing catalogItem with ID %v", catalogItemID)
 		for _, subscription := range subscriptions {
 			// just initiate the unsubscibe, and let the poller handle finishing it all up
 			log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
 			subscription.apicClient = c
 			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
 			if err != nil {
-				return err
+				return len(subscriptions), err
 			}
 		}
+		return len(subscriptions), nil
 	}
 
-	return nil
+	return 0, nil
 }
 
 // catalogDeployAPI -
@@ -428,4 +471,16 @@ func (c *ServiceClient) deleteCatalogItem(catalogID string, serviceBody ServiceB
 	}
 
 	return nil
+}
+
+func (c *ServiceClient) doesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
+	catalogID, err := c.getCatalogItemIDForConsumerInstance(instanceID)
+	if err != nil {
+		return false, err
+	}
+	subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogID)
+	if err != nil {
+		return false, err
+	}
+	return len(subscriptions) > 0, nil
 }
