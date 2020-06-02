@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
 
 func getPFlag(cmd AgentRootCmd, flagName string) *flag.Flag {
@@ -45,6 +46,7 @@ func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagNam
 	assertCmdFlag(t, cmd, flagName, "duration", description)
 	assert.Equal(t, defaultVal, viper.GetDuration(propertyName))
 }
+
 func TestRootCmdFlags(t *testing.T) {
 
 	// Discovery Agent
@@ -54,36 +56,36 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "AMPLIFY Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
+	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSSLMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "AMPLIFY Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
+	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 
 	// Log yaml properties and command flags
 	assertStringCmdFlag(t, rootCmd, "log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
@@ -216,11 +218,11 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -229,11 +231,11 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -256,11 +258,11 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -269,11 +271,11 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -304,6 +306,7 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	assert.Panics(t, fExecute)
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.Set("path.config", "./testdata")
 	fExecute = func() {
 		rootCmd.Execute()
 	}
@@ -319,11 +322,11 @@ func TestRootCmdHandlers(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -336,11 +339,11 @@ func TestRootCmdHandlers(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "agentString", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
