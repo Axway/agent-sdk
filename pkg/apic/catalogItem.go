@@ -14,13 +14,23 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type catalogItemService struct {
+	serviceClient *ServiceClient
+}
+
+func newCatalogItemService(serviceClient *ServiceClient) *catalogItemService {
+	return &catalogItemService{
+		serviceClient: serviceClient,
+	}
+}
+
 // AddToAPIC -
-func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
+func (c *catalogItemService) addCatalog(serviceBody ServiceBody) (string, error) {
 	// add createdBy as a tag
 	serviceBody.Tags["createdBy_"+serviceBody.CreatedBy] = ""
 
 	serviceBody.ServiceExecution = addCatalog
-	catalogID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
+	catalogID, err := c.deployCatalog(serviceBody, http.MethodPost, c.serviceClient.cfg.GetCatalogItemsURL())
 	if err != nil {
 		return "", err
 	}
@@ -29,7 +39,7 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.serviceClient.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
@@ -37,7 +47,7 @@ func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
 	return catalogID, nil
 }
 
-func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
+func (c *catalogItemService) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
 		return "", fmt.Errorf("Unsupported security policy '%v' for FrontEndProxy '%s'. ", serviceBody.AuthPolicy, serviceBody.APIName)
 	}
@@ -51,7 +61,7 @@ func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url strin
 	return c.catalogDeployAPI(method, url, buffer)
 }
 
-func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, error) {
+func (c *catalogItemService) createCatalogBody(serviceBody ServiceBody) ([]byte, error) {
 	var spec []byte
 	var err error
 	switch serviceBody.ServiceExecution {
@@ -72,14 +82,14 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 	return spec, nil
 }
 
-func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
+func (c *catalogItemService) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
 	enableSubscription := (serviceBody.AuthPolicy != Passthrough)
 
 	// assume that we use the default schema unless it one is enabled and registered
-	subSchema := c.DefaultSubscriptionSchema
+	subSchema := c.serviceClient.DefaultSubscriptionSchema
 	if enableSubscription {
-		if c.RegisteredSubscriptionSchema != nil {
-			subSchema = c.RegisteredSubscriptionSchema
+		if c.serviceClient.RegisteredSubscriptionSchema != nil {
+			subSchema = c.serviceClient.RegisteredSubscriptionSchema
 		} else {
 			enableSubscription = false
 		}
@@ -113,7 +123,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
 		Properties:         catalogProperties,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Tags:               c.serviceClient.mapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED", // default value
 		Subscription: CatalogSubscription{
 			Enabled:         enableSubscription,
@@ -144,7 +154,7 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 }
 
 // marshal the CatalogItem -
-func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
+func (c *catalogItemService) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
 
 	definitionSubType, _ := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
@@ -156,7 +166,7 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 		Name:               serviceBody.NameToPush,
 		OwningTeamID:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Tags:               c.serviceClient.mapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED",   // default value
 		State:              PublishedState, //default
 		LatestVersionDetails: CatalogItemRevision{
@@ -169,7 +179,7 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 }
 
 // marshal the CatalogItem revision
-func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
+func (c *catalogItemService) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
 
 	_, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
@@ -192,7 +202,7 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 }
 
 // marshals the catalog image body
-func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte, error) {
+func (c *catalogItemService) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte, error) {
 	catalogImage := CatalogItemImage{
 		DataType:      serviceBody.ImageContentType,
 		Base64Content: serviceBody.Image,
@@ -200,7 +210,7 @@ func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte
 	return json.Marshal(catalogImage)
 }
 
-func (c *ServiceClient) getDefinitionSubtypeAndRevisionKey(serviceBody ServiceBody) (definitionSubType, revisionPropertyKey string) {
+func (c *catalogItemService) getDefinitionSubtypeAndRevisionKey(serviceBody ServiceBody) (definitionSubType, revisionPropertyKey string) {
 	if serviceBody.ResourceType == Wsdl {
 		definitionSubType = Wsdl
 		revisionPropertyKey = Specification
@@ -217,7 +227,7 @@ func (c *ServiceClient) getDefinitionSubtypeAndRevisionKey(serviceBody ServiceBo
 	return
 }
 
-func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMsg json.RawMessage) {
+func (c *catalogItemService) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMsg json.RawMessage) {
 	if serviceBody.ResourceType == Wsdl {
 		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
 		rawMsg = json.RawMessage(strconv.Quote(str))
@@ -228,25 +238,25 @@ func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMs
 }
 
 // UpdateCatalogItemRevisions -
-func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
+func (c *catalogItemService) updateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalogRevision
-	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisions(ID))
+	return c.deployCatalog(serviceBody, http.MethodPost, c.serviceClient.cfg.UpdateCatalogItemRevisions(ID))
 }
 
 // GetCatalogItemRevision -
-func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
-	headers, err := c.createHeader()
+func (c *catalogItemService) GetCatalogItemRevision(ID string) (string, error) {
+	headers, err := c.serviceClient.createHeader()
 	if err != nil {
 		return "", err
 	}
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByID(ID),
+		URL:     c.serviceClient.cfg.GetCatalogItemByID(ID),
 		Headers: headers,
 	}
 
-	response, err := c.apiClient.Send(request)
+	response, err := c.serviceClient.apiClient.Send(request)
 	if err != nil {
 		return "", err
 	}
@@ -272,16 +282,16 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 // updateCatalog -
-func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody) (string, error) {
+func (c *catalogItemService) updateCatalog(catalogID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalog
-	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
+	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.serviceClient.cfg.GetCatalogItemsURL()+"/"+catalogID)
 	if err != nil {
 		return "", err
 	}
 
 	if serviceBody.Image != "" {
 		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
+		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.serviceClient.cfg.GetCatalogItemImageURL(catalogID))
 		if err != nil {
 			log.Warn("Unable to add image to the catalog item. " + err.Error())
 		}
@@ -291,7 +301,7 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 	i, err := strconv.Atoi(version)
 
 	serviceBody.Version = strconv.Itoa(i + 1)
-	_, err = c.UpdateCatalogItemRevisions(catalogID, serviceBody)
+	_, err = c.updateCatalogItemRevisions(catalogID, serviceBody)
 	if err != nil {
 		return "", err
 	}
@@ -304,7 +314,7 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 }
 
 // updateCatalogSubscription -
-func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
+func (c *catalogItemService) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
 	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
@@ -314,11 +324,11 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 }
 
 // unsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
-	if c.cfg.IsPublishToEnvironmentMode() {
+func (c *catalogItemService) unsubscribeCatalogItem(catalogItemID string) error {
+	if c.serviceClient.cfg.IsPublishToEnvironmentMode() {
 		// TODO
 	} else {
-		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
+		subscriptions, err := c.serviceClient.getActiveSubscriptionsForCatalogItem(catalogItemID)
 		if err != nil {
 			return err
 		}
@@ -326,7 +336,7 @@ func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
 		for _, subscription := range subscriptions {
 			// just initiate the unsubscibe, and let the poller handle finishing it all up
 			log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
-			subscription.apicClient = c
+			subscription.apicClient = c.serviceClient
 			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
 			if err != nil {
 				return err
@@ -338,13 +348,13 @@ func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) error {
 }
 
 // catalogDeployAPI -
-func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (string, error) {
+func (c *catalogItemService) catalogDeployAPI(method, url string, buffer []byte) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	headers, err := c.createHeader()
+	headers, err := c.serviceClient.createHeader()
 	if err != nil {
 		return "", err
 	}
@@ -356,7 +366,7 @@ func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (str
 		Headers:     headers,
 		Body:        buffer,
 	}
-	response, err := c.apiClient.Send(request)
+	response, err := c.serviceClient.apiClient.Send(request)
 	if err != nil {
 		return "", err
 	}

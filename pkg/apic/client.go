@@ -2,33 +2,17 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
+	"strconv"
 	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
-
-// constants for auth policy types
-const (
-	Apikey      = "verify-api-key"
-	Passthrough = "pass-through"
-	Oauth       = "verify-oauth-token"
-)
-
-// ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
-var ValidPolicies = []string{Apikey, Passthrough, Oauth}
-
-// SubscriptionProcessor - callback method type to process subscriptions
-type SubscriptionProcessor func(subscription Subscription)
-
-// SubscriptionValidator - callback method type to validate subscription for processing
-type SubscriptionValidator func(subscription Subscription) bool
 
 // Client - interface
 type Client interface {
@@ -38,16 +22,16 @@ type Client interface {
 	GetSubscriptionManager() SubscriptionManager
 }
 
-type tokenGetter interface {
-	GetToken() (string, error)
-}
-
-type platformTokenGetter struct {
-	requester *apicauth.PlatformTokenGetter
-}
-
-func (p *platformTokenGetter) GetToken() (string, error) {
-	return p.requester.GetToken()
+// ServiceClient -
+type ServiceClient struct {
+	tokenRequester               tokenGetter
+	cfg                          corecfg.CentralConfig
+	apiClient                    coreapi.Client
+	DefaultSubscriptionSchema    SubscriptionSchema
+	RegisteredSubscriptionSchema SubscriptionSchema
+	subscriptionMgr              SubscriptionManager
+	apiService                   *apiService
+	catalogItemService           *catalogItemService
 }
 
 // New -
@@ -69,9 +53,194 @@ func New(cfg corecfg.CentralConfig) Client {
 		DefaultSubscriptionSchema: NewSubscriptionSchema(),
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
+	serviceClient.apiService = newAPIService(serviceClient)
+	serviceClient.catalogItemService = newCatalogItemService(serviceClient)
 
 	hc.RegisterHealthcheck("AMPLIFY Central", "central", serviceClient.healthcheck)
 	return serviceClient
+}
+
+// CreateService - Creates a catalog item or API service for the definition based on the agent mode
+func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
+	if c.cfg.IsPublishToEnvironmentMode() {
+		return c.apiService.processAPIService(serviceBody)
+	}
+	return c.catalogItemService.addCatalog(serviceBody)
+}
+
+// UpdateService -
+func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
+	if c.cfg.IsPublishToEnvironmentMode() {
+		return c.apiService.processAPIService(serviceBody)
+	}
+	return c.catalogItemService.updateCatalog(ID, serviceBody)
+}
+
+// getCatalogItemAPIServerInfoProperty -
+func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*APIServerInfo, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	apiServerInfoURL := c.cfg.GetCatalogItemsURL() + "/" + catalogID + "/properties/apiServerInfo"
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     apiServerInfoURL,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+
+	apiserverInfo := new(APIServerInfo)
+	json.Unmarshal(response.Body, apiserverInfo)
+	return apiserverInfo, nil
+}
+
+// getAPIServerConsumerInstance -
+func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	consumerInstanceURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + consumerInstanceName
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     consumerInstanceURL,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+	consumerInstance := new(APIServer)
+	json.Unmarshal(response.Body, consumerInstance)
+	return consumerInstance, nil
+}
+
+// getSubscriptions -
+func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state==" + state
+	}
+
+	queryParams["query"] = searchQuery
+	return c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+}
+
+func (c *ServiceClient) getActiveSubscriptionsForCatalogItem(catalogItemID string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+	searchQuery := "state==" + string(SubscriptionActive)
+	queryParams["query"] = searchQuery
+
+	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+}
+
+func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]CentralSubscription, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		QueryParams: queryParams,
+		Headers:     headers,
+		Body:        nil,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+	subscriptions := make([]CentralSubscription, 0)
+	json.Unmarshal(response.Body, &subscriptions)
+	return subscriptions, nil
+}
+
+// RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
+// creates a API Server resource for subscription definition
+func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	c.RegisteredSubscriptionSchema = subscriptionSchema
+	if c.cfg.IsPublishToEnvironmentMode() {
+		// Add API Server resource - SubscriptionDefinition
+		buffer, err := c.marshalSubsciptionDefinition(subscriptionSchema)
+
+		headers, err := c.createHeader()
+		if err != nil {
+			return err
+		}
+
+		request := coreapi.Request{
+			Method:  coreapi.POST,
+			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL(),
+			Headers: headers,
+			Body:    buffer,
+		}
+
+		response, err := c.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
+		if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+			logResponseErrors(response.Body)
+			return errors.New(strconv.Itoa(response.Code))
+		}
+	}
+	return nil
+}
+
+func (c *ServiceClient) marshalSubsciptionDefinition(subscriptionSchema SubscriptionSchema) ([]byte, error) {
+	catalogSubscriptionSchema, err := subscriptionSchema.rawJSON()
+	if err != nil {
+		return nil, err
+	}
+	spec := APIServerSubscriptionDefinitionSpec{
+		Schema: APIServerSubscriptionSchema{
+			Properties: []CatalogRevisionProperty{
+				{
+					Key:   "profile",
+					Value: catalogSubscriptionSchema,
+				},
+			},
+		},
+	}
+
+	apiServerService := APIServer{
+		Name:       c.cfg.GetEnvironmentName() + "." + "authsubscription",
+		Title:      "Subscription definition created by agent",
+		Attributes: nil,
+		Spec:       spec,
+		Tags:       nil,
+	}
+
+	return json.Marshal(apiServerService)
 }
 
 // mapToTagsArray -
@@ -107,20 +276,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	return strArr
-}
-
-func isUnitTesting() bool {
-	return strings.HasSuffix(os.Args[0], ".test")
-}
-
-func logResponseErrors(body []byte) {
-	detail := make(map[string]*json.RawMessage)
-	json.Unmarshal(body, &detail)
-
-	for k, v := range detail {
-		buffer, _ := v.MarshalJSON()
-		log.Debugf("HTTP response %v: %v", k, string(buffer))
-	}
 }
 
 func (c *ServiceClient) createHeader() (map[string]string, error) {
