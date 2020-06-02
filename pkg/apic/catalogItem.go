@@ -413,10 +413,9 @@ func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error
 			return 0, err
 		}
 
-		log.Debugf("Unsubscribing catalogItem with ID %v", catalogItemID)
 		for _, subscription := range subscriptions {
 			// just initiate the unsubscibe, and let the poller handle finishing it all up
-			log.Debugf("Found active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
+			log.Debugf("Unsubscribing from active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
 			subscription.apicClient = c
 			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
 			if err != nil {
