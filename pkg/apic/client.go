@@ -39,7 +39,7 @@ type Client interface {
 	DeleteCatalogItem(itemID string) error
 	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
 	DeleteConsumerInstance(instanceName string) error
-	DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error)
+	GetActiveSubscriptionsForCatalogItem(instanceID string) (int, error)
 }
 
 type tokenGetter interface {
@@ -282,7 +282,7 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 	return c.deleteConsumerInstance(instanceName)
 }
 
-// DoesCatalogItemForServiceHaveActiveSubscriptions -
-func (c *ServiceClient) DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
-	return c.doesCatalogItemForServiceHaveActiveSubscriptions(instanceID)
+// GetActiveSubscriptionsForCatalogItem -
+func (c *ServiceClient) GetActiveSubscriptionsForCatalogItem(instanceID string) (int, error) {
+	return c.GetActiveSubscriptionsForCatalogItem(instanceID)
 }

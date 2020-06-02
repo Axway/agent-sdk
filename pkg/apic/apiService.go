@@ -233,22 +233,29 @@ func (c *ServiceClient) processUnpublish(httpMethod, consumerInstanceName string
 		return err
 	}
 
-	// this is crazy. If there were subscriptions, we need to wait for the callback to remove the consumerInstance
-	// and catalogItem, etc. If there were none, this will never happen so we need to delete them now.
-	if subscriptions == 0 {
-		err = c.DeleteCatalogItem(catalogItemID)
-		if err != nil {
-			log.Errorf("Unable to delete catalogItem with ID '%s'. %v", catalogItemID, err.Error())
-		}
-		err = c.DeleteConsumerInstance(consumerInstanceName)
-		if err != nil && err.Error() != strconv.Itoa(http.StatusNoContent) {
-			log.Errorf("Unable to delete consumerInstance '%s'. %v", consumerInstanceName, err.Error())
-		}
-	}
-
-	// if there were subscriptions, do NOT delete the catalogItem or the consumerInstance yet. The call to unsubscribe the catalog item
+	// If there were subscriptions, do NOT delete the catalogItem or the consumerInstance yet. The call to unsubscribe the catalog item
 	// must complete first, or things will get left orphaned. Do them when we receive the requestForUnpublish
 	// callback instead!
+	if subscriptions > 0 {
+		return nil
+	}
+
+	// If there were subscriptions, we need to wait for the callback to remove the consumerInstance
+	// and catalogItem, etc. If there were none, that callback will never happen so we need to delete them now.
+	return c.postProcessUnpublish(catalogItemID, consumerInstanceName)
+}
+
+func (c *ServiceClient) postProcessUnpublish(catalogItemID, consumerInstanceName string) error {
+	err := c.DeleteCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Unable to delete catalogItem with ID '%s'. %v", catalogItemID, err.Error())
+		return err
+	}
+	err = c.DeleteConsumerInstance(consumerInstanceName)
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNoContent) {
+		log.Errorf("Unable to delete consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
+	}
 	return nil
 }
 
