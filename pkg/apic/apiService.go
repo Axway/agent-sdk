@@ -589,7 +589,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 	}
 	//  Check to see if rollback was processed
 	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		log.Error("Rollback API service.  API has been removed.")
+		log.Error("API service has been removed.")
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
