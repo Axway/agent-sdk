@@ -36,7 +36,7 @@ func init() {
 type APIService struct {
 	v1.ResourceMeta
 
-	Spec ApiServiceSpec `json:"true"`
+	Spec ApiServiceSpec `json:"spec"`
 }
 
 func (res *APIService) FromInstance(ri *v1.ResourceInstance) error {

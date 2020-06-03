@@ -36,7 +36,7 @@ func init() {
 type CommandLineInterface struct {
 	v1.ResourceMeta
 
-	Spec CommandLineInterfaceSpec `json:"true"`
+	Spec CommandLineInterfaceSpec `json:"spec"`
 }
 
 func (res *CommandLineInterface) FromInstance(ri *v1.ResourceInstance) error {

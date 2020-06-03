@@ -36,7 +36,7 @@ func init() {
 type ResourceDefinition struct {
 	v1.ResourceMeta
 
-	Spec ResourceDefinitionSpec `json:"true"`
+	Spec ResourceDefinitionSpec `json:"spec"`
 }
 
 func (res *ResourceDefinition) FromInstance(ri *v1.ResourceInstance) error {

@@ -36,7 +36,7 @@ func init() {
 type Environment struct {
 	v1.ResourceMeta
 
-	Spec EnvironmentSpec `json:"true"`
+	Spec EnvironmentSpec `json:"spec"`
 }
 
 func (res *Environment) FromInstance(ri *v1.ResourceInstance) error {

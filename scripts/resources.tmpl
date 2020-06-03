@@ -39,7 +39,7 @@
   type {{.res.kind}} struct {
   v1.ResourceMeta
   {{range $field, $isNotEmpty := .res.fields}}
-     {{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{. | strings.ToLower}}"`
+     {{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{$field | strings.ToLower}}"`
   {{end}}
   }
 

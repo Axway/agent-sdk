@@ -36,7 +36,7 @@ func init() {
 type ResourceGroup struct {
 	v1.ResourceMeta
 
-	Spec struct{} `json:"false"`
+	Spec struct{} `json:"spec"`
 }
 
 func (res *ResourceGroup) FromInstance(ri *v1.ResourceInstance) error {

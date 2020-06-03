@@ -36,7 +36,7 @@ func init() {
 type Webhook struct {
 	v1.ResourceMeta
 
-	Spec WebhookSpec `json:"true"`
+	Spec WebhookSpec `json:"spec"`
 }
 
 func (res *Webhook) FromInstance(ri *v1.ResourceInstance) error {

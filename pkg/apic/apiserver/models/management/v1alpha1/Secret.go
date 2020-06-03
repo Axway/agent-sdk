@@ -36,7 +36,7 @@ func init() {
 type Secret struct {
 	v1.ResourceMeta
 
-	Spec SecretSpec `json:"true"`
+	Spec SecretSpec `json:"spec"`
 }
 
 func (res *Secret) FromInstance(ri *v1.ResourceInstance) error {

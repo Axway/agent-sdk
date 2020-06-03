@@ -36,7 +36,7 @@ func init() {
 type ConsumerSubscriptionDefinition struct {
 	v1.ResourceMeta
 
-	Spec ConsumerSubscriptionDefinitionSpec `json:"true"`
+	Spec ConsumerSubscriptionDefinitionSpec `json:"spec"`
 }
 
 func (res *ConsumerSubscriptionDefinition) FromInstance(ri *v1.ResourceInstance) error {
