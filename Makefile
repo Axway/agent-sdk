@@ -42,3 +42,6 @@ sonar: test-sonar
 
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
+
+apiserver_generate: ## generate api server resources
+	./scripts/apiserver_generate.sh
