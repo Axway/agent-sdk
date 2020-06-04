@@ -1,0 +1,4894 @@
+{
+  "openapi" : "3.0.2",
+  "info" : {
+    "title" : "API Server specification.",
+    "version" : "0.13.0",
+    "contact" : {
+      "name" : "Axway Support",
+      "email" : "support@axway.com"
+    },
+    "license" : {
+      "name" : "Copyright Axway 2020. All rights reserved."
+    },
+    "description" : "API Server specification for Amplify Central."
+  },
+  "security" : [ {
+    "token" : [ ]
+  } ],
+  "servers" : [ {
+    "url" : "https://apicentral.axway.com/apis"
+  } ],
+  "paths" : {
+    "/management/v1alpha1/environments" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Environment for version v1alpha1 from group management",
+        "operationId" : "list_management_v1alpha1_Environment",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Environment resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type Environment for version v1alpha1 from group management",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create Environment for version v1alpha1 from group management",
+        "operationId" : "create_management_v1alpha1_Environment",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Environment resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new Environment for version v1alpha1 from group management",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{name}" : {
+      "parameters" : [ {
+        "name" : "name",
+        "description" : "The name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Environment for version v1alpha1 from group management",
+        "operationId" : "read_management_v1alpha1_Environment",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Environment resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read Environment for version v1alpha1 from group management",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove Environment for version v1alpha1 from group management",
+        "operationId" : "remove_management_v1alpha1_Environment",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing Environment for version v1alpha1 from group management. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed Environment for version v1alpha1 from group management"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update Environment for version v1alpha1 from group management",
+        "operationId" : "update_management_v1alpha1_Environment",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Environment resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update Environment for version v1alpha1 from group management",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Environment"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiservices" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIService for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_APIService",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIService resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type APIService for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create APIService for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_APIService",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIService resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new APIService for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiservices/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the APIService",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIService for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_APIService",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIService resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read APIService for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove APIService for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_APIService",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing APIService for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed APIService for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update APIService for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_APIService",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIService resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update APIService for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIService"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiservicerevisions" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIServiceRevision for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_APIServiceRevision",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceRevision resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type APIServiceRevision for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create APIServiceRevision for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_APIServiceRevision",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceRevision resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new APIServiceRevision for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiservicerevisions/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the APIServiceRevision",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIServiceRevision for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_APIServiceRevision",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceRevision resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read APIServiceRevision for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove APIServiceRevision for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_APIServiceRevision",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing APIServiceRevision for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed APIServiceRevision for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update APIServiceRevision for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_APIServiceRevision",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceRevision resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update APIServiceRevision for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevision"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiserviceinstances" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIServiceInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_APIServiceInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type APIServiceInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create APIServiceInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_APIServiceInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new APIServiceInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/apiserviceinstances/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the APIServiceInstance",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves APIServiceInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_APIServiceInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read APIServiceInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove APIServiceInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_APIServiceInstance",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing APIServiceInstance for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed APIServiceInstance for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update APIServiceInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_APIServiceInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.APIServiceInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update APIServiceInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/secrets" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Secret for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_Secret",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Secret resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type Secret for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create Secret for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_Secret",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Secret resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new Secret for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/secrets/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the Secret",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Secret for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_Secret",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Secret resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read Secret for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove Secret for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_Secret",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing Secret for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed Secret for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update Secret for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_Secret",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Secret resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update Secret for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Secret"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/webhooks" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Webhook for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_Webhook",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Webhook resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type Webhook for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create Webhook for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_Webhook",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Webhook resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new Webhook for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/webhooks/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the Webhook",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves Webhook for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_Webhook",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Webhook resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read Webhook for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove Webhook for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_Webhook",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing Webhook for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed Webhook for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update Webhook for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_Webhook",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.Webhook resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update Webhook for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.Webhook"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/consumerinstances" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_ConsumerInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec, status. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_ConsumerInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec, status. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/consumerinstances/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the ConsumerInstance",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_ConsumerInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec, status. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_ConsumerInstance",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing ConsumerInstance for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed ConsumerInstance for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_ConsumerInstance",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec, status. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/consumerinstances/{name}/status" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the ConsumerInstance",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves status resource data of ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_ConsumerInstance_status",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read status resource data of ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update status resource data of ConsumerInstance for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_ConsumerInstance_status",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerInstance resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Updated status resource data of ConsumerInstance for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstance"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/consumersubscriptiondefs" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+        "operationId" : "list_management_v1alpha1_Environment_ConsumerSubscriptionDefinition",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerSubscriptionDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+        "operationId" : "create_management_v1alpha1_Environment_ConsumerSubscriptionDefinition",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerSubscriptionDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/management/v1alpha1/environments/{environmentName}/consumersubscriptiondefs/{name}" : {
+      "parameters" : [ {
+        "name" : "environmentName",
+        "description" : "Name of the Environment",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the ConsumerSubscriptionDefinition",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+        "operationId" : "read_management_v1alpha1_Environment_ConsumerSubscriptionDefinition",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerSubscriptionDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+        "operationId" : "remove_management_v1alpha1_Environment_ConsumerSubscriptionDefinition",
+        "tags" : [ "management" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+        "operationId" : "update_management_v1alpha1_Environment_ConsumerSubscriptionDefinition",
+        "tags" : [ "management" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the management.v1alpha1.ConsumerSubscriptionDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update ConsumerSubscriptionDefinition for version v1alpha1 from group management in scope Environment",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceGroup for version v1alpha1 from group definitions",
+        "operationId" : "list_definitions_v1alpha1_ResourceGroup",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceGroup resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type ResourceGroup for version v1alpha1 from group definitions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create ResourceGroup for version v1alpha1 from group definitions",
+        "operationId" : "create_definitions_v1alpha1_ResourceGroup",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceGroup resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new ResourceGroup for version v1alpha1 from group definitions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{name}" : {
+      "parameters" : [ {
+        "name" : "name",
+        "description" : "The name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceGroup for version v1alpha1 from group definitions",
+        "operationId" : "read_definitions_v1alpha1_ResourceGroup",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceGroup resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read ResourceGroup for version v1alpha1 from group definitions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove ResourceGroup for version v1alpha1 from group definitions",
+        "operationId" : "remove_definitions_v1alpha1_ResourceGroup",
+        "tags" : [ "definitions" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing ResourceGroup for version v1alpha1 from group definitions. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed ResourceGroup for version v1alpha1 from group definitions"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update ResourceGroup for version v1alpha1 from group definitions",
+        "operationId" : "update_definitions_v1alpha1_ResourceGroup",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceGroup resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update ResourceGroup for version v1alpha1 from group definitions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroup"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/resources" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "list_definitions_v1alpha1_ResourceGroup_ResourceDefinition",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "create_definitions_v1alpha1_ResourceGroup_ResourceDefinition",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/resources/{name}" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the ResourceDefinition",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "read_definitions_v1alpha1_ResourceGroup_ResourceDefinition",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "remove_definitions_v1alpha1_ResourceGroup_ResourceDefinition",
+        "tags" : [ "definitions" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "update_definitions_v1alpha1_ResourceGroup_ResourceDefinition",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinition resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update ResourceDefinition for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/resourceversions" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "list_definitions_v1alpha1_ResourceGroup_ResourceDefinitionVersion",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinitionVersion resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "create_definitions_v1alpha1_ResourceGroup_ResourceDefinitionVersion",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinitionVersion resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/resourceversions/{name}" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the ResourceDefinitionVersion",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "read_definitions_v1alpha1_ResourceGroup_ResourceDefinitionVersion",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinitionVersion resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "remove_definitions_v1alpha1_ResourceGroup_ResourceDefinitionVersion",
+        "tags" : [ "definitions" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "update_definitions_v1alpha1_ResourceGroup_ResourceDefinitionVersion",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.ResourceDefinitionVersion resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update ResourceDefinitionVersion for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersion"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/commandlines" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "list_definitions_v1alpha1_ResourceGroup_CommandLineInterface",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/offsetParam"
+        }, {
+          "$ref" : "#/components/parameters/countParam"
+        }, {
+          "$ref" : "#/components/parameters/pageNumberParam"
+        }, {
+          "$ref" : "#/components/parameters/pageSizeParam"
+        }, {
+          "$ref" : "#/components/parameters/sortParam"
+        }, {
+          "$ref" : "#/components/parameters/queryParam"
+        }, {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.CommandLineInterface resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List all resources of type CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "create_definitions_v1alpha1_ResourceGroup_CommandLineInterface",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.CommandLineInterface resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Create a new CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Conflict"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/definitions/v1alpha1/groups/{groupName}/commandlines/{name}" : {
+      "parameters" : [ {
+        "name" : "groupName",
+        "description" : "Name of the ResourceGroup",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "name" : "name",
+        "description" : "The name of the CommandLineInterface",
+        "in" : "path",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      }, {
+        "$ref" : "#/components/parameters/TenantHeader"
+      } ],
+      "get" : {
+        "summary" : "Retrieves CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "read_definitions_v1alpha1_ResourceGroup_CommandLineInterface",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.CommandLineInterface resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Read CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "remove_definitions_v1alpha1_ResourceGroup_CommandLineInterface",
+        "tags" : [ "definitions" ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted removing CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup. Dependent resources found, clean up will finish once all dependent resources have been removed"
+          },
+          "204" : {
+            "description" : "Removed CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+        "operationId" : "update_definitions_v1alpha1_ResourceGroup_CommandLineInterface",
+        "tags" : [ "definitions" ],
+        "parameters" : [ {
+          "name" : "fields",
+          "in" : "query",
+          "description" : "Query string for restricting the response fields from the definitions.v1alpha1.CommandLineInterface resource. Multiple values can be specified separated by comma. Supported values: group, apiVersion, kind, name, title, metadata, attributes, tags, spec. Unknown values will be ignored.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Update CommandLineInterface for version v1alpha1 from group definitions in scope ResourceGroup",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterface"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "parameters" : {
+      "offsetParam" : {
+        "name" : "offset",
+        "in" : "query",
+        "description" : "The offset index into the result set to start returning results from.",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "default" : 0
+        }
+      },
+      "countParam" : {
+        "name" : "count",
+        "in" : "query",
+        "description" : "The maximum number of entities to return.",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "default" : 20
+        }
+      },
+      "pageNumberParam" : {
+        "name" : "page",
+        "in" : "query",
+        "description" : "The offset starting page number in the result set to start returning results from, starts at 1.",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "default" : 1
+        }
+      },
+      "pageSizeParam" : {
+        "name" : "pageSize",
+        "in" : "query",
+        "description" : "The number of entities allowed in a page.",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "default" : 20
+        }
+      },
+      "sortParam" : {
+        "name" : "sort",
+        "in" : "query",
+        "description" : "The field to sort result sets by, in ASC or DESC order.",
+        "required" : false,
+        "schema" : {
+          "type" : "string"
+        }
+      },
+      "queryParam" : {
+        "name" : "query",
+        "in" : "query",
+        "description" : "Query string for filtering entity. Expressed in FIQL/RSQL language. Supported filters on resources:\n  * name\n  * tags\n  * attributes\n  * metadata.references.id\n  * metadata.references.kind\n  * metadata.references.name\n  * metadata.resourceVersion\n  * metadata.audit.createTimestamp - Date filter must be provided as epoch time or yyyy-MM-dd'T'HH:mm:ss.SSSZZZZ\n  * metadata.audit.modifyTimestamp - Date filter must be provided as epoch time or yyyy-MM-dd'T'HH:mm:ss.SSSZZZZ\n",
+        "required" : false,
+        "schema" : {
+          "type" : "string"
+        }
+      },
+      "TenantHeader" : {
+        "name" : "X-Axway-Tenant-Id",
+        "in" : "header",
+        "schema" : {
+          "type" : "string",
+          "maxLength" : 36
+        },
+        "required" : true,
+        "description" : "The currently selected team if the user is using the system within a team context"
+      }
+    },
+    "responses" : {
+      "BadRequest" : {
+        "description" : "Failed to validate request parameters.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Unauthorized. A valid authorization header was not provided with the request to authenticate.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden" : {
+        "description" : "Forbidden, the user does not have the correct permissions to call this API.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "The resource specified could not be found.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict" : {
+        "description" : "Request conflicts with the current state of the server.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError" : {
+        "description" : "Unexpected internal server error.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/api.v1.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "token" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "description" : "Authenticated platform bearer token."
+      }
+    },
+    "schemas" : {
+      "api.v1.ErrorResponse" : {
+        "title" : "api.v1.ErrorResponse",
+        "description" : "Detail for standard error responses.",
+        "type" : "object",
+        "additionalProperties" : true,
+        "properties" : {
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "additionalProperties" : true,
+              "properties" : {
+                "status" : {
+                  "type" : "integer"
+                },
+                "title" : {
+                  "type" : "string"
+                },
+                "detail" : {
+                  "type" : "string"
+                },
+                "meta" : {
+                  "type" : "object",
+                  "additionalProperties" : true,
+                  "properties" : {
+                    "tenantId" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "api.v1.Metadata" : {
+        "type" : "object",
+        "description" : "Metadata that all server resources have. Data is generated by the server.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Internal id of the resource."
+          },
+          "audit" : {
+            "$ref" : "#/components/schemas/api.v1.AuditMetadata"
+          },
+          "scope" : {
+            "type" : "object",
+            "description" : "The scope where this resource was defined.",
+            "properties" : {
+              "id" : {
+                "type" : "string",
+                "maxLength" : 32,
+                "description" : "Internal id of the scope resource where the resource is defined."
+              },
+              "kind" : {
+                "type" : "string",
+                "maxLength" : 30,
+                "description" : "The kind of the scope resource where the resource is defined."
+              },
+              "name" : {
+                "type" : "string",
+                "maxLength" : 100,
+                "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+                "description" : "The name of the scope where the resource is defined."
+              }
+            }
+          },
+          "resourceVersion" : {
+            "type" : "string",
+            "description" : "Internal version of this object that can be used by clients to determine when objects have changed.",
+            "maxLength" : 20
+          },
+          "references" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/api.v1.Reference"
+            }
+          },
+          "state" : {
+            "type" : "string",
+            "description" : "Defines the state of the resource. If present, indicates if the resource is in Deleting state."
+          }
+        },
+        "readOnly" : true
+      },
+      "api.v1.Reference" : {
+        "type" : "object",
+        "description" : "List of objects dependent by this object.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "maxLength" : 32,
+            "description" : "Unique id generated by the server."
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "description" : "The kind of the resource that it is reffering to."
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "The name of the resource that it is reffering to."
+          },
+          "type" : {
+            "type" : "string",
+            "default" : "hard",
+            "description" : "Defines the type of the reference: * soft - spec property that has this reference will get nulled out if the referenced resource gets removed. * hard - dictates that the current resource will get removed when the referenced resource gets removed.\n",
+            "enum" : [ "soft", "hard" ]
+          }
+        },
+        "readOnly" : true
+      },
+      "api.v1.AuditMetadata" : {
+        "title" : "api.v1.AuditMetadata",
+        "description" : "Read-only metadata for the record.",
+        "properties" : {
+          "createTimestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "The creation time."
+          },
+          "createUserId" : {
+            "type" : "string",
+            "description" : "Id of the user that created the entity.",
+            "minLength" : 1,
+            "maxLength" : 38
+          },
+          "modifyTimestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "The last modification time."
+          },
+          "modifyUserId" : {
+            "type" : "string",
+            "description" : "Id of the user that last modified the entity.",
+            "minLength" : 1,
+            "maxLength" : 38
+          }
+        },
+        "readOnly" : true,
+        "type" : "object"
+      },
+      "api.v1.Attributes" : {
+        "title" : "api.v1.Attributes",
+        "description" : "Custom attributes added to objects.",
+        "type" : "object",
+        "additionalProperties" : {
+          "type" : "string"
+        }
+      },
+      "api.v1.ResourceInstance" : {
+        "description" : "API Server generic resource structure.",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Defines the group from which the resource belongs to. The server infers this from the endpoint the client submits the request to."
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "description" : "Defines the structure of the resource. The server infers this from the endpoint the client submits the request to."
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "description" : "Defines the kind of the resource. The server infers this from the endpoint the client submits the request to."
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "type" : "object",
+            "description" : "Resource instance specs."
+          }
+        },
+        "additionalProperties" : {
+          "type" : "object"
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.Environment" : {
+        "description" : "Definition of Environment for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind Environment. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "Environment"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the Environment. Environment name is unique and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the Environment."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.EnvironmentSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.EnvironmentSpec" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "variables" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "icon" : {
+            "type" : "object",
+            "description" : "Image for the Environment.",
+            "properties" : {
+              "contentType" : {
+                "description" : "Content-Type of the image.",
+                "type" : "string",
+                "enum" : [ "image/jpeg", "image/png" ],
+                "default" : "image/jpeg"
+              },
+              "data" : {
+                "description" : "Base64 encoded image.",
+                "type" : "string",
+                "format" : "base64"
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.APIService" : {
+        "description" : "Definition of APIService for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind APIService. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "APIService"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the APIService. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the APIService."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.APIServiceSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.APIServiceSpec" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "description" : "The description of the api service."
+          },
+          "icon" : {
+            "type" : "object",
+            "description" : "Image for the APIService.",
+            "properties" : {
+              "contentType" : {
+                "description" : "Content-Type of the image.",
+                "type" : "string",
+                "enum" : [ "image/jpeg", "image/png" ],
+                "default" : "image/jpeg"
+              },
+              "data" : {
+                "description" : "Base64 encoded image.",
+                "type" : "string",
+                "format" : "base64"
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.APIServiceRevision" : {
+        "description" : "Definition of APIServiceRevision for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind APIServiceRevision. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "APIServiceRevision"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the APIServiceRevision. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the APIServiceRevision."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.APIServiceRevisionSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.APIServiceRevisionSpec" : {
+        "type" : "object",
+        "properties" : {
+          "apiService" : {
+            "type" : "string",
+            "x-amplify-kind-ref" : "APIService"
+          },
+          "definition" : {
+            "type" : "object",
+            "description" : "The api specification details.",
+            "properties" : {
+              "type" : {
+                "type" : "string",
+                "description" : "The type of the api specification. Example oas3, oas2, wsdl, protobuf."
+              },
+              "value" : {
+                "type" : "string",
+                "description" : "Base64 encoded value of the api specification.",
+                "format" : "base64"
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "required" : [ "apiService" ],
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.APIServiceInstance" : {
+        "description" : "Definition of APIServiceInstance for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind APIServiceInstance. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "APIServiceInstance"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the APIServiceInstance. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the APIServiceInstance."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.APIServiceInstanceSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.APIServiceInstanceSpec" : {
+        "type" : "object",
+        "properties" : {
+          "apiServiceRevision" : {
+            "type" : "string",
+            "x-amplify-kind-ref" : "APIServiceRevision"
+          },
+          "endpoint" : {
+            "type" : "array",
+            "description" : "A list of locations where the api is deployed.",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "host" : {
+                  "type" : "string"
+                },
+                "port" : {
+                  "type" : "integer"
+                },
+                "protocol" : {
+                  "type" : "string"
+                },
+                "routing" : {
+                  "type" : "object",
+                  "properties" : {
+                    "basePath" : {
+                      "type" : "string",
+                      "pattern" : "^/",
+                      "description" : "The base path to the API. Example: '/api'."
+                    }
+                  },
+                  "additionalProperties" : false
+                }
+              },
+              "additionalProperties" : false,
+              "required" : [ "host", "protocol" ]
+            }
+          }
+        },
+        "required" : [ "apiServiceRevision", "endpoint" ],
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.Secret" : {
+        "description" : "Definition of Secret for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind Secret. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "Secret"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the Secret. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the Secret."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.SecretSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.SecretSpec" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "description" : "Key value pairs. The value will be stored encrypted.",
+            "x-amplify-encrypted" : true,
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        },
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.Webhook" : {
+        "description" : "Definition of Webhook for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind Webhook. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "Webhook"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the Webhook. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the Webhook."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.WebhookSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.WebhookSpec" : {
+        "type" : "object",
+        "properties" : {
+          "auth" : {
+            "type" : "object",
+            "description" : "Defines the authentication used to invoke the webhook. When invoking the webhook, the value from the secret/key will be sent in the Authorization header.\n",
+            "properties" : {
+              "secret" : {
+                "type" : "object",
+                "properties" : {
+                  "name" : {
+                    "type" : "string",
+                    "x-amplify-kind-ref" : "Secret",
+                    "x-amplify-kind-ref-type" : "soft",
+                    "description" : "Secret name to be used as a reference. If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.\n"
+                  },
+                  "key" : {
+                    "description" : "Key to be used from the referenced secret.",
+                    "type" : "string"
+                  }
+                },
+                "additionalProperties" : false
+              }
+            },
+            "additionalProperties" : false
+          },
+          "enabled" : {
+            "type" : "boolean",
+            "default" : true
+          },
+          "url" : {
+            "type" : "string",
+            "pattern" : "^https?://[\\w-_\\:\\.\\?\\/=%&#~\\[\\]\\(\\)@!$&',;]*$"
+          },
+          "headers" : {
+            "type" : "object",
+            "description" : "A list of headers that will be sent as par of the http call to the webhook endpoint.",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "url" ],
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.ConsumerInstance" : {
+        "description" : "Definition of ConsumerInstance for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind ConsumerInstance. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "ConsumerInstance"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the ConsumerInstance. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the ConsumerInstance."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstanceSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.ConsumerInstanceStatus"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.ConsumerInstanceSpec" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Maps to the name of the Catalog Item. If not provided, the resource title will be used.",
+            "maxLength" : 100,
+            "minLength" : 1
+          },
+          "apiServiceInstance" : {
+            "type" : "string",
+            "description" : "The name of an APIServiceInstance resource that specifies where the API is deployed.",
+            "x-amplify-kind-ref" : "APIServiceInstance"
+          },
+          "owningTeam" : {
+            "type" : "string",
+            "description" : "Name of the team that owns the Catalog Item. If not provided, the Default team will be used."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Maps to the description of the Catalog Item. Defaults to the API service description.",
+            "maxLength" : 350
+          },
+          "visibility" : {
+            "type" : "string",
+            "description" : "The visibility of the Catalog Item:\n * PUBLIC - If Catalog Item is in PUBLISHED state, it will be visible to the entire organization.\n * RESTRICTED - If Catalog Item is in PUBLISHED state, it will be visible to the owning team and teams part of the Catalog Item Access Control List.\n",
+            "enum" : [ "RESTRICTED", "PUBLIC" ],
+            "default" : "RESTRICTED"
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Version name for the revision.",
+            "maxLength" : 255,
+            "pattern" : "^(?!\\s).*(?<!\\s)$"
+          },
+          "state" : {
+            "type" : "string",
+            "description" : "Catalog Item state:\n * UNPUBLISHED - Only developers in the owning team will be able to access the Catalog Item.\n * PUBLISHED - Developers and Consumers in the owning team and any additional team in the ACL will\nbe able to access the Catalog Item.\n",
+            "enum" : [ "UNPUBLISHED", "PUBLISHED" ],
+            "default" : "UNPUBLISHED"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA",
+            "maxLength" : 255
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            },
+            "description" : "List of tags to be set on the Catalog Item. Max allowed tags for the Catalog Item is 80."
+          },
+          "icon" : {
+            "type" : "object",
+            "description" : "Image for the Catalog Item.\nIf not present, the icon on the APISevice will be used in the Catalog Item.",
+            "properties" : {
+              "contentType" : {
+                "description" : "Content-Type of the image.",
+                "type" : "string",
+                "enum" : [ "image/jpeg", "image/png" ],
+                "default" : "image/jpeg"
+              },
+              "data" : {
+                "description" : "Base64 encoded image.",
+                "type" : "string",
+                "format" : "base64"
+              }
+            },
+            "additionalProperties" : false
+          },
+          "documentation" : {
+            "type" : "string",
+            "description" : "Markdown documentation for the Catalog Item documentation."
+          },
+          "unstructuredDataProperties" : {
+            "type" : "object",
+            "description" : "The Catalog Item properties for unstructuded definition subtypes.",
+            "properties" : {
+              "type" : {
+                "type" : "string",
+                "description" : "Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'."
+              },
+              "contentType" : {
+                "type" : "string",
+                "description" : "Defines the Content Type of the data."
+              },
+              "label" : {
+                "type" : "string",
+                "description" : "Short name for the unstructured data."
+              },
+              "fileName" : {
+                "type" : "string",
+                "description" : "File name used to be sent as part of the content disposition header for revision unstructured data download."
+              },
+              "data" : {
+                "type" : "string",
+                "format" : "base64",
+                "description" : "Base64 encoded data for the Catalog Item revision content."
+              }
+            },
+            "required" : [ "type", "contentType" ],
+            "additionalProperties" : false
+          },
+          "additionalDataProperties" : {
+            "type" : "object",
+            "description" : "The Catalog Item properties for additional data.",
+            "properties" : {
+              "type" : {
+                "type" : "string",
+                "description" : "Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'."
+              },
+              "contentType" : {
+                "type" : "string",
+                "description" : "Defines the Content Type of the data."
+              },
+              "label" : {
+                "type" : "string",
+                "description" : "Short name for the unstructured data."
+              },
+              "fileName" : {
+                "type" : "string",
+                "description" : "File name used to be sent as part of the content disposition header for revision unstructured data download."
+              },
+              "data" : {
+                "type" : "string",
+                "format" : "base64",
+                "description" : "Base64 encoded data for the Catalog Item revision content."
+              }
+            },
+            "required" : [ "type", "contentType", "data" ],
+            "additionalProperties" : false
+          },
+          "subscription" : {
+            "type" : "object",
+            "properties" : {
+              "enabled" : {
+                "type" : "boolean",
+                "default" : false,
+                "description" : "Defines if subscriptions are allowed on the Catalog Item."
+              },
+              "autoSubscribe" : {
+                "type" : "boolean",
+                "default" : true,
+                "description" : "Defines if subscriptions need to be manually approved."
+              },
+              "subscriptionDefinition" : {
+                "type" : "string",
+                "x-amplify-kind-ref" : "ConsumerSubscriptionDefinition",
+                "x-amplify-kind-ref-type" : "soft",
+                "description" : "The name of a ConsumerSubscriptionDefinition kind that defines the schema and possible webhooks to get invoked."
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "additionalProperties" : false
+      },
+      "management.v1alpha1.ConsumerInstanceStatus" : {
+        "type" : "object",
+        "properties" : {
+          "phase" : {
+            "type" : "object",
+            "properties" : {
+              "name" : {
+                "type" : "string",
+                "enum" : [ "Update", "Delete", "Create" ]
+              },
+              "level" : {
+                "type" : "string",
+                "description" : "The criticality of the last update",
+                "enum" : [ "info", "error" ],
+                "default" : "info"
+              },
+              "transitionTime" : {
+                "type" : "string",
+                "format" : "date-time",
+                "description" : "Time of the current phase."
+              },
+              "message" : {
+                "type" : "string",
+                "description" : "Description of the phase."
+              }
+            },
+            "additionalProperties" : false,
+            "required" : [ "name", "level", "transitionTime" ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "phase" ]
+      },
+      "management.v1alpha1.ConsumerSubscriptionDefinition" : {
+        "description" : "Definition of ConsumerSubscriptionDefinition for version v1alpha1 in group management",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the management group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "management"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind ConsumerSubscriptionDefinition. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "ConsumerSubscriptionDefinition"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the ConsumerSubscriptionDefinition. Name is unique in its Environment scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the ConsumerSubscriptionDefinition."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/management.v1alpha1.ConsumerSubscriptionDefinitionSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "management.v1alpha1.ConsumerSubscriptionDefinitionSpec" : {
+        "type" : "object",
+        "properties" : {
+          "webhooks" : {
+            "type" : "array",
+            "description" : "List of Webhook kind resource names that dictates what webhooks will be invoked on subscription changes.",
+            "items" : {
+              "type" : "string",
+              "description" : "Reference to the webhook to be triggered on subscription updates.",
+              "x-amplify-kind-ref" : "Webhook",
+              "x-amplify-kind-ref-type" : "soft"
+            }
+          },
+          "schema" : {
+            "type" : "object",
+            "description" : "Subscription definition properties to be used by the consumers.",
+            "properties" : {
+              "properties" : {
+                "type" : "array",
+                "description" : "Defines the subscription schema properties as key/value pairs.",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "key" : {
+                      "type" : "string",
+                      "description" : "The Catalog Item subscription spec key.\nFor API type subscriptions, the key needs to be 'profile'."
+                    },
+                    "value" : {
+                      "type" : "object",
+                      "description" : "JSON schema to specify data needed from consumers when subscriptions are created."
+                    }
+                  },
+                  "required" : [ "key", "value" ],
+                  "additionalProperties" : false
+                }
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "additionalProperties" : false
+      },
+      "definitions.v1alpha1.ResourceGroup" : {
+        "description" : "Definition of ResourceGroup for version v1alpha1 in group definitions",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the definitions group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "definitions"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind ResourceGroup. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "ResourceGroup"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the ResourceGroup. ResourceGroup name is unique and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the ResourceGroup."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceGroupSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "definitions.v1alpha1.ResourceGroupSpec" : {
+        "type" : "object",
+        "additionalProperties" : false
+      },
+      "definitions.v1alpha1.ResourceDefinition" : {
+        "description" : "Definition of ResourceDefinition for version v1alpha1 in group definitions",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the definitions group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "definitions"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind ResourceDefinition. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "ResourceDefinition"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the ResourceDefinition. Name is unique in its ResourceGroup scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the ResourceDefinition."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "definitions.v1alpha1.ResourceDefinitionSpec" : {
+        "type" : "object",
+        "properties" : {
+          "plural" : {
+            "type" : "string",
+            "description" : "Value used in the endpoint path for accessing the resource."
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "description" : "Defines the kind of the resource. The server infers this from the endpoint the client submits the request to."
+          },
+          "scope" : {
+            "type" : "object",
+            "properties" : {
+              "kind" : {
+                "type" : "string",
+                "maxLength" : 30,
+                "description" : "Defines the kind of the scope. The server infers this from the endpoint the client submits the request to."
+              }
+            },
+            "additionalProperties" : false
+          },
+          "references" : {
+            "type" : "object",
+            "properties" : {
+              "toResources" : {
+                "type" : "array",
+                "description" : "A list of resources that the current resources has references to.",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "kind" : {
+                      "type" : "string",
+                      "maxLength" : 30,
+                      "description" : "Defines the kind of the resource."
+                    },
+                    "types" : {
+                      "type" : "array",
+                      "description" : "The type of the reference.",
+                      "items" : {
+                        "type" : "string",
+                        "enum" : [ "hard", "soft" ]
+                      }
+                    }
+                  },
+                  "additionalProperties" : false
+                }
+              },
+              "fromResources" : {
+                "type" : "array",
+                "description" : "A list of resources that the current resources is beging referenced from.",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "kind" : {
+                      "type" : "string",
+                      "maxLength" : 30,
+                      "description" : "Defines the kind of the resource."
+                    },
+                    "types" : {
+                      "type" : "array",
+                      "description" : "The type of the reference.",
+                      "items" : {
+                        "type" : "string",
+                        "enum" : [ "hard", "soft" ]
+                      }
+                    }
+                  },
+                  "additionalProperties" : false
+                }
+              }
+            },
+            "additionalProperties" : false
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "plural", "kind" ]
+      },
+      "definitions.v1alpha1.ResourceDefinitionVersion" : {
+        "description" : "Definition of ResourceDefinitionVersion for version v1alpha1 in group definitions",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the definitions group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "definitions"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind ResourceDefinitionVersion. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "ResourceDefinitionVersion"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the ResourceDefinitionVersion. Name is unique in its ResourceGroup scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the ResourceDefinitionVersion."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/definitions.v1alpha1.ResourceDefinitionVersionSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "definitions.v1alpha1.ResourceDefinitionVersionSpec" : {
+        "type" : "object",
+        "properties" : {
+          "resourceDefinition" : {
+            "type" : "string",
+            "x-amplify-kind-ref" : "ResourceDefinition",
+            "x-amplify-kind-ref-type" : "hard",
+            "description" : "A reference to a resource definition."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "The name of the version to be used in the resource definition."
+          },
+          "served" : {
+            "type" : "boolean",
+            "description" : "Defines if this version is currently served by the server."
+          },
+          "storage" : {
+            "type" : "boolean",
+            "description" : "Defines if this version is used when storing the resource instance details."
+          },
+          "spec" : {
+            "type" : "object",
+            "description" : "Defines the strucure of the spec for this resource version."
+          }
+        },
+        "additionalProperties" : true,
+        "required" : [ "resourceDefinition", "name", "served", "storage" ]
+      },
+      "definitions.v1alpha1.CommandLineInterface" : {
+        "description" : "Definition of CommandLineInterface for version v1alpha1 in group definitions",
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "readOnly" : true,
+            "description" : "Resource belongs to the definitions group. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "definitions"
+          },
+          "apiVersion" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "readOnly" : true,
+            "description" : "Resource version is v1alpha1. The version defines the structure of the resource. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "v1alpha1"
+          },
+          "kind" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "readOnly" : true,
+            "description" : "Resource of kind CommandLineInterface. Cannot be updated. The server infers this from the endpoint the client submits the request to.",
+            "default" : "CommandLineInterface"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "pattern" : "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+            "description" : "Name of the CommandLineInterface. Name is unique in its ResourceGroup scope and cannot be updated. The characters allowed in names are: digits (0-9), lower case letters (a-z), -, and ."
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 350,
+            "description" : "The friendly name of the CommandLineInterface."
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/api.v1.Metadata"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/api.v1.Attributes"
+          },
+          "tags" : {
+            "type" : "array",
+            "description" : "List of tags.",
+            "items" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 80
+            }
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/definitions.v1alpha1.CommandLineInterfaceSpec"
+          }
+        },
+        "required" : [ "name", "spec" ]
+      },
+      "definitions.v1alpha1.CommandLineInterfaceSpec" : {
+        "type" : "object",
+        "properties" : {
+          "resourceDefinition" : {
+            "type" : "string",
+            "x-amplify-kind-ref" : "ResourceDefinition",
+            "x-amplify-kind-ref-type" : "hard",
+            "description" : "A reference to a resource definition."
+          },
+          "names" : {
+            "type" : "object",
+            "properties" : {
+              "plural" : {
+                "type" : "string",
+                "description" : "Defines the name used to access resources in this group. Also provided as default in the autocomplete for listing commands."
+              },
+              "singular" : {
+                "type" : "string",
+                "description" : "Defines the name used to access a resource in this group. Also provided as default in the autocomplete for single resource access commands."
+              },
+              "shortNames" : {
+                "type" : "array",
+                "description" : "Defines the short names that the cli can use to fetch a resource in the group.",
+                "items" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "additionalProperties" : false,
+            "required" : [ "plural", "singular", "shortNames" ]
+          },
+          "columns" : {
+            "type" : "array",
+            "description" : "Defines an ordered list of the columns and data to be rendered using a table output.",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "name" : {
+                  "type" : "string",
+                  "description" : "The name of the column for the resource."
+                },
+                "type" : {
+                  "type" : "string",
+                  "description" : "The type of the column.",
+                  "enum" : [ "string", "date" ]
+                },
+                "jsonPath" : {
+                  "type" : "string",
+                  "description" : "The JSONPath used to fetch data for the column starting from the root."
+                },
+                "description" : {
+                  "type" : "string",
+                  "description" : "The description of the column data."
+                }
+              },
+              "additionalProperties" : false,
+              "required" : [ "name", "type", "jsonPath" ]
+            }
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "columns", "resourceDefinition" ]
+      }
+    }
+  }
+}

@@ -1,0 +1,633 @@
+[
+  {
+    "group": "definitions",
+    "version": "v1alpha1",
+    "openapi": {
+      "components": {
+        "schemas": {
+          "ResourceGroupSPEC": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "ResourceDefinitionSPEC": {
+            "type": "object",
+            "properties": {
+              "plural": {
+                "type": "string",
+                "description": "Value used in the endpoint path for accessing the resource."
+              },
+              "kind": {
+                "type": "string",
+                "maxLength": 30,
+                "description": "Defines the kind of the resource. The server infers this from the endpoint the client submits the request to."
+              },
+              "scope": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "description": "Defines the kind of the scope. The server infers this from the endpoint the client submits the request to."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "references": {
+                "type": "object",
+                "properties": {
+                  "toResources": {
+                    "type": "array",
+                    "description": "A list of resources that the current resources has references to.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "maxLength": 30,
+                          "description": "Defines the kind of the resource."
+                        },
+                        "types": {
+                          "type": "array",
+                          "description": "The type of the reference.",
+                          "items": {
+                            "type": "string",
+                            "enum": ["hard", "soft"]
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "fromResources": {
+                    "type": "array",
+                    "description": "A list of resources that the current resources is beging referenced from.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "maxLength": 30,
+                          "description": "Defines the kind of the resource."
+                        },
+                        "types": {
+                          "type": "array",
+                          "description": "The type of the reference.",
+                          "items": {
+                            "type": "string",
+                            "enum": ["hard", "soft"]
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": ["plural", "kind"]
+          },
+          "ResourceDefinitionVersionSPEC": {
+            "type": "object",
+            "properties": {
+              "resourceDefinition": {
+                "type": "string",
+                "x-amplify-kind-ref": "ResourceDefinition",
+                "x-amplify-kind-ref-type": "hard",
+                "description": "A reference to a resource definition."
+              },
+              "name": {
+                "type": "string",
+                "description": "The name of the version to be used in the resource definition."
+              },
+              "served": {
+                "type": "boolean",
+                "description": "Defines if this version is currently served by the server."
+              },
+              "storage": {
+                "type": "boolean",
+                "description": "Defines if this version is used when storing the resource instance details."
+              },
+              "spec": {
+                "type": "object",
+                "description": "Defines the strucure of the spec for this resource version."
+              }
+            },
+            "additionalProperties": true,
+            "required": ["resourceDefinition", "name", "served", "storage"]
+          },
+          "CommandLineInterfaceSPEC": {
+            "type": "object",
+            "properties": {
+              "resourceDefinition": {
+                "type": "string",
+                "x-amplify-kind-ref": "ResourceDefinition",
+                "x-amplify-kind-ref-type": "hard",
+                "description": "A reference to a resource definition."
+              },
+              "names": {
+                "type": "object",
+                "properties": {
+                  "plural": {
+                    "type": "string",
+                    "description": "Defines the name used to access resources in this group. Also provided as default in the autocomplete for listing commands."
+                  },
+                  "singular": {
+                    "type": "string",
+                    "description": "Defines the name used to access a resource in this group. Also provided as default in the autocomplete for single resource access commands."
+                  },
+                  "shortNames": {
+                    "type": "array",
+                    "description": "Defines the short names that the cli can use to fetch a resource in the group.",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["plural", "singular", "shortNames"]
+              },
+              "columns": {
+                "type": "array",
+                "description": "Defines an ordered list of the columns and data to be rendered using a table output.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The name of the column for the resource."
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "The type of the column.",
+                      "enum": ["string", "date"]
+                    },
+                    "jsonPath": {
+                      "type": "string",
+                      "description": "The JSONPath used to fetch data for the column starting from the root."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "The description of the column data."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["name", "type", "jsonPath"]
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": ["columns", "resourceDefinition"]
+          }
+        }
+      },
+      "paths": {},
+      "openapi": "3.0.2",
+      "info": {
+        "title": "API Server specification.",
+        "version": "SNAPSHOT"
+      }
+    }
+  },
+  {
+    "group": "management",
+    "version": "v1alpha1",
+    "openapi": {
+      "components": {
+        "schemas": {
+          "ConsumerInstanceSTATUS": {
+            "type": "object",
+            "properties": {
+              "phase": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": ["Update", "Delete", "Create"]
+                  },
+                  "level": {
+                    "type": "string",
+                    "description": "The criticality of the last update",
+                    "enum": ["info", "error"],
+                    "default": "info"
+                  },
+                  "transitionTime": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Time of the current phase."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Description of the phase."
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["name", "level", "transitionTime"]
+              }
+            },
+            "additionalProperties": false,
+            "required": ["phase"]
+          },
+          "EnvironmentSPEC": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "variables": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "icon": {
+                "type": "object",
+                "description": "Image for the Environment.",
+                "properties": {
+                  "contentType": {
+                    "description": "Content-Type of the image.",
+                    "type": "string",
+                    "enum": ["image/jpeg", "image/png"],
+                    "default": "image/jpeg"
+                  },
+                  "data": {
+                    "description": "Base64 encoded image.",
+                    "type": "string",
+                    "format": "base64"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "APIServiceSPEC": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "The description of the api service."
+              },
+              "icon": {
+                "type": "object",
+                "description": "Image for the APIService.",
+                "properties": {
+                  "contentType": {
+                    "description": "Content-Type of the image.",
+                    "type": "string",
+                    "enum": ["image/jpeg", "image/png"],
+                    "default": "image/jpeg"
+                  },
+                  "data": {
+                    "description": "Base64 encoded image.",
+                    "type": "string",
+                    "format": "base64"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "APIServiceRevisionSPEC": {
+            "type": "object",
+            "properties": {
+              "apiService": {
+                "type": "string",
+                "x-amplify-kind-ref": "APIService"
+              },
+              "definition": {
+                "type": "object",
+                "description": "The api specification details.",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of the api specification. Example oas3, oas2, wsdl, protobuf."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Base64 encoded value of the api specification.",
+                    "format": "base64"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["apiService"],
+            "additionalProperties": false
+          },
+          "APIServiceInstanceSPEC": {
+            "type": "object",
+            "properties": {
+              "apiServiceRevision": {
+                "type": "string",
+                "x-amplify-kind-ref": "APIServiceRevision"
+              },
+              "endpoint": {
+                "type": "array",
+                "description": "A list of locations where the api is deployed.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "host": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "protocol": {
+                      "type": "string"
+                    },
+                    "routing": {
+                      "type": "object",
+                      "properties": {
+                        "basePath": {
+                          "type": "string",
+                          "pattern": "^/",
+                          "description": "The base path to the API. Example: '/api'."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["host", "protocol"]
+                }
+              }
+            },
+            "required": ["apiServiceRevision", "endpoint"],
+            "additionalProperties": false
+          },
+          "SecretSPEC": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "description": "Key value pairs. The value will be stored encrypted.",
+                "x-amplify-encrypted": true,
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "WebhookSPEC": {
+            "type": "object",
+            "properties": {
+              "auth": {
+                "type": "object",
+                "description": "Defines the authentication used to invoke the webhook. When invoking the webhook, the value from the secret/key will be sent in the Authorization header.\n",
+                "properties": {
+                  "secret": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "x-amplify-kind-ref": "Secret",
+                        "x-amplify-kind-ref-type": "soft",
+                        "description": "Secret name to be used as a reference. If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.\n"
+                      },
+                      "key": {
+                        "description": "Key to be used from the referenced secret.",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?://[\\w-_\\:\\.\\?\\/=%&#~\\[\\]\\(\\)@!$&',;]*$"
+              },
+              "headers": {
+                "type": "object",
+                "description": "A list of headers that will be sent as par of the http call to the webhook endpoint.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+          },
+          "ConsumerInstanceSPEC": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Maps to the name of the Catalog Item. If not provided, the resource title will be used.",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              "apiServiceInstance": {
+                "type": "string",
+                "description": "The name of an APIServiceInstance resource that specifies where the API is deployed.",
+                "x-amplify-kind-ref": "APIServiceInstance"
+              },
+              "owningTeam": {
+                "type": "string",
+                "description": "Name of the team that owns the Catalog Item. If not provided, the Default team will be used."
+              },
+              "description": {
+                "type": "string",
+                "description": "Maps to the description of the Catalog Item. Defaults to the API service description.",
+                "maxLength": 350
+              },
+              "visibility": {
+                "type": "string",
+                "description": "The visibility of the Catalog Item:\n * PUBLIC - If Catalog Item is in PUBLISHED state, it will be visible to the entire organization.\n * RESTRICTED - If Catalog Item is in PUBLISHED state, it will be visible to the owning team and teams part of the Catalog Item Access Control List.\n",
+                "enum": ["RESTRICTED", "PUBLIC"],
+                "default": "RESTRICTED"
+              },
+              "version": {
+                "type": "string",
+                "description": "Version name for the revision.",
+                "maxLength": 255,
+                "pattern": "^(?!\\s).*(?<!\\s)$"
+              },
+              "state": {
+                "type": "string",
+                "description": "Catalog Item state:\n * UNPUBLISHED - Only developers in the owning team will be able to access the Catalog Item.\n * PUBLISHED - Developers and Consumers in the owning team and any additional team in the ACL will\nbe able to access the Catalog Item.\n",
+                "enum": ["UNPUBLISHED", "PUBLISHED"],
+                "default": "UNPUBLISHED"
+              },
+              "status": {
+                "type": "string",
+                "description": "A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA",
+                "maxLength": 255
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "description": "List of tags to be set on the Catalog Item. Max allowed tags for the Catalog Item is 80."
+              },
+              "icon": {
+                "type": "object",
+                "description": "Image for the Catalog Item.\nIf not present, the icon on the APISevice will be used in the Catalog Item.",
+                "properties": {
+                  "contentType": {
+                    "description": "Content-Type of the image.",
+                    "type": "string",
+                    "enum": ["image/jpeg", "image/png"],
+                    "default": "image/jpeg"
+                  },
+                  "data": {
+                    "description": "Base64 encoded image.",
+                    "type": "string",
+                    "format": "base64"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "documentation": {
+                "type": "string",
+                "description": "Markdown documentation for the Catalog Item documentation."
+              },
+              "unstructuredDataProperties": {
+                "type": "object",
+                "description": "The Catalog Item properties for unstructuded definition subtypes.",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'."
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "description": "Defines the Content Type of the data."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Short name for the unstructured data."
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "description": "File name used to be sent as part of the content disposition header for revision unstructured data download."
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "base64",
+                    "description": "Base64 encoded data for the Catalog Item revision content."
+                  }
+                },
+                "required": ["type", "contentType"],
+                "additionalProperties": false
+              },
+              "additionalDataProperties": {
+                "type": "object",
+                "description": "The Catalog Item properties for additional data.",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'."
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "description": "Defines the Content Type of the data."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Short name for the unstructured data."
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "description": "File name used to be sent as part of the content disposition header for revision unstructured data download."
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "base64",
+                    "description": "Base64 encoded data for the Catalog Item revision content."
+                  }
+                },
+                "required": ["type", "contentType", "data"],
+                "additionalProperties": false
+              },
+              "subscription": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Defines if subscriptions are allowed on the Catalog Item."
+                  },
+                  "autoSubscribe": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Defines if subscriptions need to be manually approved."
+                  },
+                  "subscriptionDefinition": {
+                    "type": "string",
+                    "x-amplify-kind-ref": "ConsumerSubscriptionDefinition",
+                    "x-amplify-kind-ref-type": "soft",
+                    "description": "The name of a ConsumerSubscriptionDefinition kind that defines the schema and possible webhooks to get invoked."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "ConsumerSubscriptionDefinitionSPEC": {
+            "type": "object",
+            "properties": {
+              "webhooks": {
+                "type": "array",
+                "description": "List of Webhook kind resource names that dictates what webhooks will be invoked on subscription changes.",
+                "items": {
+                  "type": "string",
+                  "description": "Reference to the webhook to be triggered on subscription updates.",
+                  "x-amplify-kind-ref": "Webhook",
+                  "x-amplify-kind-ref-type": "soft"
+                }
+              },
+              "schema": {
+                "type": "object",
+                "description": "Subscription definition properties to be used by the consumers.",
+                "properties": {
+                  "properties": {
+                    "type": "array",
+                    "description": "Defines the subscription schema properties as key/value pairs.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "description": "The Catalog Item subscription spec key.\nFor API type subscriptions, the key needs to be 'profile'."
+                        },
+                        "value": {
+                          "type": "object",
+                          "description": "JSON schema to specify data needed from consumers when subscriptions are created."
+                        }
+                      },
+                      "required": ["key", "value"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "paths": {},
+      "openapi": "3.0.2",
+      "info": {
+        "title": "API Server specification.",
+        "version": "SNAPSHOT"
+      }
+    }
+  }
+]
