@@ -84,3 +84,10 @@ type ResourceInstance struct {
 	// Resource instance specs.
 	Spec map[string]interface{} `json:"spec"`
 }
+
+// Event is an API Server event concerning a resource
+type Event struct {
+	Id      string
+	Type    string
+	Payload ResourceMeta
+}
