@@ -44,4 +44,4 @@ lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
 
 apiserver_generate: ## generate api server resources
-	./scripts/apiserver_generate.sh
+	./scripts/apiserver/apiserver_generate.sh
