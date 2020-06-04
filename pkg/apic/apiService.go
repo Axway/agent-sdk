@@ -42,7 +42,6 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 		servicesURL := c.cfg.GetAPIServerServicesURL()
 		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
 		serviceInstancesURL = c.cfg.GetAPIServerServicesInstancesURL()
-		consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
 		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
 		if err != nil {
 			return "", err
@@ -68,13 +67,27 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 
 	// add/update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		if !c.consumerInstanceExists(sanitizedName) {
+			httpMethod = http.MethodPost
+			consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
+		}
 		itemID, err = c.processAPIConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
 	}
-
 	return itemID, err
+}
+
+func (c *ServiceClient) consumerInstanceExists(name string) bool {
+	_, err := c.getAPIServerConsumerInstance(name)
+	if err != nil {
+		if err.Error() != strconv.Itoa(http.StatusNotFound) {
+			log.Errorf("Error getting consumerInstance '%v', %v", name, err.Error())
+		}
+		return false
+	}
+	return true
 }
 
 //processAPIServerService -
@@ -151,8 +164,14 @@ func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMe
 	return itemID, err
 }
 
-//processAPIConsumerInstance -
+//processAPIConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
+	// if this is an update (PUT) and the serviceBody indicates that the api has been Unpublished, deal with it
+	if httpMethod == http.MethodPut && strings.EqualFold(serviceBody.PubState, UnpublishedState) {
+		c.processUnpublish(httpMethod, name, serviceBody)
+		return "", nil
+	}
+
 	doc, err := strconv.Unquote(string(serviceBody.Documentation))
 	if err != nil {
 		return "", err
@@ -187,6 +206,59 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 	return itemID, err
 }
 
+// processUnpublish - in publishToEnvironmentAndCatalogMode, if a consumerInstance is being updated and the API is being
+// unpublished, unsubscribe the catalogItem. This will eventually trigger the callback for unsubscribing, which will take care
+// of cleaning up all of the other necessary objects.
+func (c *ServiceClient) processUnpublish(httpMethod, consumerInstanceName string, serviceBody ServiceBody) error {
+	// if not publishing to catalog also, ignore
+	if !c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		return nil
+	}
+	consumerInstance, err := c.getAPIServerConsumerInstance(consumerInstanceName)
+	if err != nil {
+		log.Errorf("Unable to get consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
+	}
+
+	catalogItemID, err := c.getCatalogItemIDForConsumerInstance(consumerInstance.Metadata.ID)
+	if err != nil {
+		log.Errorf("Unable to find catalogItem for consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
+	}
+
+	// this should remove the subscriptions
+	subscriptions, err := c.unsubscribeCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Unable to update subscriptions for catalog with ID '%s'. %v", catalogItemID, err.Error())
+		return err
+	}
+
+	// If there were subscriptions, do NOT delete the catalogItem or the consumerInstance yet. The call to unsubscribe the catalog item
+	// must complete first, or things will get left orphaned. Do them when we receive the requestForUnpublish
+	// callback instead!
+	if subscriptions > 0 {
+		return nil
+	}
+
+	// If there were subscriptions, we need to wait for the callback to remove the consumerInstance
+	// and catalogItem, etc. If there were none, that callback will never happen so we need to delete them now.
+	return c.postProcessUnpublish(catalogItemID, consumerInstanceName)
+}
+
+func (c *ServiceClient) postProcessUnpublish(catalogItemID, consumerInstanceName string) error {
+	err := c.DeleteCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Unable to delete catalogItem with ID '%s'. %v", catalogItemID, err.Error())
+		return err
+	}
+	err = c.DeleteConsumerInstance(consumerInstanceName)
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNoContent) {
+		log.Errorf("Unable to delete consumerInstance '%s'. %v", consumerInstanceName, err.Error())
+		return err
+	}
+	return nil
+}
+
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
 func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
 	spec := APIServiceSpec{}
@@ -198,11 +270,20 @@ func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string)
 	return "", nil
 }
 
+// deleteConsumerInstance -
+func (c *ServiceClient) deleteConsumerInstance(name string) error {
+	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetAPIServerConsumerInstancesURL()+"/"+name, nil)
+	if err.Error() != strconv.Itoa(http.StatusNotFound) {
+		return err
+	}
+	return nil
+}
+
 // isNewAPI -
 func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
 	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
+	request, err := http.NewRequest(http.MethodGet, c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
 
 	if token, err = c.tokenRequester.GetToken(); err != nil {
 		log.Error("Could not get token")
@@ -508,7 +589,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 	}
 	//  Check to see if rollback was processed
 	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		log.Error("Rollback API service.  API has been removed.")
+		log.Error("API service has been removed.")
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}

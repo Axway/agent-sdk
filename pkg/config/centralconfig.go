@@ -3,8 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
 
@@ -62,6 +66,7 @@ type CentralConfig interface {
 	GetURL() string
 	GetCatalogItemsURL() string
 	GetCatalogItemImageURL(catalogItemID string) string
+	GetCatalogItemRelationshipsURL(catalogItemID string) string
 	GetEnvironmentURL() string
 	GetAPIServerURL() string
 	GetAPIServerEnvironmentURL() string
@@ -192,6 +197,11 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 // GetCatalogItemImageURL - Returns the image based on catalogItemID
 func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
+}
+
+// GetCatalogItemRelationshipsURL - Returns the image based on catalogItemID
+func (c *CentralConfiguration) GetCatalogItemRelationshipsURL(catalogItemID string) string {
+	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/relationships"
 }
 
 // GetEnvironmentURL - Returns the APIServer URL for services API
@@ -342,4 +352,115 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
+}
+
+const (
+	pathTenantID              = "central.tenantId"
+	pathURL                   = "central.url"
+	pathAuthPrivateKey        = "central.auth.privateKey"
+	pathAuthPublicKey         = "central.auth.publicKey"
+	pathAuthKeyPassword       = "central.auth.keyPassword"
+	pathAuthURL               = "central.auth.url"
+	pathAuthRealm             = "central.auth.realm"
+	pathAuthClientID          = "central.auth.clientId"
+	pathAuthTimeout           = "central.auth.timeout"
+	pathSSLNextProtos         = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites       = "central.ssl.cipherSuites"
+	pathSSLMinVersion         = "central.ssl.minVersion"
+	pathSSLMaxVersion         = "central.ssl.maxVersion"
+	pathEnvironment           = "central.environment"
+	pathDeployment            = "central.deployment"
+	pathMode                  = "central.mode"
+	pathTeamID                = "central.teamId"
+	pathPollInterval          = "central.pollInterval"
+	pathProxyURL              = "central.proxyUrl"
+	pathAPIServerVersion      = "central.apiServerVersion"
+	pathAdditionalTags        = "central.additionalTags"
+)
+
+// AddCentralConfigProperties - Adds the command properties needed for Central Config
+func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
+	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
+	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
+	props.AddStringProperty(pathAuthURL, "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	props.AddStringProperty(pathAuthRealm, "Broker", "AMPLIFY Central authentication Realm")
+	props.AddStringProperty(pathAuthClientID, "", "Client ID for the service account")
+	props.AddDurationProperty(pathAuthTimeout, 10*time.Second, "Timeout waiting for AxwayID response")
+	// ssl properties and command flags
+	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
+	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name")
+	props.AddStringSliceProperty(pathSSLCipherSuites, TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	props.AddStringProperty(pathSSLMinVersion, TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
+	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
+
+	if agentType == TraceabilityAgent {
+		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
+	} else {
+		props.AddStringProperty(pathMode, "publishToCatalog", "Agent Mode")
+		props.AddStringProperty(pathTeamID, "", "Team ID for the current default team for creating catalog")
+		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+		// props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
+		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
+	}
+}
+
+// ParseCentralConfig - Parses the Central Config values form teh command line
+func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
+	proxyURL := props.StringPropertyValue(pathProxyURL)
+	cfg := &CentralConfiguration{
+		AgentType:    agentType,
+		TenantID:     props.StringPropertyValue(pathTenantID),
+		PollInterval: props.DurationPropertyValue(pathPollInterval),
+		Environment:  props.StringPropertyValue(pathEnvironment),
+		Auth: &AuthConfiguration{
+			URL:        props.StringPropertyValue(pathAuthURL),
+			Realm:      props.StringPropertyValue(pathAuthRealm),
+			ClientID:   props.StringPropertyValue(pathAuthClientID),
+			PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
+			PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
+			KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
+			Timeout:    props.DurationPropertyValue(pathAuthTimeout),
+		},
+		TLS: &TLSConfiguration{
+			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
+			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
+			CipherSuites:       NewCipherArray(props.StringSlicePropertyValue(pathSSLCipherSuites)),
+			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
+			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
+		},
+		ProxyURL: proxyURL,
+	}
+
+	// Set the proxy environment variable so the APIC auth uses the same proxy
+	if proxyURL != "" {
+		urlInfo, err := url.Parse(proxyURL)
+		if err == nil {
+			if urlInfo.Scheme == "https" {
+				os.Setenv("HTTPS_PROXY", proxyURL)
+			} else if urlInfo.Scheme == "http" {
+				os.Setenv("HTTP_PROXY", proxyURL)
+			}
+		}
+	}
+
+	if agentType == TraceabilityAgent {
+		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+	} else {
+		cfg.URL = props.StringPropertyValue(pathURL)
+		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
+		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
+		cfg.TeamID = props.StringPropertyValue(pathTeamID)
+		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
