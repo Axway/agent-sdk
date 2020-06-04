@@ -10,6 +10,7 @@ const files = fs.readdirSync(apiserverDir);
 for (file of files) {
   const dirToMake = file.split('_');
   const [, group, kind] = dirToMake;
+
   if (dirToMake.length > 2) {
     const modelsDir = `${apiserverDir}/models/${group}/${kind}`;
     execSync(`mkdir -p ${modelsDir}`);
