@@ -5,4 +5,4 @@
 # becomes
 # [{"group": "management", "kind": "APIService", "version": "v1alpha2", "schema": {}}, {"group": "management", "kind": "APIService", "version": "v1alpha2", "schema": {}}]
 
-.[] |= . as $root | .spec.versions[] | . + {"group": $root.group, "kind": $root.kind, "scope": $root.scope, "version": .name, "names": $root.spec.names }
+[.[] | . as $root | .spec.versions[] | . + {"group": $root.group, "kind": $root.kind, "scope": $root.scope, "version": .name, "names": $root.spec.names }]
