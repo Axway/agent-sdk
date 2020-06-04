@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
  	"group": "management",
  	"kind": "APIService",
  	"spec": {
- 			"versions": [ { "name": "v1alpha1", "schema": {} }, { "name": "v1alpha2", "schema": {} } ]
+ 		"versions": [ { "name": "v1alpha1", "schema": {} }, { "name": "v1alpha2", "schema": {} } ]
  	}
  }
  which becomes
