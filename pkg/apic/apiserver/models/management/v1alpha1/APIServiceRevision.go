@@ -37,7 +37,7 @@ func init() {
 type APIServiceRevision struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec ApiServiceRevisionSpec `json:"spec"`
 }
 
 func (res *APIServiceRevision) FromInstance(ri *apiv1.ResourceInstance) error {
@@ -47,7 +47,7 @@ func (res *APIServiceRevision) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &ApiServiceRevisionSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err

@@ -37,7 +37,7 @@ func init() {
 type CommandLineInterface struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec CommandLineInterfaceSpec `json:"spec"`
 }
 
 func (res *CommandLineInterface) FromInstance(ri *apiv1.ResourceInstance) error {
@@ -47,7 +47,7 @@ func (res *CommandLineInterface) FromInstance(ri *apiv1.ResourceInstance) error 
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &CommandLineInterfaceSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err

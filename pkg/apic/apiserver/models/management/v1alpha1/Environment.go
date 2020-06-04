@@ -37,7 +37,7 @@ func init() {
 type Environment struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec EnvironmentSpec `json:"spec"`
 }
 
 func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
@@ -47,7 +47,7 @@ func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &EnvironmentSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err

@@ -37,9 +37,9 @@ func init() {
 type ConsumerInstance struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec ConsumerInstanceSpec `json:"spec"`
 
-	Status struct{} `json:"status"`
+	Status ConsumerInstanceStatus `json:"status"`
 }
 
 func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
@@ -49,7 +49,7 @@ func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &ConsumerInstanceSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err
