@@ -2,6 +2,11 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+
+	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 )
 
 // APIServerSubscriptionSchema -
@@ -72,4 +77,63 @@ func (ss *subscriptionSchema) rawJSON() (json.RawMessage, error) {
 		return nil, err
 	}
 	return json.RawMessage(schemaBuffer), nil
+}
+
+// RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
+// creates a API Server resource for subscription definition
+func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	c.RegisteredSubscriptionSchema = subscriptionSchema
+	if c.cfg.IsPublishToEnvironmentMode() {
+		// Add API Server resource - SubscriptionDefinition
+		buffer, err := c.marshalSubsciptionDefinition(subscriptionSchema)
+
+		headers, err := c.createHeader()
+		if err != nil {
+			return err
+		}
+
+		request := coreapi.Request{
+			Method:  coreapi.POST,
+			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL(),
+			Headers: headers,
+			Body:    buffer,
+		}
+
+		response, err := c.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
+		if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+			logResponseErrors(response.Body)
+			return errors.New(strconv.Itoa(response.Code))
+		}
+	}
+	return nil
+}
+
+func (c *ServiceClient) marshalSubsciptionDefinition(subscriptionSchema SubscriptionSchema) ([]byte, error) {
+	catalogSubscriptionSchema, err := subscriptionSchema.rawJSON()
+	if err != nil {
+		return nil, err
+	}
+	spec := APIServerSubscriptionDefinitionSpec{
+		Schema: APIServerSubscriptionSchema{
+			Properties: []CatalogRevisionProperty{
+				{
+					Key:   "profile",
+					Value: catalogSubscriptionSchema,
+				},
+			},
+		},
+	}
+
+	apiServerService := APIServer{
+		Name:       c.cfg.GetEnvironmentName() + "." + "authsubscription",
+		Title:      "Subscription definition created by agent",
+		Attributes: nil,
+		Spec:       spec,
+		Tags:       nil,
+	}
+
+	return json.Marshal(apiServerService)
 }

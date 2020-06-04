@@ -57,7 +57,6 @@ func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
 		},
 	}
 	c := New(cfg)
-	c.(*ServiceClient).apiService = newAPIService(c.(*ServiceClient))
 	return c.(*ServiceClient), cfg
 }
 func TestCreateCatalogItemBodyForAdd(t *testing.T) {
@@ -89,7 +88,7 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes1, _ := c.catalogItemService.marshalCatalogItemInit(serviceBody)
+	catalogBytes1, _ := c.marshalCatalogItemInit(serviceBody)
 
 	var catalogItem1 CatalogItemInit
 	json.Unmarshal(catalogBytes1, &catalogItem1)
@@ -120,7 +119,7 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes2, _ := c.catalogItemService.marshalCatalogItemInit(serviceBody)
+	catalogBytes2, _ := c.marshalCatalogItemInit(serviceBody)
 
 	var catalogItem2 CatalogItemInit
 	json.Unmarshal(catalogBytes2, &catalogItem2)
@@ -151,7 +150,7 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		Tags:          tags,
 	}
 
-	catalogBytes3, _ := c.catalogItemService.marshalCatalogItemInit(serviceBody)
+	catalogBytes3, _ := c.marshalCatalogItemInit(serviceBody)
 
 	var catalogItem3 CatalogItemInit
 	json.Unmarshal(catalogBytes3, &catalogItem3)
@@ -179,7 +178,7 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 		ResourceType:  Wsdl,
 	}
 
-	catalogBytes3, _ = c.catalogItemService.marshalCatalogItemInit(serviceBody)
+	catalogBytes3, _ = c.marshalCatalogItemInit(serviceBody)
 
 	json.Unmarshal(catalogBytes3, &catalogItem3)
 
@@ -196,7 +195,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	endPoints, err := c.apiService.getEndpointsBasedOnSwagger(oas2Bytes, Oas2)
+	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, Oas2)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -208,7 +207,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
 	oas3Bytes, _ := ioutil.ReadAll(oas3Json)
 
-	endPoints, err = c.apiService.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
+	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
@@ -226,7 +225,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json2, _ := os.Open("./testdata/petstore-openapi3-template-urls.json") // OAS3
 	oas3Bytes2, _ := ioutil.ReadAll(oas3Json2)
 
-	endPoints, err = c.apiService.getEndpointsBasedOnSwagger(oas3Bytes2, Oas3)
+	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes2, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3 and templated URLs")
 	assert.Len(t, endPoints, 6, "The returned end points array did not have exactly 6 endpoints")
@@ -253,7 +252,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	wsdlFile, _ := os.Open("./testdata/weather.xml") // wsdl
 	wsdlBytes, _ := ioutil.ReadAll(wsdlFile)
 
-	endPoints, err = c.apiService.getEndpointsBasedOnSwagger(wsdlBytes, Wsdl)
+	endPoints, err = c.getEndpointsBasedOnSwagger(wsdlBytes, Wsdl)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")

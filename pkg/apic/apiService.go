@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,20 +18,10 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-type apiService struct {
-	serviceClient *ServiceClient
-}
-
-func newAPIService(serviceClient *ServiceClient) *apiService {
-	return &apiService{
-		serviceClient: serviceClient,
-	}
-}
-
 // processAPIService - This function will add or update the api service
 // If the api doesn't exist, it will add the service, revision, and instance.
 // If the api does exist, it will update the revision and instance
-func (a *apiService) processAPIService(serviceBody ServiceBody) (string, error) {
+func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, error) {
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
 		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
 	}
@@ -39,45 +30,45 @@ func (a *apiService) processAPIService(serviceBody ServiceBody) (string, error) 
 	var err error
 	httpMethod := http.MethodPut
 	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
-	servicesURL := a.serviceClient.cfg.GetAPIServerServicesURL() + "/" + sanitizedName
-	revisionsURL := a.serviceClient.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
-	serviceInstancesURL := a.serviceClient.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
-	consumerInstancesURL := a.serviceClient.cfg.GetAPIServerConsumerInstancesURL() + "/" + sanitizedName
+	servicesURL := c.cfg.GetAPIServerServicesURL() + "/" + sanitizedName
+	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
+	serviceInstancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
+	consumerInstancesURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + sanitizedName
 
 	// Verify if the api already exists
-	if a.isNewAPI(serviceBody) {
+	if c.isNewAPI(serviceBody) {
 		// add api
 		httpMethod = http.MethodPost
-		servicesURL := a.serviceClient.cfg.GetAPIServerServicesURL()
-		revisionsURL = a.serviceClient.cfg.GetAPIServerServicesRevisionsURL()
-		serviceInstancesURL = a.serviceClient.cfg.GetAPIServerServicesInstancesURL()
-		consumerInstancesURL = a.serviceClient.cfg.GetAPIServerConsumerInstancesURL()
-		_, err = a.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
+		servicesURL := c.cfg.GetAPIServerServicesURL()
+		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
+		serviceInstancesURL = c.cfg.GetAPIServerServicesInstancesURL()
+		consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
+		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		_, err = a.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
+		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	// add/update api revision
-	_, err = a.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
+	_, err = c.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
 	if err != nil {
 		return "", err
 	}
 
 	// add/update api instance
-	itemID, err = a.processAPIServerInstance(serviceBody, httpMethod, serviceInstancesURL, sanitizedName)
+	itemID, err = c.processAPIServerInstance(serviceBody, httpMethod, serviceInstancesURL, sanitizedName)
 	if err != nil {
 		return "", err
 	}
 
 	// add/update consumer instance
-	if a.serviceClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		itemID, err = a.processAPIConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		itemID, err = c.processAPIConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
 		if err != nil {
 			return "", err
 		}
@@ -87,7 +78,7 @@ func (a *apiService) processAPIService(serviceBody ServiceBody) (string, error) 
 }
 
 //processAPIServerService -
-func (a *apiService) processAPIServerService(serviceBody ServiceBody, httpMethod, servicesURL, name string) (string, error) {
+func (c *ServiceClient) processAPIServerService(serviceBody ServiceBody, httpMethod, servicesURL, name string) (string, error) {
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	if serviceBody.Image != "" {
@@ -104,19 +95,19 @@ func (a *apiService) processAPIServerService(serviceBody ServiceBody, httpMethod
 		}
 	}
 
-	buffer, err := a.createAPIServerBody(serviceBody, spec, name)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
 		return "", err
 	}
 
-	return a.apiServiceDeployAPI(httpMethod, servicesURL, buffer)
+	return c.apiServiceDeployAPI(httpMethod, servicesURL, buffer)
 
 }
 
 //processAPIServerRevision -
-func (a *apiService) processAPIServerRevision(serviceBody ServiceBody, httpMethod, revisionsURL, name string) (string, error) {
+func (c *ServiceClient) processAPIServerRevision(serviceBody ServiceBody, httpMethod, revisionsURL, name string) (string, error) {
 	revisionDefinition := RevisionDefinition{
-		Type:  a.getRevisionDefinitionType(serviceBody),
+		Type:  c.getRevisionDefinitionType(serviceBody),
 		Value: serviceBody.Swagger,
 	}
 	spec := APIServiceRevisionSpec{
@@ -124,22 +115,22 @@ func (a *apiService) processAPIServerRevision(serviceBody ServiceBody, httpMetho
 		Definition: revisionDefinition,
 	}
 
-	buffer, err := a.createAPIServerBody(serviceBody, spec, name)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
 		return "", err
 	}
 
-	itemID, err := a.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
+	itemID, err := c.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		return a.rollbackAPIService(serviceBody, name)
+		return c.rollbackAPIService(serviceBody, name)
 	}
 
 	return itemID, err
 }
 
 //processAPIServerInstance -
-func (a *apiService) processAPIServerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
-	endPoints, _ := a.getEndpointsBasedOnSwagger(serviceBody.Swagger, a.getRevisionDefinitionType(serviceBody))
+func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
+	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(serviceBody))
 
 	// reset the name here to include the stage
 	spec := APIServerInstanceSpec{
@@ -147,21 +138,21 @@ func (a *apiService) processAPIServerInstance(serviceBody ServiceBody, httpMetho
 		InstanceEndPoint:   endPoints,
 	}
 
-	buffer, err := a.createAPIServerBody(serviceBody, spec, name)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
 		return "", err
 	}
 
-	itemID, err := a.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
+	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		return a.rollbackAPIService(serviceBody, name)
+		return c.rollbackAPIService(serviceBody, name)
 	}
 
 	return itemID, err
 }
 
 //processAPIConsumerInstance -
-func (a *apiService) processAPIConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
+func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
 	doc, err := strconv.Unquote(string(serviceBody.Documentation))
 	if err != nil {
 		return "", err
@@ -174,50 +165,50 @@ func (a *apiService) processAPIConsumerInstance(serviceBody ServiceBody, httpMet
 		Version:            serviceBody.Version,
 		State:              PublishedState,
 		Status:             "GA",
-		Tags:               a.serviceClient.mapToTagsArray(serviceBody.Tags),
+		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
 		Subscription: &APIServiceSubscription{
 			Enabled:                true,
 			AutoSubscribe:          true,
-			SubscriptionDefinition: a.serviceClient.cfg.GetEnvironmentName() + "." + "authsubscription",
+			SubscriptionDefinition: c.cfg.GetEnvironmentName() + "." + "authsubscription",
 		},
 	}
 
-	buffer, err := a.createAPIServerBody(serviceBody, spec, name)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
 		return "", err
 	}
 
-	itemID, err := a.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
+	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		return a.rollbackAPIService(serviceBody, name)
+		return c.rollbackAPIService(serviceBody, name)
 	}
 
 	return itemID, err
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (a *apiService) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
+func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
 	spec := APIServiceSpec{}
-	buffer, err := a.createAPIServerBody(serviceBody, spec, name)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
 		return "", err
 	}
-	a.apiServiceDeployAPI(http.MethodDelete, a.serviceClient.cfg.DeleteAPIServerServicesURL()+"/"+name, buffer)
+	c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteAPIServerServicesURL()+"/"+name, buffer)
 	return "", nil
 }
 
 // isNewAPI -
-func (a *apiService) isNewAPI(serviceBody ServiceBody) bool {
+func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
 	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest("GET", a.serviceClient.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
+	request, err := http.NewRequest("GET", c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
 
-	if token, err = a.serviceClient.tokenRequester.GetToken(); err != nil {
+	if token, err = c.tokenRequester.GetToken(); err != nil {
 		log.Error("Could not get token")
 	}
 
-	request.Header.Add("X-Axway-Tenant-Id", a.serviceClient.cfg.GetTenantID())
+	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
 	request.Header.Add("Authorization", "Bearer "+token)
 	request.Header.Add("Content-Type", "application/json")
 
@@ -230,7 +221,7 @@ func (a *apiService) isNewAPI(serviceBody ServiceBody) bool {
 }
 
 //getRevisionDefinitionType -
-func (a *apiService) getRevisionDefinitionType(serviceBody ServiceBody) string {
+func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
 	var revisionDefinitionType string
 	if serviceBody.ResourceType == Wsdl {
 		revisionDefinitionType = Wsdl
@@ -246,12 +237,12 @@ func (a *apiService) getRevisionDefinitionType(serviceBody ServiceBody) string {
 }
 
 // createAPIServerBody - create APIServer for server, revision, and instance
-func (a *apiService) createAPIServerBody(serviceBody ServiceBody, spec interface{}, name string) ([]byte, error) {
+func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interface{}, name string) ([]byte, error) {
 	attributes := make(map[string]interface{})
 	attributes["externalAPIID"] = serviceBody.RestAPIID
 	attributes["createdBy"] = serviceBody.CreatedBy
 
-	newtags := a.serviceClient.mapToTagsArray(serviceBody.Tags)
+	newtags := c.mapToTagsArray(serviceBody.Tags)
 
 	apiServer := APIServer{
 		Name:       name,
@@ -264,20 +255,20 @@ func (a *apiService) createAPIServerBody(serviceBody ServiceBody, spec interface
 	return json.Marshal(apiServer)
 }
 
-func (a *apiService) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
+func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
 	switch revisionDefinitionType {
 	case Wsdl:
-		return a.getWsdlEndpoints(swagger)
+		return c.getWsdlEndpoints(swagger)
 	case Oas2:
-		return a.getOas2Endpoints(swagger)
+		return c.getOas2Endpoints(swagger)
 	case Oas3:
-		return a.getOas3Endpoints(swagger)
+		return c.getOas3Endpoints(swagger)
 	}
 
 	return nil, fmt.Errorf("Unable to get endpoints from swagger; invalid definition type: %v", revisionDefinitionType)
 }
 
-func (a *apiService) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
+func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 	endPoints := []EndPoint{}
 	def, err := wsdl.Unmarshal(swagger)
 	if err != nil {
@@ -324,7 +315,15 @@ func (a *apiService) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 	return endPoints, nil
 }
 
-func (a *apiService) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
+func contains(endpts []EndPoint, endpt EndPoint) bool {
+	for _, pt := range endpts {
+		if pt == endpt {
+			return true
+		}
+	}
+	return false
+}
+func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
 	endPoints := []EndPoint{}
 	swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
 	host := swaggerHost[0]
@@ -361,7 +360,7 @@ func (a *apiService) getOas2Endpoints(swagger []byte) ([]EndPoint, error) {
 	return endPoints, nil
 }
 
-func (a *apiService) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
+func (c *ServiceClient) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 	endPoints := []EndPoint{}
 	openAPI, _ := openapi3.NewSwaggerLoader().LoadSwaggerFromData(swagger)
 
@@ -374,13 +373,13 @@ func (a *apiService) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 		defaultURL := ""
 		var err error
 		if server.Variables != nil {
-			defaultURL, allURLs, err = a.handleURLSubstitutions(server, allURLs)
+			defaultURL, allURLs, err = c.handleURLSubstitutions(server, allURLs)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		parsedEndPoints, err := a.parseURLsIntoEndpoints(defaultURL, allURLs)
+		parsedEndPoints, err := c.parseURLsIntoEndpoints(defaultURL, allURLs)
 		if err != nil {
 			return nil, err
 		}
@@ -390,7 +389,7 @@ func (a *apiService) getOas3Endpoints(swagger []byte) ([]EndPoint, error) {
 	return endPoints, nil
 }
 
-func (a *apiService) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
+func (c *ServiceClient) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
 	defaultURL := server.URL
 	// Handle substitutions
 	for serverKey, serverVar := range server.Variables {
@@ -418,7 +417,7 @@ func (a *apiService) handleURLSubstitutions(server *openapi3.Server, allURLs []s
 	return defaultURL, allURLs, nil
 }
 
-func (a *apiService) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndPoint, error) {
+func (c *ServiceClient) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndPoint, error) {
 	endPoints := []EndPoint{}
 	for _, urlStr := range allURLs {
 		urlObj, err := url.Parse(urlStr)
@@ -461,14 +460,37 @@ func (a *apiService) parseURLsIntoEndpoints(defaultURL string, allURLs []string)
 	return endPoints, nil
 }
 
+// Sanitize name to be path friendly and follow this regex: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*
+func sanitizeAPIName(name string) string {
+	// convert all letters to lower first
+	newName := strings.ToLower(name)
+
+	// parse name out. All valid parts must be '-', '.', a-z, or 0-9
+	re := regexp.MustCompile(`[-\.a-z0-9]*`)
+	matches := re.FindAllString(newName, -1)
+
+	// join all of the parts, separated with '-'. This in effect is substituting all illegal chars with a '-'
+	newName = strings.Join(matches, "-")
+
+	// The regex rule says that the name must not begin or end with a '-' or '.', so trim them off
+	newName = strings.TrimLeft(strings.TrimRight(newName, "-."), "-.")
+
+	// The regex rule also says that the name must not have a sequence of ".-", "-.", or "..", so replace them
+	r1 := strings.ReplaceAll(newName, "-.", "--")
+	r2 := strings.ReplaceAll(r1, ".-", "--")
+	r3 := strings.ReplaceAll(r2, "..", "--")
+
+	return r3
+}
+
 // apiServiceDeployAPI -
-func (a *apiService) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
+func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
 	// Unit testing. For now just dummy up a return
 	if isUnitTesting() {
 		return "12345678", nil
 	}
 
-	headers, err := a.serviceClient.createHeader()
+	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
 	}
@@ -480,7 +502,7 @@ func (a *apiService) apiServiceDeployAPI(method, url string, buffer []byte) (str
 		Headers:     headers,
 		Body:        buffer,
 	}
-	response, err := a.serviceClient.apiClient.Send(request)
+	response, err := c.apiClient.Send(request)
 	if err != nil {
 		return "", err
 	}
