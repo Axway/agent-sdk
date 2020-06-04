@@ -83,6 +83,7 @@ type CentralConfig interface {
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
 	GetProxyURL() string
+	SetProxyEnvironmentVariable() error
 	GetPollInterval() time.Duration
 	UpdateCatalogItemRevisions(catalogItemID string) string
 	GetCatalogItemByID(catalogItemID string) string
@@ -187,6 +188,21 @@ func (c *CentralConfiguration) GetURL() string {
 // GetProxyURL - Returns the central Proxy URL
 func (c *CentralConfiguration) GetProxyURL() string {
 	return c.ProxyURL
+}
+
+// SetProxyEnvironmentVariable - Set the proxy environment variable so the APIC auth uses the same proxy
+func (c *CentralConfiguration) SetProxyEnvironmentVariable() (err error) {
+	if c.GetProxyURL() != "" {
+		urlInfo, err := url.Parse(c.GetProxyURL())
+		if err == nil {
+			if urlInfo.Scheme == "https" {
+				os.Setenv("HTTPS_PROXY", c.GetProxyURL())
+			} else if urlInfo.Scheme == "http" {
+				os.Setenv("HTTP_PROXY", c.GetProxyURL())
+			}
+		}
+	}
+	return
 }
 
 // GetCatalogItemsURL - Returns the URL for catalog items API
@@ -437,17 +453,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		ProxyURL: proxyURL,
 	}
 
-	// Set the proxy environment variable so the APIC auth uses the same proxy
-	if proxyURL != "" {
-		urlInfo, err := url.Parse(proxyURL)
-		if err == nil {
-			if urlInfo.Scheme == "https" {
-				os.Setenv("HTTPS_PROXY", proxyURL)
-			} else if urlInfo.Scheme == "http" {
-				os.Setenv("HTTP_PROXY", proxyURL)
-			}
-		}
-	}
+	// Set the Proxy Environment Variable
+	cfg.SetProxyEnvironmentVariable()
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
