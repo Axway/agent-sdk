@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
+)
 
 // StatusConfig - Interface for status config
 type StatusConfig interface {
@@ -31,4 +35,25 @@ func (a *StatusConfiguration) GetPort() int {
 // GetHealthCheckPeriod - Returns the timeout before exiting discovery agent
 func (a *StatusConfiguration) GetHealthCheckPeriod() time.Duration {
 	return a.HealthCheckPeriod
+}
+
+const (
+	pathPort              = "status.port"
+	pathHealthcheckPeriod = "status.healthCheckPeriod"
+)
+
+// AddStatusConfigProperties - Adds the command properties needed for Status Config
+func AddStatusConfigProperties(props properties.Properties) {
+	props.AddIntProperty(pathPort, 8989, "The port that will serve the status endpoints")
+	props.AddDurationProperty(pathHealthcheckPeriod, 3*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
+	props.AddBoolFlag("status", "Get the status of all the Health Checks")
+}
+
+// ParseStatusConfig - Parses the Status Config values form teh command line
+func ParseStatusConfig(props properties.Properties) (StatusConfig, error) {
+	cfg := &StatusConfiguration{
+		Port:              props.IntPropertyValue(pathPort),
+		HealthCheckPeriod: props.DurationPropertyValue(pathHealthcheckPeriod),
+	}
+	return cfg, nil
 }
