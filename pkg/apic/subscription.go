@@ -34,6 +34,7 @@ type SubscriptionProperties struct {
 type Subscription interface {
 	GetID() string
 	GetApicID() string
+	GetCatalogItemID() string
 	GetState() SubscriptionState
 	GetPropertyValue(key string) string
 	UpdateState(newState SubscriptionState) error
@@ -63,6 +64,11 @@ func (s *CentralSubscription) GetID() string {
 // GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *CentralSubscription) GetApicID() string {
 	return s.ApicID
+}
+
+// GetCatalogItemID - Returns ID of the Catalog Item
+func (s *CentralSubscription) GetCatalogItemID() string {
+	return s.CatalogItemID
 }
 
 // GetState - Returns subscription state

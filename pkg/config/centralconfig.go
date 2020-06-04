@@ -66,6 +66,7 @@ type CentralConfig interface {
 	GetURL() string
 	GetCatalogItemsURL() string
 	GetCatalogItemImageURL(catalogItemID string) string
+	GetCatalogItemRelationshipsURL(catalogItemID string) string
 	GetEnvironmentURL() string
 	GetAPIServerURL() string
 	GetAPIServerEnvironmentURL() string
@@ -196,6 +197,11 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 // GetCatalogItemImageURL - Returns the image based on catalogItemID
 func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
+}
+
+// GetCatalogItemRelationshipsURL - Returns the image based on catalogItemID
+func (c *CentralConfiguration) GetCatalogItemRelationshipsURL(catalogItemID string) string {
+	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/relationships"
 }
 
 // GetEnvironmentURL - Returns the APIServer URL for services API

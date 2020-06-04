@@ -27,6 +27,7 @@ const (
 	addCatalog
 	addCatalogImage
 	updateCatalog
+	deleteCatalog
 	updateCatalogRevision
 	getCatalogItem
 )
@@ -39,7 +40,7 @@ func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
 	return c.addCatalog(serviceBody)
 }
 
-// UpdateService -
+// UpdateService - depending on the mode, ID might be a catalogID, a serverInstanceID, or a consumerInstanceID
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
 	if c.cfg.IsPublishToEnvironmentMode() {
 		return c.processAPIService(serviceBody)
