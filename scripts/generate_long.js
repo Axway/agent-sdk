@@ -5,32 +5,13 @@ const { execSync } = require('child_process');
  	"group": "management",
  	"kind": "APIService",
  	"spec": {
- 			"versions": [
- 					{
- 							"name": "v1alpha1",
- 							"schema": {}
- 					},
- 					{
- 							"name": "v1alpha2",
- 							"schema": {}
- 					}
- 			]
+ 			"versions": [ { "name": "v1alpha1", "schema": {} }, { "name": "v1alpha2", "schema": {} } ]
  	}
  }
  which becomes
  [
- 	{
- 			"group": "management",
- 			"kind": "APIService",
- 			"version": "v1alpha1",
- 			"schema": {}
- 	},
- 	{
- 			"group": "management",
- 			"kind": "APIService",
- 			"version": "v1alpha2",
- 			"schema": {}
- 	}
+ 	{ "group": "management", "kind": "APIService", "version": "v1alpha1", "schema": {} },
+ 	{ "group": "management", "kind": "APIService", "version": "v1alpha2","schema": {} }
  ]
 
  This gets passed into the openapi-generator command to create go code
@@ -128,10 +109,37 @@ for (groupedResource of groupedResources) {
   console.log(res.toString());
 }
 
-// The main struct for each resources is generated via gomplate
+const gomplateResources = resources.map((resource) => ({
+  kind: resource.kind,
+  version: resource.version,
+  group: resource.group,
+  scope: resource.scope || null,
+  resource: resource.names.plural,
+  fields: {
+    spec:
+      resource.schema.openAPIV3Schema.type !== 'object' &&
+      resource.schema.openAPIV3Schema.additionalProperties !== false,
+    ...Object.entries(resource.subresources || {})
+      .map(([key, value]) => [
+        key,
+        value.openAPIV3Schema.type !== 'object' &&
+          value.openAPIV3Schema.additionalProperties !== false,
+      ])
+      .reduce((acc, value) => {
+        acc[value[0]] = value[1];
+        return acc;
+      }, {}),
+  },
+}));
 
-const output = execSync(
-  `
-		export PROJ="git.ecd.axway.int/apigov/apic_agents_sdk"
-	`
-);
+// The main struct for each resources is generated via gomplate
+for (resource of gomplateResources) {
+  const input = `\'${JSON.stringify(resource)}\'`;
+  execSync(
+    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/resources.tmpl --out "pkg/apic/apiserver/models/${resource.group}/${resource.version}/${resource.kind}.go"`
+  );
+  console.log(`Created ${resource.group}/${resource.version}/${resource.kind}.go`);
+}
+
+execSync('go fmt ./pkg/apic/apiserver/models/...');
+execSync('goimports -w=true ./pkg/apic/apiserver/models');

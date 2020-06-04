@@ -6,11 +6,11 @@
 
   import (
     "encoding/json"
-    v1 "{{.Env.PROJ}}/pkg/apic/apiserver/models/api/v1"
+    apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
   )
   var (
-  _{{.res.kind}}GVK = v1.GroupVersionKind{
-		GroupKind: v1.GroupKind{
+  _{{.res.kind}}GVK = apiv1.GroupVersionKind{
+		GroupKind: apiv1.GroupKind{
 			Group: "{{.res.group}}",
 			Kind:  "{{.res.kind}}",
 		},
@@ -27,23 +27,23 @@
   {{end}}
   {{.res.kind}}Resource = "{{.res.resource}}"
   )
-  func {{.res.kind}}GVK() v1.GroupVersionKind {
+  func {{.res.kind}}GVK() apiv1.GroupVersionKind {
   return _{{.res.kind}}GVK
   }
 
   func init() {
-	v1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scope, {{.res.kind}}Resource)
+	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scope, {{.res.kind}}Resource)
   }
 
 
   type {{.res.kind}} struct {
-  v1.ResourceMeta
+  apiv1.ResourceMeta
   {{range $field, $isNotEmpty := .res.fields}}
      {{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{$field | strings.ToLower}}"`
   {{end}}
   }
 
-func (res *{{.res.kind}}) FromInstance(ri *v1.ResourceInstance) (error) {
+func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
 	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
@@ -61,7 +61,7 @@ func (res *{{.res.kind}}) FromInstance(ri *v1.ResourceInstance) (error) {
         return err
 }
 
-func (res *{{.res.kind}}) AsInstance() (*v1.ResourceInstance, error) {
+func (res *{{.res.kind}}) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
 		return nil, err
@@ -73,5 +73,5 @@ func (res *{{.res.kind}}) AsInstance() (*v1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	return &v1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
 }

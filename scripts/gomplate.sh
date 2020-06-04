@@ -1,0 +1,1 @@
+echo $INPUT | gomplate --context res="stdin:?type=application/json" -f ./scripts/resources.tmpl --out "pkg/apic/apiserver/models/$GROUP/$VERSION/$KIND.go"
