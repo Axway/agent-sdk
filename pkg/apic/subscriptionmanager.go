@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"sync"
 	"time"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
@@ -14,6 +15,8 @@ type SubscriptionManager interface {
 	Stop()
 	getPublisher() notification.Notifier
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
+	AddBlacklistItem(id string)
+	RemoveBlacklistItem(id string)
 }
 
 // subscriptionManager -
@@ -28,6 +31,8 @@ type subscriptionManager struct {
 	validator           SubscriptionValidator
 	statesToQuery       []string
 	apicClient          *ServiceClient
+	blacklist           map[string]string // subscription items to skip
+	blacklistLock       *sync.RWMutex     // Use lock when making changes/reading the blacklist map
 }
 
 // newSubscriptionManager - Creates a new subscription manager
@@ -37,6 +42,8 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 		apicClient:    apicClient,
 		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
 		statesToQuery: make([]string, 0),
+		blacklist:     make(map[string]string),
+		blacklistLock: &sync.RWMutex{},
 	}
 
 	return subscriptionMgr
@@ -66,7 +73,9 @@ func (sm *subscriptionManager) pollSubscriptions() {
 			subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 			if err == nil {
 				for _, subscription := range subscriptions {
-					sm.publishChannel <- subscription
+					if _, found := sm.blacklist[subscription.GetCatalogItemID()]; !found {
+						sm.publishChannel <- subscription
+					}
 				}
 			}
 		case <-sm.publishQuitChannel:
@@ -170,4 +179,16 @@ func (sm *subscriptionManager) getPublisher() notification.Notifier {
 
 func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]SubscriptionProcessor {
 	return sm.processorMap
+}
+
+func (sm *subscriptionManager) AddBlacklistItem(id string) {
+	sm.blacklistLock.RLock()
+	defer sm.blacklistLock.RUnlock()
+	sm.blacklist[id] = "" // don't care about the value
+}
+
+func (sm *subscriptionManager) RemoveBlacklistItem(id string) {
+	sm.blacklistLock.RLock()
+	defer sm.blacklistLock.RUnlock()
+	delete(sm.blacklist, id)
 }
