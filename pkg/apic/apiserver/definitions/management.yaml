@@ -1,0 +1,614 @@
+---
+group: management
+kind: Environment
+description: Resource representing an Amplify Central Environment.
+spec:
+  names:
+    plural: environments
+    singular: environment
+  cli:
+    shortNames:
+      - env
+      - envs
+    columns:
+      - name: Name
+        description: The name of the environment.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the environment was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the environment.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            description:
+              type: string
+            variables:
+              type: object
+              additionalProperties:
+                type: string
+            icon:
+              type: object
+              description: Image for the Environment.
+              properties:
+                contentType:
+                  description: Content-Type of the image.
+                  type: string
+                  enum:
+                    - image/jpeg
+                    - image/png
+                  default: image/jpeg
+                data:
+                  description: Base64 encoded image.
+                  type: string
+                  format: base64
+              additionalProperties: false
+          additionalProperties: false
+---
+group: management
+kind: APIService
+scope: Environment
+description: Resource representing an Amplify Central API Service
+spec:
+  names:
+    plural: apiservices
+    singular: apiservice
+  cli:
+    shortNames:
+      - apisvc
+      - apisvcs
+    columns:
+      - name: Name
+        description: The name of the API Service.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the API Service was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the API Service.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            description:
+              type: string
+              description: The description of the api service.
+            icon:
+              type: object
+              description: Image for the APIService.
+              properties:
+                contentType:
+                  description: Content-Type of the image.
+                  type: string
+                  enum:
+                    - image/jpeg
+                    - image/png
+                  default: image/jpeg
+                data:
+                  description: Base64 encoded image.
+                  type: string
+                  format: base64
+              additionalProperties: false
+          additionalProperties: false
+---
+group: management
+kind: APIServiceRevision
+scope: Environment
+description: Resource representing an Amplify Central API Service Revision
+spec:
+  names:
+    plural: apiservicerevisions
+    singular: apiservicerevision
+  cli:
+    shortNames:
+      - apisvcrev
+      - apisvcrevs
+    columns:
+      - name: Name
+        description: The name of the API Service Revision.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the API Service Revision was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the API Service Revision.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiService:
+              type: string
+              x-amplify-kind-ref: APIService
+            definition:
+              type: object
+              description: The api specification details.
+              properties:
+                type:
+                  type: string
+                  description: The type of the api specification. Example oas3, oas2, wsdl, protobuf.
+                value:
+                  type: string
+                  description: Base64 encoded value of the api specification.
+                  format: base64
+              additionalProperties: false
+          required:
+            - apiService
+          additionalProperties: false
+---
+group: management
+kind: APIServiceInstance
+scope: Environment
+description: Resource representing an Amplify Central API Service Instance
+spec:
+  names:
+    plural: apiserviceinstances
+    singular: apiserviceinstance
+  cli:
+    shortNames:
+      - apisvcinst
+      - apisvcinsts
+    columns:
+      - name: Name
+        description: The name of the API Service Instance.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the API Service Instance was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the API Service Instance.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiServiceRevision:
+              type: string
+              x-amplify-kind-ref: APIServiceRevision
+            endpoint:
+              type: array
+              description: A list of locations where the api is deployed.
+              items:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                  protocol:
+                    type: string
+                  routing:
+                    type: object
+                    properties:
+                      basePath:
+                        type: string
+                        pattern: '^/'
+                        description: "The base path to the API. Example: '/api'."
+                    additionalProperties: false
+                additionalProperties: false
+                required:
+                  - host
+                  - protocol
+          required:
+            - apiServiceRevision
+            - endpoint
+          additionalProperties: false
+---
+group: management
+kind: Secret
+scope: Environment
+description: Resource representing secrets for an Environment.
+spec:
+  names:
+    plural: secrets
+    singular: secret
+  cli:
+    columns:
+      - name: Name
+        description: The name of the Secret.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Secret was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Secret.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            data:
+              description: Key value pairs. The value will be stored encrypted.
+              x-amplify-encrypted: true
+              type: object
+              additionalProperties:
+                type: string
+          additionalProperties: false
+---
+group: management
+kind: Webhook
+scope: Environment
+description: Resource representing Webhook Configuration
+spec:
+  names:
+    plural: webhooks
+    singular: webhook
+  cli:
+    shortNames:
+      - whs
+      - wh
+    columns:
+      - name: Name
+        description: The name of the Webhook.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Webhook was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Webhook.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            auth:
+              type: object
+              description: >
+                Defines the authentication used to invoke the webhook.
+                When invoking the webhook, the value from the secret/key will be sent in the Authorization header.
+              properties:
+                secret:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      x-amplify-kind-ref: Secret
+                      x-amplify-kind-ref-type: soft
+                      description: >
+                        Secret name to be used as a reference.
+                        If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.
+                    key:
+                      description: Key to be used from the referenced secret.
+                      type: string
+                  additionalProperties: false
+              additionalProperties: false
+            enabled:
+              type: boolean
+              default: true
+            url:
+              type: string
+              pattern: '^https?://[\w-_\:\.\?\/=%&#~\[\]\(\)@!$&'',;]*$'
+            headers:
+              type: object
+              description: A list of headers that will be sent as par of the http call to the webhook endpoint.
+              additionalProperties:
+                type: string
+          required:
+            - url
+          additionalProperties: false
+---
+group: management
+kind: ConsumerInstance
+scope: Environment
+description: Resource representing a Unified Catalog Item of type API
+spec:
+  names:
+    plural: consumerinstances
+    singular: consumerinstance
+  cli:
+    shortNames:
+      - consinsts
+      - consinst
+    columns:
+      - name: Name
+        description: The name of the Consumer Instance.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Consumer Instance was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Consumer Instance.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Maps to the name of the Catalog Item. If not provided, the resource title will be used.
+              maxLength: 100
+              minLength: 1
+            apiServiceInstance:
+              type: string
+              description: The name of an APIServiceInstance resource that specifies where the API is deployed.
+              x-amplify-kind-ref: APIServiceInstance
+            owningTeam:
+              type: string
+              description: Name of the team that owns the Catalog Item. If not provided, the Default team will be used.
+            description:
+              type: string
+              description: Maps to the description of the Catalog Item. Defaults to the API service description.
+              maxLength: 350
+            visibility:
+              type: string
+              description: >
+                The visibility of the Catalog Item:
+                 * PUBLIC - If Catalog Item is in PUBLISHED state, it will be visible to the entire organization.
+                 * RESTRICTED - If Catalog Item is in PUBLISHED state, it will be visible to the owning team and teams part of the Catalog Item Access Control List.
+              enum:
+                - RESTRICTED
+                - PUBLIC
+              default: RESTRICTED
+            version:
+              type: string
+              description: Version name for the revision.
+              maxLength: 255
+              pattern: '^(?!\s).*(?<!\s)$'
+            state:
+              type: string
+              description: >
+                Catalog Item state:
+                 * UNPUBLISHED - Only developers in the owning team will be able to access the Catalog Item.
+                 * PUBLISHED - Developers and Consumers in the owning team and any additional team in the ACL will
+                be able to access the Catalog Item.
+              enum:
+                - UNPUBLISHED
+                - PUBLISHED
+              default: UNPUBLISHED
+            status:
+              type: string
+              description: 'A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA'
+              maxLength: 255
+            tags:
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 80
+              description: List of tags to be set on the Catalog Item. Max allowed tags for the Catalog Item is 80.
+            icon:
+              type: object
+              description: |-
+                Image for the Catalog Item.
+                If not present, the icon on the APISevice will be used in the Catalog Item.
+              properties:
+                contentType:
+                  description: Content-Type of the image.
+                  type: string
+                  enum:
+                    - image/jpeg
+                    - image/png
+                  default: image/jpeg
+                data:
+                  description: Base64 encoded image.
+                  type: string
+                  format: base64
+              additionalProperties: false
+            documentation:
+              type: string
+              description: Markdown documentation for the Catalog Item documentation.
+            unstructuredDataProperties:
+              type: object
+              description: The Catalog Item properties for unstructuded definition subtypes.
+              properties:
+                type:
+                  type: string
+                  description: Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'.
+                contentType:
+                  type: string
+                  description: Defines the Content Type of the data.
+                label:
+                  type: string
+                  description: Short name for the unstructured data.
+                fileName:
+                  type: string
+                  description: File name used to be sent as part of the content disposition header for revision unstructured data download.
+                data:
+                  type: string
+                  format: base64
+                  description: Base64 encoded data for the Catalog Item revision content.
+              required:
+                - type
+                - contentType
+              additionalProperties: false
+            additionalDataProperties:
+              type: object
+              description: The Catalog Item properties for additional data.
+              properties:
+                type:
+                  type: string
+                  description: Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'.
+                contentType:
+                  type: string
+                  description: Defines the Content Type of the data.
+                label:
+                  type: string
+                  description: Short name for the unstructured data.
+                fileName:
+                  type: string
+                  description: File name used to be sent as part of the content disposition header for revision unstructured data download.
+                data:
+                  type: string
+                  format: base64
+                  description: Base64 encoded data for the Catalog Item revision content.
+              required:
+                - type
+                - contentType
+                - data
+              additionalProperties: false
+            subscription:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  default: false
+                  description: Defines if subscriptions are allowed on the Catalog Item.
+                autoSubscribe:
+                  type: boolean
+                  default: true
+                  description: Defines if subscriptions need to be manually approved.
+                subscriptionDefinition:
+                  type: string
+                  x-amplify-kind-ref: ConsumerSubscriptionDefinition
+                  x-amplify-kind-ref-type: soft
+                  description: The name of a ConsumerSubscriptionDefinition kind that defines the schema and possible webhooks to get invoked.
+              additionalProperties: false
+          additionalProperties: false
+      subresources:
+        status:
+          openAPIV3Schema:
+            type: object
+            properties:
+              phase:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    enum:
+                      - Update
+                      - Delete
+                      - Create
+                  level:
+                    type: string
+                    description: The criticality of the last update
+                    enum:
+                      - info
+                      - error
+                    default: info
+                  transitionTime:
+                    type: string
+                    format: date-time
+                    description: Time of the current phase.
+                  message:
+                    type: string
+                    description: Description of the phase.
+                additionalProperties: false
+                required:
+                  - name
+                  - level
+                  - transitionTime
+            additionalProperties: false
+            required:
+              - phase
+          mutationStrategy:
+            type:
+              - resetOnUpdate
+---
+group: management
+kind: ConsumerSubscriptionDefinition
+scope: Environment
+description: Resource representing a Unified Catalog Item of type API.
+spec:
+  names:
+    plural: consumersubscriptiondefs
+    singular: consumersubscriptiondef
+  cli:
+    shortNames:
+      - conssubcsrdefs
+      - conssubcsrdef
+    columns:
+      - name: Name
+        description: The name of the Consumer Instance Subscription.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Consumer Instance Subscription was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Consumer Instance Subscription.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            webhooks:
+              type: array
+              description: List of Webhook kind resource names that dictates what webhooks will be invoked on subscription changes.
+              items:
+                type: string
+                description: Reference to the webhook to be triggered on subscription updates.
+                x-amplify-kind-ref: Webhook
+                x-amplify-kind-ref-type: soft
+            schema:
+              type: object
+              description: Subscription definition properties to be used by the consumers.
+              properties:
+                properties:
+                  type: array
+                  description: Defines the subscription schema properties as key/value pairs.
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        description: |-
+                          The Catalog Item subscription spec key.
+                          For API type subscriptions, the key needs to be 'profile'.
+                      value:
+                        type: object
+                        description: JSON schema to specify data needed from consumers when subscriptions are created.
+                    required:
+                      - key
+                      - value
+                    additionalProperties: false
+              additionalProperties: false
+          additionalProperties: false
