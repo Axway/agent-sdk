@@ -2,7 +2,7 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v pkg/apic/apiserver)
 
 all : clean
 
@@ -42,3 +42,6 @@ sonar: test-sonar
 
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
+
+apiserver_generate: ## generate api server resources
+	./scripts/apiserver/apiserver_generate.sh
