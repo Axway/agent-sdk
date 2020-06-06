@@ -290,12 +290,12 @@ func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
 }
 
-// UpdateCatalogItemRevisions - Returns URL to update catalog revision
+// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
 func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
-// GetCatalogItemByID - Returns URL to get catalog item by id
+// GetCatalogItemByIDURL - Returns URL to get catalog item by id
 func (c *CentralConfiguration) GetCatalogItemByIDURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID
 }
