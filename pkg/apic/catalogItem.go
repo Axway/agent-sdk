@@ -232,7 +232,7 @@ func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMs
 // UpdateCatalogItemRevisions -
 func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalogRevision
-	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisions(ID))
+	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisionsURL(ID))
 }
 
 // GetCatalogItemRevision -
@@ -244,7 +244,7 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByID(ID),
+		URL:     c.cfg.GetCatalogItemByIDURL(ID),
 		Headers: headers,
 	}
 
@@ -397,7 +397,7 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
 	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
 	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
-		_, err := c.unsubscribeCatalogItem(catalogID)
+		_, err := c.InitiateUnsubscribeCatalogItem(catalogID)
 		if err != nil {
 			return err
 		}
@@ -405,19 +405,41 @@ func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody 
 	return nil
 }
 
-// unsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error) {
+// InitiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
+func (c *ServiceClient) InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogItemID)
+		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogItemID)
 		if err != nil {
 			return 0, err
 		}
 
 		for _, subscription := range subscriptions {
 			// just initiate the unsubscibe, and let the poller handle finishing it all up
-			log.Debugf("Unsubscribing from active subscription %s for catalog item ID %s", subscription.Name, catalogItemID)
 			subscription.apicClient = c
+			log.Debugf("Updating subscription '%s' for catalog item ID '%s' to state: %s", subscription.Name, catalogItemID, string(SubscriptionUnsubscribeInitiated))
 			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)
+			if err != nil {
+				return len(subscriptions), err
+			}
+		}
+		return len(subscriptions), nil
+	}
+
+	return 0, nil
+}
+
+// UnsubscribeCatalogItem - move the catalog item to unsubscribed state
+func (c *ServiceClient) UnsubscribeCatalogItem(catalogItemID string) (int, error) {
+	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionUnsubscribeInitiated)}, catalogItemID)
+		if err != nil {
+			return 0, err
+		}
+
+		for _, subscription := range subscriptions {
+			subscription.apicClient = c
+			log.Debugf("Updating subscription '%s' for catalog item ID '%s' to state: %s", subscription.Name, catalogItemID, string(SubscriptionUnsubscribed))
+			err = subscription.UpdateState(SubscriptionUnsubscribed)
 			if err != nil {
 				return len(subscriptions), err
 			}
@@ -477,9 +499,24 @@ func (c *ServiceClient) doesCatalogItemForServiceHaveActiveSubscriptions(instanc
 	if err != nil {
 		return false, err
 	}
-	subscriptions, err := c.getActiveSubscriptionsForCatalogItem(catalogID)
+	subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogID)
 	if err != nil {
 		return false, err
 	}
 	return len(subscriptions) > 0, nil
+}
+
+func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state==" + state
+	}
+
+	queryParams["query"] = searchQuery
+	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
 }

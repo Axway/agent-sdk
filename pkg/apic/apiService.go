@@ -226,8 +226,8 @@ func (c *ServiceClient) processUnpublish(httpMethod, consumerInstanceName string
 		return err
 	}
 
-	// this should remove the subscriptions
-	subscriptions, err := c.unsubscribeCatalogItem(catalogItemID)
+	// this will start the removal of the subscriptions
+	subscriptions, err := c.InitiateUnsubscribeCatalogItem(catalogItemID)
 	if err != nil {
 		log.Errorf("Unable to update subscriptions for catalog with ID '%s'. %v", catalogItemID, err.Error())
 		return err
@@ -589,7 +589,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 	}
 	//  Check to see if rollback was processed
 	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		log.Error("API service has been removed.")
+		log.Debug("API service has been removed.")
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
