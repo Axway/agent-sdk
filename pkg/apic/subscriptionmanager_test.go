@@ -133,7 +133,7 @@ func TestSubscriptionManagerPollPublishToCatalogMode(t *testing.T) {
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
 	client.GetSubscriptionManager().RegisterValidator(subscriptionValidator)
 	client.GetSubscriptionManager().Start()
-	client.GetSubscriptionManager().AddBlcaklistItem("123")
+	client.GetSubscriptionManager().AddBlacklistItem("123")
 	client.GetSubscriptionManager().RemoveBlacklistItem("123")
 
 	time.Sleep(2 * time.Second)
