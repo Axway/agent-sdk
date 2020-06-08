@@ -35,7 +35,7 @@ sonar: test-sonar
 		-Dsonar.projectBaseDir=${WORKSPACE} \
 		-Dsonar.sources=. \
 		-Dsonar.tests=. \
-		-Dsonar.exclusions=**/mock/**,**/vendor/** \
+		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/apic/apiserver/definitions/**,**/apic/apiserver/models/** \
 		-Dsonar.test.inclusions=**/*test*.go \
 		-Dsonar.go.tests.reportPaths=goreport.json \
 		-Dsonar.go.coverage.reportPaths=gocoverage.out
