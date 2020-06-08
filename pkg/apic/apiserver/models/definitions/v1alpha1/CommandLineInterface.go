@@ -41,7 +41,6 @@ type CommandLineInterface struct {
 }
 
 func (res *CommandLineInterface) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err

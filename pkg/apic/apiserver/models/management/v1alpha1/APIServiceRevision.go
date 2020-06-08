@@ -41,7 +41,6 @@ type APIServiceRevision struct {
 }
 
 func (res *APIServiceRevision) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err

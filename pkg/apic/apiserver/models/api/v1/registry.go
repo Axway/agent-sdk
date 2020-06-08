@@ -12,9 +12,9 @@ var (
 
 // RegisterGVK registers a GroupVersionKind with optional scope and mandatory resource
 func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
-	// TODO gvk must not have empty fields
+	// TODO: gvk must not have empty fields
 
-	// TODO Resource must not be be empty
+	// TODO: Resource must not be be empty
 	if gvkSet[gvk] {
 		panic(fmt.Sprint("Attempt to register duplicate gvk: ", gvk))
 	}

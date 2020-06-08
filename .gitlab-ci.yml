@@ -109,7 +109,7 @@ stages:
 .get-latest-version: &get-latest-version |
   export IMAGE_NAME=${PROJECT}/${PACKAGE_NAME}
   if [ $(cat version) == 0.0.1 ];
-    then 
+    then
     export CI_COMMIT_SHA=$(git rev-parse --short=8 HEAD)
     export IMAGE_VERSION="0.0.1-${CI_COMMIT_SHA}";
   else

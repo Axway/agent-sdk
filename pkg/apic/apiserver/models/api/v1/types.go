@@ -5,6 +5,7 @@ type ErrorResponse struct {
 	Errors []map[string]map[string]interface{} `json:"errors,omitempty"`
 }
 
+// GroupKind the Group and Kind of the resource
 type GroupKind struct {
 	// Defines the group from which the resource belongs to. The server infers this from the endpoint the client submits the request to.
 	Group string `json:"group,omitempty"`
@@ -12,6 +13,7 @@ type GroupKind struct {
 	Kind string `json:"kind,omitempty"`
 }
 
+// GroupVersionKind - The group, version & kind of the resource
 type GroupVersionKind struct {
 	GroupKind
 	ApiVersion string `json:"apiVersion,omitempty"`
@@ -64,6 +66,7 @@ type Metadata struct {
 	State string `json:"state,omitempty"`
 }
 
+// ResourceMeta metadata for a ResourceInstance
 type ResourceMeta struct {
 	GroupVersionKind
 	Name     string   `json:"name"`

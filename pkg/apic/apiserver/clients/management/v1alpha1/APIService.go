@@ -1,0 +1,113 @@
+package v1alpha1
+
+import (
+	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+)
+
+// APIServiceClient -
+type APIServiceClient struct {
+	client *v1.Client
+}
+
+// NewAPIServiceClient -
+func NewAPIServiceClient(cb *v1.ClientBase) (*APIServiceClient, error) {
+	client, err := cb.ForKind(v1alpha1.APIServiceGVK())
+	if err != nil {
+		return nil, err
+	}
+
+	return &APIServiceClient{client}, nil
+}
+
+// WithScope -
+func (c *APIServiceClient) WithScope(scope string) *APIServiceClient {
+	return &APIServiceClient{
+		c.client.WithScope(scope),
+	}
+}
+
+// List -
+func (c *APIServiceClient) List() ([]*v1alpha1.APIService, error) {
+	riList, err := c.client.List()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.APIService, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.APIService{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+// Get -
+func (c *APIServiceClient) Get(name string) (*v1alpha1.APIService, error) {
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.APIService{}
+	service.FromInstance(ri)
+
+	return service, nil
+}
+
+// Delete -
+func (c *APIServiceClient) Delete(res *v1alpha1.APIService) error {
+	ri, err := res.AsInstance()
+
+	if err != nil {
+		return err
+	}
+
+	return c.client.Delete(ri)
+}
+
+// Create -
+func (c *APIServiceClient) Create(res *v1alpha1.APIService) (*v1alpha1.APIService, error) {
+	ri, err := res.AsInstance()
+
+	if err != nil {
+		return nil, err
+	}
+
+	cri, err := c.client.Create(ri)
+	if err != nil {
+		return nil, err
+	}
+
+	created := &v1alpha1.APIService{}
+
+	err = created.FromInstance(cri)
+	if err != nil {
+		return nil, err
+	}
+
+	return created, err
+}
+
+// Update -
+func (c *APIServiceClient) Update(res *v1alpha1.APIService) (*v1alpha1.APIService, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri)
+	updated := &v1alpha1.APIService{}
+
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}

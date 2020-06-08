@@ -1,0 +1,25 @@
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "Environment",
+  "name": "test-env-1",
+  "title": "test-env-1",
+  "metadata": {
+    "id": "e4f1cf5371cd390b0171cd43d7460056",
+    "audit": {
+      "createTimestamp": "2020-04-30T22:45:07.533+0000",
+      "createUserId": "DOSA_531453183cc145adb68ed2d8af625eb2",
+      "modifyTimestamp": "2020-04-30T22:45:07.533+0000",
+      "modifyUserId": "DOSA_531453183cc145adb68ed2d8af625eb2"
+    },
+    "resourceVersion": "297",
+    "references": []
+  },
+  "attributes": {
+    "attr": "value"
+  },
+  "tags": ["tag1", "tag2"],
+  "spec": {
+    "description": "desc"
+  }
+}

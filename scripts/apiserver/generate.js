@@ -102,6 +102,7 @@ const groupedResources = resources.reduce((acc, currentResource) => {
   return acc;
 }, initGroupedResources);
 
+// Create packages based on the group & version
 for (groupedResource of groupedResources) {
   const { group, openapi, version } = groupedResource;
   const res = execSync(
@@ -129,11 +130,14 @@ const gomplateResources = resources.map((resource) => ({
   },
 }));
 
-// The main struct for each resources is generated via gomplate
+// The main struct & client for each resource is generated via gomplate
 for (resource of gomplateResources) {
   const input = `\'${JSON.stringify(resource)}\'`;
   execSync(
-    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/resources.tmpl --out "pkg/apic/apiserver/models/${resource.group}/${resource.version}/${resource.kind}.go"`
+    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/resources.tmpl --out "pkg/apic/apiserver/models/${resource.group}/${resource.version}/${resource.kind}.go"`
+  );
+  execSync(
+    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/clients.tmpl --out "pkg/apic/apiserver/clients/${resource.group}/${resource.version}/${resource.kind}.go"`
   );
   console.log(`Created ${resource.group}/${resource.version}/${resource.kind}.go`);
 }
