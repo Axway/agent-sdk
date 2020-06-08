@@ -226,7 +226,7 @@ func (c *ServiceClient) processUnpublish(httpMethod, consumerInstanceName string
 		return err
 	}
 
-	// this should start the removal of the subscriptions
+	// this will start the removal of the subscriptions
 	subscriptions, err := c.InitiateUnsubscribeCatalogItem(catalogItemID)
 	if err != nil {
 		log.Errorf("Unable to update subscriptions for catalog with ID '%s'. %v", catalogItemID, err.Error())
