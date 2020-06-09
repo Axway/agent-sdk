@@ -267,11 +267,12 @@ func TestScoped(t *testing.T) {
 func TestListWithQuery(t *testing.T) {
 	// List envs
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments?query=hey").
+		Get("/management/v1alpha1/environments").
+		MatchParam("query", "name==test,tags==test").
 		Reply(200).
 		JSON([]*apiv1.ResourceInstance{mockEnv})
 
-	client.SetQuery("?query=hey")
+	client.SetQuery("?query=name==test,tags==test")
 	_, err := client.List()
 	if err != nil {
 		t.Fatalf("Error: %s", err)
