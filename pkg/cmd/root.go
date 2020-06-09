@@ -10,6 +10,7 @@ import (
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/spf13/cobra"
 
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/agentsync"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -61,6 +62,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 	c.props = properties.NewProperties(c.rootCmd)
 	c.addBaseProps()
+	agentsync.AddSyncConfigProperties(c.props)
 	corecfg.AddCentralConfigProperties(c.props, agentType)
 	corecfg.AddStatusConfigProperties(c.props)
 
@@ -132,7 +134,18 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// Validate Agent Config
-	return c.validateAgentConfig(agentCfg)
+	err = c.validateAgentConfig(agentCfg)
+	if err != nil {
+		return err
+	}
+
+	// Check the sync flag
+	exit, exitcode := agentsync.CheckSyncFlag(c.GetProperties())
+	if exit {
+		os.Exit(exitcode)
+	}
+
+	return err
 }
 
 // parse the logger config values and setup the logger
