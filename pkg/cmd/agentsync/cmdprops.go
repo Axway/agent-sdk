@@ -6,7 +6,7 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 )
 
-const syncFlag = "sync"
+const syncFlag = "synchronize"
 
 // CheckSyncFlag - checks to see if the sync flag was used, if so
 func CheckSyncFlag(props properties.Properties) (bool, int) {
