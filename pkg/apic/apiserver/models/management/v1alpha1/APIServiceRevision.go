@@ -34,12 +34,14 @@ func init() {
 	apiv1.RegisterGVK(_APIServiceRevisionGVK, APIServiceRevisionScope, APIServiceRevisionResource)
 }
 
+// APIServiceRevision Resource
 type APIServiceRevision struct {
 	apiv1.ResourceMeta
 
 	Spec ApiServiceRevisionSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a APIServiceRevision
 func (res *APIServiceRevision) FromInstance(ri *apiv1.ResourceInstance) error {
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
@@ -57,6 +59,7 @@ func (res *APIServiceRevision) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a APIServiceRevision to a ResourceInstance
 func (res *APIServiceRevision) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

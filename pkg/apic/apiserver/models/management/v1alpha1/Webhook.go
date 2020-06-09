@@ -34,12 +34,14 @@ func init() {
 	apiv1.RegisterGVK(_WebhookGVK, WebhookScope, WebhookResource)
 }
 
+// Webhook Resource
 type Webhook struct {
 	apiv1.ResourceMeta
 
 	Spec WebhookSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a Webhook
 func (res *Webhook) FromInstance(ri *apiv1.ResourceInstance) error {
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
@@ -57,6 +59,7 @@ func (res *Webhook) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a Webhook to a ResourceInstance
 func (res *Webhook) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

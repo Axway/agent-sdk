@@ -136,6 +136,7 @@ for (resource of gomplateResources) {
   execSync(
     `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/resources.tmpl --out "pkg/apic/apiserver/models/${resource.group}/${resource.version}/${resource.kind}.go"`
   );
+  execSync(`mkdir -p pkg/apic/apiserver/clients/${resource.group}/${resource.version}`);
   execSync(
     `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/clients.tmpl --out "pkg/apic/apiserver/clients/${resource.group}/${resource.version}/${resource.kind}.go"`
   );

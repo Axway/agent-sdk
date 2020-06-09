@@ -34,6 +34,7 @@ func init() {
 	apiv1.RegisterGVK(_ConsumerInstanceGVK, ConsumerInstanceScope, ConsumerInstanceResource)
 }
 
+// ConsumerInstance Resource
 type ConsumerInstance struct {
 	apiv1.ResourceMeta
 
@@ -42,6 +43,7 @@ type ConsumerInstance struct {
 	Status ConsumerInstanceStatus `json:"status"`
 }
 
+// FromInstance converts a ResourceInstance to a ConsumerInstance
 func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
@@ -59,6 +61,7 @@ func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a ConsumerInstance to a ResourceInstance
 func (res *ConsumerInstance) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
