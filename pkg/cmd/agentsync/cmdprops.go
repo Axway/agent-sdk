@@ -8,7 +8,7 @@ import (
 
 const syncFlag = "synchronize"
 
-// CheckSyncFlag - checks to see if the sync flag was used, if so
+// CheckSyncFlag - checks to see if the sync flag was used and runs the ProcessSynchronization. Returns if the agents should exit and the code if so.
 func CheckSyncFlag(props properties.Properties) (bool, int) {
 	if props.BoolFlagValue(syncFlag) {
 		// Call sync commands
