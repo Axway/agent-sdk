@@ -166,12 +166,6 @@ func (c *ServiceClient) processAPIServerInstance(serviceBody ServiceBody, httpMe
 
 //processAPIConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
-	// if this is an update (PUT) and the serviceBody indicates that the api has been Unpublished, deal with it
-	if httpMethod == http.MethodPut && strings.EqualFold(serviceBody.PubState, UnpublishedState) {
-		c.processUnpublish(httpMethod, name, serviceBody)
-		return "", nil
-	}
-
 	doc, err := strconv.Unquote(string(serviceBody.Documentation))
 	if err != nil {
 		return "", err
@@ -204,59 +198,6 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 	}
 
 	return itemID, err
-}
-
-// processUnpublish - in publishToEnvironmentAndCatalogMode, if a consumerInstance is being updated and the API is being
-// unpublished, unsubscribe the catalogItem. This will eventually trigger the callback for unsubscribing, which will take care
-// of cleaning up all of the other necessary objects.
-func (c *ServiceClient) processUnpublish(httpMethod, consumerInstanceName string, serviceBody ServiceBody) error {
-	// if not publishing to catalog also, ignore
-	if !c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		return nil
-	}
-	consumerInstance, err := c.getAPIServerConsumerInstance(consumerInstanceName)
-	if err != nil {
-		log.Errorf("Unable to get consumerInstance '%s'. %v", consumerInstanceName, err.Error())
-		return err
-	}
-
-	catalogItemID, err := c.getCatalogItemIDForConsumerInstance(consumerInstance.Metadata.ID)
-	if err != nil {
-		log.Errorf("Unable to find catalogItem for consumerInstance '%s'. %v", consumerInstanceName, err.Error())
-		return err
-	}
-
-	// this will start the removal of the subscriptions
-	subscriptions, err := c.InitiateUnsubscribeCatalogItem(catalogItemID)
-	if err != nil {
-		log.Errorf("Unable to update subscriptions for catalog with ID '%s'. %v", catalogItemID, err.Error())
-		return err
-	}
-
-	// If there were subscriptions, do NOT delete the catalogItem or the consumerInstance yet. The call to unsubscribe the catalog item
-	// must complete first, or things will get left orphaned. Do them when we receive the requestForUnpublish
-	// callback instead!
-	if subscriptions > 0 {
-		return nil
-	}
-
-	// If there were subscriptions, we need to wait for the callback to remove the consumerInstance
-	// and catalogItem, etc. If there were none, that callback will never happen so we need to delete them now.
-	return c.postProcessUnpublish(catalogItemID, consumerInstanceName)
-}
-
-func (c *ServiceClient) postProcessUnpublish(catalogItemID, consumerInstanceName string) error {
-	err := c.DeleteCatalogItem(catalogItemID)
-	if err != nil {
-		log.Errorf("Unable to delete catalogItem with ID '%s'. %v", catalogItemID, err.Error())
-		return err
-	}
-	err = c.DeleteConsumerInstance(consumerInstanceName)
-	if err != nil && err.Error() != strconv.Itoa(http.StatusNoContent) {
-		log.Errorf("Unable to delete consumerInstance '%s'. %v", consumerInstanceName, err.Error())
-		return err
-	}
-	return nil
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created

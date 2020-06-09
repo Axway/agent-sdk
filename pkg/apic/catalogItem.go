@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -385,24 +384,7 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 		return "", err
 	}
 
-	err = c.updateCatalogSubscription(catalogID, serviceBody)
-	if err != nil {
-		log.Warnf("Unable to update subscription for catalog with ID '%s'. %v", catalogID, err.Error())
-	}
 	return catalogID, nil
-}
-
-// updateCatalogSubscription -
-func (c *ServiceClient) updateCatalogSubscription(catalogID string, serviceBody ServiceBody) error {
-	// if the current state is unpublished, unsubscribe the catalog item. NOTE: despite the API docs that say the
-	// value of the state is UPPER, the api returns LOWER. Make them all the same before comparing
-	if strings.EqualFold(serviceBody.PubState, UnpublishedState) {
-		_, err := c.InitiateUnsubscribeCatalogItem(catalogID)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // InitiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
