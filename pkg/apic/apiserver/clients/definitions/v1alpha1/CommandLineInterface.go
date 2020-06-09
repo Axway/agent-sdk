@@ -32,7 +32,7 @@ func (c *CommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfa
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *CommandLineInterfaceClient) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 

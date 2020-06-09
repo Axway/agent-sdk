@@ -32,7 +32,7 @@ func (c *SecretClient) WithScope(scope string) *SecretClient {
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *SecretClient) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 

@@ -32,7 +32,7 @@ func (c *ConsumerInstanceClient) WithScope(scope string) *ConsumerInstanceClient
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *ConsumerInstanceClient) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 

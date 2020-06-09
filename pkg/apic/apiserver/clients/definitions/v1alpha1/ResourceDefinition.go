@@ -32,7 +32,7 @@ func (c *ResourceDefinitionClient) WithScope(scope string) *ResourceDefinitionCl
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *ResourceDefinitionClient) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 

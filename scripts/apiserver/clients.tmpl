@@ -32,7 +32,7 @@ func (c *{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Client {
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *{{.res.kind}}Client) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 

@@ -32,7 +32,7 @@ func (c *WebhookClient) WithScope(scope string) *WebhookClient {
 }
 
 // SetQuery -
-func (c *APIServiceClient) SetQuery(query string) {
+func (c *WebhookClient) SetQuery(query string) {
 	c.client.SetQuery(query)
 }
 
