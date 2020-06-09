@@ -15,6 +15,11 @@ func (ba *basicAuth) Authenticate(req *http.Request) {
 	req.Header.Set("X-Axway-Instance-Id", ba.instanceId)
 }
 
+func (j *jwtAuth) Authenticate(req *http.Request) {
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", j.token))
+	req.Header.Set("X-Axway-Tenant-Id", j.tenantId)
+}
+
 // BasicAuth auth with user/pass
 func BasicAuth(user, password, tenantId, instanceId string) Options {
 	return func(c *ClientBase) {
@@ -27,10 +32,13 @@ func BasicAuth(user, password, tenantId, instanceId string) Options {
 	}
 }
 
-// HTTPClient -
-func HTTPClient(client *http.Client) Options {
+// JWTAuth auth with token
+func JWTAuth(token, tenantId string) Options {
 	return func(c *ClientBase) {
-		c.client = client
+		c.auth = &jwtAuth{
+			token:    token,
+			tenantId: tenantId,
+		}
 	}
 }
 
@@ -107,6 +115,11 @@ func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
 	return fmt.Sprintf(unscopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.resource, rm.Name)
 }
 
+// SetQuery -
+func (c *Client) SetQuery(query string) {
+	c.query = query
+}
+
 // WithScope creates a request within the given scope. ex: env/$name/services
 func (c *Client) WithScope(scope string) *Client {
 	return &Client{
@@ -121,7 +134,11 @@ func (c *Client) WithScope(scope string) *Client {
 
 // List returns a list of resources
 func (c *Client) List() ([]*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequest("GET", c.url(), nil)
+	url := c.url()
+	if c.query != "" {
+		url = url + c.query
+	}
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

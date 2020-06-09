@@ -2,7 +2,7 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v pkg/apic/apiserver)
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
 
 all : clean
 

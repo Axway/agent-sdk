@@ -1,17 +1,83 @@
 package v1
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"os"
 	"testing"
-	"time"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	management "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"gopkg.in/h2non/gock.v1"
 )
 
-// needs apiserver started to run
-func TestUnscoped(t *testing.T) {
-	client, err := NewClient(
+const mockJSONEnv = `{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "Environment",
+  "name": "test-env-1",
+  "title": "test-env-1",
+  "metadata": {
+    "id": "e4f1cf5371cd390b0171cd43d7460056",
+    "audit": {
+      "createTimestamp": "2020-04-30T22:45:07.533+0000",
+      "createUserId": "DOSA_531453183cc145adb68ed2d8af625eb2",
+      "modifyTimestamp": "2020-04-30T22:45:07.533+0000",
+      "modifyUserId": "DOSA_531453183cc145adb68ed2d8af625eb2"
+    },
+    "resourceVersion": "297",
+    "references": []
+  },
+  "attributes": {
+    "attr": "value"
+  },
+  "tags": ["tag1", "tag2"],
+  "spec": {
+    "description": "desc"
+  }
+}`
+
+const mockJSONApiSvc = `{
+	"group": "management",
+	"apiVersion": "v1alpha1",
+	"kind": "APIService",
+	"name": "test-api-svc",
+	"title": "test-api-svc",
+	"metadata": {
+		"id": "e4e7efa47287250c017296c54e3f01a6",
+		"audit": {
+			"createTimestamp": "2020-06-09T01:50:12.548+0000",
+			"modifyTimestamp": "2020-06-09T01:50:12.548+0000"
+		},
+		"scope": {
+			"id": "e4e7efa47287250c017296c54dd301a3",
+			"kind": "Environment",
+			"name": "test-env-1"
+		},
+		"resourceVersion": "696",
+		"references": []
+	},
+	"attributes": {
+		"attr": "value"
+	},
+	"tags": [
+		"atag"
+	],
+	"spec": {}
+}`
+
+var mockEnv = &apiv1.ResourceInstance{}
+var mockEnvUpdated = &apiv1.ResourceInstance{}
+var mockApiSvc = &apiv1.ResourceInstance{}
+var client = &Client{}
+
+func TestMain(m *testing.M) {
+	defer gock.Off()
+	json.Unmarshal([]byte(mockJSONEnv), mockEnv)
+	json.Unmarshal([]byte(mockJSONEnv), mockEnvUpdated)
+	mockEnvUpdated.Title = "updated-testenv-title"
+	json.Unmarshal([]byte(mockJSONApiSvc), mockApiSvc)
+	newClient, err := NewClient(
 		"http://localhost:8080/apis",
 		BasicAuth(
 			"admin",
@@ -20,17 +86,50 @@ func TestUnscoped(t *testing.T) {
 			"123",
 		),
 	).ForKind(management.EnvironmentGVK())
-
-	// HTTPClient(client.ClientBase.client)()
-
+	client = newClient
 	if err != nil {
-		t.Fatalf("Failed: %s", err)
+		log.Fatalf("Error in test setup: %s", err)
+		os.Exit(1)
 	}
+	os.Exit(m.Run())
+}
+
+func TestUnscoped(t *testing.T) {
+	// Create env
+	gock.New("http://localhost:8080/apis").
+		Post("/management/v1alpha1/environments").
+		Reply(201).
+		JSON(mockEnv)
+
+	// Update env
+	gock.New("http://localhost:8080/apis").
+		Put("/management/v1alpha1/environments").
+		Reply(200).
+		JSON(mockEnvUpdated)
+
+	// Get env by name
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments/test-env-1").
+		Reply(200).
+		JSON(mockEnv)
+
+	// List envs
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(200).
+		JSON([]*apiv1.ResourceInstance{mockEnv})
+
+	// Delete env
+	gock.New("http://localhost:8080/apis").
+		Delete("/management/v1alpha1/environments/test-env-1").
+		Reply(204)
+
+	// Create an env
 	created, err := client.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
-			Name:             fmt.Sprintf("test-env-%d", time.Now().Unix()),
-			Title:            fmt.Sprintf("test-env-%d", time.Now().Unix()),
+			Name:             "test-env-1",
+			Title:            "test-env-1",
 			Tags:             []string{"atag"},
 			Attributes:       map[string]string{"attr": "value"},
 		},
@@ -41,18 +140,26 @@ func TestUnscoped(t *testing.T) {
 		t.Fatalf("Failed to create: %s", err)
 	}
 
+	// Get env by name
 	_, err = client.Get(created.Name)
 	if err != nil {
 		t.Fatalf("Failed to get env by name: %s", err)
 	}
 
+	// Update the env
 	created.Title = "updated-testenv-title"
-	_, err = client.Update(created)
+	updatedEnv, err := client.Update(created)
+
+	if updatedEnv.Title != mockEnvUpdated.Title {
+		t.Fatalf("Updated resource name does not match %s. Received %s", mockEnvUpdated.Title, updatedEnv.Title)
+	}
 
 	if err != nil {
 		t.Fatalf("Failed to update: %s", err)
 	}
 
+	// client.SetQuery("?query=name==*abc*,tags==*abc*")
+	// Get all envs
 	envList, err := client.List()
 	if err != nil {
 		t.Fatalf("Failed to list environments: %s", err)
@@ -77,34 +184,47 @@ func TestUnscoped(t *testing.T) {
 	}
 }
 
-// needs apiserver started to run
 func TestScoped(t *testing.T) {
-	client := NewClient(
-		"http://localhost:8080/apis",
-		BasicAuth(
-			"admin",
-			"servicesecret",
-			"admin",
-			"123",
-		),
-	)
+	// Create env
+	gock.New("http://localhost:8080/apis").
+		Post("/management/v1alpha1/environments").
+		Reply(201).
+		JSON(mockEnv)
 
-	envClient, err := client.ForKind(management.EnvironmentGVK())
-	if err != nil {
-		t.Fatalf("Failed: %s", err)
-	}
+	// Create api service
+	gock.New("http://localhost:8080/apis").
+		Post("/management/v1alpha1/environments/test-env-1/apiservices").
+		Reply(201).
+		JSON(mockApiSvc)
 
-	env, err := envClient.Create(&apiv1.ResourceInstance{
+	// List api services
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments/test-env-1/apiservices").
+		Reply(200).
+		JSON([]*apiv1.ResourceInstance{mockApiSvc})
+
+	// Delete api service
+	gock.New("http://localhost:8080/apis").
+		Delete("/management/v1alpha1/environments/test-env-1/apiservices/test-api-svc").
+		Reply(204)
+
+	// Delete env
+	gock.New("http://localhost:8080/apis").
+		Delete("/management/v1alpha1/environments/test-env-1").
+		Reply(204)
+
+	env, err := client.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
-			Name:             "testenv1",
+			Name:             "test-env-1",
+			Title:            "test-env-1",
 			Tags:             []string{"atag"},
 			Attributes:       map[string]string{"attr": "value"},
 		},
 		Spec: map[string]interface{}{},
 	})
 	defer func() {
-		err = envClient.Delete(env)
+		err = client.Delete(env)
 		if err != nil {
 			t.Fatalf("Failed: %s", err)
 		}
@@ -115,7 +235,7 @@ func TestScoped(t *testing.T) {
 
 	svc, err := svcClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			Name:       "testapsvc",
+			Name:       "test-api-svc",
 			Tags:       []string{"atag"},
 			Attributes: map[string]string{"attr": "value"},
 		},
@@ -126,8 +246,12 @@ func TestScoped(t *testing.T) {
 	}
 
 	svcs, err := svcClient.List()
+	if err != nil {
+		t.Fatalf("Failed to list api services: %s", err)
+	}
 	found := false
 	for _, s := range svcs {
+		svcClient.Delete(svc)
 		if s.Name == svc.Name {
 			t.Logf("Found created svc %v", s)
 
@@ -143,5 +267,112 @@ func TestScoped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed: %s", err)
 	}
+}
 
+func TestQuery(t *testing.T) {
+
+}
+
+func TestJWTAuth(t *testing.T) {
+
+}
+
+func TestForKindErrors(t *testing.T) {
+
+}
+
+func TestUrlForResourceEmptyScope(t *testing.T) {
+
+}
+
+func TestListError(t *testing.T) {
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(500).
+		JSON(mockEnv)
+
+	_, err := client.List()
+
+	if err == nil {
+		t.Fatalf("Expected list to fail: %s", err)
+	}
+}
+
+func TestGetError(t *testing.T) {
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(500).
+		JSON(mockEnv)
+
+	_, err := client.Get("name")
+
+	if err == nil {
+		t.Fatalf("Expected Update to fail: %s", err)
+	}
+}
+
+func TestDeleteError(t *testing.T) {
+	gock.New("http://localhost:8080/apis").
+		Delete("/management/v1alpha1/environments").
+		Reply(500).
+		JSON(mockEnv)
+
+	err := client.Delete(&apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "test-env-1",
+			Title:            "test-env-1",
+			Tags:             []string{"atag"},
+			Attributes:       map[string]string{"attr": "value"},
+		},
+		Spec: map[string]interface{}{},
+	})
+
+	if err == nil {
+		t.Fatalf("Expected delete to fail: %s", err)
+	}
+}
+
+func TestCreateError(t *testing.T) {
+	gock.New("http://localhost:8080/apis").
+		Post("/management/v1alpha1/environments").
+		Reply(500).
+		JSON(mockEnv)
+
+	_, err := client.Create(&apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "test-env-1",
+			Title:            "test-env-1",
+			Tags:             []string{"atag"},
+			Attributes:       map[string]string{"attr": "value"},
+		},
+		Spec: map[string]interface{}{},
+	})
+
+	if err == nil {
+		t.Fatalf("Expected create to fail: %s", err)
+	}
+}
+
+func TestUpdateError(t *testing.T) {
+	gock.New("http://localhost:8080/apis").
+		Put("/management/v1alpha1/environments").
+		Reply(500).
+		JSON(mockEnv)
+
+	_, err := client.Update(&apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "test-env-1",
+			Title:            "test-env-1",
+			Tags:             []string{"atag"},
+			Attributes:       map[string]string{"attr": "value"},
+		},
+		Spec: map[string]interface{}{},
+	})
+
+	if err == nil {
+		t.Fatalf("Expected update to fail: %s", err)
+	}
 }

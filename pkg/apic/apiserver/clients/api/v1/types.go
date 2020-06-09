@@ -17,10 +17,16 @@ type noopAuth struct{}
 func (noopAuth) Authenticate(*http.Request) {}
 
 type basicAuth struct {
-	user       string
+	instanceId string
 	pass       string
 	tenantId   string
+	user       string
+}
+
+type jwtAuth struct {
 	instanceId string
+	tenantId   string
+	token      string
 }
 
 // ClientBase for grouping a client, auth method and url together
@@ -38,4 +44,5 @@ type Client struct {
 	resource      string
 	scopeResource string
 	scope         string
+	query         string
 }

@@ -15,7 +15,7 @@ func TestUnmarshall(t *testing.T) {
 	}{
 		{
 			"correct format",
-			[]byte("2006-01-02T15:04:05+0700"),
+			[]byte(`"2006-01-02T15:04:05+0700"`),
 			nil,
 		},
 	}
