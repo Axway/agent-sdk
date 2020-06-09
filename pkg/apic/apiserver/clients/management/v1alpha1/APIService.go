@@ -27,6 +27,11 @@ func (c *APIServiceClient) WithScope(scope string) *APIServiceClient {
 	}
 }
 
+// SetQuery -
+func (c *APIServiceClient) SetQuery(query string) {
+	c.client.SetQuery(query)
+}
+
 // List -
 func (c *APIServiceClient) List() ([]*v1alpha1.APIService, error) {
 	riList, err := c.client.List()

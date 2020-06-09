@@ -71,6 +71,20 @@ var mockEnvUpdated = &apiv1.ResourceInstance{}
 var mockApiSvc = &apiv1.ResourceInstance{}
 var client = &Client{}
 
+func createEnv(client *Client) (*apiv1.ResourceInstance, error) {
+	created, err := client.Create(&apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "test-env-1",
+			Title:            "test-env-1",
+			Tags:             []string{"atag"},
+			Attributes:       map[string]string{"attr": "value"},
+		},
+		Spec: map[string]interface{}{},
+	})
+	return created, err
+}
+
 func TestMain(m *testing.M) {
 	defer gock.Off()
 	json.Unmarshal([]byte(mockJSONEnv), mockEnv)
@@ -124,17 +138,7 @@ func TestUnscoped(t *testing.T) {
 		Delete("/management/v1alpha1/environments/test-env-1").
 		Reply(204)
 
-	// Create an env
-	created, err := client.Create(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.EnvironmentGVK(),
-			Name:             "test-env-1",
-			Title:            "test-env-1",
-			Tags:             []string{"atag"},
-			Attributes:       map[string]string{"attr": "value"},
-		},
-		Spec: map[string]interface{}{},
-	})
+	created, err := createEnv(client)
 
 	if err != nil {
 		t.Fatalf("Failed to create: %s", err)
@@ -146,7 +150,7 @@ func TestUnscoped(t *testing.T) {
 		t.Fatalf("Failed to get env by name: %s", err)
 	}
 
-	// Update the env
+	// Update env
 	created.Title = "updated-testenv-title"
 	updatedEnv, err := client.Update(created)
 
@@ -158,7 +162,6 @@ func TestUnscoped(t *testing.T) {
 		t.Fatalf("Failed to update: %s", err)
 	}
 
-	// client.SetQuery("?query=name==*abc*,tags==*abc*")
 	// Get all envs
 	envList, err := client.List()
 	if err != nil {
@@ -213,16 +216,8 @@ func TestScoped(t *testing.T) {
 		Delete("/management/v1alpha1/environments/test-env-1").
 		Reply(204)
 
-	env, err := client.Create(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.EnvironmentGVK(),
-			Name:             "test-env-1",
-			Title:            "test-env-1",
-			Tags:             []string{"atag"},
-			Attributes:       map[string]string{"attr": "value"},
-		},
-		Spec: map[string]interface{}{},
-	})
+	env, err := createEnv(client)
+
 	defer func() {
 		err = client.Delete(env)
 		if err != nil {
@@ -269,20 +264,32 @@ func TestScoped(t *testing.T) {
 	}
 }
 
-func TestQuery(t *testing.T) {
-
-}
-
 func TestJWTAuth(t *testing.T) {
+	token := "abcdefg"
+	tenantID := "123456"
+	gock.New("http://localhost:8080/apis").
+		Post("/management/v1alpha1/environments").
+		MatchHeader("Authorization", "Bearer abcdefg").
+		MatchHeader("X-Axway-Tenant-Id", tenantID).
+		Reply(201).
+		JSON(mockEnv)
 
-}
+	client, err := NewClient(
+		"http://localhost:8080/apis",
+		JWTAuth(
+			token,
+			tenantID,
+		),
+	).ForKind(management.EnvironmentGVK())
 
-func TestForKindErrors(t *testing.T) {
+	if err != nil {
+		t.Fatalf("Error creating client with JWT Auth: %s", err)
+	}
+	_, err = createEnv(client)
 
-}
-
-func TestUrlForResourceEmptyScope(t *testing.T) {
-
+	if err != nil {
+		t.Fatalf("Error creating env with JWT Auth: %s", err)
+	}
 }
 
 func TestListError(t *testing.T) {
@@ -339,16 +346,7 @@ func TestCreateError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	_, err := client.Create(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.EnvironmentGVK(),
-			Name:             "test-env-1",
-			Title:            "test-env-1",
-			Tags:             []string{"atag"},
-			Attributes:       map[string]string{"attr": "value"},
-		},
-		Spec: map[string]interface{}{},
-	})
+	_, err := createEnv(client)
 
 	if err == nil {
 		t.Fatalf("Expected create to fail: %s", err)

@@ -95,11 +95,19 @@ const (
 )
 
 func (c *Client) url() string {
+	// unscoped
+	url := fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
+
+	// scoped
 	if c.scopeResource != "" {
-		return fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, c.scope, c.resource)
+		url = fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, c.scope, c.resource)
 	}
 
-	return fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
+	if c.query != "" {
+		url = url + c.query
+	}
+
+	return url
 }
 
 func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
@@ -134,11 +142,7 @@ func (c *Client) WithScope(scope string) *Client {
 
 // List returns a list of resources
 func (c *Client) List() ([]*apiv1.ResourceInstance, error) {
-	url := c.url()
-	if c.query != "" {
-		url = url + c.query
-	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", c.url(), nil)
 	if err != nil {
 		return nil, err
 	}
