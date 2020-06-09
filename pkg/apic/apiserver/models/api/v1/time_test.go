@@ -7,28 +7,18 @@ import (
 )
 
 func TestUnmarshall(t *testing.T) {
-	// TODO test error cases
-	testCases := []struct {
-		name     string
-		input    []byte
-		expected error
-	}{
-		{
-			"correct format",
-			[]byte(`"2006-01-02T15:04:05+0700"`),
-			nil,
-		},
+	time := &Time{}
+	err := time.UnmarshalJSON([]byte(`"2006-01-02T15:04:05+0700"`))
+
+	if err != nil {
+		t.Fatalf("Error: %s", err)
 	}
 
-	for i := range testCases {
-		tc := testCases[i]
+	time = &Time{}
+	err = time.UnmarshalJSON([]byte("abc"))
 
-		time := &Time{}
-		err := time.UnmarshalJSON(tc.input)
-
-		if err != tc.expected {
-			t.Fatalf("%s: expected err: %s got %s", tc.name, tc.expected, err)
-		}
+	if err == nil {
+		t.Fatalf("Expected time.UnmarshalJSON to throw an error")
 	}
 }
 
