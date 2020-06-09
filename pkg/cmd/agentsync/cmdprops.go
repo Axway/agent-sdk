@@ -8,18 +8,19 @@ import (
 
 const syncFlag = "synchronize"
 
-// CheckSyncFlag - checks to see if the sync flag was used and runs the ProcessSynchronization. Returns if the agents should exit and the code if so.
-func CheckSyncFlag(props properties.Properties) (bool, int) {
+// CheckSyncFlag - checks to see if the sync flag was used and runs the ProcessSynchronization.
+//   If return is 0 or greater exit should happen, with return as exitcode
+func CheckSyncFlag(props properties.Properties) int {
 	if props.BoolFlagValue(syncFlag) {
 		// Call sync commands
 		err := agentSync.ProcessSynchronization()
 		if err != nil {
 			fmt.Printf("ERROR: %s\n", err.Error())
-			return true, 1
+			return 1
 		}
-		return true, 0
+		return 0
 	}
-	return false, 0
+	return -1
 }
 
 // AddSyncConfigProperties - Adds the command properties needed for Sync Process Config

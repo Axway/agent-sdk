@@ -94,9 +94,8 @@ func TestCheckSyncFlag(t *testing.T) {
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exit, exitcode := CheckSyncFlag(props)
+	exitcode := CheckSyncFlag(props)
 	assert.True(t, cas.syncCalled, "The syncCalled attribute was not set properly, was our custom sync method used?")
-	assert.True(t, exit, "Sync process should have told the main command to exit")
 	assert.Equal(t, 0, exitcode, "Expected the sync process to have a 0 exitcode")
 
 	// recreate the custom agent sync and props
@@ -107,10 +106,9 @@ func TestCheckSyncFlag(t *testing.T) {
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exit, exitcode = CheckSyncFlag(props)
+	exitcode = CheckSyncFlag(props)
 	assert.False(t, cas.syncCalled, "The syncCalled attribute false as expected")
-	assert.False(t, exit, "Sync process should have not told the main command to exit")
-	assert.Equal(t, 0, exitcode, "Expected the sync process to have a 0 exitcode")
+	assert.Equal(t, -1, exitcode, "Expected the sync process to have a 0 exitcode")
 
 	// recreate the custom agent sync and props
 	cas = setupCustomAgentSync("failed")
@@ -120,9 +118,8 @@ func TestCheckSyncFlag(t *testing.T) {
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exit, exitcode = CheckSyncFlag(props)
+	exitcode = CheckSyncFlag(props)
 	assert.True(t, cas.syncCalled, "The syncCalled attribute was not set properly, was our custom sync method used?")
-	assert.True(t, exit, "Sync process should have told the main command to exit")
 	assert.Equal(t, 1, exitcode, "Expected the sync process to have a 1 exitcode")
 
 }

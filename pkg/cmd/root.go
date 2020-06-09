@@ -140,8 +140,8 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// Check the sync flag
-	exit, exitcode := agentsync.CheckSyncFlag(c.GetProperties())
-	if exit {
+	exitcode := agentsync.CheckSyncFlag(c.GetProperties())
+	if exitcode > -1 {
 		os.Exit(exitcode)
 	}
 
