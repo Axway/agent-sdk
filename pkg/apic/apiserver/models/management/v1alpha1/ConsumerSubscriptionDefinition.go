@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "ConsumerSubscriptionDefinition",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 
@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_ConsumerSubscriptionDefinitionGVK, ConsumerSubscriptionDefinitionScope, ConsumerSubscriptionDefinitionResource)
 }
 
+// ConsumerSubscriptionDefinition Resource
 type ConsumerSubscriptionDefinition struct {
 	apiv1.ResourceMeta
 
 	Spec ConsumerSubscriptionDefinitionSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a ConsumerSubscriptionDefinition
 func (res *ConsumerSubscriptionDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *ConsumerSubscriptionDefinition) FromInstance(ri *apiv1.ResourceInstan
 	return err
 }
 
+// AsInstance converts a ConsumerSubscriptionDefinition to a ResourceInstance
 func (res *ConsumerSubscriptionDefinition) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

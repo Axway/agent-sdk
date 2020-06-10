@@ -1,5 +1,5 @@
 #!/bin/bash
 
-node ./scripts/generate.js
-go fmt ./pkg/apic/apiserver/models/...
+node ./scripts/apiserver/generate.js
+go fmt ./pkg/apic/apiserver/...
 goimports -w=true ./pkg/apic/apiserver/models

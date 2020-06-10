@@ -16,7 +16,7 @@ var (
 			Group: "definitions",
 			Kind:  "ResourceGroup",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 
@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_ResourceGroupGVK, ResourceGroupScope, ResourceGroupResource)
 }
 
+// ResourceGroup Resource
 type ResourceGroup struct {
 	apiv1.ResourceMeta
 
 	Spec struct{} `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a ResourceGroup
 func (res *ResourceGroup) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *ResourceGroup) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a ResourceGroup to a ResourceInstance
 func (res *ResourceGroup) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
