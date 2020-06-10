@@ -85,9 +85,19 @@ type ResourceInstance struct {
 	Spec map[string]interface{} `json:"spec"`
 }
 
+type EventPayload struct {
+	GroupKind
+	Scope      MetadataScope     `json:"scope"`
+	Tags       []string          `json:"tags"`
+	Attributes map[string]string `json:"attributes"`
+	Id         string            `json:"id"`
+	Name       string            `json:"name"`
+	References []Reference       `json:"references"`
+}
+
 // Event is an API Server event concerning a resource
 type Event struct {
 	Id      string
 	Type    string
-	Payload ResourceMeta
+	Payload EventPayload
 }

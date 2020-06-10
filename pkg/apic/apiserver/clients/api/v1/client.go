@@ -42,6 +42,12 @@ func JWTAuth(token, tenantId string) Options {
 	}
 }
 
+func HTTPClient(client *http.Client) Options {
+	return func(c *ClientBase) {
+		c.client = client
+	}
+}
+
 // NewClient creates a new HTTP client
 func NewClient(baseUrl string, options ...Options) *ClientBase {
 	c := &ClientBase{
@@ -103,10 +109,6 @@ func (c *Client) url() string {
 		url = fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, c.scope, c.resource)
 	}
 
-	if c.query != "" {
-		url = url + c.query
-	}
-
 	return url
 }
 
@@ -123,11 +125,6 @@ func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
 	return fmt.Sprintf(unscopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.resource, rm.Name)
 }
 
-// SetQuery -
-func (c *Client) SetQuery(query string) {
-	c.query = query
-}
-
 // WithScope creates a request within the given scope. ex: env/$name/services
 func (c *Client) WithScope(scope string) *Client {
 	return &Client{
@@ -141,10 +138,24 @@ func (c *Client) WithScope(scope string) *Client {
 }
 
 // List returns a list of resources
-func (c *Client) List() ([]*apiv1.ResourceInstance, error) {
+func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	req, err := http.NewRequest("GET", c.url(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	opts := listOptions{}
+
+	for _, o := range options {
+		o(&opts)
+	}
+
+	if opts.query != nil {
+		rv := NewRSQLVisitor()
+		rv.Visit(opts.query)
+		q := req.URL.Query()
+		q.Add("query", rv.String())
+		req.URL.RawQuery = q.Encode()
 	}
 
 	c.auth.Authenticate(req)

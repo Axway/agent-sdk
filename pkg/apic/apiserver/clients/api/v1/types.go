@@ -2,6 +2,8 @@ package v1
 
 import (
 	"net/http"
+
+	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // Options -
@@ -45,4 +47,50 @@ type Client struct {
 	scopeResource string
 	scope         string
 	query         string
+}
+
+type Base interface {
+	ForKind(apiv1.GroupVersionKind) (Unscoped, error)
+}
+
+type Unscoped interface {
+	Scoped
+	WithScope(name string) Scoped
+}
+
+type Scoped interface {
+	Create(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Delete(*apiv1.ResourceInstance) error
+	Get(string) (*apiv1.ResourceInstance, error)
+	List(...ListOptions) ([]*apiv1.ResourceInstance, error)
+	Update(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+}
+
+func WithQuery(n QueryNode) func(*listOptions) {
+	return func(lo *listOptions) {
+		lo.query = n
+	}
+}
+
+type ListOptions func(*listOptions)
+
+// ListOptions
+type listOptions struct {
+	query QueryNode //
+}
+
+// GetOptions - placeholder for future options
+type letOptions struct {
+}
+
+// CreateOptions - placeholder for future options
+type createOptions struct {
+}
+
+// DeleteOptions - placeholder for future options
+type deleteOptions struct {
+}
+
+// UpdateOptions - placeholder for future options
+type updateOptions struct {
 }

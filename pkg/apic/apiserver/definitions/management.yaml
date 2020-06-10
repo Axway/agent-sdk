@@ -509,43 +509,43 @@ spec:
           additionalProperties: false
       subresources:
         status:
-          openAPIV3Schema:
-            type: object
-            properties:
-              phase:
-                type: object
-                properties:
-                  name:
-                    type: string
-                    enum:
-                      - Update
-                      - Delete
-                      - Create
-                  level:
-                    type: string
-                    description: The criticality of the last update
-                    enum:
-                      - info
-                      - error
-                    default: info
-                  transitionTime:
-                    type: string
-                    format: date-time
-                    description: Time of the current phase.
-                  message:
-                    type: string
-                    description: Description of the phase.
-                additionalProperties: false
-                required:
-                  - name
-                  - level
-                  - transitionTime
-            additionalProperties: false
-            required:
-              - phase
-          mutationStrategy:
-            type:
-              - resetOnUpdate
+            openAPIV3Schema:
+              type: object
+              properties:
+                  phase:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        enum:
+                          - Update
+                          - Delete
+                          - Create
+                      level:
+                        type: string
+                        description: The criticality of the last update
+                        enum:
+                          - info
+                          - error
+                        default: info
+                      transitionTime:
+                        type: string
+                        format: date-time
+                        description: Time of the current phase.
+                      message:
+                        type: string
+                        description: Description of the phase.
+                    additionalProperties: false
+                    required:
+                      - name
+                      - level
+                      - transitionTime
+              additionalProperties: false
+              required:
+                - phase
+            mutationStrategy:
+              type:
+                - resetOnUpdate
 ---
 group: management
 kind: ConsumerSubscriptionDefinition
@@ -611,4 +611,275 @@ spec:
                       - value
                     additionalProperties: false
               additionalProperties: false
+          additionalProperties: false
+---
+group: management
+kind: K8SCluster
+description: Resource representing a kubernetes cluster.
+spec:
+  names:
+    plural: k8sclusters
+    singular: k8scluster
+  cli:
+    shortNames:
+      - k8
+      - k8s
+    columns:
+      - name: Name
+        description: The name of the cluster.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the cluster was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the cluster.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            mesh:
+              type: string
+              x-amplify-kind-ref: APIService
+          additionalProperties: true
+---
+group: management
+kind: K8SResource
+scope: K8SCluster
+description: Represents a Kubernetes resource in a mesh.
+spec:
+  names:
+    plural: K8SResources
+    singular: K8SResource
+  cli:
+    shortNames:
+      - k8sres
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            resourceDiscovery:
+              type: string
+              x-amplify-kind-ref: ResourceDiscovery
+            resourceVersion:
+              type: string
+            uid:
+              type: string
+            resourceSpec:
+              type: object
+              additionalProperties: true
+            resourceStatus:
+              type: object
+              additionalProperties: true
+          additionalProperties: true
+---
+group: management
+kind: ResourceDiscovery
+scope: K8SCluster
+description: Resource controlling resource discoveries in a mesh.
+spec:
+  names:
+    plural: ResourceDiscoveries
+    singular: ResourceDiscovery
+  cli:
+    shortNames:
+      - resdisc
+      - resdiscs
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            version:
+              type: string
+            kind:
+              type: string
+            group:
+              type: string
+            namespaceFilter:
+              type: object
+              description: Namespace filter.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+            resourceFilter:
+              type: object
+              description: Resource filter.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+                matchLabels:
+                  type: object
+                  additionalProperties:
+                    type: string
+            # what specs fields to keep
+            keepSpecFields:
+              type: array
+              items:
+                type: string
+            # what status fields to keep
+            keepStatusFields:
+              type: array
+              items:
+                type: string
+            # what labels to keep
+            # labels will be kept as attributes in the resulting K8SResource
+            keepLabels:
+              type: array
+              items:
+                type: string
+            # tags for the resulting K8SResource
+            tags:
+              type: array
+              items:
+                type: string
+            # additional attributes to be added on the resulting K8SResource
+            extraAttributes:
+              type: object
+              additionalProperties: true
+        additionalProperties: true
+---
+group: management
+kind: Mesh
+description: Resource representing a Mesh.
+spec:
+  names:
+    plural: meshes
+    singular: mesh
+  cli:
+    shortNames:
+      - mesh
+      - meshes
+    columns:
+      - name: Name
+        description: The name of the mesh.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the mesh was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the mesh.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          additionalProperties: false
+---
+group: management
+kind: MeshService
+scope: Mesh
+description: Resource representing a Mesh Service.
+spec:
+  names:
+    plural: meshservices
+    singular: meshservice
+  cli:
+    shortNames:
+      - meshservice
+      - meshservices
+    columns:
+      - name: Name
+        description: The name of the mesh service.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the mesh was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the mesh service.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          additionalProperties: false
+---
+group: management
+kind: MeshWorkload
+scope: Mesh
+description: Resource representing a MeshWorkload.
+spec:
+  names:
+    plural: meshworkloads
+    singular: meshworkload
+  cli:
+    shortNames:
+      - meshworkload
+      - meshworkload
+    columns:
+      - name: Name
+        description: The name of the mesh workload.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the mesh was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the mesh workload.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
           additionalProperties: false
