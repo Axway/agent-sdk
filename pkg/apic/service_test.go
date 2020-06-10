@@ -227,26 +227,71 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
 	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes2, Oas3)
 
+	type verification struct {
+		Host     string
+		Port     int
+		Protocol string
+		Found    bool
+	}
+
+	possibleEndpoints := []verification{
+		{
+			Host:     "petstore.swagger.io",
+			Port:     443,
+			Protocol: "https",
+		},
+		{
+			Host:     "petstore.swagger.io",
+			Port:     80,
+			Protocol: "http",
+		},
+		{
+			Host:     "petstore-preprod.swagger.io",
+			Port:     443,
+			Protocol: "https",
+		},
+		{
+			Host:     "petstore-preprod.swagger.io",
+			Port:     80,
+			Protocol: "http",
+		},
+		{
+			Host:     "petstore-test.swagger.io",
+			Port:     443,
+			Protocol: "https",
+		},
+		{
+			Host:     "petstore-test.swagger.io",
+			Port:     80,
+			Protocol: "http",
+		},
+	}
+
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3 and templated URLs")
 	assert.Len(t, endPoints, 6, "The returned end points array did not have exactly 6 endpoints")
-	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
-	assert.Equal(t, "https", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore.swagger.io", endPoints[1].Host, "The second returned end point had an unexpected value for it's host")
-	assert.Equal(t, 80, endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[1].Protocol, "The second returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore-preprod.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
-	assert.Equal(t, 80, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore-test.swagger.io", endPoints[3].Host, "The forth returned end point had an unexpected value for it's host")
-	assert.Equal(t, 80, endPoints[3].Port, "The forth returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[3].Protocol, "The forth returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore-preprod.swagger.io", endPoints[4].Host, "The fifth returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[4].Port, "The fifth returned end point had an unexpected value for it's port")
-	assert.Equal(t, "https", endPoints[4].Protocol, "The fifth returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore-test.swagger.io", endPoints[5].Host, "The sixth returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[5].Port, "The sixth returned end point had an unexpected value for it's port")
-	assert.Equal(t, "https", endPoints[5].Protocol, "The sixth returned end point had an unexpected value for it's protocol")
+	endpointNotFound := false
+	for _, endpoint := range endPoints {
+		found := false
+		for i, possibleEndpoint := range possibleEndpoints {
+			if possibleEndpoint.Found {
+				continue // Can't find the same endpoint twice
+			}
+			if endpoint.Host == possibleEndpoint.Host && endpoint.Port == possibleEndpoint.Port && endpoint.Protocol == possibleEndpoint.Protocol {
+				found = true
+				possibleEndpoints[i].Found = true
+				continue // No need to keep looking once we find it
+			}
+		}
+		if !found {
+			endpointNotFound = true
+		}
+	}
+
+	// Check that all endpoints have been verified
+	assert.False(t, endpointNotFound, "At least one endpoint returned was not expected")
+	for _, possibleEndpoint := range possibleEndpoints {
+		assert.True(t, possibleEndpoint.Found, "Did not find an endpoint with Host(%s), Port(%d), and Protocol(%s) in the returned endpoint array", possibleEndpoint.Host, possibleEndpoint.Port, possibleEndpoint.Protocol)
+	}
 
 	// Test wsdl object
 	wsdlFile, _ := os.Open("./testdata/weather.xml") // wsdl
