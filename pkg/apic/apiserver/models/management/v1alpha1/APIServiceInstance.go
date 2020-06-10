@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "APIServiceInstance",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 
@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_APIServiceInstanceGVK, APIServiceInstanceScope, APIServiceInstanceResource)
 }
 
+// APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
 
 	Spec ApiServiceInstanceSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a APIServiceInstance
 func (res *APIServiceInstance) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *APIServiceInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a APIServiceInstance to a ResourceInstance
 func (res *APIServiceInstance) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

@@ -12,9 +12,9 @@ var (
 
 // RegisterGVK registers a GroupVersionKind with optional scope and mandatory resource
 func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
-	// TODO gvk must not have empty fields
+	// TODO: gvk must not have empty fields
 
-	// TODO Resource must not be be empty
+	// TODO: Resource must not be be empty
 	if gvkSet[gvk] {
 		panic(fmt.Sprint("Attempt to register duplicate gvk: ", gvk))
 	}
@@ -33,11 +33,13 @@ func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
 	resourceMap[gvk.GroupKind] = resource
 }
 
+// GetScope return the scope of a Kind
 func GetScope(gv GroupKind) (k string, ok bool) {
 	k, ok = scopeKindMap[gv]
 	return
 }
 
+// GetResource returns the resource name of a Kind
 func GetResource(gv GroupKind) (r string, ok bool) {
 	r, ok = resourceMap[gv]
 	return

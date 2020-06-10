@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "Environment",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 
@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScope, EnvironmentResource)
 }
 
+// Environment Resource
 type Environment struct {
 	apiv1.ResourceMeta
 
 	Spec EnvironmentSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a Environment
 func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a Environment to a ResourceInstance
 func (res *Environment) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
