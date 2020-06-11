@@ -67,10 +67,6 @@ func (fk *fakeUnscoped) Get(name string) (*apiv1.ResourceInstance, error) {
 	return fk.get(name)
 }
 
-func (fk *fakeUnscoped) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	panic("not implemented") // TODO: Implement
-}
-
 func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	created, err := fk.fakeScoped.create(ri)
 	if err != nil {
@@ -102,6 +98,14 @@ func (fk *fakeUnscoped) WithScope(name string) Scoped {
 }
 
 type set map[string]struct{}
+
+func newSet(entries ...string) set {
+	s := set{}
+	for _, entry := range entries {
+		s[entry] = struct{}{}
+	}
+	return s
+}
 
 func (s set) Union(other set) set {
 	res := set{}
@@ -135,50 +139,7 @@ func (idx index) LookUp(key string) set {
 		return set{}
 	}
 
-	res := set{}
-	for _, name := range names {
-		res[name] = struct{}{}
-	}
-
-	return res
-}
-
-type FakeVisitor struct {
-	resources fakeScoped
-	set
-}
-
-func (fv *FakeVisitor) Visit(node QueryNode) {
-	switch n := node.(type) {
-	case andNode:
-		for i, child := range n {
-			childFV := &FakeVisitor{fv.resources, set{}}
-			child.Accept(childFV)
-			if i == 0 {
-				fv.set = childFV.set
-			} else {
-				fv.set = fv.set.Intersection(childFV.set)
-			}
-
-		}
-	case orNode:
-		for _, child := range n {
-			childFV := &FakeVisitor{fv.resources, set{}}
-			child.Accept(childFV)
-			fv.set = fv.set.Intersection(childFV.set)
-		}
-	case tagNode:
-		for _, tag := range n {
-			fv.set = fv.set.Union(fv.resources.tagsIndex.LookUp(tag))
-		}
-	case *attrNode:
-		for _, val := range n.values {
-			fv.set = fv.set.Union(fv.resources.attributeIndex.LookUp(fmt.Sprintf("%s;%s", n.key, val)))
-		}
-
-	default:
-		panic(fmt.Sprintf("unknown node type %v", n))
-	}
+	return newSet(names...)
 }
 
 func (idx index) Update(old []string, new []string, val string) {
@@ -225,6 +186,52 @@ outer:
 	}
 }
 
+type FakeVisitor struct {
+	resources *fakeScoped
+	set
+}
+
+func (fv *FakeVisitor) Visit(node QueryNode) {
+	switch n := node.(type) {
+	case andNode:
+		for i, child := range n {
+			childFV := &FakeVisitor{fv.resources, set{}}
+			child.Accept(childFV)
+			if i == 0 {
+				fv.set = childFV.set
+			} else {
+				fv.set = fv.set.Intersection(childFV.set)
+			}
+		}
+	case orNode:
+		for _, child := range n {
+			childFV := &FakeVisitor{fv.resources, set{}}
+			child.Accept(childFV)
+			fv.set = fv.set.Union(childFV.set)
+		}
+	case tagNode:
+		for _, tag := range n {
+			fv.set = fv.set.Union(fv.resources.tagsIndex.LookUp(tag))
+		}
+	case *attrNode:
+		for _, val := range n.values {
+			fv.set = fv.set.Union(fv.resources.attributeIndex.LookUp(fmt.Sprintf("%s;%s", n.key, val)))
+		}
+	default:
+		panic(fmt.Sprintf("unknown node type %+v", n))
+	}
+}
+
+func attrsAsIdxs(attrs map[string]string) []string {
+	// update attributes
+	idxs := make([]string, len(attrs))
+
+	for key, val := range attrs {
+		idxs = append(idxs, fmt.Sprintf("%s;%s", key, val))
+	}
+	return idxs
+}
+
 type fakeScoped struct {
 	apiv1.GroupVersionKind
 	apiv1.MetadataScope
@@ -245,8 +252,23 @@ func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 	return fk.create(ri)
 }
 
-func (fk *fakeScoped) Delete(_ *apiv1.ResourceInstance) error {
-	panic("not implemented") // TODO: Implement
+func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
+	if fk == nil {
+		return fmt.Errorf("unknown scope for %s", ri.Name)
+	}
+
+	fk.lock.Lock()
+	defer fk.lock.Unlock()
+
+	deleted, ok := fk.resources[ri.Name]
+	if !ok {
+		return fmt.Errorf("resource not found %+v", ri)
+	}
+
+	fk.attributeIndex.Update(attrsAsIdxs(deleted.Attributes), []string{}, deleted.Name)
+	fk.tagsIndex.Update(deleted.Tags, []string{}, deleted.Name)
+
+	return nil
 }
 
 func (fk *fakeScoped) Get(name string) (*apiv1.ResourceInstance, error) {
@@ -261,7 +283,48 @@ func (fk *fakeScoped) Get(name string) (*apiv1.ResourceInstance, error) {
 }
 
 func (fk *fakeScoped) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	panic("not implemented") // TODO: Implement
+	if fk == nil {
+		return nil, fmt.Errorf("unknown scope") // TODO
+	}
+
+	opts := listOptions{}
+
+	for _, o := range options {
+		o(&opts)
+	}
+
+	fk.lock.Lock()
+	defer fk.lock.Unlock()
+
+	if opts.query == nil {
+		ris := make([]*apiv1.ResourceInstance, len(fk.resources))
+
+		for _, ri := range fk.resources {
+			ris = append(ris, ri)
+		}
+		return ris, nil
+	}
+
+	fv := &FakeVisitor{
+		resources: fk,
+		set:       set{},
+	}
+
+	opts.query.Accept(fv)
+
+	ris := make([]*apiv1.ResourceInstance, len(fv.set))
+
+	i := 0
+	for k := range fv.set {
+		if ri, ok := fk.resources[k]; !ok {
+			panic(fmt.Sprintf("Resource %s in index but not in resource list", k))
+		} else {
+			ris[i] = ri
+			i++
+		}
+	}
+
+	return ris, nil
 }
 
 func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
@@ -312,6 +375,9 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 		Spec: ri.Spec,
 	}
 
+	fk.attributeIndex.Update([]string{}, attrsAsIdxs(created.Attributes), created.Name)
+	fk.tagsIndex.Update([]string{}, created.Tags, created.Name)
+
 	fk.resources[ri.Name] = created
 
 	return created, nil
@@ -336,14 +402,14 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 				Id: prev.Metadata.Id,
 				Audit: apiv1.AuditMetadata{
 					CreateTimestamp: prev.Metadata.Audit.CreateTimestamp,
-					CreateUserId:    "", // TODO
+					CreateUserId:    "", // needed?
 					ModifyTimestamp: apiv1.Time(time.Now()),
-					ModifyUserId:    "", // TODO
+					ModifyUserId:    "", // needed?
 				},
 				Scope:           prev.Metadata.Scope,
 				ResourceVersion: prev.Metadata.ResourceVersion,
 				References:      nil,
-				State:           "", // TODO
+				State:           "", // needed?
 			},
 			Attributes: ri.Attributes,
 			Tags:       ri.Tags,
@@ -351,24 +417,26 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 		Spec: ri.Spec,
 	}
 
+	// update indexes
+	fk.attributeIndex.Update(attrsAsIdxs(prev.Attributes), attrsAsIdxs(updated.Attributes), updated.Name)
+	fk.tagsIndex.Update(prev.Tags, updated.Tags, updated.Name)
+
 	fk.resources[ri.Name] = updated
 
 	return updated, nil
 }
 
 func (fk *fakeScoped) get(name string) (*apiv1.ResourceInstance, error) {
-	fmt.Printf("%+v", fk)
-
 	if fk == nil {
 		return nil, fmt.Errorf("not found: %s", name) // TODO
 	}
 
-	res, ok := fk.resources[name]
+	ris, ok := fk.resources[name]
 	if !ok {
 		return nil, fmt.Errorf("resource %s not found", name)
 	}
 
-	return res, nil
+	return ris, nil
 }
 
 type fakeClientBase map[string]fakeGroup
@@ -498,7 +566,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (fakeClientBase, error) {
 	return groups, nil
 }
 
-func (fcb fakeClientBase) ForKind(gvk apiv1.GroupVersionKind) (*fakeClient, error) {
+func (fcb fakeClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
 	sk, ok := apiv1.GetScope(gvk.GroupKind)
 	if !ok {
 		panic(fmt.Sprintf("no scope for gvk: %s", gvk))

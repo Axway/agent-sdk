@@ -1,17 +1,19 @@
 package v1_test
 
 import (
+	"reflect"
 	"testing"
 
+	. "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestFakeUnscoped(t *testing.T) {
-	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
+	cb, err := NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: v1alpha1.K8SClusterGVK(),
+			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -20,7 +22,7 @@ func TestFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	k8sClient, err := cb.ForKind(v1alpha1.K8SClusterGVK())
+	k8sClient, err := cb.ForKind(management.K8SClusterGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -32,9 +34,9 @@ func TestFakeUnscoped(t *testing.T) {
 }
 
 func TestAddFakeUnscoped(t *testing.T) {
-	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
+	cb, err := NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: v1alpha1.K8SClusterGVK(),
+			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -43,14 +45,14 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	k8sClient, err := cb.ForKind(v1alpha1.K8SClusterGVK())
+	k8sClient, err := cb.ForKind(management.K8SClusterGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
 	_, err = k8sClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: v1alpha1.K8SClusterGVK(),
+			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -61,7 +63,7 @@ func TestAddFakeUnscoped(t *testing.T) {
 
 	_, err = k8sClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: v1alpha1.K8SClusterGVK(),
+			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhSecondName",
 		},
 		Spec: map[string]interface{}{},
@@ -75,14 +77,14 @@ func TestFakeScoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: v1alpha1.K8SClusterGVK(),
+				GroupVersionKind: management.K8SClusterGVK(),
 				Name:             "muhName",
 			},
 			Spec: map[string]interface{}{},
 		},
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: v1alpha1.K8SResourceGVK(),
+				GroupVersionKind: management.K8SResourceGVK(),
 				Name:             "muhResource",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
@@ -97,7 +99,7 @@ func TestFakeScoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	noScope, err := cb.ForKind(v1alpha1.K8SResourceGVK())
+	noScope, err := cb.ForKind(management.K8SResourceGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -109,7 +111,7 @@ func TestFakeScoped(t *testing.T) {
 	ri, err = noScope.WithScope("muhName").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: v1alpha1.K8SResourceGVK(),
+				GroupVersionKind: management.K8SResourceGVK(),
 				Name:             "muhResource",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
@@ -126,4 +128,340 @@ func TestFakeScoped(t *testing.T) {
 	}
 
 	t.Logf("%+v", ri)
+}
+
+func TestFakeQueries(t *testing.T) {
+	cb, err := NewFakeClient(
+		&apiv1.ResourceInstance{
+			ResourceMeta: apiv1.ResourceMeta{
+				Name:             "env1",
+				GroupVersionKind: management.EnvironmentGVK(),
+				Attributes: map[string]string{
+					"attr1":    "val1",
+					"attr":     "val",
+					"diffattr": "val1",
+				},
+				Tags: []string{
+					"tag", "tag1",
+				},
+			},
+			Spec: map[string]interface{}{},
+		},
+		&apiv1.ResourceInstance{
+			ResourceMeta: apiv1.ResourceMeta{
+				Name:             "env2",
+				GroupVersionKind: management.EnvironmentGVK(),
+				Attributes: map[string]string{
+					"attr2":    "val2",
+					"attr":     "val",
+					"diffattr": "val2",
+				},
+				Tags: []string{
+					"tag", "tag2",
+				},
+			},
+			Spec: map[string]interface{}{},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	cEnv, err := cb.ForKind(management.EnvironmentGVK())
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	testCases := []struct {
+		name     string
+		query    QueryNode
+		expected []string
+	}{{
+		"common attribute and value",
+		AttrIn("attr", "val"),
+		[]string{"env1", "env2"},
+	}, {
+		"common tag",
+		TagsIn("tag"),
+		[]string{"env1", "env2"},
+	}, {
+		"tag with one match",
+		TagsIn("tag1"),
+		[]string{"env1"},
+	}, {
+		"two tags",
+		TagsIn("tag1", "tag2"),
+		[]string{"env1", "env2"},
+	}, {
+		"attribute with two values",
+		AttrIn("diffattr", "val1"),
+		[]string{"env1"},
+	}, {
+		"any attr",
+		AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
+		[]string{"env1", "env2"},
+	}, {
+		"all attr",
+		AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
+		[]string{"env1"},
+	}, {
+		"all attr and one tag",
+		And(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag")),
+		[]string{"env1"},
+	}, {
+		"all attr and one tag no result",
+		And(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag2")),
+		[]string{},
+	}, {
+		"all attr or one tag",
+		Or(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag2")),
+		[]string{"env1", "env2"},
+	},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ris, err := cEnv.List(WithQuery(tc.query))
+			if err != nil {
+				t.Errorf("Failed due: %s", err)
+			}
+
+			names := make([]string, len(ris))
+
+			for i, ri := range ris {
+				names[i] = ri.Name
+			}
+
+			if !reflect.DeepEqual(tc.expected, names) {
+				t.Errorf("Got %+v, expected %+v", names, tc.expected)
+			}
+		})
+	}
+}
+
+func withAttr(attr map[string]string) func(*apiv1.ResourceInstance) {
+	return func(ri *apiv1.ResourceInstance) {
+		ri.Attributes = attr
+	}
+}
+
+func withTags(tags []string) func(*apiv1.ResourceInstance) {
+	return func(ri *apiv1.ResourceInstance) {
+		ri.Tags = tags
+	}
+}
+
+type buildOption func(*apiv1.ResourceInstance)
+
+func env(name string, opts ...buildOption) *apiv1.ResourceInstance {
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: management.EnvironmentGVK(),
+		},
+	}
+
+	for _, o := range opts {
+		o(ri)
+	}
+
+	return ri
+}
+
+func apisvc(name string, scopeName string, opts ...buildOption) *apiv1.ResourceInstance {
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: management.APIServiceGVK(),
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+				},
+			},
+		},
+	}
+
+	for _, o := range opts {
+		o(ri)
+	}
+
+	return ri
+}
+
+func TestFake(t *testing.T) {
+	testCases := []struct {
+		name           string
+		init           []*apiv1.ResourceInstance
+		add            []*apiv1.ResourceInstance
+		update         []*apiv1.ResourceInstance
+		delete         []*apiv1.ResourceInstance
+		queryClient    func(Base) Scoped
+		query          QueryNode
+		expectedBefore []string
+		expectedAfter  []string
+	}{{
+		"attr list after delete",
+		[]*apiv1.ResourceInstance{
+			env("env1"),
+			apisvc("svc1", "env1", withAttr(map[string]string{"attr": "val"})),
+		},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{apisvc("svc1", "env1")},
+		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		AttrIn("attr", "val"),
+		[]string{"svc1"},
+		[]string{},
+	}, {
+		"attr list after update",
+		[]*apiv1.ResourceInstance{
+			env("env1"),
+			apisvc("svc1", "env1"),
+		},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{apisvc("svc1", "env1", withAttr(map[string]string{"attr": "val"}))},
+		[]*apiv1.ResourceInstance{},
+		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		AttrIn("attr", "val"),
+		[]string{},
+		[]string{"svc1"},
+	}, {
+		"tags list after delete",
+		[]*apiv1.ResourceInstance{
+			env("env1"),
+			apisvc("svc1", "env1", withTags([]string{"tag1"})),
+		},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{apisvc("svc1", "env1")},
+		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		TagsIn("tag1"),
+		[]string{"svc1"},
+		[]string{},
+	}, {
+		"tags list after update",
+		[]*apiv1.ResourceInstance{
+			env("env1"),
+			apisvc("svc1", "env1"),
+		},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{apisvc("svc1", "env1", withTags([]string{"tag1"}))},
+		[]*apiv1.ResourceInstance{},
+		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		TagsIn("tag1"),
+		[]string{},
+		[]string{"svc1"},
+	}, {
+		"attribute and tags list after add",
+		[]*apiv1.ResourceInstance{
+			env("env1"),
+			apisvc("svc1", "env1", withAttr(map[string]string{"attr1": "val1"}), withTags([]string{"tag1"})),
+		},
+		[]*apiv1.ResourceInstance{apisvc("svc2", "env1", withAttr(map[string]string{"attr1": "val1"}), withTags([]string{"tag1"}))},
+		[]*apiv1.ResourceInstance{},
+		[]*apiv1.ResourceInstance{},
+		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		TagsIn("tag1"),
+		[]string{"svc1"},
+		[]string{"svc1", "svc2"},
+	},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			fk, err := NewFakeClient(tc.init...)
+			if err != nil {
+				t.Fatalf("Failed due: %s", err)
+			}
+
+			ris, err := tc.queryClient(fk).List(WithQuery(tc.query))
+			if err != nil {
+				t.Fatalf("List query failed due: %s", err)
+			}
+
+			names := make([]string, len(ris))
+			for i, ri := range ris {
+				names[i] = ri.Name
+			}
+
+			if !reflect.DeepEqual(tc.expectedBefore, names) {
+				t.Fatalf("Before: got %+v, expected %+v", names, tc.expectedBefore)
+			}
+
+			for _, ri := range tc.add {
+				c, err := fk.ForKind(ri.GroupVersionKind)
+				if err != nil {
+					t.Fatalf("Failed to add %+v: %s", ri, err)
+				}
+
+				s := c.(Scoped)
+
+				if ri.Metadata.Scope.Name != "" {
+					s = c.WithScope(ri.Metadata.Scope.Name)
+				}
+
+				_, err = s.Create(ri)
+				if err != nil {
+					t.Fatalf("Failed to add %+v: %s", ri, err)
+				}
+			}
+
+			for _, ri := range tc.update {
+				c, err := fk.ForKind(ri.GroupVersionKind)
+				if err != nil {
+					t.Fatalf("Failed to update %+v: %s", ri, err)
+				}
+
+				s := c.(Scoped)
+
+				if ri.Metadata.Scope.Name != "" {
+					s = c.WithScope(ri.Metadata.Scope.Name)
+				}
+
+				_, err = s.Update(ri)
+				if err != nil {
+					t.Fatalf("Failed to update %+v: %s", ri, err)
+				}
+			}
+
+			for _, ri := range tc.delete {
+				c, err := fk.ForKind(ri.GroupVersionKind)
+				if err != nil {
+					t.Fatalf("Failed to delete %+v: %s", ri, err)
+				}
+
+				s := c.(Scoped)
+
+				if ri.Metadata.Scope.Name != "" {
+					s = c.WithScope(ri.Metadata.Scope.Name)
+				}
+
+				err = s.Delete(ri)
+				if err != nil {
+					t.Fatalf("Failed to delete %+v: %s", ri, err)
+				}
+			}
+
+			ris, err = tc.queryClient(fk).List(WithQuery(tc.query))
+			if err != nil {
+				t.Errorf("Failed due: %s", err)
+			}
+
+			names = make([]string, len(ris))
+			for i, ri := range ris {
+				names[i] = ri.Name
+			}
+
+			expectedSorted = sort.Slice(tc.expectedAfter)
+			gotSorted = sort.Slice(names)
+
+			if !reflect.DeepEqual(, names) {
+				t.Errorf("After: got %+v, expected %+v", names, tc.expectedAfter)
+			}
+
+		})
+	}
+
 }

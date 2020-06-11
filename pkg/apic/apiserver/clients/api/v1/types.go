@@ -76,7 +76,7 @@ type ListOptions func(*listOptions)
 
 // ListOptions
 type listOptions struct {
-	query QueryNode //
+	query QueryNode
 }
 
 // GetOptions - placeholder for future options
