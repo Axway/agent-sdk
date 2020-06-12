@@ -9,6 +9,22 @@ import (
 	"github.com/google/uuid"
 )
 
+func event(eType apiv1.EventType, ri *apiv1.ResourceInstance) *apiv1.Event {
+	return &apiv1.Event{
+		Id:   uuid.New().String(),
+		Type: eType,
+		Payload: apiv1.EventPayload{
+			GroupKind:  ri.GroupKind,
+			Scope:      ri.Metadata.Scope,
+			Tags:       ri.Tags,
+			Attributes: ri.Attributes,
+			Id:         ri.Metadata.Id,
+			Name:       ri.Name,
+			References: nil, // needed ?
+		},
+	}
+}
+
 type fakeGroup map[string]fakeVersion
 
 type fakeVersion map[string]*fakeUnscoped
@@ -49,6 +65,16 @@ func (fbs fakeByScope) WithScope(name string) Scoped {
 	return fbs[name]
 }
 
+func (fbs fakeByScope) deleteAll() error {
+	for _, fs := range fbs {
+		if err := fs.deleteAll(); err != nil {
+
+			return err
+		}
+	}
+	return nil
+}
+
 func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
@@ -56,8 +82,29 @@ func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInsta
 	return fk.create(ri)
 }
 
-func (fk *fakeUnscoped) Delete(_ *apiv1.ResourceInstance) error {
-	panic("not implemented") // TODO: Implement
+func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
+	if fk == nil {
+		return fmt.Errorf("unknown scope for %s", ri.Name)
+	}
+
+	fk.lock.Lock()
+	defer fk.lock.Unlock()
+
+	_, ok := fk.resources[ri.Name]
+	if !ok {
+		return fmt.Errorf("resource not found %+v", ri)
+	}
+
+	toDelete, ok := fk.scopedKinds[ri.Name]
+	if !ok {
+		return fk.fakeScoped.delete(ri)
+	}
+
+	toDelete.deleteAll()
+
+	delete(fk.resources, ri.Name)
+
+	return fk.fakeScoped.delete(ri)
 }
 
 func (fk *fakeUnscoped) Get(name string) (*apiv1.ResourceInstance, error) {
@@ -87,6 +134,7 @@ func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInsta
 				Kind: fk.GroupVersionKind.Kind,
 				Name: created.Name,
 			},
+			fk.handler,
 		)
 	}
 
@@ -239,6 +287,7 @@ type fakeScoped struct {
 	tagsIndex      index
 	attributeIndex index
 	lock           *sync.Mutex
+	handler        EventHandler
 }
 
 func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
@@ -260,6 +309,10 @@ func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
+	return fk.delete(ri)
+}
+
+func (fk *fakeScoped) delete(ri *apiv1.ResourceInstance) error {
 	deleted, ok := fk.resources[ri.Name]
 	if !ok {
 		return fmt.Errorf("resource not found %+v", ri)
@@ -267,6 +320,8 @@ func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
 
 	fk.attributeIndex.Update(attrsAsIdxs(deleted.Attributes), []string{}, deleted.Name)
 	fk.tagsIndex.Update(deleted.Tags, []string{}, deleted.Name)
+
+	fk.handler.Handle(event(apiv1.ResourceEntryDeletedEvent, deleted))
 
 	return nil
 }
@@ -380,6 +435,8 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 	fk.resources[ri.Name] = created
 
+	fk.handler.Handle(event(apiv1.ResourceEntryCreatedEvent, created))
+
 	return created, nil
 }
 
@@ -423,6 +480,8 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 	fk.resources[ri.Name] = updated
 
+	fk.handler.Handle(event(apiv1.ResourceEntryUpdatedEvent, updated))
+
 	return updated, nil
 }
 
@@ -439,14 +498,40 @@ func (fk *fakeScoped) get(name string) (*apiv1.ResourceInstance, error) {
 	return ris, nil
 }
 
-type fakeClientBase map[string]fakeGroup
+func (fk *fakeScoped) deleteAll() error {
+	fk.lock.Lock()
+	defer fk.lock.Unlock()
+
+	for _, ri := range fk.resources {
+		fk.handler.Handle(event(apiv1.ResourceEntryDeletedEvent, ri))
+	}
+
+	*fk = fakeScoped{}
+
+	return nil
+}
+
+type delegatingEventHandler struct {
+	wrapped EventHandler
+}
+
+func (dh *delegatingEventHandler) Handle(e *apiv1.Event) {
+	if dh != nil && dh.wrapped != nil {
+		dh.wrapped.Handle(e)
+	}
+}
+
+type fakeClientBase struct {
+	handler *delegatingEventHandler
+	groups  map[string]fakeGroup
+}
 
 type fakeClient struct {
 	fakeClientBase
 	Unscoped
 }
 
-func newFakeKind(gvk apiv1.GroupVersionKind, ms apiv1.MetadataScope) *fakeScoped {
+func newFakeKind(gvk apiv1.GroupVersionKind, ms apiv1.MetadataScope, handler EventHandler) *fakeScoped {
 	return &fakeScoped{
 		gvk,
 		ms,
@@ -454,10 +539,12 @@ func newFakeKind(gvk apiv1.GroupVersionKind, ms apiv1.MetadataScope) *fakeScoped
 		index{},
 		index{},
 		&sync.Mutex{},
+		handler,
 	}
 }
 
-func NewFakeClient(ris ...*apiv1.ResourceInstance) (fakeClientBase, error) {
+func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
+	handler := &delegatingEventHandler{}
 	groups := map[string]fakeGroup{}
 
 	for _, gvk := range apiv1.GVKSet() {
@@ -492,6 +579,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (fakeClientBase, error) {
 							ApiVersion: gvk.ApiVersion,
 						},
 						apiv1.MetadataScope{},
+						handler,
 					),
 					map[string]fakeByScope{},
 				}
@@ -510,14 +598,16 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (fakeClientBase, error) {
 			version[gvk.Kind] = &fakeUnscoped{
 				*newFakeKind(
 					gvk,
+
 					apiv1.MetadataScope{},
+					handler,
 				),
 				map[string]fakeByScope{},
 			}
 		}
 	}
 
-	client := fakeClientBase(groups)
+	client := &fakeClientBase{handler, groups}
 
 	// pass through and create unscoped resources
 	for _, ri := range ris {
@@ -563,7 +653,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (fakeClientBase, error) {
 		}
 	}
 
-	return groups, nil
+	return client, nil
 }
 
 func (fcb fakeClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
@@ -573,14 +663,12 @@ func (fcb fakeClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) 
 	}
 
 	if sk == "" {
-		return &fakeClient{
-			fcb,
-			fcb[gvk.Group][gvk.ApiVersion][gvk.Kind],
-		}, nil
+		return fcb.groups[gvk.Group][gvk.ApiVersion][gvk.Kind], nil
 	}
 
-	return &fakeClient{
-		fcb,
-		fcb[gvk.Group][gvk.ApiVersion][sk].scopedKinds[gvk.Kind],
-	}, nil
+	return fcb.groups[gvk.Group][gvk.ApiVersion][sk].scopedKinds[gvk.Kind], nil
+}
+
+func (fck fakeClientBase) SetHandler(ev EventHandler) {
+	fck.handler.wrapped = ev
 }

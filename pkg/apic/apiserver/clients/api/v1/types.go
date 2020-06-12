@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // Options -
@@ -79,18 +80,12 @@ type listOptions struct {
 	query QueryNode
 }
 
-// GetOptions - placeholder for future options
-type letOptions struct {
+type EventHandler interface {
+	Handle(*v1.Event)
 }
 
-// CreateOptions - placeholder for future options
-type createOptions struct {
-}
+type EventHandlerFunc func(*v1.Event)
 
-// DeleteOptions - placeholder for future options
-type deleteOptions struct {
-}
-
-// UpdateOptions - placeholder for future options
-type updateOptions struct {
+func (ehf EventHandlerFunc) Handle(ev *v1.Event) {
+	ehf(ev)
 }

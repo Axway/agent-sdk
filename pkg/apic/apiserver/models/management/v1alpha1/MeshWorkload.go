@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_MeshWorkloadGVK, MeshWorkloadScope, MeshWorkloadResource)
 }
 
+// MeshWorkload Resource
 type MeshWorkload struct {
 	apiv1.ResourceMeta
 
 	Spec struct{} `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a MeshWorkload
 func (res *MeshWorkload) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *MeshWorkload) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a MeshWorkload to a ResourceInstance
 func (res *MeshWorkload) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

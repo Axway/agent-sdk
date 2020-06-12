@@ -2,6 +2,7 @@ package v1_test
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	. "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
@@ -386,6 +387,9 @@ func TestFake(t *testing.T) {
 				names[i] = ri.Name
 			}
 
+			sort.Strings(tc.expectedBefore)
+			sort.Strings(names)
+
 			if !reflect.DeepEqual(tc.expectedBefore, names) {
 				t.Fatalf("Before: got %+v, expected %+v", names, tc.expectedBefore)
 			}
@@ -454,14 +458,110 @@ func TestFake(t *testing.T) {
 				names[i] = ri.Name
 			}
 
-			expectedSorted = sort.Slice(tc.expectedAfter)
-			gotSorted = sort.Slice(names)
+			sort.Strings(tc.expectedAfter)
+			sort.Strings(names)
 
-			if !reflect.DeepEqual(, names) {
+			if !reflect.DeepEqual(tc.expectedAfter, names) {
 				t.Errorf("After: got %+v, expected %+v", names, tc.expectedAfter)
 			}
 
 		})
 	}
 
+}
+
+func TestFakeEvents(t *testing.T) {
+	fk, err := NewFakeClient()
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	ri := env("env1")
+
+	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+		if e.Type != apiv1.ResourceEntryCreatedEvent {
+			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
+		}
+
+		if e.Payload.Name != "env1" {
+			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
+		}
+	}))
+
+	c, err := fk.ForKind(management.EnvironmentGVK())
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	_, err = c.Create(ri)
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+		if e.Type != apiv1.ResourceEntryUpdatedEvent {
+			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
+		}
+
+		if e.Payload.Name != "env1" {
+			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
+		}
+	}))
+
+	_, err = c.Update(ri)
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+		if e.Type != apiv1.ResourceEntryDeletedEvent {
+			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
+		}
+
+		if e.Payload.Name != "env1" {
+			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
+		}
+	}))
+
+	err = c.Delete(ri)
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+}
+
+func TestFakeScopedDeleteEvents(t *testing.T) {
+	fk, err := NewFakeClient(env("env1"), apisvc("svc1", "env1"))
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	c, err := fk.ForKind(management.EnvironmentGVK())
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
+
+	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+		if e.Type != apiv1.ResourceEntryDeletedEvent {
+			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
+		}
+
+		if e.Payload.Name != "svc1" {
+			t.Errorf("Unexpected resource name. Expected svc1 got: %+v", e)
+		}
+
+		fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+			if e.Type != apiv1.ResourceEntryDeletedEvent {
+				t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
+			}
+
+			if e.Payload.Name != "env1" {
+				t.Errorf("Unexpected resource name. Expected env1 got %+v", e)
+			}
+		}))
+	}))
+	err = c.Delete(env("env1"))
+
+	if err != nil {
+		t.Fatalf("Failed due: %s", err)
+	}
 }

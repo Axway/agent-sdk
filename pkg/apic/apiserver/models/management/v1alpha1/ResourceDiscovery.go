@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_ResourceDiscoveryGVK, ResourceDiscoveryScope, ResourceDiscoveryResource)
 }
 
+// ResourceDiscovery Resource
 type ResourceDiscovery struct {
 	apiv1.ResourceMeta
 
 	Spec ResourceDiscoverySpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a ResourceDiscovery
 func (res *ResourceDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *ResourceDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a ResourceDiscovery to a ResourceInstance
 func (res *ResourceDiscovery) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {

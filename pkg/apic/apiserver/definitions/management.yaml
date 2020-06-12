@@ -691,11 +691,11 @@ spec:
               type: string
             resourceSpec:
               type: object
-              additionalProperties: true
+              additionalProperties: {}
             resourceStatus:
               type: object
-              additionalProperties: true
-          additionalProperties: true
+              additionalProperties: {}
+          additionalProperties: {}
 ---
 group: management
 kind: ResourceDiscovery

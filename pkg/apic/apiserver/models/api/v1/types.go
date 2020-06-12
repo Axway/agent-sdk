@@ -66,25 +66,6 @@ type Metadata struct {
 	State string `json:"state,omitempty"`
 }
 
-// ResourceMeta metadata for a ResourceInstance
-type ResourceMeta struct {
-	GroupVersionKind
-	Name     string   `json:"name"`
-	Title    string   `json:"title,omitempty"`
-	Metadata Metadata `json:"metadata,omitempty"`
-	// Custom attributes added to objects.
-	Attributes map[string]string `json:"attributes,omitempty"`
-	// List of tags.
-	Tags []string `json:"tags,omitempty"`
-}
-
-// ResourceInstance API Server generic resource structure.
-type ResourceInstance struct {
-	ResourceMeta
-	// Resource instance specs.
-	Spec map[string]interface{} `json:"spec"`
-}
-
 type EventPayload struct {
 	GroupKind
 	Scope      MetadataScope     `json:"scope"`
@@ -95,9 +76,17 @@ type EventPayload struct {
 	References []Reference       `json:"references"`
 }
 
+type EventType string
+
+const (
+	ResourceEntryCreatedEvent EventType = "ResourceEntryCreatedEvent"
+	ResourceEntryDeletedEvent EventType = "ResourceEntryDeletedEvent"
+	ResourceEntryUpdatedEvent EventType = "ResourceEntryUpdatedEvent"
+)
+
 // Event is an API Server event concerning a resource
 type Event struct {
 	Id      string
-	Type    string
+	Type    EventType
 	Payload EventPayload
 }

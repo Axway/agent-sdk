@@ -34,14 +34,15 @@ func init() {
 	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScope, K8SResourceResource)
 }
 
+// K8SResource Resource
 type K8SResource struct {
 	apiv1.ResourceMeta
 
 	Spec K8SResourceSpec `json:"spec"`
 }
 
+// FromInstance converts a ResourceInstance to a K8SResource
 func (res *K8SResource) FromInstance(ri *apiv1.ResourceInstance) error {
-	// TODO this needs to be better
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -58,6 +59,7 @@ func (res *K8SResource) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
+// AsInstance converts a K8SResource to a ResourceInstance
 func (res *K8SResource) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
