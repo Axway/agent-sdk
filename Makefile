@@ -2,8 +2,7 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
-
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/**/definitions/v1alpha  | grep -v ./pkg/apic/apiserver/**/management/v1alpha)
 all : clean
 
 clean:
@@ -35,7 +34,7 @@ sonar: test-sonar
 		-Dsonar.projectBaseDir=${WORKSPACE} \
 		-Dsonar.sources=. \
 		-Dsonar.tests=. \
-		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/apic/apiserver/definitions/**,**/apic/apiserver/models/** \
+		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/definitions/v1alpha1/**,**/management/v1alpha1/** \
 		-Dsonar.test.inclusions=**/*test*.go \
 		-Dsonar.go.tests.reportPaths=goreport.json \
 		-Dsonar.go.coverage.reportPaths=gocoverage.out
