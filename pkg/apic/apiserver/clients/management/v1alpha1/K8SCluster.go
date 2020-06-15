@@ -11,34 +11,25 @@ import (
 
 // K8SClusterClient -
 type K8SClusterClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewK8SClusterClient -
-func NewK8SClusterClient(cb *v1.ClientBase) (*K8SClusterClient, error) {
-	client, err := cb.ForKind(v1alpha1.K8SClusterGVK())
+
+func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
+
+	client, err := c.ForKind(v1alpha1.K8SClusterGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &K8SClusterClient{client}, nil
-}
 
-// WithScope -
-func (c *K8SClusterClient) WithScope(scope string) *K8SClusterClient {
-	return &K8SClusterClient{
-		c.client.WithScope(scope),
-	}
-}
-
-// SetQuery -
-func (c *K8SClusterClient) SetQuery(query string) {
-	c.client.SetQuery(query)
 }
 
 // List -
-func (c *K8SClusterClient) List() ([]*v1alpha1.K8SCluster, error) {
-	riList, err := c.client.List()
+func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SCluster, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

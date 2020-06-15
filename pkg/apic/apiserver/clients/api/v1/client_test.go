@@ -3,13 +3,18 @@ package v1
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	management "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"gopkg.in/h2non/gock.v1"
 )
+
+const privKey = "testdata/privatekey"
+const pubKey = "testdata/publickey"
 
 const mockJSONEnv = `{
   "group": "management",
@@ -66,9 +71,11 @@ const mockJSONApiSvc = `{
 	"spec": {}
 }`
 
+const mockTokenResponse = `{"access_token":"eyJhbGc","expires_in":1800}`
+
 var mockEnv = &apiv1.ResourceInstance{}
 var mockEnvUpdated = &apiv1.ResourceInstance{}
-var mockApiSvc = &apiv1.ResourceInstance{}
+var mockAPISvc = &apiv1.ResourceInstance{}
 var client = &Client{}
 
 func createEnv(client *Client) (*apiv1.ResourceInstance, error) {
@@ -86,11 +93,11 @@ func createEnv(client *Client) (*apiv1.ResourceInstance, error) {
 }
 
 func TestMain(m *testing.M) {
-	defer gock.Off()
 	json.Unmarshal([]byte(mockJSONEnv), mockEnv)
 	json.Unmarshal([]byte(mockJSONEnv), mockEnvUpdated)
 	mockEnvUpdated.Title = "updated-testenv-title"
-	json.Unmarshal([]byte(mockJSONApiSvc), mockApiSvc)
+	json.Unmarshal([]byte(mockJSONApiSvc), mockAPISvc)
+
 	newClient, err := NewClient(
 		"http://localhost:8080/apis",
 		BasicAuth(
@@ -109,31 +116,28 @@ func TestMain(m *testing.M) {
 }
 
 func TestUnscoped(t *testing.T) {
+	defer gock.Off()
 	// Create env
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments").
 		Reply(201).
 		JSON(mockEnv)
 
-	// Update env
 	gock.New("http://localhost:8080/apis").
-		Put("/management/v1alpha1/environments").
+		Put("/management/v1alpha1/environments/test-env-1").
 		Reply(200).
 		JSON(mockEnvUpdated)
 
-	// Get env by name
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments/test-env-1").
 		Reply(200).
 		JSON(mockEnv)
 
-	// List envs
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(200).
 		JSON([]*apiv1.ResourceInstance{mockEnv})
 
-	// Delete env
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments/test-env-1").
 		Reply(204)
@@ -188,30 +192,27 @@ func TestUnscoped(t *testing.T) {
 }
 
 func TestScoped(t *testing.T) {
+	defer gock.Off()
 	// Create env
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments").
 		Reply(201).
 		JSON(mockEnv)
 
-	// Create api service
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments/test-env-1/apiservices").
 		Reply(201).
-		JSON(mockApiSvc)
+		JSON(mockAPISvc)
 
-	// List api services
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments/test-env-1/apiservices").
 		Reply(200).
-		JSON([]*apiv1.ResourceInstance{mockApiSvc})
+		JSON([]*apiv1.ResourceInstance{mockAPISvc})
 
-	// Delete api service
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments/test-env-1/apiservices/test-api-svc").
 		Reply(204)
 
-	// Delete env
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments/test-env-1").
 		Reply(204)
@@ -264,22 +265,46 @@ func TestScoped(t *testing.T) {
 	}
 }
 
+func TestListWithQuery(t *testing.T) {
+	defer gock.Off()
+	// List envs
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
+		JSON([]*apiv1.ResourceInstance{mockEnv})
+
+	_, err := client.List(WithQuery(And(TagsIn("test"), AttrIn("attr", "val"))))
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+}
+
 func TestJWTAuth(t *testing.T) {
-	token := "abcdefg"
-	tenantID := "123456"
+	defer gock.Off()
+	tenantID := "426937327920148"
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments").
-		MatchHeader("Authorization", "Bearer abcdefg").
+		MatchHeader("Authorization", "Bearer eyJhbGc").
 		MatchHeader("X-Axway-Tenant-Id", tenantID).
 		Reply(201).
 		JSON(mockEnv)
 
+	gock.New("https://login-preprod.axway.com").
+		Post("/auth/realms/Broker/protocol/openid-connect/token").
+		Reply(200).
+		JSON(mockTokenResponse)
+
 	client, err := NewClient(
 		"http://localhost:8080/apis",
 		JWTAuth(
-			token,
 			tenantID,
-		),
+			privKey,
+			pubKey,
+			"",
+			"https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token",
+			"https://login-preprod.axway.com/auth/realms/Broker",
+			"DOSA_1234",
+			10*time.Second),
 	).ForKind(management.EnvironmentGVK())
 
 	if err != nil {
@@ -293,6 +318,7 @@ func TestJWTAuth(t *testing.T) {
 }
 
 func TestListError(t *testing.T) {
+	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(500).
@@ -306,6 +332,7 @@ func TestListError(t *testing.T) {
 }
 
 func TestGetError(t *testing.T) {
+	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(500).
@@ -319,6 +346,7 @@ func TestGetError(t *testing.T) {
 }
 
 func TestDeleteError(t *testing.T) {
+	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments").
 		Reply(500).
@@ -341,6 +369,7 @@ func TestDeleteError(t *testing.T) {
 }
 
 func TestCreateError(t *testing.T) {
+	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments").
 		Reply(500).
@@ -354,6 +383,7 @@ func TestCreateError(t *testing.T) {
 }
 
 func TestUpdateError(t *testing.T) {
+	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
 		Put("/management/v1alpha1/environments").
 		Reply(500).
@@ -372,5 +402,27 @@ func TestUpdateError(t *testing.T) {
 
 	if err == nil {
 		t.Fatalf("Expected update to fail: %s", err)
+	}
+}
+
+func TestHTTPClient(t *testing.T) {
+	client, err := NewClient(
+		"http://localhost:8080/apis",
+		BasicAuth(
+			"admin",
+			"servicesecret",
+			"admin",
+			"123",
+		),
+	).ForKind(management.EnvironmentGVK())
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+
+	newClient := &http.Client{}
+	HTTPClient(newClient)(client.ClientBase)
+
+	if newClient != client.client {
+		t.Fatalf("Error: expected client.client to be %v but received %v", newClient, client.client)
 	}
 }

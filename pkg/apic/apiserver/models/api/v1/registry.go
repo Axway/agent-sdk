@@ -33,11 +33,13 @@ func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
 	resourceMap[gvk.GroupKind] = resource
 }
 
+// GetScope return the scope of a Kind
 func GetScope(gv GroupKind) (k string, ok bool) {
 	k, ok = scopeKindMap[gv]
 	return
 }
 
+// GetResource returns the resource name of a Kind
 func GetResource(gv GroupKind) (r string, ok bool) {
 	r, ok = resourceMap[gv]
 	return

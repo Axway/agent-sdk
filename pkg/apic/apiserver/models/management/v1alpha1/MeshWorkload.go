@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "MeshWorkload",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 

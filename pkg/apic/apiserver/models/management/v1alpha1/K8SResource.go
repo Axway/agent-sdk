@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "K8SResource",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 

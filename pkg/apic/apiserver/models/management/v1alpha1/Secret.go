@@ -16,7 +16,7 @@ var (
 			Group: "management",
 			Kind:  "Secret",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 

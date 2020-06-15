@@ -11,34 +11,25 @@ import (
 
 // EnvironmentClient -
 type EnvironmentClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewEnvironmentClient -
-func NewEnvironmentClient(cb *v1.ClientBase) (*EnvironmentClient, error) {
-	client, err := cb.ForKind(v1alpha1.EnvironmentGVK())
+
+func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.EnvironmentGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &EnvironmentClient{client}, nil
-}
 
-// WithScope -
-func (c *EnvironmentClient) WithScope(scope string) *EnvironmentClient {
-	return &EnvironmentClient{
-		c.client.WithScope(scope),
-	}
-}
-
-// SetQuery -
-func (c *EnvironmentClient) SetQuery(query string) {
-	c.client.SetQuery(query)
 }
 
 // List -
-func (c *EnvironmentClient) List() ([]*v1alpha1.Environment, error) {
-	riList, err := c.client.List()
+func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Environment, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

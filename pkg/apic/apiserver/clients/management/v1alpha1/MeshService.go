@@ -11,34 +11,37 @@ import (
 
 // MeshServiceClient -
 type MeshServiceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedMeshServiceClient -
+type UnscopedMeshServiceClient struct {
+	client v1.Unscoped
 }
 
 // NewMeshServiceClient -
-func NewMeshServiceClient(cb *v1.ClientBase) (*MeshServiceClient, error) {
-	client, err := cb.ForKind(v1alpha1.MeshServiceGVK())
+
+func NewMeshServiceClient(c v1.Base) (*UnscopedMeshServiceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.MeshServiceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &MeshServiceClient{client}, nil
+	return &UnscopedMeshServiceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *MeshServiceClient) WithScope(scope string) *MeshServiceClient {
+func (c *UnscopedMeshServiceClient) WithScope(scope string) *MeshServiceClient {
 	return &MeshServiceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *MeshServiceClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *MeshServiceClient) List() ([]*v1alpha1.MeshService, error) {
-	riList, err := c.client.List()
+func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshService, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

@@ -11,34 +11,37 @@ import (
 
 // ConsumerInstanceClient -
 type ConsumerInstanceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedConsumerInstanceClient -
+type UnscopedConsumerInstanceClient struct {
+	client v1.Unscoped
 }
 
 // NewConsumerInstanceClient -
-func NewConsumerInstanceClient(cb *v1.ClientBase) (*ConsumerInstanceClient, error) {
-	client, err := cb.ForKind(v1alpha1.ConsumerInstanceGVK())
+
+func NewConsumerInstanceClient(c v1.Base) (*UnscopedConsumerInstanceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ConsumerInstanceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ConsumerInstanceClient{client}, nil
+	return &UnscopedConsumerInstanceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ConsumerInstanceClient) WithScope(scope string) *ConsumerInstanceClient {
+func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstanceClient {
 	return &ConsumerInstanceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *ConsumerInstanceClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *ConsumerInstanceClient) List() ([]*v1alpha1.ConsumerInstance, error) {
-	riList, err := c.client.List()
+func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerInstance, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

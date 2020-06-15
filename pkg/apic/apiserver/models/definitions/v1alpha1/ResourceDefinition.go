@@ -16,7 +16,7 @@ var (
 			Group: "definitions",
 			Kind:  "ResourceDefinition",
 		},
-		ApiVersion: "v1alpha1",
+		APIVersion: "v1alpha1",
 	}
 )
 

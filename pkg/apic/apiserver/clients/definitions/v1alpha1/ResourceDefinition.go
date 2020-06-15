@@ -11,34 +11,37 @@ import (
 
 // ResourceDefinitionClient -
 type ResourceDefinitionClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedResourceDefinitionClient -
+type UnscopedResourceDefinitionClient struct {
+	client v1.Unscoped
 }
 
 // NewResourceDefinitionClient -
-func NewResourceDefinitionClient(cb *v1.ClientBase) (*ResourceDefinitionClient, error) {
-	client, err := cb.ForKind(v1alpha1.ResourceDefinitionGVK())
+
+func NewResourceDefinitionClient(c v1.Base) (*UnscopedResourceDefinitionClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ResourceDefinitionGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResourceDefinitionClient{client}, nil
+	return &UnscopedResourceDefinitionClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ResourceDefinitionClient) WithScope(scope string) *ResourceDefinitionClient {
+func (c *UnscopedResourceDefinitionClient) WithScope(scope string) *ResourceDefinitionClient {
 	return &ResourceDefinitionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *ResourceDefinitionClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *ResourceDefinitionClient) List() ([]*v1alpha1.ResourceDefinition, error) {
-	riList, err := c.client.List()
+func (c *ResourceDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinition, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

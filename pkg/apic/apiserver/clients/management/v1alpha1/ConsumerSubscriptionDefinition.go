@@ -11,34 +11,37 @@ import (
 
 // ConsumerSubscriptionDefinitionClient -
 type ConsumerSubscriptionDefinitionClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedConsumerSubscriptionDefinitionClient -
+type UnscopedConsumerSubscriptionDefinitionClient struct {
+	client v1.Unscoped
 }
 
 // NewConsumerSubscriptionDefinitionClient -
-func NewConsumerSubscriptionDefinitionClient(cb *v1.ClientBase) (*ConsumerSubscriptionDefinitionClient, error) {
-	client, err := cb.ForKind(v1alpha1.ConsumerSubscriptionDefinitionGVK())
+
+func NewConsumerSubscriptionDefinitionClient(c v1.Base) (*UnscopedConsumerSubscriptionDefinitionClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ConsumerSubscriptionDefinitionGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ConsumerSubscriptionDefinitionClient{client}, nil
+	return &UnscopedConsumerSubscriptionDefinitionClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ConsumerSubscriptionDefinitionClient) WithScope(scope string) *ConsumerSubscriptionDefinitionClient {
+func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *ConsumerSubscriptionDefinitionClient {
 	return &ConsumerSubscriptionDefinitionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *ConsumerSubscriptionDefinitionClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *ConsumerSubscriptionDefinitionClient) List() ([]*v1alpha1.ConsumerSubscriptionDefinition, error) {
-	riList, err := c.client.List()
+func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerSubscriptionDefinition, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

@@ -11,34 +11,37 @@ import (
 
 // APIServiceInstanceClient -
 type APIServiceInstanceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedAPIServiceInstanceClient -
+type UnscopedAPIServiceInstanceClient struct {
+	client v1.Unscoped
 }
 
 // NewAPIServiceInstanceClient -
-func NewAPIServiceInstanceClient(cb *v1.ClientBase) (*APIServiceInstanceClient, error) {
-	client, err := cb.ForKind(v1alpha1.APIServiceInstanceGVK())
+
+func NewAPIServiceInstanceClient(c v1.Base) (*UnscopedAPIServiceInstanceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.APIServiceInstanceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &APIServiceInstanceClient{client}, nil
+	return &UnscopedAPIServiceInstanceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *APIServiceInstanceClient) WithScope(scope string) *APIServiceInstanceClient {
+func (c *UnscopedAPIServiceInstanceClient) WithScope(scope string) *APIServiceInstanceClient {
 	return &APIServiceInstanceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *APIServiceInstanceClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *APIServiceInstanceClient) List() ([]*v1alpha1.APIServiceInstance, error) {
-	riList, err := c.client.List()
+func (c *APIServiceInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.APIServiceInstance, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

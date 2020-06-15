@@ -11,34 +11,37 @@ import (
 
 // K8SResourceClient -
 type K8SResourceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedK8SResourceClient -
+type UnscopedK8SResourceClient struct {
+	client v1.Unscoped
 }
 
 // NewK8SResourceClient -
-func NewK8SResourceClient(cb *v1.ClientBase) (*K8SResourceClient, error) {
-	client, err := cb.ForKind(v1alpha1.K8SResourceGVK())
+
+func NewK8SResourceClient(c v1.Base) (*UnscopedK8SResourceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.K8SResourceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &K8SResourceClient{client}, nil
+	return &UnscopedK8SResourceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *K8SResourceClient) WithScope(scope string) *K8SResourceClient {
+func (c *UnscopedK8SResourceClient) WithScope(scope string) *K8SResourceClient {
 	return &K8SResourceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *K8SResourceClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *K8SResourceClient) List() ([]*v1alpha1.K8SResource, error) {
-	riList, err := c.client.List()
+func (c *K8SResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SResource, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

@@ -5,54 +5,64 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
 
-func (ba *basicAuth) Authenticate(req *http.Request) {
-	req.SetBasicAuth(ba.user, ba.pass)
-	req.Header.Set("X-Axway-Tenant-Id", ba.tenantId)
-	req.Header.Set("X-Axway-Instance-Id", ba.instanceId)
-}
-
-func (j *jwtAuth) Authenticate(req *http.Request) {
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", j.token))
-	req.Header.Set("X-Axway-Tenant-Id", j.tenantId)
-}
-
-// BasicAuth auth with user/pass
-func BasicAuth(user, password, tenantId, instanceId string) Options {
-	return func(c *ClientBase) {
-		c.auth = &basicAuth{
-			user:       user,
-			pass:       password,
-			tenantId:   tenantId,
-			instanceId: instanceId,
-		}
-	}
-}
-
-// JWTAuth auth with token
-func JWTAuth(token, tenantId string) Options {
-	return func(c *ClientBase) {
-		c.auth = &jwtAuth{
-			token:    token,
-			tenantId: tenantId,
-		}
-	}
-}
-
+// HTTPClient allows you to replace the default client for different use cases
 func HTTPClient(client *http.Client) Options {
 	return func(c *ClientBase) {
 		c.client = client
 	}
 }
 
+func (ba *basicAuth) Authenticate(req *http.Request) error {
+	req.SetBasicAuth(ba.user, ba.pass)
+	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
+	req.Header.Set("X-Axway-Instance-Id", ba.instanceID)
+	return nil
+}
+
+func (j *jwtAuth) Authenticate(req *http.Request) error {
+	t, err := j.tokenGetter.GetToken()
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
+	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
+	return nil
+}
+
+// BasicAuth auth with user/pass
+func BasicAuth(user, password, tenantID, instanceID string) Options {
+	return func(c *ClientBase) {
+		c.auth = &basicAuth{
+			user:       user,
+			pass:       password,
+			tenantID:   tenantID,
+			instanceID: instanceID,
+		}
+	}
+}
+
+// JWTAuth auth with token
+func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
+	return func(c *ClientBase) {
+		tokenGetter := apicauth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
+		c.auth = &jwtAuth{
+			tenantID:    tenantID,
+			tokenGetter: tokenGetter,
+		}
+	}
+}
+
 // NewClient creates a new HTTP client
-func NewClient(baseUrl string, options ...Options) *ClientBase {
+func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
 		client: &http.Client{},
-		url:    baseUrl,
+		url:    baseURL,
 		auth:   noopAuth{},
 	}
 
@@ -87,7 +97,7 @@ func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (*Client, error) {
 
 	return &Client{
 		ClientBase:    cb,
-		version:       gvk.ApiVersion,
+		version:       gvk.APIVersion,
 		group:         gvk.Group,
 		resource:      resource,
 		scopeResource: scopeResource,
@@ -137,6 +147,13 @@ func (c *Client) WithScope(scope string) *Client {
 	}
 }
 
+// WithQuery applies a query on the list operation
+func WithQuery(n QueryNode) func(*listOptions) {
+	return func(lo *listOptions) {
+		lo.query = n
+	}
+}
+
 // List returns a list of resources
 func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	req, err := http.NewRequest("GET", c.url(), nil)
@@ -144,6 +161,10 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 		return nil, err
 	}
 
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
 	opts := listOptions{}
 
 	for _, o := range options {
@@ -151,7 +172,7 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 	}
 
 	if opts.query != nil {
-		rv := NewRSQLVisitor()
+		rv := newRSQLVisitor()
 		rv.Visit(opts.query)
 		q := req.URL.Query()
 		q.Add("query", rv.String())
@@ -186,7 +207,10 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	c.auth.Authenticate(req)
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -214,7 +238,10 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	c.auth.Authenticate(req)
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return err
+	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -246,7 +273,10 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 	if err != nil {
 		return nil, err
 	}
-	c.auth.Authenticate(req)
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := c.client.Do(req)
@@ -283,7 +313,12 @@ func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 	if err != nil {
 		return nil, err
 	}
-	c.auth.Authenticate(req)
+
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
+
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := c.client.Do(req)

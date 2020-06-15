@@ -11,34 +11,25 @@ import (
 
 // ResourceGroupClient -
 type ResourceGroupClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewResourceGroupClient -
-func NewResourceGroupClient(cb *v1.ClientBase) (*ResourceGroupClient, error) {
-	client, err := cb.ForKind(v1alpha1.ResourceGroupGVK())
+
+func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ResourceGroupGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &ResourceGroupClient{client}, nil
-}
 
-// WithScope -
-func (c *ResourceGroupClient) WithScope(scope string) *ResourceGroupClient {
-	return &ResourceGroupClient{
-		c.client.WithScope(scope),
-	}
-}
-
-// SetQuery -
-func (c *ResourceGroupClient) SetQuery(query string) {
-	c.client.SetQuery(query)
 }
 
 // List -
-func (c *ResourceGroupClient) List() ([]*v1alpha1.ResourceGroup, error) {
-	riList, err := c.client.List()
+func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceGroup, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

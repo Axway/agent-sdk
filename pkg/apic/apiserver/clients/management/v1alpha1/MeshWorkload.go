@@ -11,34 +11,37 @@ import (
 
 // MeshWorkloadClient -
 type MeshWorkloadClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedMeshWorkloadClient -
+type UnscopedMeshWorkloadClient struct {
+	client v1.Unscoped
 }
 
 // NewMeshWorkloadClient -
-func NewMeshWorkloadClient(cb *v1.ClientBase) (*MeshWorkloadClient, error) {
-	client, err := cb.ForKind(v1alpha1.MeshWorkloadGVK())
+
+func NewMeshWorkloadClient(c v1.Base) (*UnscopedMeshWorkloadClient, error) {
+
+	client, err := c.ForKind(v1alpha1.MeshWorkloadGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &MeshWorkloadClient{client}, nil
+	return &UnscopedMeshWorkloadClient{client}, nil
+
 }
 
 // WithScope -
-func (c *MeshWorkloadClient) WithScope(scope string) *MeshWorkloadClient {
+func (c *UnscopedMeshWorkloadClient) WithScope(scope string) *MeshWorkloadClient {
 	return &MeshWorkloadClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *MeshWorkloadClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *MeshWorkloadClient) List() ([]*v1alpha1.MeshWorkload, error) {
-	riList, err := c.client.List()
+func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshWorkload, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

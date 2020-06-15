@@ -11,34 +11,37 @@ import (
 
 // WebhookClient -
 type WebhookClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedWebhookClient -
+type UnscopedWebhookClient struct {
+	client v1.Unscoped
 }
 
 // NewWebhookClient -
-func NewWebhookClient(cb *v1.ClientBase) (*WebhookClient, error) {
-	client, err := cb.ForKind(v1alpha1.WebhookGVK())
+
+func NewWebhookClient(c v1.Base) (*UnscopedWebhookClient, error) {
+
+	client, err := c.ForKind(v1alpha1.WebhookGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &WebhookClient{client}, nil
+	return &UnscopedWebhookClient{client}, nil
+
 }
 
 // WithScope -
-func (c *WebhookClient) WithScope(scope string) *WebhookClient {
+func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 	return &WebhookClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *WebhookClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *WebhookClient) List() ([]*v1alpha1.Webhook, error) {
-	riList, err := c.client.List()
+func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

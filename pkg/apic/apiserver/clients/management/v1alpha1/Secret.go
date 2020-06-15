@@ -11,34 +11,37 @@ import (
 
 // SecretClient -
 type SecretClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedSecretClient -
+type UnscopedSecretClient struct {
+	client v1.Unscoped
 }
 
 // NewSecretClient -
-func NewSecretClient(cb *v1.ClientBase) (*SecretClient, error) {
-	client, err := cb.ForKind(v1alpha1.SecretGVK())
+
+func NewSecretClient(c v1.Base) (*UnscopedSecretClient, error) {
+
+	client, err := c.ForKind(v1alpha1.SecretGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &SecretClient{client}, nil
+	return &UnscopedSecretClient{client}, nil
+
 }
 
 // WithScope -
-func (c *SecretClient) WithScope(scope string) *SecretClient {
+func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 	return &SecretClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *SecretClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *SecretClient) List() ([]*v1alpha1.Secret, error) {
-	riList, err := c.client.List()
+func (c *SecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

@@ -33,6 +33,7 @@ type SubscriptionProperties struct {
 // Subscription -
 type Subscription interface {
 	GetID() string
+	GetName() string
 	GetApicID() string
 	GetCatalogItemID() string
 	GetState() SubscriptionState
@@ -59,6 +60,11 @@ type CentralSubscription struct {
 // GetID - Returns ID of the subscription
 func (s *CentralSubscription) GetID() string {
 	return s.ID
+}
+
+// GetName - Returns Name of the subscription
+func (s *CentralSubscription) GetName() string {
+	return s.Name
 }
 
 // GetApicID - Returns ID of the Catalog Item or API Service instance

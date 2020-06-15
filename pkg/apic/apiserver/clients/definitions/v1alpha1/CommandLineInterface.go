@@ -11,34 +11,37 @@ import (
 
 // CommandLineInterfaceClient -
 type CommandLineInterfaceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedCommandLineInterfaceClient -
+type UnscopedCommandLineInterfaceClient struct {
+	client v1.Unscoped
 }
 
 // NewCommandLineInterfaceClient -
-func NewCommandLineInterfaceClient(cb *v1.ClientBase) (*CommandLineInterfaceClient, error) {
-	client, err := cb.ForKind(v1alpha1.CommandLineInterfaceGVK())
+
+func NewCommandLineInterfaceClient(c v1.Base) (*UnscopedCommandLineInterfaceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.CommandLineInterfaceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &CommandLineInterfaceClient{client}, nil
+	return &UnscopedCommandLineInterfaceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *CommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfaceClient {
+func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfaceClient {
 	return &CommandLineInterfaceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *CommandLineInterfaceClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *CommandLineInterfaceClient) List() ([]*v1alpha1.CommandLineInterface, error) {
-	riList, err := c.client.List()
+func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*v1alpha1.CommandLineInterface, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

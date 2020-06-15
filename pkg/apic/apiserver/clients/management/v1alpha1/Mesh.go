@@ -11,34 +11,25 @@ import (
 
 // MeshClient -
 type MeshClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewMeshClient -
-func NewMeshClient(cb *v1.ClientBase) (*MeshClient, error) {
-	client, err := cb.ForKind(v1alpha1.MeshGVK())
+
+func NewMeshClient(c v1.Base) (*MeshClient, error) {
+
+	client, err := c.ForKind(v1alpha1.MeshGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &MeshClient{client}, nil
-}
 
-// WithScope -
-func (c *MeshClient) WithScope(scope string) *MeshClient {
-	return &MeshClient{
-		c.client.WithScope(scope),
-	}
-}
-
-// SetQuery -
-func (c *MeshClient) SetQuery(query string) {
-	c.client.SetQuery(query)
 }
 
 // List -
-func (c *MeshClient) List() ([]*v1alpha1.Mesh, error) {
-	riList, err := c.client.List()
+func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

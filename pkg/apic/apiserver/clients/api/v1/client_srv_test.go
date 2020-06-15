@@ -122,7 +122,7 @@ func TestQueries(t *testing.T) {
 	},
 	}
 
-	for i := range testCases {
+	for i, _ := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
 			ris, err := cEnv.List(WithQuery(tc.query))

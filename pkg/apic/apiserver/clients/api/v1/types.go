@@ -4,32 +4,33 @@ import (
 	"net/http"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // Options -
 type Options func(*ClientBase)
 
 type authenticator interface {
-	Authenticate(req *http.Request)
+	Authenticate(req *http.Request) error
 }
 
 type noopAuth struct{}
 
 // Authenticate -
-func (noopAuth) Authenticate(*http.Request) {}
+func (noopAuth) Authenticate(*http.Request) error {
+	return nil
+}
 
 type basicAuth struct {
-	instanceId string
+	instanceID string
 	pass       string
-	tenantId   string
+	tenantID   string
 	user       string
 }
 
 type jwtAuth struct {
-	instanceId string
-	tenantId   string
-	token      string
+	tenantID    string
+	tokenGetter *apicauth.PlatformTokenGetter
 }
 
 // ClientBase for grouping a client, auth method and url together
@@ -67,25 +68,23 @@ type Scoped interface {
 	Update(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
-func WithQuery(n QueryNode) func(*listOptions) {
-	return func(lo *listOptions) {
-		lo.query = n
-	}
-}
-
 type ListOptions func(*listOptions)
 
-// ListOptions
 type listOptions struct {
 	query QueryNode
 }
 
 type EventHandler interface {
-	Handle(*v1.Event)
+	Handle(*apiv1.Event)
 }
 
-type EventHandlerFunc func(*v1.Event)
+type EventHandlerFunc func(*apiv1.Event)
 
-func (ehf EventHandlerFunc) Handle(ev *v1.Event) {
+func (ehf EventHandlerFunc) Handle(ev *apiv1.Event) {
 	ehf(ev)
+}
+
+// QueryNode represents a query
+type QueryNode interface {
+	Accept(Visitor)
 }

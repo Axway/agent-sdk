@@ -11,34 +11,37 @@ import (
 
 // ResourceDefinitionVersionClient -
 type ResourceDefinitionVersionClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedResourceDefinitionVersionClient -
+type UnscopedResourceDefinitionVersionClient struct {
+	client v1.Unscoped
 }
 
 // NewResourceDefinitionVersionClient -
-func NewResourceDefinitionVersionClient(cb *v1.ClientBase) (*ResourceDefinitionVersionClient, error) {
-	client, err := cb.ForKind(v1alpha1.ResourceDefinitionVersionGVK())
+
+func NewResourceDefinitionVersionClient(c v1.Base) (*UnscopedResourceDefinitionVersionClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ResourceDefinitionVersionGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResourceDefinitionVersionClient{client}, nil
+	return &UnscopedResourceDefinitionVersionClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ResourceDefinitionVersionClient) WithScope(scope string) *ResourceDefinitionVersionClient {
+func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *ResourceDefinitionVersionClient {
 	return &ResourceDefinitionVersionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// SetQuery -
-func (c *ResourceDefinitionVersionClient) SetQuery(query string) {
-	c.client.SetQuery(query)
-}
-
 // List -
-func (c *ResourceDefinitionVersionClient) List() ([]*v1alpha1.ResourceDefinitionVersion, error) {
-	riList, err := c.client.List()
+func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}

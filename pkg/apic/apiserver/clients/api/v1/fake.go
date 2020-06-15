@@ -18,7 +18,7 @@ func event(eType apiv1.EventType, ri *apiv1.ResourceInstance) *apiv1.Event {
 			Scope:      ri.Metadata.Scope,
 			Tags:       ri.Tags,
 			Attributes: ri.Attributes,
-			Id:         ri.Metadata.Id,
+			Id:         ri.Metadata.ID,
 			Name:       ri.Name,
 			References: nil, // needed ?
 		},
@@ -65,16 +65,6 @@ func (fbs fakeByScope) WithScope(name string) Scoped {
 	return fbs[name]
 }
 
-func (fbs fakeByScope) deleteAll() error {
-	for _, fs := range fbs {
-		if err := fs.deleteAll(); err != nil {
-
-			return err
-		}
-	}
-	return nil
-}
-
 func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
@@ -95,14 +85,11 @@ func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
 		return fmt.Errorf("resource not found %+v", ri)
 	}
 
-	toDelete, ok := fk.scopedKinds[ri.Name]
-	if !ok {
-		return fk.fakeScoped.delete(ri)
+	for _, sk := range fk.scopedKinds {
+		sk[ri.Name].deleteAll()
+
+		sk[ri.Name] = nil
 	}
-
-	toDelete.deleteAll()
-
-	delete(fk.resources, ri.Name)
 
 	return fk.fakeScoped.delete(ri)
 }
@@ -127,10 +114,10 @@ func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInsta
 					Kind:  kind,
 					Group: fk.Group,
 				},
-				ApiVersion: fk.ApiVersion,
+				APIVersion: fk.APIVersion,
 			},
 			apiv1.MetadataScope{
-				Id:   created.Metadata.Id,
+				ID:   created.Metadata.ID,
 				Kind: fk.GroupVersionKind.Kind,
 				Name: created.Name,
 			},
@@ -412,12 +399,12 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 			Title:            ri.Title,
 			GroupVersionKind: fk.GroupVersionKind,
 			Metadata: apiv1.Metadata{
-				Id: uuid.New().String(),
+				ID: uuid.New().String(),
 				Audit: apiv1.AuditMetadata{
 					CreateTimestamp: apiv1.Time(time.Now()),
-					CreateUserId:    "", // TODO
+					CreateUserID:    "", // TODO
 					ModifyTimestamp: apiv1.Time(time.Now()),
-					ModifyUserId:    "", // TODO
+					ModifyUserID:    "", // TODO
 				},
 				Scope:           fk.MetadataScope,
 				ResourceVersion: "0",
@@ -456,12 +443,12 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 			Title:            prev.Title,
 			GroupVersionKind: prev.GroupVersionKind,
 			Metadata: apiv1.Metadata{
-				Id: prev.Metadata.Id,
+				ID: prev.Metadata.ID,
 				Audit: apiv1.AuditMetadata{
 					CreateTimestamp: prev.Metadata.Audit.CreateTimestamp,
-					CreateUserId:    "", // needed?
+					CreateUserID:    "", // needed?
 					ModifyTimestamp: apiv1.Time(time.Now()),
-					ModifyUserId:    "", // needed?
+					ModifyUserID:    "", // needed?
 				},
 				Scope:           prev.Metadata.Scope,
 				ResourceVersion: prev.Metadata.ResourceVersion,
@@ -555,10 +542,10 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 			groups[gvk.Group] = group
 		}
 
-		version, ok := group[gvk.ApiVersion]
+		version, ok := group[gvk.APIVersion]
 		if !ok {
 			version = fakeVersion(map[string]*fakeUnscoped{})
-			group[gvk.ApiVersion] = version
+			group[gvk.APIVersion] = version
 		}
 
 		sk, ok := apiv1.GetScope(gvk.GroupKind)
@@ -576,7 +563,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 								Group: gvk.Group,
 								Kind:  sk,
 							},
-							ApiVersion: gvk.ApiVersion,
+							APIVersion: gvk.APIVersion,
 						},
 						apiv1.MetadataScope{},
 						handler,
@@ -663,10 +650,10 @@ func (fcb fakeClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) 
 	}
 
 	if sk == "" {
-		return fcb.groups[gvk.Group][gvk.ApiVersion][gvk.Kind], nil
+		return fcb.groups[gvk.Group][gvk.APIVersion][gvk.Kind], nil
 	}
 
-	return fcb.groups[gvk.Group][gvk.ApiVersion][sk].scopedKinds[gvk.Kind], nil
+	return fcb.groups[gvk.Group][gvk.APIVersion][sk].scopedKinds[gvk.Kind], nil
 }
 
 func (fck fakeClientBase) SetHandler(ev EventHandler) {

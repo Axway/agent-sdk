@@ -15,7 +15,7 @@ var (
 			Group: "{{.res.group}}",
 			Kind:  "{{.res.kind}}",
 		},
-		ApiVersion: "{{.res.version}}",
+		APIVersion: "{{.res.version}}",
 	}
 )
 
@@ -77,3 +77,4 @@ func (res *{{.res.kind}}) AsInstance() (*apiv1.ResourceInstance, error) {
 
 	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
 }
+

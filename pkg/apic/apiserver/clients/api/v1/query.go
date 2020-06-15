@@ -2,22 +2,14 @@ package v1
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
-//go:generate stringer -type=QueryOp
-type QueryOp int
-
-const (
-	In QueryOp = iota
-	Eq
-)
-
-const (
-	opIn  = "=in="
-	opAnd = ";"
-	opOr  = ","
-)
+// Visitor visits a QueryNode
+type Visitor interface {
+	Visit(QueryNode)
+}
 
 type andNode []QueryNode
 
@@ -46,14 +38,7 @@ func (n tagNode) Accept(v Visitor) {
 	v.Visit(n)
 }
 
-type Visitor interface {
-	Visit(QueryNode)
-}
-
-type QueryNode interface {
-	Accept(Visitor)
-}
-
+// AttrIn creates a query that matches resources with attribute key and  any of values
 func AttrIn(key string, values ...string) QueryNode {
 	return &attrNode{
 		key,
@@ -61,30 +46,48 @@ func AttrIn(key string, values ...string) QueryNode {
 	}
 }
 
+// TagsIn creates a query that matches resources with any of the tag values
 func TagsIn(values ...string) QueryNode {
 	return tagNode(values)
 }
 
+// AnyAttr creates a query that matches resources with any of the attributes
 func AnyAttr(attrs map[string]string) QueryNode {
 	nodes := make([]QueryNode, len(attrs))
 	i := 0
-	for key, val := range attrs {
-		nodes[i] = AttrIn(key, val)
+
+	keys := make([]string, 0, len(attrs))
+	for k := range attrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		nodes[i] = AttrIn(key, attrs[key])
 		i++
 	}
 	return orNode(nodes)
 }
 
+// AllAttr creates a query that matches resources with all of the attributes
 func AllAttr(attrs map[string]string) QueryNode {
 	nodes := make([]QueryNode, len(attrs))
 	i := 0
-	for key, val := range attrs {
-		nodes[i] = AttrIn(key, val)
+
+	keys := make([]string, 0, len(attrs))
+	for k := range attrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		nodes[i] = AttrIn(key, attrs[key])
 		i++
 	}
 	return andNode(nodes)
 }
 
+// Or creates a query that ors two or more subqueries
 func Or(first, second QueryNode, rest ...QueryNode) QueryNode {
 	nodes := make([]QueryNode, len(rest)+2)
 	nodes[0] = first
@@ -93,6 +96,7 @@ func Or(first, second QueryNode, rest ...QueryNode) QueryNode {
 	return orNode(append(nodes, rest...))
 }
 
+// And creates a query that ands two or more subqueries
 func And(first, second QueryNode, rest ...QueryNode) QueryNode {
 	nodes := make([]QueryNode, len(rest)+2)
 	nodes[0] = first
@@ -101,22 +105,22 @@ func And(first, second QueryNode, rest ...QueryNode) QueryNode {
 	return andNode(append(nodes, rest...))
 }
 
-// RSQLVisitor builds an RSQL string by visiting QueryNodes
-type RSQLVisitor struct {
+// rsqlVisitor builds an RSQL string by visiting QueryNodes
+type rsqlVisitor struct {
 	b strings.Builder
 }
 
-func NewRSQLVisitor() *RSQLVisitor {
-	return &RSQLVisitor{
+func newRSQLVisitor() *rsqlVisitor {
+	return &rsqlVisitor{
 		b: strings.Builder{},
 	}
 }
 
-func (rv *RSQLVisitor) String() string {
+func (rv *rsqlVisitor) String() string {
 	return rv.b.String()
 }
 
-func (rv *RSQLVisitor) Visit(node QueryNode) {
+func (rv *rsqlVisitor) Visit(node QueryNode) {
 
 	switch n := node.(type) {
 	case andNode:
