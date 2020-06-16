@@ -54,14 +54,14 @@ type EntryPoint struct {
 
 // Event - Represents the transaction detail event
 type Event struct {
-	ID          string    `json:"id,omitempty"`
-	ParentID    string    `json:"parentId,omitempty"`
-	Source      string    `json:"source,omitempty"`
-	Destination string    `json:"destination,omitempty"`
-	Duration    int       `json:"duration,omitempty"`
-	Direction   string    `json:"direction,omitempty"`
-	Status      string    `json:"status,omitempty"`
-	Protocol    *Protocol `json:"protocol,omitempty"`
+	ID          string      `json:"id,omitempty"`
+	ParentID    string      `json:"parentId,omitempty"`
+	Source      string      `json:"source,omitempty"`
+	Destination string      `json:"destination,omitempty"`
+	Duration    int         `json:"duration,omitempty"`
+	Direction   string      `json:"direction,omitempty"`
+	Status      string      `json:"status,omitempty"`
+	Protocol    interface{} `json:"protocol,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events
@@ -94,4 +94,23 @@ type Protocol struct {
 	ResponsePayload        string `json:"responsePayload,omitempty"`
 	WafStatus              int    `json:"wafStatus,omitempty"`
 	Timing                 string `json:"timing,omitempty"`
+}
+
+// JMSProtocol - Represents the details in a transaction event for the JMS protocol
+type JMSProtocol struct {
+	Type             string `json:"type,omitempty"`
+	AuthSubjectID    string `json:"authSubjectId,omitempty"`
+	JMSMessageID     string `json:"jmsMessageID,omitempty"`
+	JMSCorrelationID string `json:"jmsCorrelationID,omitempty"`
+	JMSDestination   string `json:"jmsDestination,omitempty"`
+	JMSProviderURL   string `json:"jmsProviderURL,omitempty"`
+	JMSDeliveryMode  int    `json:"jmsDeliveryMode,omitempty"`
+	JMSPriority      int    `json:"jmsPriority,omitempty"`
+	JMSReplyTo       string `json:"jmsReplyTo,omitempty"`
+	JMSRedelivered   int    `json:"jmsRedelivered,omitempty"`
+	JMSTimestamp     int    `json:"jmsTimestamp,omitempty"`
+	JMSExpiration    int    `json:"jmsExpiration,omitempty"`
+	JMSType          string `json:"jmsType,omitempty"`
+	JMSStatus        string `json:"jmsStatus,omitempty"`
+	JMSStatusText    string `json:"jmsStatusText,omitempty"`
 }
