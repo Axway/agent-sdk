@@ -11,9 +11,10 @@ package v1alpha1
 
 // K8SResourceSpec struct for K8SResourceSpec
 type K8SResourceSpec struct {
-	ResourceDiscovery string                 `json:"resourceDiscovery,omitempty"`
-	ResourceVersion   string                 `json:"resourceVersion,omitempty"`
-	Uid               string                 `json:"uid,omitempty"`
-	ResourceSpec      map[string]interface{} `json:"resourceSpec,omitempty"`
-	ResourceStatus    map[string]interface{} `json:"resourceStatus,omitempty"`
+	ResourceDiscovery string                           `json:"resourceDiscovery,omitempty"`
+	ResourceVersion   string                           `json:"resourceVersion,omitempty"`
+	Uid               string                           `json:"uid,omitempty"`
+	OwnerReferences   []K8SResourceSpecOwnerReferences `json:"ownerReferences,omitempty"`
+	ResourceSpec      map[string]interface{}           `json:"resourceSpec,omitempty"`
+	ResourceStatus    map[string]interface{}           `json:"resourceStatus,omitempty"`
 }

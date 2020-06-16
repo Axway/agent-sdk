@@ -38,7 +38,7 @@ func init() {
 type MeshWorkload struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec MeshWorkloadSpec `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a MeshWorkload
@@ -48,7 +48,7 @@ func (res *MeshWorkload) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &MeshWorkloadSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err

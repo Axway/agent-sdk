@@ -71,7 +71,7 @@ type EventPayload struct {
 	Scope      MetadataScope     `json:"scope"`
 	Tags       []string          `json:"tags"`
 	Attributes map[string]string `json:"attributes"`
-	Id         string            `json:"id"`
+	ID         string            `json:"id"`
 	Name       string            `json:"name"`
 	References []Reference       `json:"references"`
 }
@@ -86,7 +86,7 @@ const (
 
 // Event is an API Server event concerning a resource
 type Event struct {
-	Id      string
+	ID      string
 	Type    EventType
 	Payload EventPayload
 }

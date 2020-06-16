@@ -1,6 +1,7 @@
 package v1
 
 type Resource interface {
+	GetName() string
 	GetGroupVersionKind() GroupVersionKind
 	GetMetadata() Metadata
 	GetAttributes() map[string]string
@@ -19,6 +20,18 @@ type ResourceMeta struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 	// List of tags.
 	Tags []string `json:"tags,omitempty"`
+}
+
+func (rm *ResourceMeta) GetName() string {
+	if rm == nil {
+		return ""
+	}
+
+	return rm.Name
+}
+
+func (rm *ResourceMeta) SetName(name string) {
+	rm.Name = name
 }
 
 func (rm *ResourceMeta) GetMetadata() Metadata {

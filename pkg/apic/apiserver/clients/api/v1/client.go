@@ -74,7 +74,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 }
 
 // ForKind registers a client with a given group/version
-func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (*Client, error) {
+func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
 	resource, ok := apiv1.GetResource(gvk.GroupKind)
 	if !ok {
 		return nil, fmt.Errorf("no resource for gvk: %s", gvk)
@@ -136,7 +136,7 @@ func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
 }
 
 // WithScope creates a request within the given scope. ex: env/$name/services
-func (c *Client) WithScope(scope string) *Client {
+func (c *Client) WithScope(scope string) Scoped {
 	return &Client{
 		ClientBase:    c.ClientBase,
 		version:       c.version,
