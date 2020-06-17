@@ -20,7 +20,7 @@ func event(eType apiv1.EventType, ri *apiv1.ResourceInstance) *apiv1.Event {
 			Attributes: ri.Attributes,
 			ID:         ri.Metadata.ID,
 			Name:       ri.Name,
-			References: nil, // needed ?
+			References: ri.Metadata.References, // needed ?
 		},
 	}
 }
@@ -39,30 +39,78 @@ type fakeUnscoped struct {
 	scopedKinds map[string]fakeByScope
 }
 
+func notFound(name, kind string) NotFoundError {
+	return NotFoundError{[]apiv1.Error{{
+		Status: 404,
+		Title:  "Not found error",
+		Detail: fmt.Sprintf("Resource %s of kind %s not found.", name, kind),
+	}}}
+}
+
+func notFoundInScope(name, kind, scopeName string) NotFoundError {
+	return NotFoundError{[]apiv1.Error{{
+		Status: 404,
+		Title:  "Not found error",
+		Detail: fmt.Sprintf("Resource %s of kind %s not found in scope %s.", name, kind, scopeName),
+	}}}
+}
+
+type unknownScope NotFoundError
+
+func (us unknownScope) Create(_ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return nil, NotFoundError(us)
+}
+
+func (us unknownScope) Delete(_ *apiv1.ResourceInstance) error {
+	return NotFoundError(us)
+}
+
+func (us unknownScope) Get(_ string) (*apiv1.ResourceInstance, error) {
+	return nil, NotFoundError(us)
+}
+
+func (us unknownScope) List(_ ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	return nil, NotFoundError(us)
+}
+
+func (us unknownScope) Update(_ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return nil, NotFoundError(us)
+}
+
+// TODO add kind to fakeByScope
 type fakeByScope map[string]*fakeScoped
 
 func (fk fakeByScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return nil, &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+	// TODO should work if ri has scope name
+	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
 func (fk fakeByScope) Delete(ri *apiv1.ResourceInstance) error {
-	return &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+	// TODO should work if ri has scope name
+	return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
 func (fk fakeByScope) Get(name string) (*apiv1.ResourceInstance, error) {
-	return nil, &NotFound{Name: name}
+	return nil, notFound("", "")
 }
 
 func (fk fakeByScope) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	return nil, fmt.Errorf("Not found")
+	// TODO should work if ri has scope name
+	return nil, notFound("", "")
 }
 
 func (fk fakeByScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return nil, &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+	// TODO should work if ri has scope name
+	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
 func (fbs fakeByScope) WithScope(name string) Scoped {
-	return fbs[name]
+	if s, ok := fbs[name]; !ok {
+		return unknownScope(notFound(name, ""))
+	} else {
+		return s
+	}
+
 }
 
 func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
@@ -74,7 +122,7 @@ func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInsta
 
 func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
 	if fk == nil {
-		return &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
 
 	fk.lock.Lock()
@@ -82,7 +130,7 @@ func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
 
 	_, ok := fk.resources[ri.Name]
 	if !ok {
-		return &NotFound{fk.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+		return notFound(ri.Name, fk.Kind)
 	}
 
 	for _, sk := range fk.scopedKinds {
@@ -99,6 +147,10 @@ func (fk *fakeUnscoped) Get(name string) (*apiv1.ResourceInstance, error) {
 	defer fk.lock.Unlock()
 
 	return fk.get(name)
+}
+
+func (fk *fakeScoped) WithScope(name string) Scoped {
+	return (*fakeScoped)(nil)
 }
 
 func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
@@ -279,7 +331,7 @@ type fakeScoped struct {
 
 func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
-		return nil, &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
 
 	fk.lock.Lock()
@@ -290,7 +342,7 @@ func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
 	if fk == nil {
-		return &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
 
 	fk.lock.Lock()
@@ -302,7 +354,7 @@ func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
 func (fk *fakeScoped) delete(ri *apiv1.ResourceInstance) error {
 	deleted, ok := fk.resources[ri.Name]
 	if !ok {
-		return &NotFound{fk.GroupKind, ri.Name, fk.MetadataScope.Name}
+		return notFoundInScope(ri.Name, fk.Kind, fk.MetadataScope.Name)
 	}
 
 	fk.attributeIndex.Update(attrsAsIdxs(deleted.Attributes), []string{}, deleted.Name)
@@ -367,17 +419,13 @@ func (fk *fakeScoped) List(options ...ListOptions) ([]*apiv1.ResourceInstance, e
 
 func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
-		return nil, &NotFound{ri.GroupKind, ri.Name, ri.Metadata.Scope.Name}
+		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
 
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
 	return fk.update(ri)
-}
-
-func (fk *fakeScoped) WithScope(name string) Scoped {
-	return (*fakeScoped)(nil)
 }
 
 func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
@@ -425,12 +473,12 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if ri.Name == "" {
-		return nil, &NotFound{fk.GroupVersionKind.GroupKind, ri.Name, fk.MetadataScope.Name}
+		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
 
 	prev, ok := fk.resources[ri.Name]
 	if !ok {
-		return nil, &NotFound{fk.GroupVersionKind.GroupKind, ri.Name, fk.MetadataScope.Name}
+		return nil, notFoundInScope(ri.Name, fk.Kind, fk.MetadataScope.Name)
 	}
 
 	updated := &apiv1.ResourceInstance{
@@ -470,12 +518,12 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 func (fk *fakeScoped) get(name string) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
-		return nil, &NotFound{Name: name}
+		return nil, &NotFoundError{[]apiv1.Error{}}
 	}
 
 	ris, ok := fk.resources[name]
 	if !ok {
-		return nil, &NotFound{fk.GroupKind, name, fk.MetadataScope.Name}
+		return nil, notFoundInScope(name, fk.Kind, fk.MetadataScope.Name)
 	}
 
 	return ris, nil

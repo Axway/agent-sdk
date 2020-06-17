@@ -1,8 +1,16 @@
 package v1
 
+// Error an error in an ErrorResponse
+type Error struct {
+	Status int                    `json:"status,omitempty"`
+	Title  string                 `json:"title,omitempty"`
+	Detail string                 `json:"detail,omitempty"`
+	Meta   map[string]interface{} `json:"meta:,omitempty"`
+}
+
 // ErrorResponse Detail for standard error responses.
 type ErrorResponse struct {
-	Errors []map[string]map[string]interface{} `json:"errors,omitempty"`
+	Errors []Error `json:"errors,omitempty"`
 }
 
 // GroupKind the Group and Kind of the resource

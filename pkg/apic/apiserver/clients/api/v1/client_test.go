@@ -78,7 +78,7 @@ var mockEnvUpdated = &apiv1.ResourceInstance{}
 var mockAPISvc = &apiv1.ResourceInstance{}
 var client = &Client{}
 
-func createEnv(client *Client) (*apiv1.ResourceInstance, error) {
+func createEnv(client Unscoped) (*apiv1.ResourceInstance, error) {
 	created, err := client.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
@@ -107,7 +107,7 @@ func TestMain(m *testing.M) {
 			"123",
 		),
 	).ForKind(management.EnvironmentGVK())
-	client = newClient
+	client = newClient.(*Client)
 	if err != nil {
 		log.Fatalf("Error in test setup: %s", err)
 		os.Exit(1)
@@ -227,7 +227,7 @@ func TestScoped(t *testing.T) {
 	}()
 
 	svcClient, err := client.ForKind(management.APIServiceGVK())
-	svcClient = svcClient.WithScope(env.Name)
+	svcClient = svcClient.WithScope(env.Name).(*Client)
 
 	svc, err := svcClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -406,7 +406,9 @@ func TestUpdateError(t *testing.T) {
 }
 
 func TestHTTPClient(t *testing.T) {
-	client, err := NewClient(
+	newClient := &http.Client{}
+
+	client := NewClient(
 		"http://localhost:8080/apis",
 		BasicAuth(
 			"admin",
@@ -414,13 +416,8 @@ func TestHTTPClient(t *testing.T) {
 			"admin",
 			"123",
 		),
-	).ForKind(management.EnvironmentGVK())
-	if err != nil {
-		t.Fatalf("Error: %s", err)
-	}
-
-	newClient := &http.Client{}
-	HTTPClient(newClient)(client.ClientBase)
+		HTTPClient(newClient),
+	)
 
 	if newClient != client.client {
 		t.Fatalf("Error: expected client.client to be %v but received %v", newClient, client.client)

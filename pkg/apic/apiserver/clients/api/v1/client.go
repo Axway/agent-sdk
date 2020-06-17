@@ -122,6 +122,38 @@ func (c *Client) url() string {
 	return url
 }
 
+// handleError handles an api-server error response. caller should close body.
+func handleError(res *http.Response) error {
+	var errors Errors
+	errRes := apiv1.ErrorResponse{}
+	err := json.NewDecoder(res.Body).Decode(&errRes)
+	if err != nil {
+		errors = []apiv1.Error{{
+			Status: 0,
+			Detail: err.Error(),
+		}}
+	} else {
+		errors = errRes.Errors
+	}
+
+	switch res.StatusCode {
+	case 400:
+		return BadRequestError{errors}
+	case 401:
+		return UnauthorizedError{errors}
+	case 403:
+		return ForbiddenError{errors}
+	case 404:
+		return NotFoundError{errors}
+	case 409:
+		return ConflictError{errors}
+	case 500:
+		return InternalServerError{errors}
+	default:
+		return UnexpectedError{res.StatusCode, errors}
+	}
+}
+
 func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
 	if c.scopeResource != "" {
 		scope := c.scope
@@ -188,7 +220,7 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to get resource list: %s", res.Status)
+		return nil, handleError(res)
 	}
 	dec := json.NewDecoder(res.Body)
 	objs := []*apiv1.ResourceInstance{}
@@ -219,7 +251,7 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to get resource for %s: %s", name, res.Status)
+		return nil, handleError(res)
 	}
 	dec := json.NewDecoder(res.Body)
 	obj := &apiv1.ResourceInstance{}
@@ -250,7 +282,7 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 202 && res.StatusCode != 204 {
-		return fmt.Errorf("Failed to delete resource: %s", res.Status)
+		return handleError(res)
 	}
 	if err != nil {
 		return err
@@ -286,7 +318,7 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 	defer res.Body.Close()
 
 	if res.StatusCode != 201 {
-		return nil, fmt.Errorf("Failed to create resource: %s", res.Status)
+		return nil, handleError(res)
 	}
 
 	dec := json.NewDecoder(res.Body)
@@ -326,9 +358,13 @@ func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 	defer res.Body.Close()
-
+	switch res.StatusCode {
+	case 200:
+	case 404:
+	default:
+	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to Update resource: %s", res.Status)
+		return nil, handleError(res)
 	}
 
 	dec := json.NewDecoder(res.Body)
