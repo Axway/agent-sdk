@@ -476,18 +476,6 @@ func (c *ServiceClient) deleteCatalogItem(catalogID string, serviceBody ServiceB
 	return nil
 }
 
-func (c *ServiceClient) doesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
-	catalogID, err := c.getCatalogItemIDForConsumerInstance(instanceID)
-	if err != nil {
-		return false, err
-	}
-	subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogID)
-	if err != nil {
-		return false, err
-	}
-	return len(subscriptions) > 0, nil
-}
-
 func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
 	queryParams := make(map[string]string)
 
@@ -500,5 +488,12 @@ func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogI
 	}
 
 	queryParams["query"] = searchQuery
-	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+	subscriptions, err := c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+	if err != nil {
+		if err.Error() != strconv.Itoa(http.StatusNotFound) {
+			return nil, err
+		}
+		return make([]CentralSubscription, 0), nil
+	}
+	return subscriptions, nil
 }
