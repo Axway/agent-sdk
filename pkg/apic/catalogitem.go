@@ -387,8 +387,29 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 	return catalogID, nil
 }
 
-// InitiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
-func (c *ServiceClient) InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
+// RemoveActiveSubscriptionsForCatalogItem - set all active subscriptions for the catalogItem to unsubscribed
+func (c *ServiceClient) RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error {
+	if !(c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode()) {
+		return nil
+	}
+
+	// move any subscriptions directly through and delete the catalog item. By blacklisting the item,
+	// the polling for subscriptions for this item will be circumvented
+	_, err := c.initiateUnsubscribeCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Error initiating unsubscribe of catalogItem with ID '%v': %v", catalogItemID, err.Error())
+		return err
+	}
+	_, err = c.unsubscribeCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Error unsubscribing of catalogItem with ID '%v': %v", catalogItemID, err.Error())
+		return err
+	}
+	return nil
+}
+
+// initiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
+func (c *ServiceClient) initiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogItemID)
 		if err != nil {
@@ -410,8 +431,8 @@ func (c *ServiceClient) InitiateUnsubscribeCatalogItem(catalogItemID string) (in
 	return 0, nil
 }
 
-// UnsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (c *ServiceClient) UnsubscribeCatalogItem(catalogItemID string) (int, error) {
+// unsubscribeCatalogItem - move the catalog item to unsubscribed state
+func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionUnsubscribeInitiated)}, catalogItemID)
 		if err != nil {
