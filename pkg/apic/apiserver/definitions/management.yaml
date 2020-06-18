@@ -656,8 +656,8 @@ scope: K8SCluster
 description: Represents a Kubernetes resource in a mesh.
 spec:
   names:
-    plural: K8SResources
-    singular: K8SResource
+    plural: k8sresources
+    singular: k8resource
   cli:
     shortNames:
       - k8sres
@@ -896,6 +896,6 @@ spec:
               type: array
               items:
                 type: string
-                x-amplify-kind-ref: K8SResources
+                x-amplify-kind-ref: K8SResource
                 x-amplify-kind-ref-type: soft
           additionalProperties: true

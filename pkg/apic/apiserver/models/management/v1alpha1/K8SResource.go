@@ -23,7 +23,7 @@ var (
 const (
 	K8SResourceScope = "K8SCluster"
 
-	K8SResourceResource = "K8SResources"
+	K8SResourceResource = "k8sresources"
 )
 
 func K8SResourceGVK() apiv1.GroupVersionKind {
