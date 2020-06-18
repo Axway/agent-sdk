@@ -41,8 +41,7 @@ type Client interface {
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
-	InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error)
-	UnsubscribeCatalogItem(catalogItemID string) (int, error)
+	RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error
 }
 
 type tokenGetter interface {
