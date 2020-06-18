@@ -45,6 +45,8 @@ type Reference struct {
 	Kind string `json:"kind,omitempty"`
 	// The name of the resource that it is reffering to.
 	Name string `json:"name,omitempty"`
+	// The name of the scope of the resource that it is reffering to.
+	Scope string `json:"scope,omitempty"`
 	// Defines the type of the reference: * soft - spec property that has this reference will get nulled out if the referenced resource gets removed. * hard - dictates that the current resource will get removed when the referenced resource gets removed.
 	Type string `json:"type,omitempty"`
 }
