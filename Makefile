@@ -8,9 +8,12 @@ all : clean
 clean:
 	@echo "Clean complete"
 
+dep-update:
+  go mod tidy
+
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
-	@go mod tidy
+	@go mod download
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
