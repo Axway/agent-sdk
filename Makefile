@@ -10,7 +10,7 @@ clean:
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
-	@dep ensure -v
+	@go mod tidy
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
