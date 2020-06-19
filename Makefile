@@ -8,21 +8,21 @@ all : clean
 clean:
 	@echo "Clean complete"
 
-dep-update:
-  @go mod tidy
+dep-check:
+	@go mod verify
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
-	@go mod download
+	@go mod tidy
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
 
-test: dep
+test: dep-check
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST}
 
-test-sonar: dep
+test-sonar: dep-check
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
