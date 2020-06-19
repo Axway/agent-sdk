@@ -11,9 +11,11 @@ clean:
 dep-check:
 	@go mod verify
 
+
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
 	@go mod tidy
+	@go mod vendor
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
