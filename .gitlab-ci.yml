@@ -2,6 +2,8 @@ image: docker:dind
 
 variables:
   GO111MODULE: "on"
+  GOPRIVATE: "git.ecd.axway.int"
+
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
   BINTRAY_NAMESPACE: agent
