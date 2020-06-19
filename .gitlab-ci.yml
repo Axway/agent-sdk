@@ -134,6 +134,7 @@ test:
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   before_script:
     - *prepare-path
+    - *configure-git-ssh
   script:
     - make test
   <<: *only-feature
@@ -143,6 +144,7 @@ sonar:
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   before_script:
     - *prepare-path
+    - *configure-git-ssh
   script:
     - make sonar
   <<: *only-protected
@@ -155,6 +157,7 @@ sonar:
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
   before_script:
     - *prepare-path
+    - *configure-git-ssh
     - go get golang.org/x/lint/golint
   script:
     - make lint
