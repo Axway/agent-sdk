@@ -9,7 +9,7 @@ clean:
 	@echo "Clean complete"
 
 dep-update:
-  go mod tidy
+  @go mod tidy
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
