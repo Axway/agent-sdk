@@ -857,7 +857,44 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          additionalProperties: false
+          properties:
+            resource:
+              type: string
+              x-amplify-kind-ref: K8SResource
+              x-amplify-kind-ref-type: soft
+            workloads:
+              type: array
+              items:
+                type: string
+                x-amplify-kind-ref: MeshWorkload
+                x-amplify-kind-ref-type: soft
+            ports:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  number:
+                    type: integer
+                  endpoints:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        workloads:
+                          type: array
+                          items:
+                            type: string
+                        subset:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        specs:
+                          type: array
+                          items:
+                            # references to discovered APISpecs
+                            type: string
 ---
 group: management
 kind: MeshWorkload
@@ -870,7 +907,7 @@ spec:
   cli:
     shortNames:
       - meshworkload
-      - meshworkload
+      - meshworkloads
     columns:
       - name: Name
         description: The name of the mesh workload.
@@ -898,4 +935,17 @@ spec:
                 type: string
                 x-amplify-kind-ref: K8SResource
                 x-amplify-kind-ref-type: soft
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            ports:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: integer
           additionalProperties: true

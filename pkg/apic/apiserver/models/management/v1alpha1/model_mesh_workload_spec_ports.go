@@ -9,9 +9,8 @@
 
 package v1alpha1
 
-// MeshWorkloadSpec struct for MeshWorkloadSpec
-type MeshWorkloadSpec struct {
-	Resources []string                `json:"resources,omitempty"`
-	Labels    map[string]string       `json:"labels,omitempty"`
-	Ports     []MeshWorkloadSpecPorts `json:"ports,omitempty"`
+// MeshWorkloadSpecPorts struct for MeshWorkloadSpecPorts
+type MeshWorkloadSpecPorts struct {
+	Name string `json:"name,omitempty"`
+	Port int32  `json:"port,omitempty"`
 }

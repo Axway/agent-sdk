@@ -38,7 +38,7 @@ func init() {
 type MeshService struct {
 	apiv1.ResourceMeta
 
-	Spec struct{} `json:"spec"`
+	Spec MeshServiceSpec `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a MeshService
@@ -48,7 +48,7 @@ func (res *MeshService) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &struct{}{}
+	spec := &MeshServiceSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err
