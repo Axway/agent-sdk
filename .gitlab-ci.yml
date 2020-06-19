@@ -1,6 +1,7 @@
 image: docker:dind
 
 variables:
+  GO111MODULE: on
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
   BINTRAY_NAMESPACE: agent
