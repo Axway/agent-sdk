@@ -3,6 +3,9 @@
 WORKSPACE ?= $$(pwd)
 
 GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/**/definitions/v1alpha  | grep -v ./pkg/apic/apiserver/**/management/v1alpha)
+
+export GOFLAGS := -mod=vendor
+
 all : clean
 
 clean:
@@ -10,7 +13,6 @@ clean:
 
 dep-check:
 	@go mod verify
-
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
@@ -20,11 +22,11 @@ resolve-dependencies:
 
 dep: resolve-dependencies
 
-test: dep-check
+test:
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST}
 
-test-sonar: dep-check
+test-sonar:
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
