@@ -231,13 +231,14 @@ func (c *itemCache) save(path string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	cacheBytes, err := json.Marshal(c)
 	if err != nil {
+		file.Close()
 		return err
 	}
 	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
+	file.Close()
 	return err
 }
 
@@ -251,9 +252,9 @@ func (c *itemCache) load(path string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	err = json.NewDecoder(file).Decode(c)
+	file.Close()
 	return err
 }
 
