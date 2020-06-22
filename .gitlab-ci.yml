@@ -145,7 +145,6 @@ sonar:
   script:
     - make sonar
   <<: *only-protected
-  # <<: *only-feature
 
 ############################################################
 # Section for lint builds stage
@@ -221,7 +220,7 @@ run-csr:
   dependencies:
     - dependencycheck
     - gosec
-  <<: *only-feature
+  <<: *all
 
 update-csr:
   dependencies:
