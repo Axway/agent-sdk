@@ -1,6 +1,9 @@
 image: docker:dind
 
 variables:
+  GO111MODULE: "on"
+  GOPRIVATE: "git.ecd.axway.int"
+
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
   BINTRAY_NAMESPACE: agent
@@ -80,15 +83,19 @@ stages:
 # Section for build command scripts
 ############################################################
 .configure-git-ssh: &configure-git-ssh |
-  which ssh-agent || ( apk update && apk add openssh-client )
-  eval $(ssh-agent -s)
-  echo "$GIT_SSH_KEY" | tr -d '\r' | ssh-add - > /dev/null
+  apk update && apk add openssl
+  which ssh-agent || ( apk add openssh-client )
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
+  echo "$GIT_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+  chmod 700 ~/.ssh/id_rsa
+  eval $(ssh-agent -s)
+  ssh-add ~/.ssh/id_rsa
   echo "$GIT_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
   chmod 644 ~/.ssh/known_hosts
   echo -n | openssl s_client -showcerts -connect git.ecd.axway.int:443 2>/dev/null  | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > ~/git-ecd-axway-int.pem
   git config --global http."https://git.ecd.axway.int/".sslCAInfo ~/git-ecd-axway-int.pem
+  git config --global url."git@git.ecd.axway.int:".insteadOf "https://git.ecd.axway.int/"
   git config --global push.default matching
   git config --global user.email "builder-lphxmjtnt11@axway.com"
   git config --global user.name "builder-lphxmjtnt11"
@@ -133,6 +140,7 @@ test:
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   before_script:
     - *prepare-path
+    - *configure-git-ssh
   script:
     - make test
   <<: *only-feature
@@ -142,6 +150,7 @@ sonar:
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   before_script:
     - *prepare-path
+    - *configure-git-ssh
   script:
     - make sonar
   <<: *only-protected
@@ -152,7 +161,9 @@ sonar:
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
   before_script:
+    - export GOFLAGS=""
     - *prepare-path
+    - *configure-git-ssh
     - go get golang.org/x/lint/golint
   script:
     - make lint

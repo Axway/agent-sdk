@@ -7,8 +7,8 @@ import (
 
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"github.com/elastic/beats/libbeat/beat"
-	"github.com/elastic/beats/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 // EventGenerator - Create the events to be published to Condor
