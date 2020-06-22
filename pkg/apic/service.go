@@ -97,7 +97,9 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 		return nil, err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
+		if response.Code != http.StatusNotFound {
+			logResponseErrors(response.Body)
+		}
 		return nil, errors.New(strconv.Itoa(response.Code))
 	}
 	consumerInstance := new(APIServer)

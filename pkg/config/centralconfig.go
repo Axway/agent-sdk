@@ -54,6 +54,7 @@ type CentralConfig interface {
 	GetAgentType() AgentType
 	IsPublishToCatalogMode() bool
 	IsPublishToEnvironmentMode() bool
+	IsPublishToEnvironmentOnlyMode() bool
 	IsPublishToEnvironmentAndCatalogMode() bool
 	GetAgentMode() AgentMode
 	GetAgentModeAsString() string
@@ -133,6 +134,11 @@ func (c *CentralConfiguration) IsPublishToCatalogMode() bool {
 // IsPublishToEnvironmentMode -
 func (c *CentralConfiguration) IsPublishToEnvironmentMode() bool {
 	return c.Mode == PublishToEnvironment || c.IsPublishToEnvironmentAndCatalogMode()
+}
+
+// IsPublishToEnvironmentOnlyMode -
+func (c *CentralConfiguration) IsPublishToEnvironmentOnlyMode() bool {
+	return c.Mode == PublishToEnvironment
 }
 
 // IsPublishToEnvironmentAndCatalogMode -
