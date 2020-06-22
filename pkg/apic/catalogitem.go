@@ -389,7 +389,7 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 
 // RemoveActiveSubscriptionsForCatalogItem - set all active subscriptions for the catalogItem to unsubscribed
 func (c *ServiceClient) RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error {
-	if !(c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode()) {
+	if c.cfg.IsPublishToEnvironmentOnlyMode() {
 		return nil
 	}
 
