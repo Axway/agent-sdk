@@ -21,6 +21,8 @@ const (
 	Oauth       = "verify-oauth-token"
 )
 
+const serverName = "AMPLIFY Central"
+
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
 
@@ -76,7 +78,7 @@ func New(cfg corecfg.CentralConfig) Client {
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 
-	hc.RegisterHealthcheck("AMPLIFY Central", "central", serviceClient.healthcheck)
+	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
 	return serviceClient
 }
 
@@ -189,7 +191,7 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 func (c *ServiceClient) checkPlatformHealth() error {
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
-		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
+		return fmt.Errorf("error trying to get platform token: %s. Check %s configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", serverName, err.Error())
 	}
 	return nil
 }
@@ -200,8 +202,12 @@ func (c *ServiceClient) checkCatalogHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	sendErr := "error sending request to API Manager: %s. Check API Manager for URL and CONNECTION"
-	statusErr := "error sending request to API Manager - status code %d. Check API Manager and CONNECTION"
+	sendErr := "error sending request to %s: %s. Check configuration for URL"
+	statusErr := "error sending request to %s - status code %d. Check configuration for ENVIRONMENT"
+
+	if c.cfg.IsPublishToEnvironmentMode() {
+		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
+	}
 
 	// do a request for catalog items
 	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
@@ -215,8 +221,13 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and ENVIRONMENT"
-	statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for ENVIRONMENT"
+	sendErr := "error sending request to %s: %s. Check configuration for URL"
+	statusErr := "error sending request to %s - status code %d. Check configuration for ENVIRONMENT"
+	generalErr := "error sending request to %s. Check configuration for ENVIRONMENT"
+
+	if c.cfg.IsPublishToEnvironmentMode() {
+		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
+	}
 
 	// do a request for the environment
 	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, make(map[string]string, 0), sendErr, statusErr)
@@ -229,7 +240,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 			var envList []EnvironmentSpec
 			err := json.Unmarshal(envListByte, &envList)
 			if err != nil || len(envList) == 0 {
-				return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+				return fmt.Errorf(generalErr, serverName)
 			}
 			c.cfg.SetEnvironmentID(envList[0].ID)
 			return nil
@@ -241,7 +252,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
-		return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+		return fmt.Errorf(generalErr, serverName)
 	}
 	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
 	return nil
@@ -256,11 +267,11 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 	}
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, fmt.Errorf(sendErr, err.Error())
+		return nil, fmt.Errorf(sendErr, serverName, err.Error())
 	}
 	if response.Code != http.StatusOK {
 		logResponseErrors(response.Body)
-		return nil, fmt.Errorf(statusErr, response.Code)
+		return nil, fmt.Errorf(statusErr, serverName, response.Code)
 	}
 	return response.Body, nil
 }
