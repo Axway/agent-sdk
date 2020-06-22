@@ -41,9 +41,7 @@ type Client interface {
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
-	DoesCatalogItemForServiceHaveActiveSubscriptions(itemID string) (bool, error)
-	InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error)
-	UnsubscribeCatalogItem(catalogItemID string) (int, error)
+	RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error
 }
 
 type tokenGetter interface {
@@ -294,9 +292,4 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 // GetSubscriptionsForCatalogItem -
 func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
-}
-
-// DoesCatalogItemForServiceHaveActiveSubscriptions -
-func (c *ServiceClient) DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
-	return c.doesCatalogItemForServiceHaveActiveSubscriptions(instanceID)
 }

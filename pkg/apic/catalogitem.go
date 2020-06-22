@@ -387,8 +387,29 @@ func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody)
 	return catalogID, nil
 }
 
-// InitiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
-func (c *ServiceClient) InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
+// RemoveActiveSubscriptionsForCatalogItem - set all active subscriptions for the catalogItem to unsubscribed
+func (c *ServiceClient) RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error {
+	if c.cfg.IsPublishToEnvironmentOnlyMode() {
+		return nil
+	}
+
+	// move any subscriptions directly through and delete the catalog item. By blacklisting the item,
+	// the polling for subscriptions for this item will be circumvented
+	_, err := c.initiateUnsubscribeCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Error initiating unsubscribe of catalogItem with ID '%v': %v", catalogItemID, err.Error())
+		return err
+	}
+	_, err = c.unsubscribeCatalogItem(catalogItemID)
+	if err != nil {
+		log.Errorf("Error unsubscribing of catalogItem with ID '%v': %v", catalogItemID, err.Error())
+		return err
+	}
+	return nil
+}
+
+// initiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
+func (c *ServiceClient) initiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogItemID)
 		if err != nil {
@@ -410,8 +431,8 @@ func (c *ServiceClient) InitiateUnsubscribeCatalogItem(catalogItemID string) (in
 	return 0, nil
 }
 
-// UnsubscribeCatalogItem - move the catalog item to unsubscribed state
-func (c *ServiceClient) UnsubscribeCatalogItem(catalogItemID string) (int, error) {
+// unsubscribeCatalogItem - move the catalog item to unsubscribed state
+func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error) {
 	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionUnsubscribeInitiated)}, catalogItemID)
 		if err != nil {
@@ -476,18 +497,6 @@ func (c *ServiceClient) deleteCatalogItem(catalogID string, serviceBody ServiceB
 	return nil
 }
 
-func (c *ServiceClient) doesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
-	catalogID, err := c.getCatalogItemIDForConsumerInstance(instanceID)
-	if err != nil {
-		return false, err
-	}
-	subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogID)
-	if err != nil {
-		return false, err
-	}
-	return len(subscriptions) > 0, nil
-}
-
 func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
 	queryParams := make(map[string]string)
 
@@ -500,5 +509,12 @@ func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogI
 	}
 
 	queryParams["query"] = searchQuery
-	return c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+	subscriptions, err := c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+	if err != nil {
+		if err.Error() != strconv.Itoa(http.StatusNotFound) {
+			return nil, err
+		}
+		return make([]CentralSubscription, 0), nil
+	}
+	return subscriptions, nil
 }

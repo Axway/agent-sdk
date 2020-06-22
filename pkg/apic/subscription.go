@@ -167,7 +167,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 	if err != nil {
 		return nil, err
 	}
-	if response.Code != http.StatusOK {
+	if response.Code != http.StatusOK && response.Code != http.StatusNotFound {
 		logResponseErrors(response.Body)
 		return nil, errors.New(strconv.Itoa(response.Code))
 	}
