@@ -200,8 +200,12 @@ func (c *ServiceClient) checkCatalogHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	sendErr := "error sending request to API Manager: %s. Check API Manager for URL and CONNECTION"
-	statusErr := "error sending request to API Manager - status code %d. Check API Manager and CONNECTION"
+	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
+	statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for ENVIRONMENT"
+
+	if c.cfg.IsPublishToEnvironmentMode() {
+		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
+	}
 
 	// do a request for catalog items
 	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
@@ -215,8 +219,13 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and ENVIRONMENT"
+	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL"
 	statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for ENVIRONMENT"
+	generalErr := "error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT"
+
+	if c.cfg.IsPublishToEnvironmentMode() {
+		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
+	}
 
 	// do a request for the environment
 	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, make(map[string]string, 0), sendErr, statusErr)
@@ -229,7 +238,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 			var envList []EnvironmentSpec
 			err := json.Unmarshal(envListByte, &envList)
 			if err != nil || len(envList) == 0 {
-				return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+				return fmt.Errorf(generalErr)
 			}
 			c.cfg.SetEnvironmentID(envList[0].ID)
 			return nil
@@ -241,7 +250,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
-		return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+		return fmt.Errorf(generalErr)
 	}
 	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
 	return nil
