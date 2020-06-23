@@ -221,20 +221,20 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return fmt.Errorf("error creating request header. %s", err.Error())
 	}
 
-	sendErr := "error sending request to %s: %s. Check configuration for URL"
+	sendErr := "error sending request to %s: %s. Check configuration for URL and ENVIRONMENT"
 	statusErr := "error sending request to %s - status code %d. Check configuration for ENVIRONMENT"
 	generalErr := "error sending request to %s. Check configuration for ENVIRONMENT"
 
-	if c.cfg.IsPublishToEnvironmentMode() {
-		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
-	}
+	queryParams := map[string]string{"fields": "metadata"}
 
 	// do a request for the environment
-	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, make(map[string]string, 0), sendErr, statusErr)
+	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, queryParams, sendErr, statusErr)
 	if err != nil {
 		queryParams := map[string]string{
 			"query": fmt.Sprintf("name==\"%s\"", c.cfg.GetEnvironmentName()),
 		}
+
+		// if the environment wasn't found above, check for it here
 		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams, sendErr, statusErr)
 		if err == nil {
 			var envList []EnvironmentSpec
@@ -254,6 +254,8 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	if err != nil {
 		return fmt.Errorf(generalErr, serverName)
 	}
+
+	// need to save this ID for the traceability agent for later
 	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
 	return nil
 }
