@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"context"
+
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -40,8 +42,8 @@ func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstan
 }
 
 // List -
-func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerInstance, error) {
-	riList, err := c.client.List(options...)
+func (c *ConsumerInstanceClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.ConsumerInstance, error) {
+	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +62,8 @@ func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Co
 }
 
 // Get -
-func (c *ConsumerInstanceClient) Get(name string) (*v1alpha1.ConsumerInstance, error) {
-	ri, err := c.client.Get(name)
+func (c *ConsumerInstanceClient) Get(ctx context.Context, name string) (*v1alpha1.ConsumerInstance, error) {
+	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -73,25 +75,25 @@ func (c *ConsumerInstanceClient) Get(name string) (*v1alpha1.ConsumerInstance, e
 }
 
 // Delete -
-func (c *ConsumerInstanceClient) Delete(res *v1alpha1.ConsumerInstance) error {
+func (c *ConsumerInstanceClient) Delete(ctx context.Context, res *v1alpha1.ConsumerInstance) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ri)
+	return c.client.Delete(ctx, ri)
 }
 
 // Create -
-func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
+func (c *ConsumerInstanceClient) Create(ctx context.Context, res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ctx, ri)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +109,15 @@ func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance) (*v1alph
 }
 
 // Update -
-func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
+func (c *ConsumerInstanceClient) Update(ctx context.Context, res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ctx, ri)
+	if err != nil {
+		return nil, err
+	}
 	updated := &v1alpha1.ConsumerInstance{}
 
 	// Updates the resource in place

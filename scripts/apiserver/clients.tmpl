@@ -5,7 +5,9 @@
 package {{.res.version}}
 
 import (
-	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+        "context"
+
+        v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/{{.res.group}}/{{.res.version}}"
 )
 
@@ -49,8 +51,8 @@ func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Clie
 {{ end }}
 
 // List -
-func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.res.kind}}, error) {
-	riList, err := c.client.List(options...)
+func (c *{{.res.kind}}Client) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.{{.res.kind}}, error) {
+	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +71,8 @@ func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.re
 }
 
 // Get -
-func (c *{{.res.kind}}Client) Get(name string) (*v1alpha1.{{.res.kind}}, error) {
-	ri, err := c.client.Get(name)
+func (c *{{.res.kind}}Client) Get(ctx context.Context, name string) (*v1alpha1.{{.res.kind}}, error) {
+	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -82,25 +84,25 @@ func (c *{{.res.kind}}Client) Get(name string) (*v1alpha1.{{.res.kind}}, error) 
 }
 
 // Delete -
-func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
+func (c *{{.res.kind}}Client) Delete(ctx context.Context, res *v1alpha1.{{.res.kind}}) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ri)
+	return c.client.Delete(ctx, ri)
 }
 
 // Create -
-func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Create(ctx context.Context, res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ctx, ri)
 	if err != nil {
 		return nil, err
 	}
@@ -116,12 +118,15 @@ func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.
 }
 
 // Update -
-func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Update(ctx context.Context, res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ctx, ri)
+	if err != nil {
+		return nil, err
+	}
 	updated := &v1alpha1.{{.res.kind}}{}
 
 	// Updates the resource in place

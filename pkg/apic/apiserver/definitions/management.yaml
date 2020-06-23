@@ -875,7 +875,7 @@ spec:
                 properties:
                   name:
                     type: string
-                  number:
+                  port:
                     type: integer
                   endpoints:
                     type: array
@@ -949,3 +949,152 @@ spec:
                   port:
                     type: integer
           additionalProperties: true
+---
+group: management
+kind: SpecDiscovery
+scope: K8SCluster
+description: Configures API Discovery in a mesh.
+spec:
+  names:
+    plural: apidiscoveries
+    singular: apidiscovery
+  cli:
+    shortNames:
+      - apidisc
+      - apidiscs
+    columns:
+      - name: Name
+        description: The name of the resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            namespaceFilter:
+              type: object
+              description: a list of namespace names to follow. If not set, follows all namespaces.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+            resourceFilter:
+              type: object
+              description: Pod filter.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+                matchLabels:
+                  type: object
+                  additionalProperties:
+                    type: string
+            targets:
+              type: object
+              properties:
+                exactPaths:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                        description: path to api definition
+                        example: "/apidocs"
+                      headers:
+                        type: object
+                        description: headers to add to the query
+                        additionalProperties:
+                          type: string
+                fromAnnotation:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      template:
+                        type: string
+                        description: 'annotation template. golang template that''s fed the following object for each declared port of the pod: {"name", "number"}'
+                        example: '[my.path.annotation/{{ .port.Name }}]'
+---
+group: management
+kind: APISpec
+scope: K8SCluster
+description: An API Spec
+spec:
+  names:
+    plural: apispecs
+    singular: apispec
+  cli:
+    shortNames:
+      - apispec
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            specDiscoveryRef:
+              type: string
+              x-amplify-kind-ref: SpecDiscovery
+            definition:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: The type of the api specification. Example
+                    oas3, oas2, wsdl, protobuf.
+                value:
+                  type: string
+                  description: Base64 encoded value of the api specification.
+                  format: base64
+                hash:
+                  type: string
+                  description: Consistent hash of the value.
+                  format: base64
+            endpoints:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    description: The type of the endpoint
+                  host:
+                    type: string
+                    description: The host of the pod <namespace>.<pod-name>
+                  port:
+                    type: string
+                    description: The port of the pod on
+                      which this spec was discovered
+                  path:
+                    type: string
+                    description: The path on which this spec was discovered

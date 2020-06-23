@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+
+	ot "github.com/opentracing/opentracing-go"
 )
 
 // HTTPClient allows you to replace the default client for different use cases
@@ -33,6 +36,10 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
 	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
 	return nil
+}
+
+type modifier interface {
+	Modify()
 }
 
 // BasicAuth auth with user/pass
@@ -61,6 +68,7 @@ func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, tim
 // NewClient creates a new HTTP client
 func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
+		tracer: ot.NoopTracer{},
 		client: &http.Client{},
 		url:    baseURL,
 		auth:   noopAuth{},
@@ -187,8 +195,8 @@ func WithQuery(n QueryNode) func(*listOptions) {
 }
 
 // List returns a list of resources
-func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequest("GET", c.url(), nil)
+func (c *Client) List(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -233,8 +241,8 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 }
 
 // Get returns a single resource
-func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequest("GET", c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
+func (c *Client) Get(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +272,8 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 }
 
 // Delete deletes a single resource
-func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
-	req, err := http.NewRequest("DELETE", c.urlForResource(&ri.ResourceMeta), nil)
+func (c *Client) Delete(ctx context.Context, ri *apiv1.ResourceInstance) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(&ri.ResourceMeta), nil)
 	if err != nil {
 		return err
 	}
@@ -292,7 +300,7 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 }
 
 // Create creates a single resource
-func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) Create(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 
@@ -301,7 +309,7 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.url(), buf)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.url(), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +340,7 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 }
 
 // Update updates a single resource
-func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) Update(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 
@@ -341,7 +349,7 @@ func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", c.urlForResource(&ri.ResourceMeta), buf)
+	req, err := http.NewRequestWithContext(ctx, "PUT", c.urlForResource(&ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}

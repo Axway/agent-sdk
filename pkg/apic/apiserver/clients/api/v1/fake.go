@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -57,70 +58,69 @@ func notFoundInScope(name, kind, scopeName string) NotFoundError {
 
 type unknownScope NotFoundError
 
-func (us unknownScope) Create(_ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Create(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) Delete(_ *apiv1.ResourceInstance) error {
+func (us unknownScope) Delete(ctx context.Context, _ *apiv1.ResourceInstance) error {
 	return NotFoundError(us)
 }
 
-func (us unknownScope) Get(_ string) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Get(_ context.Context, _ string) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) List(_ ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (us unknownScope) List(_ context.Context, _ ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) Update(_ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Update(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
 // TODO add kind to fakeByScope
 type fakeByScope map[string]*fakeScoped
 
-func (fk fakeByScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
-func (fk fakeByScope) Delete(ri *apiv1.ResourceInstance) error {
+func (fk fakeByScope) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
 	// TODO should work if ri has scope name
 	return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
-func (fk fakeByScope) Get(name string) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	return nil, notFound("", "")
 }
 
-func (fk fakeByScope) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) List(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound("", "")
 }
 
-func (fk fakeByScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Update(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
-func (fbs fakeByScope) WithScope(name string) Scoped {
-	if s, ok := fbs[name]; !ok {
+func (fk fakeByScope) WithScope(name string) Scoped {
+	if s, ok := fk[name]; !ok {
 		return unknownScope(notFound(name, ""))
 	} else {
 		return s
 	}
-
 }
 
-func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeUnscoped) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
 	return fk.create(ri)
 }
 
-func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
+func (fk *fakeUnscoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
 	if fk == nil {
 		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -142,7 +142,7 @@ func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
 	return fk.fakeScoped.delete(ri)
 }
 
-func (fk *fakeUnscoped) Get(name string) (*apiv1.ResourceInstance, error) {
+func (fk *fakeUnscoped) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
@@ -329,7 +329,7 @@ type fakeScoped struct {
 	handler        EventHandler
 }
 
-func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -340,7 +340,7 @@ func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 	return fk.create(ri)
 }
 
-func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
+func (fk *fakeScoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
 	if fk == nil {
 		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -365,14 +365,14 @@ func (fk *fakeScoped) delete(ri *apiv1.ResourceInstance) error {
 	return nil
 }
 
-func (fk *fakeScoped) Get(name string) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
 	return fk.get(name)
 }
 
-func (fk *fakeScoped) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) List(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, fmt.Errorf("unknown scope") // TODO
 	}
@@ -417,7 +417,7 @@ func (fk *fakeScoped) List(options ...ListOptions) ([]*apiv1.ResourceInstance, e
 	return ris, nil
 }
 
-func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Update(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -659,7 +659,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 			return nil, err
 		}
 
-		_, err = c.Create(ri)
+		_, err = c.Create(context.Background(), ri)
 		if err != nil {
 			return nil, err
 		}
@@ -682,7 +682,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 
 		c := noScope.WithScope(ri.Metadata.Scope.Name)
 
-		_, err = c.Create(ri)
+		_, err = c.Create(context.Background(), ri)
 		if err != nil {
 			return nil, err
 		}

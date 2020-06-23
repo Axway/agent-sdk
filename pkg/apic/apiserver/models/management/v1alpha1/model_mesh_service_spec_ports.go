@@ -12,6 +12,6 @@ package v1alpha1
 // MeshServiceSpecPorts struct for MeshServiceSpecPorts
 type MeshServiceSpecPorts struct {
 	Name      string                     `json:"name,omitempty"`
-	Number    int32                      `json:"number,omitempty"`
+	Port      int32                      `json:"port,omitempty"`
 	Endpoints []MeshServiceSpecEndpoints `json:"endpoints,omitempty"`
 }

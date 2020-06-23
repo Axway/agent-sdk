@@ -13,6 +13,7 @@ require (
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/google/uuid v1.1.1
+	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pelletier/go-toml v1.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.8 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/gjson v1.6.0
 	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
+	golang.org/x/tools v0.0.0-20191112195655-aa38f8e97acc
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	k8s.io/apimachinery v0.18.3

@@ -11,47 +11,47 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// SecretClient -
-type SecretClient struct {
+// SpecDiscoveryClient -
+type SpecDiscoveryClient struct {
 	client v1.Scoped
 }
 
-// UnscopedSecretClient -
-type UnscopedSecretClient struct {
+// UnscopedSpecDiscoveryClient -
+type UnscopedSpecDiscoveryClient struct {
 	client v1.Unscoped
 }
 
-// NewSecretClient -
+// NewSpecDiscoveryClient -
 
-func NewSecretClient(c v1.Base) (*UnscopedSecretClient, error) {
+func NewSpecDiscoveryClient(c v1.Base) (*UnscopedSpecDiscoveryClient, error) {
 
-	client, err := c.ForKind(v1alpha1.SecretGVK())
+	client, err := c.ForKind(v1alpha1.SpecDiscoveryGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedSecretClient{client}, nil
+	return &UnscopedSpecDiscoveryClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
-	return &SecretClient{
+func (c *UnscopedSpecDiscoveryClient) WithScope(scope string) *SpecDiscoveryClient {
+	return &SpecDiscoveryClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // List -
-func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
+func (c *SpecDiscoveryClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.SpecDiscovery, error) {
 	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Secret, len(riList))
+	result := make([]*v1alpha1.SpecDiscovery, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Secret{}
+		result[i] = &v1alpha1.SpecDiscovery{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -62,20 +62,20 @@ func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*
 }
 
 // Get -
-func (c *SecretClient) Get(ctx context.Context, name string) (*v1alpha1.Secret, error) {
+func (c *SpecDiscoveryClient) Get(ctx context.Context, name string) (*v1alpha1.SpecDiscovery, error) {
 	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Secret{}
+	service := &v1alpha1.SpecDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *SecretClient) Delete(ctx context.Context, res *v1alpha1.Secret) error {
+func (c *SpecDiscoveryClient) Delete(ctx context.Context, res *v1alpha1.SpecDiscovery) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (c *SecretClient) Delete(ctx context.Context, res *v1alpha1.Secret) error {
 }
 
 // Create -
-func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SpecDiscoveryClient) Create(ctx context.Context, res *v1alpha1.SpecDiscovery) (*v1alpha1.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 		return nil, err
 	}
 
-	created := &v1alpha1.Secret{}
+	created := &v1alpha1.SpecDiscovery{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 }
 
 // Update -
-func (c *SecretClient) Update(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SpecDiscoveryClient) Update(ctx context.Context, res *v1alpha1.SpecDiscovery) (*v1alpha1.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *SecretClient) Update(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 	if err != nil {
 		return nil, err
 	}
-	updated := &v1alpha1.Secret{}
+	updated := &v1alpha1.SpecDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

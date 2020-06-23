@@ -1,18 +1,18 @@
 package v1_test
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"testing"
 
-	. "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	management "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestFakeUnscoped(t *testing.T) {
-	cb, err := NewFakeClient(&apiv1.ResourceInstance{
+	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
@@ -27,7 +27,7 @@ func TestFakeUnscoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	k8s, err := k8sClient.Get("muhName")
+	k8s, err := k8sClient.Get(context.Background(), "muhName")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -35,7 +35,7 @@ func TestFakeUnscoped(t *testing.T) {
 }
 
 func TestAddFakeUnscoped(t *testing.T) {
-	cb, err := NewFakeClient(&apiv1.ResourceInstance{
+	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
@@ -51,7 +51,7 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	_, err = k8sClient.Create(&apiv1.ResourceInstance{
+	_, err = k8sClient.Create(context.Background(), &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
@@ -62,7 +62,7 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: expected error")
 	}
 
-	_, err = k8sClient.Create(&apiv1.ResourceInstance{
+	_, err = k8sClient.Create(context.Background(), &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhSecondName",
@@ -104,12 +104,12 @@ func TestFakeScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	ri, err := noScope.WithScope("muhName").Get("muhResource")
+	ri, err := noScope.WithScope("muhName").Get(context.Background(), "muhResource")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	ri, err = noScope.WithScope("muhName").Update(
+	ri, err = noScope.WithScope("muhName").Update(context.Background(),
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.K8SResourceGVK(),
@@ -132,7 +132,7 @@ func TestFakeScoped(t *testing.T) {
 }
 
 func TestFakeQueries(t *testing.T) {
-	cb, err := NewFakeClient(
+	cb, err := v1.NewFakeClient(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				Name:             "env1",
@@ -175,47 +175,47 @@ func TestFakeQueries(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		query    QueryNode
+		query    v1.QueryNode
 		expected []string
 	}{{
 		"common attribute and value",
-		AttrIn("attr", "val"),
+		v1.AttrIn("attr", "val"),
 		[]string{"env1", "env2"},
 	}, {
 		"common tag",
-		TagsIn("tag"),
+		v1.TagsIn("tag"),
 		[]string{"env1", "env2"},
 	}, {
 		"tag with one match",
-		TagsIn("tag1"),
+		v1.TagsIn("tag1"),
 		[]string{"env1"},
 	}, {
 		"two tags",
-		TagsIn("tag1", "tag2"),
+		v1.TagsIn("tag1", "tag2"),
 		[]string{"env1", "env2"},
 	}, {
 		"attribute with two values",
-		AttrIn("diffattr", "val1"),
+		v1.AttrIn("diffattr", "val1"),
 		[]string{"env1"},
 	}, {
 		"any attr",
-		AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
+		v1.AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
 		[]string{"env1", "env2"},
 	}, {
 		"all attr",
-		AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
+		v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
 		[]string{"env1"},
 	}, {
 		"all attr and one tag",
-		And(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag")),
+		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag")),
 		[]string{"env1"},
 	}, {
 		"all attr and one tag no result",
-		And(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag2")),
+		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
 		[]string{},
 	}, {
 		"all attr or one tag",
-		Or(AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), TagsIn("tag2")),
+		v1.Or(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
 		[]string{"env1", "env2"},
 	},
 	}
@@ -223,7 +223,7 @@ func TestFakeQueries(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ris, err := cEnv.List(WithQuery(tc.query))
+			ris, err := cEnv.List(context.Background(), v1.WithQuery(tc.query))
 			if err != nil {
 				t.Errorf("Failed due: %s", err)
 			}
@@ -233,6 +233,8 @@ func TestFakeQueries(t *testing.T) {
 			for i, ri := range ris {
 				names[i] = ri.Name
 			}
+
+			sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
 
 			if !reflect.DeepEqual(tc.expected, names) {
 				t.Errorf("Got %+v, expected %+v", names, tc.expected)
@@ -297,8 +299,8 @@ func TestFake(t *testing.T) {
 		add            []*apiv1.ResourceInstance
 		update         []*apiv1.ResourceInstance
 		delete         []*apiv1.ResourceInstance
-		queryClient    func(Base) Scoped
-		query          QueryNode
+		queryClient    func(v1.Base) v1.Scoped
+		query          v1.QueryNode
 		expectedBefore []string
 		expectedAfter  []string
 	}{{
@@ -310,8 +312,8 @@ func TestFake(t *testing.T) {
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{apisvc("svc1", "env1")},
-		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
-		AttrIn("attr", "val"),
+		func(b v1.Base) v1.Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		v1.AttrIn("attr", "val"),
 		[]string{"svc1"},
 		[]string{},
 	}, {
@@ -323,8 +325,8 @@ func TestFake(t *testing.T) {
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{apisvc("svc1", "env1", withAttr(map[string]string{"attr": "val"}))},
 		[]*apiv1.ResourceInstance{},
-		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
-		AttrIn("attr", "val"),
+		func(b v1.Base) v1.Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		v1.AttrIn("attr", "val"),
 		[]string{},
 		[]string{"svc1"},
 	}, {
@@ -336,8 +338,8 @@ func TestFake(t *testing.T) {
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{apisvc("svc1", "env1")},
-		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
-		TagsIn("tag1"),
+		func(b v1.Base) v1.Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		v1.TagsIn("tag1"),
 		[]string{"svc1"},
 		[]string{},
 	}, {
@@ -349,8 +351,8 @@ func TestFake(t *testing.T) {
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{apisvc("svc1", "env1", withTags([]string{"tag1"}))},
 		[]*apiv1.ResourceInstance{},
-		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
-		TagsIn("tag1"),
+		func(b v1.Base) v1.Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		v1.TagsIn("tag1"),
 		[]string{},
 		[]string{"svc1"},
 	}, {
@@ -362,8 +364,8 @@ func TestFake(t *testing.T) {
 		[]*apiv1.ResourceInstance{apisvc("svc2", "env1", withAttr(map[string]string{"attr1": "val1"}), withTags([]string{"tag1"}))},
 		[]*apiv1.ResourceInstance{},
 		[]*apiv1.ResourceInstance{},
-		func(b Base) Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
-		TagsIn("tag1"),
+		func(b v1.Base) v1.Scoped { c, _ := b.ForKind(management.APIServiceGVK()); return c.WithScope("env1") },
+		v1.TagsIn("tag1"),
 		[]string{"svc1"},
 		[]string{"svc1", "svc2"},
 	},
@@ -372,12 +374,12 @@ func TestFake(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			fk, err := NewFakeClient(tc.init...)
+			fk, err := v1.NewFakeClient(tc.init...)
 			if err != nil {
 				t.Fatalf("Failed due: %s", err)
 			}
 
-			ris, err := tc.queryClient(fk).List(WithQuery(tc.query))
+			ris, err := tc.queryClient(fk).List(context.Background(), v1.WithQuery(tc.query))
 			if err != nil {
 				t.Fatalf("List query failed due: %s", err)
 			}
@@ -400,13 +402,13 @@ func TestFake(t *testing.T) {
 					t.Fatalf("Failed to add %+v: %s", ri, err)
 				}
 
-				s := c.(Scoped)
+				s := c.(v1.Scoped)
 
 				if ri.Metadata.Scope.Name != "" {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				_, err = s.Create(ri)
+				_, err = s.Create(context.Background(), ri)
 				if err != nil {
 					t.Fatalf("Failed to add %+v: %s", ri, err)
 				}
@@ -418,13 +420,13 @@ func TestFake(t *testing.T) {
 					t.Fatalf("Failed to update %+v: %s", ri, err)
 				}
 
-				s := c.(Scoped)
+				s := c.(v1.Scoped)
 
 				if ri.Metadata.Scope.Name != "" {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				_, err = s.Update(ri)
+				_, err = s.Update(context.Background(), ri)
 				if err != nil {
 					t.Fatalf("Failed to update %+v: %s", ri, err)
 				}
@@ -436,19 +438,19 @@ func TestFake(t *testing.T) {
 					t.Fatalf("Failed to delete %+v: %s", ri, err)
 				}
 
-				s := c.(Scoped)
+				s := c.(v1.Scoped)
 
 				if ri.Metadata.Scope.Name != "" {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				err = s.Delete(ri)
+				err = s.Delete(context.Background(), ri)
 				if err != nil {
 					t.Fatalf("Failed to delete %+v: %s", ri, err)
 				}
 			}
 
-			ris, err = tc.queryClient(fk).List(WithQuery(tc.query))
+			ris, err = tc.queryClient(fk).List(context.Background(), v1.WithQuery(tc.query))
 			if err != nil {
 				t.Errorf("Failed due: %s", err)
 			}
@@ -471,14 +473,14 @@ func TestFake(t *testing.T) {
 }
 
 func TestFakeEvents(t *testing.T) {
-	fk, err := NewFakeClient()
+	fk, err := v1.NewFakeClient()
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
 
 	ri := env("env1")
 
-	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
 		if e.Type != apiv1.ResourceEntryCreatedEvent {
 			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
 		}
@@ -493,12 +495,12 @@ func TestFakeEvents(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	_, err = c.Create(ri)
+	_, err = c.Create(context.Background(), ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
 		if e.Type != apiv1.ResourceEntryUpdatedEvent {
 			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
 		}
@@ -508,12 +510,12 @@ func TestFakeEvents(t *testing.T) {
 		}
 	}))
 
-	_, err = c.Update(ri)
+	_, err = c.Update(context.Background(), ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
 		if e.Type != apiv1.ResourceEntryDeletedEvent {
 			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
 		}
@@ -523,14 +525,14 @@ func TestFakeEvents(t *testing.T) {
 		}
 	}))
 
-	err = c.Delete(ri)
+	err = c.Delete(context.Background(), ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
 }
 
 func TestFakeScopedDeleteEvents(t *testing.T) {
-	fk, err := NewFakeClient(env("env1"), apisvc("svc1", "env1"))
+	fk, err := v1.NewFakeClient(env("env1"), apisvc("svc1", "env1"))
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
@@ -540,7 +542,7 @@ func TestFakeScopedDeleteEvents(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
 		if e.Type != apiv1.ResourceEntryDeletedEvent {
 			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
 		}
@@ -549,7 +551,7 @@ func TestFakeScopedDeleteEvents(t *testing.T) {
 			t.Errorf("Unexpected resource name. Expected svc1 got: %+v", e)
 		}
 
-		fk.SetHandler(EventHandlerFunc(func(e *apiv1.Event) {
+		fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
 			if e.Type != apiv1.ResourceEntryDeletedEvent {
 				t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
 			}
@@ -559,7 +561,7 @@ func TestFakeScopedDeleteEvents(t *testing.T) {
 			}
 		}))
 	}))
-	err = c.Delete(env("env1"))
+	err = c.Delete(context.Background(), env("env1"))
 
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)

@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"context"
+
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
@@ -40,8 +42,8 @@ func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLin
 }
 
 // List -
-func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*v1alpha1.CommandLineInterface, error) {
-	riList, err := c.client.List(options...)
+func (c *CommandLineInterfaceClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.CommandLineInterface, error) {
+	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +62,8 @@ func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*v1alpha
 }
 
 // Get -
-func (c *CommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInterface, error) {
-	ri, err := c.client.Get(name)
+func (c *CommandLineInterfaceClient) Get(ctx context.Context, name string) (*v1alpha1.CommandLineInterface, error) {
+	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -73,25 +75,25 @@ func (c *CommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInte
 }
 
 // Delete -
-func (c *CommandLineInterfaceClient) Delete(res *v1alpha1.CommandLineInterface) error {
+func (c *CommandLineInterfaceClient) Delete(ctx context.Context, res *v1alpha1.CommandLineInterface) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ri)
+	return c.client.Delete(ctx, ri)
 }
 
 // Create -
-func (c *CommandLineInterfaceClient) Create(res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
+func (c *CommandLineInterfaceClient) Create(ctx context.Context, res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ctx, ri)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +109,15 @@ func (c *CommandLineInterfaceClient) Create(res *v1alpha1.CommandLineInterface) 
 }
 
 // Update -
-func (c *CommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
+func (c *CommandLineInterfaceClient) Update(ctx context.Context, res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ctx, ri)
+	if err != nil {
+		return nil, err
+	}
 	updated := &v1alpha1.CommandLineInterface{}
 
 	// Updates the resource in place

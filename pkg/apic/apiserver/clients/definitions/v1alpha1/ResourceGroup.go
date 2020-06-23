@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"context"
+
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
@@ -28,8 +30,8 @@ func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
 }
 
 // List -
-func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceGroup, error) {
-	riList, err := c.client.List(options...)
+func (c *ResourceGroupClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.ResourceGroup, error) {
+	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +50,8 @@ func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resou
 }
 
 // Get -
-func (c *ResourceGroupClient) Get(name string) (*v1alpha1.ResourceGroup, error) {
-	ri, err := c.client.Get(name)
+func (c *ResourceGroupClient) Get(ctx context.Context, name string) (*v1alpha1.ResourceGroup, error) {
+	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -61,25 +63,25 @@ func (c *ResourceGroupClient) Get(name string) (*v1alpha1.ResourceGroup, error) 
 }
 
 // Delete -
-func (c *ResourceGroupClient) Delete(res *v1alpha1.ResourceGroup) error {
+func (c *ResourceGroupClient) Delete(ctx context.Context, res *v1alpha1.ResourceGroup) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ri)
+	return c.client.Delete(ctx, ri)
 }
 
 // Create -
-func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Create(ctx context.Context, res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ctx, ri)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +97,15 @@ func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup) (*v1alpha1.Res
 }
 
 // Update -
-func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Update(ctx context.Context, res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ctx, ri)
+	if err != nil {
+		return nil, err
+	}
 	updated := &v1alpha1.ResourceGroup{}
 
 	// Updates the resource in place

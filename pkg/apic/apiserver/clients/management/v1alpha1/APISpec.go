@@ -11,47 +11,47 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// SecretClient -
-type SecretClient struct {
+// APISpecClient -
+type APISpecClient struct {
 	client v1.Scoped
 }
 
-// UnscopedSecretClient -
-type UnscopedSecretClient struct {
+// UnscopedAPISpecClient -
+type UnscopedAPISpecClient struct {
 	client v1.Unscoped
 }
 
-// NewSecretClient -
+// NewAPISpecClient -
 
-func NewSecretClient(c v1.Base) (*UnscopedSecretClient, error) {
+func NewAPISpecClient(c v1.Base) (*UnscopedAPISpecClient, error) {
 
-	client, err := c.ForKind(v1alpha1.SecretGVK())
+	client, err := c.ForKind(v1alpha1.APISpecGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedSecretClient{client}, nil
+	return &UnscopedAPISpecClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
-	return &SecretClient{
+func (c *UnscopedAPISpecClient) WithScope(scope string) *APISpecClient {
+	return &APISpecClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // List -
-func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
+func (c *APISpecClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.APISpec, error) {
 	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Secret, len(riList))
+	result := make([]*v1alpha1.APISpec, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Secret{}
+		result[i] = &v1alpha1.APISpec{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -62,20 +62,20 @@ func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*
 }
 
 // Get -
-func (c *SecretClient) Get(ctx context.Context, name string) (*v1alpha1.Secret, error) {
+func (c *APISpecClient) Get(ctx context.Context, name string) (*v1alpha1.APISpec, error) {
 	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Secret{}
+	service := &v1alpha1.APISpec{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *SecretClient) Delete(ctx context.Context, res *v1alpha1.Secret) error {
+func (c *APISpecClient) Delete(ctx context.Context, res *v1alpha1.APISpec) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (c *SecretClient) Delete(ctx context.Context, res *v1alpha1.Secret) error {
 }
 
 // Create -
-func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *APISpecClient) Create(ctx context.Context, res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 		return nil, err
 	}
 
-	created := &v1alpha1.Secret{}
+	created := &v1alpha1.APISpec{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 }
 
 // Update -
-func (c *SecretClient) Update(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *APISpecClient) Update(ctx context.Context, res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *SecretClient) Update(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 	if err != nil {
 		return nil, err
 	}
-	updated := &v1alpha1.Secret{}
+	updated := &v1alpha1.APISpec{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

@@ -1,13 +1,15 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 
 	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	ot "github.com/opentracing/opentracing-go"
 )
 
-// Options -
+// Options
 type Options func(*ClientBase)
 
 type authenticator interface {
@@ -35,6 +37,7 @@ type jwtAuth struct {
 
 // ClientBase for grouping a client, auth method and url together
 type ClientBase struct {
+	tracer ot.Tracer
 	client *http.Client
 	url    string
 	auth   authenticator
@@ -61,11 +64,11 @@ type Unscoped interface {
 }
 
 type Scoped interface {
-	Create(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	Delete(*apiv1.ResourceInstance) error
-	Get(string) (*apiv1.ResourceInstance, error)
-	List(...ListOptions) ([]*apiv1.ResourceInstance, error)
-	Update(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Create(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Delete(context.Context, *apiv1.ResourceInstance) error
+	Get(context.Context, string) (*apiv1.ResourceInstance, error)
+	List(context.Context, ...ListOptions) ([]*apiv1.ResourceInstance, error)
+	Update(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
 type ListOptions func(*listOptions)

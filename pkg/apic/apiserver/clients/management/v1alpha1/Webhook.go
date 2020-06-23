@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"context"
+
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -40,8 +42,8 @@ func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 }
 
 // List -
-func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
-	riList, err := c.client.List(options...)
+func (c *WebhookClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
+	riList, err := c.client.List(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +62,8 @@ func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, er
 }
 
 // Get -
-func (c *WebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
-	ri, err := c.client.Get(name)
+func (c *WebhookClient) Get(ctx context.Context, name string) (*v1alpha1.Webhook, error) {
+	ri, err := c.client.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -73,25 +75,25 @@ func (c *WebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
 }
 
 // Delete -
-func (c *WebhookClient) Delete(res *v1alpha1.Webhook) error {
+func (c *WebhookClient) Delete(ctx context.Context, res *v1alpha1.Webhook) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ri)
+	return c.client.Delete(ctx, ri)
 }
 
 // Create -
-func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *WebhookClient) Create(ctx context.Context, res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ctx, ri)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +109,15 @@ func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error)
 }
 
 // Update -
-func (c *WebhookClient) Update(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *WebhookClient) Update(ctx context.Context, res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ctx, ri)
+	if err != nil {
+		return nil, err
+	}
 	updated := &v1alpha1.Webhook{}
 
 	// Updates the resource in place
