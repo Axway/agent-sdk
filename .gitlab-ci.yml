@@ -231,7 +231,7 @@ run-csr:
   dependencies:
     - dependencycheck
     - gosec
-  <<: *all
+  <<: *only-feature
 
 update-csr:
   dependencies:
