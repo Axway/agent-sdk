@@ -192,7 +192,7 @@ func ParseCentralConfig(cmdProps cmdprops.CmdProps, agentType AgentType) (Centra
 		cfg.TagsToPublish = cmdProps.StringPropertyValue("central.additionalTags")
 	}
 
-	if err := cfg.validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -406,7 +406,7 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 }
 
 // Validate - Validates the config
-func (c *CentralConfiguration) validate() (err error) {
+func (c *CentralConfiguration) Validate() (err error) {
 	exception.Block{
 		Try: func() {
 			c.validateConfig()
