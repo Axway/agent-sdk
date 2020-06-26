@@ -395,8 +395,8 @@ func (c *CentralConfiguration) GetCatalogItemByID(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID
 }
 
-// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
-func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
+// UpdateCatalogItemRevisions - Returns URL to update catalog revision
+func (c *CentralConfiguration) UpdateCatalogItemRevisions(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
