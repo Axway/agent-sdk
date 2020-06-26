@@ -3,8 +3,34 @@ package config
 import (
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/cmdprops"
 )
+
+const (
+	statusPortDefault              = 8989
+	statusHealthCheckPeriodDefault = 3 * time.Minute
+)
+
+// AddStatusConfigProperties -
+func AddStatusConfigProperties(cmdProps cmdprops.CmdProps) {
+	// Status
+	cmdProps.AddIntProperty("status.port", "statusPort", statusPortDefault, "The port that will serve the status endpoints")
+	cmdProps.AddDurationProperty("status.healthCheckPeriod", "statusHealthCheckPeriod", statusHealthCheckPeriodDefault, "Time in minutes allotted for services to be ready before exiting discovery agent")
+	cmdProps.AddBoolFlag("status", "Get the status of all the Health Checks")
+}
+
+// ParseStatusConfig -
+func ParseStatusConfig(cmdProps cmdprops.CmdProps) (StatusConfig, error) {
+	cfg := &StatusConfiguration{
+		Port:              cmdProps.IntPropertyValue("status.port"),
+		HealthCheckPeriod: cmdProps.DurationPropertyValue("status.healthCheckPeriod"),
+	}
+
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
 
 // StatusConfig - Interface for status config
 type StatusConfig interface {
@@ -22,8 +48,8 @@ type StatusConfiguration struct {
 // NewStatusConfig - create a new status config
 func NewStatusConfig() StatusConfig {
 	return &StatusConfiguration{
-		Port:              8989,
-		HealthCheckPeriod: 3 * time.Minute,
+		Port:              statusPortDefault,
+		HealthCheckPeriod: statusHealthCheckPeriodDefault,
 	}
 }
 
@@ -42,18 +68,7 @@ const (
 	pathHealthcheckPeriod = "status.healthCheckPeriod"
 )
 
-// AddStatusConfigProperties - Adds the command properties needed for Status Config
-func AddStatusConfigProperties(props properties.Properties) {
-	props.AddIntProperty(pathPort, 8989, "The port that will serve the status endpoints")
-	props.AddDurationProperty(pathHealthcheckPeriod, 3*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
-	props.AddBoolFlag("status", "Get the status of all the Health Checks")
-}
-
-// ParseStatusConfig - Parses the Status Config values form teh command line
-func ParseStatusConfig(props properties.Properties) (StatusConfig, error) {
-	cfg := &StatusConfiguration{
-		Port:              props.IntPropertyValue(pathPort),
-		HealthCheckPeriod: props.DurationPropertyValue(pathHealthcheckPeriod),
-	}
-	return cfg, nil
+// validate function
+func (a *StatusConfiguration) validate() error {
+	return nil
 }

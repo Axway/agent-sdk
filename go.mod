@@ -5,6 +5,8 @@ go 1.13
 require (
 	git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933
 	github.com/elastic/beats/v7 v7.7.1
+	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
+	github.com/emersion/go-smtp v0.13.0
 	github.com/getkin/kin-openapi v0.9.0
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f

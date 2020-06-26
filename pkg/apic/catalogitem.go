@@ -228,10 +228,36 @@ func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMs
 	return
 }
 
+// GetCatalogItemName -
+func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return "", err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetCatalogItemByID(ID),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return "", err
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return "", errors.New(strconv.Itoa(response.Code))
+	}
+
+	name := gjson.Get(string(response.Body), "name").String()
+	return name, nil
+}
+
 // UpdateCatalogItemRevisions -
 func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalogRevision
-	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisionsURL(ID))
+	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisions(ID))
 }
 
 // GetCatalogItemRevision -
@@ -243,7 +269,7 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByIDURL(ID),
+		URL:     c.cfg.GetCatalogItemByID(ID),
 		Headers: headers,
 	}
 

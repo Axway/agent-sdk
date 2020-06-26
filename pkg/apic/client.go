@@ -12,6 +12,7 @@ import (
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	"github.com/tidwall/gjson"
 )
 
 // constants for auth policy types
@@ -44,6 +45,8 @@ type Client interface {
 	DeleteConsumerInstance(instanceName string) error
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
 	RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error
+	GetUserEmailAddress(ID string) string
+	GetCatalogItemName(ID string) (string, error)
 }
 
 type tokenGetter interface {
@@ -305,4 +308,29 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 // GetSubscriptionsForCatalogItem -
 func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
+}
+
+// GetUserEmailAddress - request the user email
+func (c *ServiceClient) GetUserEmailAddress(id string) string {
+	log.Debug(fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id))
+	headers, err := c.createHeader()
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return ""
+	}
+
+	email := gjson.Get(string(response.Body), "result.email").String()
+	return email
 }
