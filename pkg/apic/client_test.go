@@ -50,7 +50,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	mockClient := mockHTTPClient{
 		respCount: 0,
 		responses: []mockResponse{
-			mockResponse{
+			{
 				fileName: "./testdata/apic-environment.json",
 				respCode: http.StatusOK,
 			},
@@ -77,11 +77,11 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	cfg.Mode = corecfg.PublishToCatalog
 	mockClient.respCount = 0
 	mockClient.responses = []mockResponse{
-		mockResponse{
+		{
 			fileName: "./testdata/apiserver-environment-notfound.json",
 			respCode: http.StatusNotFound,
 		},
-		mockResponse{
+		{
 			fileName: "./testdata/apic-environment.json",
 			respCode: http.StatusOK,
 		},
@@ -95,7 +95,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	cfg.Mode = corecfg.PublishToEnvironment
 	mockClient.respCount = 0
 	mockClient.responses = []mockResponse{
-		mockResponse{
+		{
 			fileName: "./testdata/apiserver-environment.json",
 			respCode: http.StatusOK,
 		},

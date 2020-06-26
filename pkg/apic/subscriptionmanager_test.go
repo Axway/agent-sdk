@@ -65,7 +65,7 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 		ID:    ID,
 		State: state,
 		Properties: []SubscriptionProperties{
-			SubscriptionProperties{
+			{
 				Key:    "profile",
 				Values: subscriptionProps,
 			},
@@ -188,7 +188,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 				Metadata: &APIServerMetadata{
 					ID: "11111",
 					References: []APIServerReference{
-						APIServerReference{
+						{
 							ID:   "11111",
 							Kind: "APIServiceInstance",
 						},
@@ -204,7 +204,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 				Metadata: &APIServerMetadata{
 					ID: "22222",
 					References: []APIServerReference{
-						APIServerReference{
+						{
 							ID:   "22222",
 							Kind: "APIServiceInstance",
 						},

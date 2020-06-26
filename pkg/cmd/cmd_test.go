@@ -218,11 +218,11 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetCmdProps().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetCmdProps().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetCmdProps().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetCmdProps().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetCmdProps().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -231,11 +231,11 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetCmdProps().AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
+	rootCmd.GetCmdProps().AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetCmdProps().AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
+	rootCmd.GetCmdProps().AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.GetCmdProps().AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -258,11 +258,11 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetCmdProps().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetCmdProps().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetCmdProps().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetCmdProps().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetCmdProps().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -271,11 +271,11 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetCmdProps().AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
+	rootCmd.GetCmdProps().AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetCmdProps().AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
+	rootCmd.GetCmdProps().AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.GetCmdProps().AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
@@ -322,11 +322,11 @@ func TestRootCmdHandlers(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetCmdProps().BoolPropertyValue("agent.bool"),
+				dProp:                 rootCmd.GetCmdProps().DurationPropertyValue("agent.duration"),
+				iProp:                 rootCmd.GetCmdProps().IntPropertyValue("agent.int"),
+				sProp:                 rootCmd.GetCmdProps().StringPropertyValue("agent.string"),
+				ssProp:                rootCmd.GetCmdProps().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -339,11 +339,11 @@ func TestRootCmdHandlers(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.Set("path.config", "./testdata")
 
-	rootCmd.AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
-	rootCmd.AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetCmdProps().AddBoolProperty("agent.bool", "agentBool", false, "Agent Bool Property")
+	rootCmd.GetCmdProps().AddDurationProperty("agent.duration", "agentDuration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetCmdProps().AddIntProperty("agent.int", "agentInt", 0, "Agent Int Property")
+	rootCmd.GetCmdProps().AddStringProperty("agent.string", "agentString", "", "Agent String Property")
+	rootCmd.GetCmdProps().AddStringSliceProperty("agent.stringSlice", "agentStringSlice", nil, "Agent String Slice Property")
 
 	fExecute := func() {
 		rootCmd.Execute()
