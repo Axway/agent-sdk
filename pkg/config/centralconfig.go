@@ -126,11 +126,11 @@ func AddCentralConfigProperties(cmdProps properties.Properties, agentType AgentT
 	cmdProps.AddStringProperty("central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
 	cmdProps.AddDurationProperty("central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	// ssl properties and command flags
-	cmdProps.AddStringSliceProperty("central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	cmdProps.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	cmdProps.AddStringSliceProperty("central.ssl.cipherSuites", "centralSSLCipherSuites", TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	cmdProps.AddStringProperty("central.ssl.minVersion", "centralSSLMinVersion", TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	cmdProps.AddStringProperty("central.ssl.maxVersion", "centralSSLMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	cmdProps.AddStringSliceProperty("central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
+	cmdProps.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	cmdProps.AddStringSliceProperty("central.ssl.cipherSuites", "centralSslCipherSuites", TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	cmdProps.AddStringProperty("central.ssl.minVersion", "centralSslMinVersion", TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	cmdProps.AddStringProperty("central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 	cmdProps.AddStringProperty("central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 
 	if agentType == TraceabilityAgent {
