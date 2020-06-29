@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/cmdprops"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 )
 
 // NotificationType - Type definition for subscription state
@@ -58,7 +58,7 @@ const (
 )
 
 // AddSubscriptionsConfigProperties -
-func AddSubscriptionsConfigProperties(cmdProps cmdprops.CmdProps) {
+func AddSubscriptionsConfigProperties(cmdProps properties.Properties) {
 	cmdProps.AddStringProperty("subscription.smtp.host", "subscriptionSMTPHost", "", "desc")
 	cmdProps.AddIntProperty("subscription.smtp.port", "subscriptionSMTPPort", 0, "desc")
 	cmdProps.AddStringProperty(smtpFrom, "subscriptionSMTPFromAddress", "", "desc")
@@ -95,7 +95,7 @@ type EmailTemplate struct {
 }
 
 // ParseSubscriptionConfig -
-func ParseSubscriptionConfig(cmdProps cmdprops.CmdProps) (SubscriptionConfig, error) {
+func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig, error) {
 	// Determine the auth type
 	authTypeString := cmdProps.StringPropertyValue(smtpAuthType)
 	authType := NoAuth

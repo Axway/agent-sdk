@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -53,13 +56,13 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "AMPLIFY Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
 	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
 	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
@@ -71,13 +74,13 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "authClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "AMPLIFY Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
 	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
 	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSSLCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
@@ -368,93 +371,90 @@ func noOpCmdHandler() error {
 }
 
 func TestRootCommandLoggerStdout(t *testing.T) {
-	// TODO:shane
-	// initConfigHandler := noOpInitConfigHandler
-	// cmdHandler := noOpCmdHandler
+	initConfigHandler := noOpInitConfigHandler
+	cmdHandler := noOpCmdHandler
 
-	// rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	// viper.Set("path.config", "./testdata")
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.Set("path.config", "./testdata")
 
-	// rescueStdout := os.Stdout
-	// r, w, _ := os.Pipe()
-	// os.Stdout = w
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-	// fExecute := func() {
-	// 	rootCmd.Execute()
-	// }
-	// assert.NotPanics(t, fExecute)
-	// w.Close()
-	// out, _ := ioutil.ReadAll(r)
-	// os.Stdout = rescueStdout
-	// var logData map[string]string
-	// json.Unmarshal([]byte(out), &logData)
+	fExecute := func() {
+		rootCmd.Execute()
+	}
+	assert.NotPanics(t, fExecute)
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+	var logData map[string]string
+	json.Unmarshal([]byte(out), &logData)
 
-	// assert.Equal(t, "info", logData["level"])
-	// assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+	assert.Equal(t, "info", logData["level"])
+	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
-	// TODO:shane
-	// initConfigHandler := noOpInitConfigHandler
-	// cmdHandler := noOpCmdHandler
+	initConfigHandler := noOpInitConfigHandler
+	cmdHandler := noOpCmdHandler
 
-	// rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	// viper.Set("path.config", "./testdata")
-	// rootCmd.RootCmd().SetArgs([]string{
-	// 	"--logOutput",
-	// 	"file",
-	// 	"--logPath",
-	// 	"./tmplogs",
-	// },
-	// )
-	// // Make sure to delete file
-	// os.RemoveAll("./tmplogs/test_with_non_defaults.log")
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.Set("path.config", "./testdata")
+	rootCmd.RootCmd().SetArgs([]string{
+		"--logOutput",
+		"file",
+		"--logPath",
+		"./tmplogs",
+	},
+	)
+	// Make sure to delete file
+	os.RemoveAll("./tmplogs/test_with_non_defaults.log")
 
-	// fExecute := func() {
-	// 	rootCmd.Execute()
-	// }
-	// assert.NotPanics(t, fExecute)
+	fExecute := func() {
+		rootCmd.Execute()
+	}
+	assert.NotPanics(t, fExecute)
 
-	// dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
-	// assert.Nil(t, err)
-	// var logData map[string]string
-	// json.Unmarshal([]byte(dat), &logData)
+	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
+	assert.Nil(t, err)
+	var logData map[string]string
+	json.Unmarshal([]byte(dat), &logData)
 
-	// assert.Equal(t, "info", logData["level"])
-	// assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+	assert.Equal(t, "info", logData["level"])
+	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
-	// TODO:shane
-	// initConfigHandler := noOpInitConfigHandler
-	// cmdHandler := noOpCmdHandler
+	initConfigHandler := noOpInitConfigHandler
+	cmdHandler := noOpCmdHandler
 
-	// rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	// viper.Set("path.config", "./testdata")
-	// rootCmd.RootCmd().SetArgs([]string{
-	// 	"--logOutput",
-	// 	"both",
-	// 	"--logPath",
-	// 	"./tmplogs",
-	// },
-	// )
-	// rescueStdout := os.Stdout
-	// r, w, _ := os.Pipe()
-	// os.Stdout = w
+	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.Set("path.config", "./testdata")
+	rootCmd.RootCmd().SetArgs([]string{
+		"--logOutput",
+		"both",
+		"--logPath",
+		"./tmplogs",
+	},
+	)
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-	// fExecute := func() {
-	// 	rootCmd.Execute()
-	// }
-	// // Make sure to delete file
-	// os.Remove("./tmplogs/test_with_non_defaults.log")
-	// assert.NotPanics(t, fExecute)
-	// w.Close()
-	// out, _ := ioutil.ReadAll(r)
-	// os.Stdout = rescueStdout
-	// var logData map[string]string
-	// json.Unmarshal([]byte(out), &logData)
+	fExecute := func() {
+		rootCmd.Execute()
+	}
+	// Make sure to delete file
+	os.Remove("./tmplogs/test_with_non_defaults.log")
+	assert.NotPanics(t, fExecute)
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+	var logData map[string]string
+	json.Unmarshal([]byte(out), &logData)
 
-	// dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
-	// assert.Nil(t, err)
-	// assert.Equal(t, out, dat)
+	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
+	assert.Nil(t, err)
+	assert.Equal(t, out, dat)
 }

@@ -11,7 +11,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/cmdprops"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
@@ -30,7 +30,7 @@ type AgentRootCmd interface {
 
 	// Get the agentType
 	GetAgentType() corecfg.AgentType
-	GetCmdProps() cmdprops.CmdProps
+	GetCmdProps() properties.Properties
 }
 
 // agentRootCommand - Represents the agent root command
@@ -40,7 +40,7 @@ type agentRootCommand struct {
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
 	agentType         corecfg.AgentType
-	cmdProps          cmdprops.CmdProps
+	cmdProps          properties.Properties
 }
 
 // NewRootCmd - Creates a new Agent Root Command
@@ -60,10 +60,10 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		PreRun:  c.initialize,
 	}
 
-	c.cmdProps = cmdprops.NewCmdProperties(c.rootCmd)
+	c.cmdProps = properties.NewProperties(c.rootCmd)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
-	c.GetCmdProps().AddBaseConfigProperties()
+	c.cmdProps.AddBaseConfigProperties()
 	corecfg.AddCentralConfigProperties(c.GetCmdProps(), c.GetAgentType())
 	corecfg.AddStatusConfigProperties(c.GetCmdProps())
 	corecfg.AddSubscriptionsConfigProperties(c.GetCmdProps())
@@ -214,6 +214,6 @@ func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
 	return c.agentType
 }
 
-func (c *agentRootCommand) GetCmdProps() cmdprops.CmdProps {
+func (c *agentRootCommand) GetCmdProps() properties.Properties {
 	return c.cmdProps
 }

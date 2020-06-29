@@ -13,12 +13,13 @@ import (
 // Properties - Root Command Properties interface for all configs to use for adding and parsing values
 type Properties interface {
 	// Methods for adding yaml properties and command flag
-	AddStringProperty(name string, defaultVal string, description string)
-	AddDurationProperty(name string, defaultVal time.Duration, description string)
-	AddIntProperty(name string, defaultVal int, description string)
-	AddBoolProperty(name string, defaultVal bool, description string)
-	AddBoolFlag(name, description string)
-	AddStringSliceProperty(name string, defaultVal []string, description string)
+	AddStringProperty(name, flagName string, defaultVal string, description string)
+	AddDurationProperty(name, flagName string, defaultVal time.Duration, description string)
+	AddIntProperty(name, flagName string, defaultVal int, description string)
+	AddBoolProperty(name, flagName string, defaultVal bool, description string)
+	AddBoolFlag(flagName, description string)
+	AddStringSliceProperty(name, flagName string, defaultVal []string, description string)
+	AddBaseConfigProperties()
 
 	// Methods to get the configured properties
 	StringPropertyValue(name string) string
@@ -43,13 +44,23 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 	return cmdprops
 }
 
+// AddBaseConfigProperties -
+func (p *properties) AddBaseConfigProperties() {
+	// Log yaml properties and command flags
+	p.AddStringProperty("log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
+	p.AddStringProperty("log.format", "logFormat", "json", "Log format (json, line, package)")
+	p.AddStringProperty("log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
+	p.AddStringProperty("log.path", "logPath", "logs", "Log file path if output type is file or both")
+	p.AddStringProperty("path.config", "pathConfig", ".", "Configuration file path for the agent")
+}
+
 func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 	if err := viper.BindPFlag(key, flg); err != nil {
 		panic(err)
 	}
 }
 
-func (p *properties) AddStringProperty(name string, defaultVal string, description string) {
+func (p *properties) AddStringProperty(name, flagName string, defaultVal string, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().String(flagName, defaultVal, description)
@@ -57,7 +68,7 @@ func (p *properties) AddStringProperty(name string, defaultVal string, descripti
 	}
 }
 
-func (p *properties) AddStringSliceProperty(name string, defaultVal []string, description string) {
+func (p *properties) AddStringSliceProperty(name, flagName string, defaultVal []string, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().StringSlice(flagName, defaultVal, description)
@@ -65,7 +76,7 @@ func (p *properties) AddStringSliceProperty(name string, defaultVal []string, de
 	}
 }
 
-func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string) {
+func (p *properties) AddDurationProperty(name, flagName string, defaultVal time.Duration, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
@@ -73,7 +84,7 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
-func (p *properties) AddIntProperty(name string, defaultVal int, description string) {
+func (p *properties) AddIntProperty(name, flagName string, defaultVal int, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Int(flagName, defaultVal, description)
@@ -81,7 +92,7 @@ func (p *properties) AddIntProperty(name string, defaultVal int, description str
 	}
 }
 
-func (p *properties) AddBoolProperty(name string, defaultVal bool, description string) {
+func (p *properties) AddBoolProperty(name, flagName string, defaultVal bool, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Bool(flagName, defaultVal, description)

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/cmdprops"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
 )
 
@@ -113,18 +113,18 @@ type CentralConfiguration struct {
 }
 
 // AddCentralConfigProperties -
-func AddCentralConfigProperties(cmdProps cmdprops.CmdProps, agentType AgentType) {
+func AddCentralConfigProperties(cmdProps properties.Properties, agentType AgentType) {
 	// APIC yaml properties and command flags
 	cmdProps.AddStringProperty("central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	cmdProps.AddStringProperty("central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	cmdProps.AddStringProperty("central.platformUrl", "centralPlatformUrl", "https://platform.axway.com", "URL of AMPLIFY Platform")
-	cmdProps.AddStringProperty("central.auth.privateKey", "authPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	cmdProps.AddStringProperty("central.auth.publicKey", "authPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	cmdProps.AddStringProperty("central.auth.keyPassword", "authKeyPassword", "", "Password for the private key, if needed")
-	cmdProps.AddStringProperty("central.auth.url", "authUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	cmdProps.AddStringProperty("central.auth.realm", "authRealm", "Broker", "AMPLIFY Central authentication Realm")
-	cmdProps.AddStringProperty("central.auth.clientId", "authClientId", "", "Client ID for the service account")
-	cmdProps.AddDurationProperty("central.auth.timeout", "authTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	cmdProps.AddStringProperty("central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	cmdProps.AddStringProperty("central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	cmdProps.AddStringProperty("central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
+	cmdProps.AddStringProperty("central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	cmdProps.AddStringProperty("central.auth.realm", "centralAuthRealm", "Broker", "AMPLIFY Central authentication Realm")
+	cmdProps.AddStringProperty("central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	cmdProps.AddDurationProperty("central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
 	// ssl properties and command flags
 	cmdProps.AddStringSliceProperty("central.ssl.nextProtos", "centralSSLNextProtos", []string{}, "List of supported application level protocols, comma separated")
 	cmdProps.AddBoolProperty("central.ssl.insecureSkipVerify", "centralSSLInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
@@ -143,7 +143,7 @@ func AddCentralConfigProperties(cmdProps cmdprops.CmdProps, agentType AgentType)
 }
 
 // ParseCentralConfig -
-func ParseCentralConfig(cmdProps cmdprops.CmdProps, agentType AgentType) (CentralConfig, error) {
+func ParseCentralConfig(cmdProps properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := cmdProps.StringPropertyValue("central.proxyUrl")
 	cfg := &CentralConfiguration{
 		AgentType:    agentType,

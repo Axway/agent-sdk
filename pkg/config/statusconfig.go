@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/cmdprops"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 )
 
 // AddStatusConfigProperties -
-func AddStatusConfigProperties(cmdProps cmdprops.CmdProps) {
+func AddStatusConfigProperties(cmdProps properties.Properties) {
 	// Status
 	cmdProps.AddIntProperty("status.port", "statusPort", statusPortDefault, "The port that will serve the status endpoints")
 	cmdProps.AddDurationProperty("status.healthCheckPeriod", "statusHealthCheckPeriod", statusHealthCheckPeriodDefault, "Time in minutes allotted for services to be ready before exiting discovery agent")
@@ -20,7 +20,7 @@ func AddStatusConfigProperties(cmdProps cmdprops.CmdProps) {
 }
 
 // ParseStatusConfig -
-func ParseStatusConfig(cmdProps cmdprops.CmdProps) (StatusConfig, error) {
+func ParseStatusConfig(cmdProps properties.Properties) (StatusConfig, error) {
 	cfg := &StatusConfiguration{
 		Port:              cmdProps.IntPropertyValue("status.port"),
 		HealthCheckPeriod: cmdProps.DurationPropertyValue("status.healthCheckPeriod"),
