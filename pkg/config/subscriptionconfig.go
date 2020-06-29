@@ -59,19 +59,19 @@ const (
 
 // AddSubscriptionsConfigProperties -
 func AddSubscriptionsConfigProperties(cmdProps properties.Properties) {
-	cmdProps.AddStringProperty("subscription.smtp.host", "subscriptionSMTPHost", "", "desc")
-	cmdProps.AddIntProperty("subscription.smtp.port", "subscriptionSMTPPort", 0, "desc")
-	cmdProps.AddStringProperty(smtpFrom, "subscriptionSMTPFromAddress", "", "desc")
-	cmdProps.AddStringProperty(smtpAuthType, "subscriptionSMTPAuthType", string(NoAuth), "desc")
-	cmdProps.AddStringProperty(smtpIdentity, "subscriptionSMTPIdentity", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribe.subject", "subscriptionSubscribeSubject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribe.body", "subscriptionSubscribeBody", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.subject", "subscriptionUnsubscribeSubject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.body", "subscriptionUnsubscribeBody", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.subject", "subscriptionSubscribeFailedSubject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.body", "subscriptionSubscribeFailedBody", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.subject", "subscriptionUnsubscribeFailedSubject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.body", "subscriptionUnsubscribeFailedBody", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.host", "", "desc")
+	cmdProps.AddIntProperty("subscription.smtp.port", 0, "desc")
+	cmdProps.AddStringProperty(smtpFrom, "", "desc")
+	cmdProps.AddStringProperty(smtpAuthType, string(NoAuth), "desc")
+	cmdProps.AddStringProperty(smtpIdentity, "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.subscribe.subject", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.subscribe.body", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.subject", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.body", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.subject", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.body", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.subject", "", "desc")
+	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.body", "", "desc")
 }
 
 type smtp struct {

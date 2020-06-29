@@ -12,7 +12,6 @@ import (
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
-	"github.com/tidwall/gjson"
 )
 
 // constants for auth policy types
@@ -348,6 +347,11 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 		return "", err
 	}
 
-	email := gjson.Get(string(response.Body), "result.email").String()
+	var platformUserInfo PlatformUserInfo
+	err = json.Unmarshal(response.Body, &platformUserInfo)
+	email := platformUserInfo.Result.Email
+	log.Debugf("Platform user email %s", platformUserInfo.Result.Email)
+
+	// email := gjson.Get(string(response.Body), "result.email").String()
 	return email, nil
 }

@@ -7,14 +7,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/spf13/cobra"
-	flag "github.com/spf13/pflag"
-	"github.com/spf13/viper"
-
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	"github.com/spf13/cobra"
+
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/agentsync"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/spf13/viper"
 )
 
 // CommandHandler - Root command execution handler
@@ -30,7 +30,8 @@ type AgentRootCmd interface {
 
 	// Get the agentType
 	GetAgentType() corecfg.AgentType
-	GetCmdProps() properties.Properties
+
+	GetProperties() properties.Properties
 }
 
 // agentRootCommand - Represents the agent root command
@@ -40,7 +41,7 @@ type agentRootCommand struct {
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
 	agentType         corecfg.AgentType
-	cmdProps          properties.Properties
+	props             properties.Properties
 }
 
 // NewRootCmd - Creates a new Agent Root Command
@@ -59,20 +60,29 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		RunE:    c.run,
 		PreRun:  c.initialize,
 	}
-
-	c.cmdProps = properties.NewProperties(c.rootCmd)
+	c.props = properties.NewProperties(c.rootCmd)
+	c.addBaseProps()
+	agentsync.AddSyncConfigProperties(c.props)
+	corecfg.AddCentralConfigProperties(c.props, agentType)
+	corecfg.AddStatusConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
-	c.cmdProps.AddBaseConfigProperties()
-	corecfg.AddCentralConfigProperties(c.GetCmdProps(), c.GetAgentType())
-	corecfg.AddStatusConfigProperties(c.GetCmdProps())
-	corecfg.AddSubscriptionsConfigProperties(c.GetCmdProps())
 
+	// Call the config add props
 	return c
 }
 
+// Add the command line properties for the logger and path config
+func (c *agentRootCommand) addBaseProps() {
+	c.props.AddStringProperty("log.level", "info", "Log level (debug, info, warn, error)")
+	c.props.AddStringProperty("log.format", "json", "Log format (json, line, package)")
+	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
+	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
+	c.props.AddStringProperty("path.config", ".", "Configuration file path for the agent")
+}
+
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
-	configFilePath := c.GetCmdProps().StringPropertyValue("path.config")
+	configFilePath := c.props.StringPropertyValue("path.config")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)
@@ -88,8 +98,8 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 }
 
 func (c *agentRootCommand) checkStatusFlag() {
-	statusPort := c.GetCmdProps().IntPropertyValue("status.port")
-	if c.GetCmdProps().BoolFlagValue("status") {
+	statusPort := c.props.IntPropertyValue("status.port")
+	if c.props.BoolFlagValue("status") {
 		urlObj := url.URL{
 			Scheme: "http",
 			Host:   fmt.Sprintf("localhost:%d", statusPort),
@@ -101,39 +111,18 @@ func (c *agentRootCommand) checkStatusFlag() {
 	}
 }
 
-func (c *agentRootCommand) bindOrPanic(key string, flg *flag.Flag) {
-	if err := viper.BindPFlag(key, flg); err != nil {
-		panic(err)
-	}
-}
-
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
-	logLevel := c.GetCmdProps().StringPropertyValue("log.level")
-	logFormat := c.GetCmdProps().StringPropertyValue("log.format")
-	logOutput := c.GetCmdProps().StringPropertyValue("log.output")
-	logPath := c.GetCmdProps().StringPropertyValue("log.path")
-	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
+	c.setupLogger()
 
-	// Init Status Config
-	statusCfg, err := corecfg.ParseStatusConfig(c.GetCmdProps())
-	if err != nil {
-		return err
-	}
-
-	// Start Health Checker
+	// Init the healthcheck API
+	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
 	hc.SetStatusConfig(statusCfg)
 	hc.HandleRequests()
 
 	// Init Central Config
-	centralCfg, err := corecfg.ParseCentralConfig(c.GetCmdProps(), c.GetAgentType())
-	if err != nil {
-		return err
-	}
-
-	// Init Subscription Config
-	_, err = corecfg.ParseSubscriptionConfig(c.GetCmdProps())
+	centralCfg, err := corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {
 		return err
 	}
@@ -145,7 +134,27 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// Validate Agent Config
-	return c.validateAgentConfig(agentCfg)
+	err = c.validateAgentConfig(agentCfg)
+	if err != nil {
+		return err
+	}
+
+	// Check the sync flag
+	exitcode := agentsync.CheckSyncFlag(c.GetProperties())
+	if exitcode > -1 {
+		os.Exit(exitcode)
+	}
+
+	return err
+}
+
+// parse the logger config values and setup the logger
+func (c *agentRootCommand) setupLogger() {
+	logLevel := c.props.StringPropertyValue("log.level")
+	logFormat := c.props.StringPropertyValue("log.format")
+	logOutput := c.props.StringPropertyValue("log.output")
+	logPath := c.props.StringPropertyValue("log.path")
+	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 }
 
 // validateAgentConfig - Validates the agent config
@@ -214,6 +223,6 @@ func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
 	return c.agentType
 }
 
-func (c *agentRootCommand) GetCmdProps() properties.Properties {
-	return c.cmdProps
+func (c *agentRootCommand) GetProperties() properties.Properties {
+	return c.props
 }
