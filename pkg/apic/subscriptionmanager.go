@@ -82,6 +82,7 @@ func (sm *subscriptionManager) pollSubscriptions() {
 		case <-sm.publishQuitChannel:
 			return
 		}
+		// Set sleep to throttle loop
 		time.Sleep(1 * time.Second)
 	}
 }

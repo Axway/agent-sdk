@@ -237,7 +237,7 @@ func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByID(ID),
+		URL:     c.cfg.GetCatalogItemByIDURL(ID),
 		Headers: headers,
 	}
 
@@ -257,7 +257,7 @@ func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 // UpdateCatalogItemRevisions -
 func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
 	serviceBody.ServiceExecution = updateCatalogRevision
-	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisions(ID))
+	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisionsURL(ID))
 }
 
 // GetCatalogItemRevision -
@@ -269,7 +269,7 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByID(ID),
+		URL:     c.cfg.GetCatalogItemByIDURL(ID),
 		Headers: headers,
 	}
 

@@ -36,7 +36,7 @@ type Subscription interface {
 	GetName() string
 	GetApicID() string
 	GetCatalogItemID() string
-	GetCreateUserID() string
+	GetCreatedUserID() string
 	GetState() SubscriptionState
 	GetPropertyValue(key string) string
 	UpdateState(newState SubscriptionState) error
@@ -67,8 +67,8 @@ type centralSubscriptionMetadata struct {
 	ModifyUserID    string `json:"modifyUserId"`
 }
 
-// GetCreateUserID - Returns ID of the user that created the subscription
-func (s *CentralSubscription) GetCreateUserID() string {
+// GetCreatedUserID - Returns ID of the user that created the subscription
+func (s *CentralSubscription) GetCreatedUserID() string {
 	return s.Metadata.CreateUserID
 }
 
