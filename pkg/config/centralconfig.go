@@ -102,7 +102,7 @@ type CentralConfiguration struct {
 	APICDeployment   string        `config:"deployment"`
 	Environment      string        `config:"environment"`
 	URL              string        `config:"url"`
-	PlatformURL      string        `config:"platformUrl"`
+	PlatformURL      string        `config:"platformURL"`
 	APIServerVersion string        `config:"apiServerVersion"`
 	TagsToPublish    string        `config:"additionalTags"`
 	Auth             AuthConfig    `config:"auth"`
@@ -344,9 +344,10 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.url not set in config"))
 	}
 
-	if c.GetPlatformURL() == "" {
-		exception.Throw(errors.New("Error central.platformUrl not set in config"))
-	}
+	// TODO we absolutely need this to verify?  Or only if subscription email is setup
+	// if c.GetPlatformURL() == "" {
+	// 	exception.Throw(errors.New("Error central.platformURL not set in config"))
+	// }
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
@@ -391,6 +392,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 const (
 	pathTenantID              = "central.tenantId"
 	pathURL                   = "central.url"
+	pathPlatformURL           = "central.platformURL"
 	pathAuthPrivateKey        = "central.auth.privateKey"
 	pathAuthPublicKey         = "central.auth.publicKey"
 	pathAuthKeyPassword       = "central.auth.keyPassword"
@@ -417,6 +419,7 @@ const (
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathPlatformURL, "platform.axwaytest.net", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
