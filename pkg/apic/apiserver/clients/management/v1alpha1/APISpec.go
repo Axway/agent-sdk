@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -42,8 +40,8 @@ func (c *UnscopedAPISpecClient) WithScope(scope string) *APISpecClient {
 }
 
 // List -
-func (c *APISpecClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.APISpec, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *APISpecClient) List(options ...v1.ListOptions) ([]*v1alpha1.APISpec, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +60,8 @@ func (c *APISpecClient) List(ctx context.Context, options ...v1.ListOptions) ([]
 }
 
 // Get -
-func (c *APISpecClient) Get(ctx context.Context, name string) (*v1alpha1.APISpec, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *APISpecClient) Get(name string) (*v1alpha1.APISpec, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +73,25 @@ func (c *APISpecClient) Get(ctx context.Context, name string) (*v1alpha1.APISpec
 }
 
 // Delete -
-func (c *APISpecClient) Delete(ctx context.Context, res *v1alpha1.APISpec) error {
+func (c *APISpecClient) Delete(res *v1alpha1.APISpec) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *APISpecClient) Create(ctx context.Context, res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
+func (c *APISpecClient) Create(res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +107,12 @@ func (c *APISpecClient) Create(ctx context.Context, res *v1alpha1.APISpec) (*v1a
 }
 
 // Update -
-func (c *APISpecClient) Update(ctx context.Context, res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
+func (c *APISpecClient) Update(res *v1alpha1.APISpec) (*v1alpha1.APISpec, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.APISpec{}
 
 	// Updates the resource in place

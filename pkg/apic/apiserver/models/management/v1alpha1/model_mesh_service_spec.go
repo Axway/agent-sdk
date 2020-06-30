@@ -11,6 +11,7 @@ package v1alpha1
 
 // MeshServiceSpec struct for MeshServiceSpec
 type MeshServiceSpec struct {
+	Selector  map[string]string      `json:"selector,omitempty"`
 	Resource  string                 `json:"resource,omitempty"`
 	Workloads []string               `json:"workloads,omitempty"`
 	Ports     []MeshServiceSpecPorts `json:"ports,omitempty"`

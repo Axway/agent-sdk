@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
@@ -42,8 +40,8 @@ func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *Resou
 }
 
 // List -
-func (c *ResourceDefinitionVersionClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +60,8 @@ func (c *ResourceDefinitionVersionClient) List(ctx context.Context, options ...v
 }
 
 // Get -
-func (c *ResourceDefinitionVersionClient) Get(ctx context.Context, name string) (*v1alpha1.ResourceDefinitionVersion, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *ResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +73,25 @@ func (c *ResourceDefinitionVersionClient) Get(ctx context.Context, name string) 
 }
 
 // Delete -
-func (c *ResourceDefinitionVersionClient) Delete(ctx context.Context, res *v1alpha1.ResourceDefinitionVersion) error {
+func (c *ResourceDefinitionVersionClient) Delete(res *v1alpha1.ResourceDefinitionVersion) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *ResourceDefinitionVersionClient) Create(ctx context.Context, res *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error) {
+func (c *ResourceDefinitionVersionClient) Create(res *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +107,12 @@ func (c *ResourceDefinitionVersionClient) Create(ctx context.Context, res *v1alp
 }
 
 // Update -
-func (c *ResourceDefinitionVersionClient) Update(ctx context.Context, res *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error) {
+func (c *ResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.ResourceDefinitionVersion{}
 
 	// Updates the resource in place

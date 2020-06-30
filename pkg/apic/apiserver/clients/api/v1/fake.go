@@ -58,49 +58,89 @@ func notFoundInScope(name, kind, scopeName string) NotFoundError {
 
 type unknownScope NotFoundError
 
-func (us unknownScope) Create(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return us.CreateCtx(context.Background(), ri)
+}
+
+func (us unknownScope) CreateCtx(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) Delete(ctx context.Context, _ *apiv1.ResourceInstance) error {
+func (us unknownScope) Delete(ri *apiv1.ResourceInstance) error {
+	return us.DeleteCtx(context.Background(), ri)
+}
+
+func (us unknownScope) DeleteCtx(ctx context.Context, _ *apiv1.ResourceInstance) error {
 	return NotFoundError(us)
 }
 
-func (us unknownScope) Get(_ context.Context, _ string) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Get(name string) (*apiv1.ResourceInstance, error) {
+	return us.GetCtx(context.Background(), name)
+}
+
+func (us unknownScope) GetCtx(_ context.Context, _ string) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) List(_ context.Context, _ ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (us unknownScope) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	return us.ListCtx(context.Background(), options...)
+}
+
+func (us unknownScope) ListCtx(_ context.Context, _ ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) Update(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return us.UpdateCtx(context.Background(), ri)
+}
+
+func (us unknownScope) UpdateCtx(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
 // TODO add kind to fakeByScope
 type fakeByScope map[string]*fakeScoped
 
-func (fk fakeByScope) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri)
+}
+
+func (fk fakeByScope) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
-func (fk fakeByScope) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
+func (fk fakeByScope) Delete(ri *apiv1.ResourceInstance) error {
+	return fk.DeleteCtx(context.Background(), ri)
+}
+
+func (fk fakeByScope) DeleteCtx(_ context.Context, ri *apiv1.ResourceInstance) error {
 	// TODO should work if ri has scope name
 	return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
 
-func (fk fakeByScope) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Get(ri string) (*apiv1.ResourceInstance, error) {
+	return fk.GetCtx(context.Background(), ri)
+}
+
+func (fk fakeByScope) GetCtx(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	return nil, notFound("", "")
 }
 
-func (fk fakeByScope) List(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	return fk.ListCtx(context.Background(), ri...)
+}
+
+func (fk fakeByScope) ListCtx(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound("", "")
 }
 
-func (fk fakeByScope) Update(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return fk.UpdateCtx(context.Background(), ri)
+}
+
+func (fk fakeByScope) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
@@ -113,14 +153,22 @@ func (fk fakeByScope) WithScope(name string) Scoped {
 	}
 }
 
-func (fk *fakeUnscoped) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri)
+}
+
+func (fk *fakeUnscoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
 	return fk.create(ri)
 }
 
-func (fk *fakeUnscoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
+func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
+	return fk.DeleteCtx(context.Background(), ri)
+}
+
+func (fk *fakeUnscoped) DeleteCtx(_ context.Context, ri *apiv1.ResourceInstance) error {
 	if fk == nil {
 		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -142,7 +190,11 @@ func (fk *fakeUnscoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) er
 	return fk.fakeScoped.delete(ri)
 }
 
-func (fk *fakeUnscoped) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
+func (fk *fakeUnscoped) Get(ri string) (*apiv1.ResourceInstance, error) {
+	return fk.GetCtx(context.Background(), ri)
+}
+
+func (fk *fakeUnscoped) GetCtx(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
@@ -321,7 +373,7 @@ func attrsAsIdxs(attrs map[string]string) []string {
 
 type fakeScoped struct {
 	apiv1.GroupVersionKind
-	apiv1.MetadataScope
+	ms             apiv1.MetadataScope
 	resources      map[string]*apiv1.ResourceInstance
 	tagsIndex      index
 	attributeIndex index
@@ -329,7 +381,11 @@ type fakeScoped struct {
 	handler        EventHandler
 }
 
-func (fk *fakeScoped) Create(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri)
+}
+
+func (fk *fakeScoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -340,7 +396,11 @@ func (fk *fakeScoped) Create(_ context.Context, ri *apiv1.ResourceInstance) (*ap
 	return fk.create(ri)
 }
 
-func (fk *fakeScoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) error {
+func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
+	return fk.DeleteCtx(context.Background(), ri)
+}
+
+func (fk *fakeScoped) DeleteCtx(_ context.Context, ri *apiv1.ResourceInstance) error {
 	if fk == nil {
 		return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -354,7 +414,7 @@ func (fk *fakeScoped) Delete(_ context.Context, ri *apiv1.ResourceInstance) erro
 func (fk *fakeScoped) delete(ri *apiv1.ResourceInstance) error {
 	deleted, ok := fk.resources[ri.Name]
 	if !ok {
-		return notFoundInScope(ri.Name, fk.Kind, fk.MetadataScope.Name)
+		return notFoundInScope(ri.Name, fk.Kind, fk.ms.Name)
 	}
 
 	fk.attributeIndex.Update(attrsAsIdxs(deleted.Attributes), []string{}, deleted.Name)
@@ -365,14 +425,22 @@ func (fk *fakeScoped) delete(ri *apiv1.ResourceInstance) error {
 	return nil
 }
 
-func (fk *fakeScoped) Get(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Get(ri string) (*apiv1.ResourceInstance, error) {
+	return fk.GetCtx(context.Background(), ri)
+}
+
+func (fk *fakeScoped) GetCtx(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
 	return fk.get(name)
 }
 
-func (fk *fakeScoped) List(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	return fk.ListCtx(context.Background(), ri...)
+}
+
+func (fk *fakeScoped) ListCtx(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, fmt.Errorf("unknown scope") // TODO
 	}
@@ -417,7 +485,11 @@ func (fk *fakeScoped) List(_ context.Context, options ...ListOptions) ([]*apiv1.
 	return ris, nil
 }
 
-func (fk *fakeScoped) Update(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return fk.UpdateCtx(context.Background(), ri)
+}
+
+func (fk *fakeScoped) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -450,7 +522,7 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 					ModifyTimestamp: apiv1.Time(time.Now()),
 					ModifyUserID:    "", // TODO
 				},
-				Scope:           fk.MetadataScope,
+				Scope:           fk.ms,
 				ResourceVersion: "0",
 				References:      nil,
 				State:           "", // TODO
@@ -478,7 +550,7 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 
 	prev, ok := fk.resources[ri.Name]
 	if !ok {
-		return nil, notFoundInScope(ri.Name, fk.Kind, fk.MetadataScope.Name)
+		return nil, notFoundInScope(ri.Name, fk.Kind, fk.ms.Name)
 	}
 
 	updated := &apiv1.ResourceInstance{
@@ -523,7 +595,7 @@ func (fk *fakeScoped) get(name string) (*apiv1.ResourceInstance, error) {
 
 	ris, ok := fk.resources[name]
 	if !ok {
-		return nil, notFoundInScope(name, fk.Kind, fk.MetadataScope.Name)
+		return nil, notFoundInScope(name, fk.Kind, fk.ms.Name)
 	}
 
 	return ris, nil
@@ -659,7 +731,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 			return nil, err
 		}
 
-		_, err = c.Create(context.Background(), ri)
+		_, err = c.Create(ri)
 		if err != nil {
 			return nil, err
 		}
@@ -682,7 +754,7 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 
 		c := noScope.WithScope(ri.Metadata.Scope.Name)
 
-		_, err = c.Create(context.Background(), ri)
+		_, err = c.Create(ri)
 		if err != nil {
 			return nil, err
 		}

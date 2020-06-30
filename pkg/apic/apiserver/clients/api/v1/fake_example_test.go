@@ -1,7 +1,6 @@
 package v1_test
 
 import (
-	"context"
 	"testing"
 
 	. "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
@@ -11,7 +10,6 @@ import (
 )
 
 func TestExampleFake(t *testing.T) {
-
 	// can be started with a set of initial resources
 	cb, err := NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -32,7 +30,7 @@ func TestExampleFake(t *testing.T) {
 	}
 
 	// K8SResource is scoped under K8SCluster so I need to use WithScope
-	created, err := k8sResClient.WithScope("muhCluster").Create(context.Background(), &aMgmgt.K8SResource{
+	created, err := k8sResClient.WithScope("muhCluster").Create(&aMgmgt.K8SResource{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name: "muhName",
 			Attributes: map[string]string{
@@ -48,7 +46,7 @@ func TestExampleFake(t *testing.T) {
 	}
 
 	// then I can list it
-	list, err := k8sResClient.WithScope("muhCluster").List(context.Background(), WithQuery(AttrIn("attr", "val")))
+	list, err := k8sResClient.WithScope("muhCluster").List(WithQuery(AttrIn("attr", "val")))
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}
@@ -60,13 +58,13 @@ func TestExampleFake(t *testing.T) {
 	// update the resource and clear attributes
 	created.Attributes = map[string]string{}
 	// K8SResource is scoped under K8SCluster so I need to use WithScope
-	_, err = k8sResClient.WithScope("muhCluster").Update(context.Background(), created)
+	_, err = k8sResClient.WithScope("muhCluster").Update(created)
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}
 
 	// the list won't contain the resource anymore
-	list, err = k8sResClient.WithScope("muhCluster").List(context.Background(), WithQuery(AttrIn("attr", "val")))
+	list, err = k8sResClient.WithScope("muhCluster").List(WithQuery(AttrIn("attr", "val")))
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}

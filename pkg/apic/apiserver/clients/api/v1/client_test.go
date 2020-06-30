@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -80,7 +79,7 @@ var mockAPISvc = &apiv1.ResourceInstance{}
 var client = &Client{}
 
 func createEnv(client Unscoped) (*apiv1.ResourceInstance, error) {
-	created, err := client.Create(context.Background(), &apiv1.ResourceInstance{
+	created, err := client.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",
@@ -150,14 +149,14 @@ func TestUnscoped(t *testing.T) {
 	}
 
 	// Get env by name
-	_, err = client.Get(context.Background(), created.Name)
+	_, err = client.Get(created.Name)
 	if err != nil {
 		t.Fatalf("Failed to get env by name: %s", err)
 	}
 
 	// Update env
 	created.Title = "updated-testenv-title"
-	updatedEnv, err := client.Update(context.Background(), created)
+	updatedEnv, err := client.Update(created)
 
 	if updatedEnv.Title != mockEnvUpdated.Title {
 		t.Fatalf("Updated resource name does not match %s. Received %s", mockEnvUpdated.Title, updatedEnv.Title)
@@ -168,7 +167,7 @@ func TestUnscoped(t *testing.T) {
 	}
 
 	// Get all envs
-	envList, err := client.List(context.Background())
+	envList, err := client.List()
 	if err != nil {
 		t.Fatalf("Failed to list environments: %s", err)
 	}
@@ -186,7 +185,7 @@ func TestUnscoped(t *testing.T) {
 		t.Fatalf("Cannot find created environment %v", created)
 	}
 
-	err = client.Delete(context.Background(), created)
+	err = client.Delete(created)
 	if err != nil {
 		t.Fatalf("Failed to delete: %s", err)
 	}
@@ -221,7 +220,7 @@ func TestScoped(t *testing.T) {
 	env, err := createEnv(client)
 
 	defer func() {
-		err = client.Delete(context.Background(), env)
+		err = client.Delete(env)
 		if err != nil {
 			t.Fatalf("Failed: %s", err)
 		}
@@ -230,7 +229,7 @@ func TestScoped(t *testing.T) {
 	svcClient, err := client.ForKind(management.APIServiceGVK())
 	svcClient = svcClient.WithScope(env.Name).(*Client)
 
-	svc, err := svcClient.Create(context.Background(), &apiv1.ResourceInstance{
+	svc, err := svcClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:       "test-api-svc",
 			Tags:       []string{"atag"},
@@ -242,13 +241,13 @@ func TestScoped(t *testing.T) {
 		t.Fatalf("Failed: %s", err)
 	}
 
-	svcs, err := svcClient.List(context.Background())
+	svcs, err := svcClient.List()
 	if err != nil {
 		t.Fatalf("Failed to list api services: %s", err)
 	}
 	found := false
 	for _, s := range svcs {
-		svcClient.Delete(context.Background(), svc)
+		svcClient.Delete(svc)
 		if s.Name == svc.Name {
 			t.Logf("Found created svc %v", s)
 
@@ -260,7 +259,7 @@ func TestScoped(t *testing.T) {
 		t.Fatalf("Cannot find created service %v", svc)
 	}
 
-	err = svcClient.Delete(context.Background(), svc)
+	err = svcClient.Delete(svc)
 	if err != nil {
 		t.Fatalf("Failed: %s", err)
 	}
@@ -274,7 +273,7 @@ func TestListWithQuery(t *testing.T) {
 		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
 		JSON([]*apiv1.ResourceInstance{mockEnv})
 
-	_, err := client.List(context.Background(), WithQuery(And(TagsIn("test"), AttrIn("attr", "val"))))
+	_, err := client.List(WithQuery(And(TagsIn("test"), AttrIn("attr", "val"))))
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}
@@ -325,7 +324,7 @@ func TestListError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	_, err := client.List(context.Background())
+	_, err := client.List()
 
 	if err == nil {
 		t.Fatalf("Expected list to fail: %s", err)
@@ -339,7 +338,7 @@ func TestGetError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	_, err := client.Get(context.Background(), "name")
+	_, err := client.Get("name")
 
 	if err == nil {
 		t.Fatalf("Expected Update to fail: %s", err)
@@ -353,7 +352,7 @@ func TestDeleteError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	err := client.Delete(context.Background(), &apiv1.ResourceInstance{
+	err := client.Delete(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",
@@ -390,7 +389,7 @@ func TestUpdateError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	_, err := client.Update(context.Background(), &apiv1.ResourceInstance{
+	_, err := client.Update(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",

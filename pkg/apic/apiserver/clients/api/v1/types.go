@@ -58,17 +58,34 @@ type Base interface {
 	ForKind(apiv1.GroupVersionKind) (Unscoped, error)
 }
 
+type BaseCtx interface {
+	ForKindCtx(apiv1.GroupVersionKind) (UnscopedCtx, error)
+}
+
+type UnscopedCtx interface {
+	ScopedCtx
+	WithScope(name string) ScopedCtx
+}
+
 type Unscoped interface {
 	Scoped
 	WithScope(name string) Scoped
 }
 
+type ScopedCtx interface {
+	CreateCtx(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	DeleteCtx(context.Context, *apiv1.ResourceInstance) error
+	GetCtx(context.Context, string) (*apiv1.ResourceInstance, error)
+	ListCtx(context.Context, ...ListOptions) ([]*apiv1.ResourceInstance, error)
+	UpdateCtx(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+}
+
 type Scoped interface {
-	Create(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	Delete(context.Context, *apiv1.ResourceInstance) error
-	Get(context.Context, string) (*apiv1.ResourceInstance, error)
-	List(context.Context, ...ListOptions) ([]*apiv1.ResourceInstance, error)
-	Update(context.Context, *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Create(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Delete(*apiv1.ResourceInstance) error
+	Get(string) (*apiv1.ResourceInstance, error)
+	List(...ListOptions) ([]*apiv1.ResourceInstance, error)
+	Update(*apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
 type ListOptions func(*listOptions)

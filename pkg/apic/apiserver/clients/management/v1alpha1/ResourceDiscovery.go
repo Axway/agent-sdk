@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -42,8 +40,8 @@ func (c *UnscopedResourceDiscoveryClient) WithScope(scope string) *ResourceDisco
 }
 
 // List -
-func (c *ResourceDiscoveryClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.ResourceDiscovery, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *ResourceDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDiscovery, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +60,8 @@ func (c *ResourceDiscoveryClient) List(ctx context.Context, options ...v1.ListOp
 }
 
 // Get -
-func (c *ResourceDiscoveryClient) Get(ctx context.Context, name string) (*v1alpha1.ResourceDiscovery, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *ResourceDiscoveryClient) Get(name string) (*v1alpha1.ResourceDiscovery, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +73,25 @@ func (c *ResourceDiscoveryClient) Get(ctx context.Context, name string) (*v1alph
 }
 
 // Delete -
-func (c *ResourceDiscoveryClient) Delete(ctx context.Context, res *v1alpha1.ResourceDiscovery) error {
+func (c *ResourceDiscoveryClient) Delete(res *v1alpha1.ResourceDiscovery) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *ResourceDiscoveryClient) Create(ctx context.Context, res *v1alpha1.ResourceDiscovery) (*v1alpha1.ResourceDiscovery, error) {
+func (c *ResourceDiscoveryClient) Create(res *v1alpha1.ResourceDiscovery) (*v1alpha1.ResourceDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +107,12 @@ func (c *ResourceDiscoveryClient) Create(ctx context.Context, res *v1alpha1.Reso
 }
 
 // Update -
-func (c *ResourceDiscoveryClient) Update(ctx context.Context, res *v1alpha1.ResourceDiscovery) (*v1alpha1.ResourceDiscovery, error) {
+func (c *ResourceDiscoveryClient) Update(res *v1alpha1.ResourceDiscovery) (*v1alpha1.ResourceDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.ResourceDiscovery{}
 
 	// Updates the resource in place

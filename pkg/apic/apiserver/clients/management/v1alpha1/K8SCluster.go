@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -30,8 +28,8 @@ func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
 }
 
 // List -
-func (c *K8SClusterClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.K8SCluster, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SCluster, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +48,8 @@ func (c *K8SClusterClient) List(ctx context.Context, options ...v1.ListOptions) 
 }
 
 // Get -
-func (c *K8SClusterClient) Get(ctx context.Context, name string) (*v1alpha1.K8SCluster, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *K8SClusterClient) Get(name string) (*v1alpha1.K8SCluster, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -63,25 +61,25 @@ func (c *K8SClusterClient) Get(ctx context.Context, name string) (*v1alpha1.K8SC
 }
 
 // Delete -
-func (c *K8SClusterClient) Delete(ctx context.Context, res *v1alpha1.K8SCluster) error {
+func (c *K8SClusterClient) Delete(res *v1alpha1.K8SCluster) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *K8SClusterClient) Create(ctx context.Context, res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +95,12 @@ func (c *K8SClusterClient) Create(ctx context.Context, res *v1alpha1.K8SCluster)
 }
 
 // Update -
-func (c *K8SClusterClient) Update(ctx context.Context, res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.K8SCluster{}
 
 	// Updates the resource in place

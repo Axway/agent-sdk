@@ -1,7 +1,6 @@
 package v1_test
 
 import (
-	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -27,7 +26,7 @@ func TestFakeUnscoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	k8s, err := k8sClient.Get(context.Background(), "muhName")
+	k8s, err := k8sClient.Get("muhName")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -51,7 +50,7 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	_, err = k8sClient.Create(context.Background(), &apiv1.ResourceInstance{
+	_, err = k8sClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhName",
@@ -62,7 +61,7 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: expected error")
 	}
 
-	_, err = k8sClient.Create(context.Background(), &apiv1.ResourceInstance{
+	_, err = k8sClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.K8SClusterGVK(),
 			Name:             "muhSecondName",
@@ -104,12 +103,12 @@ func TestFakeScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	ri, err := noScope.WithScope("muhName").Get(context.Background(), "muhResource")
+	ri, err := noScope.WithScope("muhName").Get("muhResource")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	ri, err = noScope.WithScope("muhName").Update(context.Background(),
+	ri, err = noScope.WithScope("muhName").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.K8SResourceGVK(),
@@ -223,7 +222,7 @@ func TestFakeQueries(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ris, err := cEnv.List(context.Background(), v1.WithQuery(tc.query))
+			ris, err := cEnv.List(v1.WithQuery(tc.query))
 			if err != nil {
 				t.Errorf("Failed due: %s", err)
 			}
@@ -379,7 +378,7 @@ func TestFake(t *testing.T) {
 				t.Fatalf("Failed due: %s", err)
 			}
 
-			ris, err := tc.queryClient(fk).List(context.Background(), v1.WithQuery(tc.query))
+			ris, err := tc.queryClient(fk).List(v1.WithQuery(tc.query))
 			if err != nil {
 				t.Fatalf("List query failed due: %s", err)
 			}
@@ -408,7 +407,7 @@ func TestFake(t *testing.T) {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				_, err = s.Create(context.Background(), ri)
+				_, err = s.Create(ri)
 				if err != nil {
 					t.Fatalf("Failed to add %+v: %s", ri, err)
 				}
@@ -426,7 +425,7 @@ func TestFake(t *testing.T) {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				_, err = s.Update(context.Background(), ri)
+				_, err = s.Update(ri)
 				if err != nil {
 					t.Fatalf("Failed to update %+v: %s", ri, err)
 				}
@@ -444,13 +443,13 @@ func TestFake(t *testing.T) {
 					s = c.WithScope(ri.Metadata.Scope.Name)
 				}
 
-				err = s.Delete(context.Background(), ri)
+				err = s.Delete(ri)
 				if err != nil {
 					t.Fatalf("Failed to delete %+v: %s", ri, err)
 				}
 			}
 
-			ris, err = tc.queryClient(fk).List(context.Background(), v1.WithQuery(tc.query))
+			ris, err = tc.queryClient(fk).List(v1.WithQuery(tc.query))
 			if err != nil {
 				t.Errorf("Failed due: %s", err)
 			}
@@ -495,7 +494,7 @@ func TestFakeEvents(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	_, err = c.Create(context.Background(), ri)
+	_, err = c.Create(ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
@@ -510,7 +509,7 @@ func TestFakeEvents(t *testing.T) {
 		}
 	}))
 
-	_, err = c.Update(context.Background(), ri)
+	_, err = c.Update(ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
@@ -525,7 +524,7 @@ func TestFakeEvents(t *testing.T) {
 		}
 	}))
 
-	err = c.Delete(context.Background(), ri)
+	err = c.Delete(ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
@@ -561,7 +560,7 @@ func TestFakeScopedDeleteEvents(t *testing.T) {
 			}
 		}))
 	}))
-	err = c.Delete(context.Background(), env("env1"))
+	err = c.Delete(env("env1"))
 
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)

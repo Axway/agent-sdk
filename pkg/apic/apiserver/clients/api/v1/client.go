@@ -81,8 +81,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 	return c
 }
 
-// ForKind registers a client with a given group/version
-func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
+func (cb *ClientBase) forKindInternal(gvk apiv1.GroupVersionKind) (*Client, error) {
 	resource, ok := apiv1.GetResource(gvk.GroupKind)
 	if !ok {
 		return nil, fmt.Errorf("no resource for gvk: %s", gvk)
@@ -112,11 +111,30 @@ func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
 	}, nil
 }
 
+// ForKindCtx registers a client with a given group/version
+func (cb *ClientBase) ForKindCtx(gvk apiv1.GroupVersionKind) (UnscopedCtx, error) {
+	c, err := cb.forKindInternal(gvk)
+	return &ClientCtx{*c}, err
+}
+
+// ForKind registers a client with a given group/version
+func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
+	return cb.forKindInternal(gvk)
+}
+
 const (
 	// baseURL/group/version/scopeResource/scope/resource
 	scopedURLFormat   = "%s/%s/%s/%s/%s/%s"
 	unscopedURLFormat = "%s/%s/%s/%s"
 )
+
+type ClientCtx struct {
+	Client
+}
+
+func (c *ClientCtx) WithScope(scope string) ScopedCtx {
+	return c
+}
 
 func (c *Client) url() string {
 	// unscoped
@@ -194,8 +212,12 @@ func WithQuery(n QueryNode) func(*listOptions) {
 	}
 }
 
+func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	return c.ListCtx(context.Background(), options...)
+}
+
 // List returns a list of resources
-func (c *Client) List(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.url(), nil)
 	if err != nil {
 		return nil, err
@@ -240,8 +262,12 @@ func (c *Client) List(ctx context.Context, options ...ListOptions) ([]*apiv1.Res
 	return objs, nil
 }
 
+func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
+	return c.GetCtx(context.Background(), name)
+}
+
 // Get returns a single resource
-func (c *Client) Get(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
+func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
 	if err != nil {
 		return nil, err
@@ -271,8 +297,12 @@ func (c *Client) Get(ctx context.Context, name string) (*apiv1.ResourceInstance,
 	return obj, nil
 }
 
+func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
+	return c.DeleteCtx(context.Background(), ri)
+}
+
 // Delete deletes a single resource
-func (c *Client) Delete(ctx context.Context, ri *apiv1.ResourceInstance) error {
+func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) error {
 	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(&ri.ResourceMeta), nil)
 	if err != nil {
 		return err
@@ -299,8 +329,12 @@ func (c *Client) Delete(ctx context.Context, ri *apiv1.ResourceInstance) error {
 	return nil
 }
 
+func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return c.CreateCtx(context.Background(), ri)
+}
+
 // Create creates a single resource
-func (c *Client) Create(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 
@@ -339,8 +373,12 @@ func (c *Client) Create(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1
 	return obj, err
 }
 
+func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return c.UpdateCtx(context.Background(), ri)
+}
+
 // Update updates a single resource
-func (c *Client) Update(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 

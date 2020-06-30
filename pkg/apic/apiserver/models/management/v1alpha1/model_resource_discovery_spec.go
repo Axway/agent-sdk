@@ -20,5 +20,5 @@ type ResourceDiscoverySpec struct {
 	KeepStatusFields []string                             `json:"keepStatusFields,omitempty"`
 	KeepLabels       []string                             `json:"keepLabels,omitempty"`
 	Tags             []string                             `json:"tags,omitempty"`
-	ExtraAttributes  map[string]map[string]interface{}    `json:"extraAttributes,omitempty"`
+	ExtraAttributes  map[string]string                    `json:"extraAttributes,omitempty"`
 }

@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+// QueryStringer helps print a query
+type QueryStringer struct {
+	QueryNode
+}
+
+func (qs QueryStringer) String() string {
+	v := rsqlVisitor{strings.Builder{}}
+	v.Visit(qs)
+
+	return v.String()
+}
+
 // Visitor visits a QueryNode
 type Visitor interface {
 	Visit(QueryNode)

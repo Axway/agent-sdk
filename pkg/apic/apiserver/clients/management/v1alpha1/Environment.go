@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -30,8 +28,8 @@ func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
 }
 
 // List -
-func (c *EnvironmentClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Environment, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Environment, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +48,8 @@ func (c *EnvironmentClient) List(ctx context.Context, options ...v1.ListOptions)
 }
 
 // Get -
-func (c *EnvironmentClient) Get(ctx context.Context, name string) (*v1alpha1.Environment, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *EnvironmentClient) Get(name string) (*v1alpha1.Environment, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -63,25 +61,25 @@ func (c *EnvironmentClient) Get(ctx context.Context, name string) (*v1alpha1.Env
 }
 
 // Delete -
-func (c *EnvironmentClient) Delete(ctx context.Context, res *v1alpha1.Environment) error {
+func (c *EnvironmentClient) Delete(res *v1alpha1.Environment) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *EnvironmentClient) Create(ctx context.Context, res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Create(res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +95,12 @@ func (c *EnvironmentClient) Create(ctx context.Context, res *v1alpha1.Environmen
 }
 
 // Update -
-func (c *EnvironmentClient) Update(ctx context.Context, res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Update(res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.Environment{}
 
 	// Updates the resource in place

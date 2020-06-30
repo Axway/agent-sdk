@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -42,8 +40,8 @@ func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 }
 
 // List -
-func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *SecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +60,8 @@ func (c *SecretClient) List(ctx context.Context, options ...v1.ListOptions) ([]*
 }
 
 // Get -
-func (c *SecretClient) Get(ctx context.Context, name string) (*v1alpha1.Secret, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *SecretClient) Get(name string) (*v1alpha1.Secret, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +73,25 @@ func (c *SecretClient) Get(ctx context.Context, name string) (*v1alpha1.Secret, 
 }
 
 // Delete -
-func (c *SecretClient) Delete(ctx context.Context, res *v1alpha1.Secret) error {
+func (c *SecretClient) Delete(res *v1alpha1.Secret) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +107,12 @@ func (c *SecretClient) Create(ctx context.Context, res *v1alpha1.Secret) (*v1alp
 }
 
 // Update -
-func (c *SecretClient) Update(ctx context.Context, res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SecretClient) Update(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.Secret{}
 
 	// Updates the resource in place

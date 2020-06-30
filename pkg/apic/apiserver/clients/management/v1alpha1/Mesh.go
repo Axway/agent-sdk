@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"context"
-
 	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -30,8 +28,8 @@ func NewMeshClient(c v1.Base) (*MeshClient, error) {
 }
 
 // List -
-func (c *MeshClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
-	riList, err := c.client.List(ctx, options...)
+func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
+	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +48,8 @@ func (c *MeshClient) List(ctx context.Context, options ...v1.ListOptions) ([]*v1
 }
 
 // Get -
-func (c *MeshClient) Get(ctx context.Context, name string) (*v1alpha1.Mesh, error) {
-	ri, err := c.client.Get(ctx, name)
+func (c *MeshClient) Get(name string) (*v1alpha1.Mesh, error) {
+	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -63,25 +61,25 @@ func (c *MeshClient) Get(ctx context.Context, name string) (*v1alpha1.Mesh, erro
 }
 
 // Delete -
-func (c *MeshClient) Delete(ctx context.Context, res *v1alpha1.Mesh) error {
+func (c *MeshClient) Delete(res *v1alpha1.Mesh) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return err
 	}
 
-	return c.client.Delete(ctx, ri)
+	return c.client.Delete(ri)
 }
 
 // Create -
-func (c *MeshClient) Create(ctx context.Context, res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
+func (c *MeshClient) Create(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ctx, ri)
+	cri, err := c.client.Create(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +95,12 @@ func (c *MeshClient) Create(ctx context.Context, res *v1alpha1.Mesh) (*v1alpha1.
 }
 
 // Update -
-func (c *MeshClient) Update(ctx context.Context, res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
+func (c *MeshClient) Update(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ctx, ri)
-	if err != nil {
-		return nil, err
-	}
+	resource, err := c.client.Update(ri)
 	updated := &v1alpha1.Mesh{}
 
 	// Updates the resource in place

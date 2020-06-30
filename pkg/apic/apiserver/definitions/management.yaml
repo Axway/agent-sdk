@@ -789,7 +789,8 @@ spec:
             # additional attributes to be added on the resulting K8SResource
             extraAttributes:
               type: object
-              additionalProperties: true
+              additionalProperties:
+                type: string
         additionalProperties: true
 ---
 group: management
@@ -858,6 +859,10 @@ spec:
         openAPIV3Schema:
           type: object
           properties:
+            selector:
+              type: object
+              additionalProperties:
+                type: string
             resource:
               type: string
               x-amplify-kind-ref: K8SResource
