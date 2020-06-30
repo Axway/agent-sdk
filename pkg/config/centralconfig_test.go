@@ -33,12 +33,6 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfg.Validate()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.platformUrl not set in config", err.Error())
-
-	centralConfig.PlatformURL = "aaa"
-	err = cfg.Validate()
-
-	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.teamID not set in config", err.Error())
 
 	centralConfig.TeamID = "aaa"
