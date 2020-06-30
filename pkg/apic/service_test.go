@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	unifiedcatalog "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/tidwall/gjson"
 )
@@ -90,12 +91,12 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 
 	catalogBytes1, _ := c.marshalCatalogItemInit(serviceBody)
 
-	var catalogItem1 CatalogItemInit
+	var catalogItem1 unifiedcatalog.CatalogItemInit
 	json.Unmarshal(catalogBytes1, &catalogItem1)
 
 	// Validate the security is pass-through
-	if catalogItem1.Properties[0].Value.AuthPolicy != "pass-through" {
-		t.Error("swagger1.json has no security, therefore the AuthPolicy should have been pass-through. Found: ", catalogItem1.Properties[0].Value.AuthPolicy)
+	if catalogItem1.Properties[0].Value.(map[string]interface{})["authPolicy"] != "pass-through" {
+		t.Error("swagger1.json has no security, therefore the AuthPolicy should have been pass-through. Found: ", catalogItem1.Properties[0].Value.(map[string]interface{})["authPolicy"])
 	}
 
 	jsonFile2, _ := os.Open("./testdata/swagger2.json") // API Key
@@ -121,12 +122,12 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 
 	catalogBytes2, _ := c.marshalCatalogItemInit(serviceBody)
 
-	var catalogItem2 CatalogItemInit
+	var catalogItem2 unifiedcatalog.CatalogItemInit
 	json.Unmarshal(catalogBytes2, &catalogItem2)
 
 	// Validate the security is verify-api-key
-	if catalogItem2.Properties[0].Value.AuthPolicy != "verify-api-key" {
-		t.Error("swagger2.json has security, therefore the AuthPolicy should have been verify-api-key. Found: ", catalogItem2.Properties[0].Value.AuthPolicy)
+	if catalogItem2.Properties[0].Value.(map[string]interface{})["authPolicy"] != "verify-api-key" {
+		t.Error("swagger2.json has security, therefore the AuthPolicy should have been verify-api-key. Found: ", catalogItem2.Properties[0].Value.(map[string]interface{})["authPolicy"])
 	}
 
 	jsonFile3, _ := os.Open("./testdata/swagger3.json") // Oauth
@@ -152,12 +153,12 @@ func TestCreateCatalogItemBodyForAdd(t *testing.T) {
 
 	catalogBytes3, _ := c.marshalCatalogItemInit(serviceBody)
 
-	var catalogItem3 CatalogItemInit
+	var catalogItem3 unifiedcatalog.CatalogItemInit
 	json.Unmarshal(catalogBytes3, &catalogItem3)
 
 	// Validate the security is verify-api-key
-	if catalogItem3.Properties[0].Value.AuthPolicy != "verify-oauth-token" {
-		t.Error("swagger3.json has security, therefore the AuthPolicy should have been verify-oauth-token. Found: ", catalogItem3.Properties[0].Value.AuthPolicy)
+	if catalogItem3.Properties[0].Value.(map[string]interface{})["authPolicy"] != "verify-oauth-token" {
+		t.Error("swagger3.json has security, therefore the AuthPolicy should have been verify-oauth-token. Found: ", catalogItem3.Properties[0].Value.(map[string]interface{})["authPolicy"])
 	}
 
 	wsdlFile, _ := os.Open("./testdata/weather.xml") // WSDL

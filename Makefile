@@ -2,7 +2,7 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/**/definitions/v1alpha  | grep -v ./pkg/apic/apiserver/**/management/v1alpha)
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/*/definitions/v1alpha  | grep -v ./pkg/apic/apiserver/*/management/v1alpha | grep -v ./pkg/apic/unifiedcatalog/models)
 
 export GOFLAGS := -mod=vendor
 
@@ -47,7 +47,10 @@ sonar: test-sonar
 		-Dsonar.go.coverage.reportPaths=gocoverage.out
 
 lint: ## Lint the files
-	@golint -set_exit_status $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/models/management | grep -v ./pkg/apic/apiserver/models/definitions)
+	@golint -set_exit_status $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/models/management | grep -v ./pkg/apic/apiserver/models/definitions | grep -v ./pkg/apic/unifiedcatalog/models)
 
 apiserver_generate: ## generate api server resources
 	./scripts/apiserver/apiserver_generate.sh
+
+unifiedcatalog_generate: ## generate unified catalog resources
+	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
