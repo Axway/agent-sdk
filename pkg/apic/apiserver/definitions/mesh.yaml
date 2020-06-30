@@ -1,0 +1,132 @@
+---
+group: mesh
+kind: ResourceDiscovery
+description: Resource controlling resource discoveries in a mesh.
+spec:
+  names:
+    plural: ResourceDiscoveries
+    singular: ResourceDiscovery
+  cli:
+    shortNames:
+      - resdisc
+      - resdiscs
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            version:
+              type: string
+            kind:
+              type: string
+            group:
+              type: string
+            namespaceFilter:
+              type: object
+              description: Namespace filter.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+            resourceFilter:
+              type: object
+              description: Resource filter.
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+                matchLabels:
+                  type: object
+                  additionalProperties:
+                    type: string
+            # what specs fields to keep
+            keepSpecFields:
+              type: array
+              items:
+                type: string
+            # what status fields to keep
+            keepStatusFields:
+              type: array
+              items:
+                type: string
+            # what labels to ignore
+            # labels will be kept as attributes in the resulting K8SResource    
+            ignoreLabels:
+              type: array
+              items:
+                type: string
+            # tags for the resulting K8SResource
+            tags:
+              type: array
+              items:
+                type: string
+            # additional attributes to be added on the resulting K8SResource
+            extraAttributes:
+              type: object
+              additionalProperties:
+                type: string
+        additionalProperties: true
+---
+group: mesh
+kind: K8SResource
+description: Resource controlling resource discoveries in a mesh.
+spec:
+  names:
+    plural: K8SResources
+    singular: K8SResource
+  cli:
+    shortNames:
+      - k8sres
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            resourceDiscovery:
+              type: string
+              x-amplify-kind-ref: ResourceDiscovery
+            resourceVersion:
+              type: string
+            uid:
+              type: string
+            resourceSpec:
+              type: object
+              additionalProperties: {}
+            resourceStatus:
+              type: object
+              additionalProperties: {}
+          additionalProperties: true    
