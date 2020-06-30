@@ -344,10 +344,9 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.url not set in config"))
 	}
 
-	// TODO we absolutely need this to verify?  Or only if subscription email is setup
-	// if c.GetPlatformURL() == "" {
-	// 	exception.Throw(errors.New("Error central.platformURL not set in config"))
-	// }
+	if c.GetPlatformURL() == "" {
+		exception.Throw(errors.New("Error central.platformURL not set in config"))
+	}
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
@@ -481,6 +480,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
 		cfg.URL = props.StringPropertyValue(pathURL)
+		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamID = props.StringPropertyValue(pathTeamID)

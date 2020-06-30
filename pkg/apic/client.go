@@ -347,11 +347,11 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 		return "", err
 	}
 
+	// Get the email
 	var platformUserInfo PlatformUserInfo
 	err = json.Unmarshal(response.Body, &platformUserInfo)
 	email := platformUserInfo.Result.Email
 	log.Debugf("Platform user email %s", platformUserInfo.Result.Email)
 
-	// email := gjson.Get(string(response.Body), "result.email").String()
 	return email, nil
 }
