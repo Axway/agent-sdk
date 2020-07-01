@@ -647,7 +647,7 @@ spec:
           properties:
             mesh:
               type: string
-              x-amplify-kind-ref: APIService
+              x-amplify-kind-ref: Mesh
           additionalProperties: true
 ---
 group: management
