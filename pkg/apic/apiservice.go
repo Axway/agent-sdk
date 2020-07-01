@@ -79,8 +79,42 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 	return itemID, err
 }
 
+// getAPIServerConsumerInstance -
+func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string, queryParams map[string]string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	consumerInstanceURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + consumerInstanceName
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         consumerInstanceURL,
+		Headers:     headers,
+		QueryParams: queryParams,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		if response.Code != http.StatusNotFound {
+			logResponseErrors(response.Body)
+		}
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+	consumerInstance := new(APIServer)
+	json.Unmarshal(response.Body, consumerInstance)
+	return consumerInstance, nil
+}
+
 func (c *ServiceClient) consumerInstanceExists(name string) bool {
-	_, err := c.getAPIServerConsumerInstance(name)
+	params := map[string]string{
+		"fields": "name",
+	}
+	_, err := c.getAPIServerConsumerInstance(name, params)
 	if err != nil {
 		if err.Error() != strconv.Itoa(http.StatusNotFound) {
 			log.Errorf("Error getting consumerInstance '%v', %v", name, err.Error())
@@ -224,7 +258,7 @@ func (c *ServiceClient) deleteConsumerInstance(name string) error {
 func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
 	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest(http.MethodGet, c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage), nil)
+	request, err := http.NewRequest(http.MethodGet, c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage)+"?fields=", nil)
 
 	if token, err = c.tokenRequester.GetToken(); err != nil {
 		log.Error("Could not get token")

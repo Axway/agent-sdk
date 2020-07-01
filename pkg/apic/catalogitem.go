@@ -347,7 +347,7 @@ func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APISe
 		return nil, errors.New("No relationships found")
 	}
 
-	return c.getAPIServerConsumerInstance(relationships[0].Value)
+	return c.getAPIServerConsumerInstance(relationships[0].Value, nil)
 }
 
 func isValidAuthPolicy(auth string) bool {

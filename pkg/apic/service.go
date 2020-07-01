@@ -77,32 +77,3 @@ func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*
 	return apiserverInfo, nil
 }
 
-// getAPIServerConsumerInstance -
-func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string) (*APIServer, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	consumerInstanceURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + consumerInstanceName
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     consumerInstanceURL,
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-		}
-		return nil, errors.New(strconv.Itoa(response.Code))
-	}
-	consumerInstance := new(APIServer)
-	json.Unmarshal(response.Body, consumerInstance)
-	return consumerInstance, nil
-}

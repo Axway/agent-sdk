@@ -111,7 +111,7 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 		// Assign subscription ApicID with ApiServiceInstanceId
 		apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
 		if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-			consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name)
+			consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name, nil)
 			if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
 				if err == nil && consumerInstance.Metadata != nil {
 					subscription.ApicID = consumerInstance.Metadata.ID
