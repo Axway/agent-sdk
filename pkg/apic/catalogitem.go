@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
+	unifiedcatalog "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
@@ -65,7 +66,7 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 	case deleteCatalog:
 		break // empty spec for delete
 	default:
-		return nil, errors.New("Invalid catalog operation")
+		return nil, errors.New("invalid catalog operation")
 	}
 	if err != nil {
 		return nil, err
@@ -74,7 +75,7 @@ func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, erro
 }
 
 func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
-	enableSubscription := (serviceBody.AuthPolicy != Passthrough)
+	enableSubscription := serviceBody.AuthPolicy != Passthrough
 
 	// assume that we use the default schema unless it one is enabled and registered
 	subSchema := c.DefaultSubscriptionSchema
@@ -93,42 +94,42 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 
 	definitionSubType, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
-	catalogProperties := []CatalogProperty{}
+	var catalogProperties []unifiedcatalog.CatalogItemProperty
 	if definitionSubType != Wsdl {
-		catalogProperties = []CatalogProperty{
+		catalogProperties = []unifiedcatalog.CatalogItemProperty{
 			{
 				Key: "accessInfo",
-				Value: CatalogPropertyValue{
-					AuthPolicy: serviceBody.AuthPolicy,
-					URL:        serviceBody.URL,
+				Value: map[string]interface{}{
+					"authPolicy": serviceBody.AuthPolicy,
+					"url":        serviceBody.URL,
 				},
 			},
 		}
 	}
 
-	newCatalogItem := CatalogItemInit{
+	newCatalogItem := unifiedcatalog.CatalogItemInit{
 		DefinitionType:     API,
 		DefinitionSubType:  definitionSubType,
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
-		OwningTeamID:       serviceBody.TeamID,
+		OwningTeamId:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
 		Properties:         catalogProperties,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED", // default value
-		Subscription: CatalogSubscription{
+		Subscription: unifiedcatalog.CatalogItemSubscriptionDefinition{
 			Enabled:         enableSubscription,
 			AutoSubscribe:   true,
 			AutoUnsubscribe: false,
-			Properties: []CatalogRevisionProperty{{
+			Properties: []unifiedcatalog.CatalogItemProperty{{
 				Key:   "profile",
 				Value: catalogSubscriptionSchema,
 			}},
 		},
-		Revision: CatalogItemInitRevision{
+		Revision: unifiedcatalog.CatalogItemInitRevision{
 			Version: serviceBody.Version,
 			State:   PublishedState,
-			Properties: []CatalogRevisionProperty{
+			Properties: []unifiedcatalog.CatalogItemProperty{
 				{
 					Key:   "documentation",
 					Value: json.RawMessage(string(serviceBody.Documentation)),
@@ -149,18 +150,18 @@ func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, err
 
 	definitionSubType, _ := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
-	newCatalogItem := CatalogItem{
+	newCatalogItem := unifiedcatalog.CatalogItem{
 		DefinitionType:    API,
 		DefinitionSubType: definitionSubType,
 
 		DefinitionRevision: 1,
 		Name:               serviceBody.NameToPush,
-		OwningTeamID:       serviceBody.TeamID,
+		OwningTeamId:       serviceBody.TeamID,
 		Description:        serviceBody.Description,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Visibility:         "RESTRICTED",   // default value
 		State:              PublishedState, //default
-		LatestVersionDetails: CatalogItemRevision{
+		LatestVersionDetails: unifiedcatalog.CatalogItemRevision{
 			Version: serviceBody.Version,
 			State:   PublishedState,
 		},
@@ -174,10 +175,10 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 
 	_, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
 
-	catalogItemRevision := CatalogItemInitRevision{
+	catalogItemRevision := unifiedcatalog.CatalogItemInitRevision{
 		Version: serviceBody.Version,
 		State:   PublishedState,
-		Properties: []CatalogRevisionProperty{
+		Properties: []unifiedcatalog.CatalogItemProperty{
 			{
 				Key:   "documentation",
 				Value: json.RawMessage(string(serviceBody.Documentation)),
@@ -194,9 +195,9 @@ func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]b
 
 // marshals the catalog image body
 func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte, error) {
-	catalogImage := CatalogItemImage{
-		DataType:      serviceBody.ImageContentType,
-		Base64Content: serviceBody.Image,
+	catalogImage := unifiedcatalog.CatalogItemImage{
+		Data:   serviceBody.ImageContentType,
+		Base64: serviceBody.Image,
 	}
 	return json.Marshal(catalogImage)
 }
@@ -285,7 +286,7 @@ func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
 	revisions := gjson.Get(string(response.Body), "availableRevisions")
 	availableRevisions := make([]int, 0)
 	json.Unmarshal([]byte(revisions.Raw), &availableRevisions)
-	revision := availableRevisions[len(availableRevisions)-1] // get the latest revsions
+	revision := availableRevisions[len(availableRevisions)-1] // get the latest revisions
 	return strconv.Itoa(revision), nil
 }
 
@@ -325,7 +326,7 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	// since we have asked for a specific one
 	catalogIDs := make([]string, 0)
 	json.Unmarshal([]byte(ids.Raw), &catalogIDs)
-	catalogItems := make([]CatalogItem, 0)
+	catalogItems := make([]unifiedcatalog.CatalogItem, 0)
 	if len(catalogIDs) == 0 {
 		return "", errors.New("Unable to find catalogID for consumerInstance " + instanceID)
 	}
@@ -364,7 +365,7 @@ func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APISe
 		return nil, errors.New(strconv.Itoa(response.Code))
 	}
 
-	relationships := make([]EntityRelationship, 0)
+	relationships := make([]unifiedcatalog.EntityRelationship, 0)
 	err = json.Unmarshal(response.Body, &relationships)
 	if err != nil {
 		return nil, err
@@ -373,7 +374,7 @@ func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APISe
 		return nil, errors.New("No relationships found")
 	}
 
-	return c.getAPIServerConsumerInstance(relationships[0].Value)
+	return c.getAPIServerConsumerInstance(relationships[0].Value, nil)
 }
 
 func isValidAuthPolicy(auth string) bool {
@@ -443,7 +444,7 @@ func (c *ServiceClient) initiateUnsubscribeCatalogItem(catalogItemID string) (in
 		}
 
 		for _, subscription := range subscriptions {
-			// just initiate the unsubscibe, and let the poller handle finishing it all up
+			// just initiate the unsubscribe, and let the poller handle finishing it all up
 			subscription.apicClient = c
 			log.Debugf("Updating subscription '%s' for catalog item ID '%s' to state: %s", subscription.Name, catalogItemID, string(SubscriptionUnsubscribeInitiated))
 			err = subscription.UpdateState(SubscriptionUnsubscribeInitiated)

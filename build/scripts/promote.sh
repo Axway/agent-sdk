@@ -21,8 +21,8 @@ set_version_variables() {
 }
 
 tag_branch() {
-    git tag -a ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} master -m "Version ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}"
-    git push origin ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} master -m "Version ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}"
+    git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
 }
 
 promote_version() {
