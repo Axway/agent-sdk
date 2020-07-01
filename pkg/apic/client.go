@@ -44,6 +44,8 @@ type Client interface {
 	DeleteConsumerInstance(instanceName string) error
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
 	RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error
+	GetUserEmailAddress(ID string) (string, error)
+	GetCatalogItemName(ID string) (string, error)
 }
 
 type tokenGetter interface {
@@ -305,4 +307,55 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 // GetSubscriptionsForCatalogItem -
 func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
+}
+
+// PlatformUserInfo -
+type PlatformUserInfo struct {
+	Success bool `json:"success"`
+	Result  struct {
+		ID        string `json:"_id"`
+		GUID      string `json:"guid"`
+		UserID    int64  `json:"user_id"`
+		Firstname string `json:"firstname"`
+		Lastname  string `json:"lastname"`
+		Active    bool   `json:"active"`
+		Email     string `json:"email"`
+	} `json:"result"`
+}
+
+// GetUserEmailAddress - request the user email
+func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return "", err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return "", err
+	}
+
+	// Get the email
+	var platformUserInfo PlatformUserInfo
+	err = json.Unmarshal(response.Body, &platformUserInfo)
+	if err != nil {
+		return "", err
+	}
+
+	email := platformUserInfo.Result.Email
+	log.Debugf("Platform user email %s", email)
+
+	return email, nil
 }

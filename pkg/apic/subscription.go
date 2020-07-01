@@ -36,6 +36,7 @@ type Subscription interface {
 	GetName() string
 	GetApicID() string
 	GetCatalogItemID() string
+	GetCreatedUserID() string
 	GetState() SubscriptionState
 	GetPropertyValue(key string) string
 	UpdateState(newState SubscriptionState) error
@@ -43,18 +44,32 @@ type Subscription interface {
 
 // CentralSubscription -
 type CentralSubscription struct {
-	ID                      string                   `json:"id"`
-	Properties              []SubscriptionProperties `json:"properties"`
-	State                   string                   `json:"state"`
-	StateDescription        string                   `json:"stateDescription"`
-	CatalogItemID           string                   `json:"catalogItemId"`
-	OwningTeamID            string                   `json:"owningTeamId"`
-	Deletable               bool                     `json:"deletable"`
-	Name                    string                   `json:"name"`
-	NextPossibleStates      []string                 `json:"nextPossibleStates"`
-	AllowedTransitionStates []string                 `json:"allowedTransitionStates"`
-	ApicID                  string                   `json:"-"`
+	ID                      string                      `json:"id"`
+	Properties              []SubscriptionProperties    `json:"properties"`
+	State                   string                      `json:"state"`
+	StateDescription        string                      `json:"stateDescription"`
+	CatalogItemID           string                      `json:"catalogItemId"`
+	OwningTeamID            string                      `json:"owningTeamId"`
+	Deletable               bool                        `json:"deletable"`
+	Name                    string                      `json:"name"`
+	NextPossibleStates      []string                    `json:"nextPossibleStates"`
+	AllowedTransitionStates []string                    `json:"allowedTransitionStates"`
+	Metadata                centralSubscriptionMetadata `json:"metadata"`
+	ApicID                  string                      `json:"-"`
 	apicClient              *ServiceClient
+}
+
+// CentralSubscriptionMetadata -
+type centralSubscriptionMetadata struct {
+	CreateTimestamp string `json:"createTimestamp"`
+	CreateUserID    string `json:"createUserId"`
+	ModifyTimestamp string `json:"modifyTimestamp"`
+	ModifyUserID    string `json:"modifyUserId"`
+}
+
+// GetCreatedUserID - Returns ID of the user that created the subscription
+func (s *CentralSubscription) GetCreatedUserID() string {
+	return s.Metadata.CreateUserID
 }
 
 // GetID - Returns ID of the subscription

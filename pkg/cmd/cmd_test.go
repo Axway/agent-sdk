@@ -22,7 +22,7 @@ func getPFlag(cmd AgentRootCmd, flagName string) *flag.Flag {
 
 func assertCmdFlag(t *testing.T, cmd AgentRootCmd, flagName, fType, description string) {
 	pflag := getPFlag(cmd, flagName)
-	assert.NotNil(t, pflag)
+	assert.NotNil(t, &pflag)
 	assert.Equal(t, fType, pflag.Value.Type())
 	assert.Equal(t, description, pflag.Usage)
 }
@@ -53,6 +53,7 @@ func TestRootCmdFlags(t *testing.T) {
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
 	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axwaytest.net", "URL of the platform")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
@@ -73,6 +74,7 @@ func TestRootCmdFlags(t *testing.T) {
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axwaytest.net", "URL of the platform")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")

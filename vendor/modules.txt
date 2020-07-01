@@ -30,6 +30,10 @@ github.com/elastic/go-ucfg/parse
 github.com/elastic/go-ucfg/yaml
 # github.com/elastic/go-windows v1.0.1
 github.com/elastic/go-windows
+# github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
+github.com/emersion/go-sasl
+# github.com/emersion/go-smtp v0.13.0
+github.com/emersion/go-smtp
 # github.com/fsnotify/fsnotify v1.4.7 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.9.0

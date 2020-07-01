@@ -65,6 +65,7 @@ type CentralConfig interface {
 	GetEnvironmentName() string
 	GetTeamID() string
 	GetURL() string
+	GetPlatformURL() string
 	GetCatalogItemsURL() string
 	GetCatalogItemImageURL(catalogItemID string) string
 	GetCatalogItemRelationshipsURL(catalogItemID string) string
@@ -80,6 +81,7 @@ type CentralConfig interface {
 	GetSubscriptionURL() string
 	GetCatalogItemSubscriptionsURL(string) string
 	Validate() error
+	GetSubscriptionConfig() SubscriptionConfig
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -100,6 +102,7 @@ type CentralConfiguration struct {
 	APICDeployment   string        `config:"deployment"`
 	Environment      string        `config:"environment"`
 	URL              string        `config:"url"`
+	PlatformURL      string        `config:"platformURL"`
 	APIServerVersion string        `config:"apiServerVersion"`
 	TagsToPublish    string        `config:"additionalTags"`
 	Auth             AuthConfig    `config:"auth"`
@@ -119,6 +122,11 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		TLS:              NewTLSConfig(),
 		PollInterval:     60 * time.Second,
 	}
+}
+
+// GetPlatformURL - Returns the central base URL
+func (c *CentralConfiguration) GetPlatformURL() string {
+	return c.PlatformURL
 }
 
 // GetAgentType - Returns the agent type
@@ -296,14 +304,14 @@ func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
 }
 
-// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
-func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
-}
-
 // GetCatalogItemByIDURL - Returns URL to get catalog item by id
 func (c *CentralConfiguration) GetCatalogItemByIDURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID
+}
+
+// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
+func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
+	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
 // GetPollInterval - Returns the interval for polling subscriptions
@@ -334,6 +342,10 @@ func (c *CentralConfiguration) validateConfig() {
 
 	if c.GetURL() == "" {
 		exception.Throw(errors.New("Error central.url not set in config"))
+	}
+
+	if c.GetPlatformURL() == "" {
+		exception.Throw(errors.New("Error central.platformURL not set in config"))
 	}
 
 	if c.GetAgentType() == TraceabilityAgent {
@@ -379,6 +391,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 const (
 	pathTenantID              = "central.tenantId"
 	pathURL                   = "central.url"
+	pathPlatformURL           = "central.platformURL"
 	pathAuthPrivateKey        = "central.auth.privateKey"
 	pathAuthPublicKey         = "central.auth.publicKey"
 	pathAuthKeyPassword       = "central.auth.keyPassword"
@@ -405,6 +418,7 @@ const (
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathPlatformURL, "https://platform.axwaytest.net", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -466,6 +480,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
 		cfg.URL = props.StringPropertyValue(pathURL)
+		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamID = props.StringPropertyValue(pathTeamID)

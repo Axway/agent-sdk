@@ -66,6 +66,7 @@ func (sm *subscriptionManager) RegisterValidator(validator SubscriptionValidator
 
 func (sm *subscriptionManager) pollSubscriptions() {
 	ticker := time.NewTicker(sm.apicClient.cfg.GetPollInterval())
+
 	defer ticker.Stop()
 	for {
 		select {
@@ -81,6 +82,8 @@ func (sm *subscriptionManager) pollSubscriptions() {
 		case <-sm.publishQuitChannel:
 			return
 		}
+		// Set sleep to throttle loop
+		time.Sleep(1 * time.Second)
 	}
 }
 
