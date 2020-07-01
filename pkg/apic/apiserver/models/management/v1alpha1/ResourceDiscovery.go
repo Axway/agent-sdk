@@ -23,7 +23,7 @@ var (
 const (
 	ResourceDiscoveryScope = "K8SCluster"
 
-	ResourceDiscoveryResource = "ResourceDiscoveries"
+	ResourceDiscoveryResource = "resourcediscoveries"
 )
 
 func ResourceDiscoveryGVK() apiv1.GroupVersionKind {

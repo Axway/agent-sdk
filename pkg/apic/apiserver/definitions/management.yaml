@@ -712,8 +712,8 @@ scope: K8SCluster
 description: Resource controlling resource discoveries in a mesh.
 spec:
   names:
-    plural: ResourceDiscoveries
-    singular: ResourceDiscovery
+    plural: resourcediscoveries
+    singular: resourcediscovery
   cli:
     shortNames:
       - resdisc
