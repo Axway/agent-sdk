@@ -18,7 +18,7 @@ type ResourceDiscoverySpec struct {
 	ResourceFilter   ResourceDiscoverySpecResourceFilter  `json:"resourceFilter,omitempty"`
 	KeepSpecFields   []string                             `json:"keepSpecFields,omitempty"`
 	KeepStatusFields []string                             `json:"keepStatusFields,omitempty"`
-	KeepLabels       []string                             `json:"keepLabels,omitempty"`
+	IgnoreLabels     []string                             `json:"ignoreLabels,omitempty"`
 	Tags             []string                             `json:"tags,omitempty"`
 	ExtraAttributes  map[string]string                    `json:"extraAttributes,omitempty"`
 }

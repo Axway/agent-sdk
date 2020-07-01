@@ -777,7 +777,7 @@ spec:
                 type: string
             # what labels to keep
             # labels will be kept as attributes in the resulting K8SResource
-            keepLabels:
+            ignoreLabels:
               type: array
               items:
                 type: string
@@ -1098,8 +1098,7 @@ spec:
                     description: The host of the pod <namespace>.<pod-name>
                   port:
                     type: string
-                    description: The port of the pod on
-                      which this spec was discovered
+                    description: The port of the pod on which this spec was discovered
                   path:
                     type: string
                     description: The path on which this spec was discovered
