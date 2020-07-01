@@ -1,4 +1,4 @@
-# git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933
+# git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
 git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
