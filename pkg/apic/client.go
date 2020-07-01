@@ -350,8 +350,12 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	// Get the email
 	var platformUserInfo PlatformUserInfo
 	err = json.Unmarshal(response.Body, &platformUserInfo)
+	if err! = nil {
+		return "", err
+	}
+	
 	email := platformUserInfo.Result.Email
-	log.Debugf("Platform user email %s", platformUserInfo.Result.Email)
+	log.Debugf("Platform user email %s", email)
 
 	return email, nil
 }
