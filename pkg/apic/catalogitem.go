@@ -326,14 +326,8 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	// since we have asked for a specific one
 	catalogIDs := make([]string, 0)
 	json.Unmarshal([]byte(ids.Raw), &catalogIDs)
-	catalogItems := make([]unifiedcatalog.CatalogItem, 0)
 	if len(catalogIDs) == 0 {
 		return "", errors.New("Unable to find catalogID for consumerInstance " + instanceID)
-	}
-
-	err = json.Unmarshal(response.Body, &catalogItems)
-	if err != nil {
-		return "", err
 	}
 
 	return catalogIDs[0], nil
