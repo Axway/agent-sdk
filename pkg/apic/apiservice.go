@@ -213,6 +213,12 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		}
 	}
 
+	if enableSubscription {
+		log.Debug("Subscriptions will be enabled for consumer instances")
+	} else {
+		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
+	}
+
 	spec := ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		APIServiceInstance: name,

@@ -87,6 +87,12 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 		}
 	}
 
+	if enableSubscription {
+		log.Debug("Subscriptions will be enabled for catalog items")
+	} else {
+		log.Debug("Subscriptions will be disabled for catalog items, either because the authPolicy is pass-through or there is not a registered subscription schema")
+	}
+
 	catalogSubscriptionSchema, err := subSchema.rawJSON()
 	if err != nil {
 		return nil, err
