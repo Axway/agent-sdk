@@ -70,14 +70,6 @@ type CatalogRevisionProperty struct {
 	Value json.RawMessage `json:"value"`
 }
 
-//CatalogSubscription -
-type CatalogSubscription struct {
-	Enabled         bool                      `json:"enabled"`
-	AutoSubscribe   bool                      `json:"autoSubscribe"`
-	AutoUnsubscribe bool                      `json:"autoUnsubscribe"`
-	Properties      []CatalogRevisionProperty `json:"properties"`
-}
-
 // APIServerInfoProperty -
 type APIServerInfoProperty struct {
 	Name string `json:"name,omitempty"`
