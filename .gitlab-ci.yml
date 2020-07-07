@@ -114,16 +114,10 @@ stages:
   cd ${GOPATH}/src/git.ecd.axway.int/apigov/apic_agents_sdk
 
 .get-latest-version: &get-latest-version |
-  export IMAGE_NAME=${PROJECT}/${PACKAGE_NAME}
-  if [ $(cat version) == 0.0.1 ];
-    then 
-    export CI_COMMIT_SHA=$(git rev-parse --short=8 HEAD)
-    export IMAGE_VERSION="0.0.1-${CI_COMMIT_SHA}";
+  if [ $(git --version | grep -Eo '2.*') ]; then 
+    export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]' | tail -1)
   else
-  if [ $(git --version | grep -Eo '2.*') ];
-    then export IMAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]' | tail -1)
-    else export IMAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
-    fi
+    export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
   fi
 
 .get-ca-certs: &get-ca-certs |
@@ -217,7 +211,7 @@ gosec:on-schedule:
     - git config --global http.sslVerify false
     - git fetch && git checkout master
     - *get-latest-version
-    - if [[ ${IMAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out ${IMAGE_VERSION}" && git checkout ${IMAGE_VERSION}; fi
+    - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
 
 dependencycheck:on-schedule:
   retry: 0
@@ -225,7 +219,7 @@ dependencycheck:on-schedule:
     - git config --global http.sslVerify false
     - git fetch && git checkout master
     - *get-latest-version
-    - if [[ ${IMAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out ${IMAGE_VERSION}" && git checkout ${IMAGE_VERSION}; fi
+    - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
 
 run-csr:
   dependencies:
