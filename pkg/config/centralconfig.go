@@ -121,6 +121,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
 		PollInterval:     60 * time.Second,
+		PlatformURL:      "https://platform.axwaytest.net",
 	}
 }
 
