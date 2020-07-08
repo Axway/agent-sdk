@@ -121,6 +121,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
 		PollInterval:     60 * time.Second,
+		PlatformURL:      "https://platform.axwaytest.net",
 	}
 }
 
@@ -441,7 +442,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathMode, "publishToCatalog", "Agent Mode")
 		props.AddStringProperty(pathTeamID, "", "Team ID for the current default team for creating catalog")
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
-		// props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
+		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 	}
 }
