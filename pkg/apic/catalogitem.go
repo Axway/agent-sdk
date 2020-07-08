@@ -111,6 +111,8 @@ func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte,
 				},
 			},
 		}
+	} else {
+		catalogProperties = []unifiedcatalog.CatalogItemProperty{}
 	}
 
 	newCatalogItem := unifiedcatalog.CatalogItemInit{
