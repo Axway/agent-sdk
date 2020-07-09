@@ -92,7 +92,8 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(err.Error())
+		fmt.Println("Fatal error: ", err.Error())
+		os.Exit(1)
 	}
 	c.checkStatusFlag()
 }
