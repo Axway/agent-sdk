@@ -58,7 +58,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		Short:   desc,
 		Version: fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha),
 		RunE:    c.run,
-		PreRun:  c.initialize,
+		PreRunE: c.initialize,
 	}
 	c.props = properties.NewProperties(c.rootCmd)
 	c.addBaseProps()
@@ -81,7 +81,7 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("path.config", ".", "Configuration file path for the agent")
 }
 
-func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
+func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	configFilePath := c.props.StringPropertyValue("path.config")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
@@ -92,9 +92,10 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	c.checkStatusFlag()
+	return nil
 }
 
 func (c *agentRootCommand) checkStatusFlag() {
