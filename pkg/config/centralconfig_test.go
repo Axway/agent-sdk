@@ -32,7 +32,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	centralConfig.URL = "aaa"
 	err = cfg.Validate()
 
-	assert.Equal(t, "https://platform.axwaytest.net", centralConfig.PlatformURL)
+	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.teamID not set in config", err.Error())
@@ -87,7 +87,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	centralConfig.URL = "aaa"
 	err = cfg.Validate()
 
-	assert.Equal(t, "https://platform.axwaytest.net", centralConfig.PlatformURL)
+	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.apicDeployment not set in config", err.Error())

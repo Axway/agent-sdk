@@ -121,7 +121,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
 		PollInterval:     60 * time.Second,
-		PlatformURL:      "https://platform.axwaytest.net",
+		PlatformURL:      "https://platform.axway.com",
 	}
 }
 
@@ -419,7 +419,7 @@ const (
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
-	props.AddStringProperty(pathPlatformURL, "https://platform.axwaytest.net", "URL of the platform")
+	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
