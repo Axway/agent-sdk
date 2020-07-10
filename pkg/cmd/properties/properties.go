@@ -14,6 +14,8 @@ import (
 type Properties interface {
 	// Methods for adding yaml properties and command flag
 	AddStringProperty(name string, defaultVal string, description string)
+	AddStringPersistentFlag(name string, defaultVal string, description string)
+	AddStringFlag(name, description string)
 	AddDurationProperty(name string, defaultVal time.Duration, description string)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
@@ -22,6 +24,7 @@ type Properties interface {
 
 	// Methods to get the configured properties
 	StringPropertyValue(name string) string
+	StringFlagValue(name string) (bool, string)
 	DurationPropertyValue(name string) time.Duration
 	IntPropertyValue(name string) int
 	BoolPropertyValue(name string) bool
@@ -54,6 +57,18 @@ func (p *properties) AddStringProperty(name string, defaultVal string, descripti
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().String(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+	}
+}
+
+func (p *properties) AddStringPersistentFlag(flagName string, defaultVal string, description string) {
+	if p.rootCmd != nil {
+		p.rootCmd.PersistentFlags().String(flagName, "", description)
+	}
+}
+
+func (p *properties) AddStringFlag(flagName string, description string) {
+	if p.rootCmd != nil {
+		p.rootCmd.Flags().String(flagName, "", description)
 	}
 }
 
@@ -118,6 +133,14 @@ func (p *properties) convertStringToSlice(value string) []string {
 
 func (p *properties) StringPropertyValue(name string) string {
 	return viper.GetString(name)
+}
+
+func (p *properties) StringFlagValue(name string) (bool, string) {
+	flag := p.rootCmd.Flag(name)
+	if flag == nil || flag.Value.String() == "" {
+		return false, ""
+	}
+	return true, flag.Value.String()
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
