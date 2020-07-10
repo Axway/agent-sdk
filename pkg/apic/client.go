@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -344,7 +345,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	}
 	if !(response.Code == http.StatusOK) {
 		logResponseErrors(response.Body)
-		return "", err
+		return "", errors.New("Subscriber address not found in the platform")
 	}
 
 	// Get the email
