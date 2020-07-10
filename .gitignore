@@ -1,6 +1,6 @@
 # IDE project directories
 .vscode/
-
+.idea/
 # Go lang dependencies, Use 'dep ensure --vendor-only' to fetch the package dependencies
 *.code-workspace
 

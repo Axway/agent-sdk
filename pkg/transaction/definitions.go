@@ -20,6 +20,8 @@ type LogEvent struct {
 	TenantID           string   `json:"tenantId"`
 	TrcbltPartitionID  string   `json:"trcbltPartitionId"`
 	Type               string   `json:"type"`
+	TargetPath         string   `json:"targetPath,omitempty"`
+	ResourcePath       string   `json:"resourcePath,omitempty"`
 	TransactionEvent   *Event   `json:"transactionEvent,omitempty"`
 	TransactionSummary *Summary `json:"transactionSummary,omitempty"`
 }
@@ -34,6 +36,7 @@ type Summary struct {
 	Team         string `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
+	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
 }
 
@@ -41,6 +44,12 @@ type Summary struct {
 type Proxy struct {
 	ID       string `json:"id,omitempty"`
 	Revision int    `json:"revision,omitempty"`
+	Name     string `json:"name,omitempty"`
+}
+
+//Runtime - Represents the runtime group details if applicable in summary event
+type Runtime struct {
+	ID       string `json:"id,omitempty"`
 	Name     string `json:"name,omitempty"`
 }
 
@@ -84,6 +93,7 @@ type Protocol struct {
 	LocalPort              int    `json:"localPort,omitempty"`
 	SslServerName          string `json:"sslServerName,omitempty"`
 	SslProtocol            string `json:"sslProtocol,omitempty"`
+	Referer                string `json:"referer,omitempty"`
 	SslSubject             string `json:"sslSubject,omitempty"`
 	AuthSubjectID          string `json:"authSubjectId,omitempty"`
 	RequestHeaders         string `json:"requestHeaders,omitempty"`
