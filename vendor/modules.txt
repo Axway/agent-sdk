@@ -7,6 +7,7 @@ github.com/dgrijalva/jwt-go
 # github.com/elastic/beats/v7 v7.7.1
 github.com/elastic/beats/v7/libbeat/beat
 github.com/elastic/beats/v7/libbeat/common
+github.com/elastic/beats/v7/libbeat/common/cli
 github.com/elastic/beats/v7/libbeat/common/file
 github.com/elastic/beats/v7/libbeat/common/reload
 github.com/elastic/beats/v7/libbeat/feature
@@ -97,6 +98,8 @@ github.com/spf13/viper
 github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
+# github.com/takama/daemon v0.12.0
+github.com/takama/daemon
 # github.com/tidwall/gjson v1.6.0
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
@@ -115,12 +118,16 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zaptest/observer
+# golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+golang.org/x/crypto/ssh/terminal
 # golang.org/x/sys v0.0.0-20200620081246-981b61492c35
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
+golang.org/x/sys/windows/svc
 golang.org/x/sys/windows/svc/eventlog
+golang.org/x/sys/windows/svc/mgr
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
