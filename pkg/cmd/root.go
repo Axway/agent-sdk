@@ -82,7 +82,7 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
 }
 
-func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
+func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	_, configFilePath := c.props.StringFlagValue("pathConfig")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
