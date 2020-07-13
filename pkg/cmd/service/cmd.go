@@ -7,8 +7,6 @@ import (
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/cobra"
-
-	"github.com/elastic/beats/v7/libbeat/common/cli"
 )
 
 var argDescriptions = map[string]string{
@@ -38,29 +36,28 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 		ValidArgs: validArgs,
 		Short:     shortDesc,
 		Long:      longDesc,
-		Run: cli.RunWith(
-			func(cmd *cobra.Command, args []string) error {
-				if len(args) != 1 {
-					log.Errorf("must provide only 1 arg to service (%s)", strings.Join(validArgs, ", "))
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				log.Errorf("must provide only 1 arg to service (%s)", strings.Join(validArgs, ", "))
+			}
+			if _, ok := argDescriptions[args[0]]; !ok {
+				log.Errorf("invalid command to service (%s)", strings.Join(validArgs, ", "))
+			}
+			globalAgentService.PathArg = fmt.Sprintf("--%s", pathArg)
+			globalAgentService.Path = cmd.Flag(pathArg).Value.String()
+			if globalAgentService.Path == "." || globalAgentService.Path == "" {
+				var err error
+				globalAgentService.Path, err = os.Getwd()
+				if err != nil {
+					log.Errorf("error determining current working directory: %s", err.Error())
+					return err
 				}
-				if _, ok := argDescriptions[args[0]]; !ok {
-					log.Errorf("invalid command to service (%s)", strings.Join(validArgs, ", "))
-				}
-				GlobalAgentService.PathArg = fmt.Sprintf("--%s", pathArg)
-				GlobalAgentService.Path = cmd.Flag(pathArg).Value.String()
-				if GlobalAgentService.Path == "." || GlobalAgentService.Path == "" {
-					var err error
-					GlobalAgentService.Path, err = os.Getwd()
-					if err != nil {
-						log.Errorf("error determining current working directory: %s", err.Error())
-					}
-				}
-				GlobalAgentService.User = cmd.Flag("user").Value.String()
-				GlobalAgentService.Group = cmd.Flag("group").Value.String()
+			}
+			globalAgentService.User = cmd.Flag("user").Value.String()
+			globalAgentService.Group = cmd.Flag("group").Value.String()
 
-				GlobalAgentService.HandleServiceFlag(args[0])
-				return nil
-			}),
+			return globalAgentService.HandleServiceFlag(args[0])
+		},
 	}
 
 	cmd.Flags().StringP("user", "u", "", "The OS user that will execute the service")

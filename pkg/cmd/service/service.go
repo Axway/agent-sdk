@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 	"text/template"
@@ -19,8 +20,9 @@ var (
 
 	dependencies = []string{"network"}
 
-	// GlobalAgentService -
-	GlobalAgentService AgentService
+	globalAgentService AgentService
+
+	execCommand = exec.Command
 )
 
 var systemDConfig = `[Unit]
@@ -57,7 +59,7 @@ func init() {
 		log.Errorf("error hit creating the service definition: %s", err.Error())
 	}
 
-	GlobalAgentService = AgentService{
+	globalAgentService = AgentService{
 		service:     service,
 		Name:        Name,
 		Description: Description,
@@ -65,10 +67,9 @@ func init() {
 }
 
 // HandleServiceFlag - handles the action needed based ont eh service flag value
-func (a *AgentService) HandleServiceFlag(command string) int {
+func (a *AgentService) HandleServiceFlag(command string) error {
 	var err error
 	var status string
-	result := 0
 	// complete teh appropriate action for the service
 	switch strings.ToLower(command) {
 	case "install":
@@ -88,24 +89,19 @@ func (a *AgentService) HandleServiceFlag(command string) int {
 	case "enable":
 		_, err = a.serviceEnableReboot()
 	default:
-		log.Errorf("unknown value of '%s' given", command)
-		result = 1
+		err = fmt.Errorf("unknown value of '%s' given", command)
 	}
 
 	// error hit
 	if err != nil {
 		log.Errorf("service %s command failed: %s", strings.ToLower(command), err.Error())
-		result = 1
-	}
-
-	// log success
-	if result == 0 {
+	} else {
 		log.Debugf("service %s command succeeded", strings.ToLower(command))
 		if status != "" {
 			log.Info(status)
 		}
 	}
-	return result
+	return err
 }
 
 func (a *AgentService) serviceinstall() (string, error) {
@@ -151,6 +147,7 @@ func (a *AgentService) serviceEnableReboot() (string, error) {
 		return status, err
 	}
 
-	output, err := exec.Command("systemctl", "enable", a.Name+".service").Output()
+	// execute the linux command to enable the service
+	output, err := execCommand("systemctl", "enable", a.Name+".service").Output()
 	return string(output), err
 }
