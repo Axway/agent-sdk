@@ -1,11 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"fmt"
 	"os/exec"
 	"strings"
-	"text/template"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
 
@@ -24,23 +22,6 @@ var (
 
 	execCommand = exec.Command
 )
-
-var systemDConfig = `[Unit]
-Description={{.Description}}
-Requires={{.Dependencies}}
-After={{.Dependencies}}
-
-[Service]
-PIDFile=/var/run/{{.Name}}.pid
-ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
-ExecStart={{.Path}} {{.Args}}
-User={{.User}}
-Group={{.Group}}
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-`
 
 //AgentService -
 type AgentService struct {
@@ -73,7 +54,9 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 	// complete teh appropriate action for the service
 	switch strings.ToLower(command) {
 	case "install":
-		_, err = a.serviceinstall()
+		log.Debug("installing the agent service")
+		log.Infof("service will look for config file at %s", a.Path)
+		_, err = a.service.Install(a.PathArg, a.Path)
 	case "remove":
 		log.Debug("removing the agent service")
 		_, err = a.service.Remove()
@@ -87,7 +70,8 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		log.Debug("getting the agent service status")
 		status, err = a.service.Status()
 	case "enable":
-		_, err = a.serviceEnableReboot()
+		log.Debug("setting the agent to start on reboot")
+		_, err = a.service.Enable()
 	default:
 		err = fmt.Errorf("unknown value of '%s' given", command)
 	}
@@ -102,52 +86,4 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		}
 	}
 	return err
-}
-
-func (a *AgentService) serviceinstall() (string, error) {
-	log.Debug("installing the agent service")
-	log.Infof("service will look for config file at %s", a.Path)
-
-	// Create a template to fill in the variables
-	temp, err := template.New("systemDConfig").Parse(systemDConfig)
-	if err != nil {
-		return "Install could not create template", err
-	}
-
-	var newTemplate bytes.Buffer
-	if err := temp.Execute(&newTemplate,
-		// Execute expects all values to be replaced, adding back in the template variable names for values the daemon library will handle
-		&struct {
-			Name, Description, Dependencies, Path, Args, User, Group string
-		}{
-			"{{.Name}}",
-			"{{.Description}}",
-			"{{.Dependencies}}",
-			"{{.Path}}",
-			"{{.Args}}",
-			a.User,
-			a.Group,
-		},
-	); err != nil {
-		return "Install could not populate template", err
-	}
-
-	a.service.SetTemplate(newTemplate.String())
-
-	_, err = a.service.Install(a.PathArg, a.Path)
-
-	return "", err
-}
-
-func (a *AgentService) serviceEnableReboot() (string, error) {
-	// Check the status
-	log.Debug("setting the agent to start on reboot")
-	status, err := a.service.Status()
-	if err != nil {
-		return status, err
-	}
-
-	// execute the linux command to enable the service
-	output, err := execCommand("systemctl", "enable", a.Name+".service").Output()
-	return string(output), err
 }

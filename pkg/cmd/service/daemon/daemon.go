@@ -30,8 +30,17 @@ type Daemon interface {
 	// Status - check the service status
 	Status() (string, error)
 
+	// Enable - sets the service to persist reboots
+	Enable() (string, error)
+
 	// Run - run executable service
 	Run(e Executable) (string, error)
+
+	// SetUser - sets the user that executes the service
+	SetUser(string) error
+
+	// setGroup - sets the group that executes the service
+	SetGroup(string) error
 }
 
 // Executable interface defines controlling methods of executable service

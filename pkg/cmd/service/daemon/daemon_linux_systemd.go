@@ -13,6 +13,8 @@ type systemDRecord struct {
 	name         string
 	description  string
 	dependencies []string
+	user         string
+	group        string
 }
 
 // Standard service path for systemD daemons
@@ -80,11 +82,13 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 	if err := templ.Execute(
 		file,
 		&struct {
-			Name, Description, Dependencies, Path, Args string
+			Name, Description, Dependencies, User, Group, Path, Args string
 		}{
 			linux.name,
 			linux.description,
 			strings.Join(linux.dependencies, " "),
+			linux.user,
+			linux.group,
 			execPatch,
 			strings.Join(args, " "),
 		},
@@ -195,6 +199,29 @@ func (linux *systemDRecord) Run(e Executable) (string, error) {
 	return runAction + " completed.", nil
 }
 
+// Status - Get service status
+func (linux *systemDRecord) Enable() (string, error) {
+	enableAction := "Enabling " + linux.description + ":"
+
+	if ok, err := checkPrivileges(); !ok {
+		return enableAction + failed, err
+	}
+
+	if !linux.isInstalled() {
+		return enableAction + failed, ErrNotInstalled
+	}
+
+	if _, ok := linux.checkRunning(); !ok {
+		return enableAction + failed, ErrAlreadyStopped
+	}
+
+	if err := exec.Command("systemctl", "enable", linux.name+".service").Run(); err != nil {
+		return enableAction + failed, err
+	}
+
+	return enableAction + success, nil
+}
+
 // GetTemplate - gets service config template
 func (linux *systemDRecord) GetTemplate() string {
 	return systemDConfig
@@ -203,6 +230,18 @@ func (linux *systemDRecord) GetTemplate() string {
 // SetTemplate - sets service config template
 func (linux *systemDRecord) SetTemplate(tplStr string) error {
 	systemDConfig = tplStr
+	return nil
+}
+
+// SetUser - sets the user that will execute the service
+func (linux *systemDRecord) SetUser(user string) error {
+	linux.user = user
+	return nil
+}
+
+// SetGroup - sets the group that will execute the service
+func (linux *systemDRecord) SetGroup(group string) error {
+	linux.group = group
 	return nil
 }
 
@@ -215,6 +254,8 @@ After={{.Dependencies}}
 PIDFile=/var/run/{{.Name}}.pid
 ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
 ExecStart={{.Path}} {{.Args}}
+User={{.User}}
+Group={{.Group}}
 Restart=on-failure
 
 [Install]
