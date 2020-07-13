@@ -1,8 +1,6 @@
 package service
 
 import (
-	"bytes"
-	"io/ioutil"
 	"os/exec"
 	"testing"
 
@@ -27,23 +25,19 @@ func TestGenServiceCmd(t *testing.T) {
 func TestRunGenServiceCmd(t *testing.T) {
 	Name = "discovery-agent"
 	Description = "Discovery Agent Description"
+
+	a := newMockAgentService()
+	globalAgentService = a
+
 	cmd := GenServiceCmd("pathConfig")
 
-	// Capture the output from the cmd object
-	b := bytes.NewBufferString("")
-	cmd.SetOut(b)
-
 	cmd.Flags().String("pathConfig", "", "")
-	cmd.SilenceUsage = true
-
 	cmd.SetArgs([]string{"install", "--pathConfig", "."})
 	err := cmd.Execute()
 
-	// Read the cmd object output
-	out, _ := ioutil.ReadAll(b)
-
-	assert.NotNil(t, err, "Error expected to be returned from command Execute")
-	assert.Contains(t, string(out), "Error: You must have root user privileges. Possibly using 'sudo' command should help")
+	assert.Nil(t, err, "Error expected to be returned from command Execute")
+	assert.True(t, a.service.(*mockDaemon).installCalled)
+	assert.True(t, a.service.(*mockDaemon).setTemplateCalled)
 }
 
 type mockDaemon struct {
