@@ -44,8 +44,35 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 // NotifySubscriber - send a notification to the smtp server
 func (s *SubscriptionNotification) NotifySubscriber() error {
 	switch globalCfg.GetNotificationType() {
+	case corecfg.NotifyWebhook:
+		return s.notifyViaWebhook()
 	case corecfg.NotifySMTP:
 		return s.notifyViaSMTP()
+	}
+
+	return nil
+}
+
+func (s *SubscriptionNotification) notifyViaWebhook() error {
+	buffer, err := json.Marshal(&s)
+	if err != nil {
+		log.Errorf("Error creating notification request: %s", err.Error())
+		return err
+	}
+
+	fmt.Printf("%v\n", s)
+	fmt.Println(string(buffer))
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     globalCfg.GetNotificationWebhook(),
+		Headers: globalCfg.GetNotificationHeaders(),
+		Body:    buffer,
+	}
+
+	_, err = s.apiClient.Send(request)
+	if err != nil {
+		log.Errorf("Error sending notification webhook: %s", err.Error())
+		return err
 	}
 
 	return nil
