@@ -11,6 +11,7 @@ variables:
   DEPENDENCY_CHECK_FLAGS: "--scan=**/*"
   AWS_DISCOVERY_PROJECT_ID: 7397
   V7_DISCOVERY_PROJECT_ID: 7540
+  FORTIFY_PROJECT: "10566"
 
 stages:
   - test
@@ -181,6 +182,9 @@ include:
     file: "/.gitlab-ci-prepcsr.yml"
   - project: "scurity/gitlabci"
     ref: master
+    file: "/.gitlab-ci-fortify.yml"
+  - project: "scurity/gitlabci"
+    ref: master
     file: "/.gitlab-ci-dependencycheck.yml"
   - project: "scurity/gitlabci"
     ref: master
@@ -223,12 +227,14 @@ dependencycheck:on-schedule:
 
 run-csr:
   dependencies:
+    - fetch-fortify
     - dependencycheck
     - gosec
   <<: *only-feature
 
 update-csr:
   dependencies:
+    - fetch-fortify
     - dependencycheck:on-schedule
     - gosec:on-schedule
 
