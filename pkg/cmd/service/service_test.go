@@ -4,8 +4,8 @@ import (
 	"os/exec"
 	"testing"
 
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
 	"github.com/stretchr/testify/assert"
-	"github.com/takama/daemon"
 )
 
 func TestGenServiceCmd(t *testing.T) {

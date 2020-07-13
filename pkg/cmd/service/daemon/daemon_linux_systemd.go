@@ -1,7 +1,3 @@
-// Copyright 2016 The Go Authors. All rights reserved.
-// Use of this source code is governed by
-// license that can be found in the LICENSE file.
-
 package daemon
 
 import (
@@ -12,20 +8,20 @@ import (
 	"text/template"
 )
 
-// upstartRecord - standard record (struct) for linux upstart version of daemon package
-type upstartRecord struct {
+// systemDRecord - standard record (struct) for linux systemD version of daemon package
+type systemDRecord struct {
 	name         string
 	description  string
 	dependencies []string
 }
 
-// Standard service path for systemV daemons
-func (linux *upstartRecord) servicePath() string {
-	return "/etc/init/" + linux.name + ".conf"
+// Standard service path for systemD daemons
+func (linux *systemDRecord) servicePath() string {
+	return "/etc/systemd/system/" + linux.name + ".service"
 }
 
 // Is a service installed
-func (linux *upstartRecord) isInstalled() bool {
+func (linux *systemDRecord) isInstalled() bool {
 
 	if _, err := os.Stat(linux.servicePath()); err == nil {
 		return true
@@ -35,11 +31,11 @@ func (linux *upstartRecord) isInstalled() bool {
 }
 
 // Check service is running
-func (linux *upstartRecord) checkRunning() (string, bool) {
-	output, err := exec.Command("status", linux.name).Output()
+func (linux *systemDRecord) checkRunning() (string, bool) {
+	output, err := exec.Command("systemctl", "status", linux.name+".service").Output()
 	if err == nil {
-		if matched, err := regexp.MatchString(linux.name+" start/running", string(output)); err == nil && matched {
-			reg := regexp.MustCompile("process ([0-9]+)")
+		if matched, err := regexp.MatchString("Active: active", string(output)); err == nil && matched {
+			reg := regexp.MustCompile("Main PID: ([0-9]+)")
 			data := reg.FindStringSubmatch(string(output))
 			if len(data) > 1 {
 				return "Service (pid  " + data[1] + ") is running...", true
@@ -52,7 +48,7 @@ func (linux *upstartRecord) checkRunning() (string, bool) {
 }
 
 // Install the service
-func (linux *upstartRecord) Install(args ...string) (string, error) {
+func (linux *systemDRecord) Install(args ...string) (string, error) {
 	installAction := "Install " + linux.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
@@ -76,7 +72,7 @@ func (linux *upstartRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
-	templ, err := template.New("upstatConfig").Parse(upstatConfig)
+	templ, err := template.New("systemDConfig").Parse(systemDConfig)
 	if err != nil {
 		return installAction + failed, err
 	}
@@ -84,13 +80,23 @@ func (linux *upstartRecord) Install(args ...string) (string, error) {
 	if err := templ.Execute(
 		file,
 		&struct {
-			Name, Description, Path, Args string
-		}{linux.name, linux.description, execPatch, strings.Join(args, " ")},
+			Name, Description, Dependencies, Path, Args string
+		}{
+			linux.name,
+			linux.description,
+			strings.Join(linux.dependencies, " "),
+			execPatch,
+			strings.Join(args, " "),
+		},
 	); err != nil {
 		return installAction + failed, err
 	}
 
-	if err := os.Chmod(srvPath, 0755); err != nil {
+	if err := exec.Command("systemctl", "daemon-reload").Run(); err != nil {
+		return installAction + failed, err
+	}
+
+	if err := exec.Command("systemctl", "enable", linux.name+".service").Run(); err != nil {
 		return installAction + failed, err
 	}
 
@@ -98,7 +104,7 @@ func (linux *upstartRecord) Install(args ...string) (string, error) {
 }
 
 // Remove the service
-func (linux *upstartRecord) Remove() (string, error) {
+func (linux *systemDRecord) Remove() (string, error) {
 	removeAction := "Removing " + linux.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
@@ -109,6 +115,10 @@ func (linux *upstartRecord) Remove() (string, error) {
 		return removeAction + failed, ErrNotInstalled
 	}
 
+	if err := exec.Command("systemctl", "disable", linux.name+".service").Run(); err != nil {
+		return removeAction + failed, err
+	}
+
 	if err := os.Remove(linux.servicePath()); err != nil {
 		return removeAction + failed, err
 	}
@@ -117,7 +127,7 @@ func (linux *upstartRecord) Remove() (string, error) {
 }
 
 // Start the service
-func (linux *upstartRecord) Start() (string, error) {
+func (linux *systemDRecord) Start() (string, error) {
 	startAction := "Starting " + linux.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
@@ -132,7 +142,7 @@ func (linux *upstartRecord) Start() (string, error) {
 		return startAction + failed, ErrAlreadyRunning
 	}
 
-	if err := exec.Command("start", linux.name).Run(); err != nil {
+	if err := exec.Command("systemctl", "start", linux.name+".service").Run(); err != nil {
 		return startAction + failed, err
 	}
 
@@ -140,7 +150,7 @@ func (linux *upstartRecord) Start() (string, error) {
 }
 
 // Stop the service
-func (linux *upstartRecord) Stop() (string, error) {
+func (linux *systemDRecord) Stop() (string, error) {
 	stopAction := "Stopping " + linux.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
@@ -155,7 +165,7 @@ func (linux *upstartRecord) Stop() (string, error) {
 		return stopAction + failed, ErrAlreadyStopped
 	}
 
-	if err := exec.Command("stop", linux.name).Run(); err != nil {
+	if err := exec.Command("systemctl", "stop", linux.name+".service").Run(); err != nil {
 		return stopAction + failed, err
 	}
 
@@ -163,7 +173,7 @@ func (linux *upstartRecord) Stop() (string, error) {
 }
 
 // Status - Get service status
-func (linux *upstartRecord) Status() (string, error) {
+func (linux *systemDRecord) Status() (string, error) {
 
 	if ok, err := checkPrivileges(); !ok {
 		return "", err
@@ -179,33 +189,34 @@ func (linux *upstartRecord) Status() (string, error) {
 }
 
 // Run - Run service
-func (linux *upstartRecord) Run(e Executable) (string, error) {
+func (linux *systemDRecord) Run(e Executable) (string, error) {
 	runAction := "Running " + linux.description + ":"
 	e.Run()
 	return runAction + " completed.", nil
 }
 
 // GetTemplate - gets service config template
-func (linux *upstartRecord) GetTemplate() string {
-	return upstatConfig
+func (linux *systemDRecord) GetTemplate() string {
+	return systemDConfig
 }
 
 // SetTemplate - sets service config template
-func (linux *upstartRecord) SetTemplate(tplStr string) error {
-	upstatConfig = tplStr
+func (linux *systemDRecord) SetTemplate(tplStr string) error {
+	systemDConfig = tplStr
 	return nil
 }
 
-var upstatConfig = `# {{.Name}} {{.Description}}
+var systemDConfig = `[Unit]
+Description={{.Description}}
+Requires={{.Dependencies}}
+After={{.Dependencies}}
 
-description     "{{.Description}}"
-author          "Pichu Chen <pichu@tih.tw>"
+[Service]
+PIDFile=/var/run/{{.Name}}.pid
+ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
+ExecStart={{.Path}} {{.Args}}
+Restart=on-failure
 
-start on runlevel [2345]
-stop on runlevel [016]
-
-respawn
-#kill timeout 5
-
-exec {{.Path}} {{.Args}} >> /var/log/{{.Name}}.log 2>> /var/log/{{.Name}}.err
+[Install]
+WantedBy=multi-user.target
 `

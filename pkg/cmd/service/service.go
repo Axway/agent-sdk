@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/takama/daemon"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )

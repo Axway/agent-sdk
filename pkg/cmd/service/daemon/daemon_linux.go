@@ -1,11 +1,7 @@
-// Copyright 2016 The Go Authors. All rights reserved.
-// Use of this source code is governed by
-// license that can be found in the LICENSE file.
-
-// Package daemon linux version
 package daemon
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -15,10 +11,7 @@ func newDaemon(name, description string, dependencies []string) (Daemon, error) 
 	if _, err := os.Stat("/run/systemd/system"); err == nil {
 		return &systemDRecord{name, description, dependencies}, nil
 	}
-	if _, err := os.Stat("/sbin/initctl"); err == nil {
-		return &upstartRecord{name, description, dependencies}, nil
-	}
-	return &systemVRecord{name, description, dependencies}, nil
+	return nil, fmt.Errorf("can not install service, need systemd")
 }
 
 // Get executable path
