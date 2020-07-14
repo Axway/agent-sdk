@@ -31,7 +31,7 @@ const (
 
 // SubscriptionConfig - Interface to get subscription config
 type SubscriptionConfig interface {
-	GetNotificationType() NotificationType
+	GetNotificationTypes() []NotificationType
 	GetNotificationWebhook() string
 	GetNotificationHeaders() map[string]string
 	GetSMTPURL() string
@@ -52,7 +52,7 @@ type SubscriptionConfiguration struct {
 	SubscriptionConfig
 	SMTP    *smtp    `config:"smtp"`
 	Webhook *webhook `config:"webhook"`
-	Type    NotificationType
+	Types   []NotificationType
 }
 
 // These constants are the paths that the settings is at in a config file
@@ -168,12 +168,12 @@ func NewSubscriptionConfig() SubscriptionConfig {
 
 // SetNotificationType -
 func (s *SubscriptionConfiguration) SetNotificationType(notificationType NotificationType) {
-	s.Type = notificationType
+	s.Types = append(s.Types, notificationType)
 }
 
-// GetNotificationType -
-func (s *SubscriptionConfiguration) GetNotificationType() NotificationType {
-	return s.Type
+// GetNotificationTypes -
+func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
+	return s.Types
 }
 
 // GetNotificationWebhook - Returns the webhook url for notifications
@@ -262,11 +262,9 @@ func (s *SubscriptionConfiguration) validate() error {
 			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
 			s.Webhook.headers[hvArray[0]] = hvArray[1]
 		}
-		return nil
 	}
 	if s.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
-		return nil
 	}
 
 	return nil
