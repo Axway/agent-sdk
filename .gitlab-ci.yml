@@ -12,7 +12,7 @@ variables:
   AWS_DISCOVERY_PROJECT_ID: 7397
   V7_DISCOVERY_PROJECT_ID: 7540
   FORTIFY_PROJECT: "10566"
-
+  FORTIFY_BUILD_ID: "apic_agents_sdk"
 stages:
   - test
   - sonar

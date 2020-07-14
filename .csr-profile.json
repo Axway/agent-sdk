@@ -2,7 +2,7 @@
   "project": "APIC Agents SDK",
   "requirements": {
     "dependency-check": true,
-    "fortify": false,
+    "fortify": true,
     "irius-risk": false,
     "npm-audit": false,
     "pentest": false,
