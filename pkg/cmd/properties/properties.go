@@ -15,7 +15,7 @@ type Properties interface {
 	// Methods for adding yaml properties and command flag
 	AddStringProperty(name string, defaultVal string, description string)
 	AddStringPersistentFlag(name string, defaultVal string, description string)
-	AddStringFlag(name, description string)
+	AddStringFlag(name string, description string)
 	AddDurationProperty(name string, defaultVal time.Duration, description string)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
