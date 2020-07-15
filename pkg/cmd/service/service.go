@@ -56,6 +56,8 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 	case "install":
 		log.Debug("installing the agent service")
 		log.Infof("service will look for config file at %s", a.Path)
+		a.service.SetUser(a.User)
+		a.service.SetGroup(a.Group)
 		_, err = a.service.Install(a.PathArg, a.Path)
 	case "remove":
 		log.Debug("removing the agent service")
