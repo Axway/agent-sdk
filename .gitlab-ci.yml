@@ -209,6 +209,16 @@ dependencycheck:
     - web
     - triggers
 
+fetch-fortify:
+  retry: 0
+  except:
+    refs:
+      - tags
+      - web
+      - triggers
+    variables:
+      - $CI_PIPELINE_SOURCE == "pipeline"
+    
 gosec:on-schedule:
   retry: 0
   before_script:
