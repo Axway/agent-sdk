@@ -30,6 +30,7 @@ type AgentRootCmd interface {
 
 	// Get the agentType
 	GetAgentType() corecfg.AgentType
+	AddCommand(*cobra.Command)
 
 	GetProperties() properties.Properties
 }
@@ -78,11 +79,11 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("log.format", "json", "Log format (json, line, package)")
 	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
 	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
-	c.props.AddStringProperty("path.config", ".", "Configuration file path for the agent")
+	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
-	configFilePath := c.props.StringPropertyValue("path.config")
+	_, configFilePath := c.props.StringFlagValue("pathConfig")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)
@@ -226,4 +227,8 @@ func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
 
 func (c *agentRootCommand) GetProperties() properties.Properties {
 	return c.props
+}
+
+func (c *agentRootCommand) AddCommand(cmd *cobra.Command) {
+	c.rootCmd.AddCommand(cmd)
 }

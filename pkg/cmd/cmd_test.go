@@ -110,7 +110,7 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", nil, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
@@ -157,7 +157,7 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Discovery
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", discoveryInitConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	err := rootCmd.Execute()
 
 	// should NOT be FileNotFound error
@@ -173,7 +173,7 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Traceability
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.TraceabilityAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
@@ -249,7 +249,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -293,7 +293,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -338,7 +338,7 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
@@ -373,7 +373,7 @@ func TestRootCmdHandlers(t *testing.T) {
 		return nil
 	}
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -415,7 +415,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -445,7 +445,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"file",
@@ -475,7 +475,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"both",
