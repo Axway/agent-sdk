@@ -8,6 +8,11 @@ import (
 	"text/template"
 )
 
+const (
+	systemctl     = "systemctl"
+	serviceSuffix = ".service"
+)
+
 // systemDRecord - standard record (struct) for linux systemD version of daemon package
 type systemDRecord struct {
 	name         string
@@ -19,7 +24,7 @@ type systemDRecord struct {
 
 // Standard service path for systemD daemons
 func (linux *systemDRecord) servicePath() string {
-	return "/etc/systemd/system/" + linux.name + ".service"
+	return "/etc/systemd/system/" + linux.name + serviceSuffix
 }
 
 // Is a service installed
@@ -34,7 +39,7 @@ func (linux *systemDRecord) isInstalled() bool {
 
 // Check service is running
 func (linux *systemDRecord) checkRunning() (string, bool) {
-	output, err := exec.Command("systemctl", "status", linux.name+".service").Output()
+	output, err := exec.Command(systemctl, "status", linux.name+serviceSuffix).Output()
 	if err == nil {
 		if matched, err := regexp.MatchString("Active: active", string(output)); err == nil && matched {
 			reg := regexp.MustCompile("Main PID: ([0-9]+)")
@@ -96,11 +101,11 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
-	if err := exec.Command("systemctl", "daemon-reload").Run(); err != nil {
+	if err := exec.Command(systemctl, "daemon-reload").Run(); err != nil {
 		return installAction + failed, err
 	}
 
-	if err := exec.Command("systemctl", "enable", linux.name+".service").Run(); err != nil {
+	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
 		return installAction + failed, err
 	}
 
@@ -119,7 +124,7 @@ func (linux *systemDRecord) Remove() (string, error) {
 		return removeAction + failed, ErrNotInstalled
 	}
 
-	if err := exec.Command("systemctl", "disable", linux.name+".service").Run(); err != nil {
+	if err := exec.Command(systemctl, "disable", linux.name+serviceSuffix).Run(); err != nil {
 		return removeAction + failed, err
 	}
 
@@ -146,7 +151,7 @@ func (linux *systemDRecord) Start() (string, error) {
 		return startAction + failed, ErrAlreadyRunning
 	}
 
-	if err := exec.Command("systemctl", "start", linux.name+".service").Run(); err != nil {
+	if err := exec.Command(systemctl, "start", linux.name+serviceSuffix).Run(); err != nil {
 		return startAction + failed, err
 	}
 
@@ -169,7 +174,7 @@ func (linux *systemDRecord) Stop() (string, error) {
 		return stopAction + failed, ErrAlreadyStopped
 	}
 
-	if err := exec.Command("systemctl", "stop", linux.name+".service").Run(); err != nil {
+	if err := exec.Command(systemctl, "stop", linux.name+serviceSuffix).Run(); err != nil {
 		return stopAction + failed, err
 	}
 
@@ -215,7 +220,7 @@ func (linux *systemDRecord) Enable() (string, error) {
 		return enableAction + failed, ErrAlreadyStopped
 	}
 
-	if err := exec.Command("systemctl", "enable", linux.name+".service").Run(); err != nil {
+	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
 		return enableAction + failed, err
 	}
 
