@@ -41,11 +41,51 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 	}
 }
 
-// NotifySubscriber - send a notification to the smtp server
-func (s *SubscriptionNotification) NotifySubscriber() error {
-	switch globalCfg.GetNotificationType() {
-	case corecfg.NotifySMTP:
-		return s.notifyViaSMTP()
+// NotifySubscriber - send a notification to any configured notification type
+func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
+	for _, notificationType := range globalCfg.GetNotificationTypes() {
+		switch notificationType {
+		case config.NotifyWebhook:
+			err := s.notifyViaWebhook()
+			if err != nil {
+				log.Errorf("Could not send notification via webook: %s", err.Error())
+				return err
+			}
+			log.Debugf("Webhook notification sent to %s.", recipient)
+
+		case config.NotifySMTP:
+			err := s.notifyViaSMTP()
+			if err != nil {
+				log.Errorf("Could not send notification via smtp server: %s", err.Error())
+				return err
+			}
+			log.Debugf("Email notification sent to %s.", recipient)
+		}
+	}
+
+	return nil
+}
+
+func (s *SubscriptionNotification) notifyViaWebhook() error {
+	buffer, err := json.Marshal(&s)
+	if err != nil {
+		log.Errorf("Error creating notification request: %s", err.Error())
+		return err
+	}
+
+	fmt.Printf("%v\n", s)
+	fmt.Println(string(buffer))
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     globalCfg.GetNotificationWebhook(),
+		Headers: globalCfg.GetNotificationHeaders(),
+		Body:    buffer,
+	}
+
+	_, err = s.apiClient.Send(request)
+	if err != nil {
+		log.Errorf("Error sending notification webhook: %s", err.Error())
+		return err
 	}
 
 	return nil

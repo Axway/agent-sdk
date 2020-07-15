@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
@@ -12,7 +14,8 @@ type NotificationType string
 
 // NotificationTypes
 const (
-	NotifySMTP = NotificationType("SMTP")
+	NotifySMTP    = NotificationType("SMTP")
+	NotifyWebhook = NotificationType("WEBHOOK")
 )
 
 // SMTPAuthType - the type of authentication methods the SMTP client supports
@@ -28,7 +31,8 @@ const (
 
 // SubscriptionConfig - Interface to get subscription config
 type SubscriptionConfig interface {
-	GetNotificationType() NotificationType
+	GetNotificationTypes() []NotificationType
+	GetNotificationWebhook() string
 	GetNotificationHeaders() map[string]string
 	GetSMTPURL() string
 	GetSMTPHost() string
@@ -46,19 +50,24 @@ type SubscriptionConfig interface {
 // SubscriptionConfiguration - Structure to hold the subscription config
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
-	SMTP *smtp `config:"smtp"`
-	Type NotificationType
+	SMTP    *smtp    `config:"smtp"`
+	Webhook *webhook `config:"webhook"`
+	Types   []NotificationType
 }
 
 // These constants are the paths that the settings is at in a config file
 const (
-	smtpFrom     = "subscriptions.smtp.fromAddress"
-	smtpAuthType = "subscriptions.smtp.authType"
-	smtpIdentity = "subscriptions.smtp.identity"
+	webhookURL     = "subscriptions.webhook.url"
+	webhookHeaders = "subscriptions.webhook.headers"
+	smtpFrom       = "subscriptions.smtp.fromAddress"
+	smtpAuthType   = "subscriptions.smtp.authType"
+	smtpIdentity   = "subscriptions.smtp.identity"
 )
 
 // AddSubscriptionsConfigProperties -
 func AddSubscriptionsConfigProperties(cmdProps properties.Properties) {
+	cmdProps.AddStringProperty("subscription.webhook.url", "", "desc")
+	cmdProps.AddStringProperty("subscription.webhook.headers", "", "desc")
 	cmdProps.AddStringProperty("subscription.smtp.host", "", "desc")
 	cmdProps.AddIntProperty("subscription.smtp.port", 0, "desc")
 	cmdProps.AddStringProperty(smtpFrom, "", "desc")
@@ -72,6 +81,12 @@ func AddSubscriptionsConfigProperties(cmdProps properties.Properties) {
 	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.body", "", "desc")
 	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.subject", "", "desc")
 	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.body", "", "desc")
+}
+
+type webhook struct {
+	URL     string `config:"webhook.url"`
+	Headers string `config:"webhook.headers"`
+	headers map[string]string
 }
 
 type smtp struct {
@@ -109,6 +124,10 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 	}
 
 	cfg := &SubscriptionConfiguration{
+		Webhook: &webhook{
+			URL:     cmdProps.StringPropertyValue("subscriptions.webhook.url"),
+			Headers: cmdProps.StringPropertyValue("subscriptions.webhook.headers"),
+		},
 		SMTP: &smtp{
 			Host:     cmdProps.StringPropertyValue("subscriptions.smtp.host"),
 			Port:     cmdProps.IntPropertyValue("subscriptions.smtp.port"),
@@ -149,12 +168,22 @@ func NewSubscriptionConfig() SubscriptionConfig {
 
 // SetNotificationType -
 func (s *SubscriptionConfiguration) SetNotificationType(notificationType NotificationType) {
-	s.Type = notificationType
+	s.Types = append(s.Types, notificationType)
 }
 
-// GetNotificationType -
-func (s *SubscriptionConfiguration) GetNotificationType() NotificationType {
-	return s.Type
+// GetNotificationTypes -
+func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
+	return s.Types
+}
+
+// GetNotificationWebhook - Returns the webhook url for notifications
+func (s *SubscriptionConfiguration) GetNotificationWebhook() string {
+	return s.Webhook.URL
+}
+
+// GetNotificationHeaders - Returns the notification headers
+func (s *SubscriptionConfiguration) GetNotificationHeaders() map[string]string {
+	return s.Webhook.headers
 }
 
 // GetSMTPURL - Returns the URL for the SMTP server
@@ -213,13 +242,29 @@ func (s *SubscriptionConfiguration) GetUnsubscribeFailedTemplate() *EmailTemplat
 }
 
 func (s *SubscriptionConfiguration) validate() error {
+	if s.Webhook.URL != "" {
+		s.SetNotificationType(NotifyWebhook)
+		if webhookURL := s.GetNotificationWebhook(); webhookURL != "" {
+			if _, err := url.ParseRequestURI(webhookURL); err != nil {
+				return errors.New("Error central.subscriptions.notificationWebhook nota valid URL")
+			}
+		}
+
+		// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
+		s.Webhook.headers = map[string]string{}
+		s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
+		headersValues := strings.Split(s.Webhook.Headers, ",Header=")
+		for _, headerValue := range headersValues {
+			hvArray := strings.Split(headerValue, ",Value=")
+			if len(hvArray) != 2 {
+				return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
+			}
+			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+			s.Webhook.headers[hvArray[0]] = hvArray[1]
+		}
+	}
 	if s.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
-		// Check values by auth type
-		//check host set
-		//check port set
-
-		//check all subjects/templates have only variables expected
 	}
 
 	return nil
