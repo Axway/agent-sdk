@@ -3,6 +3,7 @@ image: docker:dind
 variables:
   GO111MODULE: "on"
   GOPRIVATE: "git.ecd.axway.int"
+  GOFLAGS: "-mod=vendor"
 
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
