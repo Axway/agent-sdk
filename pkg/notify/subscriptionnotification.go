@@ -100,6 +100,8 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 
 	// determine the auth type to use
 	var auth sasl.Client
+	log.Debugf("SMTP authorization type %s", globalCfg.GetSMTPAuthType())
+
 	switch globalCfg.GetSMTPAuthType() {
 	case (corecfg.LoginAuth):
 		auth = sasl.NewLoginClient(globalCfg.GetSMTPUsername(), globalCfg.GetSMTPPassword())
@@ -126,10 +128,16 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *config.EmailTempla
 		"charset":      "UTF-8",
 	}
 
+	fromAddress := fmt.Sprintf("From: %s", globalCfg.GetSMTPFromAddress())
+	toAddress := fmt.Sprintf("To: %s", s.Email)
+	subject := fmt.Sprintf("Subject: %s", s.UpdateTemplate(template.Subject))
+
+	log.Debugf("Sending email %s, %s, %s", fromAddress, toAddress, subject)
+
 	msgArray := []string{
-		fmt.Sprintf("From: %s", globalCfg.GetSMTPFromAddress()),
-		fmt.Sprintf("To: %s", s.Email),
-		fmt.Sprintf("Subject: %s", s.UpdateTemplate(template.Subject)),
+		fromAddress,
+		toAddress,
+		subject,
 		mime.String(),
 		s.UpdateTemplate(template.Body),
 	}
