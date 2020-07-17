@@ -1,8 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
-
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
@@ -65,12 +63,6 @@ type ServiceClient struct {
 	DefaultSubscriptionSchema    SubscriptionSchema
 	RegisteredSubscriptionSchema SubscriptionSchema
 	subscriptionMgr              SubscriptionManager
-}
-
-//CatalogRevisionProperty -
-type CatalogRevisionProperty struct {
-	Key   string          `json:"key"`
-	Value json.RawMessage `json:"value"`
 }
 
 // APIServerInfoProperty -

@@ -10,17 +10,6 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// APIServerSubscriptionSchema -
-type APIServerSubscriptionSchema struct {
-	Properties []CatalogRevisionProperty `json:"properties,omitempty"`
-}
-
-// APIServerSubscriptionDefinitionSpec -
-type APIServerSubscriptionDefinitionSpec struct {
-	Webhooks []string                    `json:"webhooks,omitempty"`
-	Schema   APIServerSubscriptionSchema `json:"schema,omitempty"`
-}
-
 // SubscriptionSchema -
 type SubscriptionSchema interface {
 	AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string)
