@@ -16,6 +16,8 @@ const (
 	Oas3          = "oas3"
 	Specification = "specification"
 	Swagger       = "swagger"
+
+	SubscriptionSchemaNameSuffix = ".authsubscription"
 )
 
 type apiErrorResponse map[string][]apiError
@@ -52,6 +54,7 @@ type ServiceBody struct {
 	ImageContentType string
 	CreatedBy        string
 	ResourceType     string
+	SubscriptionName string
 }
 
 // ServiceClient -
