@@ -331,9 +331,12 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 		return "", err
 	}
 
+	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
+	log.Debugf("Platform URL being used to get user information %s", platformURL)
+
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id),
+		URL:     platformURL,
 		Headers: headers,
 	}
 

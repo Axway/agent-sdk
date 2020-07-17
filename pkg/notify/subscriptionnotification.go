@@ -21,8 +21,8 @@ type SubscriptionNotification struct {
 	CatalogItemURL  string                 `json:"catalogItemUrl"`
 	CatalogItemName string                 `json:"catalogItemName"`
 	Action          apic.SubscriptionState `json:"action"`
-	Email           string                 `json:"email"`
-	Message         string                 `json:"message"`
+	Email           string                 `json:"email,omitempty"`
+	Message         string                 `json:"message,omitempty"`
 	Key             string                 `json:"key,omitempty"`
 	apiClient       coreapi.Client
 }
