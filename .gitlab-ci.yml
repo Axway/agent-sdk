@@ -149,7 +149,7 @@ sonar:
     - *configure-git-ssh
   script:
     - make sonar
-  <<: *only-protected
+  <<: *only-feature
 
 ############################################################
 # Section for lint builds stage
