@@ -1,6 +1,6 @@
-# APIC Agents Core Build Folder
+# AMPLIFY Central Agents Core Build Folder
 
-In this folder you will find scripts and files necessary for the build and release of the APIC Agents Core
+In this folder you will find scripts and files necessary for the build and release of the AMPLIFY Central Agents Core
 
 ## scripts folder
 
