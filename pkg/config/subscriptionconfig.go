@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // NotificationType - Type definition for subscription state
@@ -225,6 +226,7 @@ func (s *SubscriptionConfiguration) GetUnsubscribeFailedTemplate() *EmailTemplat
 func (s *SubscriptionConfiguration) validate() error {
 	if s.Webhook.URL != "" {
 		s.SetNotificationType(NotifyWebhook)
+		log.Debug("Webhook notification set")
 		if webhookURL := s.GetNotificationWebhook(); webhookURL != "" {
 			if _, err := url.ParseRequestURI(webhookURL); err != nil {
 				return errors.New("Error central.subscriptions.notificationWebhook nota valid URL")
@@ -246,6 +248,7 @@ func (s *SubscriptionConfiguration) validate() error {
 	}
 	if s.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
+		log.Debug("SMTP notification set")
 	}
 
 	return nil

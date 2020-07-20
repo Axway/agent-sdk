@@ -44,6 +44,7 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 // NotifySubscriber - send a notification to any configured notification type
 func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 	for _, notificationType := range globalCfg.GetNotificationTypes() {
+		log.Debugf("Attempt to notify using %s", notificationType)
 		switch notificationType {
 		case config.NotifyWebhook:
 			err := s.notifyViaWebhook()
