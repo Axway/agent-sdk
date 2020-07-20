@@ -1,4 +1,4 @@
-# APIC Agents Core
+# AMPLIFY Central Agents Core
 
 ## Packages
 
