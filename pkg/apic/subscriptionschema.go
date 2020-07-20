@@ -105,19 +105,39 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	// nothing to do if not environment mode
+	if !c.cfg.IsPublishToEnvironmentMode() {
+		return nil
+	}
+
 	c.RegisteredSubscriptionSchema = subscriptionSchema
-	if c.cfg.IsPublishToEnvironmentMode() {
-		// Add API Server resource - SubscriptionDefinition
-		buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
+	// Add API Server resource - SubscriptionDefinition
+	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
 
-		headers, err := c.createHeader()
-		if err != nil {
-			return err
-		}
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
 
-		request := coreapi.Request{
-			Method:  coreapi.POST,
-			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL(),
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+		logResponseErrors(response.Body)
+		return errors.New(strconv.Itoa(response.Code))
+	}
+	if response.Code == http.StatusConflict {
+		request = coreapi.Request{
+			Method:  coreapi.PUT,
+			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
 			Headers: headers,
 			Body:    buffer,
 		}
@@ -126,26 +146,9 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		if err != nil {
 			return err
 		}
-		if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+		if !(response.Code == http.StatusOK) {
 			logResponseErrors(response.Body)
 			return errors.New(strconv.Itoa(response.Code))
-		}
-		if response.Code == http.StatusConflict {
-			request = coreapi.Request{
-				Method:  coreapi.PUT,
-				URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
-				Headers: headers,
-				Body:    buffer,
-			}
-
-			response, err := c.apiClient.Send(request)
-			if err != nil {
-				return err
-			}
-			if !(response.Code == http.StatusOK) {
-				logResponseErrors(response.Body)
-				return errors.New(strconv.Itoa(response.Code))
-			}
 		}
 	}
 	return nil
