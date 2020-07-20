@@ -105,12 +105,13 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	c.RegisteredSubscriptionSchema = subscriptionSchema
+
 	// nothing to do if not environment mode
 	if !c.cfg.IsPublishToEnvironmentMode() {
 		return nil
 	}
 
-	c.RegisteredSubscriptionSchema = subscriptionSchema
 	// Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
 
