@@ -64,25 +64,6 @@ const (
 	smtpIdentity   = "subscriptions.smtp.identity"
 )
 
-// AddSubscriptionsConfigProperties -
-func AddSubscriptionsConfigProperties(cmdProps properties.Properties) {
-	cmdProps.AddStringProperty("subscription.webhook.url", "", "desc")
-	cmdProps.AddStringProperty("subscription.webhook.headers", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.host", "", "desc")
-	cmdProps.AddIntProperty("subscription.smtp.port", 0, "desc")
-	cmdProps.AddStringProperty(smtpFrom, "", "desc")
-	cmdProps.AddStringProperty(smtpAuthType, string(NoAuth), "desc")
-	cmdProps.AddStringProperty(smtpIdentity, "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribe.subject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribe.body", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.subject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribe.body", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.subject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.subscribeFailed.body", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.subject", "", "desc")
-	cmdProps.AddStringProperty("subscription.smtp.unsubscribeFailed.body", "", "desc")
-}
-
 type webhook struct {
 	URL     string `config:"webhook.url"`
 	Headers string `config:"webhook.headers"`
