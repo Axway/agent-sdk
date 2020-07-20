@@ -1,8 +1,6 @@
 package daemon
 
 import (
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"text/template"
@@ -30,7 +28,7 @@ func (linux *systemDRecord) servicePath() string {
 // Is a service installed
 func (linux *systemDRecord) isInstalled() bool {
 
-	if _, err := os.Stat(linux.servicePath()); err == nil {
+	if _, err := fs.Stat(linux.servicePath()); err == nil {
 		return true
 	}
 
@@ -39,8 +37,7 @@ func (linux *systemDRecord) isInstalled() bool {
 
 // Check service is running
 func (linux *systemDRecord) checkRunning() (string, bool) {
-	// #nosec
-	output, err := exec.Command(systemctl, "status", linux.name+serviceSuffix).Output()
+	output, err := execCmd(systemctl, "status", linux.name+serviceSuffix)
 	if err == nil {
 		if matched, err := regexp.MatchString("Active: active", string(output)); err == nil && matched {
 			reg := regexp.MustCompile("Main PID: ([0-9]+)")
@@ -69,7 +66,7 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 		return installAction + failed, ErrAlreadyInstalled
 	}
 
-	file, err := os.Create(srvPath)
+	file, err := fs.Create(srvPath)
 	if err != nil {
 		return installAction + failed, err
 	}
@@ -104,14 +101,7 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
-	// #nosec
-	if err := exec.Command(systemctl, "daemon-reload").Run(); err != nil {
-		file.Close()
-		return installAction + failed, err
-	}
-
-	// #nosec
-	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
+	if _, err := execCmd(systemctl, "daemon-reload"); err != nil {
 		file.Close()
 		return installAction + failed, err
 	}
@@ -132,12 +122,11 @@ func (linux *systemDRecord) Remove() (string, error) {
 		return removeAction + failed, ErrNotInstalled
 	}
 
-	// #nosec
-	if err := exec.Command(systemctl, "disable", linux.name+serviceSuffix).Run(); err != nil {
+	if _, err := execCmd(systemctl, "disable", linux.name+serviceSuffix); err != nil {
 		return removeAction + failed, err
 	}
 
-	if err := os.Remove(linux.servicePath()); err != nil {
+	if err := fs.Remove(linux.servicePath()); err != nil {
 		return removeAction + failed, err
 	}
 
@@ -160,8 +149,7 @@ func (linux *systemDRecord) Start() (string, error) {
 		return startAction + failed, ErrAlreadyRunning
 	}
 
-	// #nosec
-	if err := exec.Command(systemctl, "start", linux.name+serviceSuffix).Run(); err != nil {
+	if _, err := execCmd(systemctl, "start", linux.name+serviceSuffix); err != nil {
 		return startAction + failed, err
 	}
 
@@ -184,8 +172,7 @@ func (linux *systemDRecord) Stop() (string, error) {
 		return stopAction + failed, ErrAlreadyStopped
 	}
 
-	// #nosec
-	if err := exec.Command(systemctl, "stop", linux.name+serviceSuffix).Run(); err != nil {
+	if _, err := execCmd(systemctl, "stop", linux.name+serviceSuffix); err != nil {
 		return stopAction + failed, err
 	}
 
@@ -227,12 +214,7 @@ func (linux *systemDRecord) Enable() (string, error) {
 		return enableAction + failed, ErrNotInstalled
 	}
 
-	if _, ok := linux.checkRunning(); !ok {
-		return enableAction + failed, ErrAlreadyStopped
-	}
-
-	// #nosec
-	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
+	if _, err := execCmd(systemctl, "enable", linux.name+serviceSuffix); err != nil {
 		return enableAction + failed, err
 	}
 
