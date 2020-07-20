@@ -39,6 +39,7 @@ func (linux *systemDRecord) isInstalled() bool {
 
 // Check service is running
 func (linux *systemDRecord) checkRunning() (string, bool) {
+	// #nosec
 	output, err := exec.Command(systemctl, "status", linux.name+serviceSuffix).Output()
 	if err == nil {
 		if matched, err := regexp.MatchString("Active: active", string(output)); err == nil && matched {
@@ -72,15 +73,16 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 	if err != nil {
 		return installAction + failed, err
 	}
-	defer file.Close()
 
 	execPatch, err := executablePath(linux.name)
 	if err != nil {
+		file.Close()
 		return installAction + failed, err
 	}
 
 	templ, err := template.New("systemDConfig").Parse(systemDConfig)
 	if err != nil {
+		file.Close()
 		return installAction + failed, err
 	}
 
@@ -98,17 +100,23 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 			strings.Join(args, " "),
 		},
 	); err != nil {
+		file.Close()
 		return installAction + failed, err
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "daemon-reload").Run(); err != nil {
+		file.Close()
 		return installAction + failed, err
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
+		file.Close()
 		return installAction + failed, err
 	}
 
+	file.Close()
 	return installAction + success, nil
 }
 
@@ -124,6 +132,7 @@ func (linux *systemDRecord) Remove() (string, error) {
 		return removeAction + failed, ErrNotInstalled
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "disable", linux.name+serviceSuffix).Run(); err != nil {
 		return removeAction + failed, err
 	}
@@ -151,6 +160,7 @@ func (linux *systemDRecord) Start() (string, error) {
 		return startAction + failed, ErrAlreadyRunning
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "start", linux.name+serviceSuffix).Run(); err != nil {
 		return startAction + failed, err
 	}
@@ -174,6 +184,7 @@ func (linux *systemDRecord) Stop() (string, error) {
 		return stopAction + failed, ErrAlreadyStopped
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "stop", linux.name+serviceSuffix).Run(); err != nil {
 		return stopAction + failed, err
 	}
@@ -220,6 +231,7 @@ func (linux *systemDRecord) Enable() (string, error) {
 		return enableAction + failed, ErrAlreadyStopped
 	}
 
+	// #nosec
 	if err := exec.Command(systemctl, "enable", linux.name+serviceSuffix).Run(); err != nil {
 		return enableAction + failed, err
 	}
