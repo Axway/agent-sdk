@@ -208,6 +208,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 
 	// if there isn't a registered subscription schema, do not enable subscriptions
 	if enableSubscription && c.RegisteredSubscriptionSchema == nil {
+		enableSubscription = false
 	}
 
 	if enableSubscription {
