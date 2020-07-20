@@ -207,10 +207,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 
 	// if there isn't a registered subscription schema, do not enable subscriptions
-	if enableSubscription {
-		if c.RegisteredSubscriptionSchema == nil {
-			enableSubscription = false
-		}
+	if enableSubscription && c.RegisteredSubscriptionSchema == nil {
 	}
 
 	if enableSubscription {
