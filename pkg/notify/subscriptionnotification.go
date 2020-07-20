@@ -7,6 +7,7 @@ import (
 
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
+	"github.com/pkg/errors"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic"
@@ -53,6 +54,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				return err
 			}
 			log.Debugf("Webhook notification sent to %s.", recipient)
+			return nil
 
 		case config.NotifySMTP:
 			err := s.notifyViaSMTP()
@@ -61,10 +63,11 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				return err
 			}
 			log.Debugf("Email notification sent to %s.", recipient)
+			return nil
 		}
 	}
 
-	return nil
+	return errors.New("Could not send notification.  No subscription notification type is configured")
 }
 
 func (s *SubscriptionNotification) notifyViaWebhook() error {
