@@ -38,6 +38,7 @@ type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	DeleteCatalogItem(itemID string) error
 	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
@@ -77,7 +78,7 @@ func New(cfg corecfg.CentralConfig) Client {
 		cfg:                       cfg,
 		tokenRequester:            platformTokenGetter,
 		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
-		DefaultSubscriptionSchema: NewSubscriptionSchema(),
+		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
 	}
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 

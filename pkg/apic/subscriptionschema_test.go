@@ -25,9 +25,9 @@ func TestSubscriptionSchemaRegistration(t *testing.T) {
 	passthruSchema := serviceClient.DefaultSubscriptionSchema
 	assert.NotNil(t, passthruSchema)
 
-	apiKeySchema := NewSubscriptionSchema()
-	apiKeySchema.AddProperty("prop1", "string", "someproperty", "", true)
-	apiKeySchema.AddProperty("prop2", "int", "someproperty2", "", false)
+	apiKeySchema := NewSubscriptionSchema("testname")
+	apiKeySchema.AddProperty("prop1", "string", "someproperty", "", true, []string{})
+	apiKeySchema.AddProperty("prop2", "int", "someproperty2", "", false, []string{})
 	client.RegisterSubscriptionSchema(apiKeySchema)
 
 	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema

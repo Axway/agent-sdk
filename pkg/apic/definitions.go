@@ -1,8 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
-
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 )
@@ -16,6 +14,8 @@ const (
 	Oas3          = "oas3"
 	Specification = "specification"
 	Swagger       = "swagger"
+
+	SubscriptionSchemaNameSuffix = ".authsubscription"
 )
 
 type apiErrorResponse map[string][]apiError
@@ -52,6 +52,7 @@ type ServiceBody struct {
 	ImageContentType string
 	CreatedBy        string
 	ResourceType     string
+	SubscriptionName string
 }
 
 // ServiceClient -
@@ -62,12 +63,6 @@ type ServiceClient struct {
 	DefaultSubscriptionSchema    SubscriptionSchema
 	RegisteredSubscriptionSchema SubscriptionSchema
 	subscriptionMgr              SubscriptionManager
-}
-
-//CatalogRevisionProperty -
-type CatalogRevisionProperty struct {
-	Key   string          `json:"key"`
-	Value json.RawMessage `json:"value"`
 }
 
 // APIServerInfoProperty -

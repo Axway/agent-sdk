@@ -207,16 +207,19 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 
 	// if there isn't a registered subscription schema, do not enable subscriptions
-	if enableSubscription {
-		if c.RegisteredSubscriptionSchema == nil {
-			enableSubscription = false
-		}
+	if enableSubscription && c.RegisteredSubscriptionSchema == nil {
+		enableSubscription = false
 	}
 
 	if enableSubscription {
 		log.Debug("Subscriptions will be enabled for consumer instances")
 	} else {
 		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
+	}
+
+	subscriptionDefinitionName := c.cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix
+	if serviceBody.SubscriptionName != "" {
+		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
 
 	spec := ConsumerInstanceSpec{
@@ -232,7 +235,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		Subscription: &APIServiceSubscription{
 			Enabled:                enableSubscription,
 			AutoSubscribe:          true,
-			SubscriptionDefinition: c.cfg.GetEnvironmentName() + "." + "authsubscription",
+			SubscriptionDefinition: subscriptionDefinitionName,
 		},
 	}
 
