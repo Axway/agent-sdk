@@ -113,6 +113,10 @@ func (c *ResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitio
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ResourceDefinitionVersion{}
 
 	// Updates the resource in place

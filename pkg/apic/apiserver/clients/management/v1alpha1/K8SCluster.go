@@ -101,6 +101,10 @@ func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluste
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.K8SCluster{}
 
 	// Updates the resource in place

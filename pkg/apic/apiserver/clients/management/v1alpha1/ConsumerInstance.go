@@ -113,6 +113,10 @@ func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance) (*v1alph
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ConsumerInstance{}
 
 	// Updates the resource in place

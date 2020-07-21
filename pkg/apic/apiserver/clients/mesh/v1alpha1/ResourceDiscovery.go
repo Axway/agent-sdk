@@ -101,6 +101,10 @@ func (c *ResourceDiscoveryClient) Update(res *v1alpha1.ResourceDiscovery) (*v1al
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ResourceDiscovery{}
 
 	// Updates the resource in place

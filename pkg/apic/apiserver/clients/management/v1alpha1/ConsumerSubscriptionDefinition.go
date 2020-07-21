@@ -113,6 +113,10 @@ func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubs
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ConsumerSubscriptionDefinition{}
 
 	// Updates the resource in place

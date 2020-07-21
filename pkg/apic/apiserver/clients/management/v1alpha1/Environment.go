@@ -101,6 +101,10 @@ func (c *EnvironmentClient) Update(res *v1alpha1.Environment) (*v1alpha1.Environ
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.Environment{}
 
 	// Updates the resource in place

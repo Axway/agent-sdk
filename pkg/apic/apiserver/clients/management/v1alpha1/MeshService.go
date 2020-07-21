@@ -113,6 +113,10 @@ func (c *MeshServiceClient) Update(res *v1alpha1.MeshService) (*v1alpha1.MeshSer
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.MeshService{}
 
 	// Updates the resource in place

@@ -101,6 +101,10 @@ func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup) (*v1alpha1.Res
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ResourceGroup{}
 
 	// Updates the resource in place

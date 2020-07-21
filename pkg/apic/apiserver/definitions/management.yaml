@@ -1102,3 +1102,43 @@ spec:
                   path:
                     type: string
                     description: The path on which this spec was discovered
+---
+group: management
+kind: MeshDiscovery
+scope: Mesh
+description: Mesh discovery 
+spec:
+  names:
+    plural: meshdiscoveries
+    singular: meshdiscovery
+  cli:
+    shortNames:
+      - mdis
+    columns:
+      - name: Name
+        description: The name of resource.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            selectors:
+              type: object
+              additionalProperties: {}
+            environmentRef:
+              type: string
+              x-amplify-kind-ref: Environment
+

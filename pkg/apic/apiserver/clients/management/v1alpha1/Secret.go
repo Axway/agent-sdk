@@ -113,6 +113,10 @@ func (c *SecretClient) Update(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.Secret{}
 
 	// Updates the resource in place

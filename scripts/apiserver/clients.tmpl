@@ -122,6 +122,10 @@ func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.{{.res.kind}}{}
 
 	// Updates the resource in place

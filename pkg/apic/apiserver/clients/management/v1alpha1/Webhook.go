@@ -113,6 +113,10 @@ func (c *WebhookClient) Update(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error)
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.Webhook{}
 
 	// Updates the resource in place

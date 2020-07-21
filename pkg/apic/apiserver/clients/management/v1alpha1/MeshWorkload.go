@@ -113,6 +113,10 @@ func (c *MeshWorkloadClient) Update(res *v1alpha1.MeshWorkload) (*v1alpha1.MeshW
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.MeshWorkload{}
 
 	// Updates the resource in place

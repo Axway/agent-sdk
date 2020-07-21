@@ -9,35 +9,47 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// MeshClient -
-type MeshClient struct {
+// MeshDiscoveryClient -
+type MeshDiscoveryClient struct {
 	client v1.Scoped
 }
 
-// NewMeshClient -
+// UnscopedMeshDiscoveryClient -
+type UnscopedMeshDiscoveryClient struct {
+	client v1.Unscoped
+}
 
-func NewMeshClient(c v1.Base) (*MeshClient, error) {
+// NewMeshDiscoveryClient -
 
-	client, err := c.ForKind(v1alpha1.MeshGVK())
+func NewMeshDiscoveryClient(c v1.Base) (*UnscopedMeshDiscoveryClient, error) {
+
+	client, err := c.ForKind(v1alpha1.MeshDiscoveryGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &MeshClient{client}, nil
+	return &UnscopedMeshDiscoveryClient{client}, nil
 
 }
 
+// WithScope -
+func (c *UnscopedMeshDiscoveryClient) WithScope(scope string) *MeshDiscoveryClient {
+	return &MeshDiscoveryClient{
+		c.client.WithScope(scope),
+	}
+}
+
 // List -
-func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
+func (c *MeshDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshDiscovery, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Mesh, len(riList))
+	result := make([]*v1alpha1.MeshDiscovery, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Mesh{}
+		result[i] = &v1alpha1.MeshDiscovery{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -48,20 +60,20 @@ func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
 }
 
 // Get -
-func (c *MeshClient) Get(name string) (*v1alpha1.Mesh, error) {
+func (c *MeshDiscoveryClient) Get(name string) (*v1alpha1.MeshDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Mesh{}
+	service := &v1alpha1.MeshDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *MeshClient) Delete(res *v1alpha1.Mesh) error {
+func (c *MeshDiscoveryClient) Delete(res *v1alpha1.MeshDiscovery) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -72,7 +84,7 @@ func (c *MeshClient) Delete(res *v1alpha1.Mesh) error {
 }
 
 // Create -
-func (c *MeshClient) Create(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
+func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery) (*v1alpha1.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -84,7 +96,7 @@ func (c *MeshClient) Create(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
 		return nil, err
 	}
 
-	created := &v1alpha1.Mesh{}
+	created := &v1alpha1.MeshDiscovery{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -95,7 +107,7 @@ func (c *MeshClient) Create(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
 }
 
 // Update -
-func (c *MeshClient) Update(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
+func (c *MeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery) (*v1alpha1.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -105,7 +117,7 @@ func (c *MeshClient) Update(res *v1alpha1.Mesh) (*v1alpha1.Mesh, error) {
 		return nil, err
 	}
 
-	updated := &v1alpha1.Mesh{}
+	updated := &v1alpha1.MeshDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

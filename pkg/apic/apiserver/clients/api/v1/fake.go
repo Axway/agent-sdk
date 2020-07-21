@@ -457,8 +457,10 @@ func (fk *fakeScoped) ListCtx(_ context.Context, options ...ListOptions) ([]*api
 	if opts.query == nil {
 		ris := make([]*apiv1.ResourceInstance, len(fk.resources))
 
+		i := 0
 		for _, ri := range fk.resources {
-			ris = append(ris, ri)
+			ris[i] = ri
+			i++
 		}
 		return ris, nil
 	}

@@ -113,6 +113,10 @@ func (c *CommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface) 
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.CommandLineInterface{}
 
 	// Updates the resource in place

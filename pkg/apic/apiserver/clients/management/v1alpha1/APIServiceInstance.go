@@ -113,6 +113,10 @@ func (c *APIServiceInstanceClient) Update(res *v1alpha1.APIServiceInstance) (*v1
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.APIServiceInstance{}
 
 	// Updates the resource in place

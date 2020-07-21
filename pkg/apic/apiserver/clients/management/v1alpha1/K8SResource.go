@@ -113,6 +113,10 @@ func (c *K8SResourceClient) Update(res *v1alpha1.K8SResource) (*v1alpha1.K8SReso
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.K8SResource{}
 
 	// Updates the resource in place

@@ -113,6 +113,10 @@ func (c *APISpecClient) Update(res *v1alpha1.APISpec) (*v1alpha1.APISpec, error)
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.APISpec{}
 
 	// Updates the resource in place
