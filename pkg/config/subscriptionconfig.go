@@ -89,6 +89,8 @@ type smtp struct {
 type EmailTemplate struct {
 	Subject string `config:"subject"`
 	Body    string `config:"body"`
+	Oauth   string `config:"oauth"`
+	APIKey  string `config:"apikeys"`
 }
 
 // ParseSubscriptionConfig -
@@ -121,6 +123,8 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 			Subscribe: &EmailTemplate{
 				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.subject"),
 				Body:    cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.body"),
+				Oauth:   cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.oauth"),
+				APIKey:  cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.apikeys"),
 			},
 			Unsubscribe: &EmailTemplate{
 				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.unsubscribe.subject"),
