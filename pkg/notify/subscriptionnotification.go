@@ -24,7 +24,7 @@ type SubscriptionNotification struct {
 	Action          apic.SubscriptionState `json:"action"`
 	Email           string                 `json:"email,omitempty"`
 	Message         string                 `json:"message,omitempty"`
-	AuthTemplate    string                 `json:"authtemplate"`
+	AuthTemplate    string                 `json:"authtemplate,omitempty"`
 	Key             string                 `json:"key,omitempty"`
 	KeyHeaderName   string                 `json:"keyHeaderName,omitempty"`
 	ClientID        string                 `json:"clientID,omitempty"`
@@ -33,7 +33,7 @@ type SubscriptionNotification struct {
 }
 
 //NewSubscriptionNotification - creates a new subscription notification object
-func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient, authType, key, keyHeaderName, clientSecret string,
+func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient, key, keyHeaderName, clientSecret string,
 	state apic.SubscriptionState, message string) *SubscriptionNotification {
 	subscriptionNotification := &SubscriptionNotification{
 		CatalogItemID:   catalogID,
@@ -41,7 +41,6 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 		CatalogItemURL:  catalogItemURL,
 		Email:           recipient,
 		Action:          state,
-		AuthTemplate:    "",
 		Key:             key,
 		KeyHeaderName:   keyHeaderName,
 		ClientID:        key,
@@ -50,20 +49,30 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 		apiClient:       coreapi.NewClient(corecfg.NewTLSConfig(), ""),
 	}
 
-	subscriptionNotification.setAuthorizationTemplate(subscriptionNotification, authType)
 	return subscriptionNotification
 }
 
-//setAuthorizationTemplate -
-func (s *SubscriptionNotification) setAuthorizationTemplate(subscriptionNotification *SubscriptionNotification, authType string) *SubscriptionNotification {
-	template := templateActionMap[subscriptionNotification.Action]
-	if authType == "apikeys" {
-		subscriptionNotification.AuthTemplate = s.UpdateTemplate(template.APIKey)
-	} else if authType == "oauth" {
-		subscriptionNotification.AuthTemplate = s.UpdateTemplate(template.Oauth)
+const (
+	apikeys = "apikeys"
+	oauth   = "oauth"
+)
+
+// SetAuthorizationTemplate - Set the authtemplate in the config subscriptions.smtp.subscribe.body {authtemplate}
+func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
+	if authType == "" {
+		log.Info("Subcription notification configuration for authorization type is not set")
+		return
 	}
 
-	return subscriptionNotification
+	template := templateActionMap[s.Action]
+	switch authType {
+	case apikeys:
+		s.AuthTemplate = s.UpdateTemplate(template.APIKey)
+	case oauth:
+		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
+	}
+
+	log.Debugf("Subscription notification configuration for '{authtemplate}' is set to %s", authType)
 }
 
 // NotifySubscriber - send a notification to any configured notification type
