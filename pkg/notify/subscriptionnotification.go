@@ -24,22 +24,46 @@ type SubscriptionNotification struct {
 	Action          apic.SubscriptionState `json:"action"`
 	Email           string                 `json:"email,omitempty"`
 	Message         string                 `json:"message,omitempty"`
+	AuthTemplate    string                 `json:"authtemplate"`
 	Key             string                 `json:"key,omitempty"`
+	KeyHeaderName   string                 `json:"keyHeaderName,omitempty"`
+	ClientID        string                 `json:"clientID,omitempty"`
+	ClientSecret    string                 `json:"clientSecret,omitempty"`
 	apiClient       coreapi.Client
 }
 
 //NewSubscriptionNotification - creates a new subscription notification object
-func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient, key string, state apic.SubscriptionState, message string) *SubscriptionNotification {
-	return &SubscriptionNotification{
+func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient, authType, key, keyHeaderName, clientSecret string,
+	state apic.SubscriptionState, message string) *SubscriptionNotification {
+	subscriptionNotification := &SubscriptionNotification{
 		CatalogItemID:   catalogID,
 		CatalogItemName: catalogName,
 		CatalogItemURL:  catalogItemURL,
 		Email:           recipient,
 		Action:          state,
+		AuthTemplate:    "",
 		Key:             key,
+		KeyHeaderName:   keyHeaderName,
+		ClientID:        key,
+		ClientSecret:    clientSecret,
 		Message:         message,
 		apiClient:       coreapi.NewClient(corecfg.NewTLSConfig(), ""),
 	}
+
+	subscriptionNotification.setAuthorizationTemplate(subscriptionNotification, authType)
+	return subscriptionNotification
+}
+
+//setAuthorizationTemplate -
+func (s *SubscriptionNotification) setAuthorizationTemplate(subscriptionNotification *SubscriptionNotification, authType string) *SubscriptionNotification {
+	template := templateActionMap[subscriptionNotification.Action]
+	if authType == "apikeys" {
+		subscriptionNotification.AuthTemplate = s.UpdateTemplate(template.APIKey)
+	} else if authType == "oauth" {
+		subscriptionNotification.AuthTemplate = s.UpdateTemplate(template.Oauth)
+	}
+
+	return subscriptionNotification
 }
 
 // NotifySubscriber - send a notification to any configured notification type
