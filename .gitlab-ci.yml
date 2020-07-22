@@ -157,10 +157,7 @@ sonar:
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
   before_script:
-    - export GOFLAGS=""
     - *prepare-path
-    - *configure-git-ssh
-    - go get golang.org/x/lint/golint
   script:
     - make lint
 
@@ -219,7 +216,7 @@ fetch-fortify:
       - triggers
     variables:
       - $CI_PIPELINE_SOURCE == "pipeline"
-    
+
 gosec:on-schedule:
   retry: 0
   before_script:
