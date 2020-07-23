@@ -24,11 +24,11 @@ type SubscriptionNotification struct {
 	Action          apic.SubscriptionState `json:"action"`
 	Email           string                 `json:"email,omitempty"`
 	Message         string                 `json:"message,omitempty"`
-	AuthTemplate    string                 `json:"authtemplate,omitempty"`
 	Key             string                 `json:"key,omitempty"`
 	KeyHeaderName   string                 `json:"keyHeaderName,omitempty"`
 	ClientID        string                 `json:"clientID,omitempty"`
 	ClientSecret    string                 `json:"clientSecret,omitempty"`
+	AuthTemplate    string                 `json:"-"`
 	apiClient       coreapi.Client
 }
 
