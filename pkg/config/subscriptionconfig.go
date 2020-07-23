@@ -149,7 +149,10 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 
 // NewSubscriptionConfig - Creates the default subscription config
 func NewSubscriptionConfig() SubscriptionConfig {
-	return &SubscriptionConfiguration{}
+	return &SubscriptionConfiguration{
+		Webhook: &webhook{},
+		SMTP:    &smtp{},
+	}
 }
 
 // SetNotificationType -
@@ -164,67 +167,106 @@ func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
 
 // GetNotificationWebhook - Returns the webhook url for notifications
 func (s *SubscriptionConfiguration) GetNotificationWebhook() string {
-	return s.Webhook.URL
+	if s.Webhook != nil {
+		return s.Webhook.URL
+	}
+	return ""
 }
 
 // GetNotificationHeaders - Returns the notification headers
 func (s *SubscriptionConfiguration) GetNotificationHeaders() map[string]string {
-	return s.Webhook.headers
+	if s.Webhook != nil {
+		return s.Webhook.headers
+	}
+	return make(map[string]string)
 }
 
 // GetSMTPURL - Returns the URL for the SMTP server
 func (s *SubscriptionConfiguration) GetSMTPURL() string {
-	return fmt.Sprintf("%s:%d", s.SMTP.Host, s.SMTP.Port)
+	if s.SMTP != nil {
+		return fmt.Sprintf("%s:%d", s.SMTP.Host, s.SMTP.Port)
+	}
+	return ""
 }
 
 // GetSMTPHost - Returns the Host for the SMTP server
 func (s *SubscriptionConfiguration) GetSMTPHost() string {
-	return s.SMTP.Host
+	if s.SMTP != nil {
+		return s.SMTP.Host
+	}
+	return ""
 }
 
 // GetSMTPFromAddress -
 func (s *SubscriptionConfiguration) GetSMTPFromAddress() string {
-	return s.SMTP.From
+	if s.SMTP != nil {
+		return s.SMTP.From
+	}
+	return ""
 }
 
 // GetSMTPAuthType -
 func (s *SubscriptionConfiguration) GetSMTPAuthType() SMTPAuthType {
-	return s.SMTP.AuthType
+	if s.SMTP != nil {
+		return s.SMTP.AuthType
+	}
+	return ""
 }
 
 // GetSMTPIdentity -
 func (s *SubscriptionConfiguration) GetSMTPIdentity() string {
-	return s.SMTP.Identity
+	if s.SMTP != nil {
+		return s.SMTP.Identity
+	}
+	return ""
 }
 
 // GetSMTPUsername -
 func (s *SubscriptionConfiguration) GetSMTPUsername() string {
-	return s.SMTP.Username
+	if s.SMTP != nil {
+		return s.SMTP.Username
+	}
+	return ""
 }
 
 // GetSMTPPassword -
 func (s *SubscriptionConfiguration) GetSMTPPassword() string {
-	return s.SMTP.Password
+	if s.SMTP != nil {
+		return s.SMTP.Password
+	}
+	return ""
 }
 
 // GetSubscribeTemplate - returns the email template info for a subscribe
 func (s *SubscriptionConfiguration) GetSubscribeTemplate() *EmailTemplate {
-	return s.SMTP.Subscribe
+	if s.SMTP != nil {
+		return s.SMTP.Subscribe
+	}
+	return nil
 }
 
 // GetUnsubscribeTemplate - returns the email template info for an unsubscribe
 func (s *SubscriptionConfiguration) GetUnsubscribeTemplate() *EmailTemplate {
-	return s.SMTP.Unsubscribe
+	if s.SMTP != nil {
+		return s.SMTP.Unsubscribe
+	}
+	return nil
 }
 
 // GetSubscribeFailedTemplate - returns the email template info for a subscribe
 func (s *SubscriptionConfiguration) GetSubscribeFailedTemplate() *EmailTemplate {
-	return s.SMTP.SubscribeFailed
+	if s.SMTP != nil {
+		return s.SMTP.SubscribeFailed
+	}
+	return nil
 }
 
 // GetUnsubscribeFailedTemplate - returns the email template info for an unsubscribe
 func (s *SubscriptionConfiguration) GetUnsubscribeFailedTemplate() *EmailTemplate {
-	return s.SMTP.UnsubscribeFailed
+	if s.SMTP != nil {
+		return s.SMTP.UnsubscribeFailed
+	}
+	return nil
 }
 
 func (s *SubscriptionConfiguration) validate() error {
