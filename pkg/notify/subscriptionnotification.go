@@ -114,8 +114,8 @@ func (s *SubscriptionNotification) notifyViaWebhook() error {
 	fmt.Println(string(buffer))
 	request := coreapi.Request{
 		Method:  coreapi.POST,
-		URL:     globalCfg.GetNotificationWebhook(),
-		Headers: globalCfg.GetNotificationHeaders(),
+		URL:     globalCfg.GetNotificationWebhookURL(),
+		Headers: globalCfg.GetNotificationWebhookHeaders(),
 		Body:    buffer,
 	}
 

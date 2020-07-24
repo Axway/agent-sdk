@@ -95,21 +95,28 @@ type CentralConfig interface {
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
-	AgentType        AgentType
-	Mode             AgentMode     `config:"mode"`
-	TenantID         string        `config:"tenantID"`
-	TeamID           string        `config:"teamID" `
-	APICDeployment   string        `config:"deployment"`
-	Environment      string        `config:"environment"`
-	URL              string        `config:"url"`
-	PlatformURL      string        `config:"platformURL"`
-	APIServerVersion string        `config:"apiServerVersion"`
-	TagsToPublish    string        `config:"additionalTags"`
-	Auth             AuthConfig    `config:"auth"`
-	TLS              TLSConfig     `config:"ssl"`
-	PollInterval     time.Duration `config:"pollInterval"`
-	ProxyURL         string        `config:"proxyUrl"`
-	environmentID    string
+	AgentType                   AgentType
+	Mode                        AgentMode     `config:"mode"`
+	TenantID                    string        `config:"tenantID"`
+	TeamID                      string        `config:"teamID" `
+	APICDeployment              string        `config:"deployment"`
+	Environment                 string        `config:"environment"`
+	URL                         string        `config:"url"`
+	PlatformURL                 string        `config:"platformURL"`
+	APIServerVersion            string        `config:"apiServerVersion"`
+	TagsToPublish               string        `config:"additionalTags"`
+	Auth                        AuthConfig    `config:"auth"`
+	TLS                         TLSConfig     `config:"ssl"`
+	PollInterval                time.Duration `config:"pollInterval"`
+	ProxyURL                    string        `config:"proxyUrl"`
+	SubscriptionApprovalWebhook webhook       `config:"approvalWebhook"`
+	environmentID               string
+}
+
+type webhook struct {
+	URL                 string `config:"approvalWebhook.url"`
+	Headers             string `config:"approvalWebhook.headers"`
+	notificationHeaders map[string]string
 }
 
 // NewCentralConfig - Creates the default central config
@@ -327,6 +334,7 @@ func (c *CentralConfiguration) Validate() (err error) {
 			c.validateConfig()
 			c.Auth.validate()
 			c.TLS.Validate()
+			c.SubscriptionApprovalWebhook.Validate()
 		},
 		Catch: func(e error) {
 			err = e
@@ -390,29 +398,31 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 }
 
 const (
-	pathTenantID              = "central.tenantId"
-	pathURL                   = "central.url"
-	pathPlatformURL           = "central.platformURL"
-	pathAuthPrivateKey        = "central.auth.privateKey"
-	pathAuthPublicKey         = "central.auth.publicKey"
-	pathAuthKeyPassword       = "central.auth.keyPassword"
-	pathAuthURL               = "central.auth.url"
-	pathAuthRealm             = "central.auth.realm"
-	pathAuthClientID          = "central.auth.clientId"
-	pathAuthTimeout           = "central.auth.timeout"
-	pathSSLNextProtos         = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites       = "central.ssl.cipherSuites"
-	pathSSLMinVersion         = "central.ssl.minVersion"
-	pathSSLMaxVersion         = "central.ssl.maxVersion"
-	pathEnvironment           = "central.environment"
-	pathDeployment            = "central.deployment"
-	pathMode                  = "central.mode"
-	pathTeamID                = "central.teamId"
-	pathPollInterval          = "central.pollInterval"
-	pathProxyURL              = "central.proxyUrl"
-	pathAPIServerVersion      = "central.apiServerVersion"
-	pathAdditionalTags        = "central.additionalTags"
+	pathTenantID                           = "central.tenantId"
+	pathURL                                = "central.url"
+	pathPlatformURL                        = "central.platformURL"
+	pathAuthPrivateKey                     = "central.auth.privateKey"
+	pathAuthPublicKey                      = "central.auth.publicKey"
+	pathAuthKeyPassword                    = "central.auth.keyPassword"
+	pathAuthURL                            = "central.auth.url"
+	pathAuthRealm                          = "central.auth.realm"
+	pathAuthClientID                       = "central.auth.clientId"
+	pathAuthTimeout                        = "central.auth.timeout"
+	pathSSLNextProtos                      = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify              = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites                    = "central.ssl.cipherSuites"
+	pathSSLMinVersion                      = "central.ssl.minVersion"
+	pathSSLMaxVersion                      = "central.ssl.maxVersion"
+	pathEnvironment                        = "central.environment"
+	pathDeployment                         = "central.deployment"
+	pathMode                               = "central.mode"
+	pathTeamID                             = "central.teamId"
+	pathPollInterval                       = "central.pollInterval"
+	pathProxyURL                           = "central.proxyUrl"
+	pathAPIServerVersion                   = "central.apiServerVersion"
+	pathAdditionalTags                     = "central.additionalTags"
+	pathSubscriptionApprovalWebhookURL     = "central.subscriptions.approvalWebhook.url"
+	pathSubscriptionApprovalWebhookHeaders = "central.subscriptions.approvalWebhook.headers"
 )
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -445,6 +455,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 	}
+
+	// subscription approvals
+	props.AddStringProperty(pathSubscriptionApprovalWebhookURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
+	props.AddStringProperty(pathSubscriptionApprovalWebhookHeaders, "", "The Proxy URL to use for communication to AMPLIFY Central")
 }
 
 // ParseCentralConfig - Parses the Central Config values form teh command line

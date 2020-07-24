@@ -33,8 +33,10 @@ const (
 // SubscriptionConfig - Interface to get subscription config
 type SubscriptionConfig interface {
 	GetNotificationTypes() []NotificationType
-	GetNotificationWebhook() string
-	GetNotificationHeaders() map[string]string
+	GetApprovalWebhookURL() string
+	GetApprovalWebhookHeaders() map[string]string
+	GetNotificationWebhookURL() string
+	GetNotificationWebhookHeaders() map[string]string
 	GetSMTPURL() string
 	GetSMTPHost() string
 	GetSMTPFromAddress() string
@@ -51,24 +53,23 @@ type SubscriptionConfig interface {
 // SubscriptionConfiguration - Structure to hold the subscription config
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
-	SMTP    *smtp    `config:"smtp"`
-	Webhook *webhook `config:"webhook"`
-	Types   []NotificationType
+	SMTP                *smtp    `config:"smtp"`
+	NotificationWebhook *webhook `config:"webhook"`
+	approvalWebhook     *webhook `config:"approvalWebhook"`
+	Types               []NotificationType
 }
 
 // These constants are the paths that the settings is at in a config file
 const (
-	webhookURL     = "subscriptions.webhook.url"
-	webhookHeaders = "subscriptions.webhook.headers"
-	smtpFrom       = "subscriptions.smtp.fromAddress"
-	smtpAuthType   = "subscriptions.smtp.authType"
-	smtpIdentity   = "subscriptions.smtp.identity"
+	smtpFrom     = "subscriptions.smtp.fromAddress"
+	smtpAuthType = "subscriptions.smtp.authType"
+	smtpIdentity = "subscriptions.smtp.identity"
 )
 
 type webhook struct {
-	URL     string `config:"webhook.url"`
-	Headers string `config:"webhook.headers"`
-	headers map[string]string
+	URL                 string `config:"webhook.url"`
+	Headers             string `config:"webhook.headers"`
+	notificationHeaders map[string]string
 }
 
 type smtp struct {
@@ -108,9 +109,13 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 	}
 
 	cfg := &SubscriptionConfiguration{
-		Webhook: &webhook{
-			URL:     cmdProps.StringPropertyValue("subscriptions.webhook.url"),
-			Headers: cmdProps.StringPropertyValue("subscriptions.webhook.headers"),
+		approvalWebhook: &webhook{
+			URL:     cmdProps.StringPropertyValue("subscriptions.approvalWebhook.url"),
+			Headers: cmdProps.StringPropertyValue("subscriptions.approvalWebhook.headers"),
+		},
+		NotificationWebhook: &webhook{
+			URL:     cmdProps.StringPropertyValue("subscriptions.notificationWebhook.url"),
+			Headers: cmdProps.StringPropertyValue("subscriptions.notificationWebhook.headers"),
 		},
 		SMTP: &smtp{
 			Host:     cmdProps.StringPropertyValue("subscriptions.smtp.host"),
@@ -150,9 +155,25 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 // NewSubscriptionConfig - Creates the default subscription config
 func NewSubscriptionConfig() SubscriptionConfig {
 	return &SubscriptionConfiguration{
-		Webhook: &webhook{},
-		SMTP:    &smtp{},
+		NotificationWebhook: &webhook{},
+		SMTP:                &smtp{},
 	}
+}
+
+// GetApprovalWebhook - Returns the webhook url for subscription approval
+func (s *SubscriptionConfiguration) GetApprovalWebhook() string {
+	if s.approvalWebhook != nil {
+		return s.approvalWebhook.URL
+	}
+	return ""
+}
+
+// GetApprovalHeaders - Returns the approval webhook notification headers
+func (s *SubscriptionConfiguration) GetApprovalHeaders() map[string]string {
+	if s.approvalWebhook != nil {
+		return s.approvalWebhook.notificationHeaders
+	}
+	return make(map[string]string)
 }
 
 // SetNotificationType -
@@ -165,18 +186,18 @@ func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
 	return s.Types
 }
 
-// GetNotificationWebhook - Returns the webhook url for notifications
-func (s *SubscriptionConfiguration) GetNotificationWebhook() string {
-	if s.Webhook != nil {
-		return s.Webhook.URL
+// GetNotificationWebhookURL - Returns the webhook url for notifications
+func (s *SubscriptionConfiguration) GetNotificationWebhookURL() string {
+	if s.NotificationWebhook != nil {
+		return s.NotificationWebhook.URL
 	}
 	return ""
 }
 
-// GetNotificationHeaders - Returns the notification headers
-func (s *SubscriptionConfiguration) GetNotificationHeaders() map[string]string {
-	if s.Webhook != nil {
-		return s.Webhook.headers
+// GetNotificationWebhookHeaders - Returns the notification headers
+func (s *SubscriptionConfiguration) GetNotificationWebhookHeaders() map[string]string {
+	if s.NotificationWebhook != nil {
+		return s.NotificationWebhook.notificationHeaders
 	}
 	return make(map[string]string)
 }
@@ -270,31 +291,87 @@ func (s *SubscriptionConfiguration) GetUnsubscribeFailedTemplate() *EmailTemplat
 }
 
 func (s *SubscriptionConfiguration) validate() error {
-	if s.Webhook.URL != "" {
+	if s.approvalWebhook.URL != "" {
+		log.Debug("Approval webhook set")
+		err := s.validateApprovalWebhook()
+		if err != nil {
+			return err
+		}
+	}
+	if s.NotificationWebhook.URL != "" {
 		s.SetNotificationType(NotifyWebhook)
 		log.Debug("Webhook notification set")
-		if webhookURL := s.GetNotificationWebhook(); webhookURL != "" {
-			if _, err := url.ParseRequestURI(webhookURL); err != nil {
-				return errors.New("Error central.subscriptions.notificationWebhook nota valid URL")
-			}
+		err := s.validateNotificationWebhook()
+		if err != nil {
+			return err
 		}
+		// if webhookURL := s.GetNotificationWebhook(); webhookURL != "" {
+		// 	if _, err := url.ParseRequestURI(webhookURL); err != nil {
+		// 		return errors.New("Error central.subscriptions.notificationWebhook not a valid URL")
+		// 	}
+		// }
 
-		// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
-		s.Webhook.headers = map[string]string{}
-		s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
-		headersValues := strings.Split(s.Webhook.Headers, ",Header=")
-		for _, headerValue := range headersValues {
-			hvArray := strings.Split(headerValue, ",Value=")
-			if len(hvArray) != 2 {
-				return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
-			}
-			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
-			s.Webhook.headers[hvArray[0]] = hvArray[1]
-		}
+		// // Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
+		// s.Webhook.notificationHeaders = map[string]string{}
+		// s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
+		// headersValues := strings.Split(s.Webhook.Headers, ",Header=")
+		// for _, headerValue := range headersValues {
+		// 	hvArray := strings.Split(headerValue, ",Value=")
+		// 	if len(hvArray) != 2 {
+		// 		return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
+		// 	}
+		// 	hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+		// 	s.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]
+		// }
 	}
 	if s.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
 		log.Debug("SMTP notification set")
+	}
+
+	return nil
+}
+
+func (s *SubscriptionConfiguration) validateApprovalWebhook() error {
+	if webhookURL := s.GetApprovalWebhook(); webhookURL != "" {
+		if _, err := url.ParseRequestURI(webhookURL); err != nil {
+			return errors.New("Error subscriptions.approvalWebhook.URL not a valid URL")
+		}
+	}
+
+	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
+	s.approvalWebhook.notificationHeaders = map[string]string{}
+	s.approvalWebhook.Headers = strings.Replace(s.approvalWebhook.Headers, ", ", ",", -1)
+	headersValues := strings.Split(s.approvalWebhook.Headers, ",Header=")
+	for _, headerValue := range headersValues {
+		hvArray := strings.Split(headerValue, ",Value=")
+		if len(hvArray) != 2 {
+			return errors.New("Could not parse value of subscriptions.approvalWebhook.headers")
+		}
+		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+		s.approvalWebhook.notificationHeaders[hvArray[0]] = hvArray[1]
+	}
+
+	return nil
+}
+func (s *SubscriptionConfiguration) validateNotificationWebhook() error {
+	if webhookURL := s.GetNotificationWebhookURL(); webhookURL != "" {
+		if _, err := url.ParseRequestURI(webhookURL); err != nil {
+			return errors.New("Error subscriptions.notificationWebhook.URL not a valid URL")
+		}
+	}
+
+	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
+	s.NotificationWebhook.notificationHeaders = map[string]string{}
+	s.NotificationWebhook.Headers = strings.Replace(s.NotificationWebhook.Headers, ", ", ",", -1)
+	headersValues := strings.Split(s.NotificationWebhook.Headers, ",Header=")
+	for _, headerValue := range headersValues {
+		hvArray := strings.Split(headerValue, ",Value=")
+		if len(hvArray) != 2 {
+			return errors.New("Could not parse value of subscriptions.notificationWebhook.headers")
+		}
+		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+		s.NotificationWebhook.notificationHeaders[hvArray[0]] = hvArray[1]
 	}
 
 	return nil
