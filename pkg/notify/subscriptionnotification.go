@@ -28,7 +28,7 @@ type SubscriptionNotification struct {
 	KeyHeaderName   string                 `json:"keyHeaderName,omitempty"`
 	ClientID        string                 `json:"clientID,omitempty"`
 	ClientSecret    string                 `json:"clientSecret,omitempty"`
-	AuthTemplate    string                 `json:"-"`
+	AuthTemplate    string                 `json:"authtemplate,omitempty"`
 	apiClient       coreapi.Client
 }
 
