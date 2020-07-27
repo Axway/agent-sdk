@@ -241,11 +241,20 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return err
 	}
 
-	// Get end id from apiServerEnvByte
+	// Get env id from apiServerEnvByte
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
 		return exception.Wrap(ErrEnvironmentQuery, err.Error())
+	}
+
+	// Validate that we actually get an environment ID back within the Metadata
+	if apiServerEnv.Metadata == nil {
+		return ErrEnvironmentQuery
+	}
+
+	if apiServerEnv.Metadata.ID == "" {
+		return ErrEnvironmentQuery
 	}
 
 	// need to save this ID for the traceability agent for later
@@ -253,7 +262,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
+func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, *exception.AgentError) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
@@ -273,7 +282,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrAuthentication
 	default:
 		logResponseErrors(response.Body)
-		return nil, ErrEnvironmentQuery
+		return nil, ErrRequestQuery
 	}
 
 }
@@ -331,9 +340,12 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
 	log.Debugf("Platform URL being used to get user information %s", platformURL)
 
-	platformUserBytes, err := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
-	if err != nil {
-		return "", err
+	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
+	if reqErr != nil {
+		if reqErr.GetErrorCode() == ErrRequestQuery.GetErrorCode() {
+			return "", ErrNoAddressFound.FormatError(id)
+		}
+		return "", reqErr
 	}
 
 	// Get the email
