@@ -2,11 +2,10 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
+	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
 // SubscriptionState - Type definition for subscription state
@@ -135,11 +134,11 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState) error {
 
 	response, err := s.getServiceClient().apiClient.Send(request)
 	if err != nil {
-		return err
+		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
 	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
 		logResponseErrors(response.Body)
-		return errors.New(strconv.Itoa(response.Code))
+		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil
 }
@@ -180,11 +179,11 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, err
+		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
 	if response.Code != http.StatusOK && response.Code != http.StatusNotFound {
 		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
+		return nil, ErrSubscriptionResp.FormatError(response.Code)
 	}
 	subscriptions := make([]CentralSubscription, 0)
 	json.Unmarshal(response.Body, &subscriptions)
