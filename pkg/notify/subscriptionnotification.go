@@ -77,6 +77,7 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 
 // NotifySubscriber - send a notification to any configured notification type
 func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
+	var notificationSent bool
 	for _, notificationType := range globalCfg.GetNotificationTypes() {
 		log.Debugf("Attempt to notify using %s", notificationType)
 		switch notificationType {
@@ -86,6 +87,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				log.Errorf("Could not send notification via webook: %s", err.Error())
 				return err
 			}
+			notificationSent = true
 			log.Debugf("Webhook notification sent to %s.", recipient)
 
 		case config.NotifySMTP:
@@ -94,11 +96,17 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				log.Errorf("Could not send notification via smtp server: %s", err.Error())
 				return err
 			}
+			notificationSent = true
 			log.Debugf("Email notification sent to %s.", recipient)
 		}
 	}
 
-	return errors.New("Could not send notification.  No subscription notification type is configured")
+	if !notificationSent {
+		return errors.New("Could not send notification.  No subscription notification type is configured")
+	}
+
+	return nil
+
 }
 
 func (s *SubscriptionNotification) notifyViaWebhook() error {
