@@ -87,7 +87,6 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				return err
 			}
 			log.Debugf("Webhook notification sent to %s.", recipient)
-			return nil
 
 		case config.NotifySMTP:
 			err := s.notifyViaSMTP()
@@ -96,7 +95,6 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 				return err
 			}
 			log.Debugf("Email notification sent to %s.", recipient)
-			return nil
 		}
 	}
 
