@@ -9,7 +9,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/exception"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -195,7 +195,7 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 func (c *ServiceClient) checkPlatformHealth() error {
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
-		return exception.Wrap(ErrAuthenticationCall, err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 	return nil
 }
@@ -203,7 +203,7 @@ func (c *ServiceClient) checkCatalogHealth() error {
 	// do a request for catalog items
 	headers, err := c.createHeader()
 	if err != nil {
-		return exception.Wrap(ErrAuthenticationCall, err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
 	// do a request for catalog items
@@ -215,7 +215,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 
 	headers, err := c.createHeader()
 	if err != nil {
-		return exception.Wrap(ErrAuthenticationCall, err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
 	queryParams := map[string]string{"fields": "metadata"}
@@ -245,7 +245,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
-		return exception.Wrap(ErrEnvironmentQuery, err.Error())
+		return errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
@@ -262,7 +262,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, *exception.AgentError) {
+func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
@@ -272,7 +272,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, exception.Wrap(ErrNetwork, err.Error())
+		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
 
 	switch response.Code {
@@ -342,7 +342,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 
 	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
 	if reqErr != nil {
-		if reqErr.GetErrorCode() == ErrRequestQuery.GetErrorCode() {
+		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
 			return "", ErrNoAddressFound.FormatError(id)
 		}
 		return "", reqErr
