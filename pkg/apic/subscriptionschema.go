@@ -152,6 +152,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 			return errors.New(strconv.Itoa(response.Code))
 		}
 	}
+
 	return nil
 }
 

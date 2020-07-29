@@ -83,7 +83,7 @@ func New(cfg corecfg.CentralConfig) Client {
 	}
 
 	// set the default webhook if one has been configured
-	webCfg = cfg.GetSubscriptionApprovalWebhookConfig()
+	webCfg := cfg.GetSubscriptionApprovalWebhookConfig()
 	if webCfg != nil && cfg.GetSubscriptionApprovalWebhookConfig().IsConfigured() {
 		serviceClient.DefaultSubscriptionApprovalWebhook = cfg.GetSubscriptionApprovalWebhookConfig()
 	}
