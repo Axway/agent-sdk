@@ -37,6 +37,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
+	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
@@ -80,6 +81,13 @@ func New(cfg corecfg.CentralConfig) Client {
 		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
 		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
 	}
+
+	// set the default webhook if one has been configured
+	webCfg = cfg.GetSubscriptionApprovalWebhookConfig()
+	if webCfg != nil && cfg.GetSubscriptionApprovalWebhookConfig().IsConfigured() {
+		serviceClient.DefaultSubscriptionApprovalWebhook = cfg.GetSubscriptionApprovalWebhookConfig()
+	}
+
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 
 	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)

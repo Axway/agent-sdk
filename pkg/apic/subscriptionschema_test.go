@@ -16,6 +16,7 @@ func TestSubscriptionSchemaRegistration(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)

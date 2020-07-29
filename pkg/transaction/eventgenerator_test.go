@@ -30,6 +30,7 @@ func createMapperTestConfig(authURL, tenantID, env, envName string) *Config {
 				PublicKey:  "testdata/public_key",
 				Timeout:    10 * time.Second,
 			},
+			SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 		},
 	}
 }

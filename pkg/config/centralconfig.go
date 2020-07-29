@@ -78,10 +78,13 @@ type CentralConfig interface {
 	DeleteAPIServerServicesURL() string
 	GetAPIServerConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
+	GetAPIServerWebhooksURL() string
+	GetAPIServerSecretsURL() string
 	GetSubscriptionURL() string
 	GetCatalogItemSubscriptionsURL(string) string
 	Validate() error
 	GetSubscriptionConfig() SubscriptionConfig
+	GetSubscriptionApprovalWebhookConfig() WebhookConfig
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -109,26 +112,21 @@ type CentralConfiguration struct {
 	TLS                         TLSConfig     `config:"ssl"`
 	PollInterval                time.Duration `config:"pollInterval"`
 	ProxyURL                    string        `config:"proxyUrl"`
-	SubscriptionApprovalWebhook webhook       `config:"approvalWebhook"`
 	environmentID               string
-}
-
-type webhook struct {
-	URL                 string `config:"approvalWebhook.url"`
-	Headers             string `config:"approvalWebhook.headers"`
-	notificationHeaders map[string]string
+	SubscriptionApprovalWebhook WebhookConfig `config:"approvalWebhook"`
 }
 
 // NewCentralConfig - Creates the default central config
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
-		AgentType:        agentType,
-		Mode:             PublishToCatalog,
-		APIServerVersion: "v1alpha1",
-		Auth:             newAuthConfig(),
-		TLS:              NewTLSConfig(),
-		PollInterval:     60 * time.Second,
-		PlatformURL:      "https://platform.axway.com",
+		AgentType:                   agentType,
+		Mode:                        PublishToCatalog,
+		APIServerVersion:            "v1alpha1",
+		Auth:                        newAuthConfig(),
+		TLS:                         NewTLSConfig(),
+		PollInterval:                60 * time.Second,
+		PlatformURL:                 "https://platform.axway.com",
+		SubscriptionApprovalWebhook: NewWebhookConfig(),
 	}
 }
 
@@ -287,6 +285,16 @@ func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/consumersubscriptiondefs"
 }
 
+// GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
+func (c *CentralConfiguration) GetAPIServerWebhooksURL() string {
+	return c.GetAPIServerEnvironmentURL() + "/webhooks"
+}
+
+// GetAPIServerSecretsURL - Returns the APIServer URL for secrets
+func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
+	return c.GetAPIServerEnvironmentURL() + "/secrets"
+}
+
 // GetSubscriptionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetSubscriptionURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
@@ -305,6 +313,11 @@ func (c *CentralConfiguration) GetAuthConfig() AuthConfig {
 // GetTLSConfig - Returns the TLS Config
 func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 	return c.TLS
+}
+
+// GetSubscriptionApprovalWebhookConfig - Returns the Config for the subscription webhook
+func (c *CentralConfiguration) GetSubscriptionApprovalWebhookConfig() WebhookConfig {
+	return c.SubscriptionApprovalWebhook
 }
 
 // GetTagsToPublish - Returns tags to publish
@@ -423,6 +436,7 @@ const (
 	pathAdditionalTags                     = "central.additionalTags"
 	pathSubscriptionApprovalWebhookURL     = "central.subscriptions.approvalWebhook.url"
 	pathSubscriptionApprovalWebhookHeaders = "central.subscriptions.approvalWebhook.headers"
+	pathSubscriptionApprovalWebhookSecret  = "central.subscriptions.approvalWebhook.authSecret"
 )
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -455,10 +469,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 	}
-
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionApprovalWebhookURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
-	props.AddStringProperty(pathSubscriptionApprovalWebhookHeaders, "", "The Proxy URL to use for communication to AMPLIFY Central")
+	props.AddStringProperty(pathSubscriptionApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
+	props.AddStringProperty(pathSubscriptionApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
+	props.AddStringProperty(pathSubscriptionApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
 }
 
 // ParseCentralConfig - Parses the Central Config values form teh command line
@@ -486,6 +500,11 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
 		ProxyURL: proxyURL,
+		SubscriptionApprovalWebhook: &WebhookConfiguration{
+			URL:     props.StringPropertyValue(pathSubscriptionApprovalWebhookURL),
+			Headers: props.StringPropertyValue(pathSubscriptionApprovalWebhookHeaders),
+			Secret:  props.StringPropertyValue(pathSubscriptionApprovalWebhookSecret),
+		},
 	}
 
 	// Set the Proxy Environment Variable

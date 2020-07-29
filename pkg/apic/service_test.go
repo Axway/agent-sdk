@@ -56,6 +56,7 @@ func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
 	c := New(cfg)
 	return c.(*ServiceClient), cfg
@@ -305,5 +306,19 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
 	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+}
 
+func TestSanitizeAPIName(t *testing.T) {
+	name := sanitizeAPIName("Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName(".Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName(".Abc...De/f")
+	assert.Equal(t, "abc--.de-f", name)
+	name = sanitizeAPIName("Abc.D-ef")
+	assert.Equal(t, "abc.d-ef", name)
+	name = sanitizeAPIName("Abc.Def=")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName("A..bc.Def")
+	assert.Equal(t, "a--bc.def", name)
 }
