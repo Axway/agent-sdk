@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"strings"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -222,9 +225,9 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
 
-	spec := ConsumerInstanceSpec{
+	spec := v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
-		APIServiceInstance: name,
+		ApiServiceInstance: name,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
@@ -232,9 +235,9 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		Status:             "GA",
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
-		Subscription: &APIServiceSubscription{
+		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
-			AutoSubscribe:          true,
+			AutoSubscribe:          !c.DefaultSubscriptionApprovalWebhook.IsConfigured(),
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
 	}
@@ -600,4 +603,160 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 
 	log.Debugf("HTTP response returning itemID: [%v]", itemID)
 	return itemID, nil
+}
+
+// RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
+// per environment
+func (c *ServiceClient) RegisterSubscriptionWebhook() error {
+	// nothing to do if not environment mode
+	if !c.cfg.IsPublishToEnvironmentMode() {
+		return nil
+	}
+
+	// if the default is already set up, do nothing
+	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
+	if !webhookCfg.IsConfigured() {
+		return nil
+	}
+
+	// create the secret
+	err := c.createSecret()
+	if err != nil {
+		log.Errorf("Unable to create secret: %v", err.Error())
+		return err
+	}
+
+	err = c.createWebhook()
+	if err != nil {
+		log.Errorf("Unable to create webhook: %v", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// create the on-and-only secret for the environment
+func (c *ServiceClient) createSecret() error {
+	s := c.DefaultSubscriptionApprovalWebhook.GetSecret()
+	spec := v1alpha1.SecretSpec{
+		Data: map[string]string{DefaultSubscriptionWebhookAuthKey: base64.StdEncoding.EncodeToString([]byte(s))},
+	}
+
+	secret := v1alpha1.Secret{
+		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
+		Spec:         spec,
+	}
+
+	buffer, err := json.Marshal(secret)
+	if err != nil {
+		return err
+	}
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.cfg.GetAPIServerSecretsURL(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+		logResponseErrors(response.Body)
+		return errors.New(strconv.Itoa(response.Code))
+	}
+	if response.Code == http.StatusConflict {
+		request = coreapi.Request{
+			Method:  coreapi.PUT,
+			URL:     c.cfg.GetAPIServerSecretsURL() + "/" + DefaultSubscriptionWebhookName,
+			Headers: headers,
+			Body:    buffer,
+		}
+
+		response, err := c.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
+		if !(response.Code == http.StatusOK) {
+			logResponseErrors(response.Body)
+			return errors.New(strconv.Itoa(response.Code))
+		}
+	}
+
+	return nil
+}
+
+// create the on-and-only subscription approval webhook for the environment
+func (c *ServiceClient) createWebhook() error {
+	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
+	specSecret := v1alpha1.WebhookSpecAuthSecret{
+		Name: DefaultSubscriptionWebhookName,
+		Key:  DefaultSubscriptionWebhookAuthKey,
+	}
+	authSpec := v1alpha1.WebhookSpecAuth{
+		Secret: specSecret,
+	}
+	webSpec := v1alpha1.WebhookSpec{
+		Auth:    authSpec,
+		Enabled: true,
+		Url:     webhookCfg.GetURL(),
+		Headers: webhookCfg.GetWebhookHeaders(),
+	}
+
+	webhook := v1alpha1.Webhook{
+		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
+		Spec:         webSpec,
+	}
+
+	buffer, err := json.Marshal(webhook)
+	if err != nil {
+		return err
+	}
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.cfg.GetAPIServerWebhooksURL(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+		logResponseErrors(response.Body)
+		return errors.New(strconv.Itoa(response.Code))
+	}
+	if response.Code == http.StatusConflict {
+		request = coreapi.Request{
+			Method:  coreapi.PUT,
+			URL:     c.cfg.GetAPIServerWebhooksURL() + "/" + DefaultSubscriptionWebhookName,
+			Headers: headers,
+			Body:    buffer,
+		}
+
+		response, err := c.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
+		if !(response.Code == http.StatusOK) {
+			logResponseErrors(response.Body)
+			return errors.New(strconv.Itoa(response.Code))
+		}
+	}
+
+	return nil
 }
