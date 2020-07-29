@@ -166,19 +166,6 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
-	// Check that we can reach the API Manager catalog
-	// only concerned if mode: PublishToCatalog
-	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
-		err := c.checkCatalogHealth()
-		if err != nil {
-			s = hc.Status{
-				Result:  hc.FAIL,
-				Details: err.Error(),
-			}
-		}
-		// Return our response
-		return &s
-	}
 
 	// Check that appropriate settings for the API server are set
 	err = c.checkAPIServerHealth()

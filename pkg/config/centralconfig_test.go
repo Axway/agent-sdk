@@ -38,10 +38,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, "Error central.teamID not set in config", err.Error())
 
 	centralConfig.TeamID = "aaa"
-	err = cfg.Validate()
-	assert.Nil(t, err)
-
-	centralConfig.Mode = PublishToEnvironment
+	centralConfig.Mode = PublishToEnvironmentAndCatalog
 	err = cfg.Validate()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.environment not set in config", err.Error())

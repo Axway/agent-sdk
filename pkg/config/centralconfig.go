@@ -26,17 +26,14 @@ const (
 type AgentMode int
 
 const (
-	// PublishToCatalog (formerly Disconnected) - publish items to Catalog
-	PublishToCatalog AgentMode = iota + 1
 	// PublishToEnvironment (formerly Connected) - publish items to Environment
-	PublishToEnvironment
+	PublishToEnvironment AgentMode = iota + 1
 	// PublishToEnvironmentAndCatalog - publish items to both Catalog and Environment
 	PublishToEnvironmentAndCatalog
 )
 
 // AgentModeStringMap - Map the Agent Mode constant to a string
 var AgentModeStringMap = map[AgentMode]string{
-	PublishToCatalog:               "publishToCatalog",
 	PublishToEnvironment:           "publishToEnvironment",
 	PublishToEnvironmentAndCatalog: "publishToEnvironmentAndCatalog",
 }
@@ -44,7 +41,6 @@ var AgentModeStringMap = map[AgentMode]string{
 // StringAgentModeMap - Map the string to the Agent Mode constant. Note that the strings are lowercased. In the config parser
 // we change the string to all lowers to all for mis-typing of the case
 var StringAgentModeMap = map[string]AgentMode{
-	"publishtocatalog":               PublishToCatalog,
 	"publishtoenvironment":           PublishToEnvironment,
 	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
 }
@@ -52,7 +48,6 @@ var StringAgentModeMap = map[string]AgentMode{
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
-	IsPublishToCatalogMode() bool
 	IsPublishToEnvironmentMode() bool
 	IsPublishToEnvironmentOnlyMode() bool
 	IsPublishToEnvironmentAndCatalogMode() bool
@@ -116,7 +111,7 @@ type CentralConfiguration struct {
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
 		AgentType:        agentType,
-		Mode:             PublishToCatalog,
+		Mode:             PublishToEnvironmentAndCatalog,
 		APIServerVersion: "v1alpha1",
 		Auth:             newAuthConfig(),
 		TLS:              NewTLSConfig(),
@@ -133,11 +128,6 @@ func (c *CentralConfiguration) GetPlatformURL() string {
 // GetAgentType - Returns the agent type
 func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
-}
-
-// IsPublishToCatalogMode -
-func (c *CentralConfiguration) IsPublishToCatalogMode() bool {
-	return c.Mode == PublishToCatalog
 }
 
 // IsPublishToEnvironmentMode -
@@ -439,7 +429,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
-		props.AddStringProperty(pathMode, "publishToCatalog", "Agent Mode")
+		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathTeamID, "", "Team ID for the current default team for creating catalog")
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")

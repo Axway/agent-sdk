@@ -105,7 +105,6 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
-	// Use catalog item id as ApicID for publishToCatalog mode
 	subscription.ApicID = subscription.CatalogItemID
 	subscription.apicClient = sm.apicClient
 	if sm.apicClient.cfg.IsPublishToEnvironmentMode() {

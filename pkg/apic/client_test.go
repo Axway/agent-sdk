@@ -59,36 +59,12 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	c.apiClient = &mockClient
 	c.tokenRequester = &mockTokenGetter{}
 
-	// Test DiscoveryAgent, PublishToCatalog
-	cfg.AgentType = corecfg.DiscoveryAgent
-	cfg.Mode = corecfg.PublishToCatalog
-	err := c.checkCatalogHealth()
-	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToCatalog mode")
-
 	// Test DiscoveryAgent, PublishToEnvironment
 	mockClient.respCount = 0
 	mockClient.responses[0].fileName = "./testdata/apiserver-environment.json"
 	cfg.Mode = corecfg.PublishToEnvironment
-	err = c.checkAPIServerHealth()
+	err := c.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToEnvironment mode")
-
-	// Test TraceabilityAgent, publishToCatalog
-	cfg.AgentType = corecfg.TraceabilityAgent
-	cfg.Mode = corecfg.PublishToCatalog
-	mockClient.respCount = 0
-	mockClient.responses = []mockResponse{
-		{
-			fileName: "./testdata/apiserver-environment-notfound.json",
-			respCode: http.StatusNotFound,
-		},
-		{
-			fileName: "./testdata/apic-environment.json",
-			respCode: http.StatusOK,
-		},
-	}
-	err = c.checkAPIServerHealth()
-	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToCatalog mode")
-	assert.Equal(t, "e4e084b66fcf325a016fcf54677b0001", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToCatalog mode")
 
 	// Test TraceabilityAgent, publishToEnvironment
 	cfg.AgentType = corecfg.TraceabilityAgent

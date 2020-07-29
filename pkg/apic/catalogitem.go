@@ -439,7 +439,7 @@ func (c *ServiceClient) RemoveActiveSubscriptionsForCatalogItem(catalogItemID st
 
 // initiateUnsubscribeCatalogItem - move the catalog item to unsubscribed initiated state
 func (c *ServiceClient) initiateUnsubscribeCatalogItem(catalogItemID string) (int, error) {
-	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionActive)}, catalogItemID)
 		if err != nil {
 			return 0, err
@@ -462,7 +462,7 @@ func (c *ServiceClient) initiateUnsubscribeCatalogItem(catalogItemID string) (in
 
 // unsubscribeCatalogItem - move the catalog item to unsubscribed state
 func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error) {
-	if c.cfg.IsPublishToCatalogMode() || c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		subscriptions, err := c.getSubscriptionsForCatalogItem([]string{string(SubscriptionUnsubscribeInitiated)}, catalogItemID)
 		if err != nil {
 			return 0, err

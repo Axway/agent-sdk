@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cache"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,83 +71,6 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 		},
 		CatalogItemID: catalogID,
 	}
-}
-
-func TestSubscriptionManagerPollPublishToCatalogMode(t *testing.T) {
-	// Start a local HTTP server
-	subscriptionList := make([]Subscription, 0)
-	subscriptionList = append(subscriptionList, createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"}))
-	subscriptionList = append(subscriptionList, createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]string{"orgId": "22222"}))
-	subscriptionList = append(subscriptionList, createSubscription("33333", "APPROVED", "33333", map[string]string{"orgId": "33333"}))
-	cache.GetCache().Set("1", "1_proxy")
-	cache.GetCache().SetSecondaryKey("1", "11111")
-	cache.GetCache().Set("2", "2_proxy")
-	cache.GetCache().SetSecondaryKey("2", "22222")
-	sendList := true
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		b := []byte("[]")
-		if sendList {
-			b, _ = json.Marshal(subscriptionList)
-			sendList = false
-		}
-		// Send response to be tested
-		rw.Write(b)
-	}))
-	// Close the server when test finishes
-	defer server.Close()
-
-	cfg := &corecfg.CentralConfiguration{
-		TeamID:       "test",
-		URL:          server.URL,
-		PollInterval: 1 * time.Second,
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-	}
-	client := New(cfg)
-	assert.NotNil(t, client)
-	serviceClient := client.(*ServiceClient)
-	assert.NotNil(t, serviceClient)
-
-	serviceClient.tokenRequester = &mockTokenGetter{
-		token: "testToken",
-	}
-	approvedSubscriptions := make(map[string]Subscription)
-	unsubscribedSubscriptions := make(map[string]Subscription)
-	approvedProcessor := func(subscription Subscription) {
-		approvedSubscriptions[subscription.GetID()] = subscription
-	}
-	unsubscribedProcessor := func(subscription Subscription) {
-		unsubscribedSubscriptions[subscription.GetID()] = subscription
-	}
-	subscriptionValidator := func(subscription Subscription) bool {
-		apiCache := cache.GetCache()
-		api, _ := apiCache.GetBySecondaryKey(subscription.GetApicID())
-		return api != nil
-	}
-
-	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
-	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
-	client.GetSubscriptionManager().RegisterValidator(subscriptionValidator)
-	client.GetSubscriptionManager().Start()
-	client.GetSubscriptionManager().AddBlacklistItem("123")
-	client.GetSubscriptionManager().RemoveBlacklistItem("123")
-
-	time.Sleep(2 * time.Second)
-	client.GetSubscriptionManager().Stop()
-
-	assert.NotEqual(t, 0, len(approvedSubscriptions))
-	// approved Subscription for API in cache
-	assert.NotNil(t, approvedSubscriptions["11111"])
-	assert.Equal(t, "11111", approvedSubscriptions["11111"].GetPropertyValue("orgId"))
-	// approved Subscription for API in not cache, so not processed
-	assert.Nil(t, approvedSubscriptions["33333"])
-
-	// unsubscribe initiated Subscription for API in cache
-	assert.NotNil(t, unsubscribedSubscriptions["22222"])
-	assert.Equal(t, "22222", unsubscribedSubscriptions["22222"].GetPropertyValue("orgId"))
 }
 
 func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
