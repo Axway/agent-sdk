@@ -127,3 +127,25 @@ func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 	name := gjson.Get(string(response.Body), "name").String()
 	return name, nil
 }
+
+func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state==" + state
+	}
+
+	queryParams["query"] = searchQuery
+	subscriptions, err := c.sendSubscriptionsRequest(c.cfg.GetCatalogItemSubscriptionsURL(catalogItemID), queryParams)
+	if err != nil {
+		if err.Error() != strconv.Itoa(http.StatusNotFound) {
+			return nil, err
+		}
+		return make([]CentralSubscription, 0), nil
+	}
+	return subscriptions, nil
+}

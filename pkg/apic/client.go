@@ -44,6 +44,7 @@ type Client interface {
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
 	GetUserEmailAddress(ID string) (string, error)
+	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
 	GetCatalogItemName(ID string) (string, error)
 }
 
@@ -279,6 +280,11 @@ func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(instanceID string) (
 // DeleteConsumerInstance -
 func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 	return c.deleteConsumerInstance(instanceName)
+}
+
+// GetSubscriptionsForCatalogItem -
+func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
+	return c.getSubscriptionsForCatalogItem(states, instanceID)
 }
 
 // PlatformUserInfo -
