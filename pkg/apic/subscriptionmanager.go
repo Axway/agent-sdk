@@ -105,6 +105,8 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
+	subscription.ApicID = subscription.CatalogItemID
+	subscription.apicClient = sm.apicClient
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
 	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
 		consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name, nil)

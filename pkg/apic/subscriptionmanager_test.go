@@ -256,6 +256,6 @@ func TestSubscriptionUpdate(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	client.GetSubscriptionManager().Stop()
 
-	assert.Equal(t, SubscriptionApproved, subscriptionMap["11111"].GetState())
-	assert.Equal(t, SubscriptionUnsubscribeInitiated, subscriptionMap["22222"].GetState())
+	assert.Equal(t, SubscriptionActive, subscriptionMap["11111"].GetState())
+	assert.Equal(t, SubscriptionUnsubscribed, subscriptionMap["22222"].GetState())
 }
