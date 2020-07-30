@@ -2,9 +2,10 @@ package transaction
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -64,7 +65,7 @@ func (e *Generator) healthcheck(name string) (status *hc.Status) {
 	if err != nil {
 		status = &hc.Status{
 			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s not ready.  Error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", name, err.Error()),
+			Details: errors.Wrap(apic.ErrAuthenticationCall, err.Error()).Error(),
 		}
 	}
 
