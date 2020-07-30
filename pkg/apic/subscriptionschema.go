@@ -2,12 +2,11 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
 // SubscriptionSchema -
@@ -129,28 +128,15 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return err
+		return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.POST)
 	}
 	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
 		logResponseErrors(response.Body)
-		return errors.New(strconv.Itoa(response.Code))
+		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
 	if response.Code == http.StatusConflict {
-		request = coreapi.Request{
-			Method:  coreapi.PUT,
-			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
-			Headers: headers,
-			Body:    buffer,
-		}
-
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return err
-		}
-		if !(response.Code == http.StatusOK) {
-			logResponseErrors(response.Body)
-			return errors.New(strconv.Itoa(response.Code))
-		}
+		// Call update if a conflict was returned
+		return c.UpdateSubscriptionSchema(subscriptionSchema)
 	}
 
 	return nil
@@ -178,11 +164,11 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 
 		response, err := c.apiClient.Send(request)
 		if err != nil {
-			return err
+			return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.PUT)
 		}
 		if !(response.Code == http.StatusOK) {
 			logResponseErrors(response.Body)
-			return errors.New(strconv.Itoa(response.Code))
+			return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 		}
 	}
 	return nil

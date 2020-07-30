@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
@@ -203,7 +203,7 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 func (c *ServiceClient) checkPlatformHealth() error {
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
-		return fmt.Errorf("error trying to get platform token: %s. Check %s configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", serverName, err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 	return nil
 }
@@ -211,18 +211,11 @@ func (c *ServiceClient) checkCatalogHealth() error {
 	// do a request for catalog items
 	headers, err := c.createHeader()
 	if err != nil {
-		return fmt.Errorf("error creating request header. %s", err.Error())
-	}
-
-	sendErr := "error sending request to %s: %s. Check configuration for URL"
-	statusErr := "error sending request to %s - status code %d. Check configuration for ENVIRONMENT"
-
-	if c.cfg.IsPublishToEnvironmentMode() {
-		sendErr = fmt.Sprintf("%s%s", sendErr, " and ENVIRONMENT")
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
 	// do a request for catalog items
-	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
+	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0))
 	return err
 }
 
@@ -230,29 +223,25 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 
 	headers, err := c.createHeader()
 	if err != nil {
-		return fmt.Errorf("error creating request header. %s", err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
-
-	sendErr := "error sending request to %s: %s. Check configuration for URL and ENVIRONMENT"
-	statusErr := "error sending request to %s - status code %d. Check configuration for ENVIRONMENT"
-	generalErr := "error sending request to %s. Check configuration for ENVIRONMENT"
 
 	queryParams := map[string]string{"fields": "metadata"}
 
 	// do a request for the environment
-	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, queryParams, sendErr, statusErr)
+	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, queryParams)
 	if err != nil {
 		queryParams := map[string]string{
 			"query": fmt.Sprintf("name==\"%s\"", c.cfg.GetEnvironmentName()),
 		}
 
 		// if the environment wasn't found above, check for it here
-		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams, sendErr, statusErr)
+		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
 		if err == nil {
 			var envList []EnvironmentSpec
 			err := json.Unmarshal(envListByte, &envList)
 			if err != nil || len(envList) == 0 {
-				return fmt.Errorf(generalErr, serverName)
+				return ErrEnvironmentQuery
 			}
 			c.cfg.SetEnvironmentID(envList[0].ID)
 			return nil
@@ -260,11 +249,20 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return err
 	}
 
-	// Get end id from apiServerEnvByte
+	// Get env id from apiServerEnvByte
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
-		return fmt.Errorf(generalErr, serverName)
+		return errors.Wrap(ErrEnvironmentQuery, err.Error())
+	}
+
+	// Validate that we actually get an environment ID back within the Metadata
+	if apiServerEnv.Metadata == nil {
+		return ErrEnvironmentQuery
+	}
+
+	if apiServerEnv.Metadata.ID == "" {
+		return ErrEnvironmentQuery
 	}
 
 	// need to save this ID for the traceability agent for later
@@ -272,22 +270,29 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string, sendErr, statusErr string) ([]byte, error) {
+func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
 		QueryParams: query,
 		Headers:     headers,
 	}
+
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, fmt.Errorf(sendErr, serverName, err.Error())
+		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
-	if response.Code != http.StatusOK {
+
+	switch response.Code {
+	case http.StatusOK:
+		return response.Body, nil
+	case http.StatusUnauthorized:
+		return nil, ErrAuthentication
+	default:
 		logResponseErrors(response.Body)
-		return nil, fmt.Errorf(statusErr, serverName, response.Code)
+		return nil, ErrRequestQuery
 	}
-	return response.Body, nil
+
 }
 
 // DeleteCatalogItem -
@@ -343,26 +348,17 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
 	log.Debugf("Platform URL being used to get user information %s", platformURL)
 
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     platformURL,
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		fmt.Println(err)
-		return "", err
-
-	}
-	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
-		return "", errors.New("Subscriber address not found in the platform")
+	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
+	if reqErr != nil {
+		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
+			return "", ErrNoAddressFound.FormatError(id)
+		}
+		return "", reqErr
 	}
 
 	// Get the email
 	var platformUserInfo PlatformUserInfo
-	err = json.Unmarshal(response.Body, &platformUserInfo)
+	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
 	if err != nil {
 		return "", err
 	}
