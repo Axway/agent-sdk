@@ -7,7 +7,7 @@ import (
 
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/exception"
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/exception"
 )
 
 // TLSCipherSuite - defined type

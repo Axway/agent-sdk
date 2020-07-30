@@ -7,12 +7,12 @@ import (
 
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
-	"github.com/pkg/errors"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -84,8 +84,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 		case config.NotifyWebhook:
 			err := s.notifyViaWebhook()
 			if err != nil {
-				log.Errorf("Could not send notification via webook: %s", err.Error())
-				return err
+				return agenterrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("webhook")
 			}
 			notificationSent = true
 			log.Debugf("Webhook notification sent to %s.", recipient)
@@ -93,8 +92,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 		case config.NotifySMTP:
 			err := s.notifyViaSMTP()
 			if err != nil {
-				log.Errorf("Could not send notification via smtp server: %s", err.Error())
-				return err
+				return agenterrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("smtp")
 			}
 			notificationSent = true
 			log.Debugf("Email notification sent to %s.", recipient)
@@ -102,7 +100,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 	}
 
 	if !notificationSent {
-		return errors.New("Could not send notification.  No subscription notification type is configured")
+		return ErrSubscriptionNoNotifications
 	}
 
 	return nil
@@ -112,8 +110,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 func (s *SubscriptionNotification) notifyViaWebhook() error {
 	buffer, err := json.Marshal(&s)
 	if err != nil {
-		log.Errorf("Error creating notification request: %s", err.Error())
-		return err
+		return agenterrors.Wrap(ErrSubscriptionData, err.Error())
 	}
 
 	fmt.Printf("%v\n", s)
@@ -127,7 +124,6 @@ func (s *SubscriptionNotification) notifyViaWebhook() error {
 
 	_, err = s.apiClient.Send(request)
 	if err != nil {
-		log.Errorf("Error sending notification webhook: %s", err.Error())
 		return err
 	}
 
