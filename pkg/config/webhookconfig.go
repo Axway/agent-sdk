@@ -24,6 +24,7 @@ type WebhookConfiguration struct {
 	webhookHeaders map[string]string
 }
 
+// NewWebhookConfig
 func NewWebhookConfig() WebhookConfig {
 	return &WebhookConfiguration{}
 }
@@ -43,7 +44,7 @@ func (c *WebhookConfiguration) GetWebhookHeaders() map[string]string {
 	return c.webhookHeaders
 }
 
-// GetURL - Returns the secret
+// GetSecret - Returns the secret
 func (c *WebhookConfiguration) GetSecret() string {
 	return c.Secret
 }
