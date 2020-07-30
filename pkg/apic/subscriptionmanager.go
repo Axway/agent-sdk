@@ -105,25 +105,18 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
-	subscription.ApicID = subscription.CatalogItemID
-	subscription.apicClient = sm.apicClient
-	if sm.apicClient.cfg.IsPublishToEnvironmentMode() {
-		// Get API Service info
-		// Get Consumer Instance
-		// Assign subscription ApicID with ApiServiceInstanceId
-		apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
-		if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-			consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name, nil)
-			if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
-				if err == nil && consumerInstance.Metadata != nil {
-					subscription.ApicID = consumerInstance.Metadata.ID
-				}
-			} else {
-				if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
-					for _, reference := range consumerInstance.Metadata.References {
-						if reference.Kind == "APIServiceInstance" {
-							subscription.ApicID = reference.ID
-						}
+	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
+	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
+		consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name, nil)
+		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
+			if err == nil && consumerInstance.Metadata != nil {
+				subscription.ApicID = consumerInstance.Metadata.ID
+			}
+		} else {
+			if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+				for _, reference := range consumerInstance.Metadata.References {
+					if reference.Kind == "APIServiceInstance" {
+						subscription.ApicID = reference.ID
 					}
 				}
 			}

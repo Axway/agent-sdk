@@ -30,20 +30,19 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, "Error central.url not set in config", err.Error())
 
 	centralConfig.URL = "aaa"
+	centralConfig.Mode = PublishToEnvironmentAndCatalog
 	err = cfg.Validate()
 
-	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
+	assert.NotNil(t, err)
+	assert.Equal(t, "Error central.environment not set in config", err.Error())
+
+	centralConfig.Environment = "eee"
+	err = cfg.Validate()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.teamID not set in config", err.Error())
 
 	centralConfig.TeamID = "aaa"
-	centralConfig.Mode = PublishToEnvironmentAndCatalog
-	err = cfg.Validate()
-	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.environment not set in config", err.Error())
-
-	centralConfig.Environment = "eee"
 	err = cfg.Validate()
 	assert.Nil(t, err)
 
@@ -84,18 +83,18 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	centralConfig.URL = "aaa"
 	err = cfg.Validate()
 
+	assert.NotNil(t, err)
+	assert.Equal(t, "Error central.environment not set in config", err.Error())
+
+	centralConfig.Environment = "111111"
+	err = cfg.Validate()
+
 	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.apicDeployment not set in config", err.Error())
 
 	centralConfig.APICDeployment = "aaa"
-	err = cfg.Validate()
-
-	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.environment not set in config", err.Error())
-
-	centralConfig.Environment = "111111"
 	err = cfg.Validate()
 
 	assert.Nil(t, err)

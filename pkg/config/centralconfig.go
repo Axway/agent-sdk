@@ -333,6 +333,8 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(errors.New("Error central.platformURL not set in config"))
 	}
 
+	c.validatePublishToEnvironmentModeConfig()
+
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
@@ -343,10 +345,6 @@ func (c *CentralConfiguration) validateConfig() {
 func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetTeamID() == "" {
 		exception.Throw(errors.New("Error central.teamID not set in config"))
-	}
-
-	if c.IsPublishToEnvironmentMode() {
-		c.validatePublishToEnvironmentModeConfig()
 	}
 
 	if c.GetPollInterval() <= 0 {

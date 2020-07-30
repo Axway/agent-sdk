@@ -93,15 +93,6 @@ func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APISe
 	return c.getAPIServerConsumerInstance(relationships[0].Value, nil)
 }
 
-func isValidAuthPolicy(auth string) bool {
-	for _, item := range ValidPolicies {
-		if item == auth {
-			return true
-		}
-	}
-	return false
-}
-
 // GetCatalogItemName -
 func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 	headers, err := c.createHeader()
