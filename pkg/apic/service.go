@@ -24,11 +24,6 @@ const (
 	addAPIServerRevisionSpec
 	addAPIServerInstanceSpec
 	deleteAPIServerSpec
-
-	addCatalogImage
-
-	updateCatalogRevision
-	getCatalogItem
 )
 
 // CreateService - Creates a catalog item or API service for the definition based on the agent mode
