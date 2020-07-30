@@ -24,7 +24,7 @@ type WebhookConfiguration struct {
 	webhookHeaders map[string]string
 }
 
-// NewWebhookConfig
+// NewWebhookConfig -
 func NewWebhookConfig() WebhookConfig {
 	return &WebhookConfiguration{}
 }
