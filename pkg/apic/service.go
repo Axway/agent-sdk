@@ -24,28 +24,21 @@ const (
 	addAPIServerRevisionSpec
 	addAPIServerInstanceSpec
 	deleteAPIServerSpec
-	addCatalog
+
 	addCatalogImage
-	updateCatalog
-	deleteCatalog
+
 	updateCatalogRevision
 	getCatalogItem
 )
 
 // CreateService - Creates a catalog item or API service for the definition based on the agent mode
 func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
-	if c.cfg.IsPublishToEnvironmentMode() {
-		return c.processAPIService(serviceBody)
-	}
-	return c.addCatalog(serviceBody)
+	return c.processAPIService(serviceBody)
 }
 
 // UpdateService - depending on the mode, ID might be a catalogID, a serverInstanceID, or a consumerInstanceID
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
-	if c.cfg.IsPublishToEnvironmentMode() {
-		return c.processAPIService(serviceBody)
-	}
-	return c.updateCatalog(ID, serviceBody)
+	return c.processAPIService(serviceBody)
 }
 
 // getCatalogItemAPIServerInfoProperty -
@@ -76,4 +69,3 @@ func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*
 	json.Unmarshal(response.Body, apiserverInfo)
 	return apiserverInfo, nil
 }
-

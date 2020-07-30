@@ -40,7 +40,6 @@ type Client interface {
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
-	DeleteCatalogItem(itemID string) error
 	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
@@ -267,15 +266,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, fmt.Errorf(statusErr, serverName, response.Code)
 	}
 	return response.Body, nil
-}
-
-// DeleteCatalogItem -
-func (c *ServiceClient) DeleteCatalogItem(itemID string) error {
-	// delete doesn't need a service body
-	serviceBody := ServiceBody{
-		AuthPolicy: Passthrough,
-	}
-	return c.deleteCatalogItem(itemID, serviceBody)
 }
 
 // GetConsumerInstanceForCatalogItem -

@@ -83,7 +83,6 @@ type CentralConfig interface {
 	GetProxyURL() string
 	SetProxyEnvironmentVariable() error
 	GetPollInterval() time.Duration
-	UpdateCatalogItemRevisionsURL(catalogItemID string) string
 	GetCatalogItemByIDURL(catalogItemID string) string
 }
 
@@ -298,11 +297,6 @@ func (c *CentralConfiguration) GetTagsToPublish() string {
 // GetCatalogItemByIDURL - Returns URL to get catalog item by id
 func (c *CentralConfiguration) GetCatalogItemByIDURL(catalogItemID string) string {
 	return c.GetCatalogItemsURL() + "/" + catalogItemID
-}
-
-// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
-func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
 // GetPollInterval - Returns the interval for polling subscriptions

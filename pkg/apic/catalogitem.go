@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,290 +12,6 @@ import (
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
-
-// AddToAPIC -
-func (c *ServiceClient) addCatalog(serviceBody ServiceBody) (string, error) {
-	// add createdBy as a tag
-	serviceBody.Tags["createdBy_"+serviceBody.CreatedBy] = ""
-
-	serviceBody.ServiceExecution = addCatalog
-	catalogID, err := c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemsURL())
-	if err != nil {
-		return "", err
-	}
-
-	log.Debugf("Catalog item with ID '%v' added", catalogID)
-
-	if serviceBody.Image != "" {
-		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
-		if err != nil {
-			log.Warn("Unable to add image to the catalog item. " + err.Error())
-		}
-	}
-	return catalogID, nil
-}
-
-func (c *ServiceClient) deployCatalog(serviceBody ServiceBody, method, url string) (string, error) {
-	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return "", fmt.Errorf("Unsupported security policy '%v' for FrontEndProxy '%s'. ", serviceBody.AuthPolicy, serviceBody.APIName)
-	}
-
-	buffer, err := c.createCatalogBody(serviceBody)
-	if err != nil {
-		log.Error("Error creating service item: ", err)
-		return "", err
-	}
-
-	return c.catalogDeployAPI(method, url, buffer)
-}
-
-func (c *ServiceClient) createCatalogBody(serviceBody ServiceBody) ([]byte, error) {
-	var spec []byte
-	var err error
-	switch serviceBody.ServiceExecution {
-	case addCatalog:
-		spec, err = c.marshalCatalogItemInit(serviceBody)
-	case addCatalogImage:
-		spec, err = c.marshalCatalogItemImage(serviceBody)
-	case updateCatalog:
-		spec, err = c.marshalCatalogItem(serviceBody)
-	case updateCatalogRevision:
-		spec, err = c.marshalCatalogItemRevision(serviceBody)
-	case deleteCatalog:
-		break // empty spec for delete
-	default:
-		return nil, errors.New("invalid catalog operation")
-	}
-	if err != nil {
-		return nil, err
-	}
-	return spec, nil
-}
-
-func (c *ServiceClient) marshalCatalogItemInit(serviceBody ServiceBody) ([]byte, error) {
-	enableSubscription := serviceBody.AuthPolicy != Passthrough
-
-	// assume that we use the default schema unless it one is enabled and registered
-	subSchema := c.DefaultSubscriptionSchema
-	if enableSubscription {
-		if c.RegisteredSubscriptionSchema != nil {
-			subSchema = c.RegisteredSubscriptionSchema
-		} else {
-			enableSubscription = false
-		}
-	}
-
-	if enableSubscription {
-		log.Debug("Subscriptions will be enabled for catalog items")
-	} else {
-		log.Debug("Subscriptions will be disabled for catalog items, either because the authPolicy is pass-through or there is not a registered subscription schema")
-	}
-
-	catalogSubscriptionSchema, err := subSchema.rawJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	definitionSubType, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
-
-	var catalogProperties []unifiedcatalog.CatalogItemProperty
-	if definitionSubType != Wsdl {
-		catalogProperties = []unifiedcatalog.CatalogItemProperty{
-			{
-				Key: "accessInfo",
-				Value: map[string]interface{}{
-					"authPolicy": serviceBody.AuthPolicy,
-					"url":        serviceBody.URL,
-				},
-			},
-		}
-	} else {
-		catalogProperties = []unifiedcatalog.CatalogItemProperty{}
-	}
-
-	newCatalogItem := unifiedcatalog.CatalogItemInit{
-		DefinitionType:     API,
-		DefinitionSubType:  definitionSubType,
-		DefinitionRevision: 1,
-		Name:               serviceBody.NameToPush,
-		OwningTeamId:       serviceBody.TeamID,
-		Description:        serviceBody.Description,
-		Properties:         catalogProperties,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
-		Visibility:         "RESTRICTED", // default value
-		Subscription: unifiedcatalog.CatalogItemSubscriptionDefinition{
-			Enabled:         enableSubscription,
-			AutoSubscribe:   true,
-			AutoUnsubscribe: false,
-			Properties: []unifiedcatalog.CatalogItemProperty{{
-				Key:   "profile",
-				Value: catalogSubscriptionSchema,
-			}},
-		},
-		Revision: unifiedcatalog.CatalogItemInitRevision{
-			Version: serviceBody.Version,
-			State:   PublishedState,
-			Properties: []unifiedcatalog.CatalogItemProperty{
-				{
-					Key:   "documentation",
-					Value: json.RawMessage(string(serviceBody.Documentation)),
-				},
-				{
-					Key:   revisionPropertyKey,
-					Value: c.getRawMessageFromSwagger(serviceBody),
-				},
-			},
-		},
-	}
-
-	return json.Marshal(newCatalogItem)
-}
-
-// marshal the CatalogItem -
-func (c *ServiceClient) marshalCatalogItem(serviceBody ServiceBody) ([]byte, error) {
-
-	definitionSubType, _ := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
-
-	newCatalogItem := unifiedcatalog.CatalogItem{
-		DefinitionType:    API,
-		DefinitionSubType: definitionSubType,
-
-		DefinitionRevision: 1,
-		Name:               serviceBody.NameToPush,
-		OwningTeamId:       serviceBody.TeamID,
-		Description:        serviceBody.Description,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
-		Visibility:         "RESTRICTED",   // default value
-		State:              PublishedState, //default
-		LatestVersionDetails: unifiedcatalog.CatalogItemRevision{
-			Version: serviceBody.Version,
-			State:   PublishedState,
-		},
-	}
-
-	return json.Marshal(newCatalogItem)
-}
-
-// marshal the CatalogItem revision
-func (c *ServiceClient) marshalCatalogItemRevision(serviceBody ServiceBody) ([]byte, error) {
-
-	_, revisionPropertyKey := c.getDefinitionSubtypeAndRevisionKey(serviceBody)
-
-	catalogItemRevision := unifiedcatalog.CatalogItemInitRevision{
-		Version: serviceBody.Version,
-		State:   PublishedState,
-		Properties: []unifiedcatalog.CatalogItemProperty{
-			{
-				Key:   "documentation",
-				Value: json.RawMessage(string(serviceBody.Documentation)),
-			},
-			{
-				Key:   revisionPropertyKey,
-				Value: c.getRawMessageFromSwagger(serviceBody),
-			},
-		},
-	}
-
-	return json.Marshal(catalogItemRevision)
-}
-
-// marshals the catalog image body
-func (c *ServiceClient) marshalCatalogItemImage(serviceBody ServiceBody) ([]byte, error) {
-	catalogImage := unifiedcatalog.CatalogItemImage{
-		Data:   serviceBody.ImageContentType,
-		Base64: serviceBody.Image,
-	}
-	return json.Marshal(catalogImage)
-}
-
-func (c *ServiceClient) getDefinitionSubtypeAndRevisionKey(serviceBody ServiceBody) (definitionSubType, revisionPropertyKey string) {
-	if serviceBody.ResourceType == Wsdl {
-		definitionSubType = Wsdl
-		revisionPropertyKey = Specification
-	} else {
-		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-		definitionSubType = SwaggerV2
-		revisionPropertyKey = Swagger
-		if oasVer.Exists() {
-			// OAS v3
-			definitionSubType = Oas3
-			revisionPropertyKey = Specification
-		}
-	}
-	return
-}
-
-func (c *ServiceClient) getRawMessageFromSwagger(serviceBody ServiceBody) (rawMsg json.RawMessage) {
-	if serviceBody.ResourceType == Wsdl {
-		str := base64.StdEncoding.EncodeToString(serviceBody.Swagger)
-		rawMsg = json.RawMessage(strconv.Quote(str))
-	} else {
-		rawMsg = json.RawMessage(serviceBody.Swagger)
-	}
-	return
-}
-
-// GetCatalogItemName -
-func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return "", err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByIDURL(ID),
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return "", err
-	}
-	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
-	}
-
-	name := gjson.Get(string(response.Body), "name").String()
-	return name, nil
-}
-
-// UpdateCatalogItemRevisions -
-func (c *ServiceClient) UpdateCatalogItemRevisions(ID string, serviceBody ServiceBody) (string, error) {
-	serviceBody.ServiceExecution = updateCatalogRevision
-	return c.deployCatalog(serviceBody, http.MethodPost, c.cfg.UpdateCatalogItemRevisionsURL(ID))
-}
-
-// GetCatalogItemRevision -
-func (c *ServiceClient) GetCatalogItemRevision(ID string) (string, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return "", err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     c.cfg.GetCatalogItemByIDURL(ID),
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return "", err
-	}
-	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
-	}
-
-	revisions := gjson.Get(string(response.Body), "availableRevisions")
-	availableRevisions := make([]int, 0)
-	json.Unmarshal([]byte(revisions.Raw), &availableRevisions)
-	revision := availableRevisions[len(availableRevisions)-1] // get the latest revisions
-	return strconv.Itoa(revision), nil
-}
 
 // getCatalogItemIDForConsumerInstance -
 func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
@@ -388,32 +103,30 @@ func isValidAuthPolicy(auth string) bool {
 	return false
 }
 
-// updateCatalog -
-func (c *ServiceClient) updateCatalog(catalogID string, serviceBody ServiceBody) (string, error) {
-	serviceBody.ServiceExecution = updateCatalog
-	_, err := c.deployCatalog(serviceBody, http.MethodPut, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
+// GetCatalogItemName -
+func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
+	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
 	}
 
-	if serviceBody.Image != "" {
-		serviceBody.ServiceExecution = addCatalogImage
-		_, err = c.deployCatalog(serviceBody, http.MethodPost, c.cfg.GetCatalogItemImageURL(catalogID))
-		if err != nil {
-			log.Warn("Unable to add image to the catalog item. " + err.Error())
-		}
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetCatalogItemByIDURL(ID),
+		Headers: headers,
 	}
 
-	version, err := c.GetCatalogItemRevision(catalogID)
-	i, err := strconv.Atoi(version)
-
-	serviceBody.Version = strconv.Itoa(i + 1)
-	_, err = c.UpdateCatalogItemRevisions(catalogID, serviceBody)
+	response, err := c.apiClient.Send(request)
 	if err != nil {
 		return "", err
 	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return "", errors.New(strconv.Itoa(response.Code))
+	}
 
-	return catalogID, nil
+	name := gjson.Get(string(response.Body), "name").String()
+	return name, nil
 }
 
 // RemoveActiveSubscriptionsForCatalogItem - set all active subscriptions for the catalogItem to unsubscribed
@@ -480,50 +193,6 @@ func (c *ServiceClient) unsubscribeCatalogItem(catalogItemID string) (int, error
 	}
 
 	return 0, nil
-}
-
-// catalogDeployAPI -
-func (c *ServiceClient) catalogDeployAPI(method, url string, buffer []byte) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
-
-	headers, err := c.createHeader()
-	if err != nil {
-		return "", err
-	}
-
-	request := coreapi.Request{
-		Method:      method,
-		URL:         url,
-		QueryParams: nil,
-		Headers:     headers,
-		Body:        buffer,
-	}
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return "", err
-	}
-
-	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated || response.Code == http.StatusNoContent) {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
-	}
-
-	itemID := gjson.Get(string(response.Body), "id").String()
-	return itemID, nil
-}
-
-// deleteCatalogItem -
-func (c *ServiceClient) deleteCatalogItem(catalogID string, serviceBody ServiceBody) error {
-	serviceBody.ServiceExecution = deleteCatalog
-	_, err := c.deployCatalog(serviceBody, http.MethodDelete, c.cfg.GetCatalogItemsURL()+"/"+catalogID)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
