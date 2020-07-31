@@ -40,13 +40,11 @@ type Client interface {
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
-	DeleteCatalogItem(itemID string) error
 	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
-	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
-	RemoveActiveSubscriptionsForCatalogItem(catalogItemID string) error
 	GetUserEmailAddress(ID string) (string, error)
+	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
 	GetCatalogItemName(ID string) (string, error)
 }
 
@@ -166,19 +164,6 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
-	// Check that we can reach the API Manager catalog
-	// only concerned if mode: PublishToCatalog
-	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
-		err := c.checkCatalogHealth()
-		if err != nil {
-			s = hc.Status{
-				Result:  hc.FAIL,
-				Details: err.Error(),
-			}
-		}
-		// Return our response
-		return &s
-	}
 
 	// Check that appropriate settings for the API server are set
 	err = c.checkAPIServerHealth()
@@ -285,15 +270,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrRequestQuery
 	}
 
-}
-
-// DeleteCatalogItem -
-func (c *ServiceClient) DeleteCatalogItem(itemID string) error {
-	// delete doesn't need a service body
-	serviceBody := ServiceBody{
-		AuthPolicy: Passthrough,
-	}
-	return c.deleteCatalogItem(itemID, serviceBody)
 }
 
 // GetConsumerInstanceForCatalogItem -

@@ -1,16 +1,13 @@
 package apic
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	unifiedcatalog "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
 
@@ -59,133 +56,6 @@ func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
 	}
 	c := New(cfg)
 	return c.(*ServiceClient), cfg
-}
-func TestCreateCatalogItemBodyForAdd(t *testing.T) {
-	// set the config values
-	c, _ := createServiceClient()
-	tags := make(map[string]interface{})
-	tags["key1"] = "val1"
-	tags["key2"] = "val2"
-
-	jsonFile1, _ := os.Open("./testdata/swagger1.json") // No Security
-	swaggerFile1, _ := ioutil.ReadAll(jsonFile1)
-	authPolicy := determineAuthPolicyFromSwagger(&swaggerFile1)
-	desc := gjson.Get(string(swaggerFile1), "info.description")
-	documentation := desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS API Gateway"
-	}
-	docBytes, _ := json.Marshal(documentation)
-
-	serviceBody := ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile1,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes1, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem1 unifiedcatalog.CatalogItemInit
-	json.Unmarshal(catalogBytes1, &catalogItem1)
-
-	// Validate the security is pass-through
-	if catalogItem1.Properties[0].Value.(map[string]interface{})["authPolicy"] != "pass-through" {
-		t.Error("swagger1.json has no security, therefore the AuthPolicy should have been pass-through. Found: ", catalogItem1.Properties[0].Value.(map[string]interface{})["authPolicy"])
-	}
-
-	jsonFile2, _ := os.Open("./testdata/swagger2.json") // API Key
-	swaggerFile2, _ := ioutil.ReadAll(jsonFile2)
-	authPolicy = determineAuthPolicyFromSwagger(&swaggerFile2)
-	desc = gjson.Get(string(swaggerFile2), "info.description")
-	documentation = desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS API Gateway"
-	}
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile2,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes2, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem2 unifiedcatalog.CatalogItemInit
-	json.Unmarshal(catalogBytes2, &catalogItem2)
-
-	// Validate the security is verify-api-key
-	if catalogItem2.Properties[0].Value.(map[string]interface{})["authPolicy"] != "verify-api-key" {
-		t.Error("swagger2.json has security, therefore the AuthPolicy should have been verify-api-key. Found: ", catalogItem2.Properties[0].Value.(map[string]interface{})["authPolicy"])
-	}
-
-	jsonFile3, _ := os.Open("./testdata/swagger3.json") // Oauth
-	swaggerFile3, _ := ioutil.ReadAll(jsonFile3)
-	authPolicy = determineAuthPolicyFromSwagger(&swaggerFile3)
-	desc = gjson.Get(string(swaggerFile1), "info.description")
-	documentation = desc.Str
-	if documentation == "" {
-		documentation = "API imported from Axway API Gateway"
-	}
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From Axway API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile3,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes3, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem3 unifiedcatalog.CatalogItemInit
-	json.Unmarshal(catalogBytes3, &catalogItem3)
-
-	// Validate the security is verify-api-key
-	if catalogItem3.Properties[0].Value.(map[string]interface{})["authPolicy"] != "verify-oauth-token" {
-		t.Error("swagger3.json has security, therefore the AuthPolicy should have been verify-oauth-token. Found: ", catalogItem3.Properties[0].Value.(map[string]interface{})["authPolicy"])
-	}
-
-	wsdlFile, _ := os.Open("./testdata/weather.xml") // WSDL
-	wsdlFileBytes, _ := ioutil.ReadAll(wsdlFile)
-	documentation = "API imported from Axway API Gateway"
-
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From Axway API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    Passthrough,
-		Swagger:       wsdlFileBytes,
-		Documentation: docBytes,
-		Tags:          tags,
-		ResourceType:  Wsdl,
-	}
-
-	catalogBytes3, _ = c.marshalCatalogItemInit(serviceBody)
-
-	json.Unmarshal(catalogBytes3, &catalogItem3)
-
-	// Validate the security is verify-api-key
-	assert.Equal(t, Specification, catalogItem3.Revision.Properties[1].Key)
-	assert.Equal(t, Wsdl, catalogItem3.DefinitionSubType)
 }
 
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
