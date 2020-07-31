@@ -353,6 +353,10 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
+	if !c.IsPublishToEnvironmentMode() {
+		exception.Throw(errors.New("Error central.mode not configured for publishToEnvironment or publishToEnvironmentAndCatalog"))
+	}
+
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
