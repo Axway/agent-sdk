@@ -82,6 +82,15 @@ func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, erro
 	return itemID, err
 }
 
+func isValidAuthPolicy(auth string) bool {
+	for _, item := range ValidPolicies {
+		if item == auth {
+			return true
+		}
+	}
+	return false
+}
+
 // getAPIServerConsumerInstance -
 func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string, queryParams map[string]string) (*APIServer, error) {
 	headers, err := c.createHeader()

@@ -106,12 +106,7 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
 	c.RegisteredSubscriptionSchema = subscriptionSchema
 
-	// nothing to do if not environment mode
-	if !c.cfg.IsPublishToEnvironmentMode() {
-		return nil
-	}
-
-	// Add API Server resource - SubscriptionDefinition
+	//Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
 
 	headers, err := c.createHeader()
@@ -146,31 +141,31 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
 	c.RegisteredSubscriptionSchema = subscriptionSchema
-	if c.cfg.IsPublishToEnvironmentMode() {
-		// Add API Server resource - SubscriptionDefinition
-		buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
 
-		headers, err := c.createHeader()
-		if err != nil {
-			return err
-		}
+	// Add API Server resource - SubscriptionDefinition
+	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
 
-		request := coreapi.Request{
-			Method:  coreapi.PUT,
-			URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
-			Headers: headers,
-			Body:    buffer,
-		}
-
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.PUT)
-		}
-		if !(response.Code == http.StatusOK) {
-			logResponseErrors(response.Body)
-			return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
-		}
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
 	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.PUT)
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
+	}
+
 	return nil
 }
 

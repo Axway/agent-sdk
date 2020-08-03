@@ -51,7 +51,7 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToCatalog", "Agent Mode")
+	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
 	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
@@ -128,7 +128,7 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 
 func TestRootCmdConfigDefault(t *testing.T) {
 	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		assert.Equal(t, corecfg.PublishToCatalog, centralConfig.GetAgentMode())
+		assert.Equal(t, corecfg.PublishToEnvironmentAndCatalog, centralConfig.GetAgentMode())
 		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamID())
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
