@@ -281,6 +281,44 @@ func (c *ServiceClient) deleteConsumerInstance(name string) error {
 	return nil
 }
 
+// getConsumerInstanceByID
+func (c *ServiceClient) getConsumerInstanceByID(consumerInstanceID string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Get consumer instance by id: %s", consumerInstanceID)
+
+	params := map[string]string{
+		"query": fmt.Sprintf("metadata.id==%s", consumerInstanceID),
+	}
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         c.cfg.GetAPIServerConsumerInstancesURL(),
+		Headers:     headers,
+		QueryParams: params,
+	}
+
+	response, err := c.apiClient.Send(request)
+
+	if err != nil {
+		return nil, err
+	}
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+
+	consumerInstances := make([]*APIServer, 0)
+	json.Unmarshal(response.Body, &consumerInstances)
+	if len(consumerInstances) == 0 {
+		return nil, errors.New("Unable to find consumerInstance using consumerInstanceID " + consumerInstanceID)
+	}
+
+	return consumerInstances[0], nil
+}
+
 // isNewAPI -
 func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
 	var token string
