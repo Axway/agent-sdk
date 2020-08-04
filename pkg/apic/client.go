@@ -40,7 +40,6 @@ type Client interface {
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
-	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
 	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
@@ -271,11 +270,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrRequestQuery
 	}
 
-}
-
-// GetConsumerInstanceForCatalogItem -
-func (c *ServiceClient) GetConsumerInstanceForCatalogItem(itemID string) (*APIServer, error) {
-	return c.getConsumerInstanceForCatalogItem(itemID)
 }
 
 // GetCatalogItemIDForConsumerInstance -
