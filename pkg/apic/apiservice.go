@@ -234,6 +234,11 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
 
+	autoSubscribe := true
+	if c.DefaultSubscriptionApprovalWebhook != nil && c.DefaultSubscriptionApprovalWebhook.IsConfigured() {
+		autoSubscribe = false
+	}
+
 	spec := v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		ApiServiceInstance: name,
@@ -246,7 +251,7 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		Documentation:      doc,
 		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
-			AutoSubscribe:          !c.DefaultSubscriptionApprovalWebhook.IsConfigured(),
+			AutoSubscribe:          autoSubscribe,
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
 	}
@@ -617,11 +622,6 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 // RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
 // per environment
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
-	// nothing to do if not environment mode
-	if !c.cfg.IsPublishToEnvironmentMode() {
-		return nil
-	}
-
 	// if the default is already set up, do nothing
 	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
 	if !webhookCfg.IsConfigured() {
