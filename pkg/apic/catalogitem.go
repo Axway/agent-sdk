@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	unifiedcatalog "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	"github.com/tidwall/gjson"
 )
 
@@ -53,44 +52,6 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	}
 
 	return catalogIDs[0], nil
-}
-
-// getConsumerInstanceForCatalogItem -
-func (c *ServiceClient) getConsumerInstanceForCatalogItem(itemID string) (*APIServer, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	params := map[string]string{
-		"query": "type==API_SERVER_CONSUMER_INSTANCE_NAME",
-	}
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetCatalogItemRelationshipsURL(itemID),
-		Headers:     headers,
-		QueryParams: params,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
-	}
-
-	relationships := make([]unifiedcatalog.EntityRelationship, 0)
-	err = json.Unmarshal(response.Body, &relationships)
-	if err != nil {
-		return nil, err
-	}
-	if len(relationships) == 0 {
-		return nil, errors.New("No relationships found")
-	}
-
-	return c.getAPIServerConsumerInstance(relationships[0].Value, nil)
 }
 
 // GetCatalogItemName -
