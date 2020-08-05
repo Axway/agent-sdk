@@ -39,6 +39,7 @@ type Summary struct {
 	Team         string       `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
+	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
 }
 
