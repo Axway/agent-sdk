@@ -53,7 +53,7 @@ func FormatProxyID(proxyID string) string {
 	return SummaryEventProxyIDPrefix + proxyID
 }
 
-// FormatApplicationID - Returns the prefixed proxyID for summary event.
-func FormatApplicationID(proxyID string) string {
-	return SummaryEventApplicationIDPrefix + proxyID
+// FormatApplicationID - Returns the prefixed applicationID for summary event.
+func FormatApplicationID(applicationID string) string {
+	return SummaryEventApplicationIDPrefix + applicationID
 }
