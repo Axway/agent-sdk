@@ -42,9 +42,11 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 	// Check to see if this was a 'major change'.  Major changes expect the API to be unpublished.
 	// Unpublished means that there is no consumer instance.  The assumption is, if a consumer instance doesn't exist, then its a 'major change'
 	// since api has to be in an unpublished state
-	if !c.consumerInstanceExists(sanitizedName) {
-		// add api revision
-		return c.addNewResources(serviceBody, sanitizedName)
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		if !c.consumerInstanceExists(sanitizedName) {
+			// add api revision
+			return c.addNewResources(serviceBody, sanitizedName)
+		}
 	}
 
 	// update api revision
