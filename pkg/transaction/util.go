@@ -52,3 +52,8 @@ func MarshalHeadersAsJSONString(headers map[string]string) string {
 func FormatProxyID(proxyID string) string {
 	return SummaryEventProxyIDPrefix + proxyID
 }
+
+// FormatApplicationID - Returns the prefixed proxyID for summary event.
+func FormatApplicationID(proxyID string) string {
+	return SummaryEventApplicationIDPrefix + proxyID
+}
