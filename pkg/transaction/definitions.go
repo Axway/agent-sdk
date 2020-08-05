@@ -9,6 +9,9 @@ const TypeTransactionEvent = "transactionEvent"
 // SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 const SummaryEventProxyIDPrefix = "remoteApiId_"
 
+// SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
+const SummaryEventApplicationIDPrefix = "remoteAppId_"
+
 // LogEvent - Log event to be sent to Condor
 type LogEvent struct {
 	Version            string   `json:"version"`
@@ -28,16 +31,22 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	Status       string `json:"status,omitempty"`
-	StatusDetail string `json:"statusDetail,omitempty"`
-	Duration     int    `json:"duration,omitempty"`
-	Application  string `json:"application,omitempty"`
-	Product      string `json:"product,omitempty"`
-	Team         string `json:"team,omitempty"`
+	Status       string       `json:"status,omitempty"`
+	StatusDetail string       `json:"statusDetail,omitempty"`
+	Duration     int          `json:"duration,omitempty"`
+	Application  *Application `json:"application,omitempty"`
+	Product      string       `json:"product,omitempty"`
+	Team         string       `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
 	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
+}
+
+// Application  - Represnts the application used in transaction summary event
+type Application struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // Proxy - Represents the proxy definition in summary event
@@ -49,8 +58,8 @@ type Proxy struct {
 
 //Runtime - Represents the runtime group details if applicable in summary event
 type Runtime struct {
-	ID       string `json:"id,omitempty"`
-	Name     string `json:"name,omitempty"`
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // EntryPoint - represents the entry point details for API in summary event
