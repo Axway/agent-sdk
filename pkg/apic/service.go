@@ -3,6 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -28,12 +29,19 @@ const (
 
 // CreateService - Creates a catalog item or API service for the definition based on the agent mode
 func (c *ServiceClient) CreateService(serviceBody ServiceBody) (string, error) {
-	return c.processAPIService(serviceBody)
+	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
+		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
+	}
+
+	return c.createService(serviceBody)
 }
 
 // UpdateService - depending on the mode, ID might be a catalogID, a serverInstanceID, or a consumerInstanceID
 func (c *ServiceClient) UpdateService(ID string, serviceBody ServiceBody) (string, error) {
-	return c.processAPIService(serviceBody)
+	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
+		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
+	}
+	return c.updateService(serviceBody)
 }
 
 // getCatalogItemAPIServerInfoProperty -

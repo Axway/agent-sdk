@@ -18,60 +18,79 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// processAPIService - This function will add or update the api service
-// If the api doesn't exist, it will add the service, revision, and instance.
-// If the api does exist, it will update the revision and instance
-func (c *ServiceClient) processAPIService(serviceBody ServiceBody) (string, error) {
-	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		return "", fmt.Errorf("Unsupported security policy '%v'. ", serviceBody.AuthPolicy)
-	}
-
-	itemID := ""
-	var err error
-	httpMethod := http.MethodPut
+// createService - creates new APIServerService and necessary resources
+func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
-	servicesURL := c.cfg.GetAPIServerServicesURL() + "/" + sanitizedName
-	revisionsURL := c.cfg.GetAPIServerServicesRevisionsURL() + "/" + sanitizedName
-	serviceInstancesURL := c.cfg.GetAPIServerServicesInstancesURL() + "/" + sanitizedName
-	consumerInstancesURL := c.cfg.GetAPIServerConsumerInstancesURL() + "/" + sanitizedName
 
-	// Verify if the api already exists
-	if c.isNewAPI(serviceBody) {
-		// add api
-		httpMethod = http.MethodPost
-		servicesURL := c.cfg.GetAPIServerServicesURL()
-		revisionsURL = c.cfg.GetAPIServerServicesRevisionsURL()
-		serviceInstancesURL = c.cfg.GetAPIServerServicesInstancesURL()
-		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		_, err = c.processAPIServerService(serviceBody, httpMethod, servicesURL, sanitizedName)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// add/update api revision
-	_, err = c.processAPIServerRevision(serviceBody, httpMethod, revisionsURL, sanitizedName)
+	// add api
+	_, err := c.processAPIServerService(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesURL(), sanitizedName)
 	if err != nil {
 		return "", err
 	}
 
-	// add/update api instance
-	itemID, err = c.processAPIServerInstance(serviceBody, httpMethod, serviceInstancesURL, sanitizedName)
+	return c.addNewResources(serviceBody, sanitizedName)
+}
+
+// updateService - updates APIServerService based on  sanitized name and necessary resources.
+func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
+	sanitizedName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
+	_, err := c.processAPIServerService(serviceBody, http.MethodPut, c.cfg.GetAPIServerServicesURL()+"/"+sanitizedName, sanitizedName)
 	if err != nil {
 		return "", err
 	}
 
-	// add/update consumer instance
+	// Check to see if this was a 'major change'.  Major changes expect the API to be unpublished.
+	// Unpublished means that there is no consumer instance.  The assumption is, if a consumer instance doesn't exist, then its a 'major change'
+	// since api has to be in an unpublished state
+	if !c.consumerInstanceExists(sanitizedName) {
+		// add api revision
+		return c.addNewResources(serviceBody, sanitizedName)
+	}
+
+	// update api revision
+	_, err = c.processAPIServerRevision(serviceBody, http.MethodPut, c.cfg.GetAPIServerServicesRevisionsURL()+"/"+sanitizedName, sanitizedName)
+	if err != nil {
+		return "", err
+	}
+
+	// update api instance
+	itemID, err := c.processAPIServerInstance(serviceBody, http.MethodPut, c.cfg.GetAPIServerServicesInstancesURL()+"/"+sanitizedName, sanitizedName)
+	if err != nil {
+		return "", err
+	}
+
+	// update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		if !c.consumerInstanceExists(sanitizedName) {
-			httpMethod = http.MethodPost
-			consumerInstancesURL = c.cfg.GetAPIServerConsumerInstancesURL()
+		itemID, err = c.processAPIConsumerInstance(serviceBody, http.MethodPut, c.cfg.GetAPIServerConsumerInstancesURL()+"/"+sanitizedName, sanitizedName)
+		if err != nil {
+			return "", err
 		}
-		itemID, err = c.processAPIConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
+	}
+	return itemID, err
+}
+
+// addNewResources - This is being called from
+//	1. createService - when a new api is being published
+//	2. updateService - when a major change to an existing api is being published, ie. security profile, version
+//		1. add new API Service Revision
+//		2. add new API Service Instance
+//		3. add new API Service Consumer Instance
+func (c *ServiceClient) addNewResources(serviceBody ServiceBody, sanitizedName string) (string, error) {
+	// add api revision
+	_, err := c.processAPIServerRevision(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesRevisionsURL(), sanitizedName)
+	if err != nil {
+		return "", err
+	}
+
+	// add api instance
+	itemID, err := c.processAPIServerInstance(serviceBody, http.MethodPost, c.cfg.GetAPIServerServicesInstancesURL(), sanitizedName)
+	if err != nil {
+		return "", err
+	}
+
+	// add consumer instance
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		itemID, err = c.processAPIConsumerInstance(serviceBody, http.MethodPost, c.cfg.GetAPIServerConsumerInstancesURL(), sanitizedName)
 		if err != nil {
 			return "", err
 		}
@@ -317,28 +336,6 @@ func (c *ServiceClient) getConsumerInstanceByID(consumerInstanceID string) (*API
 	}
 
 	return consumerInstances[0], nil
-}
-
-// isNewAPI -
-func (c *ServiceClient) isNewAPI(serviceBody ServiceBody) bool {
-	var token string
-	apiName := strings.ToLower(serviceBody.APIName)
-	request, err := http.NewRequest(http.MethodGet, c.cfg.GetAPIServerServicesURL()+"/"+sanitizeAPIName(serviceBody.APIName+serviceBody.Stage)+"?fields=", nil)
-
-	if token, err = c.tokenRequester.GetToken(); err != nil {
-		log.Error("Could not get token")
-	}
-
-	request.Header.Add("X-Axway-Tenant-Id", c.cfg.GetTenantID())
-	request.Header.Add("Authorization", "Bearer "+token)
-	request.Header.Add("Content-Type", "application/json")
-
-	response, _ := http.DefaultClient.Do(request)
-	if response.StatusCode == http.StatusNotFound {
-		log.Debugf("New api found to deploy: %s", apiName)
-		return true
-	}
-	return false
 }
 
 //getRevisionDefinitionType -
