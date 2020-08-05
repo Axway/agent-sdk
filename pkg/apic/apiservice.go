@@ -15,6 +15,7 @@ import (
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -234,9 +235,9 @@ func (c *ServiceClient) processAPIConsumerInstance(serviceBody ServiceBody, http
 		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
 
-	autoSubscribe := true
-	if c.DefaultSubscriptionApprovalWebhook != nil && c.DefaultSubscriptionApprovalWebhook.IsConfigured() {
-		autoSubscribe = false
+	autoSubscribe := false
+	if c.cfg.GetSubscriptionApprovalMode() == corecfg.AutoApproval {
+		autoSubscribe = true
 	}
 
 	spec := v1alpha1.ConsumerInstanceSpec{

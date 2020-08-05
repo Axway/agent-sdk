@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+
+	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // WebhookConfig - Interface for webhook config
@@ -53,9 +55,11 @@ func (c *WebhookConfiguration) GetSecret() string {
 func (c *WebhookConfiguration) Validate() error {
 	if webhookURL := c.GetURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("Error central.subscriptions.webhook.URL not a valid URL")
+			return errors.New("Error central.subscriptions.approvalWebhook.URL is not a valid URL")
 		}
+		log.Debug("Subscription approval webhook notification set")
 	}
+
 	// (example header) Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
 	c.webhookHeaders = map[string]string{}
 	c.Headers = strings.Replace(c.Headers, ", ", ",", -1)

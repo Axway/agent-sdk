@@ -32,6 +32,13 @@ const (
 	PublishToEnvironmentAndCatalog
 )
 
+// subscription approval types
+const (
+	ManualApproval = "manual"
+	AutoApproval   = "auto"
+	CustomApproval = "custom"
+)
+
 // AgentModeStringMap - Map the Agent Mode constant to a string
 var AgentModeStringMap = map[AgentMode]string{
 	PublishToEnvironment:           "publishToEnvironment",
@@ -80,6 +87,7 @@ type CentralConfig interface {
 	Validate() error
 	GetSubscriptionConfig() SubscriptionConfig
 	GetSubscriptionApprovalWebhookConfig() WebhookConfig
+	GetSubscriptionApprovalMode() string
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -107,7 +115,8 @@ type CentralConfiguration struct {
 	PollInterval                time.Duration `config:"pollInterval"`
 	ProxyURL                    string        `config:"proxyUrl"`
 	environmentID               string
-	SubscriptionApprovalWebhook WebhookConfig `config:"approvalWebhook"`
+	SubscriptionApprovalMode    string        `config:"approvalMode"`
+	SubscriptionApprovalWebhook WebhookConfig `config:"subscriptions"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -120,6 +129,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		TLS:                         NewTLSConfig(),
 		PollInterval:                60 * time.Second,
 		PlatformURL:                 "https://platform.axway.com",
+		SubscriptionApprovalMode:    ManualApproval,
 		SubscriptionApprovalWebhook: NewWebhookConfig(),
 	}
 }
@@ -182,6 +192,11 @@ func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
+}
+
+// GetSubscriptionApprovalMode - Returns the subscription approval mode
+func (c *CentralConfiguration) GetSubscriptionApprovalMode() string {
+	return c.SubscriptionApprovalMode
 }
 
 // GetTeamID - Returns the team ID
@@ -382,6 +397,14 @@ func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
 
+	switch c.GetSubscriptionApprovalMode() {
+	case ManualApproval, AutoApproval, CustomApproval:
+		// these are all OK
+	case "":
+	default:
+		exception.Throw(errors.New("Error central.subscriptions.approvalmode set to incorrect value in config: " + c.GetSubscriptionApprovalMode()))
+	}
+
 	if c.APIServerVersion == "" {
 		exception.Throw(errors.New("Error central.apiServerVersion not set in config"))
 	}
@@ -397,32 +420,33 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 }
 
 const (
-	pathTenantID                           = "central.tenantId"
-	pathURL                                = "central.url"
-	pathPlatformURL                        = "central.platformURL"
-	pathAuthPrivateKey                     = "central.auth.privateKey"
-	pathAuthPublicKey                      = "central.auth.publicKey"
-	pathAuthKeyPassword                    = "central.auth.keyPassword"
-	pathAuthURL                            = "central.auth.url"
-	pathAuthRealm                          = "central.auth.realm"
-	pathAuthClientID                       = "central.auth.clientId"
-	pathAuthTimeout                        = "central.auth.timeout"
-	pathSSLNextProtos                      = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify              = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites                    = "central.ssl.cipherSuites"
-	pathSSLMinVersion                      = "central.ssl.minVersion"
-	pathSSLMaxVersion                      = "central.ssl.maxVersion"
-	pathEnvironment                        = "central.environment"
-	pathDeployment                         = "central.deployment"
-	pathMode                               = "central.mode"
-	pathTeamID                             = "central.teamId"
-	pathPollInterval                       = "central.pollInterval"
-	pathProxyURL                           = "central.proxyUrl"
-	pathAPIServerVersion                   = "central.apiServerVersion"
-	pathAdditionalTags                     = "central.additionalTags"
-	pathSubscriptionApprovalWebhookURL     = "central.subscriptions.approvalWebhook.url"
-	pathSubscriptionApprovalWebhookHeaders = "central.subscriptions.approvalWebhook.headers"
-	pathSubscriptionApprovalWebhookSecret  = "central.subscriptions.approvalWebhook.authSecret"
+	pathTenantID                            = "central.tenantId"
+	pathURL                                 = "central.url"
+	pathPlatformURL                         = "central.platformURL"
+	pathAuthPrivateKey                      = "central.auth.privateKey"
+	pathAuthPublicKey                       = "central.auth.publicKey"
+	pathAuthKeyPassword                     = "central.auth.keyPassword"
+	pathAuthURL                             = "central.auth.url"
+	pathAuthRealm                           = "central.auth.realm"
+	pathAuthClientID                        = "central.auth.clientId"
+	pathAuthTimeout                         = "central.auth.timeout"
+	pathSSLNextProtos                       = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify               = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites                     = "central.ssl.cipherSuites"
+	pathSSLMinVersion                       = "central.ssl.minVersion"
+	pathSSLMaxVersion                       = "central.ssl.maxVersion"
+	pathEnvironment                         = "central.environment"
+	pathDeployment                          = "central.deployment"
+	pathMode                                = "central.mode"
+	pathTeamID                              = "central.teamId"
+	pathPollInterval                        = "central.pollInterval"
+	pathProxyURL                            = "central.proxyUrl"
+	pathAPIServerVersion                    = "central.apiServerVersion"
+	pathAdditionalTags                      = "central.additionalTags"
+	pathSubscriptionsApprovalMode           = "central.subscriptions.approvalMode"
+	pathSubscriptionsApprovalWebhookURL     = "central.subscriptions.approvalWebhook.url"
+	pathSubscriptionsApprovalWebhookHeaders = "central.subscriptions.approvalWebhook.headers"
+	pathSubscriptionsApprovalWebhookSecret  = "central.subscriptions.approvalWebhook.authSecret"
 )
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -456,9 +480,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 	}
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
-	props.AddStringProperty(pathSubscriptionApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
-	props.AddStringProperty(pathSubscriptionApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, custom, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
 }
 
 // ParseCentralConfig - Parses the Central Config values form teh command line
@@ -485,11 +510,12 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
-		ProxyURL: proxyURL,
+		ProxyURL:                 proxyURL,
+		SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 		SubscriptionApprovalWebhook: &WebhookConfiguration{
-			URL:     props.StringPropertyValue(pathSubscriptionApprovalWebhookURL),
-			Headers: props.StringPropertyValue(pathSubscriptionApprovalWebhookHeaders),
-			Secret:  props.StringPropertyValue(pathSubscriptionApprovalWebhookSecret),
+			URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
+			Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
+			Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
 		},
 	}
 

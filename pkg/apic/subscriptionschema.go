@@ -175,6 +175,7 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 		return nil, err
 	}
 	spec := v1alpha1.ConsumerSubscriptionDefinitionSpec{
+		Webhooks: []string{DefaultSubscriptionWebhookName},
 		Schema: v1alpha1.ConsumerSubscriptionDefinitionSpecSchema{
 			Properties: []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
 				{

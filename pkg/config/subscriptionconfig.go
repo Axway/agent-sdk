@@ -287,7 +287,7 @@ func (s *SubscriptionConfiguration) validate() error {
 func (s *SubscriptionConfiguration) validateWebhook() error {
 	if webhookURL := s.GetWebhookURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("Error central.subscriptions.webhook nota valid URL")
+			return errors.New("Error central.subscriptions.webhook is not a valid URL")
 		}
 	}
 
