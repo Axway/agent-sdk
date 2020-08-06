@@ -6,6 +6,7 @@ import (
 
 	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
@@ -174,7 +175,13 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 	if err != nil {
 		return nil, err
 	}
+
+	webhooks := make([]string, 0)
+	if c.cfg.GetSubscriptionApprovalMode() == corecfg.WebhookApproval {
+		webhooks = append(webhooks, DefaultSubscriptionWebhookName)
+	}
 	spec := v1alpha1.ConsumerSubscriptionDefinitionSpec{
+		Webhooks: webhooks,
 		Schema: v1alpha1.ConsumerSubscriptionDefinitionSpecSchema{
 			Properties: []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
 				{

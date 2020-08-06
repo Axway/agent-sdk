@@ -29,6 +29,7 @@ func TestProcessorRegistration(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
@@ -152,6 +153,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
@@ -233,6 +235,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)

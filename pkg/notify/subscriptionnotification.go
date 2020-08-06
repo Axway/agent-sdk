@@ -113,12 +113,10 @@ func (s *SubscriptionNotification) notifyViaWebhook() error {
 		return agenterrors.Wrap(ErrSubscriptionData, err.Error())
 	}
 
-	fmt.Printf("%v\n", s)
-	fmt.Println(string(buffer))
 	request := coreapi.Request{
 		Method:  coreapi.POST,
-		URL:     globalCfg.GetNotificationWebhook(),
-		Headers: globalCfg.GetNotificationHeaders(),
+		URL:     globalCfg.GetWebhookURL(),
+		Headers: globalCfg.GetWebhookHeaders(),
 		Body:    buffer,
 	}
 

@@ -33,8 +33,8 @@ const (
 // SubscriptionConfig - Interface to get subscription config
 type SubscriptionConfig interface {
 	GetNotificationTypes() []NotificationType
-	GetNotificationWebhook() string
-	GetNotificationHeaders() map[string]string
+	GetWebhookURL() string
+	GetWebhookHeaders() map[string]string
 	GetSMTPURL() string
 	GetSMTPHost() string
 	GetSMTPFromAddress() string
@@ -58,17 +58,15 @@ type SubscriptionConfiguration struct {
 
 // These constants are the paths that the settings is at in a config file
 const (
-	webhookURL     = "subscriptions.webhook.url"
-	webhookHeaders = "subscriptions.webhook.headers"
-	smtpFrom       = "subscriptions.smtp.fromAddress"
-	smtpAuthType   = "subscriptions.smtp.authType"
-	smtpIdentity   = "subscriptions.smtp.identity"
+	smtpFrom     = "subscriptions.smtp.fromAddress"
+	smtpAuthType = "subscriptions.smtp.authType"
+	smtpIdentity = "subscriptions.smtp.identity"
 )
 
 type webhook struct {
-	URL     string `config:"webhook.url"`
-	Headers string `config:"webhook.headers"`
-	headers map[string]string
+	URL                 string `config:"webhook.url"`
+	Headers             string `config:"webhook.headers"`
+	notificationHeaders map[string]string
 }
 
 type smtp struct {
@@ -165,18 +163,18 @@ func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
 	return s.Types
 }
 
-// GetNotificationWebhook - Returns the webhook url for notifications
-func (s *SubscriptionConfiguration) GetNotificationWebhook() string {
+// GetWebhookURL - Returns the webhook url for notifications
+func (s *SubscriptionConfiguration) GetWebhookURL() string {
 	if s.Webhook != nil {
 		return s.Webhook.URL
 	}
 	return ""
 }
 
-// GetNotificationHeaders - Returns the notification headers
-func (s *SubscriptionConfiguration) GetNotificationHeaders() map[string]string {
+// GetWebhookHeaders - Returns the notification headers
+func (s *SubscriptionConfiguration) GetWebhookHeaders() map[string]string {
 	if s.Webhook != nil {
-		return s.Webhook.headers
+		return s.Webhook.notificationHeaders
 	}
 	return make(map[string]string)
 }
@@ -273,28 +271,37 @@ func (s *SubscriptionConfiguration) validate() error {
 	if s.Webhook.URL != "" {
 		s.SetNotificationType(NotifyWebhook)
 		log.Debug("Webhook notification set")
-		if webhookURL := s.GetNotificationWebhook(); webhookURL != "" {
-			if _, err := url.ParseRequestURI(webhookURL); err != nil {
-				return errors.New("Error central.subscriptions.notificationWebhook nota valid URL")
-			}
-		}
-
-		// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
-		s.Webhook.headers = map[string]string{}
-		s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
-		headersValues := strings.Split(s.Webhook.Headers, ",Header=")
-		for _, headerValue := range headersValues {
-			hvArray := strings.Split(headerValue, ",Value=")
-			if len(hvArray) != 2 {
-				return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
-			}
-			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
-			s.Webhook.headers[hvArray[0]] = hvArray[1]
+		err := s.validateWebhook()
+		if err != nil {
+			return err
 		}
 	}
 	if s.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
 		log.Debug("SMTP notification set")
+	}
+
+	return nil
+}
+
+func (s *SubscriptionConfiguration) validateWebhook() error {
+	if webhookURL := s.GetWebhookURL(); webhookURL != "" {
+		if _, err := url.ParseRequestURI(webhookURL); err != nil {
+			return errors.New("Error central.subscriptions.webhook is not a valid URL")
+		}
+	}
+
+	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
+	s.Webhook.notificationHeaders = map[string]string{}
+	s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
+	headersValues := strings.Split(s.Webhook.Headers, ",Header=")
+	for _, headerValue := range headersValues {
+		hvArray := strings.Split(headerValue, ",Value=")
+		if len(hvArray) != 2 {
+			return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
+		}
+		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+		s.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]
 	}
 
 	return nil
