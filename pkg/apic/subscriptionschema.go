@@ -177,7 +177,7 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 	}
 
 	webhooks := make([]string, 0)
-	if c.cfg.GetSubscriptionApprovalMode() == corecfg.CustomApproval {
+	if c.cfg.GetSubscriptionApprovalMode() == corecfg.WebhookApproval {
 		webhooks = append(webhooks, DefaultSubscriptionWebhookName)
 	}
 	spec := v1alpha1.ConsumerSubscriptionDefinitionSpec{

@@ -34,9 +34,9 @@ const (
 
 // subscription approval types
 const (
-	ManualApproval string = "manual"
-	AutoApproval   string = "auto"
-	CustomApproval string = "custom"
+	ManualApproval  string = "manual"
+	AutoApproval    string = "auto"
+	WebhookApproval string = "webhook"
 )
 
 // AgentModeStringMap - Map the Agent Mode constant to a string
@@ -398,7 +398,7 @@ func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 	}
 
 	switch c.GetSubscriptionApprovalMode() {
-	case ManualApproval, AutoApproval, CustomApproval:
+	case ManualApproval, AutoApproval, WebhookApproval:
 		// these are all OK
 	case "":
 	default:
@@ -480,7 +480,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 	}
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, custom, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
