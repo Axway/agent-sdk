@@ -68,7 +68,7 @@ func WaitForReady() error {
 		select {
 		// Got a timeout! Fail with a timeout error
 		case <-timeout:
-			return errors.ErrServicesNotReady
+			return errors.ErrTimeoutServicesNotReady
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {
