@@ -34,9 +34,9 @@ const (
 
 // subscription approval types
 const (
-	ManualApproval = "manual"
-	AutoApproval   = "auto"
-	CustomApproval = "custom"
+	ManualApproval string = "manual"
+	AutoApproval   string = "auto"
+	CustomApproval string = "custom"
 )
 
 // AgentModeStringMap - Map the Agent Mode constant to a string
