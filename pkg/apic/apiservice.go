@@ -16,6 +16,7 @@ import (
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	utilerrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -632,14 +633,13 @@ func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 	// create the secret
 	err := c.createSecret()
 	if err != nil {
-		log.Errorf("Unable to create secret: %v", err.Error())
-		return err
+		return utilerrors.Wrap(ErrCreateSecret, err.Error())
+
 	}
 
 	err = c.createWebhook()
 	if err != nil {
-		log.Errorf("Unable to create webhook: %v", err.Error())
-		return err
+		return utilerrors.Wrap(ErrCreateWebhook, err.Error())
 	}
 
 	return nil
