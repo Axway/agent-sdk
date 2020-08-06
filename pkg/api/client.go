@@ -5,8 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd"
 	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
 )
@@ -95,8 +97,15 @@ func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
 	if err != nil {
 		return req, err
 	}
+	hasUserAgentHeader := false
 	for key, value := range request.Headers {
 		req.Header.Set(key, value)
+		if strings.ToLower(key) == "user-agent" {
+			hasUserAgentHeader = true
+		}
+	}
+	if !hasUserAgentHeader {
+		req.Header.Set("User-Agent", cmd.BuildAgentName+"/"+cmd.BuildVersion+"-"+cmd.BuildCommitSha)
 	}
 	return req, err
 }
