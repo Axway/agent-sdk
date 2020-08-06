@@ -419,7 +419,7 @@ func (c *ServiceClient) getWsdlEndpoints(swagger []byte) ([]EndPoint, error) {
 		port, _ := strconv.Atoi(portStr)
 
 		basePath := BasePath{
-			Path: gjson.Get(string(swagger), "basePath").String(),
+			Path: fixed.Path,
 		}
 
 		endPoint := EndPoint{
