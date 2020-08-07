@@ -18,7 +18,7 @@ var (
 
 	dependencies = []string{"network"}
 
-	globalAgentService AgentService
+	globalAgentService *AgentService
 
 	execCommand = exec.Command
 )
@@ -34,17 +34,17 @@ type AgentService struct {
 	Group       string
 }
 
-func init() {
+func newAgentService() (*AgentService, error) {
 	service, err := daemon.New(Name, Description, dependencies...)
 	if err != nil {
-		log.Errorf("error hit creating the service definition: %s", err.Error())
+		return nil, err
 	}
 
-	globalAgentService = AgentService{
+	return &AgentService{
 		service:     service,
 		Name:        Name,
 		Description: Description,
-	}
+	}, nil
 }
 
 // HandleServiceFlag - handles the action needed based ont eh service flag value

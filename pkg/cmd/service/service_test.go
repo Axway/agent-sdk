@@ -57,8 +57,8 @@ func (m *mockDaemon) Enable() (string, error) {
 	return "", nil
 }
 
-func newMockAgentService() AgentService {
-	return AgentService{
+func newMockAgentService() *AgentService {
+	return &AgentService{
 		service:     &mockDaemon{},
 		Name:        "disco-agent",
 		Description: "description",
@@ -86,10 +86,8 @@ func TestGenServiceCmd(t *testing.T) {
 func TestRunGenServiceCmd(t *testing.T) {
 	Name = "discovery-agent"
 	Description = "Discovery Agent Description"
-
 	a := newMockAgentService()
 	globalAgentService = a
-
 	cmd := GenServiceCmd("pathConfig")
 
 	cmd.Flags().String("pathConfig", "", "")
@@ -101,7 +99,7 @@ func TestRunGenServiceCmd(t *testing.T) {
 }
 
 func TestHandleService(t *testing.T) {
-	var a AgentService
+	var a *AgentService
 	var err error
 
 	// Install

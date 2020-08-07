@@ -10,7 +10,7 @@ func newDaemon(name, description string, dependencies []string) (Daemon, error) 
 	if _, err := fs.Stat("/run/systemd/system"); err == nil {
 		return &systemDRecord{name, description, dependencies, "", ""}, nil
 	}
-	return nil, fmt.Errorf("can not install service, need systemd")
+	return nil, fmt.Errorf("cannot install service, need systemd")
 }
 
 // Get executable path

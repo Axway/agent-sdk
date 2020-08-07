@@ -37,6 +37,14 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 		Short:     shortDesc,
 		Long:      longDesc,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if globalAgentService == nil {
+				var err error
+				globalAgentService, err = newAgentService()
+				if err != nil {
+					return err
+				}
+			}
+
 			if len(args) != 1 {
 				log.Errorf("must provide only 1 arg to service (%s)", strings.Join(validArgs, ", "))
 			}
