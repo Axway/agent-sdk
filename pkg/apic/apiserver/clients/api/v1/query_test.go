@@ -2,6 +2,8 @@ package v1
 
 import (
 	"testing"
+
+	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestRSQL(t *testing.T) {
@@ -49,6 +51,16 @@ func TestRSQL(t *testing.T) {
 			"any three attributes",
 			AnyAttr(map[string]string{"a1": "v1", "a2": "v2", "a3": "v3"}),
 			`(attributes.a1=="v1",attributes.a2=="v2",attributes.a3=="v3")`,
+		},
+		{
+			"by reference",
+			Reference(v1alpha1.ResourceDiscoveryGVK(), "my-rd-pods"),
+			`metadata.references.name==my-rd-pods;metadata.references.kind==ResourceDiscovery`,
+		},
+		{
+			"by reference or attribute",
+			Or(AttrIn("a", "v1", "v2"), Reference(v1alpha1.ResourceDiscoveryGVK(), "my-rd-svc")),
+			`(attributes.a=in=("v1","v2"),metadata.references.name==my-rd-svc;metadata.references.kind==ResourceDiscovery)`,
 		},
 	}
 
