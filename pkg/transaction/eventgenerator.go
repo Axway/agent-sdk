@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
 )

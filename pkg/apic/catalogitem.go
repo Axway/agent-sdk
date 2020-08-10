@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 

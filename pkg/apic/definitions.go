@@ -3,8 +3,8 @@ package apic
 import (
 	"encoding/json"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
 
 // Various consts for use

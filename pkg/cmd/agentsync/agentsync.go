@@ -1,7 +1,7 @@
 package agentsync
 
 import (
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 var agentSync AgentSync

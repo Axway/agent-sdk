@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/wsdl"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
 )

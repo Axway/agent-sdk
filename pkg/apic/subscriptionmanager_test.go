@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cache"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cache"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

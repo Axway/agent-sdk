@@ -3,10 +3,10 @@ package v1_test
 import (
 	"testing"
 
-	. "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
-	cMgmgt "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1"
-	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	aMgmgt "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	. "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+	cMgmgt "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1"
+	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	aMgmgt "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestExampleFake(t *testing.T) {

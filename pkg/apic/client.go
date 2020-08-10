@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // constants for auth policy types

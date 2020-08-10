@@ -3,7 +3,7 @@ package agentsync
 import (
 	"fmt"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
 )
 
 const syncFlag = "synchronize"

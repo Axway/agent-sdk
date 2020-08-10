@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	apicClient "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	apicClient "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
 
 type mockResponse struct {

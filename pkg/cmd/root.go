@@ -7,13 +7,13 @@ import (
 	"reflect"
 	"strings"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/spf13/cobra"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/agentsync"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
-	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/viper"
 )
 

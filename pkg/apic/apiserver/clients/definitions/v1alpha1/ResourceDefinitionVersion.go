@@ -5,8 +5,8 @@
 package v1alpha1
 
 import (
-	v1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
 
 // ResourceDefinitionVersionClient -

@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -301,7 +301,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
-	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
+	assert.Equal(t, "lbean006.lab.phx.axway.org", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
 	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 

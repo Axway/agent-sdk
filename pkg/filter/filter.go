@@ -3,7 +3,7 @@ package filter
 import (
 	"strconv"
 
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // Filter - Interface for filter
