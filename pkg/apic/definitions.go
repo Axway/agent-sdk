@@ -31,28 +31,35 @@ const (
 	PublishedState   = "PUBLISHED"
 )
 
+// consts for update serverity
+const (
+	MajorChange = "MAJOR"
+	MinorChange = "MINOR"
+)
+
 //ServiceBody -
 type ServiceBody struct {
-	NameToPush       string `json:",omitempty"`
-	APIName          string `json:",omitempty"`
-	RestAPIID        string `json:",omitempty"`
-	URL              string `json:",omitempty"`
-	Stage            string `json:",omitempty"`
-	TeamID           string `json:",omitempty"`
-	Description      string `json:",omitempty"`
-	Version          string `json:",omitempty"`
-	AuthPolicy       string `json:",omitempty"`
-	Swagger          []byte `json:",omitempty"`
-	Documentation    []byte `json:",omitempty"`
-	Tags             map[string]interface{}
-	Buffer           []byte            `json:",omitempty"`
-	AgentMode        corecfg.AgentMode `json:",omitempty"`
-	ServiceExecution serviceExecution  `json:"omitempty"`
-	Image            string
-	ImageContentType string
-	CreatedBy        string
-	ResourceType     string
-	SubscriptionName string
+	NameToPush        string `json:",omitempty"`
+	APIName           string `json:",omitempty"`
+	RestAPIID         string `json:",omitempty"`
+	URL               string `json:",omitempty"`
+	Stage             string `json:",omitempty"`
+	TeamID            string `json:",omitempty"`
+	Description       string `json:",omitempty"`
+	Version           string `json:",omitempty"`
+	AuthPolicy        string `json:",omitempty"`
+	Swagger           []byte `json:",omitempty"`
+	Documentation     []byte `json:",omitempty"`
+	Tags              map[string]interface{}
+	Buffer            []byte            `json:",omitempty"`
+	AgentMode         corecfg.AgentMode `json:",omitempty"`
+	ServiceExecution  serviceExecution  `json:"omitempty"`
+	Image             string
+	ImageContentType  string
+	CreatedBy         string
+	ResourceType      string
+	SubscriptionName  string
+	APIUpdateSeverity string `json:",omitempty"`
 }
 
 // ServiceClient -

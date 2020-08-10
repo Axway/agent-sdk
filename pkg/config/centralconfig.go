@@ -67,11 +67,11 @@ type CentralConfig interface {
 	GetEnvironmentURL() string
 	GetAPIServerURL() string
 	GetAPIServerEnvironmentURL() string
-	GetAPIServerServicesURL() string
-	GetAPIServerServicesRevisionsURL() string
-	GetAPIServerServicesInstancesURL() string
-	DeleteAPIServerServicesURL() string
-	GetAPIServerConsumerInstancesURL() string
+	GetServicesURL() string
+	GetRevisionsURL() string
+	GetInstancesURL() string
+	DeleteServicesURL() string
+	GetConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
 	GetSubscriptionURL() string
 	GetCatalogItemSubscriptionsURL(string) string
@@ -239,28 +239,28 @@ func (c *CentralConfiguration) GetAPIServerEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
 }
 
-// GetAPIServerServicesURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetAPIServerServicesURL() string {
+// GetServicesURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetServicesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerServicesRevisionsURL - Returns the APIServer URL for services API revisions
-func (c *CentralConfiguration) GetAPIServerServicesRevisionsURL() string {
+// GetRevisionsURL - Returns the APIServer URL for services API revisions
+func (c *CentralConfiguration) GetRevisionsURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/apiservicerevisions"
 }
 
-// GetAPIServerServicesInstancesURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
+// GetInstancesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) GetInstancesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/apiserviceinstances"
 }
 
-// DeleteAPIServerServicesURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
+// DeleteServicesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) DeleteServicesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
-func (c *CentralConfiguration) GetAPIServerConsumerInstancesURL() string {
+// GetConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
+func (c *CentralConfiguration) GetConsumerInstancesURL() string {
 	return c.GetAPIServerEnvironmentURL() + "/consumerinstances"
 }
 
