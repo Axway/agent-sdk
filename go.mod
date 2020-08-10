@@ -1,11 +1,11 @@
-module git.ecd.axway.int/apigov/apic_agents_sdk
+module git.ecd.axway.org/apigov/apic_agents_sdk
 
 go 1.13
 
 replace github.com/Sirupsen/logrus v1.6.0 => github.com/sirupsen/logrus v1.4.2
 
 require (
-	git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933
+	git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200727160232-366a49c25a7f
 	github.com/elastic/beats v7.6.2+incompatible
 	github.com/elastic/go-sysinfo v1.3.0 // indirect
 	github.com/elastic/go-ucfg v0.8.3 // indirect

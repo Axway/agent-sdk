@@ -13,6 +13,9 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933 h1:BW0WtZNH0AtzqUOb0ElwlvuEnVp5ZYpYULF9eaDqEJs=
 git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933/go.mod h1:cK/nDFR3hx9VdwJMyfrACTxeptfrLvLTgKM7FJpTAFA=
+git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200421210019-84ac6b925933/go.mod h1:tZX3ooFbyJtKugNj4mesMIUyh8t9KDfpkS4qmvVDILs=
+git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200727160232-366a49c25a7f h1:qWA0ZkebHCfqIkBr7GjR8+YlRWO5XRUoTfBW89cGKZ8=
+git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200727160232-366a49c25a7f/go.mod h1:tZX3ooFbyJtKugNj4mesMIUyh8t9KDfpkS4qmvVDILs=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
