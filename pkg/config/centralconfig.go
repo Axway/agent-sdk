@@ -346,7 +346,6 @@ func (c *CentralConfiguration) Validate() (err error) {
 			c.validateConfig()
 			c.Auth.validate()
 			c.TLS.Validate()
-			c.SubscriptionApprovalWebhook.Validate()
 		},
 		Catch: func(e error) {
 			err = e
@@ -386,6 +385,8 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetPollInterval() <= 0 {
 		exception.Throw(errors.New("Error central.pollInterval not set in config"))
 	}
+
+	c.SubscriptionApprovalWebhook.ValidateConfig()
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
@@ -478,12 +479,13 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
+
+		// subscription approvals
+		props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
+		props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
+		props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
+		props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
 	}
-	// subscription approvals
-	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
-	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
-	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
-	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
 }
 
 // ParseCentralConfig - Parses the Central Config values form teh command line
@@ -510,13 +512,17 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
-		ProxyURL:                 proxyURL,
-		SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
-		SubscriptionApprovalWebhook: &WebhookConfiguration{
+		ProxyURL: proxyURL,
+	}
+
+	// set the subscription approval stuff
+	if agentType == DiscoveryAgent {
+		cfg.SubscriptionApprovalMode = props.StringPropertyValue(pathSubscriptionsApprovalMode)
+		cfg.SubscriptionApprovalWebhook = &WebhookConfiguration{
 			URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
 			Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
 			Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
-		},
+		}
 	}
 
 	// Set the Proxy Environment Variable

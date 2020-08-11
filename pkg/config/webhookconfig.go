@@ -14,7 +14,7 @@ type WebhookConfig interface {
 	GetWebhookHeaders() map[string]string
 	GetSecret() string
 	IsConfigured() bool
-	Validate() error
+	ValidateConfig() error
 }
 
 // WebhookConfiguration -
@@ -52,7 +52,7 @@ func (c *WebhookConfiguration) GetSecret() string {
 }
 
 // Validate the config
-func (c *WebhookConfiguration) Validate() error {
+func (c *WebhookConfiguration) ValidateConfig() error {
 	if webhookURL := c.GetURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
 			return errors.New("Error central.subscriptions.approvalWebhook.URL is not a valid URL")
