@@ -51,7 +51,7 @@ func (c *WebhookConfiguration) GetSecret() string {
 	return c.Secret
 }
 
-// Validate the config
+// ValidateConfig - Validate the config
 func (c *WebhookConfiguration) ValidateConfig() error {
 	if webhookURL := c.GetURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
