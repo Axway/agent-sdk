@@ -527,8 +527,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamID = props.StringPropertyValue(pathTeamID)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
-	// set the subscription approval stuff
-	if agentType == DiscoveryAgent {
+
+		// set the subscription approval stuff
 		cfg.SubscriptionApprovalMode = props.StringPropertyValue(pathSubscriptionsApprovalMode)
 		cfg.SubscriptionApprovalWebhook = &WebhookConfiguration{
 			URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
