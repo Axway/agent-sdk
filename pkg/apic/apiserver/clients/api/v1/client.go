@@ -212,11 +212,12 @@ func WithQuery(n QueryNode) func(*listOptions) {
 	}
 }
 
+// List -
 func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	return c.ListCtx(context.Background(), options...)
 }
 
-// List returns a list of resources
+// ListCtx returns a list of resources
 func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.url(), nil)
 	if err != nil {
@@ -227,8 +228,8 @@ func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.
 	if err != nil {
 		return nil, err
 	}
-	opts := listOptions{}
 
+	opts := listOptions{}
 	for _, o := range options {
 		o(&opts)
 	}
@@ -240,8 +241,6 @@ func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.
 		q.Add("query", rv.String())
 		req.URL.RawQuery = q.Encode()
 	}
-
-	c.auth.Authenticate(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
