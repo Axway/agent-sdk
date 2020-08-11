@@ -1,6 +1,6 @@
 package apic
 
-import "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
+import "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 
 // Errors hit when validating AMPLIFY Central connectivity
 var (

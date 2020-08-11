@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
 
 func getPFlag(cmd AgentRootCmd, flagName string) *flag.Flag {

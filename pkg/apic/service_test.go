@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )

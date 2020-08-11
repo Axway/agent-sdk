@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 )
 
 // AgentType - Defines the type of agent

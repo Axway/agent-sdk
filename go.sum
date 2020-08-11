@@ -19,8 +19,8 @@ code.cloudfoundry.org/go-loggregator v7.4.0+incompatible/go.mod h1:KPBTRqj+y738N
 code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f/go.mod h1:sk5LnIjB/nIEU7yP5sDQExVm62wu0pBh3yrElngUisI=
 code.cloudfoundry.org/rfc5424 v0.0.0-20180905210152-236a6d29298a/go.mod h1:tkZo8GtzBjySJ7USvxm4E36lNQw1D3xM6oKHGqdaAJ4=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8 h1:01EKgozu9QzUn0gOIeNYT7Rn4uzuYCLj39tkBPbiuqw=
-git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8/go.mod h1:cK/nDFR3hx9VdwJMyfrACTxeptfrLvLTgKM7FJpTAFA=
+git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8 h1:tehds/RyHnv0fA4WQkSjwQGi0JkR3Xd9KcVtQm41bQ0=
+git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8/go.mod h1:tZX3ooFbyJtKugNj4mesMIUyh8t9KDfpkS4qmvVDILs=
 github.com/Azure/azure-amqp-common-go/v3 v3.0.0/go.mod h1:SY08giD/XbhTz07tJdpw1SoxQXHPN30+DI3Z04SYqyg=
 github.com/Azure/azure-event-hubs-go/v3 v3.1.2/go.mod h1:hR40byNJjKkS74+3RhloPQ8sJ8zFQeJ920Uk3oYY0+k=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=

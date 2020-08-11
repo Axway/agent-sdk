@@ -3,7 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // Options -

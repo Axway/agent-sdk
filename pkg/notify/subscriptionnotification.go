@@ -8,12 +8,12 @@ import (
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 //SubscriptionNotification - the struct that is sent to the notification and used to fill in email templates

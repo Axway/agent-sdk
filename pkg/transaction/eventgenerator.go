@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
-	hc "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 )

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/notification"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/notification"
 )
 
 // SubscriptionManager - Interface for subscription manager

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 )
 
 // TLSCipherSuite - defined type

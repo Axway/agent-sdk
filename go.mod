@@ -1,9 +1,9 @@
-module git.ecd.axway.int/apigov/apic_agents_sdk
+module git.ecd.axway.org/apigov/apic_agents_sdk
 
 go 1.13
 
 require (
-	git.ecd.axway.int/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
+	git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0

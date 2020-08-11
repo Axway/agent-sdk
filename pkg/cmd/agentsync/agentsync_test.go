@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )

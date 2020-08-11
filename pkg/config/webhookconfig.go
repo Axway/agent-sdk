@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	log "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // WebhookConfig - Interface for webhook config

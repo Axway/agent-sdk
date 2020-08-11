@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
 // SubscriptionSchema -

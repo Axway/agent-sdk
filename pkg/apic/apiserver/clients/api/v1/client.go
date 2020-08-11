@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	apiv1 "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth"
+	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // HTTPClient allows you to replace the default client for different use cases

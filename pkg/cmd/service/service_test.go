@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
 	"github.com/stretchr/testify/assert"
 )
 

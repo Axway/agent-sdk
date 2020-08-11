@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	corecfg "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
-	"git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/log"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 

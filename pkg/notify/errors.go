@@ -1,6 +1,6 @@
 package notify
 
-import agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
+import agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 
 // Errors hit when sending subscription notifications
 var (

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	coreapi "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/api"
-	agenterrors "git.ecd.axway.int/apigov/apic_agents_sdk/pkg/util/errors"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
 // SubscriptionState - Type definition for subscription state
