@@ -515,16 +515,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		ProxyURL: proxyURL,
 	}
 
-	// set the subscription approval stuff
-	if agentType == DiscoveryAgent {
-		cfg.SubscriptionApprovalMode = props.StringPropertyValue(pathSubscriptionsApprovalMode)
-		cfg.SubscriptionApprovalWebhook = &WebhookConfiguration{
-			URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
-			Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
-			Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
-		}
-	}
-
 	// Set the Proxy Environment Variable
 	cfg.SetProxyEnvironmentVariable()
 
@@ -537,6 +527,14 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamID = props.StringPropertyValue(pathTeamID)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
+	// set the subscription approval stuff
+	if agentType == DiscoveryAgent {
+		cfg.SubscriptionApprovalMode = props.StringPropertyValue(pathSubscriptionsApprovalMode)
+		cfg.SubscriptionApprovalWebhook = &WebhookConfiguration{
+			URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
+			Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
+			Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
+		}
 	}
 
 	if err := cfg.Validate(); err != nil {
