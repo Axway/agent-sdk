@@ -426,7 +426,7 @@ const (
 	pathPlatformURL                         = "central.platformURL"
 	pathAuthPrivateKey                      = "central.auth.privateKey"
 	pathAuthPublicKey                       = "central.auth.publicKey"
-	pathAuthKeyPwd                          = "central.auth.keyPassword"
+	pathAuthKeyPassword                     = "central.auth.keyPassword"
 	pathAuthURL                             = "central.auth.url"
 	pathAuthRealm                           = "central.auth.realm"
 	pathAuthClientID                        = "central.auth.clientId"
@@ -457,7 +457,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	props.AddStringProperty(pathAuthKeyPwd, "", "Password for the private key, if needed")
+	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
 	props.AddStringProperty(pathAuthURL, "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
 	props.AddStringProperty(pathAuthRealm, "Broker", "AMPLIFY Central authentication Realm")
 	props.AddStringProperty(pathAuthClientID, "", "Client ID for the service account")
@@ -502,7 +502,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			ClientID:   props.StringPropertyValue(pathAuthClientID),
 			PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
 			PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
-			KeyPwd:     props.StringPropertyValue(pathAuthKeyPwd),
+			KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
 			Timeout:    props.DurationPropertyValue(pathAuthTimeout),
 		},
 		TLS: &TLSConfiguration{
