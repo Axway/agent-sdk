@@ -19,6 +19,8 @@
 | 1142 | couldn't get subscription data from AMPLIFY Central, check network and CENTRAL_AUTH                         | pkg/apic/ErrSubscriptionResp               |
 | 1143 | couldn't create or update subscription schema data, possible Network error                                  | pkg/apic/ErrSubscriptionSchemaCreate       |
 | 1144 | unexpected response when managing subscription schema on AMPLIFY Central, check network and CENTRAL_AUTH    | pkg/apic/ErrSubscriptionSchemaResp         |
+| 1145 | unable to create webhook    | pkg/apic/ErrCreateWebhook         |
+| 1146 | unable to create secret    | pkg/apic/ErrCreateSecret         |
 |      | 1300-1399 - for subscription notification errors                                                            |                                            |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification     |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications  |
