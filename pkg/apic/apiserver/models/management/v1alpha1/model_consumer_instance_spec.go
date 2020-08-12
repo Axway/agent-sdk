@@ -28,8 +28,10 @@ type ConsumerInstanceSpec struct {
 	// A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA
 	Status string `json:"status,omitempty"`
 	// List of tags to be set on the Catalog Item. Max allowed tags for the Catalog Item is 80.
-	Tags []string                 `json:"tags,omitempty"`
-	Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`
+	Tags []string `json:"tags,omitempty"`
+	// TODO changed
+	// Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`
+	Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`
 	// Markdown documentation for the Catalog Item documentation.
 	Documentation              string                                         `json:"documentation,omitempty"`
 	UnstructuredDataProperties ConsumerInstanceSpecUnstructuredDataProperties `json:"unstructuredDataProperties,omitempty"`
