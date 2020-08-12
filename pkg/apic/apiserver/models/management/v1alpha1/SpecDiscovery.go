@@ -23,7 +23,7 @@ var (
 const (
 	SpecDiscoveryScope = "K8SCluster"
 
-	SpecDiscoveryResource = "apidiscoveries"
+	SpecDiscoveryResource = "specdiscoveries"
 )
 
 func SpecDiscoveryGVK() apiv1.GroupVersionKind {

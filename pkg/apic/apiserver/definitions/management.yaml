@@ -47,7 +47,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -101,7 +100,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -320,7 +318,6 @@ spec:
               additionalProperties: false
             enabled:
               type: boolean
-              default: true
             url:
               type: string
               pattern: '^https?://[\w-_\:\.\?\/=%&#~\[\]\(\)@!$&'',;]*$'
@@ -391,7 +388,6 @@ spec:
               enum:
                 - RESTRICTED
                 - PUBLIC
-              default: RESTRICTED
             version:
               type: string
               description: Version name for the revision.
@@ -407,7 +403,6 @@ spec:
               enum:
                 - UNPUBLISHED
                 - PUBLISHED
-              default: UNPUBLISHED
             status:
               type: string
               description: 'A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA'
@@ -431,7 +426,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -494,11 +488,9 @@ spec:
               properties:
                 enabled:
                   type: boolean
-                  default: false
                   description: Defines if subscriptions are allowed on the Catalog Item.
                 autoSubscribe:
                   type: boolean
-                  default: true
                   description: Defines if subscriptions need to be manually approved.
                 subscriptionDefinition:
                   type: string
@@ -527,7 +519,6 @@ spec:
                         enum:
                           - info
                           - error
-                        default: info
                       transitionTime:
                         type: string
                         format: date-time
@@ -961,12 +952,12 @@ scope: K8SCluster
 description: Configures API Discovery in a mesh.
 spec:
   names:
-    plural: apidiscoveries
-    singular: apidiscovery
+    plural: specdiscoveries
+    singular: specdiscovery
   cli:
     shortNames:
-      - apidisc
-      - apidiscs
+      - specdiscs
+      - specdisc
     columns:
       - name: Name
         description: The name of the resource.
@@ -1045,6 +1036,7 @@ spec:
     singular: apispec
   cli:
     shortNames:
+      - apispecs
       - apispec
     columns:
       - name: Name
@@ -1106,7 +1098,7 @@ spec:
 group: management
 kind: MeshDiscovery
 scope: Mesh
-description: Mesh discovery 
+description: Mesh discovery
 spec:
   names:
     plural: meshdiscoveries
@@ -1140,5 +1132,3 @@ spec:
               additionalProperties: {}
             environmentRef:
               type: string
-              x-amplify-kind-ref: Environment
-
