@@ -144,11 +144,6 @@ func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
 }
 
-// IsPublishToEnvironmentMode -
-func (c *CentralConfiguration) IsPublishToEnvironmentMode() bool {
-	return c.Mode == PublishToEnvironment || c.IsPublishToEnvironmentAndCatalogMode()
-}
-
 // IsPublishToEnvironmentOnlyMode -
 func (c *CentralConfiguration) IsPublishToEnvironmentOnlyMode() bool {
 	return c.Mode == PublishToEnvironment
@@ -390,7 +385,7 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
-	if !c.IsPublishToEnvironmentMode() {
+	if !c.IsPublishToEnvironmentOnlyMode() && !c.IsPublishToEnvironmentAndCatalogMode() {
 		exception.Throw(errors.New("Error central.mode not configured for publishToEnvironment or publishToEnvironmentAndCatalog"))
 	}
 

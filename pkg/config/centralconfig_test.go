@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,4 +99,14 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfg.Validate()
 
 	assert.Nil(t, err)
+
+	centralConfig.ProxyURL = "https://foo.bar:1234"
+	err = centralConfig.SetProxyEnvironmentVariable()
+	assert.Nil(t, err)
+	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTPS_PROXY"))
+
+	centralConfig.ProxyURL = "http://foo1.bar:1234"
+	err = centralConfig.SetProxyEnvironmentVariable()
+	assert.Nil(t, err)
+	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTP_PROXY"))
 }
