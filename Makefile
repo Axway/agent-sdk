@@ -2,7 +2,9 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/*/definitions/v1alpha  | grep -v ./pkg/apic/apiserver/*/management/v1alpha | grep -v ./pkg/apic/unifiedcatalog/models)
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/*/definitions/v1alpha \
+	| grep -v ./pkg/apic/apiserver/*/management/v1alpha | grep -v ./pkg/apic/unifiedcatalog/models \
+	| grep -v ./pkg/apic/apiserver/clients/api/v1)
 
 export GOFLAGS := -mod=vendor
 
@@ -41,7 +43,7 @@ sonar: test-sonar
 		-Dsonar.projectBaseDir=${WORKSPACE} \
 		-Dsonar.sources=. \
 		-Dsonar.tests=. \
-		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/definitions/v1alpha1/**,**/management/v1alpha1/** \
+		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/definitions/v1alpha1/**,**/management/v1alpha1/**, **/api/v1/**, **/errors.go \
 		-Dsonar.test.inclusions=**/*test*.go \
 		-Dsonar.go.tests.reportPaths=goreport.json \
 		-Dsonar.go.coverage.reportPaths=gocoverage.out
