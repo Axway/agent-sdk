@@ -45,7 +45,7 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
+func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamID: "test",
 		Auth: &corecfg.AuthConfiguration{
@@ -55,13 +55,16 @@ func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
 		},
 		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
 	}
+	if tlsCfg != nil {
+		cfg.TLS = tlsCfg
+	}
 	c := New(cfg)
 	return c.(*ServiceClient), cfg
 }
 
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
-	c, _ := createServiceClient()
+	c, _ := createServiceClient(nil)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
