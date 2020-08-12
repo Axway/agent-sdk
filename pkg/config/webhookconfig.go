@@ -55,7 +55,7 @@ func (c *WebhookConfiguration) GetSecret() string {
 func (c *WebhookConfiguration) ValidateConfig() error {
 	if webhookURL := c.GetURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("Error central.subscriptions.approvalWebhook.URL is not a valid URL")
+			return errors.New("central.subscriptions.approvalWebhook.URL is not a valid URL")
 		}
 
 		// (example header) Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
@@ -65,7 +65,7 @@ func (c *WebhookConfiguration) ValidateConfig() error {
 		for _, headerValue := range headersValues {
 			hvArray := strings.Split(headerValue, ",Value=")
 			if len(hvArray) != 2 {
-				return errors.New("Could not parse value of subscriptions.approvalWebhook.headers")
+				return errors.New("could not parse value of subscriptions.approvalWebhook.headers")
 			}
 			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
 			c.webhookHeaders[hvArray[0]] = hvArray[1]
