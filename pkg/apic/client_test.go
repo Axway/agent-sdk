@@ -45,7 +45,7 @@ func (c *mockHTTPClient) Send(request apicClient.Request) (*apicClient.Response,
 }
 
 func TestCheckAPIServerHealth(t *testing.T) {
-	c, cfg := createServiceClient()
+	c, cfg := createServiceClient(nil)
 	cfg.Environment = "Environment"
 	mockClient := mockHTTPClient{
 		respCount: 0,
@@ -79,4 +79,11 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	err = c.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
 	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
+}
+
+func TestNewClientWithTLSConfig(t *testing.T) {
+	tlsCfg := corecfg.NewTLSConfig()
+	client, cfg := createServiceClient(tlsCfg)
+	assert.NotNil(t, client)
+	assert.NotNil(t, cfg)
 }
