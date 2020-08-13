@@ -60,6 +60,10 @@ func TestSubscriptionSMTPConfig(t *testing.T) {
 		Use: "test",
 	}
 	props := properties.NewProperties(rootCmd)
+
+	// this line is strange. Without it, it seems that rootCmd still has the values from
+	// previous test, which cause validations to fail
+	props.AddStringProperty("subscriptions.webhook.url", "", "")
 	props.AddStringProperty("subscriptions.smtp.host", "mail.axway.com", "")
 	props.AddIntProperty("subscriptions.smtp.port", 111, "")
 	props.AddStringProperty("subscriptions.smtp.fromAddress", "foo@axway.com", "")
