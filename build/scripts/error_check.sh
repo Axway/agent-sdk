@@ -106,7 +106,7 @@ find_usages() {
           num=`echo ${num} | awk -F: '{print $1}'`
           echo Error $err used at ${file} \(line ${num}\) and calls FormatError
         fi
-      done < <(grep "$err" $file)
+      done < <(grep "$err(,|.| )" $file)
     done
 
     for err in "${format_errors[@]}"; do
@@ -118,7 +118,7 @@ find_usages() {
           num=`echo ${num} | awk -F: '{print $1}'`
           echo Error $err used at ${file} \(line ${num}\) and does not call FormatError
         fi
-      done < <(grep -n "$err" $file | grep -v "New(" | grep -v "Newf(")
+      done < <(grep -n "$err(,|.| )" $file | grep -v "New(" | grep -v "Newf(")
     done
   done
 }

@@ -171,6 +171,10 @@ lint-sonar:
   <<: *lint-template
   <<: *only-protected
 
+  ############################################################
+# Section for error check tools
+############################################################
+
 error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
