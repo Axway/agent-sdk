@@ -172,6 +172,20 @@ lint-sonar:
   <<: *only-protected
 
 ############################################################
+# Section for error check tools
+############################################################
+
+error_check:
+  stage: test
+  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
+  before_script:
+    - *prepare-path
+    - *configure-git-ssh
+  script:
+    - make error-check
+  <<: *only-feature
+
+############################################################
 # Section for security tools
 ############################################################
 include:

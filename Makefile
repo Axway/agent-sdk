@@ -30,6 +30,9 @@ test-sonar:
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
+error-check:
+	./build/scripts/error_check.sh ./pkg
+
 sonar: test-sonar
 	sonar-scanner -X \
 		-Dsonar.host.url=http://quality1.ecd.axway.int \
