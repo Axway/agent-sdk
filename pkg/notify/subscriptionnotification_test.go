@@ -1,7 +1,6 @@
 package notify
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -15,18 +14,11 @@ import (
 
 type mockClient struct {
 	coreapi.Client
-	// httpClient *mockHTTPClient
-}
-
-type mockHTTPClient struct {
 }
 
 // NewMockClient - creates a new HTTP client
 func newMockClient() coreapi.Client {
-	// httpCli := http.DefaultClient
-	return &mockClient{
-		// httpClient: httpCli,
-	}
+	return &mockClient{}
 }
 
 func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
@@ -83,11 +75,10 @@ func TestSubscriptionNotification(t *testing.T) {
 		authID, apiKeyFieldName, authSecret, apic.SubscriptionActive, message)
 	subNotif.apiClient = newMockClient()
 	// Set the authtemplate based on the authtype
-	subNotif.SetAuthorizationTemplate(apikeys)
+	subNotif.SetAuthorizationTemplate("apikeys")
 	err = subNotif.NotifySubscriber(recipient)
 
 	// this can never succeed because the SMTP will fail
-	fmt.Println(err.Error())
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "could not send notification via smtp"))
 }
