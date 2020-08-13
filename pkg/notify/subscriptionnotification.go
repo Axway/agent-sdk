@@ -7,6 +7,7 @@ import (
 
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
+	"github.com/pkg/errors"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
@@ -67,7 +68,7 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 
 	template := templateActionMap[s.Action]
 	if template == nil {
-		log.Errorf("no template found for action %s", s.Action)
+		log.Error(ErrSubscriptionNoTemplateForAction.FormatError(s.Action))
 		return
 	}
 
@@ -77,7 +78,7 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 	case oauth:
 		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
 	default:
-		log.Errorf("bad authType sent to authoriztion template %s", authType)
+		log.Error(ErrSubscriptionBadAuthtype.FormatError(authType))
 		return
 	}
 
@@ -163,7 +164,7 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 	msg := s.BuildSMTPMessage(template)
 	err := smtp.SendMail(globalCfg.GetSMTPURL(), auth, globalCfg.GetSMTPFromAddress(), []string{s.Email}, msg)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(ErrSubscriptionSendEmail, err.Error()))
 		return err
 	}
 	return nil
