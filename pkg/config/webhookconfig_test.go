@@ -47,5 +47,5 @@ func TestWebookConfig(t *testing.T) {
 	}
 	err = cfg.ValidateConfig()
 	assert.NotNil(t, err)
-	assert.Equal(t, "could not parse value of subscriptions.approvalWebhook.headers", err.Error())
+	assert.Equal(t, "could not parse value of central.subscriptions.approvalWebhook.headers", err.Error())
 }

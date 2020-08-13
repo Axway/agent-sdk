@@ -287,7 +287,7 @@ func (s *SubscriptionConfiguration) validate() error {
 func (s *SubscriptionConfiguration) validateWebhook() error {
 	if webhookURL := s.GetWebhookURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("Error central.subscriptions.webhook is not a valid URL")
+			return errors.New("central.subscriptions.webhook is not a valid URL")
 		}
 	}
 
@@ -298,7 +298,7 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 	for _, headerValue := range headersValues {
 		hvArray := strings.Split(headerValue, ",Value=")
 		if len(hvArray) != 2 {
-			return errors.New("Could not parse value of central.subscriptions.notificationHeaders")
+			return errors.New("could not parse value of central.subscriptions.notificationHeaders")
 		}
 		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
 		s.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]

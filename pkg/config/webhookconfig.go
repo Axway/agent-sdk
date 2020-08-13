@@ -65,7 +65,7 @@ func (c *WebhookConfiguration) ValidateConfig() error {
 		for _, headerValue := range headersValues {
 			hvArray := strings.Split(headerValue, ",Value=")
 			if len(hvArray) != 2 {
-				return errors.New("could not parse value of subscriptions.approvalWebhook.headers")
+				return errors.New("could not parse value of central.subscriptions.approvalWebhook.headers")
 			}
 			hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
 			c.webhookHeaders[hvArray[0]] = hvArray[1]
