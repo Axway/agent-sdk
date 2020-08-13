@@ -52,6 +52,7 @@ func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipie
 	return subscriptionNotification
 }
 
+// consts
 const (
 	apikeys = "apikeys"
 	oauth   = "oauth"
@@ -65,11 +66,19 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 	}
 
 	template := templateActionMap[s.Action]
+	if template == nil {
+		log.Errorf("no template found for action %s", s.Action)
+		return
+	}
+
 	switch authType {
 	case apikeys:
 		s.AuthTemplate = s.UpdateTemplate(template.APIKey)
 	case oauth:
 		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
+	default:
+		log.Errorf("bad authType sent to authoriztion template %s", authType)
+		return
 	}
 
 	log.Debugf("Subscription notification configuration for '{authtemplate}' is set to %s", authType)
@@ -130,6 +139,9 @@ func (s *SubscriptionNotification) notifyViaWebhook() error {
 
 func (s *SubscriptionNotification) notifyViaSMTP() error {
 	template := templateActionMap[s.Action]
+	if template == nil {
+		return fmt.Errorf("no template found for action %s", s.Action)
+	}
 
 	if template.Subject == "" && template.Body == "" {
 		return nil
