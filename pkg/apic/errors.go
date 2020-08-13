@@ -7,7 +7,7 @@ var (
 	ErrCentralConfig      = errors.New(1100, "configuration error for AMPLIFY Central")
 	ErrEnvironmentQuery   = errors.New(1101, "error sending request to AMPLIFY Central. Check configuration for CENTRAL_ENVIRONMENT")
 	ErrNetwork            = errors.New(1110, "error connecting to AMPLIFY Central. Check docs.axway.com for more info on this error code")
-	ErrRequestQuery       = errors.Newf(1120, "error making a request to AMPLIFY. %s")
+	ErrRequestQuery       = errors.New(1120, "error making a request to AMPLIFY")
 	ErrAuthenticationCall = errors.New(1130, "error getting authentication token. Check AMPLIFY Central auth configuration (CENTRAL_AUTH_*) and network configuration for agent on docs.axway.com")
 	ErrAuthentication     = errors.New(1131, "authentication token was not valid. Check AMPLIFY Central auth configuration (CENTRAL_AUTH_*)")
 )
@@ -22,6 +22,6 @@ var (
 	ErrSubscriptionSchemaResp   = errors.Newf(1144, "unexpected response code (%d) when creating a subscription schema in AMPLIFY Central")
 
 	// APIs related to webhooks
-	ErrCreateWebhook            = errors.New(1145, "unable to create webhook")
-	ErrCreateSecret             = errors.New(1146, "unable to create secret")
+	ErrCreateWebhook = errors.New(1145, "unable to create webhook")
+	ErrCreateSecret  = errors.New(1146, "unable to create secret")
 )
