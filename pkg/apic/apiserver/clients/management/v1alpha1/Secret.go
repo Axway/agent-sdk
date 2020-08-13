@@ -84,14 +84,14 @@ func (c *SecretClient) Delete(res *v1alpha1.Secret) error {
 }
 
 // Create -
-func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SecretClient) Create(res *v1alpha1.Secret, opts ...v1.CreateOption) (*v1alpha1.Secret, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 }
 
 // Update -
-func (c *SecretClient) Update(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *SecretClient) Update(res *v1alpha1.Secret, opts ...v1.UpdateOption) (*v1alpha1.Secret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

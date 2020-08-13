@@ -84,14 +84,14 @@ func (c *MeshWorkloadClient) Delete(res *v1alpha1.MeshWorkload) error {
 }
 
 // Create -
-func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload) (*v1alpha1.MeshWorkload, error) {
+func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload, opts ...v1.CreateOption) (*v1alpha1.MeshWorkload, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload) (*v1alpha1.MeshW
 }
 
 // Update -
-func (c *MeshWorkloadClient) Update(res *v1alpha1.MeshWorkload) (*v1alpha1.MeshWorkload, error) {
+func (c *MeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...v1.UpdateOption) (*v1alpha1.MeshWorkload, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

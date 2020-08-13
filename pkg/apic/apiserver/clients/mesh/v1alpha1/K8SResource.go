@@ -72,14 +72,14 @@ func (c *K8SResourceClient) Delete(res *v1alpha1.K8SResource) error {
 }
 
 // Create -
-func (c *K8SResourceClient) Create(res *v1alpha1.K8SResource) (*v1alpha1.K8SResource, error) {
+func (c *K8SResourceClient) Create(res *v1alpha1.K8SResource, opts ...v1.CreateOption) (*v1alpha1.K8SResource, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (c *K8SResourceClient) Create(res *v1alpha1.K8SResource) (*v1alpha1.K8SReso
 }
 
 // Update -
-func (c *K8SResourceClient) Update(res *v1alpha1.K8SResource) (*v1alpha1.K8SResource, error) {
+func (c *K8SResourceClient) Update(res *v1alpha1.K8SResource, opts ...v1.UpdateOption) (*v1alpha1.K8SResource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

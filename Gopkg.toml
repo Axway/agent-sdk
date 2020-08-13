@@ -57,7 +57,7 @@
   version = "0.2.0"
 
 [[constraint]]
-  name = "git.ecd.axway.int/apigov/service-mesh-agent"
+  name = "git.ecd.axway.org/apigov/service-mesh-agent"
   branch = "master"
 
 [[constraint]]

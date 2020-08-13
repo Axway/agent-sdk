@@ -84,14 +84,14 @@ func (c *APIServiceInstanceClient) Delete(res *v1alpha1.APIServiceInstance) erro
 }
 
 // Create -
-func (c *APIServiceInstanceClient) Create(res *v1alpha1.APIServiceInstance) (*v1alpha1.APIServiceInstance, error) {
+func (c *APIServiceInstanceClient) Create(res *v1alpha1.APIServiceInstance, opts ...v1.CreateOption) (*v1alpha1.APIServiceInstance, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *APIServiceInstanceClient) Create(res *v1alpha1.APIServiceInstance) (*v1
 }
 
 // Update -
-func (c *APIServiceInstanceClient) Update(res *v1alpha1.APIServiceInstance) (*v1alpha1.APIServiceInstance, error) {
+func (c *APIServiceInstanceClient) Update(res *v1alpha1.APIServiceInstance, opts ...v1.UpdateOption) (*v1alpha1.APIServiceInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

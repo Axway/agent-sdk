@@ -84,14 +84,14 @@ func (c *ConsumerSubscriptionDefinitionClient) Delete(res *v1alpha1.ConsumerSubs
 }
 
 // Create -
-func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubscriptionDefinition) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.CreateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubs
 }
 
 // Update -
-func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubscriptionDefinition) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

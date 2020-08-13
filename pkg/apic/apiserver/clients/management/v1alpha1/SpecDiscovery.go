@@ -84,14 +84,14 @@ func (c *SpecDiscoveryClient) Delete(res *v1alpha1.SpecDiscovery) error {
 }
 
 // Create -
-func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery) (*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery, opts ...v1.CreateOption) (*v1alpha1.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery) (*v1alpha1.Spe
 }
 
 // Update -
-func (c *SpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery) (*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts ...v1.UpdateOption) (*v1alpha1.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

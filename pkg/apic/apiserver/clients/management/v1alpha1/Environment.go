@@ -72,14 +72,14 @@ func (c *EnvironmentClient) Delete(res *v1alpha1.Environment) error {
 }
 
 // Create -
-func (c *EnvironmentClient) Create(res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Create(res *v1alpha1.Environment, opts ...v1.CreateOption) (*v1alpha1.Environment, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (c *EnvironmentClient) Create(res *v1alpha1.Environment) (*v1alpha1.Environ
 }
 
 // Update -
-func (c *EnvironmentClient) Update(res *v1alpha1.Environment) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Update(res *v1alpha1.Environment, opts ...v1.UpdateOption) (*v1alpha1.Environment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

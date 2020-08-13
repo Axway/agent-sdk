@@ -72,14 +72,14 @@ func (c *K8SClusterClient) Delete(res *v1alpha1.K8SCluster) error {
 }
 
 // Create -
-func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster, opts ...v1.CreateOption) (*v1alpha1.K8SCluster, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluste
 }
 
 // Update -
-func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster, opts ...v1.UpdateOption) (*v1alpha1.K8SCluster, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

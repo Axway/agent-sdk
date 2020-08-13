@@ -84,14 +84,14 @@ func (c *ConsumerInstanceClient) Delete(res *v1alpha1.ConsumerInstance) error {
 }
 
 // Create -
-func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
+func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance, opts ...v1.CreateOption) (*v1alpha1.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance) (*v1alph
 }
 
 // Update -
-func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error) {
+func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, opts ...v1.UpdateOption) (*v1alpha1.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

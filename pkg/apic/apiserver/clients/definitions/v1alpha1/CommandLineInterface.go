@@ -84,14 +84,14 @@ func (c *CommandLineInterfaceClient) Delete(res *v1alpha1.CommandLineInterface) 
 }
 
 // Create -
-func (c *CommandLineInterfaceClient) Create(res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
+func (c *CommandLineInterfaceClient) Create(res *v1alpha1.CommandLineInterface, opts ...v1.CreateOption) (*v1alpha1.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *CommandLineInterfaceClient) Create(res *v1alpha1.CommandLineInterface) 
 }
 
 // Update -
-func (c *CommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface) (*v1alpha1.CommandLineInterface, error) {
+func (c *CommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface, opts ...v1.UpdateOption) (*v1alpha1.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -10,8 +10,6 @@ import (
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
-
-	ot "github.com/opentracing/opentracing-go"
 )
 
 // HTTPClient allows you to replace the default client for different use cases
@@ -28,6 +26,12 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 	return nil
 }
 
+func (ba *basicAuth) impersonate(req *http.Request, toImpersonate string) error {
+	req.Header.Set("X-Axway-User-Id", toImpersonate)
+
+	return nil
+}
+
 func (j *jwtAuth) Authenticate(req *http.Request) error {
 	t, err := j.tokenGetter.GetToken()
 	if err != nil {
@@ -38,19 +42,19 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	return nil
 }
 
-type modifier interface {
-	Modify()
-}
-
 // BasicAuth auth with user/pass
 func BasicAuth(user, password, tenantID, instanceID string) Options {
 	return func(c *ClientBase) {
-		c.auth = &basicAuth{
+		ba := &basicAuth{
 			user:       user,
 			pass:       password,
 			tenantID:   tenantID,
 			instanceID: instanceID,
 		}
+
+		c.auth = ba
+
+		c.impersonator = ba
 	}
 }
 
@@ -65,13 +69,27 @@ func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, tim
 	}
 }
 
+type Logger interface {
+	Log(kv ...interface{}) error
+}
+
+type noOpLogger struct{}
+
+func (noOpLogger) Log(kv ...string) error { return nil }
+
+func WithLogger(log Logger) Options {
+	return func(cb *ClientBase) {
+		cb.client = loggingDoerWrapper{log, cb.client}
+	}
+}
+
 // NewClient creates a new HTTP client
 func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
-		tracer: ot.NoopTracer{},
-		client: &http.Client{},
-		url:    baseURL,
-		auth:   noopAuth{},
+		client:       &http.Client{},
+		url:          baseURL,
+		auth:         noopAuth{},
+		impersonator: noImpersonator{},
 	}
 
 	for _, o := range options {
@@ -328,14 +346,27 @@ func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) erro
 	return nil
 }
 
-func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return c.CreateCtx(context.Background(), ri)
+func CUserID(userID string) CreateOption {
+	return func(co *createOptions) {
+		co.impersonateUserID = userID
+	}
 }
 
 // Create creates a single resource
-func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	return c.CreateCtx(context.Background(), ri, opts...)
+}
+
+// CreateCtx creates a single resource
+func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
+
+	co := createOptions{}
+
+	for _, opt := range opts {
+		opt(&co)
+	}
 
 	err := enc.Encode(ri)
 	if err != nil {
@@ -351,6 +382,13 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+
+	if co.impersonateUserID != "" {
+		err = c.impersonator.impersonate(req, co.impersonateUserID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -372,14 +410,27 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 	return obj, err
 }
 
-func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return c.UpdateCtx(context.Background(), ri)
+func UUserID(userID string) UpdateOption {
+	return func(co *updateOptions) {
+		co.impersonateUserID = userID
+	}
 }
 
 // Update updates a single resource
-func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	return c.UpdateCtx(context.Background(), ri, opts...)
+}
+
+// UpdateCtx updates a single resource
+func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
+
+	uo := updateOptions{}
+
+	for _, opt := range opts {
+		opt(&uo)
+	}
 
 	err := enc.Encode(ri)
 	if err != nil {
@@ -394,6 +445,13 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 	err = c.auth.Authenticate(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if uo.impersonateUserID != "" {
+		err = c.impersonator.impersonate(req, uo.impersonateUserID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	req.Header.Add("Content-Type", "application/json")

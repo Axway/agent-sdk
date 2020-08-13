@@ -72,14 +72,14 @@ func (c *ResourceGroupClient) Delete(res *v1alpha1.ResourceGroup) error {
 }
 
 // Create -
-func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup, opts ...v1.CreateOption) (*v1alpha1.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup) (*v1alpha1.Res
 }
 
 // Update -
-func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup, opts ...v1.UpdateOption) (*v1alpha1.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

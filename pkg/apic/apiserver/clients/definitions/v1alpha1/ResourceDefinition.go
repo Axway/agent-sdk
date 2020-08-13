@@ -84,14 +84,14 @@ func (c *ResourceDefinitionClient) Delete(res *v1alpha1.ResourceDefinition) erro
 }
 
 // Create -
-func (c *ResourceDefinitionClient) Create(res *v1alpha1.ResourceDefinition) (*v1alpha1.ResourceDefinition, error) {
+func (c *ResourceDefinitionClient) Create(res *v1alpha1.ResourceDefinition, opts ...v1.CreateOption) (*v1alpha1.ResourceDefinition, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *ResourceDefinitionClient) Create(res *v1alpha1.ResourceDefinition) (*v1
 }
 
 // Update -
-func (c *ResourceDefinitionClient) Update(res *v1alpha1.ResourceDefinition) (*v1alpha1.ResourceDefinition, error) {
+func (c *ResourceDefinitionClient) Update(res *v1alpha1.ResourceDefinition, opts ...v1.UpdateOption) (*v1alpha1.ResourceDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

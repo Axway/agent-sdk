@@ -93,14 +93,14 @@ func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
 }
 
 // Create -
-func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}, opts ...v1.CreateOption) (*v1alpha1.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,12 +116,12 @@ func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.
 }
 
 // Update -
-func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}, opts ...v1.UpdateOption) (*v1alpha1.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

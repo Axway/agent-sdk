@@ -4,7 +4,7 @@
 [[projects]]
   branch = "master"
   digest = "1:06b93fa16661a69ec306fc1272fa125141897f32d1367ef9f4308c8034c3bf09"
-  name = "git.ecd.axway.int/apigov/service-mesh-agent"
+  name = "git.ecd.axway.org/apigov/service-mesh-agent"
   packages = ["pkg/apicauth"]
   pruneopts = "UT"
   revision = "0ed253ddefa8d2e7ab63e9e95f623d02926908c7"
@@ -504,7 +504,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "git.ecd.axway.int/apigov/service-mesh-agent/pkg/apicauth",
+    "git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth",
     "github.com/elastic/beats/libbeat/beat",
     "github.com/elastic/beats/libbeat/common",
     "github.com/getkin/kin-openapi/openapi3",

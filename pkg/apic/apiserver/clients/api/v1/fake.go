@@ -58,7 +58,7 @@ func notFoundInScope(name, kind, scopeName string) NotFoundError {
 
 type unknownScope NotFoundError
 
-func (us unknownScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	return us.CreateCtx(context.Background(), ri)
 }
 
@@ -90,22 +90,22 @@ func (us unknownScope) ListCtx(_ context.Context, _ ...ListOptions) ([]*apiv1.Re
 	return nil, NotFoundError(us)
 }
 
-func (us unknownScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return us.UpdateCtx(context.Background(), ri)
+func (us unknownScope) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	return us.UpdateCtx(context.Background(), ri, opts...)
 }
 
-func (us unknownScope) UpdateCtx(_ context.Context, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (us unknownScope) UpdateCtx(_ context.Context, _ *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	return nil, NotFoundError(us)
 }
 
 // TODO add kind to fakeByScope
 type fakeByScope map[string]*fakeScoped
 
-func (fk fakeByScope) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return fk.CreateCtx(context.Background(), ri)
+func (fk fakeByScope) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri, opts...)
 }
 
-func (fk fakeByScope) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
@@ -136,11 +136,11 @@ func (fk fakeByScope) ListCtx(_ context.Context, options ...ListOptions) ([]*api
 	return nil, notFound("", "")
 }
 
-func (fk fakeByScope) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return fk.UpdateCtx(context.Background(), ri)
+func (fk fakeByScope) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	return fk.UpdateCtx(context.Background(), ri, opts...)
 }
 
-func (fk fakeByScope) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	// TODO should work if ri has scope name
 	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 }
@@ -153,15 +153,15 @@ func (fk fakeByScope) WithScope(name string) Scoped {
 	}
 }
 
-func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return fk.CreateCtx(context.Background(), ri)
+func (fk *fakeUnscoped) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri, opts...)
 }
 
-func (fk *fakeUnscoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeUnscoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
-	return fk.create(ri)
+	return fk.create(ri, opts...)
 }
 
 func (fk *fakeUnscoped) Delete(ri *apiv1.ResourceInstance) error {
@@ -205,8 +205,8 @@ func (fk *fakeScoped) WithScope(name string) Scoped {
 	return (*fakeScoped)(nil)
 }
 
-func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	created, err := fk.fakeScoped.create(ri)
+func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	created, err := fk.fakeScoped.create(ri, opts...)
 	if err != nil {
 		return created, err
 	}
@@ -381,11 +381,11 @@ type fakeScoped struct {
 	handler        EventHandler
 }
 
-func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return fk.CreateCtx(context.Background(), ri)
+func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	return fk.CreateCtx(context.Background(), ri, opts...)
 }
 
-func (fk *fakeScoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -393,7 +393,7 @@ func (fk *fakeScoped) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance) (
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
-	return fk.create(ri)
+	return fk.create(ri, opts...)
 }
 
 func (fk *fakeScoped) Delete(ri *apiv1.ResourceInstance) error {
@@ -487,11 +487,11 @@ func (fk *fakeScoped) ListCtx(_ context.Context, options ...ListOptions) ([]*api
 	return ris, nil
 }
 
-func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return fk.UpdateCtx(context.Background(), ri)
+func (fk *fakeScoped) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	return fk.UpdateCtx(context.Background(), ri, opts...)
 }
 
-func (fk *fakeScoped) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	if fk == nil {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -499,10 +499,17 @@ func (fk *fakeScoped) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance) (
 	fk.lock.Lock()
 	defer fk.lock.Unlock()
 
-	return fk.update(ri)
+	return fk.update(ri, opts...)
 }
 
-func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+
+	co := createOptions{}
+
+	for _, opt := range opts {
+		opt(&co)
+	}
+
 	if ri.Name == "" {
 		return nil, fmt.Errorf("empty resource name: %v", ri)
 	}
@@ -520,9 +527,9 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 				ID: uuid.New().String(),
 				Audit: apiv1.AuditMetadata{
 					CreateTimestamp: apiv1.Time(time.Now()),
-					CreateUserID:    "", // TODO
+					CreateUserID:    co.impersonateUserID,
 					ModifyTimestamp: apiv1.Time(time.Now()),
-					ModifyUserID:    "", // TODO
+					ModifyUserID:    co.impersonateUserID,
 				},
 				Scope:           fk.ms,
 				ResourceVersion: "0",
@@ -545,7 +552,13 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 	return created, nil
 }
 
-func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (fk *fakeScoped) update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	uo := updateOptions{}
+
+	for _, opt := range opts {
+		opt(&uo)
+	}
+
 	if ri.Name == "" {
 		return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
 	}
@@ -564,9 +577,9 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstanc
 				ID: prev.Metadata.ID,
 				Audit: apiv1.AuditMetadata{
 					CreateTimestamp: prev.Metadata.Audit.CreateTimestamp,
-					CreateUserID:    "", // needed?
+					CreateUserID:    prev.Metadata.Audit.CreateUserID,
 					ModifyTimestamp: apiv1.Time(time.Now()),
-					ModifyUserID:    "", // needed?
+					ModifyUserID:    uo.impersonateUserID,
 				},
 				Scope:           prev.Metadata.Scope,
 				ResourceVersion: prev.Metadata.ResourceVersion,

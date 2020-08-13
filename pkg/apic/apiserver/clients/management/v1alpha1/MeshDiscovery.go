@@ -84,14 +84,14 @@ func (c *MeshDiscoveryClient) Delete(res *v1alpha1.MeshDiscovery) error {
 }
 
 // Create -
-func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery) (*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery, opts ...v1.CreateOption) (*v1alpha1.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery) (*v1alpha1.Mes
 }
 
 // Update -
-func (c *MeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery) (*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts ...v1.UpdateOption) (*v1alpha1.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

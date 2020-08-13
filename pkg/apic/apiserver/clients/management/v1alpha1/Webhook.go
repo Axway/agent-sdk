@@ -84,14 +84,14 @@ func (c *WebhookClient) Delete(res *v1alpha1.Webhook) error {
 }
 
 // Create -
-func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *WebhookClient) Create(res *v1alpha1.Webhook, opts ...v1.CreateOption) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error)
 }
 
 // Update -
-func (c *WebhookClient) Update(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *WebhookClient) Update(res *v1alpha1.Webhook, opts ...v1.UpdateOption) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
