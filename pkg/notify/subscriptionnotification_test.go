@@ -12,14 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockClient struct {
-	coreapi.Client
-}
-
-func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
-	return nil, nil
-}
-
 func buildConfig() (config.SubscriptionConfig, error) {
 	rootCmd := &cobra.Command{
 		Use: "test",
@@ -72,7 +64,7 @@ func TestSubscriptionNotification(t *testing.T) {
 
 	subNotif = NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
 		authID, apiKeyFieldName, authSecret, apic.SubscriptionActive, message)
-	subNotif.apiClient = &mockClient{}
+	subNotif.apiClient = &coreapi.MockClient{}
 
 	// Set the authtemplate based on the authtype
 	subNotif.SetAuthorizationTemplate("")           // try a bad value
