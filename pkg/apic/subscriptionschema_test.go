@@ -4,9 +4,21 @@ import (
 	"encoding/json"
 	"testing"
 
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
+
+type mockClient struct {
+	coreapi.Client
+	code int
+}
+
+func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
+	return &coreapi.Response{
+		Code: c.code,
+	}, nil
+}
 
 func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	cfg := &corecfg.CentralConfiguration{
@@ -22,6 +34,10 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	assert.NotNil(t, client)
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
+
+	serviceClient.tokenRequester = &mockTokenGetter{
+		token: "testToken",
+	}
 	assert.NotNil(t, serviceClient.DefaultSubscriptionSchema)
 	passthruSchema := serviceClient.DefaultSubscriptionSchema
 	assert.NotNil(t, passthruSchema)
@@ -43,8 +59,17 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 func TestRegisterSubscriptionSchema(t *testing.T) {
 	client, apiKeySchema := commonSetup(t)
 	serviceClient := client.(*ServiceClient)
+
+	// this return code should fail
+	serviceClient.apiClient = &mockClient{code: 200}
 	err := client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
+
+	// this return code should be good
+	serviceClient.apiClient = &mockClient{code: 201}
+	err = client.RegisterSubscriptionSchema(apiKeySchema)
+	assert.Nil(t, err)
+
 	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
 	assert.NotNil(t, registeredAPIKeySchema)
 	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
@@ -67,6 +92,15 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 
 func TestUpdateSubscriptionSchema(t *testing.T) {
 	client, apiKeySchema := commonSetup(t)
+	serviceClient := client.(*ServiceClient)
+
+	// this return code should fail
+	serviceClient.apiClient = &mockClient{code: 204}
 	err := client.UpdateSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
+
+	// this return code should be good
+	serviceClient.apiClient = &mockClient{code: 200}
+	err = client.UpdateSubscriptionSchema(apiKeySchema)
+	assert.Nil(t, err)
 }
