@@ -67,11 +67,27 @@ func TestSubscriptionNotification(t *testing.T) {
 	message := "new subscription received"
 
 	subNotif := NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
+		authID, apiKeyFieldName, authSecret, apic.SubscriptionApproved, message) // this is a bad action
+	subNotif.SetAuthorizationTemplate(apikeys)
+
+	subNotif = NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
 		authID, apiKeyFieldName, authSecret, apic.SubscriptionActive, message)
 	subNotif.apiClient = &mockClient{}
+
 	// Set the authtemplate based on the authtype
-	subNotif.SetAuthorizationTemplate("apikeys")
-	err = subNotif.NotifySubscriber(recipient)
+	subNotif.SetAuthorizationTemplate("")           // try a bad value
+	subNotif.SetAuthorizationTemplate("apikeysfff") // try a bad value
+	subNotif.SetAuthorizationTemplate(oauth)
+	subNotif.SetAuthorizationTemplate(apikeys)
+
+	err = subNotif.NotifySubscriber(recipient) // logon
+
+	cfg1 := cfg.(*config.SubscriptionConfiguration)
+	cfg1.SMTP.AuthType = config.AnonymousAuth
+	err = subNotif.NotifySubscriber(recipient) // plainauth
+
+	cfg1.SMTP.AuthType = config.PlainAuth
+	err = subNotif.NotifySubscriber(recipient) // anonymous
 
 	// this can never succeed because the SMTP will fail
 	assert.NotNil(t, err)
