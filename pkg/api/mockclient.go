@@ -8,18 +8,6 @@ type MockClient struct {
 	ResponseError error
 }
 
-// func (c *MockClient) SetResponseCode(code int) {
-// 	c.ResponseCode = code
-// }
-
-// func (c *MockClient) SetResponseError(rspError error) {
-// 	c.ResponseError = rspError
-// }
-
-// func (c *MockClient) SetResponse(response *Response) {
-// 	c.Response = response
-// }
-
 // Send -
 func (c *MockClient) Send(request Request) (*Response, error) {
 	if c.ResponseError != nil {
