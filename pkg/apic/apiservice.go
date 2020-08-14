@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
@@ -76,7 +76,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 
 	// update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		err = c.processConsumerInstance(serviceBody, http.MethodPut, c.cfg.GetConsumerInstancesURL()+"/"+sanitizedName, sanitizedName)
+		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPut, c.cfg.GetConsumerInstancesURL()+"/"+sanitizedName, sanitizedName)
 		if err != nil {
 			return "", err
 		}
@@ -107,7 +107,7 @@ func (c *ServiceClient) addNewResources(serviceBody ServiceBody, sanitizedName s
 
 	// add consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		err = c.processConsumerInstance(serviceBody, http.MethodPost, c.cfg.GetConsumerInstancesURL(), sanitizedName)
+		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPost, c.cfg.GetConsumerInstancesURL(), sanitizedName)
 		if err != nil {
 			return "", err
 		}
@@ -215,7 +215,8 @@ func (c *ServiceClient) processRevision(serviceBody ServiceBody, httpMethod, rev
 
 	_, err = c.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		return c.rollbackAPIService(serviceBody, name)
+		_, err = c.rollbackAPIService(serviceBody, name)
+		return err
 	}
 
 	return nil
@@ -238,7 +239,7 @@ func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, ins
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		err = c.rollbackAPIService(serviceBody, name)
+		_, err = c.rollbackAPIService(serviceBody, name)
 		return "", err
 	}
 
@@ -246,10 +247,10 @@ func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, ins
 }
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance
-func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) error {
+func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
 	doc, err := strconv.Unquote(string(serviceBody.Documentation))
 	if err != nil {
-		return err
+		return "", err
 	}
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 
@@ -293,26 +294,25 @@ func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMet
 
 	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
+	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
 		return c.rollbackAPIService(serviceBody, name)
 	}
 
-	return err
+	return itemID, err
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) error {
+func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
 	spec := APIServiceSpec{}
 	buffer, err := c.createAPIServerBody(serviceBody, spec, name)
 	if err != nil {
-		return err
+		return "", err
 	}
-	c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, buffer)
-	return nil
+	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, buffer)
 }
 
 // deleteConsumerInstance -
