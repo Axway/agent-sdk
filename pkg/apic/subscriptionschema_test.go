@@ -4,21 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
-
-type mockClient struct {
-	coreapi.Client
-	code int
-}
-
-func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
-	return &coreapi.Response{
-		Code: c.code,
-	}, nil
-}
 
 func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	cfg := &corecfg.CentralConfiguration{
@@ -35,9 +24,7 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
 
-	serviceClient.tokenRequester = &mockTokenGetter{
-		token: "testToken",
-	}
+	serviceClient.tokenRequester = &MockTokenGetter{}
 	assert.NotNil(t, serviceClient.DefaultSubscriptionSchema)
 	passthruSchema := serviceClient.DefaultSubscriptionSchema
 	assert.NotNil(t, passthruSchema)
@@ -61,12 +48,13 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 
 	// this return code should fail
-	serviceClient.apiClient = &mockClient{code: 200}
+	mock := api.MockClient{ResponseCode: 200}
+	serviceClient.apiClient = &mock
 	err := client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
 
 	// this return code should be good
-	serviceClient.apiClient = &mockClient{code: 201}
+	mock.ResponseCode = 201
 	err = client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 
@@ -95,12 +83,13 @@ func TestUpdateSubscriptionSchema(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 
 	// this return code should fail
-	serviceClient.apiClient = &mockClient{code: 204}
+	mock := api.MockClient{ResponseCode: 204}
+	serviceClient.apiClient = &mock
 	err := client.UpdateSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
 
 	// this return code should be good
-	serviceClient.apiClient = &mockClient{code: 200}
+	mock.ResponseCode = 200
 	err = client.UpdateSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 }

@@ -57,7 +57,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 		},
 	}
 	c.apiClient = &mockClient
-	c.tokenRequester = &mockTokenGetter{}
+	c.tokenRequester = &MockTokenGetter{}
 
 	// Test DiscoveryAgent, PublishToEnvironment
 	mockClient.respCount = 0
