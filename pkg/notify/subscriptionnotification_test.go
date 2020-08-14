@@ -16,11 +16,6 @@ type mockClient struct {
 	coreapi.Client
 }
 
-// NewMockClient - creates a new HTTP client
-func newMockClient() coreapi.Client {
-	return &mockClient{}
-}
-
 func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
 	return nil, nil
 }
@@ -73,7 +68,7 @@ func TestSubscriptionNotification(t *testing.T) {
 
 	subNotif := NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
 		authID, apiKeyFieldName, authSecret, apic.SubscriptionActive, message)
-	subNotif.apiClient = newMockClient()
+	subNotif.apiClient = &mockClient{}
 	// Set the authtemplate based on the authtype
 	subNotif.SetAuthorizationTemplate("apikeys")
 	err = subNotif.NotifySubscriber(recipient)
