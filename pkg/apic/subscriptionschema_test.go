@@ -9,6 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockClient struct {
+	coreapi.Client
+	code int
+}
+
+func (c *mockClient) Send(request coreapi.Request) (*coreapi.Response, error) {
+	return &coreapi.Response{
+		Code: c.code,
+	}, nil
+}
+
 func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamID: "test",
@@ -73,6 +84,12 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 	err := client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
+
+	// this return code should be good
+	serviceClient.apiClient = &mockClient{code: 201}
+	err = client.RegisterSubscriptionSchema(apiKeySchema)
+	assert.Nil(t, err)
+
 	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
 	assert.NotNil(t, registeredAPIKeySchema)
 	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
