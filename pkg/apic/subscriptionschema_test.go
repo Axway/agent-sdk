@@ -58,6 +58,21 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	err = client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 
+	schema := apiKeySchema.(*subscriptionSchema)
+	assert.Equal(t, 0, len(schema.UniqueKeys))
+	apiKeySchema.AddUniqueKey("abc")
+	apiKeySchema.AddUniqueKey("def")
+	assert.Equal(t, 2, len(schema.UniqueKeys))
+	assert.Equal(t, "def", schema.UniqueKeys[1])
+
+	return client, apiKeySchema
+}
+
+func TestRegisterSubscriptionSchema(t *testing.T) {
+	client, apiKeySchema := commonSetup(t)
+	serviceClient := client.(*ServiceClient)
+	err := client.RegisterSubscriptionSchema(apiKeySchema)
+	assert.NotNil(t, err)
 	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
 	assert.NotNil(t, registeredAPIKeySchema)
 	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
