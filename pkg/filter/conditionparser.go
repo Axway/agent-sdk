@@ -1,11 +1,12 @@
 package filter
 
 import (
-	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"strings"
+
+	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
 // ConditionParser - Represents the filter condition parser
@@ -42,8 +43,7 @@ func (f *ConditionParser) parseCondition(filterCodition string) ([]Condition, er
 	if err != nil {
 		errSegments := strings.Split(err.Error(), ":")
 		errMsg := errSegments[len(errSegments)-1]
-		err = errors.New("Error in parsing filter. Syntax error," + errMsg)
-		return nil, err
+		return nil, ErrFilterConfiguration.FormatError(errMsg)
 	}
 
 	ast.Inspect(node, f.parseConditionExpr)
@@ -94,13 +94,13 @@ func (f *ConditionParser) parseExpr(expr ast.Expr) (Condition, error) {
 			LHSExpr: ce,
 		}, nil
 	}
-	return nil, errors.New("Error in parsing filter. Unrecognized expression")
+	return nil, ErrFilterExpression
 }
 
 func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 	funcSelectorExprt, ok := expr.Fun.(*ast.SelectorExpr)
 	if !ok {
-		return nil, errors.New("Error in parsing filter. Invalid call expression")
+		return nil, ErrFilterExpression
 	}
 	funcSelector, err := f.parseSelectorExpr(funcSelectorExprt)
 	if err != nil {
@@ -114,7 +114,7 @@ func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 
 	callType, err := GetCallType(funcName)
 	if err != nil {
-		return nil, errors.New("Error in parsing filter. " + err.Error())
+		return nil, utilerrors.Wrap(ErrFilterGeneralParse, err.Error())
 	}
 
 	var callArguments []interface{}
@@ -132,7 +132,7 @@ func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 	}
 	callExpr, err := newCallExpr(callType, selectorType, name, callArguments)
 	if err != nil {
-		return nil, errors.New("Error in parsing filter. " + err.Error())
+		return nil, utilerrors.Wrap(ErrFilterGeneralParse, err.Error())
 	}
 	return callExpr, nil
 }
@@ -142,7 +142,7 @@ func (f *ConditionParser) parseCallArguments(callType CallType, args []ast.Expr)
 	for _, argExpr := range args {
 		literal, ok := argExpr.(*ast.BasicLit)
 		if !ok {
-			return nil, errors.New("Error in parsing filter. Invalid call argument")
+			return nil, ErrFilterArgument
 		}
 		arg := strings.Trim(literal.Value, `"`)
 		argsList = append(argsList, arg)
@@ -154,7 +154,7 @@ func (f *ConditionParser) parseSelector(selector string) (selectorType, selector
 	selectorType = selector[0:strings.Index(selector, ".")]
 	selectorPath = selector[strings.Index(selector, ".")+1:]
 	if selectorType != "tag" && selectorType != "attr" {
-		err = errors.New("Error in parsing filter. Invalid selector type")
+		err = ErrFilterSelectorType
 	}
 	return
 }
@@ -168,7 +168,7 @@ func (f *ConditionParser) parseSelectorExpr(expr *ast.SelectorExpr) (string, err
 	} else if x, ok := expr.X.(*ast.SelectorExpr); ok {
 		xName, err = f.parseSelectorExpr(x)
 	} else {
-		err = errors.New("Error in parsing filter. Invalid selector expression")
+		err = ErrFilterSelectorExpr
 	}
 	if err != nil {
 		return "", err
@@ -179,7 +179,7 @@ func (f *ConditionParser) parseSelectorExpr(expr *ast.SelectorExpr) (string, err
 
 func (f *ConditionParser) parseBinaryExpr(expr *ast.BinaryExpr) (Condition, error) {
 	if !f.isConditionalExpr(expr) {
-		return nil, errors.New("Error in parsing filter. Invalid operator")
+		return nil, ErrFilterOperator
 	}
 
 	if f.isSimpleExpr(expr) {
@@ -195,7 +195,7 @@ func (f *ConditionParser) parseSimpleLHS(expr *ast.BinaryExpr) (CallExpr, error)
 	} else if lhs, ok := expr.X.(*ast.CallExpr); ok {
 		return f.parseCallLHS(lhs)
 	}
-	return nil, errors.New("Error in parsing filter. Unrecognized condition")
+	return nil, ErrFilterCondition
 }
 
 func (f *ConditionParser) parseSelectorLHS(lhs *ast.SelectorExpr) (CallExpr, error) {
