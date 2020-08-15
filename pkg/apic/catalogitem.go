@@ -32,7 +32,7 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 	if err != nil {
 		return "", err
 	}
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
@@ -71,7 +71,7 @@ func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		logResponseErrors(response.Body)
 		return "", errors.New(strconv.Itoa(response.Code))
 	}
