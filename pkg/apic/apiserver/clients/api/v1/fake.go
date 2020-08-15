@@ -348,6 +348,8 @@ func (fv *FakeVisitor) Visit(node QueryNode) {
 			child.Accept(childFV)
 			fv.set = fv.set.Union(childFV.set)
 		}
+	case namesNode:
+		newSet(n...).Intersection(fv.resources.nameSet())
 	case tagNode:
 		for _, tag := range n {
 			fv.set = fv.set.Union(fv.resources.tagsIndex.LookUp(tag))
@@ -379,6 +381,15 @@ type fakeScoped struct {
 	attributeIndex index
 	lock           *sync.Mutex
 	handler        EventHandler
+}
+
+func (fk *fakeScoped) nameSet() set {
+	res := make(set, len(fk.resources))
+	for k := range fk.resources {
+		res[k] = struct{}{}
+	}
+
+	return res
 }
 
 func (fk *fakeScoped) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
