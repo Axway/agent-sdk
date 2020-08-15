@@ -349,7 +349,7 @@ func (fv *FakeVisitor) Visit(node QueryNode) {
 			fv.set = fv.set.Union(childFV.set)
 		}
 	case namesNode:
-		newSet(n...).Intersection(fv.resources.nameSet())
+		fv.set = newSet(n...).Intersection(fv.resources.nameSet())
 	case tagNode:
 		for _, tag := range n {
 			fv.set = fv.set.Union(fv.resources.tagsIndex.LookUp(tag))

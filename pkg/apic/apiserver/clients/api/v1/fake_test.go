@@ -177,46 +177,52 @@ func TestFakeQueries(t *testing.T) {
 		query    v1.QueryNode
 		expected []string
 	}{{
-		"common attribute and value",
-		v1.AttrIn("attr", "val"),
-		[]string{"env1", "env2"},
-	}, {
-		"common tag",
-		v1.TagsIn("tag"),
-		[]string{"env1", "env2"},
-	}, {
-		"tag with one match",
-		v1.TagsIn("tag1"),
+		"query names",
+		v1.Names("env1"),
 		[]string{"env1"},
-	}, {
-		"two tags",
-		v1.TagsIn("tag1", "tag2"),
-		[]string{"env1", "env2"},
-	}, {
-		"attribute with two values",
-		v1.AttrIn("diffattr", "val1"),
-		[]string{"env1"},
-	}, {
-		"any attr",
-		v1.AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
-		[]string{"env1", "env2"},
-	}, {
-		"all attr",
-		v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
-		[]string{"env1"},
-	}, {
-		"all attr and one tag",
-		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag")),
-		[]string{"env1"},
-	}, {
-		"all attr and one tag no result",
-		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
-		[]string{},
-	}, {
-		"all attr or one tag",
-		v1.Or(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
-		[]string{"env1", "env2"},
 	},
+
+		{
+			"common attribute and value",
+			v1.AttrIn("attr", "val"),
+			[]string{"env1", "env2"},
+		}, {
+			"common tag",
+			v1.TagsIn("tag"),
+			[]string{"env1", "env2"},
+		}, {
+			"tag with one match",
+			v1.TagsIn("tag1"),
+			[]string{"env1"},
+		}, {
+			"two tags",
+			v1.TagsIn("tag1", "tag2"),
+			[]string{"env1", "env2"},
+		}, {
+			"attribute with two values",
+			v1.AttrIn("diffattr", "val1"),
+			[]string{"env1"},
+		}, {
+			"any attr",
+			v1.AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
+			[]string{"env1", "env2"},
+		}, {
+			"all attr",
+			v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
+			[]string{"env1"},
+		}, {
+			"all attr and one tag",
+			v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag")),
+			[]string{"env1"},
+		}, {
+			"all attr and one tag no result",
+			v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
+			[]string{},
+		}, {
+			"all attr or one tag",
+			v1.Or(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
+			[]string{"env1", "env2"},
+		},
 	}
 
 	for i := range testCases {
