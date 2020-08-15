@@ -119,9 +119,9 @@ func TestFilterParsingError(t *testing.T) {
 	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\" && (tag.name1 == \"value 1\")", "Unrecognized expression")
 
 	// Syntax Errors
-	assertFilterSyntaxErr(t, "tag.name1 = \"value 1\"", "Syntax error, expected '==', found '='")
-	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\" tag.name1 != \"value 1\"", "Syntax error, expected ';', found tag")
-	assertFilterSyntaxErr(t, "tag.name1 == ", "Syntax error, expected ';', found 'EOF'")
+	assertFilterSyntaxErr(t, "tag.name1 = \"value 1\"", "Syntax error: expected '==', found '='")
+	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\" tag.name1 != \"value 1\"", "Syntax error: expected ';', found tag")
+	assertFilterSyntaxErr(t, "tag.name1 == ", "Syntax error: expected ';', found 'EOF'")
 
 	// Call Expression Sytax Error
 	assertFilterSyntaxErr(t, "tag.Match(\"something\")", "Unsupported call")
