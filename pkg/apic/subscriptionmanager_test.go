@@ -151,7 +151,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	assert.NotNil(t, client)
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
-	serviceClient.tokenRequester = &MockTokenGetter{}
+	serviceClient.tokenRequester = MockTokenGetter
 	approvedSubscriptions := make(map[string]Subscription)
 	unsubscribedSubscriptions := make(map[string]Subscription)
 	approvedProcessor := func(subscription Subscription) {
@@ -232,7 +232,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
 
-	serviceClient.tokenRequester = &MockTokenGetter{}
+	serviceClient.tokenRequester = MockTokenGetter
 	approvedProcessor := func(subscription Subscription) {
 		subscription.UpdateState(SubscriptionActive)
 	}

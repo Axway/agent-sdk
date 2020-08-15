@@ -24,7 +24,7 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
 
-	serviceClient.tokenRequester = &MockTokenGetter{}
+	serviceClient.tokenRequester = MockTokenGetter
 	assert.NotNil(t, serviceClient.DefaultSubscriptionSchema)
 	passthruSchema := serviceClient.DefaultSubscriptionSchema
 	assert.NotNil(t, passthruSchema)
