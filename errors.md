@@ -33,3 +33,6 @@
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification     |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications  |
 | 1302 | error creating data for sending subscription notification                                                   | pkg/notify/ErrSubscriptionData             |
+| 1303 | email template not updated because an invalid authType was supplied                                                   | pkg/notify/ErrSubscriptionBadAuthtype             |
+| 1304 | no email template found for action                                                   | pkg/notify/ErrSubscriptionNoTemplateForAction             |
+| 1305 | error sending email to SMTP server                                                   | pkg/notify/ErrSubscriptionSendEmail             |
