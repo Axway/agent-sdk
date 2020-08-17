@@ -352,7 +352,7 @@ func (c *CentralConfiguration) Validate() (err error) {
 
 func (c *CentralConfiguration) validateConfig() {
 	if c.GetTenantID() == "" {
-		exception.Throw(errors.New("Error central.organizationId not set in config"))
+		exception.Throw(errors.New("Error central.organizationID not set in config"))
 	}
 
 	if c.GetURL() == "" {
