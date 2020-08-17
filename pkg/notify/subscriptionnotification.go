@@ -7,13 +7,12 @@ import (
 
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
-	"github.com/pkg/errors"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -94,7 +93,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 		case config.NotifyWebhook:
 			err := s.notifyViaWebhook()
 			if err != nil {
-				return agenterrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("webhook")
+				return utilerrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("webhook")
 			}
 			notificationSent = true
 			log.Debugf("Webhook notification sent to %s.", recipient)
@@ -102,7 +101,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 		case config.NotifySMTP:
 			err := s.notifyViaSMTP()
 			if err != nil {
-				return agenterrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("smtp")
+				return utilerrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("smtp")
 			}
 			notificationSent = true
 			log.Debugf("Email notification sent to %s.", recipient)
@@ -120,7 +119,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 func (s *SubscriptionNotification) notifyViaWebhook() error {
 	buffer, err := json.Marshal(&s)
 	if err != nil {
-		return agenterrors.Wrap(ErrSubscriptionData, err.Error())
+		return utilerrors.Wrap(ErrSubscriptionData, err.Error())
 	}
 
 	request := coreapi.Request{
@@ -164,7 +163,7 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 	msg := s.BuildSMTPMessage(template)
 	err := smtp.SendMail(globalCfg.GetSMTPURL(), auth, globalCfg.GetSMTPFromAddress(), []string{s.Email}, msg)
 	if err != nil {
-		log.Error(errors.Wrap(ErrSubscriptionSendEmail, err.Error()))
+		log.Error(utilerrors.Wrap(ErrSubscriptionSendEmail, err.Error()))
 		return err
 	}
 	return nil
