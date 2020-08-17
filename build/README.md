@@ -4,6 +4,7 @@ In this folder you will find scripts and files necessary for the build and relea
 
 ## scripts folder
 
-| Name       | Description                                                                     |
-| ---------- | ------------------------------------------------------------------------------- |
-| promote.sh | Updates the files necessary to increment the versioning on release of the agent |
+| Name           | Description                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| promote.sh     | Updates the files necessary to increment the versioning on release of the agent                        |
+| error_check.sh | Searched the pkg directory for SDK error definitions, validates they are used properly within the code |
