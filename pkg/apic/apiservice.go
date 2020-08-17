@@ -48,6 +48,10 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 		return "", err
 	}
 
+	/* need to talk to Cyrille about this
+	// Leave this as an update for now.  Issue is because we are doing new resources, but using the same name, we are
+	// getting an error, Resource of kind APIServiceRevision and name petstore-http already exists in scope covid19.
+
 	// Check to see if this was a 'major change'.  Major changes expect the API to be unpublished.
 	// Unpublished means that there is no consumer instance.  The assumption is, if a consumer instance doesn't exist, then its a 'major change'
 	// since api has to be in an unpublished state
@@ -60,6 +64,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 			return itemID, err
 		}
 	}
+	*/
 
 	log.Debug("Updating api for a minor change")
 	// update api revision
@@ -74,12 +79,27 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 		return "", err
 	}
 
+	/* need to talk to Cyrille about this
+	// Leave this as an update for now.  Issue is because we are doing new resources, but using the same name, we are
+	// getting an error, Resource of kind APIServiceRevision and name petstore-http already exists in scope covid19.
 	// update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
 		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPut, c.cfg.GetConsumerInstancesURL()+"/"+sanitizedName, sanitizedName)
 		if err != nil {
 			return "", err
 		}
+	}
+	*/
+
+	var httpMethod = http.MethodPut
+	consumerInstancesURL := c.cfg.GetConsumerInstancesURL() + "/" + sanitizedName
+	// add/update consumer instance
+	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		if !c.consumerInstanceExists(sanitizedName) {
+			httpMethod = http.MethodPost
+			consumerInstancesURL = c.cfg.GetConsumerInstancesURL()
+		}
+		itemID, err = c.processConsumerInstance(serviceBody, httpMethod, consumerInstancesURL, sanitizedName)
 	}
 
 	log.Debugf("Update service returning itemID: [%v]", itemID)
@@ -325,7 +345,7 @@ func (c *ServiceClient) deleteConsumerInstance(name string) error {
 }
 
 // getConsumerInstanceByID
-func (c *ServiceClient) getConsumerInstanceByInstanceID(instanceID string) (*APIServer, error) {
+func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*APIServer, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -334,7 +354,7 @@ func (c *ServiceClient) getConsumerInstanceByInstanceID(instanceID string) (*API
 	log.Debugf("Get consumer instance by id: %s", instanceID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("metadata.references.id==%s", instanceID),
+		"query": fmt.Sprintf("metadata.id==%s", instanceID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
