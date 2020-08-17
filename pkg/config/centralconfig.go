@@ -102,7 +102,7 @@ type CentralConfiguration struct {
 	CentralConfig
 	AgentType                   AgentType
 	Mode                        AgentMode     `config:"mode"`
-	TenantID                    string        `config:"tenantID"`
+	TenantID                    string        `config:"organizationId"`
 	TeamName                    string        `config:"team"`
 	APICDeployment              string        `config:"deployment"`
 	Environment                 string        `config:"environment"`
