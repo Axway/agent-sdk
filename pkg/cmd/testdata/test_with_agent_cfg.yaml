@@ -1,5 +1,5 @@
 central:
-  tenantId: "111111"
+  organizationId: "111111"
   teamId: "222222"
   environment: "environment"
   auth:
