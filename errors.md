@@ -21,6 +21,14 @@
 | 1144 | unexpected response when managing subscription schema on AMPLIFY Central, check network and CENTRAL_AUTH    | pkg/apic/ErrSubscriptionSchemaResp         |
 | 1145 | unable to create webhook                                                                                    | pkg/apic/ErrCreateWebhook                  |
 | 1146 | unable to create secret                                                                                     | pkg/apic/ErrCreateSecret                   |
+| 1147 | error parsing filter in configuration. Syntax error                                                         | pkg/filter/ErrFilterConfiguration          |
+| 1148 | error parsing filter in configuration. Unrecognized expression                                              | pkg/filter/ErrFilterExpression             |
+| 1149 | error parsing filter in configuration                                                                       | pkg/filter/ErrFilterGeneralParse           |
+| 1150 | error parsing filter in configuration. Invalid call argument                                                | pkg/filter/ErrFilterArgument               |
+| 1151 | error parsing filter in configuration. Invalid selector type                                                | pkg/filter/ErrFilterSelectorType           |
+| 1152 | error parsing filter in configuration. Invalid selector expression                                          | pkg/filter/ErrFilterSelectorExpr           |
+| 1153 | error parsing filter in configuration. Invalid operator                                                     | pkg/filter/ErrFilterOperator               |
+| 1154 | error parsing filter in configuration. Unrecognized condition                                               | pkg/filter/ErrFilterCondition              |
 |      | 1300-1399 - for subscription notification errors                                                            |                                            |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification     |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications  |
