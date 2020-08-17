@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
@@ -48,7 +49,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 
 	// this return code should fail
-	mock := api.MockClient{ResponseCode: 200}
+	mock := api.MockClient{ResponseCode: http.StatusOK}
 	serviceClient.apiClient = &mock
 	err := client.RegisterSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
@@ -104,13 +105,13 @@ func TestUpdateSubscriptionSchema(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 
 	// this return code should fail
-	mock := api.MockClient{ResponseCode: 204}
+	mock := api.MockClient{ResponseCode: http.StatusNoContent}
 	serviceClient.apiClient = &mock
 	err := client.UpdateSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
 
 	// this return code should be good
-	mock.ResponseCode = 200
+	mock.ResponseCode = http.StatusOK
 	err = client.UpdateSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 }

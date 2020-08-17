@@ -1,0 +1,24 @@
+  {
+    "id": "e4f19a3173caf7290173e45f3a270f8b",
+    "owningTeamId": "b0272c77-a2e9-4efe-9990-698cca3e1a2b",
+    "definitionType": "API",
+    "definitionSubType": "swaggerv2",
+    "definitionRevision": 1,
+    "name": "DaleAPI (V7)",
+    "description": "API From V7 APIManager",
+    "tags": [
+      "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17"
+    ],
+    "metadata": {
+      "createTimestamp": "2020-08-12T20:31:52.872+0000",
+      "modifyTimestamp": "2020-08-12T20:31:52.903+0000"
+    },
+    "visibility": "RESTRICTED",
+    "state": "PUBLISHED",
+    "access": "admin",
+    "availableRevisions": [
+      1
+    ],
+    "latestVersion": "1.0",
+    "totalSubscriptions": 0
+  }
