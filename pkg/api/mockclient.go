@@ -15,16 +15,21 @@ type MockClient struct {
 }
 
 // SetResponse -
+// if you care about the response content and the code, pass both in
+// if you only care about the code, pass "" for the filepath
 func (c *MockClient) SetResponse(filepath string, code int) {
-	responseFile, err := os.Open(filepath)
-	if err != nil {
-		c.ResponseCode = http.StatusInternalServerError
-		return
-	}
-	dat, err := ioutil.ReadAll(responseFile)
-	if err != nil {
-		c.ResponseCode = http.StatusInternalServerError
-		return
+	var dat []byte
+	if filepath != "" {
+		responseFile, err := os.Open(filepath)
+		if err != nil {
+			c.ResponseCode = http.StatusInternalServerError
+			return
+		}
+		dat, err = ioutil.ReadAll(responseFile)
+		if err != nil {
+			c.ResponseCode = http.StatusInternalServerError
+			return
+		}
 	}
 
 	c.Response = &Response{
