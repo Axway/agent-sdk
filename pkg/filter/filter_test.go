@@ -117,6 +117,7 @@ func TestFilterParsingError(t *testing.T) {
 
 	// Unsupported condition grouping
 	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\" && (tag.name1 == \"value 1\")", "Unrecognized expression")
+	assertFilterSyntaxErr(t, "\"tag.name1 == value\"", "Unrecognized expression")
 
 	// Syntax Errors
 	assertFilterSyntaxErr(t, "tag.name1 = \"value 1\"", "Syntax error: expected '==', found '='")
