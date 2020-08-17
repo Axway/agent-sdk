@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,13 +30,17 @@ func newServiceClient() *ServiceClient {
 }
 func TestGetCatalogItemIDForConsumerInstance(t *testing.T) {
 	client := newServiceClient()
-	itemID, err := client.getCatalogItemIDForConsumerInstance("e4f19a3173caf7290173e45f3a270f8b")
+	mock := client.apiClient.(*api.MockClient)
+	wd, _ := os.Getwd()
+	mock.SetResponse(wd+"/testdata/catalogid-for-consumerinstance-good.json", 200)
+	testID := "e4f19a3173caf7290173e45f3a270f8b"
+	itemID, err := client.getCatalogItemIDForConsumerInstance(testID)
 	assert.Nil(t, err)
-	assert.Equal(t, "", itemID)
+	assert.Equal(t, testID, itemID)
 
-	itemID, err := client.getCatalogItemIDForConsumerInstance("0000")
+	itemID, err = client.getCatalogItemIDForConsumerInstance("0000")
 	assert.Nil(t, err)
-	assert.Equal(t, "", itemID)
+	assert.Equal(t, testID, itemID)
 }
 
 func TestGetCatalogItemName(t *testing.T) {
