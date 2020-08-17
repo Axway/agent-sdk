@@ -29,7 +29,11 @@ func newServiceClient() *ServiceClient {
 }
 func TestGetCatalogItemIDForConsumerInstance(t *testing.T) {
 	client := newServiceClient()
-	itemID, err := client.getCatalogItemIDForConsumerInstance("00000")
+	itemID, err := client.getCatalogItemIDForConsumerInstance("e4f19a3173caf7290173e45f3a270f8b")
+	assert.Nil(t, err)
+	assert.Equal(t, "", itemID)
+
+	itemID, err := client.getCatalogItemIDForConsumerInstance("0000")
 	assert.Nil(t, err)
 	assert.Equal(t, "", itemID)
 }
