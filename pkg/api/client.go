@@ -47,7 +47,7 @@ type httpClient struct {
 	httpClient *http.Client
 }
 
-// NewClient - creates a new API client using the http client sent in
+// NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 	httpCli := http.DefaultClient
 	if cfg != nil {

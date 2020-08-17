@@ -13,14 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockTokenGetter struct {
-	token string
-}
-
-func (m *mockTokenGetter) GetToken() (string, error) {
-	return m.token, nil
-}
-
 func TestProcessorRegistration(t *testing.T) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamID: "test",
@@ -159,9 +151,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	assert.NotNil(t, client)
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
-	serviceClient.tokenRequester = &mockTokenGetter{
-		token: "testToken",
-	}
+	serviceClient.tokenRequester = MockTokenGetter
 	approvedSubscriptions := make(map[string]Subscription)
 	unsubscribedSubscriptions := make(map[string]Subscription)
 	approvedProcessor := func(subscription Subscription) {
@@ -242,9 +232,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 	serviceClient := client.(*ServiceClient)
 	assert.NotNil(t, serviceClient)
 
-	serviceClient.tokenRequester = &mockTokenGetter{
-		token: "testToken",
-	}
+	serviceClient.tokenRequester = MockTokenGetter
 	approvedProcessor := func(subscription Subscription) {
 		subscription.UpdateState(SubscriptionActive)
 	}
@@ -261,4 +249,25 @@ func TestSubscriptionUpdate(t *testing.T) {
 
 	assert.Equal(t, SubscriptionActive, subscriptionMap["11111"].GetState())
 	assert.Equal(t, SubscriptionUnsubscribed, subscriptionMap["22222"].GetState())
+}
+
+func TestBlacklist(t *testing.T) {
+	cfg := &corecfg.CentralConfiguration{
+		Auth: &corecfg.AuthConfiguration{
+			URL:      "http://localhost",
+			Realm:    "Broker",
+			ClientID: "dummy",
+		},
+	}
+	client := New(cfg)
+	mgr := client.GetSubscriptionManager().(*subscriptionManager)
+	mgr.AddBlacklistItem("123")
+	assert.Equal(t, 1, len(mgr.blacklist))
+	mgr.AddBlacklistItem("456")
+	assert.Equal(t, 2, len(mgr.blacklist))
+
+	mgr.RemoveBlacklistItem("123")
+	assert.Equal(t, 1, len(mgr.blacklist))
+	mgr.RemoveBlacklistItem("456")
+	assert.Equal(t, 0, len(mgr.blacklist))
 }
