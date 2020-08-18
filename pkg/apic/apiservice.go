@@ -48,8 +48,9 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 		return "", err
 	}
 
-	/* need to talk to Cyrille about this
-	// Leave this as an update for now.  Issue is because we are doing new resources, but using the same name, we are
+	/* NOTE - DO NOT REMOVE OR UNCOMMENT.  Leaving here for future stories
+	// --- BEGIN
+	// Issue is because we are doing new resources, but using the same name, we are
 	// getting an error, Resource of kind APIServiceRevision and name petstore-http already exists in scope covid19.
 
 	// Check to see if this was a 'major change'.  Major changes expect the API to be unpublished.
@@ -64,6 +65,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 			return itemID, err
 		}
 	}
+	// --- END
 	*/
 
 	log.Debug("Updating api for a minor change")
@@ -79,8 +81,9 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 		return "", err
 	}
 
-	/* need to talk to Cyrille about this
-	// Leave this as an update for now.  Issue is because we are doing new resources, but using the same name, we are
+	/* NOTE - DO NOT REMOVE OR UNCOMMENT.  Leaving here for future stories
+	// --- BEGIN
+	// Issue is because we are doing new resources, but using the same name, we are
 	// getting an error, Resource of kind APIServiceRevision and name petstore-http already exists in scope covid19.
 	// update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
@@ -89,6 +92,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 			return "", err
 		}
 	}
+	// --- END
 	*/
 
 	var httpMethod = http.MethodPut
