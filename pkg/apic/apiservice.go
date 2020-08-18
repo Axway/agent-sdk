@@ -305,6 +305,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMet
 		Status:             "GA",
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
+		OwningTeam:         c.cfg.GetTeamName(),
 		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
 			AutoSubscribe:          autoSubscribe,

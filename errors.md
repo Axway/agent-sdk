@@ -10,6 +10,7 @@
 |      | 1100-1299 - for apic package errors                                                                         |                                            |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                  |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery               |
+| 1102 | could not find specified team in AMPLIFY Central, check CENTRAL_TEAM                                                                  | pkg/apic/ErrTeamNotFound                   |
 | 1110 | connection to AMPLIFY Central failed, possibly network                                                      | pkg/apic/ErrNetwork                        |
 | 1120 | request to AMPLIFY Central failed, could be bad value for CENTRAL_ENVIRONMENT                               | pkg/apic/ErrRequestQuery                   |
 | 1130 | request to get authentication token failed, possibly network or CENTAL_AUTH config                          | pkg/apic/ErrAuthenticationCall             |

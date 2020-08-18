@@ -12,7 +12,7 @@ import (
 
 func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	cfg := &corecfg.CentralConfiguration{
-		TeamID: "test",
+		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",
