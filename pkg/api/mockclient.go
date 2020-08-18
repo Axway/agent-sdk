@@ -10,7 +10,7 @@ import (
 type MockClient struct {
 	Client
 	Response      *Response // this for if you want to set your own dummy response
-	ResponseCode  int       // this for if only care about a particular response code
+	ResponseCode  int       // this for if you only care about a particular response code
 	ResponseError error
 }
 

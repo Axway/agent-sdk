@@ -381,6 +381,14 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 		exception.Throw(errors.New("Error central.pollInterval not set in config"))
 	}
 
+	switch c.GetSubscriptionApprovalMode() {
+	case ManualApproval, AutoApproval, WebhookApproval:
+		// these are all OK
+	case "":
+	default:
+		exception.Throw(errors.New("Error central.subscriptions.approvalmode set to incorrect value in config: " + c.GetSubscriptionApprovalMode()))
+	}
+
 	c.SubscriptionApprovalWebhook.ValidateConfig()
 }
 
@@ -391,14 +399,6 @@ func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(errors.New("Error central.environment not set in config"))
-	}
-
-	switch c.GetSubscriptionApprovalMode() {
-	case ManualApproval, AutoApproval, WebhookApproval:
-		// these are all OK
-	case "":
-	default:
-		exception.Throw(errors.New("Error central.subscriptions.approvalmode set to incorrect value in config: " + c.GetSubscriptionApprovalMode()))
 	}
 
 	if c.APIServerVersion == "" {
