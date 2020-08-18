@@ -7,9 +7,11 @@
     "name": "DaleAPI (V7)",
     "description": "API From V7 APIManager",
     "tags": [
-      "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17"
+      "foo",
+      "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17",
+      "bar"
     ],
-    "metadata": {
+      "metadata": {
       "createTimestamp": "2020-08-12T20:31:52.872+0000",
       "modifyTimestamp": "2020-08-12T20:31:52.903+0000"
     },

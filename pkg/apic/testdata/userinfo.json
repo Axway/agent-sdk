@@ -1,0 +1,23 @@
+{
+    "success": true,
+    "result": {
+        "_id": "5e21e556e9d0da5972d5fb3c",
+        "guid": "b0433b7f-ac38-4d29-8a64-cf645c99b99f",
+        "user_id": 609128079195143,
+        "firstname": "Dale",
+        "lastname": "Feldick",
+        "active": true,
+        "activated": true,
+        "created": "2020-01-17T16:48:22.435Z",
+        "email": "joe@axway.com",
+        "updated": "2020-08-18T17:57:58.700Z",
+        "account-confirm-date": "2020-01-17 16:49:14",
+        "last_browser_language": "en",
+        "last_logged_in_org": 475532044844830,
+        "last_login": "2020-08-18T17:57:58.698Z",
+        "logged_in_count": 1301,
+        "logged_in_from_web": true,
+        "logged_in_from_cli": true,
+        "password_updated": "2020-06-01T21:46:46.116Z"
+    }
+}
