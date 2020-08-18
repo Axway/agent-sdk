@@ -46,7 +46,6 @@ type ServiceBody struct {
 	RestAPIID         string `json:",omitempty"`
 	URL               string `json:",omitempty"`
 	Stage             string `json:",omitempty"`
-	TeamID            string `json:",omitempty"`
 	Description       string `json:",omitempty"`
 	Version           string `json:",omitempty"`
 	AuthPolicy        string `json:",omitempty"`
@@ -167,4 +166,27 @@ type EnvironmentSpec struct {
 	ID       string      `json:"id,omitempty"`
 	Name     string      `json:"name,omitempty"`
 	Metadata interface{} `json:"metadata,omitempty"`
+}
+
+// PlatformUserInfo - Represents user resource from platform
+type PlatformUserInfo struct {
+	Success bool `json:"success"`
+	Result  struct {
+		ID        string `json:"_id"`
+		GUID      string `json:"guid"`
+		UserID    int64  `json:"user_id"`
+		Firstname string `json:"firstname"`
+		Lastname  string `json:"lastname"`
+		Active    bool   `json:"active"`
+		Email     string `json:"email"`
+	} `json:"result"`
+}
+
+// PlatformTeam - represents team from Central Client registry
+type PlatformTeam struct {
+	ID          string `json:"guid"`
+	Name        string `json:"name"`
+	Description string `json:"desc"`
+	Default     bool   `json:"isDefault"`
+	// Add remaining properties ??
 }

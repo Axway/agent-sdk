@@ -15,7 +15,7 @@ import (
 
 func TestProcessorRegistration(t *testing.T) {
 	cfg := &corecfg.CentralConfiguration{
-		TeamID: "test",
+		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",
@@ -136,7 +136,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 
 	cfg := &corecfg.CentralConfiguration{
 		Mode:         corecfg.PublishToEnvironment,
-		TeamID:       "test",
+		TeamName:     "test",
 		URL:          server.URL,
 		PollInterval: 1 * time.Second,
 		Environment:  "test",
@@ -217,7 +217,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 	defer server.Close()
 
 	cfg := &corecfg.CentralConfiguration{
-		TeamID:       "test",
+		TeamName:     "test",
 		URL:          server.URL,
 		PollInterval: 1 * time.Second,
 		Auth: &corecfg.AuthConfiguration{

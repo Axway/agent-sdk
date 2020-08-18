@@ -54,16 +54,36 @@ func TestCheckAPIServerHealth(t *testing.T) {
 				fileName: "./testdata/apic-environment.json",
 				respCode: http.StatusOK,
 			},
+			{
+				fileName: "./testdata/apic-team-notfound.json",
+				respCode: http.StatusOK,
+			},
 		},
 	}
 	c.apiClient = &mockClient
 	c.tokenRequester = MockTokenGetter
 
-	// Test DiscoveryAgent, PublishToEnvironment
+	// Test DiscoveryAgent, PublishToEnvironment and with team not found specified
 	mockClient.respCount = 0
 	mockClient.responses[0].fileName = "./testdata/apiserver-environment.json"
 	cfg.Mode = corecfg.PublishToEnvironment
 	err := c.checkAPIServerHealth()
+	assert.NotNil(t, err, "Expecting error to be returned from the health check with discovery agent in publishToEnvironment mode for invalid team name")
+
+	// Test Team found
+	mockClient.respCount = 0
+	mockClient.responses = []mockResponse{
+		{
+			fileName: "./testdata/apiserver-environment.json",
+			respCode: http.StatusOK,
+		},
+		{
+			fileName: "./testdata/apic-team.json",
+			respCode: http.StatusOK,
+		},
+	}
+	c.cfg.SetEnvironmentID("")
+	err = c.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToEnvironment mode")
 
 	// Test TraceabilityAgent, publishToEnvironment
