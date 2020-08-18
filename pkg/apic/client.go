@@ -272,6 +272,7 @@ func (c *ServiceClient) getEnvironmentIDByName(headers map[string]string) (strin
 
 	return apiServerEnv.Metadata.ID, nil
 }
+
 func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -317,20 +318,6 @@ func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instance
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
 }
 
-// PlatformUserInfo -
-type PlatformUserInfo struct {
-	Success bool `json:"success"`
-	Result  struct {
-		ID        string `json:"_id"`
-		GUID      string `json:"guid"`
-		UserID    int64  `json:"user_id"`
-		Firstname string `json:"firstname"`
-		Lastname  string `json:"lastname"`
-		Active    bool   `json:"active"`
-		Email     string `json:"email"`
-	} `json:"result"`
-}
-
 // GetUserEmailAddress - request the user email
 func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	headers, err := c.createHeader()
@@ -360,15 +347,6 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	log.Debugf("Platform user email %s", email)
 
 	return email, nil
-}
-
-// PlatformTeam -
-type PlatformTeam struct {
-	ID          string `json:"guid"`
-	Name        string `json:"name"`
-	Description string `json:"desc"`
-	Default     bool   `json:"isDefault"`
-	// Add remaining properties ??
 }
 
 // getTeamByName - returns the team based on team name

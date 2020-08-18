@@ -167,3 +167,26 @@ type EnvironmentSpec struct {
 	Name     string      `json:"name,omitempty"`
 	Metadata interface{} `json:"metadata,omitempty"`
 }
+
+// PlatformUserInfo - Represents user resource from platform
+type PlatformUserInfo struct {
+	Success bool `json:"success"`
+	Result  struct {
+		ID        string `json:"_id"`
+		GUID      string `json:"guid"`
+		UserID    int64  `json:"user_id"`
+		Firstname string `json:"firstname"`
+		Lastname  string `json:"lastname"`
+		Active    bool   `json:"active"`
+		Email     string `json:"email"`
+	} `json:"result"`
+}
+
+// PlatformTeam - represents team from Central Client registry
+type PlatformTeam struct {
+	ID          string `json:"guid"`
+	Name        string `json:"name"`
+	Description string `json:"desc"`
+	Default     bool   `json:"isDefault"`
+	// Add remaining properties ??
+}
