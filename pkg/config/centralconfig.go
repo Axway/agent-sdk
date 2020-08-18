@@ -69,8 +69,6 @@ type CentralConfig interface {
 	GetURL() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
-	GetCatalogItemImageURL(catalogItemID string) string
-	GetCatalogItemRelationshipsURL(catalogItemID string) string
 	GetEnvironmentURL() string
 	GetAPIServerURL() string
 	GetAPIServerEnvironmentURL() string
@@ -227,16 +225,6 @@ func (c *CentralConfiguration) SetProxyEnvironmentVariable() (err error) {
 // GetCatalogItemsURL - Returns the URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
-}
-
-// GetCatalogItemImageURL - Returns the image based on catalogItemID
-func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
-}
-
-// GetCatalogItemRelationshipsURL - Returns the image based on catalogItemID
-func (c *CentralConfiguration) GetCatalogItemRelationshipsURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/relationships"
 }
 
 // GetEnvironmentURL - Returns the APIServer URL for services API

@@ -192,17 +192,6 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	}
 	return nil
 }
-func (c *ServiceClient) checkCatalogHealth() error {
-	// do a request for catalog items
-	headers, err := c.createHeader()
-	if err != nil {
-		return errors.Wrap(ErrAuthenticationCall, err.Error())
-	}
-
-	// do a request for catalog items
-	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0))
-	return err
-}
 
 func (c *ServiceClient) checkAPIServerHealth() error {
 
