@@ -46,7 +46,6 @@ type ServiceBody struct {
 	RestAPIID         string `json:",omitempty"`
 	URL               string `json:",omitempty"`
 	Stage             string `json:",omitempty"`
-	TeamID            string `json:",omitempty"`
 	Description       string `json:",omitempty"`
 	Version           string `json:",omitempty"`
 	AuthPolicy        string `json:",omitempty"`

@@ -47,7 +47,7 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 
 func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
 	cfg := &corecfg.CentralConfiguration{
-		TeamID: "test",
+		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",

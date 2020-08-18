@@ -65,7 +65,7 @@ type CentralConfig interface {
 	GetEnvironmentID() string
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
-	GetTeamID() string
+	GetTeamName() string
 	GetURL() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
@@ -103,7 +103,7 @@ type CentralConfiguration struct {
 	AgentType                   AgentType
 	Mode                        AgentMode     `config:"mode"`
 	TenantID                    string        `config:"tenantID"`
-	TeamID                      string        `config:"teamID" `
+	TeamName                    string        `config:"team"`
 	APICDeployment              string        `config:"deployment"`
 	Environment                 string        `config:"environment"`
 	URL                         string        `config:"url"`
@@ -194,9 +194,9 @@ func (c *CentralConfiguration) GetSubscriptionApprovalMode() string {
 	return c.SubscriptionApprovalMode
 }
 
-// GetTeamID - Returns the team ID
-func (c *CentralConfiguration) GetTeamID() string {
-	return c.TeamID
+// GetTeamName - Returns the team name
+func (c *CentralConfiguration) GetTeamName() string {
+	return c.TeamName
 }
 
 // GetURL - Returns the central base URL
@@ -373,10 +373,6 @@ func (c *CentralConfiguration) validateConfig() {
 }
 
 func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
-	if c.GetTeamID() == "" {
-		exception.Throw(errors.New("Error central.teamID not set in config"))
-	}
-
 	if c.GetPollInterval() <= 0 {
 		exception.Throw(errors.New("Error central.pollInterval not set in config"))
 	}
@@ -434,7 +430,7 @@ const (
 	pathEnvironment                         = "central.environment"
 	pathDeployment                          = "central.deployment"
 	pathMode                                = "central.mode"
-	pathTeamID                              = "central.teamId"
+	pathTeam                                = "central.team"
 	pathPollInterval                        = "central.pollInterval"
 	pathProxyURL                            = "central.proxyUrl"
 	pathAPIServerVersion                    = "central.apiServerVersion"
@@ -470,7 +466,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
-		props.AddStringProperty(pathTeamID, "", "Team ID for the current default team for creating catalog")
+		props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
@@ -520,7 +516,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
-		cfg.TeamID = props.StringPropertyValue(pathTeamID)
+		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 
 		// set the subscription approval stuff
