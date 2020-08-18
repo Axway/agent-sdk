@@ -6,7 +6,7 @@ import "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 var (
 	ErrCentralConfig      = errors.New(1100, "configuration error for AMPLIFY Central")
 	ErrEnvironmentQuery   = errors.New(1101, "error sending request to AMPLIFY Central. Check configuration for CENTRAL_ENVIRONMENT")
-	ErrTeamNotFound       = errors.New(1102, "could not find team (%s) in AMPLIFY Central. Check configuration for CENTRAL_TEAM")
+	ErrTeamNotFound       = errors.Newf(1102, "could not find team (%s) in AMPLIFY Central. Check configuration for CENTRAL_TEAM")
 	ErrNetwork            = errors.New(1110, "error connecting to AMPLIFY Central. Check docs.axway.com for more info on this error code")
 	ErrRequestQuery       = errors.New(1120, "error making a request to AMPLIFY")
 	ErrAuthenticationCall = errors.New(1130, "error getting authentication token. Check AMPLIFY Central auth configuration (CENTRAL_AUTH_*) and network configuration for agent on docs.axway.com")
