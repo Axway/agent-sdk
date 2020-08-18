@@ -200,6 +200,27 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
+	envID, err := c.getEnvironmentIDByName(headers)
+	if err != nil {
+		return err
+	}
+
+	if c.cfg.GetEnvironmentID() == "" {
+		// need to save this ID for the traceability agent for later
+		c.cfg.SetEnvironmentID(envID)
+
+		// Validate if team exists
+		if c.cfg.GetTeamName() != "" {
+			_, err := c.getTeamByName(c.cfg.GetTeamName())
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *ServiceClient) getEnvironmentIDByName(headers map[string]string) (string, error) {
 	queryParams := map[string]string{"fields": "metadata"}
 
 	// do a request for the environment
@@ -215,33 +236,30 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 			var envList []EnvironmentSpec
 			err := json.Unmarshal(envListByte, &envList)
 			if err != nil || len(envList) == 0 {
-				return ErrEnvironmentQuery
+				return "", ErrEnvironmentQuery
 			}
-			c.cfg.SetEnvironmentID(envList[0].ID)
-			return nil
+			return envList[0].ID, nil
 		}
-		return err
+		return "", err
 	}
 
 	// Get env id from apiServerEnvByte
 	var apiServerEnv APIServer
 	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
 	if err != nil {
-		return errors.Wrap(ErrEnvironmentQuery, err.Error())
+		return "", errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
 	if apiServerEnv.Metadata == nil {
-		return ErrEnvironmentQuery
+		return "", ErrEnvironmentQuery
 	}
 
 	if apiServerEnv.Metadata.ID == "" {
-		return ErrEnvironmentQuery
+		return "", ErrEnvironmentQuery
 	}
 
-	// need to save this ID for the traceability agent for later
-	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
-	return nil
+	return apiServerEnv.Metadata.ID, nil
 }
 
 func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
@@ -289,20 +307,6 @@ func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instance
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
 }
 
-// PlatformUserInfo -
-type PlatformUserInfo struct {
-	Success bool `json:"success"`
-	Result  struct {
-		ID        string `json:"_id"`
-		GUID      string `json:"guid"`
-		UserID    int64  `json:"user_id"`
-		Firstname string `json:"firstname"`
-		Lastname  string `json:"lastname"`
-		Active    bool   `json:"active"`
-		Email     string `json:"email"`
-	} `json:"result"`
-}
-
 // GetUserEmailAddress - request the user email
 func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	headers, err := c.createHeader()
@@ -332,4 +336,46 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	log.Debugf("Platform user email %s", email)
 
 	return email, nil
+}
+
+// getTeamByName - returns the team based on team name
+func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
+	queryParams := map[string]string{
+		"query": fmt.Sprintf("name==\"%s\"", teamName),
+	}
+	platformTeams, err := c.getTeam(queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(platformTeams) == 0 {
+		return nil, ErrTeamNotFound.FormatError(teamName)
+	}
+
+	return &platformTeams[0], nil
+}
+
+// getTeam - returns the team ID based on filter
+func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the teams using Client registry service instead of from platform.
+	// Platform teams API require access and DOSA accound will not have the access
+	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
+
+	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
+	if reqErr != nil {
+		return nil, reqErr
+	}
+
+	var platformTeams []PlatformTeam
+	err = json.Unmarshal(response, &platformTeams)
+	if err != nil {
+		return nil, err
+	}
+
+	return platformTeams, nil
 }

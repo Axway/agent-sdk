@@ -22,7 +22,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err := cfg.Validate()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.tenantID not set in config", err.Error())
+	assert.Equal(t, "Error central.organizationID not set in config", err.Error())
 
 	centralConfig.TenantID = "1111"
 	err = cfg.Validate()
@@ -39,13 +39,6 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 
 	centralConfig.Environment = "eee"
 	err = cfg.Validate()
-
-	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.teamID not set in config", err.Error())
-
-	centralConfig.TeamID = "aaa"
-	err = cfg.Validate()
-	assert.Nil(t, err)
 
 	centralConfig.APIServerVersion = ""
 	err = cfg.Validate()
@@ -73,7 +66,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err := cfg.Validate()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error central.tenantID not set in config", err.Error())
+	assert.Equal(t, "Error central.organizationID not set in config", err.Error())
 
 	centralConfig.TenantID = "1111"
 	err = cfg.Validate()
