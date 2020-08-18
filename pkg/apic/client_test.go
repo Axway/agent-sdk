@@ -187,7 +187,7 @@ func TestGetUserEmailAddress(t *testing.T) {
 	assert.Equal(t, "", addr)
 }
 
-func TestHealtgCheck(t *testing.T) {
+func TestHealthCheck(t *testing.T) {
 	client, cfg := createServiceClient(nil)
 
 	// failure
@@ -203,31 +203,12 @@ func TestHealtgCheck(t *testing.T) {
 	assert.True(t, strings.Contains(status.Details, "unexpected end"))
 
 	// success
+	responses := []mockResponse{
+		{fileName: "./testdata/apiserver-environment.json", respCode: http.StatusOK},
+		{fileName: "./testdata/apic-team.json", respCode: http.StatusOK},
+	}
 	mockClient.respCount = 0
-	mockClient.responses[0].fileName = "./testdata/apiserver-environment.json"
-	status = client.healthcheck("Client Test")
-	assert.Equal(t, status.Result, healthcheck.OK)
-	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
-}
-
-func TestCatalogHealth(t *testing.T) {
-	client, cfg := createServiceClient(nil)
-
-	// failure
-	status := client.healthcheck("Client Test")
-	assert.Equal(t, status.Result, healthcheck.FAIL)
-	assert.True(t, strings.Contains(status.Details, "error getting authentication token"))
-
-	mockClient := setupMocks(client)
-
-	// failure
-	status = client.healthcheck("Client Test")
-	assert.Equal(t, status.Result, healthcheck.FAIL)
-	assert.True(t, strings.Contains(status.Details, "unexpected end"))
-
-	// success
-	mockClient.respCount = 0
-	mockClient.responses[0].fileName = "./testdata/apiserver-environment.json"
+	mockClient.responses = responses
 	status = client.healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
 	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
