@@ -39,6 +39,11 @@ func (c *UnscopedAPIServiceClient) WithScope(scope string) *APIServiceClient {
 	}
 }
 
+// Get -
+func (c *UnscopedAPIServiceClient) Get(name string) (*APIService, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *APIServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.APIService, error) {
 	riList, err := c.client.List(options...)

@@ -39,6 +39,11 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *
 	}
 }
 
+// Get -
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*ConsumerSubscriptionDefinition, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerSubscriptionDefinition, error) {
 	riList, err := c.client.List(options...)

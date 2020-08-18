@@ -39,6 +39,11 @@ func (c *UnscopedSpecDiscoveryClient) WithScope(scope string) *SpecDiscoveryClie
 	}
 }
 
+// Get -
+func (c *UnscopedSpecDiscoveryClient) Get(name string) (*SpecDiscovery, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *SpecDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.SpecDiscovery, error) {
 	riList, err := c.client.List(options...)

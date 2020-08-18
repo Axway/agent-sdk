@@ -39,6 +39,11 @@ func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 	}
 }
 
+// Get -
+func (c *UnscopedSecretClient) Get(name string) (*Secret, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *SecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
 	riList, err := c.client.List(options...)

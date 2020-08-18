@@ -46,6 +46,11 @@ func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Clie
 		c.client.WithScope(scope),
 	}
 }
+
+// Get - 
+func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.kind}}, error) {
+	return c.client.Get(name)
+}
 {{ end }}
 
 // List -

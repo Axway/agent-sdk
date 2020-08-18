@@ -39,6 +39,11 @@ func (c *UnscopedResourceDefinitionClient) WithScope(scope string) *ResourceDefi
 	}
 }
 
+// Get -
+func (c *UnscopedResourceDefinitionClient) Get(name string) (*ResourceDefinition, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *ResourceDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinition, error) {
 	riList, err := c.client.List(options...)

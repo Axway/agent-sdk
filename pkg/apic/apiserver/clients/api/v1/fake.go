@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -124,6 +125,12 @@ func (fk fakeByScope) Get(ri string) (*apiv1.ResourceInstance, error) {
 }
 
 func (fk fakeByScope) GetCtx(_ context.Context, name string) (*apiv1.ResourceInstance, error) {
+	split := strings.SplitN(name, `/`, 2)
+
+	if len(split) == 2 {
+		return fk.WithScope(split[0]).Get(split[1])
+	}
+
 	return nil, notFound("", "")
 }
 

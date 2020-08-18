@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
@@ -283,9 +284,20 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	return c.GetCtx(context.Background(), name)
 }
 
-// Get returns a single resource
+// GetCtx returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
+// If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
 func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
+	split := strings.SplitN(name, `/`, 2)
+
+	url := ""
+
+	if len(split) == 2 {
+		url = c.urlForResource(&apiv1.ResourceMeta{Name: split[1], Metadata: apiv1.Metadata{Scope: apiv1.MetadataScope{Name: split[0]}}})
+	} else {
+		url = c.urlForResource(&apiv1.ResourceMeta{Name: name})
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +330,7 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 	return c.DeleteCtx(context.Background(), ri)
 }
 
-// Delete deletes a single resource
+// DeleteCtx deletes a single resource
 func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) error {
 	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(&ri.ResourceMeta), nil)
 	if err != nil {

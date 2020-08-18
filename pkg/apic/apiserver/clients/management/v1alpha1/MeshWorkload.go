@@ -39,6 +39,11 @@ func (c *UnscopedMeshWorkloadClient) WithScope(scope string) *MeshWorkloadClient
 	}
 }
 
+// Get -
+func (c *UnscopedMeshWorkloadClient) Get(name string) (*MeshWorkload, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshWorkload, error) {
 	riList, err := c.client.List(options...)

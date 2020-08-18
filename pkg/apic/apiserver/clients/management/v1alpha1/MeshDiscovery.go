@@ -39,6 +39,11 @@ func (c *UnscopedMeshDiscoveryClient) WithScope(scope string) *MeshDiscoveryClie
 	}
 }
 
+// Get -
+func (c *UnscopedMeshDiscoveryClient) Get(name string) (*MeshDiscovery, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *MeshDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshDiscovery, error) {
 	riList, err := c.client.List(options...)

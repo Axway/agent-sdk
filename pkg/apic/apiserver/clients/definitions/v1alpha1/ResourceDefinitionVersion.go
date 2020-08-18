@@ -39,6 +39,11 @@ func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *Resou
 	}
 }
 
+// Get -
+func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*ResourceDefinitionVersion, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
 	riList, err := c.client.List(options...)

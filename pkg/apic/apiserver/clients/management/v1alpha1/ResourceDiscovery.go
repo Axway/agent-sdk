@@ -39,6 +39,11 @@ func (c *UnscopedResourceDiscoveryClient) WithScope(scope string) *ResourceDisco
 	}
 }
 
+// Get -
+func (c *UnscopedResourceDiscoveryClient) Get(name string) (*ResourceDiscovery, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *ResourceDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDiscovery, error) {
 	riList, err := c.client.List(options...)

@@ -39,6 +39,11 @@ func (c *UnscopedK8SResourceClient) WithScope(scope string) *K8SResourceClient {
 	}
 }
 
+// Get -
+func (c *UnscopedK8SResourceClient) Get(name string) (*K8SResource, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *K8SResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SResource, error) {
 	riList, err := c.client.List(options...)

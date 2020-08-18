@@ -39,6 +39,11 @@ func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstan
 	}
 }
 
+// Get -
+func (c *UnscopedConsumerInstanceClient) Get(name string) (*ConsumerInstance, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerInstance, error) {
 	riList, err := c.client.List(options...)

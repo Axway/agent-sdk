@@ -103,12 +103,12 @@ func TestFakeScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	ri, err := noScope.WithScope("muhName").Get("muhResource")
+	_, err = noScope.WithScope("muhName").Get("muhResource")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	ri, err = noScope.WithScope("muhName").Update(
+	ri, err := noScope.WithScope("muhName").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.K8SResourceGVK(),

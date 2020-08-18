@@ -39,6 +39,11 @@ func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 	}
 }
 
+// Get -
+func (c *UnscopedWebhookClient) Get(name string) (*Webhook, error) {
+	return c.client.Get(name)
+}
+
 // List -
 func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
 	riList, err := c.client.List(options...)
