@@ -102,7 +102,7 @@ type CentralConfiguration struct {
 	CentralConfig
 	AgentType                   AgentType
 	Mode                        AgentMode     `config:"mode"`
-	TenantID                    string        `config:"tenantID"`
+	TenantID                    string        `config:"organizationId"`
 	TeamName                    string        `config:"team"`
 	APICDeployment              string        `config:"deployment"`
 	Environment                 string        `config:"environment"`
@@ -352,7 +352,7 @@ func (c *CentralConfiguration) Validate() (err error) {
 
 func (c *CentralConfiguration) validateConfig() {
 	if c.GetTenantID() == "" {
-		exception.Throw(errors.New("Error central.tenantID not set in config"))
+		exception.Throw(errors.New("Error central.organizationID not set in config"))
 	}
 
 	if c.GetURL() == "" {
@@ -412,7 +412,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 }
 
 const (
-	pathTenantID                            = "central.tenantId"
+	pathTenantID                            = "central.organizationId"
 	pathURL                                 = "central.url"
 	pathPlatformURL                         = "central.platformURL"
 	pathAuthPrivateKey                      = "central.auth.privateKey"
