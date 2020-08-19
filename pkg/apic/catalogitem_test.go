@@ -8,25 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
-
-func newServiceClient() *ServiceClient {
-	cfg := &corecfg.CentralConfiguration{
-		// TeamID: "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost:8888",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-	}
-	return &ServiceClient{
-		cfg:                       cfg,
-		tokenRequester:            MockTokenGetter,
-		apiClient:                 &api.MockClient{ResponseCode: http.StatusOK},
-		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
-	}
-}
 
 func TestGetCatalogItemIDForConsumerInstance(t *testing.T) {
 	client := newServiceClient()

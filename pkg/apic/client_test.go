@@ -62,29 +62,38 @@ func (c *mockHTTPClient) Send(request apicClient.Request) (*apicClient.Response,
 
 func TestCheckAPIServerHealth(t *testing.T) {
 	c, cfg := createServiceClient(nil)
-	// mockClient := setupMocks(c)
+	mockClient := setupMocks(c)
 	cfg.Environment = "Environment"
 	cfg.Mode = corecfg.PublishToEnvironment
 
-	mockClient := mockHTTPClient{
-		respCount: 0,
-		responses: []mockResponse{
-			{
-				fileName: "./testdata/apic-environment.json",
-				respCode: http.StatusOK,
-			},
-			{
-				fileName: "./testdata/apic-team-notfound.json",
-				respCode: http.StatusOK,
-			},
+	// mockClient := mockHTTPClient{
+	// 	respCount: 0,
+	// 	responses: []mockResponse{
+	// 		{
+	// 			fileName: "./testdata/apic-environment.json",
+	// 			respCode: http.StatusOK,
+	// 		},
+	// 		{
+	// 			fileName: "./testdata/apic-team-notfound.json",
+	// 			respCode: http.StatusOK,
+	// 		},
+	// 	},
+	// }
+	mockClient.responses = []mockResponse{
+		{
+			fileName: "./testdata/apic-environment.json",
+			respCode: http.StatusOK,
+		},
+		{
+			fileName: "./testdata/apic-team-notfound.json",
+			respCode: http.StatusOK,
 		},
 	}
-	c.apiClient = &mockClient
-	c.tokenRequester = MockTokenGetter
+
+	// c.apiClient = &mockClient
+	// c.tokenRequester = MockTokenGetter
 
 	// Test DiscoveryAgent, PublishToEnvironment and with team not found specified
-	// mockClient.respCount = 0
-	// mockClient.responses[0].fileName = "./testdata/apiserver-environment.json"
 	err := c.checkAPIServerHealth()
 	assert.NotNil(t, err, "Expecting error to be returned from the health check with discovery agent in publishToEnvironment mode for invalid team name")
 
