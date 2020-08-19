@@ -40,7 +40,7 @@ func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 }
 
 // Get -
-func (c *UnscopedSecretClient) Get(name string) (*Secret, error) {
+func (c *UnscopedSecretClient) Get(name string) (*v1alpha1.Secret, error) {
 	return c.client.Get(name)
 }
 

@@ -40,7 +40,7 @@ func (c *UnscopedResourceDefinitionClient) WithScope(scope string) *ResourceDefi
 }
 
 // Get -
-func (c *UnscopedResourceDefinitionClient) Get(name string) (*ResourceDefinition, error) {
+func (c *UnscopedResourceDefinitionClient) Get(name string) (*v1alpha1.ResourceDefinition, error) {
 	return c.client.Get(name)
 }
 

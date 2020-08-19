@@ -40,7 +40,7 @@ func (c *UnscopedResourceDiscoveryClient) WithScope(scope string) *ResourceDisco
 }
 
 // Get -
-func (c *UnscopedResourceDiscoveryClient) Get(name string) (*ResourceDiscovery, error) {
+func (c *UnscopedResourceDiscoveryClient) Get(name string) (*v1alpha1.ResourceDiscovery, error) {
 	return c.client.Get(name)
 }
 

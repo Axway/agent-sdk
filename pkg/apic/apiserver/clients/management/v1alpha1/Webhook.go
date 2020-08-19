@@ -40,7 +40,7 @@ func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 }
 
 // Get -
-func (c *UnscopedWebhookClient) Get(name string) (*Webhook, error) {
+func (c *UnscopedWebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
 	return c.client.Get(name)
 }
 

@@ -40,7 +40,7 @@ func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLin
 }
 
 // Get -
-func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*CommandLineInterface, error) {
+func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInterface, error) {
 	return c.client.Get(name)
 }
 

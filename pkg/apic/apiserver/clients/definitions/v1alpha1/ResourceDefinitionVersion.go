@@ -40,7 +40,7 @@ func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *Resou
 }
 
 // Get -
-func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*ResourceDefinitionVersion, error) {
+func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
 	return c.client.Get(name)
 }
 

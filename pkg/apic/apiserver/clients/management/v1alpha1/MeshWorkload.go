@@ -40,7 +40,7 @@ func (c *UnscopedMeshWorkloadClient) WithScope(scope string) *MeshWorkloadClient
 }
 
 // Get -
-func (c *UnscopedMeshWorkloadClient) Get(name string) (*MeshWorkload, error) {
+func (c *UnscopedMeshWorkloadClient) Get(name string) (*v1alpha1.MeshWorkload, error) {
 	return c.client.Get(name)
 }
 

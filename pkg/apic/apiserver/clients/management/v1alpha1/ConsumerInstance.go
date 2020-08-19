@@ -40,7 +40,7 @@ func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstan
 }
 
 // Get -
-func (c *UnscopedConsumerInstanceClient) Get(name string) (*ConsumerInstance, error) {
+func (c *UnscopedConsumerInstanceClient) Get(name string) (*v1alpha1.ConsumerInstance, error) {
 	return c.client.Get(name)
 }
 

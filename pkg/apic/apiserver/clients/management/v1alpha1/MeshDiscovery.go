@@ -40,7 +40,7 @@ func (c *UnscopedMeshDiscoveryClient) WithScope(scope string) *MeshDiscoveryClie
 }
 
 // Get -
-func (c *UnscopedMeshDiscoveryClient) Get(name string) (*MeshDiscovery, error) {
+func (c *UnscopedMeshDiscoveryClient) Get(name string) (*v1alpha1.MeshDiscovery, error) {
 	return c.client.Get(name)
 }
 

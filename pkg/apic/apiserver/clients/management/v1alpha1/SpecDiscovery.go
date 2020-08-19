@@ -40,7 +40,7 @@ func (c *UnscopedSpecDiscoveryClient) WithScope(scope string) *SpecDiscoveryClie
 }
 
 // Get -
-func (c *UnscopedSpecDiscoveryClient) Get(name string) (*SpecDiscovery, error) {
+func (c *UnscopedSpecDiscoveryClient) Get(name string) (*v1alpha1.SpecDiscovery, error) {
 	return c.client.Get(name)
 }
 

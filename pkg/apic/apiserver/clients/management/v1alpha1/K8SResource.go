@@ -40,7 +40,7 @@ func (c *UnscopedK8SResourceClient) WithScope(scope string) *K8SResourceClient {
 }
 
 // Get -
-func (c *UnscopedK8SResourceClient) Get(name string) (*K8SResource, error) {
+func (c *UnscopedK8SResourceClient) Get(name string) (*v1alpha1.K8SResource, error) {
 	return c.client.Get(name)
 }
 

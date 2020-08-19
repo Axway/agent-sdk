@@ -40,7 +40,7 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *
 }
 
 // Get -
-func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*ConsumerSubscriptionDefinition, error) {
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
 	return c.client.Get(name)
 }
 

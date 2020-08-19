@@ -27,7 +27,7 @@ func New{{.res.kind}}Client(c v1.Base) (*Unscoped{{.res.kind}}Client, error) {
 {{ else }}
 func New{{.res.kind}}Client(c v1.Base) (*{{.res.kind}}Client, error) {
 {{ end }}
-	client, err := c.ForKind(v1alpha1.{{.res.kind}}GVK())
+	client, err := c.ForKind({{.res.version}}.{{.res.kind}}GVK())
 	if err != nil {
 		return nil, err
 	}
@@ -48,22 +48,22 @@ func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Clie
 }
 
 // Get - 
-func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.kind}}, error) {
+func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
 	return c.client.Get(name)
 }
 {{ end }}
 
 // List -
-func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*{{.res.version}}.{{.res.kind}}, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.{{.res.kind}}, len(riList))
+	result := make([]*{{.res.version}}.{{.res.kind}}, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.{{.res.kind}}{}
+		result[i] = &{{.res.version}}.{{.res.kind}}{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -74,20 +74,20 @@ func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.re
 }
 
 // Get -
-func (c *{{.res.kind}}Client) Get(name string) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.{{.res.kind}}{}
+	service := &{{.res.version}}.{{.res.kind}}{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
+func (c *{{.res.kind}}Client) Delete(res *{{.res.version}}.{{.res.kind}}) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
 }
 
 // Create -
-func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}, opts ...v1.CreateOption) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Create(res *{{.res.version}}.{{.res.kind}}, opts ...v1.CreateOption) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.{{.res.kind}}{}
+	created := &{{.res.version}}.{{.res.kind}}{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}, opts ...v1.Cre
 }
 
 // Update -
-func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}, opts ...v1.UpdateOption) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Update(res *{{.res.version}}.{{.res.kind}}, opts ...v1.UpdateOption) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.{{.res.kind}}{}
+	updated := &{{.res.version}}.{{.res.kind}}{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

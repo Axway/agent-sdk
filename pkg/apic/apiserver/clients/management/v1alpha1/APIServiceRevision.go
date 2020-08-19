@@ -40,7 +40,7 @@ func (c *UnscopedAPIServiceRevisionClient) WithScope(scope string) *APIServiceRe
 }
 
 // Get -
-func (c *UnscopedAPIServiceRevisionClient) Get(name string) (*APIServiceRevision, error) {
+func (c *UnscopedAPIServiceRevisionClient) Get(name string) (*v1alpha1.APIServiceRevision, error) {
 	return c.client.Get(name)
 }
 
