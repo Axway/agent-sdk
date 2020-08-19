@@ -41,7 +41,15 @@ func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 
 // Get -
 func (c *UnscopedWebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.Webhook{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

@@ -41,7 +41,15 @@ func (c *UnscopedAPIServiceInstanceClient) WithScope(scope string) *APIServiceIn
 
 // Get -
 func (c *UnscopedAPIServiceInstanceClient) Get(name string) (*v1alpha1.APIServiceInstance, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.APIServiceInstance{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

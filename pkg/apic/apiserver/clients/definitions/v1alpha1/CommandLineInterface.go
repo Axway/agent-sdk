@@ -41,7 +41,15 @@ func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLin
 
 // Get -
 func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInterface, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.CommandLineInterface{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

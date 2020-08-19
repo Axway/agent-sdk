@@ -41,7 +41,15 @@ func (c *UnscopedMeshDiscoveryClient) WithScope(scope string) *MeshDiscoveryClie
 
 // Get -
 func (c *UnscopedMeshDiscoveryClient) Get(name string) (*v1alpha1.MeshDiscovery, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.MeshDiscovery{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

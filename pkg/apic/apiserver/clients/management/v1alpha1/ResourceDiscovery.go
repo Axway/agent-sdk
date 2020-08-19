@@ -41,7 +41,15 @@ func (c *UnscopedResourceDiscoveryClient) WithScope(scope string) *ResourceDisco
 
 // Get -
 func (c *UnscopedResourceDiscoveryClient) Get(name string) (*v1alpha1.ResourceDiscovery, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.ResourceDiscovery{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

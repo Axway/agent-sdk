@@ -41,7 +41,15 @@ func (c *UnscopedResourceDefinitionClient) WithScope(scope string) *ResourceDefi
 
 // Get -
 func (c *UnscopedResourceDefinitionClient) Get(name string) (*v1alpha1.ResourceDefinition, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.ResourceDefinition{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

@@ -41,7 +41,15 @@ func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 
 // Get -
 func (c *UnscopedSecretClient) Get(name string) (*v1alpha1.Secret, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.Secret{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -

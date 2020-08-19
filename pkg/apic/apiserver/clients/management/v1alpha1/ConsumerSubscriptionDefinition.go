@@ -41,7 +41,15 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *
 
 // Get -
 func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
-	return c.client.Get(name)
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.ConsumerSubscriptionDefinition{}
+	service.FromInstance(ri)
+
+	return service, nil
 }
 
 // List -
