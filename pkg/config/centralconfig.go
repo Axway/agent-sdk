@@ -100,7 +100,7 @@ type CentralConfiguration struct {
 	CentralConfig
 	AgentType                   AgentType
 	Mode                        AgentMode     `config:"mode"`
-	TenantID                    string        `config:"organizationId"`
+	TenantID                    string        `config:"organizationID"`
 	TeamName                    string        `config:"team"`
 	APICDeployment              string        `config:"deployment"`
 	Environment                 string        `config:"environment"`
@@ -400,7 +400,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 }
 
 const (
-	pathTenantID                            = "central.organizationId"
+	pathTenantID                            = "central.organizationID"
 	pathURL                                 = "central.url"
 	pathPlatformURL                         = "central.platformURL"
 	pathAuthPrivateKey                      = "central.auth.privateKey"

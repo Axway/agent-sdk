@@ -1,5 +1,5 @@
 central:
-  organizationId: "111111"
+  organizationID: "111111"
   team: "222222"
   environment: "environment"
   auth:
