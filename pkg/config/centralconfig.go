@@ -533,6 +533,13 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
 			Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
 		}
+
+		// set the notifications
+		subscriptionConfig, err := ParseSubscriptionConfig(props)
+		if err != nil {
+			return nil, err
+		}
+		cfg.SubscriptionConfiguration = subscriptionConfig
 	}
 
 	if err := cfg.Validate(); err != nil {
