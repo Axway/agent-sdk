@@ -58,7 +58,7 @@ const (
 	oauth   = "oauth"
 )
 
-// SetAuthorizationTemplate - Set the authtemplate in the config subscriptions.smtp.subscribe.body {authtemplate}
+// SetAuthorizationTemplate - Set the authtemplate in the config central.subscriptions.notifications.smtp.subscribe.body {authtemplate}
 func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 	if authType == "" {
 		log.Info("Subcription notification configuration for authorization type is not set")

@@ -13,8 +13,8 @@ func TestSubscriptionWebhookConfig(t *testing.T) {
 		Use: "test",
 	}
 	props := properties.NewProperties(rootCmd)
-	props.AddStringProperty("subscriptions.webhook.url", "https://foo.bar", "")
-	props.AddStringProperty("subscriptions.webhook.headers", "Header=contentType,Value=application/json", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Value=application/json", "")
 
 	cfg, err := ParseSubscriptionConfig(props)
 	assert.Nil(t, err)
@@ -33,26 +33,26 @@ func TestSubscriptionWebhookConfig(t *testing.T) {
 		Use: "test",
 	}
 	props = properties.NewProperties(rootCmd)
-	props.AddStringProperty("subscriptions.webhook.url", "x", "")
-	props.AddStringProperty("subscriptions.webhook.headers", "Header=contentType,Value=application/json", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "x", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Value=application/json", "")
 
 	cfg, err = ParseSubscriptionConfig(props)
 	assert.Nil(t, cfg)
 	assert.NotNil(t, err)
-	assert.Equal(t, "central.subscriptions.webhook is not a valid URL", err.Error())
+	assert.Equal(t, "central.subscriptions.notifications.webhook is not a valid URL", err.Error())
 
 	// this one should be bad header
 	rootCmd = &cobra.Command{
 		Use: "test",
 	}
 	props = properties.NewProperties(rootCmd)
-	props.AddStringProperty("subscriptions.webhook.url", "https://foo.bar", "")
-	props.AddStringProperty("subscriptions.webhook.headers", "Header=contentType,Valaaaue=application/json", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Valaaaue=application/json", "")
 
 	cfg, err = ParseSubscriptionConfig(props)
 	assert.Nil(t, cfg)
 	assert.NotNil(t, err)
-	assert.Equal(t, "could not parse value of central.subscriptions.notificationHeaders", err.Error())
+	assert.Equal(t, "could not parse value of central.subscriptions.notifications.headers", err.Error())
 }
 
 func TestSubscriptionSMTPConfig(t *testing.T) {
@@ -63,24 +63,24 @@ func TestSubscriptionSMTPConfig(t *testing.T) {
 
 	// this line is strange. Without it, it seems that rootCmd still has the values from
 	// previous test, which cause validations to fail
-	props.AddStringProperty("subscriptions.webhook.url", "", "")
-	props.AddStringProperty("subscriptions.smtp.host", "mail.axway.com", "")
-	props.AddIntProperty("subscriptions.smtp.port", 111, "")
-	props.AddStringProperty("subscriptions.smtp.fromAddress", "foo@axway.com", "")
-	props.AddStringProperty("subscriptions.smtp.authtype", "LOGIN", "")
-	props.AddStringProperty("subscriptions.smtp.identity", "foo", "")
-	props.AddStringProperty("subscriptions.smtp.username", "bill", "")
-	props.AddStringProperty("subscriptions.smtp.password", "pwd", "")
-	props.AddStringProperty("subscriptions.smtp.subscribe.subject", "subscribe subject", "")
-	props.AddStringProperty("subscriptions.smtp.subscribe.body", "subscribe body", "")
-	props.AddStringProperty("subscriptions.smtp.subscribe.oath", "oath", "")
-	props.AddStringProperty("subscriptions.smtp.subscribe.apikeys", "apikeys", "")
-	props.AddStringProperty("subscriptions.smtp.unsubscribe.subject", "unsubscribe subject", "")
-	props.AddStringProperty("subscriptions.smtp.unsubscribe.body", "unsubscribe body", "")
-	props.AddStringProperty("subscriptions.smtp.subscribeFailed.subject", "subscribe failed subject", "")
-	props.AddStringProperty("subscriptions.smtp.subscribeFailed.body", "subscribe failed body", "")
-	props.AddStringProperty("subscriptions.smtp.unsubscribeFailed.subject", "unsubscribe failed subject", "")
-	props.AddStringProperty("subscriptions.smtp.unsubscribeFailed.body", "unsubscribe failed body", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.host", "mail.axway.com", "")
+	props.AddIntProperty("central.subscriptions.notifications.smtp.port", 111, "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.fromAddress", "foo@axway.com", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.authtype", "LOGIN", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.identity", "foo", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.username", "bill", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.password", "pwd", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.subject", "subscribe subject", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.body", "subscribe body", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.oath", "oath", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.apikeys", "apikeys", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.subject", "unsubscribe subject", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.body", "unsubscribe body", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.subject", "subscribe failed subject", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.body", "subscribe failed body", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.subject", "unsubscribe failed subject", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.body", "unsubscribe failed body", "")
 
 	cfg, err := ParseSubscriptionConfig(props)
 	assert.Nil(t, err)

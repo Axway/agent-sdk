@@ -58,9 +58,9 @@ type SubscriptionConfiguration struct {
 
 // These constants are the paths that the settings is at in a config file
 const (
-	smtpFrom     = "subscriptions.smtp.fromAddress"
-	smtpAuthType = "subscriptions.smtp.authType"
-	smtpIdentity = "subscriptions.smtp.identity"
+	smtpFrom     = "central.subscriptions.notifications.smtp.fromAddress"
+	smtpAuthType = "central.subscriptions.notifications.smtp.authType"
+	smtpIdentity = "central.subscriptions.notifications.smtp.identity"
 )
 
 type webhook struct {
@@ -107,34 +107,34 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 
 	cfg := &SubscriptionConfiguration{
 		Webhook: &webhook{
-			URL:     cmdProps.StringPropertyValue("subscriptions.webhook.url"),
-			Headers: cmdProps.StringPropertyValue("subscriptions.webhook.headers"),
+			URL:     cmdProps.StringPropertyValue("central.subscriptions.notifications.webhook.url"),
+			Headers: cmdProps.StringPropertyValue("central.subscriptions.notifications.webhook.headers"),
 		},
 		SMTP: &smtp{
-			Host:     cmdProps.StringPropertyValue("subscriptions.smtp.host"),
-			Port:     cmdProps.IntPropertyValue("subscriptions.smtp.port"),
+			Host:     cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.host"),
+			Port:     cmdProps.IntPropertyValue("central.subscriptions.notifications.smtp.port"),
 			From:     cmdProps.StringPropertyValue(smtpFrom),
 			AuthType: authType,
 			Identity: cmdProps.StringPropertyValue(smtpIdentity),
-			Username: cmdProps.StringPropertyValue("subscriptions.smtp.username"),
-			Password: cmdProps.StringPropertyValue("subscriptions.smtp.password"),
+			Username: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.username"),
+			Password: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.password"),
 			Subscribe: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.subject"),
-				Body:    cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.body"),
-				Oauth:   cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.oauth"),
-				APIKey:  cmdProps.StringPropertyValue("subscriptions.smtp.subscribe.apikeys"),
+				Subject: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribe.subject"),
+				Body:    cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribe.body"),
+				Oauth:   cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribe.oauth"),
+				APIKey:  cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribe.apikeys"),
 			},
 			Unsubscribe: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.unsubscribe.subject"),
-				Body:    cmdProps.StringPropertyValue("subscriptions.smtp.unsubscribe.body"),
+				Subject: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.unsubscribe.subject"),
+				Body:    cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.unsubscribe.body"),
 			},
 			SubscribeFailed: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.subscribeFailed.subject"),
-				Body:    cmdProps.StringPropertyValue("subscriptions.smtp.subscribeFailed.body"),
+				Subject: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribeFailed.subject"),
+				Body:    cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.subscribeFailed.body"),
 			},
 			UnsubscribeFailed: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue("subscriptions.smtp.unsubscribeFailed.subject"),
-				Body:    cmdProps.StringPropertyValue("subscriptions.smtp.unsubscribeFailed.body"),
+				Subject: cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.unsubscribeFailed.subject"),
+				Body:    cmdProps.StringPropertyValue("central.subscriptions.notifications.smtp.unsubscribeFailed.body"),
 			},
 		},
 	}
@@ -287,7 +287,7 @@ func (s *SubscriptionConfiguration) validate() error {
 func (s *SubscriptionConfiguration) validateWebhook() error {
 	if webhookURL := s.GetWebhookURL(); webhookURL != "" {
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("central.subscriptions.webhook is not a valid URL")
+			return errors.New("central.subscriptions.notifications.webhook is not a valid URL")
 		}
 	}
 
@@ -298,7 +298,7 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 	for _, headerValue := range headersValues {
 		hvArray := strings.Split(headerValue, ",Value=")
 		if len(hvArray) != 2 {
-			return errors.New("could not parse value of central.subscriptions.notificationHeaders")
+			return errors.New("could not parse value of central.subscriptions.notifications.headers")
 		}
 		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
 		s.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]

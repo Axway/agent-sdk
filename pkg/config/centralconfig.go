@@ -115,8 +115,9 @@ type CentralConfiguration struct {
 	PollInterval                time.Duration `config:"pollInterval"`
 	ProxyURL                    string        `config:"proxyUrl"`
 	environmentID               string
-	SubscriptionApprovalMode    string        `config:"approvalMode"`
-	SubscriptionApprovalWebhook WebhookConfig `config:"subscriptions"`
+	SubscriptionApprovalMode    string             `config:"approvalMode"`
+	SubscriptionApprovalWebhook WebhookConfig      `config:"approvalWebhook"`
+	SubscriptionConfiguration   SubscriptionConfig `config:"subscriptionConfig"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -131,6 +132,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PlatformURL:                 "https://platform.axway.com",
 		SubscriptionApprovalMode:    ManualApproval,
 		SubscriptionApprovalWebhook: NewWebhookConfig(),
+		SubscriptionConfiguration:   NewSubscriptionConfig(),
 	}
 }
 
@@ -314,6 +316,11 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 	return c.TLS
 }
 
+// GetSubscriptionConfig - Returns the Config for the subscription webhook
+func (c *CentralConfiguration) GetSubscriptionConfig() SubscriptionConfig {
+	return c.SubscriptionConfiguration
+}
+
 // GetSubscriptionApprovalWebhookConfig - Returns the Config for the subscription webhook
 func (c *CentralConfiguration) GetSubscriptionApprovalWebhookConfig() WebhookConfig {
 	return c.SubscriptionApprovalWebhook
@@ -479,7 +486,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	}
 }
 
-// ParseCentralConfig - Parses the Central Config values form teh command line
+// ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
