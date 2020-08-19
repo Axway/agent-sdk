@@ -10,39 +10,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newServiceBody() ServiceBody {
-	return ServiceBody{
-		// NameToPush:       nameToPush,
-		APIName: "daleapi",
-		// RestAPIID:        proxy.ID,
-		// URL:              url,
-		// TeamID:           teamID,
-		// Description:      description,
-		// Version:          version,
-		// AuthPolicy:       authType,
-		// Swagger:       []byte(swagger),
-		Documentation: []byte("\"docs\""),
-		// Tags:             tags,
-		// AgentMode:        a.getAgentMode(),
-		Image:            "abcde",
-		ImageContentType: "image/jpeg",
-		// CreatedBy:        corecmd.BuildAgentName,
-		ResourceType: Oas2,
-		// SubscriptionName: proxy.OrganizationID,
-	}
+var serviceBody = ServiceBody{
+	// NameToPush:       nameToPush,
+	APIName: "daleapi",
+	// RestAPIID:        proxy.ID,
+	// URL:              url,
+	// TeamID:           teamID,
+	// Description:      description,
+	// Version:          version,
+	// AuthPolicy:       authType,
+	// Swagger:       []byte(swagger),
+	Documentation: []byte("\"docs\""),
+	// Tags:             tags,
+	// AgentMode:        a.getAgentMode(),
+	Image:            "abcde",
+	ImageContentType: "image/jpeg",
+	// CreatedBy:        corecmd.BuildAgentName,
+	ResourceType: Oas2,
+	// SubscriptionName: proxy.OrganizationID,
 }
 
 func newServiceClient() *ServiceClient {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
 	cfg := &corecfg.CentralConfiguration{
 		Mode: corecfg.PublishToEnvironmentAndCatalog,
 		Auth: &corecfg.AuthConfiguration{
 			URL: "http://localhost:8888",
 		},
+		SubscriptionApprovalMode:    "webhook",
+		SubscriptionApprovalWebhook: webhook,
 	}
 	return &ServiceClient{
-		cfg:            cfg,
-		tokenRequester: MockTokenGetter,
-		apiClient:      &api.MockClient{ResponseCode: http.StatusOK},
+		cfg:                                cfg,
+		tokenRequester:                     MockTokenGetter,
+		apiClient:                          &api.MockClient{ResponseCode: http.StatusOK},
+		DefaultSubscriptionApprovalWebhook: webhook,
 	}
 }
 
@@ -77,7 +83,7 @@ func TestCreateService(t *testing.T) {
 		},
 	}
 
-	svcID, err := client.createService(newServiceBody())
+	svcID, err := client.createService(serviceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, svcID)
 	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
@@ -91,7 +97,7 @@ func TestCreateService(t *testing.T) {
 	}
 	mockClient.respCount = 0
 
-	svcID, err = client.createService(newServiceBody())
+	svcID, err = client.createService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -112,7 +118,7 @@ func TestCreateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.createService(newServiceBody())
+	svcID, err = client.createService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -133,7 +139,7 @@ func TestCreateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.createService(newServiceBody())
+	svcID, err = client.createService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -158,7 +164,7 @@ func TestCreateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.createService(newServiceBody())
+	svcID, err = client.createService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 }
@@ -191,7 +197,7 @@ func TestUpdateService(t *testing.T) {
 		},
 	}
 
-	svcID, err := client.updateService(newServiceBody())
+	svcID, err := client.updateService(serviceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, svcID)
 	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
@@ -205,7 +211,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.updateService(newServiceBody())
+	svcID, err = client.updateService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -226,7 +232,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.updateService(newServiceBody())
+	svcID, err = client.updateService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -247,7 +253,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.updateService(newServiceBody())
+	svcID, err = client.updateService(serviceBody)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", svcID)
 
@@ -276,7 +282,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	mockClient.respCount = 0
-	svcID, err = client.updateService(newServiceBody())
+	svcID, err = client.updateService(serviceBody)
 	assert.Nil(t, err)
 	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
 }
@@ -321,16 +327,71 @@ func TestGetConsumerInstanceByID(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "daleapi", instance.Name)
 }
+func TestRegisterSubscriptionWebhook(t *testing.T) {
+	client := newServiceClient()
+	mockClient := setupMocks(client)
 
-// createService
-// TestUpdateService
-// addNewResoures
-// getAPIServerConsumerInstance
-// consumerInstanceExists
-// processService
-// processRevision
-// processInstance
-// processConsumerInstance
-// rollbackAPIService
-// getRevisionDefType
-// createAPIServerBody
+	// go right
+	mockClient.responses = []mockResponse{
+		{
+			respCode: http.StatusCreated, // for call to createSecret
+		},
+		{
+			respCode: http.StatusCreated, // for call to createWebhook
+		},
+	}
+
+	err := client.RegisterSubscriptionWebhook()
+	assert.Nil(t, err)
+
+	// go wrong
+	mockClient.responses = []mockResponse{
+		{
+			respCode: http.StatusConflict, // for call to createSecret
+		},
+		{
+			respCode: http.StatusOK, // for call to update the secret
+		},
+		{
+			respCode: http.StatusRequestTimeout, // for call to createWebhook
+		},
+	}
+
+	mockClient.respCount = 0
+	err = client.RegisterSubscriptionWebhook()
+	assert.NotNil(t, err)
+
+	// go right
+	mockClient.responses = []mockResponse{
+		{
+			respCode: http.StatusConflict, // for call to createSecret
+		},
+		{
+			respCode: http.StatusOK, // for call to update the secret
+		},
+		{
+			respCode: http.StatusCreated, // for call to createWebhook
+		},
+	}
+
+	mockClient.respCount = 0
+	err = client.RegisterSubscriptionWebhook()
+	assert.Nil(t, err)
+
+	// go right
+	mockClient.responses = []mockResponse{
+		{
+			respCode: http.StatusCreated, // for call to createSecret
+		},
+		{
+			respCode: http.StatusConflict, // for call to createWebhook
+		},
+		{
+			respCode: http.StatusOK, // for call to update the webhook
+		},
+	}
+
+	mockClient.respCount = 0
+	err = client.RegisterSubscriptionWebhook()
+	assert.Nil(t, err)
+}

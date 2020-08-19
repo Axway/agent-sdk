@@ -703,7 +703,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 	// if the default is already set up, do nothing
 	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
-	if !webhookCfg.IsConfigured() {
+	if webhookCfg == nil || !webhookCfg.IsConfigured() {
 		return nil
 	}
 
