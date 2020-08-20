@@ -66,19 +66,19 @@ func TestCreateService(t *testing.T) {
 	// this should be a full go right path
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // this for call to create the service
 			respCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			respCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json",
+			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			respCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
 			respCode: http.StatusOK,
 		},
 	}
@@ -91,7 +91,7 @@ func TestCreateService(t *testing.T) {
 	// this should fail
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // this for call to create the service
 			respCode: http.StatusRequestTimeout,
 		},
 	}
@@ -104,37 +104,19 @@ func TestCreateService(t *testing.T) {
 	// this should fail
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // this for call to create the service
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
-			respCode: http.StatusRequestTimeout,
+			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/instancenotfound.json",
+			fileName: "./testdata/instancenotfound.json", // this for call to create the serviceInstance
 			respCode: http.StatusNoContent,
 		},
-	}
-
-	mockClient.respCount = 0
-	svcID, err = client.createService(serviceBody)
-	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
-
-	// this should fail
-	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
-			respCode: http.StatusRequestTimeout,
-		},
-		{
-			fileName: "./testdata/servicerevision.json",
-			respCode: http.StatusCreated,
-		},
-		{
-			fileName: "./testdata/serviceinstance.json",
-			respCode: http.StatusRequestTimeout,
+			respCode: http.StatusOK, // this for call to rollback
 		},
 	}
 
@@ -146,19 +128,40 @@ func TestCreateService(t *testing.T) {
 	// this should fail
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
-			respCode: http.StatusRequestTimeout,
-		},
-		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/apiservice.json", // this for call to create the service
 			respCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json",
+			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			respCode: http.StatusCreated,
+		},
+		{
+			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			respCode: http.StatusRequestTimeout,
+		},
+	}
+
+	mockClient.respCount = 0
+	svcID, err = client.createService(serviceBody)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", svcID)
+
+	// this should fail
+	mockClient.responses = []mockResponse{
+		{
+			fileName: "./testdata/apiservice.json", // this for call to create the service
+			respCode: http.StatusCreated,
+		},
+		{
+			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			respCode: http.StatusCreated,
+		},
+		{
+			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
 			respCode: http.StatusRequestTimeout,
 		},
 	}
@@ -176,23 +179,23 @@ func TestUpdateService(t *testing.T) {
 	// this should be a full go right path
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // for call to update the service
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json",
+			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // for call to check existance of the consumerInstance
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			respCode: http.StatusOK,
 		},
 	}
@@ -218,15 +221,15 @@ func TestUpdateService(t *testing.T) {
 	// this is a failure test
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // for call to update the service
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			respCode: http.StatusRequestTimeout,
 		},
 		{
-			fileName: "./testdata/instancenotfound.json",
+			fileName: "./testdata/instancenotfound.json", // for call to update the serviceInstance
 			respCode: http.StatusNoContent,
 		},
 	}
@@ -239,15 +242,15 @@ func TestUpdateService(t *testing.T) {
 	// this is a failure test
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // for call to update the service
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json",
+			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
 			respCode: http.StatusRequestTimeout,
 		},
 	}
@@ -260,23 +263,23 @@ func TestUpdateService(t *testing.T) {
 	// this is another success test
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
+			fileName: "./testdata/apiservice.json", // for call to update the service
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json",
+			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json",
+			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // for call to test if consumerInstanceExists
 			respCode: http.StatusNotFound,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json",
+			fileName: "./testdata/consumerinstance.json", // for call to create the consumerInstance
 			respCode: http.StatusOK,
 		},
 	}

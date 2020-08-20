@@ -65,33 +65,16 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	mockClient := setupMocks(c)
 	cfg.Environment = "Environment"
 	cfg.Mode = corecfg.PublishToEnvironment
-
-	// mockClient := mockHTTPClient{
-	// 	respCount: 0,
-	// 	responses: []mockResponse{
-	// 		{
-	// 			fileName: "./testdata/apic-environment.json",
-	// 			respCode: http.StatusOK,
-	// 		},
-	// 		{
-	// 			fileName: "./testdata/apic-team-notfound.json",
-	// 			respCode: http.StatusOK,
-	// 		},
-	// 	},
-	// }
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apic-environment.json",
+			fileName: "./testdata/apic-environment.json", // this for call to getEnvironmentIDByName
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/apic-team-notfound.json",
+			fileName: "./testdata/apic-team-notfound.json", // this for call to getTeamByName
 			respCode: http.StatusOK,
 		},
 	}
-
-	// c.apiClient = &mockClient
-	// c.tokenRequester = MockTokenGetter
 
 	// Test DiscoveryAgent, PublishToEnvironment and with team not found specified
 	err := c.checkAPIServerHealth()
@@ -101,11 +84,11 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	mockClient.respCount = 0
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiserver-environment.json",
+			fileName: "./testdata/apiserver-environment.json", // this for call to getEnvironmentIDByName
 			respCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/apic-team.json",
+			fileName: "./testdata/apic-team.json", // this for call to getTeamByName
 			respCode: http.StatusOK,
 		},
 	}
@@ -123,9 +106,9 @@ func TestCheckAPIServerHealth(t *testing.T) {
 
 	// pass in 2 urls to test 2nd path to getting environment
 	responses := []mockResponse{
-		{fileName: "./testdata/apiserver-environment.json", respCode: http.StatusBadRequest},
-		{fileName: "./testdata/apic-environment.json", respCode: http.StatusOK},
-		{fileName: "./testdata/apic-team.json", respCode: http.StatusOK},
+		{fileName: "./testdata/apiserver-environment.json", respCode: http.StatusBadRequest}, // this for call to getEnvironmentIDByName
+		{fileName: "./testdata/apic-environment.json", respCode: http.StatusOK},              // this for error path call in getEnvironmentIDByName
+		{fileName: "./testdata/apic-team.json", respCode: http.StatusOK},                     // this for call to getTeamByName
 	}
 	mockClient.respCount = 0
 	mockClient.responses = responses
