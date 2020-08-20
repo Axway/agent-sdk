@@ -33,20 +33,12 @@ type SubscriptionNotification struct {
 }
 
 //NewSubscriptionNotification - creates a new subscription notification object
-func NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient, key, keyHeaderName, clientSecret string,
-	state apic.SubscriptionState, message string) *SubscriptionNotification {
+func NewSubscriptionNotification(recipient, message string, state apic.SubscriptionState) *SubscriptionNotification {
 	subscriptionNotification := &SubscriptionNotification{
-		CatalogItemID:   catalogID,
-		CatalogItemName: catalogName,
-		CatalogItemURL:  catalogItemURL,
-		Email:           recipient,
-		Action:          state,
-		Key:             key,
-		KeyHeaderName:   keyHeaderName,
-		ClientID:        key,
-		ClientSecret:    clientSecret,
-		Message:         message,
-		apiClient:       coreapi.NewClient(corecfg.NewTLSConfig(), ""),
+		Email:     recipient,
+		Action:    state,
+		Message:   message,
+		apiClient: coreapi.NewClient(corecfg.NewTLSConfig(), ""),
 	}
 
 	return subscriptionNotification
@@ -57,6 +49,21 @@ const (
 	apikeys = "apikeys"
 	oauth   = "oauth"
 )
+
+// SetCatalogItemInfo - Set the catalogitem info
+func (s *SubscriptionNotification) SetCatalogItemInfo(catalogID, catalogName, catalogItemURL string) {
+	s.CatalogItemID = catalogID
+	s.CatalogItemName = catalogName
+	s.CatalogItemURL = catalogItemURL
+}
+
+// SetKeyAndSecretInfo - Set the key and secret info
+func (s *SubscriptionNotification) SetKeyAndSecretInfo(key, keyHeaderName, clientSecret string) {
+	s.Key = key
+	s.KeyHeaderName = keyHeaderName
+	s.ClientID = key
+	s.ClientSecret = clientSecret
+}
 
 // SetAuthorizationTemplate - Set the authtemplate in the config central.subscriptions.notifications.smtp.subscribe.body {authtemplate}
 func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {

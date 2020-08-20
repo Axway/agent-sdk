@@ -58,12 +58,15 @@ func TestSubscriptionNotification(t *testing.T) {
 	authSecret := "abcde"
 	message := "new subscription received"
 
-	subNotif := NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
-		authID, apiKeyFieldName, authSecret, apic.SubscriptionApproved, message) // this is a bad action
+	subNotif := NewSubscriptionNotification(recipient, message, apic.SubscriptionApproved) // this is a bad action
+	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
+	subNotif.SetKeyAndSecretInfo(authID, apiKeyFieldName, authSecret)
 	subNotif.SetAuthorizationTemplate(apikeys)
 
-	subNotif = NewSubscriptionNotification(catalogID, catalogName, catalogItemURL, recipient,
-		authID, apiKeyFieldName, authSecret, apic.SubscriptionActive, message)
+	subNotif = NewSubscriptionNotification(recipient, message, apic.SubscriptionActive)
+	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
+	subNotif.SetKeyAndSecretInfo(authID, apiKeyFieldName, authSecret)
+
 	subNotif.apiClient = &coreapi.MockClient{}
 
 	// Set the authtemplate based on the authtype
