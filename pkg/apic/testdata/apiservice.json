@@ -1,0 +1,34 @@
+{
+    "group": "management",
+    "apiVersion": "v1alpha1",
+    "kind": "APIService",
+    "name": "fooapi",
+    "title": "Musical instruments",
+    "metadata": {
+      "id": "e4f154f0740472f70174084cc0200000",
+      "audit": {
+        "createTimestamp": "2020-08-19T19:58:01.817+0000",
+        "createUserId": "b0433b7f-ac38-4d29-8a64-cf645c99b99f",
+        "modifyTimestamp": "2020-08-19T19:58:01.817+0000",
+        "modifyUserId": "b0433b7f-ac38-4d29-8a64-cf645c99b99f"
+      },
+      "scope": {
+        "id": "e4ecaab773cb08300173dab49e130259",
+        "kind": "Environment",
+        "name": "v7envandcat"
+      },
+      "resourceVersion": "2239",
+      "references": []
+    },
+    "attributes": {
+      "release": "1.0.0"
+    },
+    "tags": [
+      "prod",
+      "axway",
+      "saas"
+    ],
+    "spec": {
+      "description": "best api ever"
+    }
+  }

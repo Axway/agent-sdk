@@ -272,9 +272,13 @@ func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, ins
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name string) (string, error) {
-	doc, err := strconv.Unquote(string(serviceBody.Documentation))
-	if err != nil {
-		return "", err
+	var doc = ""
+	if serviceBody.Documentation != nil {
+		var err error
+		doc, err = strconv.Unquote(string(serviceBody.Documentation))
+		if err != nil {
+			return "", err
+		}
 	}
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 
@@ -343,7 +347,7 @@ func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string)
 // deleteConsumerInstance -
 func (c *ServiceClient) deleteConsumerInstance(name string) error {
 	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetConsumerInstancesURL()+"/"+name, nil)
-	if err.Error() != strconv.Itoa(http.StatusNotFound) {
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
 		return err
 	}
 	return nil
@@ -652,11 +656,6 @@ func sanitizeAPIName(name string) string {
 
 // apiServiceDeployAPI -
 func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
-	// Unit testing. For now just dummy up a return
-	if isUnitTesting() {
-		return "12345678", nil
-	}
-
 	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
@@ -699,7 +698,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 	// if the default is already set up, do nothing
 	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
-	if !webhookCfg.IsConfigured() {
+	if webhookCfg == nil || !webhookCfg.IsConfigured() {
 		return nil
 	}
 

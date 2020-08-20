@@ -1,0 +1,50 @@
+{
+    "group": "management",
+    "apiVersion": "v1alpha1",
+    "kind": "APIServiceInstance",
+    "name": "daleapi",
+    "title": "DaleAPI (V7)",
+    "metadata": {
+      "id": "e4ecaab773cb08300173dab5a4220273",
+      "audit": {
+        "createTimestamp": "2020-08-10T23:30:03.939+0000",
+        "createUserId": "DOSA_84aee3c17e0043fc86e66b2cc1d3a8c7",
+        "modifyTimestamp": "2020-08-10T23:30:03.939+0000",
+        "modifyUserId": "DOSA_84aee3c17e0043fc86e66b2cc1d3a8c7"
+      },
+      "scope": {
+        "id": "e4ecaab773cb08300173dab49e130259",
+        "kind": "Environment",
+        "name": "v7envandcat"
+      },
+      "resourceVersion": "2042",
+      "references": [
+        {
+          "id": "e4ecaab773cb08300173dab5a322026e",
+          "kind": "APIServiceRevision",
+          "name": "daleapi",
+          "type": "hard"
+        }
+      ]
+    },
+    "attributes": {
+      "createdBy": "",
+      "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
+    },
+    "tags": [
+      "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17"
+    ],
+    "spec": {
+      "endpoint": [
+        {
+          "host": "apiv7",
+          "port": 8065,
+          "routing": {
+            "basePath": "/api"
+          },
+          "protocol": "https"
+        }
+      ],
+      "apiServiceRevision": "daleapi"
+    }
+  }
