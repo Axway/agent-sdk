@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -46,38 +47,15 @@ type SubscriptionConfig interface {
 	GetUnsubscribeTemplate() *EmailTemplate
 	GetSubscribeFailedTemplate() *EmailTemplate
 	GetUnsubscribeFailedTemplate() *EmailTemplate
+	GetSubscriptionApprovalMode() string
+	GetSubscriptionApprovalWebhookConfig() WebhookConfig
 }
 
-// SubscriptionConfiguration - Structure to hold the subscription config
-type SubscriptionConfiguration struct {
-	SubscriptionConfig
+// NotificationConfig -
+type NotificationConfig struct {
 	SMTP    *smtp    `config:"smtp"`
 	Webhook *webhook `config:"webhook"`
-	Types   []NotificationType
 }
-
-// These constants are the paths that the settings is at in a config file
-const (
-	pathSubscriptionsNotificationsWebhookURL                   = "central.subscriptions.notifications.webhook.url"
-	pathSubscriptionsNotificationsWebhookHeaders               = "central.subscriptions.notifications.webhook.headers"
-	pathSubscriptionsNotificationsSMTPHost                     = "central.subscriptions.notifications.smtp.host"
-	pathSubscriptionsNotificationsSMTPPort                     = "central.subscriptions.notifications.smtp.port"
-	pathSubscriptionsNotificationsSMTPFrom                     = "central.subscriptions.notifications.smtp.fromAddress"
-	pathSubscriptionsNotificationsSMTPIdentity                 = "central.subscriptions.notifications.smtp.identity"
-	pathSubscriptionsNotificationsSMTPAuth                     = "central.subscriptions.notifications.smtp.authType"
-	pathSubscriptionsNotificationsSMTPUserName                 = "central.subscriptions.notifications.smtp.username"
-	pathSubscriptionsNotificationsSMTPUserPassword             = "central.subscriptions.notifications.smtp.password"
-	pathSubscriptionsNotificationsSMTPSubscribeSubject         = "central.subscriptions.notifications.smtp.subscribe.subject"
-	pathSubscriptionsNotificationsSMTPSubscribeBody            = "central.subscriptions.notifications.smtp.subscribe.body"
-	pathSubscriptionsNotificationsSMTPSubscribeOauth           = "central.subscriptions.notifications.smtp.subscribe.oauth"
-	pathSubscriptionsNotificationsSMTPSubscribeAPIKeys         = "central.subscriptions.notifications.smtp.subscribe.apikeys"
-	pathSubscriptionsNotificationsSMTPUnsubscribeSubject       = "central.subscriptions.notifications.smtp.unsubscribe.subject"
-	pathSubscriptionsNotificationsSMTPUnubscribeBody           = "central.subscriptions.notifications.smtp.unsubscribe.body"
-	pathSubscriptionsNotificationsSMTPSubscribeFailedSubject   = "central.subscriptions.notifications.smtp.subscribeFailed.subject"
-	pathSubscriptionsNotificationsSMTPSubscribeFailedBody      = "central.subscriptions.notifications.smtp.subscribeFailed.body"
-	pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject = "central.subscriptions.notifications.smtp.unsubscribeFailed.subject"
-	pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody    = "central.subscriptions.notifications.smtp.unsubscribeFailed.body"
-)
 
 type webhook struct {
 	URL                 string `config:"webhook.url"`
@@ -99,6 +77,47 @@ type smtp struct {
 	UnsubscribeFailed *EmailTemplate `config:"smtp.unsubscribeFailed"`
 }
 
+// ApprovalConfig -
+type ApprovalConfig struct {
+	SubscriptionApprovalMode    string        `config:"approvalMode"`
+	SubscriptionApprovalWebhook WebhookConfig `config:"approvalWebhook"`
+}
+
+// SubscriptionConfiguration - Structure to hold the subscription config
+type SubscriptionConfiguration struct {
+	SubscriptionConfig
+	Approval      *ApprovalConfig     `config:"approval"`
+	Notifications *NotificationConfig `config:"notifications"`
+	Types         []NotificationType
+}
+
+// These constants are the paths that the settings is at in a config file
+const (
+	pathSubscriptionsApprovalMode                              = "central.subscriptions.approvalMode"
+	pathSubscriptionsApprovalWebhookURL                        = "central.subscriptions.approvalWebhook.url"
+	pathSubscriptionsApprovalWebhookHeaders                    = "central.subscriptions.approvalWebhook.headers"
+	pathSubscriptionsApprovalWebhookSecret                     = "central.subscriptions.approvalWebhook.authSecret"
+	pathSubscriptionsNotificationsWebhookURL                   = "central.subscriptions.notifications.webhook.url"
+	pathSubscriptionsNotificationsWebhookHeaders               = "central.subscriptions.notifications.webhook.headers"
+	pathSubscriptionsNotificationsSMTPHost                     = "central.subscriptions.notifications.smtp.host"
+	pathSubscriptionsNotificationsSMTPPort                     = "central.subscriptions.notifications.smtp.port"
+	pathSubscriptionsNotificationsSMTPFrom                     = "central.subscriptions.notifications.smtp.fromAddress"
+	pathSubscriptionsNotificationsSMTPIdentity                 = "central.subscriptions.notifications.smtp.identity"
+	pathSubscriptionsNotificationsSMTPAuth                     = "central.subscriptions.notifications.smtp.authType"
+	pathSubscriptionsNotificationsSMTPUserName                 = "central.subscriptions.notifications.smtp.username"
+	pathSubscriptionsNotificationsSMTPUserPassword             = "central.subscriptions.notifications.smtp.password"
+	pathSubscriptionsNotificationsSMTPSubscribeSubject         = "central.subscriptions.notifications.smtp.subscribe.subject"
+	pathSubscriptionsNotificationsSMTPSubscribeBody            = "central.subscriptions.notifications.smtp.subscribe.body"
+	pathSubscriptionsNotificationsSMTPSubscribeOauth           = "central.subscriptions.notifications.smtp.subscribe.oauth"
+	pathSubscriptionsNotificationsSMTPSubscribeAPIKeys         = "central.subscriptions.notifications.smtp.subscribe.apikeys"
+	pathSubscriptionsNotificationsSMTPUnsubscribeSubject       = "central.subscriptions.notifications.smtp.unsubscribe.subject"
+	pathSubscriptionsNotificationsSMTPUnubscribeBody           = "central.subscriptions.notifications.smtp.unsubscribe.body"
+	pathSubscriptionsNotificationsSMTPSubscribeFailedSubject   = "central.subscriptions.notifications.smtp.subscribeFailed.subject"
+	pathSubscriptionsNotificationsSMTPSubscribeFailedBody      = "central.subscriptions.notifications.smtp.subscribeFailed.body"
+	pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject = "central.subscriptions.notifications.smtp.unsubscribeFailed.subject"
+	pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody    = "central.subscriptions.notifications.smtp.unsubscribeFailed.body"
+)
+
 //EmailTemplate -
 type EmailTemplate struct {
 	Subject string `config:"subject"`
@@ -107,10 +126,19 @@ type EmailTemplate struct {
 	APIKey  string `config:"apikeys"`
 }
 
+// AddApprovalConfigProperties -
+func AddApprovalConfigProperties(props properties.Properties) {
+	// subscription approvals
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
+	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
+}
+
 // ParseSubscriptionConfig -
-func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig, error) {
+func ParseSubscriptionConfig(props properties.Properties) (SubscriptionConfig, error) {
 	// Determine the auth type
-	authTypeString := cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPAuth)
+	authTypeString := props.StringPropertyValue(pathSubscriptionsNotificationsSMTPAuth)
 	authType := NoAuth
 	switch strings.ToUpper(authTypeString) {
 	case (string(LoginAuth)):
@@ -122,39 +150,50 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 	}
 
 	cfg := &SubscriptionConfiguration{
-		Webhook: &webhook{
-			URL:     cmdProps.StringPropertyValue(pathSubscriptionsNotificationsWebhookURL),
-			Headers: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsWebhookHeaders),
+		Approval: &ApprovalConfig{
+			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
+			SubscriptionApprovalWebhook: &WebhookConfiguration{
+				URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
+				Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
+				Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
+			},
 		},
-		SMTP: &smtp{
-			Host:     cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPHost),
-			Port:     cmdProps.IntPropertyValue(pathSubscriptionsNotificationsSMTPPort),
-			From:     cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPFrom),
-			AuthType: authType,
-			Identity: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPIdentity),
-			Username: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUserName),
-			Password: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUserPassword),
-			Subscribe: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeSubject),
-				Body:    cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeBody),
-				Oauth:   cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeOauth),
-				APIKey:  cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys),
+		Notifications: &NotificationConfig{
+			Webhook: &webhook{
+				URL:     props.StringPropertyValue(pathSubscriptionsNotificationsWebhookURL),
+				Headers: props.StringPropertyValue(pathSubscriptionsNotificationsWebhookHeaders),
 			},
-			Unsubscribe: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeSubject),
-				Body:    cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnubscribeBody),
-			},
-			SubscribeFailed: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject),
-				Body:    cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeFailedBody),
-			},
-			UnsubscribeFailed: &EmailTemplate{
-				Subject: cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject),
-				Body:    cmdProps.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody),
+			SMTP: &smtp{
+				Host:     props.StringPropertyValue(pathSubscriptionsNotificationsSMTPHost),
+				Port:     props.IntPropertyValue(pathSubscriptionsNotificationsSMTPPort),
+				From:     props.StringPropertyValue(pathSubscriptionsNotificationsSMTPFrom),
+				AuthType: authType,
+				Identity: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPIdentity),
+				Username: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUserName),
+				Password: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUserPassword),
+				Subscribe: &EmailTemplate{
+					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeSubject),
+					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeBody),
+					Oauth:   props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeOauth),
+					APIKey:  props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys),
+				},
+				Unsubscribe: &EmailTemplate{
+					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeSubject),
+					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnubscribeBody),
+				},
+				SubscribeFailed: &EmailTemplate{
+					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject),
+					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeFailedBody),
+				},
+				UnsubscribeFailed: &EmailTemplate{
+					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject),
+					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody),
+				},
 			},
 		},
 	}
 
+	// Validate properties
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
@@ -165,8 +204,14 @@ func ParseSubscriptionConfig(cmdProps properties.Properties) (SubscriptionConfig
 // NewSubscriptionConfig - Creates the default subscription config
 func NewSubscriptionConfig() SubscriptionConfig {
 	return &SubscriptionConfiguration{
-		Webhook: &webhook{},
-		SMTP:    &smtp{},
+		Approval: &ApprovalConfig{
+			SubscriptionApprovalMode:    ManualApproval,
+			SubscriptionApprovalWebhook: NewWebhookConfig(),
+		},
+		Notifications: &NotificationConfig{
+			Webhook: &webhook{},
+			SMTP:    &smtp{},
+		},
 	}
 }
 
@@ -182,110 +227,120 @@ func (s *SubscriptionConfiguration) GetNotificationTypes() []NotificationType {
 
 // GetWebhookURL - Returns the webhook url for notifications
 func (s *SubscriptionConfiguration) GetWebhookURL() string {
-	if s.Webhook != nil {
-		return s.Webhook.URL
+	if s.Notifications.Webhook != nil {
+		return s.Notifications.Webhook.URL
 	}
 	return ""
 }
 
 // GetWebhookHeaders - Returns the notification headers
 func (s *SubscriptionConfiguration) GetWebhookHeaders() map[string]string {
-	if s.Webhook != nil {
-		return s.Webhook.notificationHeaders
+	if s.Notifications.Webhook != nil {
+		return s.Notifications.Webhook.notificationHeaders
 	}
 	return make(map[string]string)
 }
 
 // GetSMTPURL - Returns the URL for the SMTP server
 func (s *SubscriptionConfiguration) GetSMTPURL() string {
-	if s.SMTP != nil {
-		return fmt.Sprintf("%s:%d", s.SMTP.Host, s.SMTP.Port)
+	if s.Notifications.SMTP != nil {
+		return fmt.Sprintf("%s:%d", s.Notifications.SMTP.Host, s.Notifications.SMTP.Port)
 	}
 	return ""
 }
 
 // GetSMTPHost - Returns the Host for the SMTP server
 func (s *SubscriptionConfiguration) GetSMTPHost() string {
-	if s.SMTP != nil {
-		return s.SMTP.Host
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Host
 	}
 	return ""
 }
 
 // GetSMTPFromAddress -
 func (s *SubscriptionConfiguration) GetSMTPFromAddress() string {
-	if s.SMTP != nil {
-		return s.SMTP.From
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.From
 	}
 	return ""
 }
 
 // GetSMTPAuthType -
 func (s *SubscriptionConfiguration) GetSMTPAuthType() SMTPAuthType {
-	if s.SMTP != nil {
-		return s.SMTP.AuthType
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.AuthType
 	}
 	return ""
 }
 
 // GetSMTPIdentity -
 func (s *SubscriptionConfiguration) GetSMTPIdentity() string {
-	if s.SMTP != nil {
-		return s.SMTP.Identity
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Identity
 	}
 	return ""
 }
 
 // GetSMTPUsername -
 func (s *SubscriptionConfiguration) GetSMTPUsername() string {
-	if s.SMTP != nil {
-		return s.SMTP.Username
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Username
 	}
 	return ""
 }
 
 // GetSMTPPassword -
 func (s *SubscriptionConfiguration) GetSMTPPassword() string {
-	if s.SMTP != nil {
-		return s.SMTP.Password
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Password
 	}
 	return ""
 }
 
 // GetSubscribeTemplate - returns the email template info for a subscribe
 func (s *SubscriptionConfiguration) GetSubscribeTemplate() *EmailTemplate {
-	if s.SMTP != nil {
-		return s.SMTP.Subscribe
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Subscribe
 	}
 	return nil
 }
 
 // GetUnsubscribeTemplate - returns the email template info for an unsubscribe
 func (s *SubscriptionConfiguration) GetUnsubscribeTemplate() *EmailTemplate {
-	if s.SMTP != nil {
-		return s.SMTP.Unsubscribe
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.Unsubscribe
 	}
 	return nil
 }
 
 // GetSubscribeFailedTemplate - returns the email template info for a subscribe
 func (s *SubscriptionConfiguration) GetSubscribeFailedTemplate() *EmailTemplate {
-	if s.SMTP != nil {
-		return s.SMTP.SubscribeFailed
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.SubscribeFailed
 	}
 	return nil
 }
 
 // GetUnsubscribeFailedTemplate - returns the email template info for an unsubscribe
 func (s *SubscriptionConfiguration) GetUnsubscribeFailedTemplate() *EmailTemplate {
-	if s.SMTP != nil {
-		return s.SMTP.UnsubscribeFailed
+	if s.Notifications.SMTP != nil {
+		return s.Notifications.SMTP.UnsubscribeFailed
 	}
 	return nil
 }
 
+// GetSubscriptionApprovalMode - Returns the subscription approval mode
+func (s *SubscriptionConfiguration) GetSubscriptionApprovalMode() string {
+	return s.Approval.SubscriptionApprovalMode
+}
+
+// GetSubscriptionApprovalWebhookConfig - Returns the Config for the subscription webhook
+func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() WebhookConfig {
+	return s.Approval.SubscriptionApprovalWebhook
+}
+
 func (s *SubscriptionConfiguration) validate() error {
-	if s.Webhook.URL != "" {
+	if s.Notifications.Webhook.URL != "" {
 		s.SetNotificationType(NotifyWebhook)
 		log.Debug("Webhook notification set")
 		err := s.validateWebhook()
@@ -293,10 +348,20 @@ func (s *SubscriptionConfiguration) validate() error {
 			return err
 		}
 	}
-	if s.SMTP.Host != "" {
+	if s.Notifications.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
 		log.Debug("SMTP notification set")
 	}
+
+	switch s.GetSubscriptionApprovalMode() {
+	case ManualApproval, AutoApproval, WebhookApproval:
+		// these are all OK
+	case "":
+	default:
+		exception.Throw(errors.New("Error central.subscriptions.approvalmode set to incorrect value in config: " + s.GetSubscriptionApprovalMode()))
+	}
+
+	s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
 
 	return nil
 }
@@ -309,16 +374,16 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 	}
 
 	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
-	s.Webhook.notificationHeaders = map[string]string{}
-	s.Webhook.Headers = strings.Replace(s.Webhook.Headers, ", ", ",", -1)
-	headersValues := strings.Split(s.Webhook.Headers, ",Header=")
+	s.Notifications.Webhook.notificationHeaders = map[string]string{}
+	s.Notifications.Webhook.Headers = strings.Replace(s.Notifications.Webhook.Headers, ", ", ",", -1)
+	headersValues := strings.Split(s.Notifications.Webhook.Headers, ",Header=")
 	for _, headerValue := range headersValues {
 		hvArray := strings.Split(headerValue, ",Value=")
 		if len(hvArray) != 2 {
 			return errors.New("could not parse value of central.subscriptions.notifications.headers")
 		}
 		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
-		s.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]
+		s.Notifications.Webhook.notificationHeaders[hvArray[0]] = hvArray[1]
 	}
 
 	return nil

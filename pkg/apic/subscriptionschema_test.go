@@ -11,6 +11,19 @@ import (
 )
 
 func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
@@ -18,7 +31,7 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
+		SubscriptionConfiguration: &subscriptions,
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
