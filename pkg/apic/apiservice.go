@@ -656,11 +656,6 @@ func sanitizeAPIName(name string) string {
 
 // apiServiceDeployAPI -
 func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
-	// Unit testing. For now just dummy up a return
-	// if isUnitTesting() {
-	// 	return "12345678", nil
-	// }
-
 	headers, err := c.createHeader()
 	if err != nil {
 		return "", err
