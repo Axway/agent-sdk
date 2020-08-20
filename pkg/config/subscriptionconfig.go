@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -352,7 +351,7 @@ func (s *SubscriptionConfiguration) validate() error {
 		// these are all OK
 	case "":
 	default:
-		exception.Throw(errors.New("Error central.subscriptions.approvalmode set to incorrect value in config: " + s.GetSubscriptionApprovalMode()))
+		return ErrSubscriptionApprovalModeInvalid
 	}
 
 	s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
