@@ -109,7 +109,7 @@ func TestCreateService(t *testing.T) {
 		},
 		{
 			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			respCode: http.StatusOK,
+			respCode: http.StatusRequestTimeout,
 		},
 		{
 			fileName: "./testdata/instancenotfound.json", // this for call to create the serviceInstance
@@ -129,7 +129,7 @@ func TestCreateService(t *testing.T) {
 	mockClient.responses = []mockResponse{
 		{
 			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusCreated,
+			respCode: http.StatusRequestTimeout,
 		},
 		{
 			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
@@ -150,7 +150,7 @@ func TestCreateService(t *testing.T) {
 	mockClient.responses = []mockResponse{
 		{
 			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusCreated,
+			respCode: http.StatusRequestTimeout,
 		},
 		{
 			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
@@ -163,6 +163,9 @@ func TestCreateService(t *testing.T) {
 		{
 			fileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
 			respCode: http.StatusRequestTimeout,
+		},
+		{
+			respCode: http.StatusOK, // this for call to rollback
 		},
 	}
 
