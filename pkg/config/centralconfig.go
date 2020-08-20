@@ -117,7 +117,7 @@ type CentralConfiguration struct {
 	environmentID               string
 	SubscriptionApprovalMode    string             `config:"approvalMode"`
 	SubscriptionApprovalWebhook WebhookConfig      `config:"approvalWebhook"`
-	SubscriptionConfiguration   SubscriptionConfig `config:"subscriptionConfig"`
+	SubscriptionConfiguration   SubscriptionConfig `config:"subscriptions"`
 }
 
 // NewCentralConfig - Creates the default central config
