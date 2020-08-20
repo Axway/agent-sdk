@@ -14,6 +14,18 @@ import (
 )
 
 func TestProcessorRegistration(t *testing.T) {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
 	cfg := &corecfg.CentralConfiguration{
 		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
@@ -21,7 +33,7 @@ func TestProcessorRegistration(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
+		SubscriptionConfiguration: &subscriptions,
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
@@ -134,6 +146,19 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		Mode:         corecfg.PublishToEnvironment,
 		TeamName:     "test",
@@ -145,7 +170,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
+		SubscriptionConfiguration: &subscriptions,
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
@@ -216,6 +241,19 @@ func TestSubscriptionUpdate(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		TeamName:     "test",
 		URL:          server.URL,
@@ -225,7 +263,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
+		SubscriptionConfiguration: &subscriptions,
 	}
 	client := New(cfg)
 	assert.NotNil(t, client)
@@ -252,13 +290,28 @@ func TestSubscriptionUpdate(t *testing.T) {
 }
 
 func TestBlacklist(t *testing.T) {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost",
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionConfiguration: &subscriptions,
 	}
+
 	client := New(cfg)
 	mgr := client.GetSubscriptionManager().(*subscriptionManager)
 	mgr.AddBlacklistItem("123")

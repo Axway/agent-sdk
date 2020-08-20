@@ -299,7 +299,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMet
 	}
 
 	autoSubscribe := false
-	if c.cfg.GetSubscriptionApprovalMode() == corecfg.AutoApproval {
+	if c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalMode() == corecfg.AutoApproval {
 		autoSubscribe = true
 	}
 
@@ -697,7 +697,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 // per environment
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 	// if the default is already set up, do nothing
-	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
+	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
 	if webhookCfg == nil || !webhookCfg.IsConfigured() {
 		return nil
 	}
@@ -777,7 +777,7 @@ func (c *ServiceClient) createSecret() error {
 
 // create the on-and-only subscription approval webhook for the environment
 func (c *ServiceClient) createWebhook() error {
-	webhookCfg := c.cfg.GetSubscriptionApprovalWebhookConfig()
+	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
 	specSecret := v1alpha1.WebhookSpecAuthSecret{
 		Name: DefaultSubscriptionWebhookName,
 		Key:  DefaultSubscriptionWebhookAuthKey,

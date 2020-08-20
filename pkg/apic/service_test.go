@@ -46,6 +46,19 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 }
 
 func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
@@ -53,8 +66,9 @@ func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.Cen
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionApprovalWebhook: corecfg.NewWebhookConfig(),
+		SubscriptionConfiguration: &subscriptions,
 	}
+
 	if tlsCfg != nil {
 		cfg.TLS = tlsCfg
 	}

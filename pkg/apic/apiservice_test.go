@@ -31,18 +31,26 @@ var serviceBody = ServiceBody{
 }
 
 func newServiceClient() *ServiceClient {
+
 	webhook := &corecfg.WebhookConfiguration{
 		URL:     "http://foo.bar",
 		Headers: "Header=contentType,Value=application/json",
 		Secret:  "",
 	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
 		Mode: corecfg.PublishToEnvironmentAndCatalog,
 		Auth: &corecfg.AuthConfiguration{
 			URL: "http://localhost:8888",
 		},
-		SubscriptionApprovalMode:    "webhook",
-		SubscriptionApprovalWebhook: webhook,
+		SubscriptionConfiguration: &subscriptions,
 	}
 	return &ServiceClient{
 		cfg:                                cfg,

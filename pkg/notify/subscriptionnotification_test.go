@@ -75,10 +75,10 @@ func TestSubscriptionNotification(t *testing.T) {
 	err = subNotif.NotifySubscriber(recipient) // logon
 
 	cfg1 := cfg.(*config.SubscriptionConfiguration)
-	cfg1.SMTP.AuthType = config.AnonymousAuth
+	cfg1.Notifications.SMTP.AuthType = config.AnonymousAuth
 	err = subNotif.NotifySubscriber(recipient) // plainauth
 
-	cfg1.SMTP.AuthType = config.PlainAuth
+	cfg1.Notifications.SMTP.AuthType = config.PlainAuth
 	err = subNotif.NotifySubscriber(recipient) // anonymous
 
 	// this can never succeed because the SMTP will fail
