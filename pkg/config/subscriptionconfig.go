@@ -354,6 +354,8 @@ func (s *SubscriptionConfiguration) validate() error {
 		return ErrSubscriptionApprovalModeInvalid
 	}
 
+	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())
+
 	s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
 
 	return nil
