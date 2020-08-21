@@ -46,8 +46,8 @@ func NewSubscriptionNotification(recipient, message string, state apic.Subscript
 
 // consts
 const (
-	apikeys = "apikeys"
-	oauth   = "oauth"
+	Apikeys = "apikeys"
+	Oauth   = "oauth"
 )
 
 // SetCatalogItemInfo - Set the catalogitem info
@@ -57,11 +57,15 @@ func (s *SubscriptionNotification) SetCatalogItemInfo(catalogID, catalogName, ca
 	s.CatalogItemURL = catalogItemURL
 }
 
-// SetKeyAndSecretInfo - Set the key and secret info
-func (s *SubscriptionNotification) SetKeyAndSecretInfo(key, keyHeaderName, clientSecret string) {
+// SetAPIKeyInfo - Set the key and header
+func (s *SubscriptionNotification) SetAPIKeyInfo(key, keyHeaderName string) {
 	s.Key = key
 	s.KeyHeaderName = keyHeaderName
-	s.ClientID = key
+}
+
+// SetOauthInfo - Set the id and secret info
+func (s *SubscriptionNotification) SetOauthInfo(clientID, clientSecret string) {
+	s.ClientID = clientID
 	s.ClientSecret = clientSecret
 }
 
@@ -79,9 +83,9 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 	}
 
 	switch authType {
-	case apikeys:
+	case Apikeys:
 		s.AuthTemplate = s.UpdateTemplate(template.APIKey)
-	case oauth:
+	case Oauth:
 		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
 	default:
 		log.Error(ErrSubscriptionBadAuthtype.FormatError(authType))
@@ -151,7 +155,7 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 	}
 
 	if template.Subject == "" && template.Body == "" {
-		return nil
+		return fmt.Errorf("template subject and body not found for action %s", s.Action)
 	}
 
 	// determine the auth type to use

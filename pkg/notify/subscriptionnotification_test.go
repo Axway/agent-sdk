@@ -60,20 +60,22 @@ func TestSubscriptionNotification(t *testing.T) {
 
 	subNotif := NewSubscriptionNotification(recipient, message, apic.SubscriptionApproved) // this is a bad action
 	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
-	subNotif.SetKeyAndSecretInfo(authID, apiKeyFieldName, authSecret)
-	subNotif.SetAuthorizationTemplate(apikeys)
+	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
+	subNotif.SetAuthorizationTemplate(Apikeys)
 
 	subNotif = NewSubscriptionNotification(recipient, message, apic.SubscriptionActive)
 	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
-	subNotif.SetKeyAndSecretInfo(authID, apiKeyFieldName, authSecret)
+	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
 
 	subNotif.apiClient = &coreapi.MockClient{}
 
 	// Set the authtemplate based on the authtype
 	subNotif.SetAuthorizationTemplate("")           // try a bad value
 	subNotif.SetAuthorizationTemplate("apikeysfff") // try a bad value
-	subNotif.SetAuthorizationTemplate(oauth)
-	subNotif.SetAuthorizationTemplate(apikeys)
+	subNotif.SetOauthInfo(authID, authSecret)
+	subNotif.SetAuthorizationTemplate(Oauth)
+	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
+	subNotif.SetAuthorizationTemplate(Apikeys)
 
 	err = subNotif.NotifySubscriber(recipient) // logon
 
