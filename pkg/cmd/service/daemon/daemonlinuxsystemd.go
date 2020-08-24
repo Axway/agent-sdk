@@ -63,7 +63,7 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 	srvPath := linux.servicePath()
 
 	if linux.isInstalled() {
-		return installAction + failed, ErrAlreadyInstalled
+		return installAction + failed, ErrAlreadyInstalled.FormatError(linux.name + serviceSuffix)
 	}
 
 	file, err := fs.Create(srvPath)
@@ -119,7 +119,11 @@ func (linux *systemDRecord) Remove() (string, error) {
 	}
 
 	if !linux.isInstalled() {
-		return removeAction + failed, ErrNotInstalled
+		return removeAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	}
+
+	if _, ok := linux.checkRunning(); ok {
+		return removeAction + failed, ErrCurrentlyRunning.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, err := execCmd(systemctl, "disable", linux.name+serviceSuffix); err != nil {
@@ -142,11 +146,11 @@ func (linux *systemDRecord) Start() (string, error) {
 	}
 
 	if !linux.isInstalled() {
-		return startAction + failed, ErrNotInstalled
+		return startAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, ok := linux.checkRunning(); ok {
-		return startAction + failed, ErrAlreadyRunning
+		return startAction + failed, ErrAlreadyRunning.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, err := execCmd(systemctl, "start", linux.name+serviceSuffix); err != nil {
@@ -165,11 +169,11 @@ func (linux *systemDRecord) Stop() (string, error) {
 	}
 
 	if !linux.isInstalled() {
-		return stopAction + failed, ErrNotInstalled
+		return stopAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, ok := linux.checkRunning(); !ok {
-		return stopAction + failed, ErrAlreadyStopped
+		return stopAction + failed, ErrAlreadyStopped.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, err := execCmd(systemctl, "stop", linux.name+serviceSuffix); err != nil {
@@ -187,7 +191,7 @@ func (linux *systemDRecord) Status() (string, error) {
 	}
 
 	if !linux.isInstalled() {
-		return statNotInstalled, ErrNotInstalled
+		return statNotInstalled, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
 	}
 
 	statusAction, _ := linux.checkRunning()
@@ -211,7 +215,7 @@ func (linux *systemDRecord) Enable() (string, error) {
 	}
 
 	if !linux.isInstalled() {
-		return enableAction + failed, ErrNotInstalled
+		return enableAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
 	}
 
 	if _, err := execCmd(systemctl, "enable", linux.name+serviceSuffix); err != nil {

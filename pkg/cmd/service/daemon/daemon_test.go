@@ -133,16 +133,16 @@ func TestRemove(t *testing.T) {
 	execCmd = fakeExecCommand
 	fakeOutput = fakeCommand{
 		calls:   0,
-		outputs: []string{"0", ""},
+		outputs: []string{"0", "", ""},
 	}
 
 	output, err = daemon.Remove()
 	assert.NotNil(t, output, "Expected an output to be returned")
 	assert.Nil(t, err, "no error expected")
-	assert.Len(t, fakeOutput.cmds, 2)
-	assert.Equal(t, "systemctl disable daemon.service", fakeOutput.cmds[1])
+	assert.Len(t, fakeOutput.cmds, 3)
+	assert.Equal(t, "systemctl status daemon.service", fakeOutput.cmds[1])
+	assert.Equal(t, "systemctl disable daemon.service", fakeOutput.cmds[2])
 	assert.True(t, mOSFS.removeCalled, "Exppected a call to remove the service definition file")
-
 }
 
 func TestStart(t *testing.T) {

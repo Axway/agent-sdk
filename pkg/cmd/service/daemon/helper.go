@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"os/exec"
 	"strconv"
@@ -13,26 +12,6 @@ import (
 const (
 	success = "\t\t\t\t\t[  \033[32mOK\033[0m  ]" // Show colored "OK"
 	failed  = "\t\t\t\t\t[\033[31mFAILED\033[0m]" // Show colored "FAILED"
-)
-
-var (
-	// ErrUnsupportedSystem appears if try to use service on system which is not supported by this release
-	ErrUnsupportedSystem = errors.New("Unsupported system")
-
-	// ErrRootPrivileges appears if run installation or deleting the service without root privileges
-	ErrRootPrivileges = errors.New("You must have root user privileges. Possibly using 'sudo' command should help")
-
-	// ErrAlreadyInstalled appears if service already installed on the system
-	ErrAlreadyInstalled = errors.New("Service has already been installed")
-
-	// ErrNotInstalled appears if try to delete service which was not been installed
-	ErrNotInstalled = errors.New("Service is not installed")
-
-	// ErrAlreadyRunning appears if try to start already running service
-	ErrAlreadyRunning = errors.New("Service is already running")
-
-	// ErrAlreadyStopped appears if try to stop already stopped service
-	ErrAlreadyStopped = errors.New("Service has already been stopped")
 )
 
 // override for testing
