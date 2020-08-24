@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/notification"
+	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // SubscriptionManager - Interface for subscription manager
@@ -148,6 +149,8 @@ func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscri
 				subscription.RemoteAPIID = value.(string)
 			}
 		}
+		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
+			subscription.ID, apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
 	}
 }
 
