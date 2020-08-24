@@ -20,6 +20,13 @@ const (
 	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
 )
 
+// Constants for attributes
+const (
+	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
+	AttrExternalAPIID                = "externalAPIID"
+	AttrCreatedBy                    = "createdBy"
+)
+
 type apiErrorResponse map[string][]apiError
 
 type apiError struct {
@@ -61,6 +68,7 @@ type ServiceBody struct {
 	ResourceType      string
 	SubscriptionName  string
 	APIUpdateSeverity string `json:",omitempty"`
+	State             string
 }
 
 // ServiceClient -
