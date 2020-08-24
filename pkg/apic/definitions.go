@@ -119,6 +119,7 @@ type APIServerMetadata struct {
 // APIServer -
 type APIServer struct {
 	Name       string                 `json:"name"`
+	Kind       string                 `json:"kind,omitempty"`
 	Title      string                 `json:"title"`
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
