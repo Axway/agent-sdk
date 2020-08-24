@@ -34,6 +34,7 @@ type Subscription interface {
 	GetID() string
 	GetName() string
 	GetApicID() string
+	GetRemoteAPIID() string
 	GetCatalogItemID() string
 	GetCreatedUserID() string
 	GetState() SubscriptionState
@@ -55,6 +56,7 @@ type CentralSubscription struct {
 	AllowedTransitionStates []string                    `json:"allowedTransitionStates"`
 	Metadata                centralSubscriptionMetadata `json:"metadata"`
 	ApicID                  string                      `json:"-"`
+	RemoteAPIID             string                      `json:"-"`
 	apicClient              *ServiceClient
 }
 
@@ -84,6 +86,11 @@ func (s *CentralSubscription) GetName() string {
 // GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *CentralSubscription) GetApicID() string {
 	return s.ApicID
+}
+
+// GetRemoteAPIID - Returns ID of the API on remote gatewat
+func (s *CentralSubscription) GetRemoteAPIID() string {
+	return s.RemoteAPIID
 }
 
 // GetCatalogItemID - Returns ID of the Catalog Item

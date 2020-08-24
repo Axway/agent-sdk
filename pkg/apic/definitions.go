@@ -20,6 +20,13 @@ const (
 	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
 )
 
+// Constants for attributes
+const (
+	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
+	AttrExternalAPIID                = "externalAPIID"
+	AttrCreatedBy                    = "createdBy"
+)
+
 type apiErrorResponse map[string][]apiError
 
 type apiError struct {
@@ -61,6 +68,7 @@ type ServiceBody struct {
 	ResourceType      string
 	SubscriptionName  string
 	APIUpdateSeverity string `json:",omitempty"`
+	State             string
 }
 
 // ServiceClient -
@@ -111,6 +119,7 @@ type APIServerMetadata struct {
 // APIServer -
 type APIServer struct {
 	Name       string                 `json:"name"`
+	Kind       string                 `json:"kind,omitempty"`
 	Title      string                 `json:"title"`
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
