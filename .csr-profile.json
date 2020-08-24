@@ -110,11 +110,11 @@
       ]
     },
     {
-      "path": ".*config\\/centralconfig\\.go",
+      "path": ".*config\\/centralconfig\\.go:.*",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
-      "component": "pathAuthKeyPassword                     = \"central.auth.keyPassword\"",
+      "component": "pathAuthKeyPassword       = \"central.auth.keyPassword\"",
       "justification": "This is just a constant declaration of a command line property",
       "version": "",
       "ids": [
