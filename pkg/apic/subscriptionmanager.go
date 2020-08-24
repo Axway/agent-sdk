@@ -109,18 +109,43 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 	subscription.apicClient = sm.apicClient
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
 	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-		consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(apiserverInfo.ConsumerInstance.Name, nil)
+		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+	}
+}
+
+func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
+	consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(consumerInstanceName, nil)
+	if err == nil {
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
-			if err == nil && consumerInstance.Metadata != nil {
-				subscription.ApicID = consumerInstance.Metadata.ID
-			}
+			sm.setSubscripitionInfo(subscription, consumerInstance)
 		} else {
-			if err == nil && consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
-				for _, reference := range consumerInstance.Metadata.References {
-					if reference.Kind == "APIServiceInstance" {
-						subscription.ApicID = reference.ID
-					}
+			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
+		}
+	}
+}
+
+func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *APIServer) {
+	if consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+		for _, reference := range consumerInstance.Metadata.References {
+			if reference.Kind == "APIServiceInstance" {
+				apiServiceInstane, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
+				if err == nil {
+					sm.setSubscripitionInfo(subscription, apiServiceInstane)
 				}
+			}
+		}
+	}
+}
+
+// setSubscripitionInfo - Sets subscription identifier that will be used as references
+// - ApicID - using the metadata of API server resoure metadata.id
+// - RemoteAPIID - using the attribute externalAPIID on API server resource
+func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *APIServer) {
+	if apiServerResource != nil && apiServerResource.Metadata != nil {
+		subscription.ApicID = apiServerResource.Metadata.ID
+		for name, value := range apiServerResource.Attributes {
+			if name == AttrExternalAPIID {
+				subscription.RemoteAPIID = value.(string)
 			}
 		}
 	}
