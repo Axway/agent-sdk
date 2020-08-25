@@ -1,8 +1,8 @@
 # API Server Resources
 
-The code in this folder is generated from the yaml files in the definitions folder. Thes yaml files have been copied (manually) directly from the API Server repository.
-To generate the models run `make apiserver-generate` from the root of the project (apigov/apic_agents_sdk).
-The code in models/api is hand written code. The rest of the code is generated from the yaml in apiserver/defnitions and passed to openapi-generator, which ultimately puts the generated models in apigov/apic_agent_sdk/pkg/apiserver/models/definitions(management)/v1alpha1.
+The code in this folder is generated from the yaml files that are pulled directly from the UnifiedCatalog repository.
+To generate the models run `make unifiedcatalog-generate` from the root of the project (apigov/apic_agents_sdk).
+The yaml is passed to openapi-generator, and ultimately the generated files are placed in apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models.
 
 For information regarding openapi-generator, see https://github.com/OpenAPITools/openapi-generator
 
@@ -24,6 +24,6 @@ In order to generate the code you need the following tools. Note that these inst
 4. install gomplate: `go get github.com/hairyhenderson/gomplate/cmd/gomplate`
 
 
-You should now be all set to run `make apiserver-generate`.
+You should now be all set to run `make unifiedcatalog-generate`.
 
 Good luck!!!
