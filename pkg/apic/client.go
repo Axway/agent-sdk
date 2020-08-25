@@ -208,7 +208,7 @@ func (c *ServiceClient) checkAPIServerHealth() (APIServer, error) {
 		return APIServer{}, errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
-	apiEnvironment, err := c.getEnvironmentIDByName(headers)
+	apiEnvironment, err := c.getEnvironment(headers)
 	if err != nil {
 		return APIServer{}, err
 	}
@@ -265,7 +265,7 @@ func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error 
 	return nil
 }
 
-func (c *ServiceClient) getEnvironmentIDByName(headers map[string]string) (APIServer, error) {
+func (c *ServiceClient) getEnvironment(headers map[string]string) (APIServer, error) {
 	queryParams := map[string]string{}
 
 	// do a request for the environment
