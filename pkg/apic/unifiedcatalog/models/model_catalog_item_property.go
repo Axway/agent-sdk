@@ -12,7 +12,6 @@ package unifiedcatalog
 
 // CatalogItemProperty struct for CatalogItemProperty
 type CatalogItemProperty struct {
-	Key string `json:"key"`
-	//Changed from Value map[string]interface{} `json:"value"`
-	Value interface{} `json:"value"`
+	Key   string                 `json:"key"`
+	Value map[string]interface{} `json:"value"`
 }
