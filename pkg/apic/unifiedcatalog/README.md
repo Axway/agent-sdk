@@ -21,6 +21,7 @@ In order to generate the code you need the following tools. Note that these inst
     sudo chmod +x yq_linux_amd64
     sudo mv yq_linux_amd64 /usr/bin/yq
 ```
+> Note that the scripts will NOT work for yq releases below 3.3.0
 4. install gomplate: `go get github.com/hairyhenderson/gomplate/cmd/gomplate`
 
 
