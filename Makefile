@@ -54,8 +54,8 @@ sonar: test-sonar
 lint: ## Lint the files
 	@golint -set_exit_status $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/models/management | grep -v ./pkg/apic/apiserver/models/definitions | grep -v ./pkg/apic/unifiedcatalog/models)
 
-apiserver_generate: ## generate api server resources
+apiserver-generate: ## generate api server resources
 	./scripts/apiserver/apiserver_generate.sh
 
-unifiedcatalog_generate: ## generate unified catalog resources
+unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
