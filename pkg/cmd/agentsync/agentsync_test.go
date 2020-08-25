@@ -63,7 +63,7 @@ func TestAddCmdProp(t *testing.T) {
 	AddSyncConfigProperties(props)
 
 	// Validate the property was added
-	val := props.BoolFlagValue(syncFlag)
+	val := props.BoolPropertyValue(syncFlag)
 
 	assert.False(t, val, "Validate that the default property value is false")
 }
@@ -74,13 +74,12 @@ func SetSyncProperty(t *testing.T, sync bool) properties.Properties {
 	rootCmd := &cobra.Command{}
 	props := properties.NewProperties(rootCmd)
 
-	// Set the sync flag to true
-	rootCmd.Flags().Bool(syncFlag, sync, "")
+	// Set the sync property to true
+	props.AddBoolProperty(syncFlag, sync, "")
 
 	// Validate the property was added
 	val := props.BoolFlagValue(syncFlag)
-
-	assert.Equal(t, sync, val, "Validate that the sync flag was set appropriately")
+	assert.Equal(t, sync, val, "Validate that the sync property was set appropriately")
 
 	return props
 }
