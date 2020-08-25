@@ -69,9 +69,8 @@ type CentralConfig interface {
 	GetURL() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
-	GetEnvironmentURL() string
 	GetAPIServerURL() string
-	GetAPIServerEnvironmentURL() string
+	GetEnvironmentURL() string
 	GetServicesURL() string
 	GetRevisionsURL() string
 	GetInstancesURL() string
@@ -218,59 +217,54 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
-// GetEnvironmentURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetEnvironmentURL() string {
-	return c.URL + "/api/v1/environments"
-}
-
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
 }
 
-// GetAPIServerEnvironmentURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetAPIServerEnvironmentURL() string {
+// GetEnvironmentURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
 }
 
 // GetServicesURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetServicesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservices"
+	return c.GetEnvironmentURL() + "/apiservices"
 }
 
 // GetRevisionsURL - Returns the APIServer URL for services API revisions
 func (c *CentralConfiguration) GetRevisionsURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservicerevisions"
+	return c.GetEnvironmentURL() + "/apiservicerevisions"
 }
 
 // GetInstancesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetInstancesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiserviceinstances"
+	return c.GetEnvironmentURL() + "/apiserviceinstances"
 }
 
 // DeleteServicesURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) DeleteServicesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservices"
+	return c.GetEnvironmentURL() + "/apiservices"
 }
 
 // GetConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
 func (c *CentralConfiguration) GetConsumerInstancesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/consumerinstances"
+	return c.GetEnvironmentURL() + "/consumerinstances"
 }
 
 // GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/consumersubscriptiondefs"
+	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
 }
 
 // GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
 func (c *CentralConfiguration) GetAPIServerWebhooksURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/webhooks"
+	return c.GetEnvironmentURL() + "/webhooks"
 }
 
 // GetAPIServerSecretsURL - Returns the APIServer URL for secrets
 func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/secrets"
+	return c.GetEnvironmentURL() + "/secrets"
 }
 
 // GetSubscriptionURL - Returns the APIServer URL for services API instances
