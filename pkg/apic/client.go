@@ -202,7 +202,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	}
 
 	apiEnvironment, err := c.getEnvironment(headers)
-	if err != nil {
+	if err != nil || apiEnvironment == nil {
 		return err
 	}
 
