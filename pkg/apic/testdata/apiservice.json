@@ -21,7 +21,8 @@
       "references": []
     },
     "attributes": {
-      "release": "1.0.0"
+      "release": "1.0.0",
+      "x-axway-agent": "true"
     },
     "tags": [
       "prod",

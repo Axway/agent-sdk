@@ -16,7 +16,9 @@
     "references": [],
     "state": "DELETING"
   },
-  "attributes": {},
+  "attributes": {
+    "x-axway-agent": "true"
+  },
   "tags": [],
   "spec": {}
 }
