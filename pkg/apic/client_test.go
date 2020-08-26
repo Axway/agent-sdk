@@ -67,7 +67,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	cfg.Mode = corecfg.PublishToEnvironment
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apic-environment.json", // this for call to getEnvironmentIDByName
+			fileName: "./testdata/apic-environment.json", // this for call to getEnvironment
 			respCode: http.StatusOK,
 		},
 		{
@@ -84,7 +84,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	mockClient.respCount = 0
 	mockClient.responses = []mockResponse{
 		{
-			fileName: "./testdata/apiserver-environment.json", // this for call to getEnvironmentIDByName
+			fileName: "./testdata/apiserver-environment.json", // this for call to getEnvironment
 			respCode: http.StatusOK,
 		},
 		{
@@ -103,19 +103,6 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	err = c.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
 	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
-
-	// pass in 2 urls to test 2nd path to getting environment
-	responses := []mockResponse{
-		{fileName: "./testdata/apiserver-environment.json", respCode: http.StatusBadRequest}, // this for call to getEnvironmentIDByName
-		{fileName: "./testdata/apic-environment.json", respCode: http.StatusOK},              // this for error path call in getEnvironmentIDByName
-		{fileName: "./testdata/apic-team.json", respCode: http.StatusOK},                     // this for call to getTeamByName
-	}
-	mockClient.respCount = 0
-	mockClient.responses = responses
-	c.cfg.SetEnvironmentID("")
-	err = c.checkAPIServerHealth()
-	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToEnvironment mode")
-	assert.Equal(t, "e4e084b66fcf325a016fcf54677b0001", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
 }
 
 func TestNewClientWithTLSConfig(t *testing.T) {

@@ -181,6 +181,7 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
+
 	// Return our response
 	return &s
 }
@@ -200,14 +201,14 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
-	envID, err := c.getEnvironmentIDByName(headers)
-	if err != nil {
+	apiEnvironment, err := c.getEnvironment(headers)
+	if err != nil || apiEnvironment == nil {
 		return err
 	}
 
 	if c.cfg.GetEnvironmentID() == "" {
 		// need to save this ID for the traceability agent for later
-		c.cfg.SetEnvironmentID(envID)
+		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 
 		// Validate if team exists
 		if c.cfg.GetTeamName() != "" {
@@ -216,50 +217,74 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 				return err
 			}
 		}
+
+		err = c.updateEnvironmentStatus(*apiEnvironment)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (c *ServiceClient) getEnvironmentIDByName(headers map[string]string) (string, error) {
-	queryParams := map[string]string{"fields": "metadata"}
+func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error {
+	attribute := "x-axway-agent"
+	attributes := apiEnvironment.Attributes
+
+	// check to see if x-axway-agent has already been set
+	if _, found := attributes[attribute]; found {
+		log.Debugf("Environment attribute: %s is already set.", attribute)
+		return nil
+	}
+
+	attributes[attribute] = "true"
+
+	apiServer := APIServer{
+		Name:       apiEnvironment.Name,
+		Title:      apiEnvironment.Title,
+		Attributes: attributes,
+		Spec:       apiEnvironment.Spec,
+		Tags:       apiEnvironment.Tags,
+	}
+
+	buffer, err := json.Marshal(apiServer)
+	if err != nil {
+		return nil
+	}
+	_, err = c.apiServiceDeployAPI(http.MethodPut, c.cfg.GetEnvironmentURL(), buffer)
+
+	if err != nil {
+		return err
+	}
+	log.Debugf("Updated environment attribute: %s to true.", attribute)
+	return nil
+}
+
+func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, error) {
+	queryParams := map[string]string{}
 
 	// do a request for the environment
-	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, queryParams)
+	apiEnvByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
 	if err != nil {
-		queryParams := map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", c.cfg.GetEnvironmentName()),
-		}
-
-		// if the environment wasn't found above, check for it here
-		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
-		if err == nil {
-			var envList []EnvironmentSpec
-			err := json.Unmarshal(envListByte, &envList)
-			if err != nil || len(envList) == 0 {
-				return "", ErrEnvironmentQuery
-			}
-			return envList[0].ID, nil
-		}
-		return "", err
+		return nil, err
 	}
 
 	// Get env id from apiServerEnvByte
-	var apiServerEnv APIServer
-	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
+	var apiEnvironment APIServer
+	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
 	if err != nil {
-		return "", errors.Wrap(ErrEnvironmentQuery, err.Error())
+		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
-	if apiServerEnv.Metadata == nil {
-		return "", ErrEnvironmentQuery
+	if apiEnvironment.Metadata == nil {
+		return nil, ErrEnvironmentQuery
 	}
 
-	if apiServerEnv.Metadata.ID == "" {
-		return "", ErrEnvironmentQuery
+	if apiEnvironment.Metadata.ID == "" {
+		return nil, ErrEnvironmentQuery
 	}
 
-	return apiServerEnv.Metadata.ID, nil
+	return &apiEnvironment, nil
 }
 
 func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
