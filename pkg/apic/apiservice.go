@@ -360,7 +360,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMet
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
 		State:              string(serviceBody.State),
-		Status:             "GA",
+		Status:             serviceBody.Status,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
 		OwningTeam:         c.cfg.GetTeamName(),
