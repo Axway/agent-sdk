@@ -16,3 +16,9 @@ func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 
 	return nil
 }
+
+type Interface interface {
+	Meta
+	AsInstance() (*ResourceInstance, error)
+	FromInstance(from *ResourceInstance) error
+}

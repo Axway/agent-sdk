@@ -139,7 +139,7 @@ type UpdateOption func(*updateOptions)
 
 type updateOptions struct {
 	impersonateUserID string
-	mergeFunc         func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error)
+	mergeFunc         MergeFunc
 }
 
 type CreateOption func(*createOptions)

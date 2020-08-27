@@ -100,24 +100,36 @@ func (us unknownScope) UpdateCtx(_ context.Context, _ *apiv1.ResourceInstance, o
 }
 
 // TODO add kind to fakeByScope
-type fakeByScope map[string]*fakeScoped
+type fakeByScope struct {
+	apiv1.GroupVersionKind
+	scopeKind apiv1.GroupKind
+	fks       map[string]*fakeScoped
+}
 
 func (fk fakeByScope) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	return fk.CreateCtx(context.Background(), ri, opts...)
 }
 
-func (fk fakeByScope) CreateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
-	// TODO should work if ri has scope name
-	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
+func (fk fakeByScope) CreateCtx(c context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	newri := *ri
+
+	newri.GroupVersionKind = fk.GroupVersionKind
+	newri.ResourceMeta.Metadata.Scope.Kind = fk.scopeKind.Kind
+
+	return fk.fks[ri.ResourceMeta.Metadata.Scope.Name].CreateCtx(c, &newri, opts...)
 }
 
 func (fk fakeByScope) Delete(ri *apiv1.ResourceInstance) error {
 	return fk.DeleteCtx(context.Background(), ri)
 }
 
-func (fk fakeByScope) DeleteCtx(_ context.Context, ri *apiv1.ResourceInstance) error {
-	// TODO should work if ri has scope name
-	return notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
+func (fk fakeByScope) DeleteCtx(c context.Context, ri *apiv1.ResourceInstance) error {
+	newri := *ri
+
+	newri.GroupVersionKind = fk.GroupVersionKind
+	newri.ResourceMeta.Metadata.Scope.Kind = fk.scopeKind.Kind
+
+	return fk.fks[ri.ResourceMeta.Metadata.Scope.Name].DeleteCtx(c, &newri)
 }
 
 func (fk fakeByScope) Get(ri string) (*apiv1.ResourceInstance, error) {
@@ -128,10 +140,10 @@ func (fk fakeByScope) GetCtx(_ context.Context, name string) (*apiv1.ResourceIns
 	split := strings.SplitN(name, `/`, 2)
 
 	if len(split) == 2 {
-		return fk.WithScope(split[0]).Get(split[1])
+		return fk.fks[split[0]].Get(split[1])
 	}
 
-	return nil, notFound("", "")
+	return nil, notFound("", fk.scopeKind.Kind)
 }
 
 func (fk fakeByScope) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error) {
@@ -139,7 +151,7 @@ func (fk fakeByScope) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error)
 }
 
 func (fk fakeByScope) ListCtx(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	// TODO should work if ri has scope name
+	// TODO should list work for unscoped
 	return nil, notFound("", "")
 }
 
@@ -147,14 +159,20 @@ func (fk fakeByScope) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (
 	return fk.UpdateCtx(context.Background(), ri, opts...)
 }
 
-func (fk fakeByScope) UpdateCtx(_ context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+func (fk fakeByScope) UpdateCtx(c context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	newri := *ri
+
+	newri.GroupVersionKind = fk.GroupVersionKind
+	newri.ResourceMeta.Metadata.Scope.Kind = fk.scopeKind.Kind
+
+	return fk.fks[ri.ResourceMeta.Metadata.Scope.Name].UpdateCtx(c, &newri, opts...)
 	// TODO should work if ri has scope name
-	return nil, notFound(ri.Metadata.Scope.Name, ri.Metadata.Scope.Kind)
+
 }
 
 func (fk fakeByScope) WithScope(name string) Scoped {
-	if s, ok := fk[name]; !ok {
-		return unknownScope(notFound(name, ""))
+	if s, ok := fk.fks[name]; !ok {
+		return unknownScope(notFound(name, fk.scopeKind.Kind))
 	} else {
 		return s
 	}
@@ -189,9 +207,9 @@ func (fk *fakeUnscoped) DeleteCtx(_ context.Context, ri *apiv1.ResourceInstance)
 	}
 
 	for _, sk := range fk.scopedKinds {
-		sk[ri.Name].deleteAll()
+		sk.fks[ri.Name].deleteAll()
 
-		sk[ri.Name] = nil
+		sk.fks[ri.Name] = nil
 	}
 
 	return fk.fakeScoped.delete(ri)
@@ -219,7 +237,7 @@ func (fk *fakeUnscoped) create(ri *apiv1.ResourceInstance, opts ...CreateOption)
 	}
 
 	for kind, scoped := range fk.scopedKinds {
-		scoped[created.Name] = newFakeKind(
+		scoped.fks[created.Name] = newFakeKind(
 			apiv1.GroupVersionKind{
 				GroupKind: apiv1.GroupKind{
 					Kind:  kind,
@@ -582,8 +600,24 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (
 	}
 
 	prev, ok := fk.resources[ri.Name]
-	if !ok {
+	if !ok && uo.mergeFunc == nil {
 		return nil, notFoundInScope(ri.Name, fk.Kind, fk.ms.Name)
+	}
+
+	if uo.mergeFunc != nil {
+		merged, err := uo.mergeFunc(prev, ri)
+		if err != nil {
+			return nil, err
+		}
+
+		ri, err = merged.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			return fk.create(ri, CUserID(uo.impersonateUserID))
+		}
 	}
 
 	updated := &apiv1.ResourceInstance{
@@ -683,7 +717,7 @@ func newFakeKind(gvk apiv1.GroupVersionKind, ms apiv1.MetadataScope, handler Eve
 	}
 }
 
-func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
+func NewFakeClient(is ...apiv1.Interface) (*fakeClientBase, error) {
 	handler := &delegatingEventHandler{}
 	groups := map[string]fakeGroup{}
 
@@ -728,7 +762,11 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 
 			_, ok = scope.scopedKinds[gvk.Kind]
 			if !ok {
-				scope.scopedKinds[gvk.Kind] = map[string]*fakeScoped{}
+				scope.scopedKinds[gvk.Kind] = fakeByScope{
+					GroupVersionKind: gvk,
+					scopeKind:        scope.GroupKind,
+					fks:              map[string]*fakeScoped{},
+				}
 			}
 
 			continue
@@ -750,7 +788,12 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 	client := &fakeClientBase{handler, groups}
 
 	// pass through and create unscoped resources
-	for _, ri := range ris {
+	for _, i := range is {
+		ri, err := i.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+
 		sk, ok := apiv1.GetScope(ri.GroupKind)
 		if !ok {
 			return nil, fmt.Errorf("no scope kind or unknown kind for ri: %v", ri)
@@ -771,7 +814,12 @@ func NewFakeClient(ris ...*apiv1.ResourceInstance) (*fakeClientBase, error) {
 	}
 
 	// pass through and create scoped resources
-	for _, ri := range ris {
+	for _, i := range is {
+		ri, err := i.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+
 		sk, ok := apiv1.GetScope(ri.GroupKind)
 		if !ok {
 			return nil, fmt.Errorf("no scope kind or unknown kind for ri: %v", ri)

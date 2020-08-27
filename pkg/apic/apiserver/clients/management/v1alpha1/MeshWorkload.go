@@ -5,9 +5,48 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
+
+type MeshWorkloadMergeFunc func(*v1alpha1.MeshWorkload, *v1alpha1.MeshWorkload) (*v1alpha1.MeshWorkload, error)
+
+// Merge builds a merge option for an update operation
+// TODO revisit nils
+func MeshWorkloadMerge(f MeshWorkloadMergeFunc) v1.UpdateOption {
+	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
+		p, n := &v1alpha1.MeshWorkload{}, &v1alpha1.MeshWorkload{}
+
+		switch t := prev.(type) {
+		case *v1alpha1.MeshWorkload:
+			p = t
+		case *apiv1.ResourceInstance:
+			err := p.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialise prev resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise prev resource, unxexpected resource type: %T", t)
+		}
+
+		switch t := new.(type) {
+		case *v1alpha1.MeshWorkload:
+			n = t
+		case *apiv1.ResourceInstance:
+			err := n.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialize new resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise new resource, unxexpected resource type: %T", t)
+		}
+
+		return f(p, n)
+	})
+}
 
 // MeshWorkloadClient -
 type MeshWorkloadClient struct {

@@ -80,6 +80,15 @@ func TagsIn(values ...string) QueryNode {
 	return tagNode(values)
 }
 
+func AllTags(values ...string) QueryNode {
+	subNodes := make([]QueryNode, len(values))
+	for i, value := range values {
+		subNodes[i] = TagsIn(value)
+	}
+
+	return andNode(subNodes)
+}
+
 // AnyAttr creates a query that matches resources with any of the attributes
 func AnyAttr(attrs map[string]string) QueryNode {
 	nodes := make([]QueryNode, len(attrs))

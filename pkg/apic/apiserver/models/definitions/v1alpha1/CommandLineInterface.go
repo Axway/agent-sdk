@@ -43,6 +43,11 @@ type CommandLineInterface struct {
 
 // FromInstance converts a ResourceInstance to a CommandLineInterface
 func (res *CommandLineInterface) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *CommandLineInterface) AsInstance() (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = CommandLineInterfaceGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

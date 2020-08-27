@@ -452,7 +452,7 @@ func UUserID(userID string) UpdateOption {
 	}
 }
 
-type MergeFunc func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error)
+type MergeFunc func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error)
 
 // Merge option first fetches the resource and then
 // applies the merge function and uses the result for the actual update

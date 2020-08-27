@@ -43,6 +43,11 @@ type MeshDiscovery struct {
 
 // FromInstance converts a ResourceInstance to a MeshDiscovery
 func (res *MeshDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *MeshDiscovery) AsInstance() (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = MeshDiscoveryGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

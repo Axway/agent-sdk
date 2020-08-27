@@ -482,7 +482,7 @@ func TestUpdateMerge(t *testing.T) {
 		getStatus        int
 		otherStatus      int
 		getResponse      interface{}
-		newResource      apiv1.Instance
+		newResource      apiv1.Interface
 		mf               MergeFunc
 		expectedErr      error
 		expectedResource interface{}
@@ -492,7 +492,7 @@ func TestUpdateMerge(t *testing.T) {
 		newResource: new,
 		getStatus:   404,
 		otherStatus: 201,
-		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
 			return new, nil
 		},
 		expectedErr:      nil,
@@ -503,7 +503,7 @@ func TestUpdateMerge(t *testing.T) {
 		newResource: new,
 		getStatus:   200,
 		otherStatus: 200,
-		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
 			return new, nil
 		},
 		expectedErr:      nil,
@@ -514,7 +514,7 @@ func TestUpdateMerge(t *testing.T) {
 		newResource: new,
 		getStatus:   200,
 		otherStatus: 200,
-		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
 			f, err := fetched.AsInstance()
 			if err != nil {
 				return nil, err
@@ -532,7 +532,7 @@ func TestUpdateMerge(t *testing.T) {
 		newResource: new,
 		getStatus:   200,
 		otherStatus: 200,
-		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
 			return nil, mergeError
 		},
 		expectedErr:      mergeError,
@@ -543,7 +543,7 @@ func TestUpdateMerge(t *testing.T) {
 		newResource: new,
 		getStatus:   500,
 		otherStatus: 200,
-		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
 			return nil, mergeError
 		},
 		expectedErr:      getError,
