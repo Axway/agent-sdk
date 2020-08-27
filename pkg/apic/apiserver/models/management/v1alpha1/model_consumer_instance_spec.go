@@ -17,8 +17,10 @@ type ConsumerInstanceSpec struct {
 	// Maps to the description of the Catalog Item. Defaults to the API service description.
 	Description string `json:"description,omitempty"`
 	// Markdown documentation for the Catalog Item documentation.
-	Documentation string                   `json:"documentation,omitempty"`
-	Icon          ConsumerInstanceSpecIcon `json:"icon,omitempty"`
+	Documentation string `json:"documentation,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Icon          ConsumerInstanceSpecIcon `json:"icon,omitempty"`
+	Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`
 	// Maps to the name of the Catalog Item. If not provided, the resource title will be used.
 	Name string `json:"name,omitempty"`
 	// Name of the team that owns the Catalog Item. If not provided, the Default team will be used.

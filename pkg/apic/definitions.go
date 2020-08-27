@@ -40,6 +40,11 @@ const (
 	PublishedState   = "PUBLISHED"
 )
 
+// consts for status
+const (
+	DeprecatedState = "DEPRECATED"
+)
+
 // consts for update serverity
 const (
 	MajorChange = "MAJOR"
@@ -69,6 +74,7 @@ type ServiceBody struct {
 	SubscriptionName  string
 	APIUpdateSeverity string `json:",omitempty"`
 	State             string
+	Status            string
 }
 
 // ServiceClient -
