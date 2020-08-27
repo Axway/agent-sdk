@@ -2,9 +2,8 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/*/definitions/v1alpha \
-	| grep -v ./pkg/apic/apiserver/*/management/v1alpha | grep -v ./pkg/apic/unifiedcatalog/models \
-	| grep -v ./pkg/apic/apiserver/clients/api/v1)
+GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
+	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models) 
 
 export GOFLAGS := -mod=vendor
 
