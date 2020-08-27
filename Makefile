@@ -51,7 +51,7 @@ sonar: test-sonar
 		-Dsonar.go.coverage.reportPaths=gocoverage.out
 
 lint: ## Lint the files
-	@golint -set_exit_status $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/models/management | grep -v ./pkg/apic/apiserver/models/definitions | grep -v ./pkg/apic/unifiedcatalog/models)
+	@golint -set_exit_status ${GO_PKG_LIST}
 
 apiserver-generate: ## generate api server resources
 	./scripts/apiserver/apiserver_generate.sh
