@@ -11,10 +11,10 @@ package v1alpha1
 
 // ResourceDefinitionSpec struct for ResourceDefinitionSpec
 type ResourceDefinitionSpec struct {
-	// Value used in the endpoint path for accessing the resource.
-	Plural string `json:"plural"`
 	// Defines the kind of the resource. The server infers this from the endpoint the client submits the request to.
-	Kind       string                           `json:"kind"`
-	Scope      ResourceDefinitionSpecScope      `json:"scope,omitempty"`
+	Kind string `json:"kind"`
+	// Value used in the endpoint path for accessing the resource.
+	Plural     string                           `json:"plural"`
 	References ResourceDefinitionSpecReferences `json:"references,omitempty"`
+	Scope      ResourceDefinitionSpecScope      `json:"scope,omitempty"`
 }

@@ -9,9 +9,7 @@
 
 package v1alpha1
 
-// EnvironmentSpec struct for EnvironmentSpec
-type EnvironmentSpec struct {
-	Description string              `json:"description,omitempty"`
-	Icon        EnvironmentSpecIcon `json:"icon,omitempty"`
-	Variables   map[string]string   `json:"variables,omitempty"`
+// IntegrationSpec struct for IntegrationSpec
+type IntegrationSpec struct {
+	Description string `json:"description,omitempty"`
 }

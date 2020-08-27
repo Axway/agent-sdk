@@ -14,6 +14,7 @@ import (
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	corealpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/core/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
@@ -773,11 +774,11 @@ func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 // create the on-and-only secret for the environment
 func (c *ServiceClient) createSecret() error {
 	s := c.DefaultSubscriptionApprovalWebhook.GetSecret()
-	spec := v1alpha1.SecretSpec{
+	spec := corealpha1.SecretSpec{
 		Data: map[string]string{DefaultSubscriptionWebhookAuthKey: base64.StdEncoding.EncodeToString([]byte(s))},
 	}
 
-	secret := v1alpha1.Secret{
+	secret := corealpha1.Secret{
 		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
 		Spec:         spec,
 	}
@@ -831,21 +832,21 @@ func (c *ServiceClient) createSecret() error {
 // create the on-and-only subscription approval webhook for the environment
 func (c *ServiceClient) createWebhook() error {
 	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	specSecret := v1alpha1.WebhookSpecAuthSecret{
+	specSecret := corealpha1.WebhookSpecAuthSecret{
 		Name: DefaultSubscriptionWebhookName,
 		Key:  DefaultSubscriptionWebhookAuthKey,
 	}
-	authSpec := v1alpha1.WebhookSpecAuth{
+	authSpec := corealpha1.WebhookSpecAuth{
 		Secret: specSecret,
 	}
-	webSpec := v1alpha1.WebhookSpec{
+	webSpec := corealpha1.WebhookSpec{
 		Auth:    authSpec,
 		Enabled: true,
 		Url:     webhookCfg.GetURL(),
 		Headers: webhookCfg.GetWebhookHeaders(),
 	}
 
-	webhook := v1alpha1.Webhook{
+	webhook := corealpha1.Webhook{
 		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
 		Spec:         webSpec,
 	}

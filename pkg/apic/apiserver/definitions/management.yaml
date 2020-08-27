@@ -47,7 +47,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -101,7 +100,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -227,113 +225,6 @@ spec:
           additionalProperties: false
 ---
 group: management
-kind: Secret
-scope: Environment
-description: Resource representing secrets for an Environment.
-spec:
-  names:
-    plural: secrets
-    singular: secret
-  cli:
-    columns:
-      - name: Name
-        description: The name of the Secret.
-        jsonPath: .name
-        format: string
-      - name: Age
-        description: The date when the Secret was created.
-        jsonPath: .metadata.audit.createTimestamp
-        format: date
-      - name: Title
-        description: The title of the Secret.
-        jsonPath: .title
-        format: string
-  versions:
-    - name: v1alpha1
-      storage: true
-      served: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            data:
-              description: Key value pairs. The value will be stored encrypted.
-              x-amplify-encrypted: true
-              type: object
-              additionalProperties:
-                type: string
-          additionalProperties: false
----
-group: management
-kind: Webhook
-scope: Environment
-description: Resource representing Webhook Configuration
-spec:
-  names:
-    plural: webhooks
-    singular: webhook
-  cli:
-    shortNames:
-      - whs
-      - wh
-    columns:
-      - name: Name
-        description: The name of the Webhook.
-        jsonPath: .name
-        format: string
-      - name: Age
-        description: The date when the Webhook was created.
-        jsonPath: .metadata.audit.createTimestamp
-        format: date
-      - name: Title
-        description: The title of the Webhook.
-        jsonPath: .title
-        format: string
-  versions:
-    - name: v1alpha1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            auth:
-              type: object
-              description: >
-                Defines the authentication used to invoke the webhook.
-                When invoking the webhook, the value from the secret/key will be sent in the Authorization header.
-              properties:
-                secret:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      x-amplify-kind-ref: Secret
-                      x-amplify-kind-ref-type: soft
-                      description: >
-                        Secret name to be used as a reference.
-                        If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.
-                    key:
-                      description: Key to be used from the referenced secret.
-                      type: string
-                  additionalProperties: false
-              additionalProperties: false
-            enabled:
-              type: boolean
-              default: true
-            url:
-              type: string
-              pattern: '^https?://[\w-_\:\.\?\/=%&#~\[\]\(\)@!$&'',;]*$'
-            headers:
-              type: object
-              description: A list of headers that will be sent as par of the http call to the webhook endpoint.
-              additionalProperties:
-                type: string
-          required:
-            - url
-          additionalProperties: false
----
-group: management
 kind: ConsumerInstance
 scope: Environment
 description: Resource representing a Unified Catalog Item of type API
@@ -391,7 +282,6 @@ spec:
               enum:
                 - RESTRICTED
                 - PUBLIC
-              default: RESTRICTED
             version:
               type: string
               description: Version name for the revision.
@@ -407,7 +297,6 @@ spec:
               enum:
                 - UNPUBLISHED
                 - PUBLISHED
-              default: UNPUBLISHED
             status:
               type: string
               description: 'A way to communicate the status of the service to consumers. Examples: DRAFT, BETA, GA'
@@ -431,7 +320,6 @@ spec:
                   enum:
                     - image/jpeg
                     - image/png
-                  default: image/jpeg
                 data:
                   description: Base64 encoded image.
                   type: string
@@ -494,11 +382,9 @@ spec:
               properties:
                 enabled:
                   type: boolean
-                  default: false
                   description: Defines if subscriptions are allowed on the Catalog Item.
                 autoSubscribe:
                   type: boolean
-                  default: true
                   description: Defines if subscriptions need to be manually approved.
                 subscriptionDefinition:
                   type: string
@@ -509,43 +395,42 @@ spec:
           additionalProperties: false
       subresources:
         status:
-          openAPIV3Schema:
-            type: object
-            properties:
-              phase:
-                type: object
-                properties:
-                  name:
-                    type: string
-                    enum:
-                      - Update
-                      - Delete
-                      - Create
-                  level:
-                    type: string
-                    description: The criticality of the last update
-                    enum:
-                      - info
-                      - error
-                    default: info
-                  transitionTime:
-                    type: string
-                    format: date-time
-                    description: Time of the current phase.
-                  message:
-                    type: string
-                    description: Description of the phase.
-                additionalProperties: false
-                required:
-                  - name
-                  - level
-                  - transitionTime
-            additionalProperties: false
-            required:
-              - phase
-          mutationStrategy:
-            type:
-              - resetOnUpdate
+            openAPIV3Schema:
+              type: object
+              properties:
+                  phase:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        enum:
+                          - Update
+                          - Delete
+                          - Create
+                      level:
+                        type: string
+                        description: The criticality of the last update
+                        enum:
+                          - info
+                          - error
+                      transitionTime:
+                        type: string
+                        format: date-time
+                        description: Time of the current phase.
+                      message:
+                        type: string
+                        description: Description of the phase.
+                    additionalProperties: false
+                    required:
+                      - name
+                      - level
+                      - transitionTime
+              additionalProperties: false
+              required:
+                - phase
+            mutationStrategy:
+              type:
+                - resetOnUpdate
 ---
 group: management
 kind: ConsumerSubscriptionDefinition
@@ -611,4 +496,135 @@ spec:
                       - value
                     additionalProperties: false
               additionalProperties: false
+          additionalProperties: false
+
+---
+group: management
+kind: Integration
+description: Resource representing a group of integration resources.
+spec:
+  names:
+    plural: integrations
+    singular: integration
+  cli:
+    shortNames:
+      - integr
+    columns:
+      - name: Name
+        description: The name of the integration.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the integration group was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the integration.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      storage: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            description:
+              type: string
+          additionalProperties: false
+---
+group: management
+kind: ResourceHook
+scope: Integration
+description: Listen to API Server resource lifecycle changes.
+spec:
+  names:
+    plural: resourcehooks
+    singular: resourcehook
+  cli:
+    shortNames:
+      - reshook
+    columns:
+      - name: Name
+        description: The name of the Resource Hook.
+        jsonPath: .name
+        format: string
+      - name: Age
+        description: The date when the Resource Hook was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+      - name: Title
+        description: The title of the Resource Hook.
+        jsonPath: .title
+        format: string
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            triggers:
+              type: array
+              items:
+                type: object
+                properties:
+                  group:
+                    type: string
+                    maxLength: 30
+                    description: Value for the group of the resource. Use "*" for any.
+                  scope:
+                    type: object
+                    description: Resource scope trigger details.
+                    properties:
+                      kind:
+                        type: string
+                        maxLength: 30
+                        description: Value for the Kind of the scope of the resource. Use "*" for any.
+                      name:
+                        type: string
+                        maxLength: 100
+                        pattern: ^([\*])|([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)
+                        description: Name of the scope of the resource. Use "*" for any.
+                    additionalProperties: false
+                    required:
+                      - kind
+                      - name
+                  kind:
+                    type: string
+                    maxLength: 30
+                    description: Value for the Kind of the resource. Use "*" for any.
+                  name:
+                    type: string
+                    maxLength: 100
+                    pattern: ^([\*])|([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)
+                    description: Name of the resource. Use "*" for any.
+                  type:
+                    type: array
+                    items:
+                      type: string
+                      description: Type of the operation for the tracked resources.
+                      enum:
+                        - created
+                        - updated
+                        - deleted
+                required:
+                  - kind
+                  - name
+                  - type
+                  - group
+                additionalProperties: false
+            webhooks:
+              type: array
+              description: List of Webhook kind resource names that dictates what webhooks will be invoked on matching triggers.
+              items:
+                type: string
+                description: Reference to webhooks to be invoked when a trigger matches.
+                x-amplify-kind-ref: Webhook
+                x-amplify-kind-ref-type: soft
+          required:
+            - triggers
+            - webhooks
           additionalProperties: false
