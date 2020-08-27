@@ -1,7 +1,7 @@
 #!/bin/bash
 
 MODEL_PATH="./pkg/apic/apiserver/models/management/v1alpha1"
-COMMENT="// GENERATE: The following code has been modified after after code generation"
+COMMENT="// GENERATE: The following code has been modified after code generation"
 
 # for each file that needs changing, you can re-use the following 2 vars if you wish
 SEARCH="\s*AutoSubscribe\s*bool.*"

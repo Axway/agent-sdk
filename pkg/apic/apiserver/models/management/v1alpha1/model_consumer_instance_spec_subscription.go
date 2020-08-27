@@ -12,7 +12,7 @@ package v1alpha1
 // ConsumerInstanceSpecSubscription struct for ConsumerInstanceSpecSubscription
 type ConsumerInstanceSpecSubscription struct {
 	// Defines if subscriptions need to be manually approved.
-	// GENERATE: The following code has been modified after after code generation
+	// GENERATE: The following code has been modified after code generation
 	// 	AutoSubscribe bool `json:"autoSubscribe,omitempty"`
 	AutoSubscribe bool `json:"autoSubscribe"`
 	// Defines if subscriptions are allowed on the Catalog Item.
