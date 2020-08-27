@@ -9,39 +9,39 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// WebhookClient -
-type WebhookClient struct {
+// IntegrationClient -
+type IntegrationClient struct {
 	client *v1.Client
 }
 
-// NewWebhookClient -
-func NewWebhookClient(cb *v1.ClientBase) (*WebhookClient, error) {
-	client, err := cb.ForKind(v1alpha1.WebhookGVK())
+// NewIntegrationClient -
+func NewIntegrationClient(cb *v1.ClientBase) (*IntegrationClient, error) {
+	client, err := cb.ForKind(v1alpha1.IntegrationGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &WebhookClient{client}, nil
+	return &IntegrationClient{client}, nil
 }
 
 // WithScope -
-func (c *WebhookClient) WithScope(scope string) *WebhookClient {
-	return &WebhookClient{
+func (c *IntegrationClient) WithScope(scope string) *IntegrationClient {
+	return &IntegrationClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // List -
-func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
+func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*v1alpha1.Integration, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Webhook, len(riList))
+	result := make([]*v1alpha1.Integration, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Webhook{}
+		result[i] = &v1alpha1.Integration{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -52,20 +52,20 @@ func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, er
 }
 
 // Get -
-func (c *WebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
+func (c *IntegrationClient) Get(name string) (*v1alpha1.Integration, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Webhook{}
+	service := &v1alpha1.Integration{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *WebhookClient) Delete(res *v1alpha1.Webhook) error {
+func (c *IntegrationClient) Delete(res *v1alpha1.Integration) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *WebhookClient) Delete(res *v1alpha1.Webhook) error {
 }
 
 // Create -
-func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *IntegrationClient) Create(res *v1alpha1.Integration) (*v1alpha1.Integration, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error)
 		return nil, err
 	}
 
-	created := &v1alpha1.Webhook{}
+	created := &v1alpha1.Integration{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -99,13 +99,13 @@ func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error)
 }
 
 // Update -
-func (c *WebhookClient) Update(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
+func (c *IntegrationClient) Update(res *v1alpha1.Integration) (*v1alpha1.Integration, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
-	updated := &v1alpha1.Webhook{}
+	updated := &v1alpha1.Integration{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

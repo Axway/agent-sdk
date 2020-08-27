@@ -11,8 +11,8 @@ package v1alpha1
 
 // WebhookSpecAuthSecret struct for WebhookSpecAuthSecret
 type WebhookSpecAuthSecret struct {
-	// Secret name to be used as a reference. If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.
-	Name string `json:"name,omitempty"`
 	// Key to be used from the referenced secret.
 	Key string `json:"key,omitempty"`
+	// Secret name to be used as a reference. If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.
+	Name string `json:"name,omitempty"`
 }

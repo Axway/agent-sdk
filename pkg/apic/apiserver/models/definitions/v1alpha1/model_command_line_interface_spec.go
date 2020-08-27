@@ -11,9 +11,9 @@ package v1alpha1
 
 // CommandLineInterfaceSpec struct for CommandLineInterfaceSpec
 type CommandLineInterfaceSpec struct {
-	// A reference to a resource definition.
-	ResourceDefinition string                        `json:"resourceDefinition"`
-	Names              CommandLineInterfaceSpecNames `json:"names,omitempty"`
 	// Defines an ordered list of the columns and data to be rendered using a table output.
 	Columns []CommandLineInterfaceSpecColumns `json:"columns"`
+	Names   CommandLineInterfaceSpecNames     `json:"names,omitempty"`
+	// A reference to a resource definition.
+	ResourceDefinition string `json:"resourceDefinition"`
 }

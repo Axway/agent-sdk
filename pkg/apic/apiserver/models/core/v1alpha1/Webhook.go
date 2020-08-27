@@ -11,56 +11,56 @@ import (
 )
 
 var (
-	_SecretGVK = apiv1.GroupVersionKind{
+	_WebhookGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
-			Group: "management",
-			Kind:  "Secret",
+			Group: "core",
+			Kind:  "Webhook",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	SecretScope = "Environment"
+	WebhookScope = "management:Environment|management:Integration"
 
-	SecretResource = "secrets"
+	WebhookResource = "webhooks"
 )
 
-func SecretGVK() apiv1.GroupVersionKind {
-	return _SecretGVK
+func WebhookGVK() apiv1.GroupVersionKind {
+	return _WebhookGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResource)
+	apiv1.RegisterGVK(_WebhookGVK, WebhookScope, WebhookResource)
 }
 
-// Secret Resource
-type Secret struct {
+// Webhook Resource
+type Webhook struct {
 	apiv1.ResourceMeta
 
-	Spec SecretSpec `json:"spec"`
+	Spec WebhookSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a Secret
-func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Webhook
+func (res *Webhook) FromInstance(ri *apiv1.ResourceInstance) error {
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
 	}
 
-	spec := &SecretSpec{}
+	spec := &WebhookSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err
 	}
 
-	*res = Secret{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	*res = Webhook{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
 }
 
-// AsInstance converts a Secret to a ResourceInstance
-func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Webhook to a ResourceInstance
+func (res *Webhook) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
 		return nil, err

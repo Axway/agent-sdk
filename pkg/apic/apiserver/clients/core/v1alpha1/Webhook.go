@@ -6,42 +6,42 @@ package v1alpha1
 
 import (
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/core/v1alpha1"
 )
 
-// SecretClient -
-type SecretClient struct {
+// WebhookClient -
+type WebhookClient struct {
 	client *v1.Client
 }
 
-// NewSecretClient -
-func NewSecretClient(cb *v1.ClientBase) (*SecretClient, error) {
-	client, err := cb.ForKind(v1alpha1.SecretGVK())
+// NewWebhookClient -
+func NewWebhookClient(cb *v1.ClientBase) (*WebhookClient, error) {
+	client, err := cb.ForKind(v1alpha1.WebhookGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &SecretClient{client}, nil
+	return &WebhookClient{client}, nil
 }
 
 // WithScope -
-func (c *SecretClient) WithScope(scope string) *SecretClient {
-	return &SecretClient{
+func (c *WebhookClient) WithScope(scope string) *WebhookClient {
+	return &WebhookClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // List -
-func (c *SecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.Secret, error) {
+func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Secret, len(riList))
+	result := make([]*v1alpha1.Webhook, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Secret{}
+		result[i] = &v1alpha1.Webhook{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -52,20 +52,20 @@ func (c *SecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.Secret, erro
 }
 
 // Get -
-func (c *SecretClient) Get(name string) (*v1alpha1.Secret, error) {
+func (c *WebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Secret{}
+	service := &v1alpha1.Webhook{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *SecretClient) Delete(res *v1alpha1.Secret) error {
+func (c *WebhookClient) Delete(res *v1alpha1.Webhook) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *SecretClient) Delete(res *v1alpha1.Secret) error {
 }
 
 // Create -
-func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *WebhookClient) Create(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 		return nil, err
 	}
 
-	created := &v1alpha1.Secret{}
+	created := &v1alpha1.Webhook{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -99,13 +99,13 @@ func (c *SecretClient) Create(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
 }
 
 // Update -
-func (c *SecretClient) Update(res *v1alpha1.Secret) (*v1alpha1.Secret, error) {
+func (c *WebhookClient) Update(res *v1alpha1.Webhook) (*v1alpha1.Webhook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
-	updated := &v1alpha1.Secret{}
+	updated := &v1alpha1.Webhook{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
