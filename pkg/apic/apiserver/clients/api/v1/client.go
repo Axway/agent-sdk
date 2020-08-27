@@ -155,18 +155,6 @@ func (c *ClientCtx) WithScope(scope string) ScopedCtx {
 	return c
 }
 
-func (c *Client) url() string {
-	// unscoped
-	url := fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
-
-	// scoped
-	if c.scopeResource != "" {
-		url = fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, c.scope, c.resource)
-	}
-
-	return url
-}
-
 // handleError handles an api-server error response. caller should close body.
 func handleError(res *http.Response) error {
 	var errors Errors
@@ -199,17 +187,21 @@ func handleError(res *http.Response) error {
 	}
 }
 
-func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
+func (c *Client) url(rm apiv1.ResourceMeta) string {
 	if c.scopeResource != "" {
 		scope := c.scope
 		if c.scope == "" {
 			scope = rm.Metadata.Scope.Name
 		}
 
-		return fmt.Sprintf(scopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.scopeResource, scope, c.resource, rm.Name)
+		return fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, scope, c.resource)
 	}
 
-	return fmt.Sprintf(unscopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.resource, rm.Name)
+	return fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
+}
+
+func (c *Client) urlForResource(rm apiv1.ResourceMeta) string {
+	return c.url(rm) + "/" + rm.Name
 }
 
 // WithScope creates a request within the given scope. ex: env/$name/services
@@ -238,7 +230,7 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 
 // ListCtx returns a list of resources
 func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.url(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url(apiv1.ResourceMeta{}), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -284,6 +276,38 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	return c.GetCtx(context.Background(), name)
 }
 
+// GetCtx2 returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
+// If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
+func (c *Client) GetCtx2(ctx context.Context, toGet *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(toGet.ResourceMeta), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, handleError(res)
+	}
+	dec := json.NewDecoder(res.Body)
+	obj := &apiv1.ResourceInstance{}
+	err = dec.Decode(&obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
 // GetCtx returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
 // If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
 func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
@@ -292,9 +316,9 @@ func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstan
 	url := ""
 
 	if len(split) == 2 {
-		url = c.urlForResource(&apiv1.ResourceMeta{Name: split[1], Metadata: apiv1.Metadata{Scope: apiv1.MetadataScope{Name: split[0]}}})
+		url = c.urlForResource(apiv1.ResourceMeta{Name: split[1], Metadata: apiv1.Metadata{Scope: apiv1.MetadataScope{Name: split[0]}}})
 	} else {
-		url = c.urlForResource(&apiv1.ResourceMeta{Name: name})
+		url = c.urlForResource(apiv1.ResourceMeta{Name: name})
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -332,7 +356,7 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 
 // DeleteCtx deletes a single resource
 func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) error {
-	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(&ri.ResourceMeta), nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(ri.ResourceMeta), nil)
 	if err != nil {
 		return err
 	}
@@ -385,7 +409,7 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.url(), buf)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.url(ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +452,21 @@ func UUserID(userID string) UpdateOption {
 	}
 }
 
-// Update updates a single resource
+type MergeFunc func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error)
+
+// Merge option first fetches the resource and then
+// applies the merge function and uses the result for the actual update
+// fetched will be the old resource
+// new will be the resource passed to the Update call
+// If the resource doesn't exist it will fetched will be set to null
+// If the merge function returns an error, the update operation will be cancelled
+func Merge(merge MergeFunc) UpdateOption {
+	return func(co *updateOptions) {
+		co.mergeFunc = merge
+	}
+}
+
+// Update updates a single resource. If the merge option is passed it will first fetch the resource and then apply the merge function.
 func (c *Client) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	return c.UpdateCtx(context.Background(), ri, opts...)
 }
@@ -444,12 +482,39 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 		opt(&uo)
 	}
 
+	if uo.mergeFunc != nil {
+		old, err := c.GetCtx2(ctx, ri)
+		if err != nil {
+			switch err.(type) {
+			case NotFoundError:
+				old = nil
+			default:
+				return nil, err
+			}
+		}
+
+		i, err := uo.mergeFunc(old, ri)
+		if err != nil {
+			return nil, err
+		}
+		newRi, err := i.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+
+		if old == nil {
+			return c.CreateCtx(ctx, newRi, CUserID(uo.impersonateUserID))
+		}
+
+		ri = newRi
+	}
+
 	err := enc.Encode(ri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "PUT", c.urlForResource(&ri.ResourceMeta), buf)
+	req, err := http.NewRequestWithContext(ctx, "PUT", c.urlForResource(ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -473,11 +538,6 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 		return nil, err
 	}
 	defer res.Body.Close()
-	switch res.StatusCode {
-	case 200:
-	case 404:
-	default:
-	}
 	if res.StatusCode != 200 {
 		return nil, handleError(res)
 	}

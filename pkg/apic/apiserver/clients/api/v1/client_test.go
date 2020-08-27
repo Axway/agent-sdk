@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -421,5 +422,186 @@ func TestHTTPClient(t *testing.T) {
 
 	if newClient != client.client {
 		t.Fatalf("Error: expected client.client to be %v but received %v", newClient, client.client)
+	}
+}
+
+func TestUpdateMerge(t *testing.T) {
+	old := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Tags: []string{"old"},
+		},
+	}
+
+	new := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Attributes: map[string]string{},
+			Tags:       []string{"new"},
+		},
+	}
+
+	mergedTags := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Attributes: map[string]string{},
+			Tags:       []string{"old", "new"},
+		},
+	}
+
+	mergeError := fmt.Errorf("merge errror")
+
+	getError := InternalServerError{
+		Errors: []apiv1.Error{{Status: 500, Detail: "Unkown error"}},
+	}
+
+	testCases := []struct {
+		name             string
+		replyFunc        func(*gock.Response) error
+		getStatus        int
+		otherStatus      int
+		getResponse      interface{}
+		newResource      apiv1.Instance
+		mf               MergeFunc
+		expectedErr      error
+		expectedResource interface{}
+	}{{
+		name:        "it's a create",
+		getResponse: old,
+		newResource: new,
+		getStatus:   404,
+		otherStatus: 201,
+		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+			return new, nil
+		},
+		expectedErr:      nil,
+		expectedResource: new,
+	}, {
+		name:        "overwriting update",
+		getResponse: old,
+		newResource: new,
+		getStatus:   200,
+		otherStatus: 200,
+		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+			return new, nil
+		},
+		expectedErr:      nil,
+		expectedResource: new,
+	}, {
+		name:        "merging tags update",
+		getResponse: old,
+		newResource: new,
+		getStatus:   200,
+		otherStatus: 200,
+		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+			f, err := fetched.AsInstance()
+			if err != nil {
+				return nil, err
+			}
+
+			f.SetTags(append(f.GetTags(), new.GetTags()...))
+
+			return f, nil
+		},
+		expectedErr:      nil,
+		expectedResource: mergedTags,
+	}, {
+		name:        "merge error",
+		getResponse: old,
+		newResource: new,
+		getStatus:   200,
+		otherStatus: 200,
+		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+			return nil, mergeError
+		},
+		expectedErr:      mergeError,
+		expectedResource: nil,
+	}, {
+		name:        "get error",
+		getResponse: apiv1.ErrorResponse{Errors: getError.Errors},
+		newResource: new,
+		getStatus:   500,
+		otherStatus: 200,
+		mf: func(fetched apiv1.Instance, new apiv1.Instance) (apiv1.Instance, error) {
+			return nil, mergeError
+		},
+		expectedErr:      getError,
+		expectedResource: nil,
+	}}
+
+	c, err := NewClient("http://localhost:8080/apis").ForKind(management.APIServiceGVK())
+	if err != nil {
+		t.Fatalf("Failed due: %s ", err)
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			defer gock.Off()
+			gock.Observe(gock.DumpRequest)
+
+			gock.New("http://localhost:8080/apis").
+				Get("/management/v1alpha1/environments/myenv/apiservices/name").
+				Reply(tc.getStatus).
+				JSON(tc.getResponse)
+
+			switch {
+			case tc.expectedErr == mergeError:
+			case tc.getStatus == 404:
+				gock.New("http://localhost:8080/apis").
+					Post("/management/v1alpha1/environments/myenv/apiservices").
+					JSON(tc.expectedResource).
+					Reply(tc.otherStatus).
+					JSON(tc.expectedResource)
+			case tc.getStatus == 200:
+				gock.New("http://localhost:8080/apis").
+					Put("/management/v1alpha1/environments/myenv/apiservices/name").
+					JSON(tc.expectedResource).
+					Reply(tc.otherStatus).
+					JSON(tc.expectedResource)
+			}
+
+			newRI, err := tc.newResource.AsInstance()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = c.Update(newRI, Merge(tc.mf))
+
+			switch {
+			case err == nil && tc.expectedErr == nil:
+			case err != nil && tc.expectedErr == nil:
+				t.Error("Not expecting error, got: ", err)
+			case err == nil && tc.expectedErr != nil:
+				t.Error("Expected error: ", tc.expectedErr, "; got no error")
+			case err.Error() != tc.expectedErr.Error():
+				t.Error("Expected error: ", tc.expectedErr, "; got: ", err)
+			}
+
+			if gock.HasUnmatchedRequest() {
+				t.Errorf("Expected more requests: %+v", gock.GetUnmatchedRequests())
+			}
+		})
 	}
 }
