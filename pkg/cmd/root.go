@@ -96,6 +96,7 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	c.checkStatusFlag()
+	agentsync.SetSyncMode(c.GetProperties())
 	return nil
 }
 
@@ -142,7 +143,7 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// Check the sync flag
-	exitcode := agentsync.CheckSyncFlag(c.GetProperties())
+	exitcode := agentsync.CheckSyncFlag()
 	if exitcode > -1 {
 		os.Exit(exitcode)
 	}
