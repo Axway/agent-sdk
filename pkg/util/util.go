@@ -20,6 +20,7 @@ func ComputeHash(data interface{}) (uint64, error) {
 	return h.Sum64(), nil
 }
 
+// LoadEnvFromFile - Loads the environment variables from a file
 func LoadEnvFromFile(envFile string) error {
 	if envFile != "" {
 		err := gotenv.Load(envFile)
