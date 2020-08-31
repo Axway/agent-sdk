@@ -17,8 +17,7 @@ func IsSyncMode() bool {
 
 // SetSyncMode - checks for the syncFlag, if present sets IsSyncMode to true
 func SetSyncMode(props properties.Properties) {
-	val := props.BoolPropertyValue(syncFlag)
-	if props.BoolPropertyValue(syncFlag) {
+	if val := props.BoolPropertyValue(syncFlag); val {
 		syncMode = val
 	}
 }
