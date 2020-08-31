@@ -7,14 +7,23 @@ import (
 	"reflect"
 	"strings"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/spf13/cobra"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/viper"
+)
+
+// Constants for cmd flags
+const (
+	EnvFileFlag           = "envFile"
+	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
 
 // CommandHandler - Root command execution handler
@@ -80,9 +89,16 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
 	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
 	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
+	c.props.AddStringProperty(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
+	envFile := c.props.StringPropertyValue(EnvFileFlag)
+	err := util.LoadEnvFromFile(envFile)
+	if err != nil {
+		return errors.Wrap(config.ErrEnvConfigOverride, err.Error())
+	}
+
 	_, configFilePath := c.props.StringFlagValue("pathConfig")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
@@ -91,10 +107,15 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
-		return err
+		if envFile == "" {
+			return err
+		} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
 	}
+
 	c.checkStatusFlag()
 	return nil
 }

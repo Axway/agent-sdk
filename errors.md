@@ -39,6 +39,7 @@
 | 1305 | error sending email to SMTP server                                                                          | pkg/notify/ErrSubscriptionSendEmail           |
 |      | 1400-1499 - for setting and parsing configuration errors                                                    |                                               |
 | 1401 | error parsing subscription approval mode                                                                    | pkg/config/ErrSubscriptionApprovalModeInvalid |
+| 1402 | error in overriding configuration using file with environment variables                                     | pkg/config/ErrEnvConfigOverride               |
 |      | 1900-1910 - errors managing agent service                                                                   |                                               |
 | 1900 | unsupported system for service installation                                                                 | pkg/cmd/service/daemon/ErrUnsupportedSystem   |
 | 1901 | systemd is required for service installation                                                                | pkg/cmd/service/daemon/ErrNeedSystemd         |
