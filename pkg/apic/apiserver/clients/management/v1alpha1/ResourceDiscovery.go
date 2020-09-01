@@ -91,6 +91,26 @@ func (c *UnscopedResourceDiscoveryClient) Get(name string) (*v1alpha1.ResourceDi
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedResourceDiscoveryClient) Get(name string) (*v1alpha1.ResourceDiscovery, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.ResourceDiscovery, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.ResourceDiscovery{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *ResourceDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDiscovery, error) {
 	riList, err := c.client.List(options...)

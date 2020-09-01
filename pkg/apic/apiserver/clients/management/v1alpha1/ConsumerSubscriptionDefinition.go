@@ -91,6 +91,26 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alph
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.ConsumerSubscriptionDefinition, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.ConsumerSubscriptionDefinition{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerSubscriptionDefinition, error) {
 	riList, err := c.client.List(options...)

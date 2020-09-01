@@ -98,7 +98,28 @@ func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res
 
 	return service, nil
 }
+
+// Get - 
+func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*{{.res.version}}.{{.res.kind}}, len(riList))
+
+	for i := range riList {
+		result[i] = &{{.res.version}}.{{.res.kind}}{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
 {{ end }}
+
 
 // List -
 func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*{{.res.version}}.{{.res.kind}}, error) {

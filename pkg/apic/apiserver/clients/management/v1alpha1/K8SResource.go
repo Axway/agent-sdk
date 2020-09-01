@@ -91,6 +91,26 @@ func (c *UnscopedK8SResourceClient) Get(name string) (*v1alpha1.K8SResource, err
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedK8SResourceClient) Get(name string) (*v1alpha1.K8SResource, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.K8SResource, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.K8SResource{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *K8SResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SResource, error) {
 	riList, err := c.client.List(options...)

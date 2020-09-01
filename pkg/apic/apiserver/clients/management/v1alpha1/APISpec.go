@@ -91,6 +91,26 @@ func (c *UnscopedAPISpecClient) Get(name string) (*v1alpha1.APISpec, error) {
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedAPISpecClient) Get(name string) (*v1alpha1.APISpec, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.APISpec, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.APISpec{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *APISpecClient) List(options ...v1.ListOptions) ([]*v1alpha1.APISpec, error) {
 	riList, err := c.client.List(options...)

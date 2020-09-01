@@ -91,6 +91,26 @@ func (c *UnscopedMeshWorkloadClient) Get(name string) (*v1alpha1.MeshWorkload, e
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedMeshWorkloadClient) Get(name string) (*v1alpha1.MeshWorkload, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.MeshWorkload, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.MeshWorkload{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshWorkload, error) {
 	riList, err := c.client.List(options...)

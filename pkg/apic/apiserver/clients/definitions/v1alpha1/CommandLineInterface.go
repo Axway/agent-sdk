@@ -91,6 +91,26 @@ func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.Command
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInterface, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.CommandLineInterface, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.CommandLineInterface{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*v1alpha1.CommandLineInterface, error) {
 	riList, err := c.client.List(options...)

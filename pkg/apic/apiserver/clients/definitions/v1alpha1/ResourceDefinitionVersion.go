@@ -91,6 +91,26 @@ func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.Re
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.ResourceDefinitionVersion, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.ResourceDefinitionVersion{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
 	riList, err := c.client.List(options...)

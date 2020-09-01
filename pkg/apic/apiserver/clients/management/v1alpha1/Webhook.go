@@ -91,6 +91,26 @@ func (c *UnscopedWebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
 	return service, nil
 }
 
+// Get -
+func (c *UnscopedWebhookClient) Get(name string) (*v1alpha1.Webhook, error) {
+	riList, err := c.client.List(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v1alpha1.Webhook, len(riList))
+
+	for i := range riList {
+		result[i] = &v1alpha1.Webhook{}
+		err := result[i].FromInstance(riList[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // List -
 func (c *WebhookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Webhook, error) {
 	riList, err := c.client.List(options...)
