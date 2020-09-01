@@ -27,7 +27,7 @@ import (
 // createService - creates new APIServerService and necessary resources
 // return the itemID from the APIServerService
 func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
-	serviceName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
+	serviceName := sanitizeAPIName(serviceBody.RestAPIID + serviceBody.Stage)
 
 	// add api
 	_, err := c.processService(serviceBody, http.MethodPost, c.cfg.GetServicesURL(), serviceName)
@@ -52,7 +52,7 @@ func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 // updateService - updates APIServerService based on  sanitized name and necessary resources.
 // return the itemID from the APIServerService
 func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
-	serviceName := sanitizeAPIName(serviceBody.APIName + serviceBody.Stage)
+	serviceName := sanitizeAPIName(serviceBody.RestAPIID + serviceBody.Stage)
 
 	_, err := c.processService(serviceBody, http.MethodPut, c.cfg.GetServicesURL()+"/"+serviceName, serviceName)
 	if err != nil {
