@@ -42,7 +42,9 @@ const (
 
 // consts for status
 const (
-	DeprecatedState = "DEPRECATED"
+	DeprecatedStatus  = "DEPRECATED"
+	PublishedStatus   = "PUBLISHED"
+	UnpublishedStatus = "UNPUBLISHED"
 )
 
 // consts for update serverity
