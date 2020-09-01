@@ -91,24 +91,26 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alph
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ConsumerSubscriptionDefinition, len(riList))
+	updated := &v1alpha1.ConsumerSubscriptionDefinition{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.ConsumerSubscriptionDefinition{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

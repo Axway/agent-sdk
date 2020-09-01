@@ -91,24 +91,26 @@ func (c *UnscopedSpecDiscoveryClient) Get(name string) (*v1alpha1.SpecDiscovery,
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedSpecDiscoveryClient) Get(name string) (*v1alpha1.SpecDiscovery, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedSpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts ...v1.UpdateOption) (*v1alpha1.SpecDiscovery, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.SpecDiscovery, len(riList))
+	updated := &v1alpha1.SpecDiscovery{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.SpecDiscovery{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

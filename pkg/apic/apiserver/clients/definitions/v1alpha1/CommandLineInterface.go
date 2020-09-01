@@ -91,24 +91,26 @@ func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.Command
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*v1alpha1.CommandLineInterface, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedCommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface, opts ...v1.UpdateOption) (*v1alpha1.CommandLineInterface, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.CommandLineInterface, len(riList))
+	updated := &v1alpha1.CommandLineInterface{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.CommandLineInterface{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

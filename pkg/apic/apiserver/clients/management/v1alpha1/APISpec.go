@@ -91,24 +91,26 @@ func (c *UnscopedAPISpecClient) Get(name string) (*v1alpha1.APISpec, error) {
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedAPISpecClient) Get(name string) (*v1alpha1.APISpec, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedAPISpecClient) Update(res *v1alpha1.APISpec, opts ...v1.UpdateOption) (*v1alpha1.APISpec, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.APISpec, len(riList))
+	updated := &v1alpha1.APISpec{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.APISpec{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

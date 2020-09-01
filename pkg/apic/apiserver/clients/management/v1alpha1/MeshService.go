@@ -91,24 +91,26 @@ func (c *UnscopedMeshServiceClient) Get(name string) (*v1alpha1.MeshService, err
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedMeshServiceClient) Get(name string) (*v1alpha1.MeshService, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedMeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1.UpdateOption) (*v1alpha1.MeshService, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.MeshService, len(riList))
+	updated := &v1alpha1.MeshService{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.MeshService{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

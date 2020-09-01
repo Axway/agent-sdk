@@ -99,24 +99,26 @@ func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res
 	return service, nil
 }
 
-// Get - 
-func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
-	riList, err := c.client.List(options...)
+// Update - 
+func (c *Unscoped{{.res.kind}}Client) Update(res *{{.res.version}}.{{.res.kind}}, opts ...v1.UpdateOption) (*{{.res.version}}.{{.res.kind}}, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*{{.res.version}}.{{.res.kind}}, len(riList))
+	updated := &{{.res.version}}.{{.res.kind}}{}
 
-	for i := range riList {
-		result[i] = &{{.res.version}}.{{.res.kind}}{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 {{ end }}
 

@@ -91,24 +91,26 @@ func (c *UnscopedK8SResourceClient) Get(name string) (*v1alpha1.K8SResource, err
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedK8SResourceClient) Get(name string) (*v1alpha1.K8SResource, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedK8SResourceClient) Update(res *v1alpha1.K8SResource, opts ...v1.UpdateOption) (*v1alpha1.K8SResource, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.K8SResource, len(riList))
+	updated := &v1alpha1.K8SResource{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.K8SResource{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -

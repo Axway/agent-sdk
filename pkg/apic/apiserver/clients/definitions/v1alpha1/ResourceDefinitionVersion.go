@@ -91,24 +91,26 @@ func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.Re
 	return service, nil
 }
 
-// Get -
-func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
-	riList, err := c.client.List(options...)
+// Update -
+func (c *UnscopedResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*v1alpha1.ResourceDefinitionVersion, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ResourceDefinitionVersion, len(riList))
+	updated := &v1alpha1.ResourceDefinitionVersion{}
 
-	for i := range riList {
-		result[i] = &v1alpha1.ResourceDefinitionVersion{}
-		err := result[i].FromInstance(riList[i])
-		if err != nil {
-			return nil, err
-		}
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return updated, nil
 }
 
 // List -
