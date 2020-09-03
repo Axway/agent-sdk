@@ -111,7 +111,7 @@
       ]
     },
     {
-      "path": ".*pkg\\/api\\/mockclient\\.go:.*",
+      "path": "\\/go\\/src\\/git.ecd.axway.int\\/apigov\\/apic_agents_sdk\\/pkg\\/api\\/mockclient.go:23",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
