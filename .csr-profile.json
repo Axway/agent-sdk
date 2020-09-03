@@ -111,7 +111,7 @@
       ]
     },
     {
-      "path": ".*api\\/mockclient\\.go:.*",
+      "path": ".*api\\/mockclient\\.go:23",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
