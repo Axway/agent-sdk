@@ -489,7 +489,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	// attempt to log CentralConfiguration to console
-	logCentralConfig(cfg)
+	// logCentralConfig(cfg)
 
 	return cfg, nil
 }
