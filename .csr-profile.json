@@ -10,8 +10,7 @@
     "twistlock": false,
     "zap": false,
     "yarn": false,
-    "gosec": true,
-    "whitesource": false
+    "gosec": true
   },
   "suppressions": [
     {
@@ -111,7 +110,7 @@
       ]
     },
     {
-      "path": "\\/go\\/src\\/git.ecd.axway.int\\/apigov\\/apic_agents_sdk\\/pkg\\/api\\/mockclient.go:23",
+      "path": ".*api\\/mockclient.go:.*",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
