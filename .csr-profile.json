@@ -111,18 +111,6 @@
       ]
     },
     {
-      "path": ".*config\\/centralconfig\\.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "component": "pathAuthKeyPassword       = \"central.auth.keyPassword\"",
-      "justification": "This is just a constant declaration of a command line property",
-      "version": "",
-      "ids": [
-        "G101"
-      ]
-    },
-    {
       "path": ".*api\\/mockclient\\.go:.*",
       "regex": true,
       "scanner": "GoSec",
@@ -132,6 +120,18 @@
       "version": "",
       "ids": [
         "G304"
+      ]
+    },
+    {
+      "path": ".*config\\/centralconfig\\.go:.*",
+      "regex": true,
+      "scanner": "GoSec",
+      "classification": "False Positive",
+      "component": "pathAuthKeyPassword       = \"central.auth.keyPassword\"",
+      "justification": "This is just a constant declaration of a command line property",
+      "version": "",
+      "ids": [
+        "G101"
       ]
     }
   ]
