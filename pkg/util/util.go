@@ -30,3 +30,12 @@ func LoadEnvFromFile(envFile string) error {
 	}
 	return nil
 }
+
+// MaskValue - mask sensitive information with * (asterisk).  Length of sensitiveData to match returning maskedValue
+func MaskValue(sensitiveData string) string {
+	var maskedValue string
+	for i := 0; i < len(sensitiveData); i++ {
+		maskedValue += "*"
+	}
+	return maskedValue
+}
