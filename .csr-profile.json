@@ -10,7 +10,8 @@
     "twistlock": false,
     "zap": false,
     "yarn": false,
-    "gosec": true
+    "gosec": true,
+    "whitesource":true
   },
   "suppressions": [
     {
