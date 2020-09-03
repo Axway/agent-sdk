@@ -11,7 +11,7 @@
     "zap": false,
     "yarn": false,
     "gosec": true,
-    "whitesource":true
+    "whitesource": true
   },
   "suppressions": [
     {

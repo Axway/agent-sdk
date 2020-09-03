@@ -16,7 +16,7 @@ variables:
   FORTIFY_BUILD_ID: "apic_agents_sdk"
 
   WS_CONFIG_FILE: "whitesource.config"
-  WS_PROJECT_ID: "V7-Discovery-Agent"
+  WS_PROJECT_ID: "APIC_Agents_SDK"
 
 stages:
   - test
