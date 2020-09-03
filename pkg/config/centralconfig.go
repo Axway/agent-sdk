@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -374,88 +376,124 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	}
 }
 
+// ConfKey - int
+type ConfKey int
+
+// IMPORTANT NOTE : constants much match order and count of func (confKey ConfKey)
+// Any adds or deletions to these constants MUST be reflected in func (confKey ConfKey) to keep keys and values in sync.
+// Failure to keep the constants and confKey in sync will result in a failure to load the central configs
 const (
-	pathTenantID              = "central.organizationID"
-	pathURL                   = "central.url"
-	pathPlatformURL           = "central.platformURL"
-	pathAuthPrivateKey        = "central.auth.privateKey"
-	pathAuthPublicKey         = "central.auth.publicKey"
-	pathAuthKeyPassword       = "central.auth.keyPassword"
-	pathAuthURL               = "central.auth.url"
-	pathAuthRealm             = "central.auth.realm"
-	pathAuthClientID          = "central.auth.clientId"
-	pathAuthTimeout           = "central.auth.timeout"
-	pathSSLNextProtos         = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites       = "central.ssl.cipherSuites"
-	pathSSLMinVersion         = "central.ssl.minVersion"
-	pathSSLMaxVersion         = "central.ssl.maxVersion"
-	pathEnvironment           = "central.environment"
-	pathDeployment            = "central.deployment"
-	pathMode                  = "central.mode"
-	pathTeam                  = "central.team"
-	pathPollInterval          = "central.pollInterval"
-	pathProxyURL              = "central.proxyUrl"
-	pathAPIServerVersion      = "central.apiServerVersion"
-	pathAdditionalTags        = "central.additionalTags"
+	pathTenantID ConfKey = iota
+	pathURL
+	pathPlatformURL
+	pathAuthPrivateKey
+	pathAuthPublicKey
+	pathAuthKeyPassword
+	pathAuthURL
+	pathAuthRealm
+	pathAuthClientID
+	pathAuthTimeout
+	pathSSLNextProtos
+	pathSSLInsecureSkipVerify
+	pathSSLCipherSuites
+	pathSSLMinVersion
+	pathSSLMaxVersion
+	pathEnvironment
+	pathDeployment
+	pathMode
+	pathTeam
+	pathPollInterval
+	pathProxyURL
+	pathAPIServerVersion
+	pathAdditionalTags
 )
+
+// IMPORTANT NOTE : these need to be in sync with constants (above)
+func (confKey ConfKey) String() string {
+	keys := [...]string{
+		"central.organizationID",
+		"central.url",
+		"central.platformURL",
+		"central.auth.privateKey",
+		"central.auth.publicKey",
+		"central.auth.keyPassword",
+		"central.auth.url",
+		"central.auth.realm",
+		"central.auth.clientId",
+		"central.auth.timeout",
+		"central.ssl.nextProtos",
+		"central.ssl.insecureSkipVerify",
+		"central.ssl.cipherSuites",
+		"central.ssl.minVersion",
+		"central.ssl.maxVersion",
+		"central.environment",
+		"central.deployment",
+		"central.mode",
+		"central.team",
+		"central.pollInterval",
+		"central.proxyUrl",
+		"central.apiServerVersion",
+		"central.additionalTags",
+	}
+	return keys[confKey]
+}
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
-	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
-	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
-	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
-	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
-	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
-	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
-	props.AddStringProperty(pathAuthURL, "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
-	props.AddStringProperty(pathAuthRealm, "Broker", "AMPLIFY Central authentication Realm")
-	props.AddStringProperty(pathAuthClientID, "", "Client ID for the service account")
-	props.AddDurationProperty(pathAuthTimeout, 10*time.Second, "Timeout waiting for AxwayID response")
+	props.AddStringProperty(fmt.Sprint(pathTenantID), "", "Tenant ID for the owner of the environment")
+	props.AddStringProperty(fmt.Sprint(pathURL), "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(fmt.Sprint(pathPlatformURL), "https://platform.axway.com", "URL of the platform")
+	props.AddStringProperty(fmt.Sprint(pathAuthPrivateKey), "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
+	props.AddStringProperty(fmt.Sprint(pathAuthPublicKey), "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
+	props.AddStringProperty(fmt.Sprint(pathAuthKeyPassword), "", "Password for the private key, if needed")
+	props.AddStringProperty(fmt.Sprint(pathAuthURL), "https://login.axway.com/auth", "AMPLIFY Central authentication URL")
+	props.AddStringProperty(fmt.Sprint(pathAuthRealm), "Broker", "AMPLIFY Central authentication Realm")
+	props.AddStringProperty(fmt.Sprint(pathAuthClientID), "", "Client ID for the service account")
+	props.AddDurationProperty(fmt.Sprint(pathAuthTimeout), 10*time.Second, "Timeout waiting for AxwayID response")
 	// ssl properties and command flags
-	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
-	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name")
-	props.AddStringSliceProperty(pathSSLCipherSuites, TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	props.AddStringProperty(pathSSLMinVersion, TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
-	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
-	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
+	props.AddStringSliceProperty(fmt.Sprint(pathSSLNextProtos), []string{}, "List of supported application level protocols, comma separated")
+	props.AddBoolProperty(fmt.Sprint(pathSSLInsecureSkipVerify), false, "Controls whether a client verifies the server's certificate chain and host name")
+	props.AddStringSliceProperty(fmt.Sprint(pathSSLCipherSuites), TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	props.AddStringProperty(fmt.Sprint(pathSSLMinVersion), TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	props.AddStringProperty(fmt.Sprint(pathSSLMaxVersion), "0", "Maximum acceptable SSL/TLS protocol version")
+	props.AddStringProperty(fmt.Sprint(pathEnvironment), "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+	props.AddStringProperty(fmt.Sprint(pathProxyURL), "", "The Proxy URL to use for communication to AMPLIFY Central")
 
 	if agentType == TraceabilityAgent {
-		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
+		props.AddStringProperty(fmt.Sprint(pathDeployment), "prod", "AMPLIFY Central")
 	} else {
-		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
-		props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
-		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
-		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
-		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
+		props.AddStringProperty(fmt.Sprint(pathMode), "publishToEnvironmentAndCatalog", "Agent Mode")
+		props.AddStringProperty(fmt.Sprint(pathTeam), "", "Team name for creating catalog")
+		props.AddDurationProperty(fmt.Sprint(pathPollInterval), 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+		props.AddStringProperty(fmt.Sprint(pathAPIServerVersion), "v1alpha1", "Version of the API Server")
+		props.AddStringProperty(fmt.Sprint(pathAdditionalTags), "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 		AddApprovalConfigProperties(props)
 	}
 }
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
-	proxyURL := props.StringPropertyValue(pathProxyURL)
+	proxyURL := props.StringPropertyValue(fmt.Sprint(pathProxyURL))
 	cfg := &CentralConfiguration{
 		AgentType:    agentType,
-		TenantID:     props.StringPropertyValue(pathTenantID),
-		PollInterval: props.DurationPropertyValue(pathPollInterval),
-		Environment:  props.StringPropertyValue(pathEnvironment),
+		TenantID:     props.StringPropertyValue(fmt.Sprint(pathTenantID)),
+		PollInterval: props.DurationPropertyValue(fmt.Sprint(pathPollInterval)),
+		Environment:  props.StringPropertyValue(fmt.Sprint(pathEnvironment)),
 		Auth: &AuthConfiguration{
-			URL:        props.StringPropertyValue(pathAuthURL),
-			Realm:      props.StringPropertyValue(pathAuthRealm),
-			ClientID:   props.StringPropertyValue(pathAuthClientID),
-			PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
-			PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
-			KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
-			Timeout:    props.DurationPropertyValue(pathAuthTimeout),
+			URL:        props.StringPropertyValue(fmt.Sprint(pathAuthURL)),
+			Realm:      props.StringPropertyValue(fmt.Sprint(pathAuthRealm)),
+			ClientID:   props.StringPropertyValue(fmt.Sprint(pathAuthClientID)),
+			PrivateKey: props.StringPropertyValue(fmt.Sprint(pathAuthPrivateKey)),
+			PublicKey:  props.StringPropertyValue(fmt.Sprint(pathAuthPublicKey)),
+			KeyPwd:     props.StringPropertyValue(fmt.Sprint(pathAuthKeyPassword)),
+			Timeout:    props.DurationPropertyValue(fmt.Sprint(pathAuthTimeout)),
 		},
 		TLS: &TLSConfiguration{
-			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
-			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
-			CipherSuites:       NewCipherArray(props.StringSlicePropertyValue(pathSSLCipherSuites)),
-			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
-			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
+			NextProtos:         props.StringSlicePropertyValue(fmt.Sprint(pathSSLNextProtos)),
+			InsecureSkipVerify: props.BoolPropertyValue(fmt.Sprint(pathSSLInsecureSkipVerify)),
+			CipherSuites:       NewCipherArray(props.StringSlicePropertyValue(fmt.Sprint(pathSSLCipherSuites))),
+			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(fmt.Sprint(pathSSLMinVersion))),
+			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(fmt.Sprint(pathSSLMaxVersion))),
 		},
 		ProxyURL: proxyURL,
 	}
@@ -464,14 +502,14 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.SetProxyEnvironmentVariable()
 
 	if agentType == TraceabilityAgent {
-		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+		cfg.APICDeployment = props.StringPropertyValue(fmt.Sprint(pathDeployment))
 	} else {
-		cfg.URL = props.StringPropertyValue(pathURL)
-		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
-		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
-		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
-		cfg.TeamName = props.StringPropertyValue(pathTeam)
-		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
+		cfg.URL = props.StringPropertyValue(fmt.Sprint(pathURL))
+		cfg.PlatformURL = props.StringPropertyValue(fmt.Sprint(pathPlatformURL))
+		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(fmt.Sprint(pathMode)))]
+		cfg.APIServerVersion = props.StringPropertyValue(fmt.Sprint(pathAPIServerVersion))
+		cfg.TeamName = props.StringPropertyValue(fmt.Sprint(pathTeam))
+		cfg.TagsToPublish = props.StringPropertyValue(fmt.Sprint(pathAdditionalTags))
 
 		// set the notifications
 		subscriptionConfig, err := ParseSubscriptionConfig(props)
@@ -484,5 +522,63 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+
+	LogCentralConfig(cfg)
 	return cfg, nil
+}
+
+// LogCentralConfig - log debug config values
+func LogCentralConfig(cfg *CentralConfiguration) {
+	log.Debug("---------- Agent Config START ----------")
+	log.Debug(fmt.Sprint(pathTenantID) + ": [" + cfg.TenantID + "]")
+	log.Debug(fmt.Sprint(pathURL) + ": [" + cfg.URL + "]")
+	log.Debug(fmt.Sprint(pathPlatformURL) + ": [" + cfg.PlatformURL + "]")
+	log.Debug(fmt.Sprint(pathAuthPrivateKey) + ": [" + cfg.Auth.GetPrivateKey() + "]")
+	log.Debug(fmt.Sprint(pathAuthPublicKey) + ": [" + cfg.Auth.GetPublicKey() + "]")
+	log.Debug(fmt.Sprint(pathAuthKeyPassword) + ": [" + cfg.maskValue(cfg.Auth.GetKeyPassword()) + "]")
+	log.Debug(fmt.Sprint(pathAuthURL) + ": [" + cfg.Auth.GetTokenURL() + "]")
+	log.Debug(fmt.Sprint(pathAuthRealm) + ": [" + cfg.Auth.GetRealm() + "]")
+	log.Debug(fmt.Sprint(pathAuthClientID) + ": [" + cfg.Auth.GetClientID() + "]")
+	log.Debug(fmt.Sprint(pathAuthTimeout) + ": [" + cfg.Auth.GetTimeout().String() + "]")
+	log.Debug(fmt.Sprint(pathSSLNextProtos) + ":[" + cfg.nextProtosArrayToString() + "]")
+	log.Debug(fmt.Sprint(pathSSLInsecureSkipVerify) + ":[" + strconv.FormatBool(cfg.TLS.IsInsecureSkipVerify()) + "]")
+	log.Debug(fmt.Sprint(pathSSLCipherSuites) + ":[" + cfg.cipherSuitesArrayToString() + "]")
+	log.Debug(fmt.Sprint(pathSSLMinVersion) + ":[" + tlsVersionsInverse[cfg.GetTLSConfig().GetMinVersion()] + "]")
+	log.Debug(fmt.Sprint(pathSSLMaxVersion) + ":[" + tlsVersionsInverse[cfg.GetTLSConfig().GetMaxVersion()] + "]")
+	log.Debug(fmt.Sprint(pathEnvironment) + ": [" + cfg.Environment + "]")
+	log.Debug(fmt.Sprint(pathDeployment) + ": [" + cfg.APICDeployment + "]")
+	log.Debug(fmt.Sprint(pathMode) + ": [" + cfg.GetAgentModeAsString() + "]")
+	log.Debug(fmt.Sprint(pathTeam) + ": [" + cfg.TeamName + "]")
+	log.Debug(fmt.Sprint(pathPollInterval) + ": [" + cfg.PollInterval.String() + "]")
+	log.Debug(fmt.Sprint(pathProxyURL) + ": [" + cfg.ProxyURL + "]")
+	log.Debug(fmt.Sprint(pathAPIServerVersion) + ": [" + cfg.APIServerVersion + "]")
+	log.Debug(fmt.Sprint(pathAdditionalTags) + ": [" + cfg.TagsToPublish + "]")
+	log.Debug("---------- Agent Config FINISH ----------")
+}
+
+// maskValue - mask sensitive information with * (asterisk).  Length of sensitiveData to match returning maskedValue
+func (c *CentralConfiguration) maskValue(sensitiveData string) string {
+	var maskedValue string
+	for i := 0; i < len(sensitiveData); i++ {
+		maskedValue += "*"
+	}
+	return maskedValue
+}
+
+// nextProtosArrayToString - return a string of concatenated next protos
+func (c *CentralConfiguration) nextProtosArrayToString() string {
+	var proto string
+	for _, str := range c.GetTLSConfig().GetNextProtos() {
+		proto += " " + str
+	}
+	return proto
+}
+
+// cipherSuitesArrayToString - return a string of concatenated tls cipher suites
+func (c *CentralConfiguration) cipherSuitesArrayToString() string {
+	var tlsCipherSuites string
+	for _, tlsCipherSuite := range c.GetTLSConfig().GetCipherSuites() {
+		tlsCipherSuites += " " + tlsCipherSuite.String()
+	}
+	return tlsCipherSuites
 }
