@@ -65,6 +65,11 @@ func SetLevel(level logrus.Level) {
 	log.SetLevel(level)
 }
 
+// GetLevel -
+func GetLevel() logrus.Level {
+	return log.GetLevel()
+}
+
 func getFormatter(format string) (logrus.Formatter, error) {
 	switch format {
 	case lineFormat:
