@@ -142,3 +142,26 @@ for (resource of gomplateResources) {
   );
   console.log(`Created ${resource.group}/${resource.version}/${resource.kind}.go`);
 }
+
+const setResources = resources.reduce((acc, currentResource) => {
+    const { group, kind, scope, version } = currentResource;
+    var setResource = acc.find(
+        (resource) => resource.group === group && resource.version === version
+    );
+
+    if (setResource == undefined) {
+        setResource = { kinds: [], group, version}
+        acc.push(setResource)
+    }
+
+    setResource.kinds.push({
+        kind,
+        scoped: (scope != undefined) || (scope != null)
+    })
+
+    return acc},
+                                      [])
+
+const setInput = JSON.stringify({set: setResources})
+
+execSync(`gomplate --context input='stdin:?type=application/json' -f scripts/apiserver/set.tmpl --out "pkg/apic/apiserver/clients/set.go"`, {input: setInput})
