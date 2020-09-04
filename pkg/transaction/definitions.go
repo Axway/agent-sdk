@@ -9,6 +9,9 @@ const TypeTransactionEvent = "transactionEvent"
 // SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 const SummaryEventProxyIDPrefix = "remoteApiId_"
 
+// SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
+const SummaryEventApplicationIDPrefix = "remoteAppId_"
+
 // LogEvent - Log event to be sent to Condor
 type LogEvent struct {
 	Version            string   `json:"version"`
@@ -20,21 +23,30 @@ type LogEvent struct {
 	TenantID           string   `json:"tenantId"`
 	TrcbltPartitionID  string   `json:"trcbltPartitionId"`
 	Type               string   `json:"type"`
+	TargetPath         string   `json:"targetPath,omitempty"`
+	ResourcePath       string   `json:"resourcePath,omitempty"`
 	TransactionEvent   *Event   `json:"transactionEvent,omitempty"`
 	TransactionSummary *Summary `json:"transactionSummary,omitempty"`
 }
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	Status       string `json:"status,omitempty"`
-	StatusDetail string `json:"statusDetail,omitempty"`
-	Duration     int    `json:"duration,omitempty"`
-	Application  string `json:"application,omitempty"`
-	Product      string `json:"product,omitempty"`
-	Team         string `json:"team,omitempty"`
+	Status       string       `json:"status,omitempty"`
+	StatusDetail string       `json:"statusDetail,omitempty"`
+	Duration     int          `json:"duration,omitempty"`
+	Application  *Application `json:"application,omitempty"`
+	Product      string       `json:"product,omitempty"`
+	Team         string       `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
+	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
+}
+
+// Application  - Represnts the application used in transaction summary event
+type Application struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // Proxy - Represents the proxy definition in summary event
@@ -42,6 +54,12 @@ type Proxy struct {
 	ID       string `json:"id,omitempty"`
 	Revision int    `json:"revision,omitempty"`
 	Name     string `json:"name,omitempty"`
+}
+
+//Runtime - Represents the runtime group details if applicable in summary event
+type Runtime struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // EntryPoint - represents the entry point details for API in summary event
@@ -54,14 +72,14 @@ type EntryPoint struct {
 
 // Event - Represents the transaction detail event
 type Event struct {
-	ID          string    `json:"id,omitempty"`
-	ParentID    string    `json:"parentId,omitempty"`
-	Source      string    `json:"source,omitempty"`
-	Destination string    `json:"destination,omitempty"`
-	Duration    int       `json:"duration,omitempty"`
-	Direction   string    `json:"direction,omitempty"`
-	Status      string    `json:"status,omitempty"`
-	Protocol    *Protocol `json:"protocol,omitempty"`
+	ID          string      `json:"id,omitempty"`
+	ParentID    string      `json:"parentId,omitempty"`
+	Source      string      `json:"source,omitempty"`
+	Destination string      `json:"destination,omitempty"`
+	Duration    int         `json:"duration,omitempty"`
+	Direction   string      `json:"direction,omitempty"`
+	Status      string      `json:"status,omitempty"`
+	Protocol    interface{} `json:"protocol,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events
@@ -84,6 +102,7 @@ type Protocol struct {
 	LocalPort              int    `json:"localPort,omitempty"`
 	SslServerName          string `json:"sslServerName,omitempty"`
 	SslProtocol            string `json:"sslProtocol,omitempty"`
+	Referer                string `json:"referer,omitempty"`
 	SslSubject             string `json:"sslSubject,omitempty"`
 	AuthSubjectID          string `json:"authSubjectId,omitempty"`
 	RequestHeaders         string `json:"requestHeaders,omitempty"`
@@ -94,4 +113,23 @@ type Protocol struct {
 	ResponsePayload        string `json:"responsePayload,omitempty"`
 	WafStatus              int    `json:"wafStatus,omitempty"`
 	Timing                 string `json:"timing,omitempty"`
+}
+
+// JMSProtocol - Represents the details in a transaction event for the JMS protocol
+type JMSProtocol struct {
+	Type             string `json:"type,omitempty"`
+	AuthSubjectID    string `json:"authSubjectId,omitempty"`
+	JMSMessageID     string `json:"jmsMessageID,omitempty"`
+	JMSCorrelationID string `json:"jmsCorrelationID,omitempty"`
+	JMSDestination   string `json:"jmsDestination,omitempty"`
+	JMSProviderURL   string `json:"jmsProviderURL,omitempty"`
+	JMSDeliveryMode  int    `json:"jmsDeliveryMode,omitempty"`
+	JMSPriority      int    `json:"jmsPriority,omitempty"`
+	JMSReplyTo       string `json:"jmsReplyTo,omitempty"`
+	JMSRedelivered   int    `json:"jmsRedelivered,omitempty"`
+	JMSTimestamp     int    `json:"jmsTimestamp,omitempty"`
+	JMSExpiration    int    `json:"jmsExpiration,omitempty"`
+	JMSType          string `json:"jmsType,omitempty"`
+	JMSStatus        string `json:"jmsStatus,omitempty"`
+	JMSStatusText    string `json:"jmsStatusText,omitempty"`
 }

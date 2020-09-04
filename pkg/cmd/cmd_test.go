@@ -22,7 +22,7 @@ func getPFlag(cmd AgentRootCmd, flagName string) *flag.Flag {
 
 func assertCmdFlag(t *testing.T, cmd AgentRootCmd, flagName, fType, description string) {
 	pflag := getPFlag(cmd, flagName)
-	assert.NotNil(t, pflag)
+	assert.NotNil(t, &pflag)
 	assert.Equal(t, fType, pflag.Value.Type())
 	assert.Equal(t, description, pflag.Usage)
 }
@@ -51,10 +51,11 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToCatalog", "Agent Mode")
+	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
-	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.teamId", "centralTeamId", "", "Team ID for the current default team for creating catalog")
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
+	assertStringCmdFlag(t, rootCmd, "central.team", "centralTeam", "", "Team name for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
@@ -73,7 +74,8 @@ func TestRootCmdFlags(t *testing.T) {
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "AMPLIFY Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of AMPLIFY Central")
-	assertStringCmdFlag(t, rootCmd, "central.tenantId", "centralTenantId", "", "Tenant ID for the owner of the environment")
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Password for the private key, if needed")
@@ -97,28 +99,38 @@ func TestRootCmdFlags(t *testing.T) {
 func TestRootCmdConfigFileLoad(t *testing.T) {
 
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	fExecute := func() {
-		rootCmd.Execute()
+
+	err := rootCmd.Execute()
+
+	// should be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.True(t, ok, "Incorrect error returned: %s", err.Error())
 	}
-	assert.Panics(t, fExecute)
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", nil, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
-	fExecute = func() {
-		rootCmd.Execute()
+	viper.AddConfigPath("./testdata")
+	err = rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
 
-	assert.Contains(t, "Error central.tenantID not set in config", errBuf.String())
+	assert.Contains(t, "Error central.organizationID not set in config", errBuf.String())
 }
 
 func TestRootCmdConfigDefault(t *testing.T) {
 	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		assert.Equal(t, corecfg.PublishToCatalog, centralConfig.GetAgentMode())
+		assert.Equal(t, corecfg.PublishToEnvironmentAndCatalog, centralConfig.GetAgentMode())
 		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
-		assert.Equal(t, "222222", centralConfig.GetTeamID())
+		assert.Equal(t, "222222", centralConfig.GetTeamName())
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
 		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
@@ -145,26 +157,34 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Discovery
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", discoveryInitConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
-	fExecute := func() {
-		rootCmd.Execute()
+	viper.AddConfigPath("./testdata")
+	err := rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
-
 	assert.Contains(t, "Test return error from init config handler, Discovery Agent", errBuf.String())
 
 	// Traceability
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.TraceabilityAgent)
-	viper.Set("path.config", "./testdata")
-	fExecute = func() {
-		rootCmd.Execute()
+	viper.AddConfigPath("./testdata")
+	err = rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf = new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
-
 	assert.Contains(t, "Test return error from init config handler, Traceability Agent", errBuf.String())
 }
 
@@ -229,7 +249,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -237,13 +257,17 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
-	fExecute := func() {
-		rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
-
 	assert.Contains(t, "configWithValidation: String prop not set", errBuf.String())
 	assert.Equal(t, true, cfg.configValidationCalled)
 	assert.Equal(t, false, cfg.AgentCfg.agentValidationCalled)
@@ -269,7 +293,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	}
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -277,13 +301,17 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
-	fExecute := func() {
-		rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
-
 	assert.Contains(t, "agentConfig: String prop not set", errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	assert.Equal(t, true, cfg.AgentCfg.(*agentConfig).agentValidationCalled)
@@ -300,17 +328,25 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 		return nil
 	}
 	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	fExecute := func() {
-		rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	// should be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.True(t, ok, "Incorrect error returned: %s", err.Error())
 	}
-	assert.Panics(t, fExecute)
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
-	fExecute = func() {
-		rootCmd.Execute()
+	viper.AddConfigPath("./testdata")
+	err = rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
-	assert.NotPanics(t, fExecute)
 }
 
 func TestRootCmdHandlers(t *testing.T) {
@@ -337,7 +373,7 @@ func TestRootCmdHandlers(t *testing.T) {
 		return nil
 	}
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
 	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
@@ -345,13 +381,17 @@ func TestRootCmdHandlers(t *testing.T) {
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
 
-	fExecute := func() {
-		rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.Nil(t, err, "An unexpected error returned")
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
+
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.NotPanics(t, fExecute)
-
 	assert.Empty(t, "", errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	agentCfg := cfg.AgentCfg.(*agentConfig)
@@ -375,16 +415,21 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	fExecute := func() {
-		rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.Nil(t, err, "An unexpected error was received")
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
 	}
-	assert.NotPanics(t, fExecute)
+
 	w.Close()
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
@@ -400,7 +445,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"file",
@@ -430,7 +475,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	cmdHandler := noOpCmdHandler
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.Set("path.config", "./testdata")
+	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"both",

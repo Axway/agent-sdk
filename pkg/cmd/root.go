@@ -7,14 +7,23 @@ import (
 	"reflect"
 	"strings"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/spf13/cobra"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/viper"
+)
+
+// Constants for cmd flags
+const (
+	EnvFileFlag           = "envFile"
+	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
 
 // CommandHandler - Root command execution handler
@@ -30,6 +39,7 @@ type AgentRootCmd interface {
 
 	// Get the agentType
 	GetAgentType() corecfg.AgentType
+	AddCommand(*cobra.Command)
 
 	GetProperties() properties.Properties
 }
@@ -58,7 +68,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		Short:   desc,
 		Version: fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha),
 		RunE:    c.run,
-		PreRun:  c.initialize,
+		PreRunE: c.initialize,
 	}
 	c.props = properties.NewProperties(c.rootCmd)
 	c.addBaseProps()
@@ -78,11 +88,18 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("log.format", "json", "Log format (json, line, package)")
 	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
 	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
-	c.props.AddStringProperty("path.config", ".", "Configuration file path for the agent")
+	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
+	c.props.AddStringProperty(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
-func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
-	configFilePath := c.props.StringPropertyValue("path.config")
+func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
+	envFile := c.props.StringPropertyValue(EnvFileFlag)
+	err := util.LoadEnvFromFile(envFile)
+	if err != nil {
+		return errors.Wrap(config.ErrEnvConfigOverride, err.Error())
+	}
+
+	_, configFilePath := c.props.StringFlagValue("pathConfig")
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)
@@ -90,11 +107,18 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) {
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
-		panic(err.Error())
+		if envFile == "" {
+			return err
+		} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
 	}
+
 	c.checkStatusFlag()
+	agentsync.SetSyncMode(c.GetProperties())
+	return nil
 }
 
 func (c *agentRootCommand) checkStatusFlag() {
@@ -140,7 +164,7 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// Check the sync flag
-	exitcode := agentsync.CheckSyncFlag(c.GetProperties())
+	exitcode := agentsync.CheckSyncFlag()
 	if exitcode > -1 {
 		os.Exit(exitcode)
 	}
@@ -225,4 +249,8 @@ func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
 
 func (c *agentRootCommand) GetProperties() properties.Properties {
 	return c.props
+}
+
+func (c *agentRootCommand) AddCommand(cmd *cobra.Command) {
+	c.rootCmd.AddCommand(cmd)
 }

@@ -1,0 +1,31 @@
+[
+    {
+      "id": "e4f19a3173caf7290173fe0310840fef",
+      "metadata": {
+        "createTimestamp": "2020-08-17T20:01:20.517+0000",
+        "createUserId": "b0433b7f-ac38-4d29-8a64-cf645c99b99f",
+        "modifyTimestamp": "2020-08-17T20:01:49.098+0000",
+        "modifyUserId": "b0433b7f-ac38-4d29-8a64-cf645c99b99f"
+      },
+      "properties": [
+        {
+          "key": "profile",
+          "value": {
+            "appName": "DaleApp"
+          }
+        }
+      ],
+      "state": "ACTIVE",
+      "stateDescription": "",
+      "catalogItemId": "e4f19a3173caf7290173e45f3a270f8b",
+      "owningTeamId": "b0272c77-a2e9-4efe-9990-698cca3e1a2b",
+      "deletable": false,
+      "nextPossibleStates": [
+        "UNSUBSCRIBE_INITIATED"
+      ],
+      "allowedTransitionStates": [
+        "UNSUBSCRIBE_INITIATED"
+      ],
+      "name": "1cd7066f-015f-4ff3-879a-2b959b325b37"
+    }
+  ]

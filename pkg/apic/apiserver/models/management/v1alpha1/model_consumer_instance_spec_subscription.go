@@ -11,10 +11,10 @@ package v1alpha1
 
 // ConsumerInstanceSpecSubscription struct for ConsumerInstanceSpecSubscription
 type ConsumerInstanceSpecSubscription struct {
-	// Defines if subscriptions are allowed on the Catalog Item.
-	Enabled bool `json:"enabled,omitempty"`
 	// Defines if subscriptions need to be manually approved.
 	AutoSubscribe bool `json:"autoSubscribe,omitempty"`
+	// Defines if subscriptions are allowed on the Catalog Item.
+	Enabled bool `json:"enabled,omitempty"`
 	// The name of a ConsumerSubscriptionDefinition kind that defines the schema and possible webhooks to get invoked.
 	SubscriptionDefinition string `json:"subscriptionDefinition,omitempty"`
 }

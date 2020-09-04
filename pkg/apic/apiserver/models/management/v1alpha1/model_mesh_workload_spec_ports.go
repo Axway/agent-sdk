@@ -11,7 +11,6 @@ package v1alpha1
 
 // MeshWorkloadSpecPorts struct for MeshWorkloadSpecPorts
 type MeshWorkloadSpecPorts struct {
-	Name  string                `json:"name,omitempty"`
-	Port  int32                 `json:"port,omitempty"`
-	Specs MeshWorkloadSpecSpecs `json:"specs,omitempty"`
+	Name string `json:"name,omitempty"`
+	Port int32  `json:"port,omitempty"`
 }

@@ -2,7 +2,7 @@
   "project": "APIC Agents SDK",
   "requirements": {
     "dependency-check": true,
-    "fortify": false,
+    "fortify": true,
     "irius-risk": false,
     "npm-audit": false,
     "pentest": false,
@@ -110,7 +110,7 @@
       ]
     },
     {
-      "path": ".*config\\/centralconfig\\.go",
+      "path": ".*config\\/centralconfig\\.go:.*",
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
@@ -119,6 +119,18 @@
       "version": "",
       "ids": [
         "G101"
+      ]
+    },
+    {
+      "path": ".*api\\/mockclient\\.go",
+      "regex": true,
+      "scanner": "GoSec",
+      "classification": "False Positive",
+      "justification": "This is only present in the junit tests and not a part of the product.",
+      "component": "os.Open(filepath)",
+      "version": "",
+      "ids": [
+        "G304"
       ]
     }
   ]

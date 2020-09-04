@@ -7,11 +7,14 @@ package clients
 import (
 	"fmt"
 	cAPIV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
+	core_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1"
 	definitions_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1"
 	management_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1"
 )
 
 type Set struct {
+	WebhookCoreV1alpha1                              *core_v1alpha1.UnscopedWebhookClient
+	SecretCoreV1alpha1                               *core_v1alpha1.UnscopedSecretClient
 	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
 	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
 	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
@@ -20,10 +23,10 @@ type Set struct {
 	APIServiceManagementV1alpha1                     *management_v1alpha1.UnscopedAPIServiceClient
 	APIServiceRevisionManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceRevisionClient
 	APIServiceInstanceManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceInstanceClient
-	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
-	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
 	ConsumerInstanceManagementV1alpha1               *management_v1alpha1.UnscopedConsumerInstanceClient
 	ConsumerSubscriptionDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedConsumerSubscriptionDefinitionClient
+	IntegrationManagementV1alpha1                    *management_v1alpha1.IntegrationClient
+	ResourceHookManagementV1alpha1                   *management_v1alpha1.UnscopedResourceHookClient
 	K8SClusterManagementV1alpha1                     *management_v1alpha1.K8SClusterClient
 	K8SResourceManagementV1alpha1                    *management_v1alpha1.UnscopedK8SResourceClient
 	ResourceDiscoveryManagementV1alpha1              *management_v1alpha1.UnscopedResourceDiscoveryClient
@@ -40,6 +43,14 @@ func New(b cAPIV1.Base) *Set {
 
 	var err error
 
+	s.WebhookCoreV1alpha1, err = core_v1alpha1.NewWebhookClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1.Webhook: %s", err))
+	}
+	s.SecretCoreV1alpha1, err = core_v1alpha1.NewSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1.Secret: %s", err))
+	}
 	s.ResourceGroupDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceGroupClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceGroup: %s", err))
@@ -72,14 +83,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.APIServiceInstance: %s", err))
 	}
-	s.SecretManagementV1alpha1, err = management_v1alpha1.NewSecretClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Secret: %s", err))
-	}
-	s.WebhookManagementV1alpha1, err = management_v1alpha1.NewWebhookClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Webhook: %s", err))
-	}
 	s.ConsumerInstanceManagementV1alpha1, err = management_v1alpha1.NewConsumerInstanceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.ConsumerInstance: %s", err))
@@ -87,6 +90,14 @@ func New(b cAPIV1.Base) *Set {
 	s.ConsumerSubscriptionDefinitionManagementV1alpha1, err = management_v1alpha1.NewConsumerSubscriptionDefinitionClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.ConsumerSubscriptionDefinition: %s", err))
+	}
+	s.IntegrationManagementV1alpha1, err = management_v1alpha1.NewIntegrationClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Integration: %s", err))
+	}
+	s.ResourceHookManagementV1alpha1, err = management_v1alpha1.NewResourceHookClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.ResourceHook: %s", err))
 	}
 	s.K8SClusterManagementV1alpha1, err = management_v1alpha1.NewK8SClusterClient(b)
 	if err != nil {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,7 +10,9 @@ import (
 	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -26,17 +29,21 @@ const (
 type AgentMode int
 
 const (
-	// PublishToCatalog (formerly Disconnected) - publish items to Catalog
-	PublishToCatalog AgentMode = iota + 1
 	// PublishToEnvironment (formerly Connected) - publish items to Environment
-	PublishToEnvironment
+	PublishToEnvironment AgentMode = iota + 1
 	// PublishToEnvironmentAndCatalog - publish items to both Catalog and Environment
 	PublishToEnvironmentAndCatalog
 )
 
+// subscription approval types
+const (
+	ManualApproval  string = "manual"
+	AutoApproval    string = "auto"
+	WebhookApproval string = "webhook"
+)
+
 // AgentModeStringMap - Map the Agent Mode constant to a string
 var AgentModeStringMap = map[AgentMode]string{
-	PublishToCatalog:               "publishToCatalog",
 	PublishToEnvironment:           "publishToEnvironment",
 	PublishToEnvironmentAndCatalog: "publishToEnvironmentAndCatalog",
 }
@@ -44,7 +51,6 @@ var AgentModeStringMap = map[AgentMode]string{
 // StringAgentModeMap - Map the string to the Agent Mode constant. Note that the strings are lowercased. In the config parser
 // we change the string to all lowers to all for mis-typing of the case
 var StringAgentModeMap = map[string]AgentMode{
-	"publishtocatalog":               PublishToCatalog,
 	"publishtoenvironment":           PublishToEnvironment,
 	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
 }
@@ -52,8 +58,8 @@ var StringAgentModeMap = map[string]AgentMode{
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
-	IsPublishToCatalogMode() bool
 	IsPublishToEnvironmentMode() bool
+	IsPublishToEnvironmentOnlyMode() bool
 	IsPublishToEnvironmentAndCatalogMode() bool
 	GetAgentMode() AgentMode
 	GetAgentModeAsString() string
@@ -62,62 +68,71 @@ type CentralConfig interface {
 	GetEnvironmentID() string
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
-	GetTeamID() string
+	GetTeamName() string
 	GetURL() string
+	GetPlatformURL() string
 	GetCatalogItemsURL() string
-	GetCatalogItemImageURL(catalogItemID string) string
-	GetCatalogItemRelationshipsURL(catalogItemID string) string
-	GetEnvironmentURL() string
 	GetAPIServerURL() string
-	GetAPIServerEnvironmentURL() string
-	GetAPIServerServicesURL() string
-	GetAPIServerServicesRevisionsURL() string
-	GetAPIServerServicesInstancesURL() string
-	DeleteAPIServerServicesURL() string
-	GetAPIServerConsumerInstancesURL() string
+	GetEnvironmentURL() string
+	GetServicesURL() string
+	GetRevisionsURL() string
+	GetInstancesURL() string
+	DeleteServicesURL() string
+	GetConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
+	GetAPIServerWebhooksURL() string
+	GetAPIServerSecretsURL() string
 	GetSubscriptionURL() string
 	GetCatalogItemSubscriptionsURL(string) string
 	Validate() error
+	GetSubscriptionConfig() SubscriptionConfig
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
 	GetProxyURL() string
 	SetProxyEnvironmentVariable() error
 	GetPollInterval() time.Duration
-	UpdateCatalogItemRevisionsURL(catalogItemID string) string
 	GetCatalogItemByIDURL(catalogItemID string) string
 }
 
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
-	AgentType        AgentType
-	Mode             AgentMode     `config:"mode"`
-	TenantID         string        `config:"tenantID"`
-	TeamID           string        `config:"teamID" `
-	APICDeployment   string        `config:"deployment"`
-	Environment      string        `config:"environment"`
-	URL              string        `config:"url"`
-	APIServerVersion string        `config:"apiServerVersion"`
-	TagsToPublish    string        `config:"additionalTags"`
-	Auth             AuthConfig    `config:"auth"`
-	TLS              TLSConfig     `config:"ssl"`
-	PollInterval     time.Duration `config:"pollInterval"`
-	ProxyURL         string        `config:"proxyUrl"`
-	environmentID    string
+	AgentType                 AgentType
+	Mode                      AgentMode     `config:"mode"`
+	TenantID                  string        `config:"organizationID"`
+	TeamName                  string        `config:"team"`
+	APICDeployment            string        `config:"deployment"`
+	Environment               string        `config:"environment"`
+	URL                       string        `config:"url"`
+	PlatformURL               string        `config:"platformURL"`
+	APIServerVersion          string        `config:"apiServerVersion"`
+	TagsToPublish             string        `config:"additionalTags"`
+	Auth                      AuthConfig    `config:"auth"`
+	TLS                       TLSConfig     `config:"ssl"`
+	PollInterval              time.Duration `config:"pollInterval"`
+	ProxyURL                  string        `config:"proxyUrl"`
+	environmentID             string
+	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 }
 
 // NewCentralConfig - Creates the default central config
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
-		AgentType:        agentType,
-		Mode:             PublishToCatalog,
-		APIServerVersion: "v1alpha1",
-		Auth:             newAuthConfig(),
-		TLS:              NewTLSConfig(),
-		PollInterval:     60 * time.Second,
+		AgentType:                 agentType,
+		Mode:                      PublishToEnvironmentAndCatalog,
+		APIServerVersion:          "v1alpha1",
+		Auth:                      newAuthConfig(),
+		TLS:                       NewTLSConfig(),
+		PollInterval:              60 * time.Second,
+		PlatformURL:               "https://platform.axway.com",
+		SubscriptionConfiguration: NewSubscriptionConfig(),
 	}
+}
+
+// GetPlatformURL - Returns the central base URL
+func (c *CentralConfiguration) GetPlatformURL() string {
+	return c.PlatformURL
 }
 
 // GetAgentType - Returns the agent type
@@ -125,14 +140,9 @@ func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
 }
 
-// IsPublishToCatalogMode -
-func (c *CentralConfiguration) IsPublishToCatalogMode() bool {
-	return c.Mode == PublishToCatalog
-}
-
-// IsPublishToEnvironmentMode -
-func (c *CentralConfiguration) IsPublishToEnvironmentMode() bool {
-	return c.Mode == PublishToEnvironment || c.IsPublishToEnvironmentAndCatalogMode()
+// IsPublishToEnvironmentOnlyMode -
+func (c *CentralConfiguration) IsPublishToEnvironmentOnlyMode() bool {
+	return c.Mode == PublishToEnvironment
 }
 
 // IsPublishToEnvironmentAndCatalogMode -
@@ -175,9 +185,9 @@ func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
 }
 
-// GetTeamID - Returns the team ID
-func (c *CentralConfiguration) GetTeamID() string {
-	return c.TeamID
+// GetTeamName - Returns the team name
+func (c *CentralConfiguration) GetTeamName() string {
+	return c.TeamName
 }
 
 // GetURL - Returns the central base URL
@@ -210,59 +220,54 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
-// GetCatalogItemImageURL - Returns the image based on catalogItemID
-func (c *CentralConfiguration) GetCatalogItemImageURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/image"
-}
-
-// GetCatalogItemRelationshipsURL - Returns the image based on catalogItemID
-func (c *CentralConfiguration) GetCatalogItemRelationshipsURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/relationships"
-}
-
-// GetEnvironmentURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetEnvironmentURL() string {
-	return c.URL + "/api/v1/environments"
-}
-
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
 }
 
-// GetAPIServerEnvironmentURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetAPIServerEnvironmentURL() string {
+// GetEnvironmentURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
 }
 
-// GetAPIServerServicesURL - Returns the APIServer URL for services API
-func (c *CentralConfiguration) GetAPIServerServicesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservices"
+// GetServicesURL - Returns the APIServer URL for services API
+func (c *CentralConfiguration) GetServicesURL() string {
+	return c.GetEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerServicesRevisionsURL - Returns the APIServer URL for services API revisions
-func (c *CentralConfiguration) GetAPIServerServicesRevisionsURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservicerevisions"
+// GetRevisionsURL - Returns the APIServer URL for services API revisions
+func (c *CentralConfiguration) GetRevisionsURL() string {
+	return c.GetEnvironmentURL() + "/apiservicerevisions"
 }
 
-// GetAPIServerServicesInstancesURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) GetAPIServerServicesInstancesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiserviceinstances"
+// GetInstancesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) GetInstancesURL() string {
+	return c.GetEnvironmentURL() + "/apiserviceinstances"
 }
 
-// DeleteAPIServerServicesURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) DeleteAPIServerServicesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/apiservices"
+// DeleteServicesURL - Returns the APIServer URL for services API instances
+func (c *CentralConfiguration) DeleteServicesURL() string {
+	return c.GetEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
-func (c *CentralConfiguration) GetAPIServerConsumerInstancesURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/consumerinstances"
+// GetConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
+func (c *CentralConfiguration) GetConsumerInstancesURL() string {
+	return c.GetEnvironmentURL() + "/consumerinstances"
 }
 
 // GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
-	return c.GetAPIServerEnvironmentURL() + "/consumersubscriptiondefs"
+	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
+}
+
+// GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
+func (c *CentralConfiguration) GetAPIServerWebhooksURL() string {
+	return c.GetEnvironmentURL() + "/webhooks"
+}
+
+// GetAPIServerSecretsURL - Returns the APIServer URL for secrets
+func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
+	return c.GetEnvironmentURL() + "/secrets"
 }
 
 // GetSubscriptionURL - Returns the APIServer URL for services API instances
@@ -285,14 +290,14 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 	return c.TLS
 }
 
+// GetSubscriptionConfig - Returns the Config for the subscription webhook
+func (c *CentralConfiguration) GetSubscriptionConfig() SubscriptionConfig {
+	return c.SubscriptionConfiguration
+}
+
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
-}
-
-// UpdateCatalogItemRevisionsURL - Returns URL to update catalog revision
-func (c *CentralConfiguration) UpdateCatalogItemRevisionsURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID + "/revisions"
 }
 
 // GetCatalogItemByIDURL - Returns URL to get catalog item by id
@@ -323,12 +328,18 @@ func (c *CentralConfiguration) Validate() (err error) {
 
 func (c *CentralConfiguration) validateConfig() {
 	if c.GetTenantID() == "" {
-		exception.Throw(errors.New("Error central.tenantID not set in config"))
+		exception.Throw(errors.New("Error central.organizationID not set in config"))
 	}
 
 	if c.GetURL() == "" {
 		exception.Throw(errors.New("Error central.url not set in config"))
 	}
+
+	if c.GetPlatformURL() == "" {
+		exception.Throw(errors.New("Error central.platformURL not set in config"))
+	}
+
+	c.validatePublishToEnvironmentModeConfig()
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
@@ -338,20 +349,16 @@ func (c *CentralConfiguration) validateConfig() {
 }
 
 func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
-	if c.GetTeamID() == "" {
-		exception.Throw(errors.New("Error central.teamID not set in config"))
-	}
-
-	if c.IsPublishToEnvironmentMode() {
-		c.validatePublishToEnvironmentModeConfig()
-	}
-
 	if c.GetPollInterval() <= 0 {
 		exception.Throw(errors.New("Error central.pollInterval not set in config"))
 	}
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
+	if !c.IsPublishToEnvironmentOnlyMode() && !c.IsPublishToEnvironmentAndCatalogMode() {
+		exception.Throw(errors.New("Error central.mode not configured for publishToEnvironment or publishToEnvironmentAndCatalog"))
+	}
+
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(errors.New("Error central.environment not set in config"))
 	}
@@ -371,8 +378,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 }
 
 const (
-	pathTenantID              = "central.tenantId"
+	pathTenantID              = "central.organizationID"
 	pathURL                   = "central.url"
+	pathPlatformURL           = "central.platformURL"
 	pathAuthPrivateKey        = "central.auth.privateKey"
 	pathAuthPublicKey         = "central.auth.publicKey"
 	pathAuthKeyPassword       = "central.auth.keyPassword"
@@ -388,7 +396,7 @@ const (
 	pathEnvironment           = "central.environment"
 	pathDeployment            = "central.deployment"
 	pathMode                  = "central.mode"
-	pathTeamID                = "central.teamId"
+	pathTeam                  = "central.team"
 	pathPollInterval          = "central.pollInterval"
 	pathProxyURL              = "central.proxyUrl"
 	pathAPIServerVersion      = "central.apiServerVersion"
@@ -399,6 +407,7 @@ const (
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -418,15 +427,16 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
-		props.AddStringProperty(pathMode, "publishToCatalog", "Agent Mode")
-		props.AddStringProperty(pathTeamID, "", "Team ID for the current default team for creating catalog")
+		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
+		props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
-		// props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
+		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
+		AddApprovalConfigProperties(props)
 	}
 }
 
-// ParseCentralConfig - Parses the Central Config values form teh command line
+// ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
@@ -460,14 +470,59 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
 		cfg.URL = props.StringPropertyValue(pathURL)
+		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
-		cfg.TeamID = props.StringPropertyValue(pathTeamID)
+		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
+
+		// set the notifications
+		subscriptionConfig, err := ParseSubscriptionConfig(props)
+		if err != nil {
+			return nil, err
+		}
+		cfg.SubscriptionConfiguration = subscriptionConfig
 	}
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+
+	// attempt to log CentralConfiguration to console
+	// logCentralConfig(cfg)
+
 	return cfg, nil
+}
+
+// logCentralConfig - log config values to the console
+// 	1. Clone the current CentralConfiguration
+// 	2. Inject the clone with masked values for sensitive data
+// 	3. Print CentralConiguration to the console (only in debug mode)
+func logCentralConfig(centralConfig *CentralConfiguration) {
+
+	// log central config to the console
+	if strings.ToLower(log.GetLevel().String()) != "debug" {
+		return
+	}
+
+	// Clone CentralConfiguration for debug purposes
+	centralConfigClone := centralConfig
+
+	maskSensitiveData(centralConfigClone, centralConfig)
+
+	data, _ := json.MarshalIndent(centralConfigClone, "", " ")
+	log.Debug("********** Central configuration values - START **********")
+	fmt.Printf("%s\n", data)
+	log.Debug("********** Central configuration values - FINISH **********")
+}
+
+// maskSensitveData - this function will hold any sensitive data that needs to be masked
+func maskSensitiveData(centralConfigClone, centralConfig *CentralConfiguration) {
+	// mask auth key password
+	authDebug := centralConfigClone.GetAuthConfig().(*AuthConfiguration)
+	authDebug.KeyPwd = util.MaskValue(centralConfig.Auth.GetKeyPassword())
+
+	// mask email server password
+	subscriptionDebug := centralConfigClone.GetSubscriptionConfig().(*SubscriptionConfiguration)
+	subscriptionDebug.Notifications.SMTP.Password = util.MaskValue((centralConfig.GetSubscriptionConfig().GetSMTPPassword()))
 }

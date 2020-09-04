@@ -5,8 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
@@ -45,12 +47,10 @@ type httpClient struct {
 	httpClient *http.Client
 }
 
-// NewClient - creates a new API client using the http client sent in
+// NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
-	var httpCli *http.Client
-	if cfg == nil {
-		httpCli = http.DefaultClient
-	} else {
+	httpCli := http.DefaultClient
+	if cfg != nil {
 		url, err := url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
@@ -73,7 +73,7 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 // means "no proxy"
 func getProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
 	return func(*http.Request) (*url.URL, error) {
-		if fixedURL.Host == "" {
+		if fixedURL == nil || fixedURL.Host == "" {
 			return nil, nil
 		}
 		return fixedURL, nil
@@ -97,8 +97,15 @@ func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
 	if err != nil {
 		return req, err
 	}
+	hasUserAgentHeader := false
 	for key, value := range request.Headers {
 		req.Header.Set(key, value)
+		if strings.ToLower(key) == "user-agent" {
+			hasUserAgentHeader = true
+		}
+	}
+	if !hasUserAgentHeader {
+		req.Header.Set("User-Agent", cmd.BuildAgentName+"/"+cmd.BuildVersion+"-"+cmd.BuildCommitSha)
 	}
 	return req, err
 }

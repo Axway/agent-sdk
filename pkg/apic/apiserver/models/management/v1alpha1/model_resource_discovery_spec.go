@@ -11,14 +11,14 @@ package v1alpha1
 
 // ResourceDiscoverySpec struct for ResourceDiscoverySpec
 type ResourceDiscoverySpec struct {
-	Version          string                               `json:"version,omitempty"`
-	Kind             string                               `json:"kind,omitempty"`
+	ExtraAttributes  map[string]string                    `json:"extraAttributes,omitempty"`
 	Group            string                               `json:"group,omitempty"`
-	NamespaceFilter  ResourceDiscoverySpecNamespaceFilter `json:"namespaceFilter,omitempty"`
-	ResourceFilter   ResourceDiscoverySpecResourceFilter  `json:"resourceFilter,omitempty"`
+	IgnoreLabels     []string                             `json:"ignoreLabels,omitempty"`
 	KeepSpecFields   []string                             `json:"keepSpecFields,omitempty"`
 	KeepStatusFields []string                             `json:"keepStatusFields,omitempty"`
-	IgnoreLabels     []string                             `json:"ignoreLabels,omitempty"`
+	Kind             string                               `json:"kind,omitempty"`
+	NamespaceFilter  ResourceDiscoverySpecNamespaceFilter `json:"namespaceFilter,omitempty"`
+	ResourceFilter   ResourceDiscoverySpecResourceFilter  `json:"resourceFilter,omitempty"`
 	Tags             []string                             `json:"tags,omitempty"`
-	ExtraAttributes  map[string]string                    `json:"extraAttributes,omitempty"`
+	Version          string                               `json:"version,omitempty"`
 }

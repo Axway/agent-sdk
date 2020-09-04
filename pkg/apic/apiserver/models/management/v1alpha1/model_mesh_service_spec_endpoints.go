@@ -11,7 +11,7 @@ package v1alpha1
 
 // MeshServiceSpecEndpoints struct for MeshServiceSpecEndpoints
 type MeshServiceSpecEndpoints struct {
-	Workloads []string          `json:"workloads,omitempty"`
-	Subset    map[string]string `json:"subset,omitempty"`
 	Specs     []string          `json:"specs,omitempty"`
+	Subset    map[string]string `json:"subset,omitempty"`
+	Workloads []string          `json:"workloads,omitempty"`
 }

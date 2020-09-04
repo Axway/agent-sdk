@@ -33,12 +33,17 @@ const newGroupedResource = (group, version) => ({
   },
 });
 
-const isSpecEmpty = (spec) =>
-  JSON.stringify(spec) === JSON.stringify({ type: 'object', additionalProperties: false });
+// Checks if spec is equal to {type: 'object', additionalProperties: false} and ignore the order of the keys
+const isSpecEmpty = (spec) => {
+  if (Object.keys(spec).length === 2) {
+    return spec['type'] === 'object' && spec['additionalProperties'] === false;
+  }
+  return false;
+};
 
 // Convert the yaml definitions to an array of json objects.
 const resources = JSON.parse(
-  execSync(`cat pkg/apic/apiserver/definitions/*.yaml | yq -s .`).toString()
+  execSync(`cat pkg/apic/apiserver/definitions/*.yaml | yq r - -d* -j --collect`).toString()
 )
   // Pull each version out and add the group, kind, & scope values
   .map((resource) =>
@@ -106,7 +111,7 @@ const groupedResources = resources.reduce((acc, currentResource) => {
 for (groupedResource of groupedResources) {
   const { group, openapi, version } = groupedResource;
   const res = execSync(
-    `openapi-generator generate -g go -i /dev/stdin --package-name ${version} --output pkg/apic/apiserver/models/${group}/${version} -DmodelDocs=false -Dmodels << 'EOF'\n${JSON.stringify(
+    `openapi-generator generate -g go -i /dev/stdin --package-name ${version} --output pkg/apic/apiserver/models/${group}/${version} --global-property modelDocs=false,models << 'EOF'\n${JSON.stringify(
       openapi
     )}\nEOF`
   );

@@ -1,15 +1,13 @@
 package apic
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
 
@@ -47,149 +45,40 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func createServiceClient() (*ServiceClient, *corecfg.CentralConfiguration) {
+func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
+	webhook := &corecfg.WebhookConfiguration{
+		URL:     "http://foo.bar",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	subscriptions := corecfg.SubscriptionConfiguration{
+		Approval: &corecfg.ApprovalConfig{
+			SubscriptionApprovalMode:    "webhook",
+			SubscriptionApprovalWebhook: webhook,
+		},
+	}
+
 	cfg := &corecfg.CentralConfiguration{
-		TeamID: "test",
+		TeamName: "test",
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		SubscriptionConfiguration: &subscriptions,
+	}
+
+	if tlsCfg != nil {
+		cfg.TLS = tlsCfg
 	}
 	c := New(cfg)
 	return c.(*ServiceClient), cfg
 }
-func TestCreateCatalogItemBodyForAdd(t *testing.T) {
-	// set the config values
-	c, _ := createServiceClient()
-	tags := make(map[string]interface{})
-	tags["key1"] = "val1"
-	tags["key2"] = "val2"
-
-	jsonFile1, _ := os.Open("./testdata/swagger1.json") // No Security
-	swaggerFile1, _ := ioutil.ReadAll(jsonFile1)
-	authPolicy := determineAuthPolicyFromSwagger(&swaggerFile1)
-	desc := gjson.Get(string(swaggerFile1), "info.description")
-	documentation := desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS API Gateway"
-	}
-	docBytes, _ := json.Marshal(documentation)
-
-	serviceBody := ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile1,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes1, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem1 CatalogItemInit
-	json.Unmarshal(catalogBytes1, &catalogItem1)
-
-	// Validate the security is pass-through
-	if catalogItem1.Properties[0].Value.AuthPolicy != "pass-through" {
-		t.Error("swagger1.json has no security, therefore the AuthPolicy should have been pass-through. Found: ", catalogItem1.Properties[0].Value.AuthPolicy)
-	}
-
-	jsonFile2, _ := os.Open("./testdata/swagger2.json") // API Key
-	swaggerFile2, _ := ioutil.ReadAll(jsonFile2)
-	authPolicy = determineAuthPolicyFromSwagger(&swaggerFile2)
-	desc = gjson.Get(string(swaggerFile2), "info.description")
-	documentation = desc.Str
-	if documentation == "" {
-		documentation = "API imported from AWS API Gateway"
-	}
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From AWS API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile2,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes2, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem2 CatalogItemInit
-	json.Unmarshal(catalogBytes2, &catalogItem2)
-
-	// Validate the security is verify-api-key
-	if catalogItem2.Properties[0].Value.AuthPolicy != "verify-api-key" {
-		t.Error("swagger2.json has security, therefore the AuthPolicy should have been verify-api-key. Found: ", catalogItem2.Properties[0].Value.AuthPolicy)
-	}
-
-	jsonFile3, _ := os.Open("./testdata/swagger3.json") // Oauth
-	swaggerFile3, _ := ioutil.ReadAll(jsonFile3)
-	authPolicy = determineAuthPolicyFromSwagger(&swaggerFile3)
-	desc = gjson.Get(string(swaggerFile1), "info.description")
-	documentation = desc.Str
-	if documentation == "" {
-		documentation = "API imported from Axway API Gateway"
-	}
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From Axway API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    authPolicy,
-		Swagger:       swaggerFile3,
-		Documentation: docBytes,
-		Tags:          tags,
-	}
-
-	catalogBytes3, _ := c.marshalCatalogItemInit(serviceBody)
-
-	var catalogItem3 CatalogItemInit
-	json.Unmarshal(catalogBytes3, &catalogItem3)
-
-	// Validate the security is verify-api-key
-	if catalogItem3.Properties[0].Value.AuthPolicy != "verify-oauth-token" {
-		t.Error("swagger3.json has security, therefore the AuthPolicy should have been verify-oauth-token. Found: ", catalogItem3.Properties[0].Value.AuthPolicy)
-	}
-
-	wsdlFile, _ := os.Open("./testdata/weather.xml") // WSDL
-	wsdlFileBytes, _ := ioutil.ReadAll(wsdlFile)
-	documentation = "API imported from Axway API Gateway"
-
-	docBytes, _ = json.Marshal(documentation)
-	serviceBody = ServiceBody{
-		NameToPush:    "Beano",
-		APIName:       "serviceapi1",
-		URL:           "https://restapiID.execute-api.eu-west.amazonaws.com/stage",
-		Description:   "API From Axway API Gateway (RestApiId: restapiID, StageName: stage",
-		Version:       "1.0.0",
-		AuthPolicy:    Passthrough,
-		Swagger:       wsdlFileBytes,
-		Documentation: docBytes,
-		Tags:          tags,
-		ResourceType:  Wsdl,
-	}
-
-	catalogBytes3, _ = c.marshalCatalogItemInit(serviceBody)
-
-	json.Unmarshal(catalogBytes3, &catalogItem3)
-
-	// Validate the security is verify-api-key
-	assert.Equal(t, Specification, catalogItem3.Revision.Properties[1].Key)
-	assert.Equal(t, Wsdl, catalogItem3.DefinitionSubType)
-}
 
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
-	c, _ := createServiceClient()
+	c, _ := createServiceClient(nil)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
@@ -301,8 +190,22 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
-	assert.Equal(t, "lbean006.lab.phx.axway.org", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
+	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
 	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+}
 
+func TestSanitizeAPIName(t *testing.T) {
+	name := sanitizeAPIName("Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName(".Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName(".Abc...De/f")
+	assert.Equal(t, "abc--.de-f", name)
+	name = sanitizeAPIName("Abc.D-ef")
+	assert.Equal(t, "abc.d-ef", name)
+	name = sanitizeAPIName("Abc.Def=")
+	assert.Equal(t, "abc.def", name)
+	name = sanitizeAPIName("A..bc.Def")
+	assert.Equal(t, "a--bc.def", name)
 }

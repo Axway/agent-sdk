@@ -9,6 +9,7 @@ import (
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
@@ -20,6 +21,8 @@ const (
 	Passthrough = "pass-through"
 	Oauth       = "verify-oauth-token"
 )
+
+const serverName = "AMPLIFY Central"
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
@@ -34,16 +37,16 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	CreateService(serviceBody ServiceBody) (string, error)
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
+	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
-	DeleteCatalogItem(itemID string) error
-	GetConsumerInstanceForCatalogItem(catalogID string) (*APIServer, error)
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
+	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
+	GetUserEmailAddress(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
-	DoesCatalogItemForServiceHaveActiveSubscriptions(itemID string) (bool, error)
-	InitiateUnsubscribeCatalogItem(catalogItemID string) (int, error)
-	UnsubscribeCatalogItem(catalogItemID string) (int, error)
+	GetCatalogItemName(ID string) (string, error)
 }
 
 type tokenGetter interface {
@@ -74,11 +77,18 @@ func New(cfg corecfg.CentralConfig) Client {
 		cfg:                       cfg,
 		tokenRequester:            platformTokenGetter,
 		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
-		DefaultSubscriptionSchema: NewSubscriptionSchema(),
+		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
 	}
+
+	// set the default webhook if one has been configured
+	webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
+	if webCfg != nil && webCfg.IsConfigured() {
+		serviceClient.DefaultSubscriptionApprovalWebhook = webCfg
+	}
+
 	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 
-	hc.RegisterHealthcheck("AMPLIFY Central", "central", serviceClient.healthcheck)
+	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
 	return serviceClient
 }
 
@@ -162,19 +172,6 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
-	// Check that we can reach the API Manager catalog
-	// only concerned if mode: PublishToCatalog
-	if c.cfg.IsPublishToCatalogMode() && c.cfg.GetAgentType() != corecfg.TraceabilityAgent {
-		err := c.checkCatalogHealth()
-		if err != nil {
-			s = hc.Status{
-				Result:  hc.FAIL,
-				Details: err.Error(),
-			}
-		}
-		// Return our response
-		return &s
-	}
 
 	// Check that appropriate settings for the API server are set
 	err = c.checkAPIServerHealth()
@@ -184,6 +181,7 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 			Details: err.Error(),
 		}
 	}
+
 	// Return our response
 	return &s
 }
@@ -191,94 +189,127 @@ func (c *ServiceClient) healthcheck(name string) *hc.Status {
 func (c *ServiceClient) checkPlatformHealth() error {
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
-		return fmt.Errorf("error trying to get platform token: %s. Check AMPLIFY Central configuration for AUTH_URL, AUTH_REALM, AUTH_CLIENTID, AUTH_PRIVATEKEY, and AUTH_PUBLICKEY", err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 	return nil
-}
-func (c *ServiceClient) checkCatalogHealth() error {
-	// do a request for catalog items
-	headers, err := c.createHeader()
-	if err != nil {
-		return fmt.Errorf("error creating request header. %s", err.Error())
-	}
-
-	sendErr := "error sending request to API Manager: %s. Check API Manager for URL and CONNECTION"
-	statusErr := "error sending request to API Manager - status code %d. Check API Manager and CONNECTION"
-
-	// do a request for catalog items
-	_, err = c.sendServerRequest(c.cfg.GetCatalogItemsURL(), headers, make(map[string]string, 0), sendErr, statusErr)
-	return err
 }
 
 func (c *ServiceClient) checkAPIServerHealth() error {
 
 	headers, err := c.createHeader()
 	if err != nil {
-		return fmt.Errorf("error creating request header. %s", err.Error())
+		return errors.Wrap(ErrAuthenticationCall, err.Error())
 	}
 
-	sendErr := "error sending request to API Server: %s. Check AMPLIFY Central configuration for URL and ENVIRONMENT"
-	statusErr := "error sending request to API Server - status code %d. Check AMPLIFY Central configuration for ENVIRONMENT"
-
-	// do a request for the environment
-	apiServerEnvByte, err := c.sendServerRequest(c.cfg.GetAPIServerEnvironmentURL(), headers, make(map[string]string, 0), sendErr, statusErr)
-	if err != nil {
-		queryParams := map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", c.cfg.GetEnvironmentName()),
-		}
-		envListByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams, sendErr, statusErr)
-		if err == nil {
-			var envList []EnvironmentSpec
-			err := json.Unmarshal(envListByte, &envList)
-			if err != nil || len(envList) == 0 {
-				return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
-			}
-			c.cfg.SetEnvironmentID(envList[0].ID)
-			return nil
-		}
+	apiEnvironment, err := c.getEnvironment(headers)
+	if err != nil || apiEnvironment == nil {
 		return err
 	}
 
-	// Get end id from apiServerEnvByte
-	var apiServerEnv APIServer
-	err = json.Unmarshal(apiServerEnvByte, &apiServerEnv)
-	if err != nil {
-		return fmt.Errorf("error sending request to API Server. Check AMPLIFY Central configuration for ENVIRONMENT")
+	if c.cfg.GetEnvironmentID() == "" {
+		// need to save this ID for the traceability agent for later
+		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
+
+		// Validate if team exists
+		if c.cfg.GetTeamName() != "" {
+			_, err := c.getTeamByName(c.cfg.GetTeamName())
+			if err != nil {
+				return err
+			}
+		}
+
+		err = c.updateEnvironmentStatus(*apiEnvironment)
+		if err != nil {
+			return err
+		}
 	}
-	c.cfg.SetEnvironmentID(apiServerEnv.Metadata.ID)
 	return nil
 }
 
-func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string, sendErr, statusErr string) ([]byte, error) {
+func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error {
+	attribute := "x-axway-agent"
+	attributes := apiEnvironment.Attributes
+
+	// check to see if x-axway-agent has already been set
+	if _, found := attributes[attribute]; found {
+		log.Debugf("Environment attribute: %s is already set.", attribute)
+		return nil
+	}
+
+	attributes[attribute] = "true"
+
+	apiServer := APIServer{
+		Name:       apiEnvironment.Name,
+		Title:      apiEnvironment.Title,
+		Attributes: attributes,
+		Spec:       apiEnvironment.Spec,
+		Tags:       apiEnvironment.Tags,
+	}
+
+	buffer, err := json.Marshal(apiServer)
+	if err != nil {
+		return nil
+	}
+	_, err = c.apiServiceDeployAPI(http.MethodPut, c.cfg.GetEnvironmentURL(), buffer)
+
+	if err != nil {
+		return err
+	}
+	log.Debugf("Updated environment attribute: %s to true.", attribute)
+	return nil
+}
+
+func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, error) {
+	queryParams := map[string]string{}
+
+	// do a request for the environment
+	apiEnvByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get env id from apiServerEnvByte
+	var apiEnvironment APIServer
+	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
+	if err != nil {
+		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
+	}
+
+	// Validate that we actually get an environment ID back within the Metadata
+	if apiEnvironment.Metadata == nil {
+		return nil, ErrEnvironmentQuery
+	}
+
+	if apiEnvironment.Metadata.ID == "" {
+		return nil, ErrEnvironmentQuery
+	}
+
+	return &apiEnvironment, nil
+}
+
+func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         url,
 		QueryParams: query,
 		Headers:     headers,
 	}
+
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, fmt.Errorf(sendErr, err.Error())
+		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
-	if response.Code != http.StatusOK {
+
+	switch response.Code {
+	case http.StatusOK:
+		return response.Body, nil
+	case http.StatusUnauthorized:
+		return nil, ErrAuthentication
+	default:
 		logResponseErrors(response.Body)
-		return nil, fmt.Errorf(statusErr, response.Code)
+		return nil, ErrRequestQuery
 	}
-	return response.Body, nil
-}
 
-// DeleteCatalogItem -
-func (c *ServiceClient) DeleteCatalogItem(itemID string) error {
-	// delete doesn't need a service body
-	serviceBody := ServiceBody{
-		AuthPolicy: Passthrough,
-	}
-	return c.deleteCatalogItem(itemID, serviceBody)
-}
-
-// GetConsumerInstanceForCatalogItem -
-func (c *ServiceClient) GetConsumerInstanceForCatalogItem(itemID string) (*APIServer, error) {
-	return c.getConsumerInstanceForCatalogItem(itemID)
 }
 
 // GetCatalogItemIDForConsumerInstance -
@@ -291,12 +322,85 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 	return c.deleteConsumerInstance(instanceName)
 }
 
+// GetConsumerInstanceByID -
+func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error) {
+	return c.getConsumerInstanceByID((consumerInstanceID))
+}
+
 // GetSubscriptionsForCatalogItem -
 func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
 }
 
-// DoesCatalogItemForServiceHaveActiveSubscriptions -
-func (c *ServiceClient) DoesCatalogItemForServiceHaveActiveSubscriptions(instanceID string) (bool, error) {
-	return c.doesCatalogItemForServiceHaveActiveSubscriptions(instanceID)
+// GetUserEmailAddress - request the user email
+func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return "", err
+	}
+
+	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
+	log.Debugf("Platform URL being used to get user information %s", platformURL)
+
+	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
+	if reqErr != nil {
+		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
+			return "", ErrNoAddressFound.FormatError(id)
+		}
+		return "", reqErr
+	}
+
+	// Get the email
+	var platformUserInfo PlatformUserInfo
+	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
+	if err != nil {
+		return "", err
+	}
+
+	email := platformUserInfo.Result.Email
+	log.Debugf("Platform user email %s", email)
+
+	return email, nil
+}
+
+// getTeamByName - returns the team based on team name
+func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
+	queryParams := map[string]string{
+		"query": fmt.Sprintf("name==\"%s\"", teamName),
+	}
+	platformTeams, err := c.getTeam(queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(platformTeams) == 0 {
+		return nil, ErrTeamNotFound.FormatError(teamName)
+	}
+
+	return &platformTeams[0], nil
+}
+
+// getTeam - returns the team ID based on filter
+func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the teams using Client registry service instead of from platform.
+	// Platform teams API require access and DOSA accound will not have the access
+	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
+
+	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
+	if reqErr != nil {
+		return nil, reqErr
+	}
+
+	var platformTeams []PlatformTeam
+	err = json.Unmarshal(response, &platformTeams)
+	if err != nil {
+		return nil, err
+	}
+
+	return platformTeams, nil
 }

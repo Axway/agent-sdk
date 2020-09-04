@@ -11,6 +11,6 @@ package v1alpha1
 
 // SpecDiscoverySpecResourceFilter Pod filter.
 type SpecDiscoverySpecResourceFilter struct {
-	Names       []string          `json:"names,omitempty"`
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+	Names       []string          `json:"names,omitempty"`
 }

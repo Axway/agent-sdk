@@ -1,8 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
-
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
@@ -16,6 +14,17 @@ const (
 	Oas3          = "oas3"
 	Specification = "specification"
 	Swagger       = "swagger"
+
+	SubscriptionSchemaNameSuffix      = ".authsubscription"
+	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
+	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
+)
+
+// Constants for attributes
+const (
+	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
+	AttrExternalAPIID                = "externalAPIID"
+	AttrCreatedBy                    = "createdBy"
 )
 
 type apiErrorResponse map[string][]apiError
@@ -31,148 +40,54 @@ const (
 	PublishedState   = "PUBLISHED"
 )
 
+// consts for status
+const (
+	DeprecatedStatus  = "DEPRECATED"
+	PublishedStatus   = "PUBLISHED"
+	UnpublishedStatus = "UNPUBLISHED"
+)
+
+// consts for update serverity
+const (
+	MajorChange = "MAJOR"
+	MinorChange = "MINOR"
+)
+
 //ServiceBody -
 type ServiceBody struct {
-	NameToPush       string `json:",omitempty"`
-	APIName          string `json:",omitempty"`
-	RestAPIID        string `json:",omitempty"`
-	URL              string `json:",omitempty"`
-	Stage            string `json:",omitempty"`
-	TeamID           string `json:",omitempty"`
-	Description      string `json:",omitempty"`
-	Version          string `json:",omitempty"`
-	AuthPolicy       string `json:",omitempty"`
-	Swagger          []byte `json:",omitempty"`
-	Documentation    []byte `json:",omitempty"`
-	Tags             map[string]interface{}
-	Buffer           []byte            `json:",omitempty"`
-	AgentMode        corecfg.AgentMode `json:",omitempty"`
-	ServiceExecution serviceExecution  `json:"omitempty"`
-	Image            string
-	ImageContentType string
-	CreatedBy        string
-	ResourceType     string
+	NameToPush        string `json:",omitempty"`
+	APIName           string `json:",omitempty"`
+	RestAPIID         string `json:",omitempty"`
+	URL               string `json:",omitempty"`
+	Stage             string `json:",omitempty"`
+	Description       string `json:",omitempty"`
+	Version           string `json:",omitempty"`
+	AuthPolicy        string `json:",omitempty"`
+	Swagger           []byte `json:",omitempty"`
+	Documentation     []byte `json:",omitempty"`
+	Tags              map[string]interface{}
+	Buffer            []byte            `json:",omitempty"`
+	AgentMode         corecfg.AgentMode `json:",omitempty"`
+	ServiceExecution  serviceExecution  `json:"omitempty"`
+	Image             string
+	ImageContentType  string
+	CreatedBy         string
+	ResourceType      string
+	SubscriptionName  string
+	APIUpdateSeverity string `json:",omitempty"`
+	State             string
+	Status            string
 }
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester               tokenGetter
-	cfg                          corecfg.CentralConfig
-	apiClient                    coreapi.Client
-	DefaultSubscriptionSchema    SubscriptionSchema
-	RegisteredSubscriptionSchema SubscriptionSchema
-	subscriptionMgr              SubscriptionManager
-}
-
-//CatalogPropertyValue -
-type CatalogPropertyValue struct {
-	URL        string `json:"url"`
-	AuthPolicy string `json:"authPolicy"`
-}
-
-//CatalogProperty -
-type CatalogProperty struct {
-	Key   string               `json:"key"`
-	Value CatalogPropertyValue `json:"value"`
-}
-
-//CatalogRevisionProperty -
-type CatalogRevisionProperty struct {
-	Key   string          `json:"key"`
-	Value json.RawMessage `json:"value"`
-}
-
-//CatalogItemInitRevision -
-type CatalogItemInitRevision struct {
-	ID         string                    `json:"id,omitempty"`
-	Properties []CatalogRevisionProperty `json:"properties"`
-	Number     int                       `json:"number,omitempty"`
-	Version    string                    `json:"version"`
-	State      string                    `json:"state"`
-	Status     string                    `json:"status,omitempty"`
-}
-
-//CatalogItemRevision -
-type CatalogItemRevision struct {
-	ID string `json:"id,omitempty"`
-	// metadata []CatalogRevisionProperty `json:"properties"`
-	Number  int    `json:"number,omitempty"`
-	Version string `json:"version"`
-	State   string `json:"state"`
-	Status  string `json:"status,omitempty"`
-}
-
-//CatalogSubscription -
-type CatalogSubscription struct {
-	Enabled         bool                      `json:"enabled"`
-	AutoSubscribe   bool                      `json:"autoSubscribe"`
-	AutoUnsubscribe bool                      `json:"autoUnsubscribe"`
-	Properties      []CatalogRevisionProperty `json:"properties"`
-}
-
-//CatalogItemInit -
-type CatalogItemInit struct {
-	OwningTeamID       string                  `json:"owningTeamId"`
-	DefinitionType     string                  `json:"definitionType"`
-	DefinitionSubType  string                  `json:"definitionSubType"`
-	DefinitionRevision int                     `json:"definitionRevision"`
-	Name               string                  `json:"name"`
-	Description        string                  `json:"description,omitempty"`
-	Properties         []CatalogProperty       `json:"properties,omitempty"`
-	Tags               []string                `json:"tags,omitempty"`
-	Visibility         string                  `json:"visibility"` // default: RESTRICTED
-	Subscription       CatalogSubscription     `json:"subscription,omitempty"`
-	Revision           CatalogItemInitRevision `json:"revision,omitempty"`
-	CategoryReferences string                  `json:"categoryReferences,omitempty"`
-}
-
-// CatalogItemImage -
-type CatalogItemImage struct {
-	DataType      string `json:"data,omitempty"`
-	Base64Content string `json:"base64,omitempty"`
-}
-
-//CatalogItem -
-type CatalogItem struct {
-	ID                 string `json:"id"`
-	OwningTeamID       string `json:"owningTeamId"`
-	DefinitionType     string `json:"definitionType"`
-	DefinitionSubType  string `json:"definitionSubType"`
-	DefinitionRevision int    `json:"definitionRevision"`
-	Name               string `json:"name"`
-	// EntityRelationship EntityRelationship `json:"relationships:omitempty"`  // can't get this to work
-	Description string         `json:"description,omitempty"`
-	Tags        []string       `json:"tags,omitempty"`
-	Metadata    *AuditMetadata `json:"metadata,omitempty"`
-
-	Visibility           string              `json:"visibility"` // default: RESTRICTED
-	State                string              `json:"state"`      // default: UNPUBLISHED
-	Access               string              `json:"access,omitempty"`
-	AvailableRevisions   []int               `json:"availableRevisions,omitempty"`
-	LatestVersion        string              `json:"latestVersion,omitempty"`
-	TotalSubscriptions   int                 `json:"totalSubscriptions,omitempty"`
-	LatestVersionDetails CatalogItemRevision `json:"latestVersionDetails,omitempty"`
-	Image                *CatalogItemImage   `json:"image,omitempty"`
-	// categories
-}
-
-// EntityRelationship -
-type EntityRelationship struct {
-	Type             string `json:"type,omitempty"`
-	Value            string `json:"value,omitempty"`
-	Path             string `json:"path,omitempty"`
-	Key              string `json:"key,omitempty"`
-	Spec             string `json:"spec,omitempty"`
-	FromCompositeKey bool   `json:"fromCompositeKey,omitempty"`
-}
-
-// AuditMetadata -
-type AuditMetadata struct {
-	Description     string `json:"description,omitempty"`
-	CreateTimestamp string `json:"createTimestamp,omitempty"`
-	CreateUserID    string `json:"createUserId,omitempty"`
-	ModifyTimestamp string `json:"modifyTimestamp,omitempty"`
-	ModifyUserID    string `json:"modifyUserId,omitempty"`
+	tokenRequester                     tokenGetter
+	cfg                                corecfg.CentralConfig
+	apiClient                          coreapi.Client
+	DefaultSubscriptionSchema          SubscriptionSchema
+	RegisteredSubscriptionSchema       SubscriptionSchema
+	subscriptionMgr                    SubscriptionManager
+	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 }
 
 // APIServerInfoProperty -
@@ -212,6 +127,7 @@ type APIServerMetadata struct {
 // APIServer -
 type APIServer struct {
 	Name       string                 `json:"name"`
+	Kind       string                 `json:"kind,omitempty"`
 	Title      string                 `json:"title"`
 	Tags       []string               `json:"tags"`
 	Attributes map[string]interface{} `json:"attributes"`
@@ -269,28 +185,25 @@ type EnvironmentSpec struct {
 	Metadata interface{} `json:"metadata,omitempty"`
 }
 
-// ConsumerInstanceSpec -
-type ConsumerInstanceSpec struct {
-	Name               string          `json:"name,omitempty"`
-	APIServiceInstance string          `json:"apiServiceInstance"`
-	OwningTeam         string          `json:"owningTeam,omitempty"`
-	Description        string          `json:"description,omitempty"`
-	Visibility         string          `json:"visibility,omitempty"` // default: RESTRICTED
-	Version            string          `json:"version,omitempty"`
-	State              string          `json:"state,omitempty"` // default: UNPUBLISHED
-	Status             string          `json:"status,omitempty"`
-	Tags               []string        `json:"tags,omitempty"`
-	Icon               *APIServiceIcon `json:"icon,omitempty"`
-	Documentation      string          `json:"documentation,omitempty"`
-
-	// UnstructuredDataProperties *APIServiceSubscription `json:"subscription"`
-	// AdditionalDataProperties *APIServiceSubscription `json:"subscription"`
-	Subscription *APIServiceSubscription `json:"subscription"`
+// PlatformUserInfo - Represents user resource from platform
+type PlatformUserInfo struct {
+	Success bool `json:"success"`
+	Result  struct {
+		ID        string `json:"_id"`
+		GUID      string `json:"guid"`
+		UserID    int64  `json:"user_id"`
+		Firstname string `json:"firstname"`
+		Lastname  string `json:"lastname"`
+		Active    bool   `json:"active"`
+		Email     string `json:"email"`
+	} `json:"result"`
 }
 
-//APIServiceSubscription -
-type APIServiceSubscription struct {
-	Enabled                bool   `json:"enabled,omitempty"`       // default: false
-	AutoSubscribe          bool   `json:"autoSubscribe,omitempty"` // default: true
-	SubscriptionDefinition string `json:"subscriptionDefinition"`
+// PlatformTeam - represents team from Central Client registry
+type PlatformTeam struct {
+	ID          string `json:"guid"`
+	Name        string `json:"name"`
+	Description string `json:"desc"`
+	Default     bool   `json:"isDefault"`
+	// Add remaining properties ??
 }

@@ -2,7 +2,6 @@ package healthcheck
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
@@ -68,7 +68,7 @@ func WaitForReady() error {
 		select {
 		// Got a timeout! Fail with a timeout error
 		case <-timeout:
-			return errors.New("Failed with timeout error.  Services are not ready")
+			return errors.ErrTimeoutServicesNotReady
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {

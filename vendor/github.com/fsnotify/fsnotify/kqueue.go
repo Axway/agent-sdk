@@ -147,6 +147,12 @@ func (w *Watcher) Remove(name string) error {
 	return nil
 }
 
+// SetRecursive enables watches to also monitor subdirectories. Currently
+// only supported under Windows.
+func (w *Watcher) SetRecursive() error {
+	return errors.New("recursion not supported")
+}
+
 // Watch all events (except NOTE_EXTEND, NOTE_LINK, NOTE_REVOKE)
 const noteAllEvents = unix.NOTE_DELETE | unix.NOTE_WRITE | unix.NOTE_ATTRIB | unix.NOTE_RENAME
 

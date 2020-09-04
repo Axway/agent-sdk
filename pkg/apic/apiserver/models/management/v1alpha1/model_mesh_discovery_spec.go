@@ -11,6 +11,6 @@ package v1alpha1
 
 // MeshDiscoverySpec struct for MeshDiscoverySpec
 type MeshDiscoverySpec struct {
-	Selectors      map[string]interface{} `json:"selectors,omitempty"`
 	EnvironmentRef string                 `json:"environmentRef,omitempty"`
+	Selectors      map[string]interface{} `json:"selectors,omitempty"`
 }

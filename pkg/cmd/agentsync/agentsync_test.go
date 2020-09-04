@@ -63,24 +63,26 @@ func TestAddCmdProp(t *testing.T) {
 	AddSyncConfigProperties(props)
 
 	// Validate the property was added
-	val := props.BoolFlagValue(syncFlag)
+	val := props.BoolPropertyValue(syncFlag)
 
 	assert.False(t, val, "Validate that the default property value is false")
 }
 
 func SetSyncProperty(t *testing.T, sync bool) properties.Properties {
+	// reset syncmode
+	syncMode = false
 
 	// Create command properties
 	rootCmd := &cobra.Command{}
 	props := properties.NewProperties(rootCmd)
 
-	// Set the sync flag to true
-	rootCmd.Flags().Bool(syncFlag, sync, "")
+	// Set the sync property to true
+	props.AddBoolProperty(syncFlag, sync, "")
+	SetSyncMode(props)
 
 	// Validate the property was added
 	val := props.BoolFlagValue(syncFlag)
-
-	assert.Equal(t, sync, val, "Validate that the sync flag was set appropriately")
+	assert.Equal(t, sync, val, "Validate that the sync property was set appropriately")
 
 	return props
 }
@@ -90,11 +92,11 @@ func TestCheckSyncFlag(t *testing.T) {
 	cas := setupCustomAgentSync("")
 
 	// Set the property to true for the next test
-	props := SetSyncProperty(t, true)
+	SetSyncProperty(t, true)
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exitcode := CheckSyncFlag(props)
+	exitcode := CheckSyncFlag()
 	assert.True(t, cas.syncCalled, "The syncCalled attribute was not set properly, was our custom sync method used?")
 	assert.Equal(t, 0, exitcode, "Expected the sync process to have a 0 exitcode")
 
@@ -102,23 +104,23 @@ func TestCheckSyncFlag(t *testing.T) {
 	cas = setupCustomAgentSync("")
 
 	// Set the property to false for the next test
-	props = SetSyncProperty(t, false)
+	SetSyncProperty(t, false)
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exitcode = CheckSyncFlag(props)
+	exitcode = CheckSyncFlag()
 	assert.False(t, cas.syncCalled, "The syncCalled attribute false as expected")
-	assert.Equal(t, -1, exitcode, "Expected the sync process to have a 0 exitcode")
+	assert.Equal(t, -1, exitcode, "Expected the sync process to have a -1 exitcode")
 
 	// recreate the custom agent sync and props
 	cas = setupCustomAgentSync("failed")
 
 	// Set the property to true for the next test
-	props = SetSyncProperty(t, true)
+	SetSyncProperty(t, true)
 
 	// Call the CheckSyncFlag
 	assert.False(t, cas.syncCalled, "The syncCalled attribute should be false prior to calling CheckSyncFlag")
-	exitcode = CheckSyncFlag(props)
+	exitcode = CheckSyncFlag()
 	assert.True(t, cas.syncCalled, "The syncCalled attribute was not set properly, was our custom sync method used?")
 	assert.Equal(t, 1, exitcode, "Expected the sync process to have a 1 exitcode")
 

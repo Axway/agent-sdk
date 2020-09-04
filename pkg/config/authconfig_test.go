@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/exception"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 	"github.com/stretchr/testify/assert"
 )
 
