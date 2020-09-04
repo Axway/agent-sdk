@@ -116,7 +116,7 @@
       "scanner": "GoSec",
       "classification": "False Positive",
       "justification": "This is only present in the junit tests and not a part of the product.",
-      "component": "os.Open(filepath)",
+      "component": "os.Open\\(filepath\\)",
       "version": "",
       "ids": [
         "G304"
