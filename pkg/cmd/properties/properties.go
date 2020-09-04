@@ -1,10 +1,14 @@
 package properties
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -30,17 +34,22 @@ type Properties interface {
 	BoolPropertyValue(name string) bool
 	BoolFlagValue(name string) bool
 	StringSlicePropertyValue(name string) []string
+
+	// Log Properties
+	DebugLogProperties()
 }
 
 type properties struct {
 	Properties
-	rootCmd *cobra.Command
+	rootCmd             *cobra.Command
+	flattenedProperties map[string]string
 }
 
 // NewProperties - Creates a new Properties struct
 func NewProperties(rootCmd *cobra.Command) Properties {
 	cmdprops := &properties{
-		rootCmd: rootCmd,
+		rootCmd:             rootCmd,
+		flattenedProperties: make(map[string]string),
 	}
 
 	return cmdprops
@@ -117,6 +126,7 @@ func (p *properties) StringSlicePropertyValue(name string) []string {
 	// turn it into an array ourselves
 	switch val.(type) {
 	case string:
+		p.addPropertyToFlatMap(name, val.(string))
 		return p.convertStringToSlice(fmt.Sprintf("%v", viper.Get(name)))
 	default:
 		return viper.GetStringSlice(name)
@@ -132,7 +142,9 @@ func (p *properties) convertStringToSlice(value string) []string {
 }
 
 func (p *properties) StringPropertyValue(name string) string {
-	return viper.GetString(name)
+	s := viper.GetString(name)
+	p.addPropertyToFlatMap(name, s)
+	return s
 }
 
 func (p *properties) StringFlagValue(name string) (bool, string) {
@@ -140,19 +152,27 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 	if flag == nil || flag.Value.String() == "" {
 		return false, ""
 	}
-	return true, flag.Value.String()
+	fv := flag.Value.String()
+	p.addPropertyToFlatMap(name, fv)
+	return true, fv
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
-	return viper.GetDuration(name)
+	d := viper.GetDuration(name)
+	p.addPropertyToFlatMap(name, d.String())
+	return d
 }
 
 func (p *properties) IntPropertyValue(name string) int {
-	return viper.GetInt(name)
+	i := viper.GetInt(name)
+	p.addPropertyToFlatMap(name, strconv.Itoa(i))
+	return i
 }
 
 func (p *properties) BoolPropertyValue(name string) bool {
-	return viper.GetBool(name)
+	b := viper.GetBool(name)
+	p.addPropertyToFlatMap(name, strconv.FormatBool(b))
+	return b
 }
 
 func (p *properties) BoolFlagValue(name string) bool {
@@ -173,4 +193,27 @@ func (p *properties) nameToFlagName(name string) (flagName string) {
 		flagName += strings.Title(part)
 	}
 	return
+}
+
+// Map containing any sensitive data that needs to be masked with "*" (asterisks)
+// Add any senstivate data here using flattened key format
+var maskKeys = map[string]bool{
+	"central.auth.keyPassword":                          true,
+	"central.subscriptions.notifications.smtp.password": true,
+	"apimanager.auth.password":                          true,
+}
+
+func (p *properties) addPropertyToFlatMap(key, value string) {
+	if maskKeys[key] {
+		value = util.MaskValue(value)
+	}
+
+	p.flattenedProperties[key] = value
+}
+
+func (p *properties) DebugLogProperties() {
+	data, _ := json.MarshalIndent(p.flattenedProperties, "", " ")
+	if strings.ToLower(log.GetLevel().String()) == "debug" {
+		fmt.Printf("%s\n", data)
+	}
 }

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -10,9 +9,7 @@ import (
 	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -488,41 +485,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		return nil, err
 	}
 
-	// attempt to log CentralConfiguration to console
-	// logCentralConfig(cfg)
-
 	return cfg, nil
-}
-
-// logCentralConfig - log config values to the console
-// 	1. Clone the current CentralConfiguration
-// 	2. Inject the clone with masked values for sensitive data
-// 	3. Print CentralConiguration to the console (only in debug mode)
-func logCentralConfig(centralConfig *CentralConfiguration) {
-
-	// log central config to the console
-	if strings.ToLower(log.GetLevel().String()) != "debug" {
-		return
-	}
-
-	// Clone CentralConfiguration for debug purposes
-	centralConfigClone := centralConfig
-
-	maskSensitiveData(centralConfigClone, centralConfig)
-
-	data, _ := json.MarshalIndent(centralConfigClone, "", " ")
-	log.Debug("********** Central configuration values - START **********")
-	fmt.Printf("%s\n", data)
-	log.Debug("********** Central configuration values - FINISH **********")
-}
-
-// maskSensitveData - this function will hold any sensitive data that needs to be masked
-func maskSensitiveData(centralConfigClone, centralConfig *CentralConfiguration) {
-	// mask auth key password
-	authDebug := centralConfigClone.GetAuthConfig().(*AuthConfiguration)
-	authDebug.KeyPwd = util.MaskValue(centralConfig.Auth.GetKeyPassword())
-
-	// mask email server password
-	subscriptionDebug := centralConfigClone.GetSubscriptionConfig().(*SubscriptionConfiguration)
-	subscriptionDebug.Notifications.SMTP.Password = util.MaskValue((centralConfig.GetSubscriptionConfig().GetSMTPPassword()))
 }

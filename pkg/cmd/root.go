@@ -157,6 +157,8 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
+	c.GetProperties().DebugLogProperties()
+
 	// Validate Agent Config
 	err = c.validateAgentConfig(agentCfg)
 	if err != nil {
