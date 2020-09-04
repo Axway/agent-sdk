@@ -10,7 +10,8 @@
     "twistlock": false,
     "zap": false,
     "yarn": false,
-    "gosec": true
+    "gosec": true,
+    "whitesource": true
   },
   "suppressions": [
     {
@@ -110,6 +111,18 @@
       ]
     },
     {
+      "path": ".*api\\/mockclient.go:.*",
+      "regex": true,
+      "scanner": "GoSec",
+      "classification": "False Positive",
+      "justification": "This is only present in the junit tests and not a part of the product.",
+      "component": "os.Open\\(filepath\\)",
+      "version": "",
+      "ids": [
+        "G304"
+      ]
+    },
+    {
       "path": ".*config\\/centralconfig\\.go:.*",
       "regex": true,
       "scanner": "GoSec",
@@ -119,18 +132,6 @@
       "version": "",
       "ids": [
         "G101"
-      ]
-    },
-    {
-      "path": ".*api\\/mockclient\\.go",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "justification": "This is only present in the junit tests and not a part of the product.",
-      "component": "os.Open(filepath)",
-      "version": "",
-      "ids": [
-        "G304"
       ]
     }
   ]
