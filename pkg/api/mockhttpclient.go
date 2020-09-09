@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 )
 
 // MockHTTPClient - use for mocking the HTTP client
@@ -55,7 +53,7 @@ func (c *MockHTTPClient) SetResponse(filepath string, code int) {
 // SetResponses -
 // if you care about the response content and the code, pass both in
 // if you only care about the code, pass "" for the filepath
-func (c *MockHTTPClient) SetResponses(responses []api.MockResponse) {
+func (c *MockHTTPClient) SetResponses(responses []MockResponse) {
 	c.RespCount = 0
 	c.Responses = responses
 }
