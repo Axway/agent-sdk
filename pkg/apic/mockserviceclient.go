@@ -28,7 +28,9 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		Mode:        corecfg.PublishToEnvironmentAndCatalog,
 		Environment: "testenvironment",
 		Auth: &corecfg.AuthConfiguration{
-			URL: "http://localhost:8888",
+			URL:      "http://localhost:8888",
+			Realm:    "Broker",
+			ClientID: "dummy",
 		},
 		SubscriptionConfiguration: &subscriptions,
 	}
