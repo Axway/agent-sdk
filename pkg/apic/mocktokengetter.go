@@ -4,7 +4,7 @@ package apic
 type mockTokenGetter struct {
 }
 
-// MockTokenGetter - global var for use in unit tests
+// MockTokenGetter - global var for use in unit tests to return a fake token
 var MockTokenGetter = &mockTokenGetter{}
 
 // GetToken -
