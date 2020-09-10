@@ -3,6 +3,7 @@ package properties
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -202,7 +203,8 @@ var maskValues = make([]string, 0)
 
 func (p *properties) addPropertyToFlatMap(key, value string) {
 	for _, maskValue := range maskValues {
-		if strings.Contains(key, strings.TrimSpace(maskValue)) {
+		match, _ := regexp.MatchString("\\b"+strings.TrimSpace(maskValue)+"\\b", key)
+		if match {
 			value = util.MaskValue(value)
 		}
 	}
