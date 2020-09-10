@@ -969,6 +969,15 @@ spec:
                     type: string
                   port:
                     type: integer
+                  specs:
+                    type: object
+                    properties:
+                      discoveredSpecs:
+                        type: array
+                        items:
+                          type: string
+                          x-amplify-kind-ref: APISpec
+                          x-amplify-kind-ref-type: soft
           additionalProperties: true
 ---
 group: management
