@@ -14,6 +14,12 @@ import (
 	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
+func TestNewClient(t *testing.T) {
+	cfg := corecfg.NewCentralConfig(corecfg.DiscoveryAgent)
+	client := New(cfg)
+	assert.NotNil(t, client)
+}
+
 func TestCheckAPIServerHealth(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	// mockClient := setupMocks(c)
