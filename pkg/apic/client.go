@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
@@ -125,10 +124,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	return strArr
-}
-
-func isUnitTesting() bool {
-	return strings.HasSuffix(os.Args[0], ".test")
 }
 
 func logResponseErrors(body []byte) {

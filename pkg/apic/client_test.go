@@ -4,18 +4,22 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 func TestCheckAPIServerHealth(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	// mockClient := setupMocks(c)
-	// cfg.Environment = "Environment"
-	// cfg.Mode = corecfg.PublishToEnvironment
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "Environment"
+	cfg.Mode = corecfg.PublishToEnvironment
 	mockHTTPClient.SetResponses([]api.MockResponse{
 		{
 			FileName: "./testdata/apic-environment.json", // this for call to getEnvironment
@@ -42,26 +46,18 @@ func TestCheckAPIServerHealth(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 	})
-	svcClient.cfg.SetEnvironmentID("")
+	cfg.SetEnvironmentID("")
 	err = svcClient.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToEnvironment mode")
 
 	// Test TraceabilityAgent, publishToEnvironment
-	// centralConfig := svcClient.cfg.(*corecfg.CentralConfiguration)
-	// centralConfig.AgentType = corecfg.TraceabilityAgent
-	// centralConfig.Mode = corecfg.PublishToEnvironment
-	// err = svcClient.checkAPIServerHealth()
-	// assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
-	// assert.Equal(t, "e4e085bf70638a1d0170639297610000", centralConfig.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
+	cfg.AgentType = corecfg.TraceabilityAgent
+	cfg.Mode = corecfg.PublishToEnvironment
+	mockHTTPClient.RespCount = 0
+	err = svcClient.checkAPIServerHealth()
+	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
+	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
 }
-
-// TODO func TestNewClientWithTLSConfig(t *testing.T) {
-// 	tlsCfg := corecfg.NewTLSConfig()
-// 	client, mockHTTPClient := GetTestServiceClient(tlsCfg)
-
-// 	assert.NotNil(t, client)
-// 	assert.NotNil(t, mockHTTPClient)
-// }
 
 func arrContains(arr []string, s string) bool {
 	for _, n := range arr {
@@ -83,28 +79,33 @@ func TestMapTagsToArray(t *testing.T) {
 	assert.True(t, arrContains(result, "tag2"))
 	assert.False(t, arrContains(result, "bar"))
 
-	// cfg.TagsToPublish = "bar"
-	// result = svcClient.mapToTagsArray(tags)
-	// assert.Equal(t, 5, len(result))
-	// assert.True(t, arrContains(result, "tag1_value1"))
-	// assert.True(t, arrContains(result, "tag2"))
-	// assert.True(t, arrContains(result, "bar"))
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.TagsToPublish = "bar"
+	result = svcClient.mapToTagsArray(tags)
+	assert.Equal(t, 5, len(result))
+	assert.True(t, arrContains(result, "tag1_value1"))
+	assert.True(t, arrContains(result, "tag2"))
+	assert.True(t, arrContains(result, "bar"))
 }
 
 func TestGetUserEmailAddress(t *testing.T) {
-	client, mockHTTPClient := GetTestServiceClient()
+	svcClient, mockHTTPClient := GetTestServiceClient()
 
-	// cfg.PlatformURL = "http://foo.bar:4080"
-	// cfg.Environment = "Environment"
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "Environment"
+	cfg.PlatformURL = "http://foo.bar:4080"
 
 	// Test DiscoveryAgent, PublishToEnvironment
 	mockHTTPClient.SetResponses([]api.MockResponse{
-		{FileName: "./testdata/userinfo.json"},
+		{
+			FileName: "./testdata/userinfo.json",
+			RespCode: http.StatusOK,
+		},
 	})
 
-	addr, err := client.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99f")
-	// assert.Nil(t, err)
-	// assert.Equal(t, "joe@axway.com", addr)
+	addr, err := svcClient.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99f")
+	assert.Nil(t, err)
+	assert.Equal(t, "joe@axway.com", addr)
 
 	// test a failure
 	mockHTTPClient.SetResponses([]api.MockResponse{
@@ -114,23 +115,29 @@ func TestGetUserEmailAddress(t *testing.T) {
 		},
 	})
 
-	addr, err = client.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99g")
+	addr, err = svcClient.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99g")
 	assert.NotNil(t, err)
 	assert.Equal(t, "", addr)
 }
 
 func TestHealthCheck(t *testing.T) {
-	client, mockHTTPClient := GetTestServiceClient()
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	requester := svcClient.tokenRequester
+
+	// swap out mock for a real tokenRequester
+	svcClient.tokenRequester = &platformTokenGetter{
+		requester: apicauth.NewPlatformTokenGetter("", "", "", "", "", "", 1*time.Second),
+	}
 
 	// failure
-	status := client.healthcheck("Client Test")
+	status := svcClient.healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.FAIL)
-	// assert.True(t, strings.Contains(status.Details, "error getting authentication token"))
+	assert.True(t, strings.Contains(status.Details, "error getting authentication token"))
 
-	// mockClient := setupMocks(client)
+	svcClient.tokenRequester = requester
 
 	// failure
-	status = client.healthcheck("Client Test")
+	status = svcClient.healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.FAIL)
 	assert.True(t, strings.Contains(status.Details, "unexpected end"))
 
@@ -139,8 +146,9 @@ func TestHealthCheck(t *testing.T) {
 		{FileName: "./testdata/apiserver-environment.json", RespCode: http.StatusOK},
 		{FileName: "./testdata/apic-team.json", RespCode: http.StatusOK},
 	}
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	mockHTTPClient.SetResponses(responses)
-	status = client.healthcheck("Client Test")
+	status = svcClient.healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
-	// assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
+	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
 }
