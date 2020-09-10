@@ -88,6 +88,7 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("log.format", "json", "Log format (json, line, package)")
 	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
 	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
+	c.props.AddStringProperty("log.maskedValues", "", "List of key words in the config to be masked (e.g. pwd, password, secret, key")
 	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
 	c.props.AddStringProperty(EnvFileFlag, "", EnvFileFlagDesciption)
 }
@@ -180,6 +181,7 @@ func (c *agentRootCommand) setupLogger() {
 	logFormat := c.props.StringPropertyValue("log.format")
 	logOutput := c.props.StringPropertyValue("log.output")
 	logPath := c.props.StringPropertyValue("log.path")
+	c.props.MaskValues(c.props.StringPropertyValue("log.maskedValues"))
 	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 }
 

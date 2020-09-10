@@ -3,6 +3,7 @@ package properties
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ type Properties interface {
 	StringSlicePropertyValue(name string) []string
 
 	// Log Properties
+	MaskValues(name string)
 	DebugLogProperties()
 }
 
@@ -195,20 +197,22 @@ func (p *properties) nameToFlagName(name string) (flagName string) {
 	return
 }
 
-// Map containing any sensitive data that needs to be masked with "*" (asterisks)
+// String array containing any sensitive data that needs to be masked with "*" (asterisks)
 // Add any senstivate data here using flattened key format
-var maskKeys = map[string]bool{
-	"central.auth.keyPassword":                          true,
-	"central.subscriptions.notifications.smtp.password": true,
-	"apimanager.auth.password":                          true,
-}
+var maskValues = make([]string, 0)
 
 func (p *properties) addPropertyToFlatMap(key, value string) {
-	if maskKeys[key] {
-		value = util.MaskValue(value)
+	for _, maskValue := range maskValues {
+		match, _ := regexp.MatchString("\\b"+strings.TrimSpace(maskValue)+"\\b", key)
+		if match {
+			value = util.MaskValue(value)
+		}
 	}
-
 	p.flattenedProperties[key] = value
+}
+
+func (p *properties) MaskValues(maskedKeys string) {
+	maskValues = strings.Split(maskedKeys, ",")
 }
 
 func (p *properties) DebugLogProperties() {
