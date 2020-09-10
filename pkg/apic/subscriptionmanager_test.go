@@ -10,14 +10,13 @@ import (
 	"time"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessorRegistration(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	assert.NotNil(t, client)
-	// serviceClient := client.(*ServiceClient)
-	// assert.NotNil(t, serviceClient)
 
 	approvedProcessor := func(subscription Subscription) {}
 	unsubscribeProcessor := func(subscription Subscription) {}
@@ -57,12 +56,12 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 	}
 }
 
-func createServiceClientForSubscriptions(server *httptest.Server) *ServiceClient {
+func createServiceClientForSubscriptions(server *httptest.Server) (*ServiceClient, *corecfg.CentralConfiguration) {
 	client, _ := GetTestServiceClient()
 	cfg := GetTestServiceClientCentralConfiguration(client)
 	cfg.URL = server.URL
 	client.apiClient = coreapi.NewClient(nil, "")
-	return client
+	return client, cfg
 }
 
 func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
@@ -133,8 +132,10 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
-	client := createServiceClientForSubscriptions(server)
+	client, cfg := createServiceClientForSubscriptions(server)
 	assert.NotNil(t, client)
+	cfg.Mode = corecfg.PublishToEnvironment
+	cfg.Environment = "test"
 
 	approvedSubscriptions := make(map[string]Subscription)
 	unsubscribedSubscriptions := make(map[string]Subscription)
@@ -200,7 +201,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
-	client := createServiceClientForSubscriptions(server)
+	client, _ := createServiceClientForSubscriptions(server)
 	assert.NotNil(t, client)
 
 	approvedProcessor := func(subscription Subscription) {
