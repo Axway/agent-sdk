@@ -7,14 +7,11 @@ package clients
 import (
 	"fmt"
 	cAPIV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
-	core_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1"
 	definitions_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1"
 	management_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1"
 )
 
 type Set struct {
-	WebhookCoreV1alpha1                              *core_v1alpha1.UnscopedWebhookClient
-	SecretCoreV1alpha1                               *core_v1alpha1.UnscopedSecretClient
 	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
 	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
 	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
@@ -43,14 +40,6 @@ func New(b cAPIV1.Base) *Set {
 
 	var err error
 
-	s.WebhookCoreV1alpha1, err = core_v1alpha1.NewWebhookClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1.Webhook: %s", err))
-	}
-	s.SecretCoreV1alpha1, err = core_v1alpha1.NewSecretClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/core/v1alpha1.Secret: %s", err))
-	}
 	s.ResourceGroupDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceGroupClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceGroup: %s", err))
