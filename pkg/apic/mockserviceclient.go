@@ -2,6 +2,7 @@ package apic
 
 import (
 	"net/http"
+	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
@@ -25,8 +26,11 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 	}
 
 	cfg := &corecfg.CentralConfiguration{
-		Mode:        corecfg.PublishToEnvironmentAndCatalog,
-		Environment: "testenvironment",
+		TeamName:     "testteam",
+		TenantID:     "112456",
+		Mode:         corecfg.PublishToEnvironmentAndCatalog,
+		Environment:  "testenvironment",
+		PollInterval: 1 * time.Second,
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",
@@ -45,4 +49,9 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 	}
 	svcClient.subscriptionMgr = newSubscriptionManager(svcClient)
 	return svcClient, apiClient
+}
+
+// GetTestServiceClientCentralConfiguration - cast and return the CentralConfiguration
+func GetTestServiceClientCentralConfiguration(client *ServiceClient) *corecfg.CentralConfiguration {
+	return client.cfg.(*corecfg.CentralConfiguration)
 }

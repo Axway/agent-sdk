@@ -9,36 +9,15 @@ import (
 	"testing"
 	"time"
 
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessorRegistration(t *testing.T) {
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-	cfg := &corecfg.CentralConfiguration{
-		TeamName: "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost:8888",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-	client := New(cfg)
+	client, _ := GetTestServiceClient()
 	assert.NotNil(t, client)
-	serviceClient := client.(*ServiceClient)
-	assert.NotNil(t, serviceClient)
+	// serviceClient := client.(*ServiceClient)
+	// assert.NotNil(t, serviceClient)
 
 	approvedProcessor := func(subscription Subscription) {}
 	unsubscribeProcessor := func(subscription Subscription) {}
@@ -46,7 +25,7 @@ func TestProcessorRegistration(t *testing.T) {
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribeProcessor)
 
-	processorMap := serviceClient.subscriptionMgr.getProcessorMap()
+	processorMap := client.subscriptionMgr.getProcessorMap()
 
 	registeredApprovedProcessor := processorMap[SubscriptionApproved]
 	assert.NotNil(t, registeredApprovedProcessor)
@@ -76,6 +55,14 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 		},
 		CatalogItemID: catalogID,
 	}
+}
+
+func createServiceClientForSubscriptions(server *httptest.Server) *ServiceClient {
+	client, _ := GetTestServiceClient()
+	cfg := GetTestServiceClientCentralConfiguration(client)
+	cfg.URL = server.URL
+	client.apiClient = coreapi.NewClient(nil, "")
+	return client
 }
 
 func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
@@ -146,37 +133,9 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		Mode:         corecfg.PublishToEnvironment,
-		TeamName:     "test",
-		URL:          server.URL,
-		PollInterval: 1 * time.Second,
-		Environment:  "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-	client := New(cfg)
+	client := createServiceClientForSubscriptions(server)
 	assert.NotNil(t, client)
-	serviceClient := client.(*ServiceClient)
-	assert.NotNil(t, serviceClient)
-	serviceClient.tokenRequester = MockTokenGetter
+
 	approvedSubscriptions := make(map[string]Subscription)
 	unsubscribedSubscriptions := make(map[string]Subscription)
 	approvedProcessor := func(subscription Subscription) {
@@ -241,36 +200,9 @@ func TestSubscriptionUpdate(t *testing.T) {
 	// Close the server when test finishes
 	defer server.Close()
 
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		TeamName:     "test",
-		URL:          server.URL,
-		PollInterval: 1 * time.Second,
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-	client := New(cfg)
+	client := createServiceClientForSubscriptions(server)
 	assert.NotNil(t, client)
-	serviceClient := client.(*ServiceClient)
-	assert.NotNil(t, serviceClient)
 
-	serviceClient.tokenRequester = MockTokenGetter
 	approvedProcessor := func(subscription Subscription) {
 		subscription.UpdateState(SubscriptionActive)
 	}
@@ -290,29 +222,7 @@ func TestSubscriptionUpdate(t *testing.T) {
 }
 
 func TestBlacklist(t *testing.T) {
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-
-	client := New(cfg)
+	client, _ := GetTestServiceClient()
 	mgr := client.GetSubscriptionManager().(*subscriptionManager)
 	mgr.AddBlacklistItem("123")
 	assert.Equal(t, 1, len(mgr.blacklist))
