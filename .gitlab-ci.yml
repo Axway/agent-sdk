@@ -264,6 +264,8 @@ dependencycheck:on-schedule:
 
 whitesource:on-schedule:
   retry: 0
+  variables:
+    GIT_CHECKOUT: "true"
   before_script:
     - git config --global http.sslVerify false
     - git fetch && git checkout master
