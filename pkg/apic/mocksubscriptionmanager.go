@@ -15,26 +15,33 @@ func NewMockSubscriptionManager() *MockSubscriptionManager {
 	return &MockSubscriptionManager{}
 }
 
+// RegisterProcessor -
 func (m *MockSubscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	m.RegisterProcessorCalled++
 }
 
+// RegisterValidator -
 func (m *MockSubscriptionManager) RegisterValidator(validator SubscriptionValidator) {
 	m.RegisterValidatorCalled++
 }
 
+// Start -
 func (m *MockSubscriptionManager) Start() {
 	m.StartCalled++
 }
 
+// func (m *MockSubscriptionManager) Stop() {
+ -
 func (m *MockSubscriptionManager) Stop() {
 	m.StopCalled++
 }
 
+// AddBlacklistItem -
 func (m *MockSubscriptionManager) AddBlacklistItem(id string) {
 	m.AddBlacklistItemCalled++
 }
 
+// RemoveBlacklistItem -
 func (m *MockSubscriptionManager) RemoveBlacklistItem(id string) {
 	m.RemoveBlacklistItemCalled++
 }
