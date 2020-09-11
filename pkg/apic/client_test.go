@@ -59,7 +59,7 @@ func TestCheckAPIServerHealth(t *testing.T) {
 	// Test TraceabilityAgent, publishToEnvironment
 	cfg.AgentType = corecfg.TraceabilityAgent
 	cfg.Mode = corecfg.PublishToEnvironment
-	mockHTTPClient.RespCount = 0
+	mockHTTPClient.RespCount = 0 // DON'T REMOVE! Need this because we are reusing the response array from above
 	err = svcClient.checkAPIServerHealth()
 	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
 	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")

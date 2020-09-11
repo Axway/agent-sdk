@@ -153,6 +153,11 @@ func (c *ServiceClient) GetSubscriptionManager() SubscriptionManager {
 	return c.subscriptionMgr
 }
 
+// SetSubscriptionManager -
+func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
+	c.subscriptionMgr = mgr
+}
+
 func (c *ServiceClient) healthcheck(name string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
