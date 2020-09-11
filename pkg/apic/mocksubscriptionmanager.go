@@ -1,5 +1,6 @@
 package apic
 
+// MockSubscriptionManager - used for unit tests to bypass the normal SubscriptionManager
 type MockSubscriptionManager struct {
 	SubscriptionManager
 	RegisterProcessorCalled   int
