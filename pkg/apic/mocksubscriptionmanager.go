@@ -30,8 +30,7 @@ func (m *MockSubscriptionManager) Start() {
 	m.StartCalled++
 }
 
-// func (m *MockSubscriptionManager) Stop() {
- -
+// Stop -
 func (m *MockSubscriptionManager) Stop() {
 	m.StopCalled++
 }
