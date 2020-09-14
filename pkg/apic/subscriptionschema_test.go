@@ -6,42 +6,15 @@ import (
 	"testing"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
+func commonSetup(t *testing.T) (Client, *api.MockHTTPClient, SubscriptionSchema) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	assert.NotNil(t, svcClient)
+	assert.NotNil(t, mockHTTPClient)
 
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		TeamName: "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost:8888",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-	client := New(cfg)
-	assert.NotNil(t, client)
-	serviceClient := client.(*ServiceClient)
-	assert.NotNil(t, serviceClient)
-
-	serviceClient.tokenRequester = MockTokenGetter
-	assert.NotNil(t, serviceClient.DefaultSubscriptionSchema)
-	passthruSchema := serviceClient.DefaultSubscriptionSchema
-	assert.NotNil(t, passthruSchema)
+	assert.NotNil(t, svcClient.DefaultSubscriptionSchema)
 
 	apiKeySchema := NewSubscriptionSchema("testname")
 	apiKeySchema.AddProperty("prop1", "string", "someproperty", "", true, []string{})
@@ -54,22 +27,21 @@ func commonSetup(t *testing.T) (Client, SubscriptionSchema) {
 	assert.Equal(t, 2, len(schema.UniqueKeys))
 	assert.Equal(t, "def", schema.UniqueKeys[1])
 
-	return client, apiKeySchema
+	return svcClient, mockHTTPClient, apiKeySchema
 }
 
 func TestRegisterSubscriptionSchema(t *testing.T) {
-	client, apiKeySchema := commonSetup(t)
-	serviceClient := client.(*ServiceClient)
-	mock := api.MockClient{ResponseCode: http.StatusOK}
-	serviceClient.apiClient = &mock
-	err := client.RegisterSubscriptionSchema(apiKeySchema)
+	svcClient, mockHTTPClient, apiKeySchema := commonSetup(t)
+	mockHTTPClient.ResponseCode = http.StatusOK
+	err := svcClient.RegisterSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
 
 	// this return code should be good
-	mock.ResponseCode = http.StatusCreated
-	err = client.RegisterSubscriptionSchema(apiKeySchema)
+	mockHTTPClient.ResponseCode = http.StatusCreated
+	err = svcClient.RegisterSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 
+	serviceClient := svcClient.(*ServiceClient)
 	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
 	assert.NotNil(t, registeredAPIKeySchema)
 	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
@@ -91,17 +63,15 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 }
 
 func TestUpdateSubscriptionSchema(t *testing.T) {
-	client, apiKeySchema := commonSetup(t)
-	serviceClient := client.(*ServiceClient)
+	svcClient, mockHTTPClient, apiKeySchema := commonSetup(t)
 
 	// this return code should fail
-	mock := api.MockClient{ResponseCode: http.StatusNoContent}
-	serviceClient.apiClient = &mock
-	err := client.UpdateSubscriptionSchema(apiKeySchema)
+	mockHTTPClient.ResponseCode = http.StatusNoContent
+	err := svcClient.UpdateSubscriptionSchema(apiKeySchema)
 	assert.NotNil(t, err)
 
 	// this return code should be good
-	mock.ResponseCode = http.StatusOK
-	err = client.UpdateSubscriptionSchema(apiKeySchema)
+	mockHTTPClient.ResponseCode = http.StatusOK
+	err = svcClient.UpdateSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
 }

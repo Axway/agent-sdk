@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -45,40 +44,10 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		TeamName: "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost:8888",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-
-	if tlsCfg != nil {
-		cfg.TLS = tlsCfg
-	}
-	c := New(cfg)
-	return c.(*ServiceClient), cfg
-}
-
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
-	c, _ := createServiceClient(nil)
+	c, _ := GetTestServiceClient()
+	assert.NotNil(t, c)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2

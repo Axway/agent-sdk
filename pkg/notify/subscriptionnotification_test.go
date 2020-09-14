@@ -67,7 +67,8 @@ func TestSubscriptionNotification(t *testing.T) {
 	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
 	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
 
-	subNotif.apiClient = &coreapi.MockClient{}
+	// set up a mock HTTP client
+	subNotif.apiClient = &coreapi.MockHTTPClient{}
 
 	// Set the authtemplate based on the authtype
 	subNotif.SetAuthorizationTemplate("")           // try a bad value
