@@ -36,19 +36,24 @@ type Summary struct {
 	Duration     int          `json:"duration,omitempty"`
 	Application  *Application `json:"application,omitempty"`
 	Product      string       `json:"product,omitempty"`
-	Team         string       `json:"team,omitempty"`
+	Team         *Team       `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
 	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
 }
 
-// Application  - Represnts the application used in transaction summary event
+// Application  - Represents the application used in transaction summary event
 type Application struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
 }
 
+// Team  - Represents the team used in transaction summary event
+type Team struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
 // Proxy - Represents the proxy definition in summary event
 type Proxy struct {
 	ID       string `json:"id,omitempty"`

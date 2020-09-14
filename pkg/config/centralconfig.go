@@ -66,6 +66,9 @@ type CentralConfig interface {
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
 	GetTeamName() string
+	SetTeamName(teamID string)
+	GetTeamID() string
+	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
@@ -110,6 +113,7 @@ type CentralConfiguration struct {
 	PollInterval              time.Duration `config:"pollInterval"`
 	ProxyURL                  string        `config:"proxyUrl"`
 	environmentID             string
+	teamID                    string
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 }
 
@@ -185,6 +189,21 @@ func (c *CentralConfiguration) GetEnvironmentName() string {
 // GetTeamName - Returns the team name
 func (c *CentralConfiguration) GetTeamName() string {
 	return c.TeamName
+}
+
+// SetTeamName - Sets the team ID
+func (c *CentralConfiguration) SetTeamName(teamName string) {
+	c.TeamName = teamName
+}
+
+// GetTeamID - Returns the team ID
+func (c *CentralConfiguration) GetTeamID() string {
+	return c.teamID
+}
+
+// SetTeamID - Sets the team ID
+func (c *CentralConfiguration) SetTeamID(teamID string) {
+	c.teamID = teamID
 }
 
 // GetURL - Returns the central base URL
@@ -404,6 +423,7 @@ const (
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
@@ -425,7 +445,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
-		props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")

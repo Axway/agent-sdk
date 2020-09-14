@@ -210,17 +210,24 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 
-		// Validate if team exists
-		if c.cfg.GetTeamName() != "" {
-			_, err := c.getTeamByName(c.cfg.GetTeamName())
-			if err != nil {
-				return err
-			}
-		}
-
 		err = c.updateEnvironmentStatus(*apiEnvironment)
 		if err != nil {
 			return err
+		}
+	}
+
+	if c.cfg.GetTeamID() == "" {
+		// Validate if team exists
+		team, err := c.getCentralTeam(c.cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+		// Set the team Id
+		c.cfg.SetTeamID(team.ID)
+
+		// Set the Team Name if it is blank
+		if c.cfg.GetTeamName() == "" {
+			c.cfg.SetTeamName(team.Name)
 		}
 	}
 	return nil
@@ -363,10 +370,17 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	return email, nil
 }
 
-// getTeamByName - returns the team based on team name
-func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
+// getCentralTeam - returns the team based on team name
+func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+	// Query for the default, if no teamName is given
 	queryParams := map[string]string{
-		"query": fmt.Sprintf("name==\"%s\"", teamName),
+		"query": "default==true",
+	}
+
+	if teamName != "" {
+		queryParams = map[string]string{
+			"query": fmt.Sprintf("name==\"%s\"", teamName),
+		}
 	}
 	platformTeams, err := c.getTeam(queryParams)
 	if err != nil {
@@ -388,7 +402,7 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	// Get the teams using Client registry service instead of from platform.
-	// Platform teams API require access and DOSA accound will not have the access
+	// Platform teams API require access and DOSA account will not have the access
 	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
 
 	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
