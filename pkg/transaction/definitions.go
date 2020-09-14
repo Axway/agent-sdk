@@ -52,7 +52,6 @@ type Application struct {
 // Team  - Represents the team used in transaction summary event
 type Team struct {
 	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
 }
 // Proxy - Represents the proxy definition in summary event
 type Proxy struct {

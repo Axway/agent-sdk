@@ -66,7 +66,6 @@ type CentralConfig interface {
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
 	GetTeamName() string
-	SetTeamName(teamID string)
 	GetTeamID() string
 	SetTeamID(teamID string)
 	GetURL() string
@@ -189,11 +188,6 @@ func (c *CentralConfiguration) GetEnvironmentName() string {
 // GetTeamName - Returns the team name
 func (c *CentralConfiguration) GetTeamName() string {
 	return c.TeamName
-}
-
-// SetTeamName - Sets the team ID
-func (c *CentralConfiguration) SetTeamName(teamName string) {
-	c.TeamName = teamName
 }
 
 // GetTeamID - Returns the team ID

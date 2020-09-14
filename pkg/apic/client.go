@@ -224,11 +224,6 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		}
 		// Set the team Id
 		c.cfg.SetTeamID(team.ID)
-
-		// Set the Team Name if it is blank
-		if c.cfg.GetTeamName() == "" {
-			c.cfg.SetTeamName(team.Name)
-		}
 	}
 	return nil
 }
