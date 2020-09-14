@@ -18,12 +18,20 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		Secret:  "",
 	}
 
-	subscriptions := corecfg.SubscriptionConfiguration{
+	subscriptionCfg := corecfg.SubscriptionConfiguration{
 		Approval: &corecfg.ApprovalConfig{
 			SubscriptionApprovalMode:    "webhook",
 			SubscriptionApprovalWebhook: webhook,
 		},
+		Notifications: &corecfg.NotificationConfig{
+			Webhook: &corecfg.WebhookConfiguration{
+				URL:     "http://bar.foo",
+				Headers: "Header=contentType,Value=application/json",
+			},
+		},
 	}
+
+	subscriptionCfg.SetNotificationType(corecfg.NotifySMTP)
 
 	cfg := &corecfg.CentralConfiguration{
 		TeamName:     "testteam",
@@ -36,7 +44,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
-		SubscriptionConfiguration: &subscriptions,
+		SubscriptionConfiguration: &subscriptionCfg,
 	}
 
 	apiClient := &api.MockHTTPClient{ResponseCode: http.StatusOK}

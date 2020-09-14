@@ -54,14 +54,14 @@ type CentralSubscription struct {
 	Name                    string                      `json:"name"`
 	NextPossibleStates      []string                    `json:"nextPossibleStates"`
 	AllowedTransitionStates []string                    `json:"allowedTransitionStates"`
-	Metadata                centralSubscriptionMetadata `json:"metadata"`
+	Metadata                CentralSubscriptionMetadata `json:"metadata"`
 	ApicID                  string                      `json:"-"`
 	RemoteAPIID             string                      `json:"-"`
 	apicClient              *ServiceClient
 }
 
 // CentralSubscriptionMetadata -
-type centralSubscriptionMetadata struct {
+type CentralSubscriptionMetadata struct {
 	CreateTimestamp string `json:"createTimestamp"`
 	CreateUserID    string `json:"createUserId"`
 	ModifyTimestamp string `json:"modifyTimestamp"`
