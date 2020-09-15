@@ -368,9 +368,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 // getCentralTeam - returns the team based on team name
 func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
 	// Query for the default, if no teamName is given
-	queryParams := map[string]string{
-		"query": "default==true",
-	}
+	queryParams := map[string]string{}
 
 	if teamName != "" {
 		queryParams = map[string]string{
@@ -386,7 +384,19 @@ func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
 		return nil, ErrTeamNotFound.FormatError(teamName)
 	}
 
-	return &platformTeams[0], nil
+	team := platformTeams[0]
+	if teamName == "" {
+		// Loop through to find the default team
+		for i, platformTeam := range platformTeams {
+			if platformTeam.Default {
+				// Found the default, set as the team var and break
+				team = platformTeams[i]
+				break
+			}
+		}
+	}
+
+	return &team, nil
 }
 
 // getTeam - returns the team ID based on filter
