@@ -181,7 +181,12 @@ func (c *agentRootCommand) setupLogger() {
 	logFormat := c.props.StringPropertyValue("log.format")
 	logOutput := c.props.StringPropertyValue("log.output")
 	logPath := c.props.StringPropertyValue("log.path")
-	c.props.MaskValues(c.props.StringPropertyValue("log.maskedValues"))
+	maskedValues := c.props.StringPropertyValue("log.maskedValues")
+	// Only attempt to mask values if the key maskValues AND key words for maskValues exist
+	if maskedValues != "" {
+		c.props.MaskValues(maskedValues)
+	}
+
 	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 }
 
