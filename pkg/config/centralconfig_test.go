@@ -103,3 +103,28 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTP_PROXY"))
 }
+
+func TestTeamConfig(t *testing.T) {
+	cfg := NewCentralConfig(TraceabilityAgent)
+	centralConfig := cfg.(*CentralConfiguration)
+
+	// Setup Auth config to ignore auth validation errors for this test
+	authCfg := centralConfig.Auth.(*AuthConfiguration)
+	authCfg.URL = "test"
+	authCfg.Realm = "Broker"
+	authCfg.ClientID = "aaaa"
+	authCfg.PrivateKey = "pppp"
+	authCfg.PublicKey = "kkk"
+	centralConfig.TenantID = "1111"
+	centralConfig.URL = "aaa"
+	centralConfig.Environment = "111111"
+	centralConfig.APICDeployment = "aaa"
+
+	// Should be nil, not yet set
+	assert.Equal(t, "", centralConfig.GetTeamID(), "Team ID was expected to be blank as it has not yet been set")
+	
+	//Set it and validate
+	teamID := "abc12:34567:def89:12345:67890"
+	centralConfig.SetTeamID(teamID)
+	assert.Equal(t, teamID, centralConfig.GetTeamID(), "The Team ID was not set appropriately")
+}

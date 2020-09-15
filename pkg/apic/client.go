@@ -210,18 +210,20 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 
-		// Validate if team exists
-		if c.cfg.GetTeamName() != "" {
-			_, err := c.getTeamByName(c.cfg.GetTeamName())
-			if err != nil {
-				return err
-			}
-		}
-
 		err = c.updateEnvironmentStatus(*apiEnvironment)
 		if err != nil {
 			return err
 		}
+	}
+
+	if c.cfg.GetTeamID() == "" {
+		// Validate if team exists
+		team, err := c.getCentralTeam(c.cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+		// Set the team Id
+		c.cfg.SetTeamID(team.ID)
 	}
 	return nil
 }
@@ -363,10 +365,15 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	return email, nil
 }
 
-// getTeamByName - returns the team based on team name
-func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
-	queryParams := map[string]string{
-		"query": fmt.Sprintf("name==\"%s\"", teamName),
+// getCentralTeam - returns the team based on team name
+func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+	// Query for the default, if no teamName is given
+	queryParams := map[string]string{}
+
+	if teamName != "" {
+		queryParams = map[string]string{
+			"query": fmt.Sprintf("name==\"%s\"", teamName),
+		}
 	}
 	platformTeams, err := c.getTeam(queryParams)
 	if err != nil {
@@ -377,7 +384,19 @@ func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
 		return nil, ErrTeamNotFound.FormatError(teamName)
 	}
 
-	return &platformTeams[0], nil
+	team := platformTeams[0]
+	if teamName == "" {
+		// Loop through to find the default team
+		for i, platformTeam := range platformTeams {
+			if platformTeam.Default {
+				// Found the default, set as the team var and break
+				team = platformTeams[i]
+				break
+			}
+		}
+	}
+
+	return &team, nil
 }
 
 // getTeam - returns the team ID based on filter
@@ -388,7 +407,7 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	// Get the teams using Client registry service instead of from platform.
-	// Platform teams API require access and DOSA accound will not have the access
+	// Platform teams API require access and DOSA account will not have the access
 	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
 
 	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)

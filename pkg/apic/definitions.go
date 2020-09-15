@@ -201,9 +201,7 @@ type PlatformUserInfo struct {
 
 // PlatformTeam - represents team from Central Client registry
 type PlatformTeam struct {
-	ID          string `json:"guid"`
-	Name        string `json:"name"`
-	Description string `json:"desc"`
-	Default     bool   `json:"isDefault"`
-	// Add remaining properties ??
+	ID    string `json:"guid"`
+	Name    string `json:"name"`
+	Default bool   `json:"default"`
 }
