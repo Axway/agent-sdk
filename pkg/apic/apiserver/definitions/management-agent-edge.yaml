@@ -1,0 +1,322 @@
+---
+group: management
+kind: EdgeDataplane
+scope: Environment
+description: Resource representing Axway Edge API Gateway dataplane
+spec:
+  names:
+    plural: edgedataplanes
+    singular: edgedataplane
+  cli:
+    shortNames:
+      - edgedps
+      - edgedp
+    columns:
+      - name: Name
+        description: The name of the Axway Edge API Gateway dataplane.
+        jsonPath: .name
+        format: string
+      - name: APIManagerHost
+        description: The host name where Axway API Manager is deployed
+        jsonPath: .spec.apiManager.host
+        format: string
+      - name: Age
+        description: The date when the Axway Edge API Gateway dataplane was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiManager:
+              type: object
+              description: Axway API Manager configuration.
+              properties:
+                host:
+                  type: string
+                  description: The host name where Axway API Manager is deployed
+                port:
+                  type: integer
+                  description: The Axway API Manager admin port. Defaults to 8075
+                pollInterval:
+                  type: string
+                  description: >
+                    Interval the agent will poll the Axway API Manager. Defaults to '30s' indicating 30 seconds
+                    The value is a sequence of number with unit suffix. Example '30s', '1m30s'.
+                    Valid units:
+                     * 'h' - Hours
+                     * 'm' - Minutes
+                     * 's' - Seconds
+                  pattern: '^(?:\d+h)?(\d+m?)?(\d+s)?$'
+            apiGatewayManager:
+              type: object
+              description: Axway API Gateway Manager configuration.
+              properties:
+                host:
+                  type: string
+                  description: The host name where Axway API Gateway Manager is deployed
+                port:
+                  type: integer
+                  description: The Axway API Gateway Manager admin port. Defaults to 8090
+                pollInterval:
+                  type: string
+                  description: >
+                    Interval the agent will poll API Gateway. Defaults to '1m' indicating 1 minute.
+                    The value is a sequence of number with unit suffix. Example '30s', '1m30s'.
+                    Valid units:
+                     * 'h' - Hours
+                     * 'm' - Minutes
+                     * 's' - Seconds
+                  pattern: '^(?:\d+h)?(\d+m?)?(\d+s)?$'
+          additionalProperties: false
+---
+group: management
+scope: Environment
+kind: EdgeDiscoveryAgent
+description: Resource representing Axway Edge API Gateway discovery agent
+spec:
+  names:
+    plural: edgediscoveryagents
+    singular: edgediscoveryagent
+  cli:
+    shortNames:
+      - edgedas
+      - edgeda
+    columns:
+      - name: Name
+        description: The name of the Axway Edge API Gateway discovery agent.
+        jsonPath: .name
+        format: string
+      - name: Status
+        description: The current status of the Axway Edge API Gateway discovery agent.
+        jsonPath: .status.state
+        format: string
+      - name: Age
+        description: The date when the Axway Edge API Gateway discovery agent was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            dataplane:
+              type: string
+              description: The name of the Axway Edge API Gateway dataplane associated to this agent
+              x-amplify-kind-ref: EdgeDataplane
+            config:
+              type: object
+              description: Represents the Axway Edge API Gateway discovery agent config
+              properties:
+                filter:
+                  type: string
+                  description: >
+                    Defines the filter expression to be evaluated for discovering the API from Axway Edge API Gateway
+                    The filter value is a conditional expression that can use logical operators to compare two value.
+                    The conditional expression must have "tag" as the prefix/selector in the symbol name. For e.g.
+
+                    ```
+                    tag.SOME_TAG == "somevalue"
+                    ```
+
+                    The expression can be a simple condition as shown above or compound condition in which more than one simple conditions are evaluated using logical operator.
+
+                    For e.g.
+
+                    ```
+                    tag.SOME_TAG == "somevalue" || tag.ANOTHER_TAG != "some_other_value"
+                    ```
+
+                    In addition to logical expression, the filter can hold call based expressions. Below are the list of supported call expressions
+
+                    #### Exists
+
+                    Exists call can be made to evaluate if the tag name exists in the list of tags on API. This call expression can be used as unary expression
+                    For e.g.
+
+                    ```
+                    tag.SOME_TAG.Exists()
+                    ```
+
+                    #### Any
+
+                    Any call can be made in a simple expression to evaluate if the tag with any name has specified value or not in the list of tags on the API.
+                    For e.g.
+
+                    ```
+                    tag.Any() == "Tag with some value" || tag.Any() != "Tag with other value"
+                    ```
+
+                    #### Contains
+
+                    Contains call can be made in a simple expression to evaluate if the the specified tag contains specified argument as value. This call expression requires string argument that will be used to perform lookup in tag value
+                    For e.g.
+
+                    ```
+                    tag.Contains("somevalue")
+                    ```
+
+                    #### MatchRegEx
+
+                    MatchRegEx call can be used for evaluating the specified tag value to match specified regular expression. This call expression requires a regular expression as the argument.
+                    For e.g.
+
+                    ```
+                    tag.MatchRegEx("(some){1}")
+                    ```
+                additionalTags:
+                  type: array
+                  description: The list of tags to be added to the API service resource that the agent publishes to Amplify Central
+                  items:
+                    type: string
+                ignoreTags:
+                  type: array
+                  description: The list of tags to exclude from the API service resource that the agent publishes to Amplify Central
+                  items:
+                    type: string
+                owningTeam:
+                  type: string
+                  description: Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
+            logging:
+              type: object
+              description: Logging config
+              properties:
+                level:
+                  type: string
+                  description: Defines the log level.
+                  enum:
+                    - error
+                    - warn
+                    - info
+                    - debug
+          required:
+            - dataplane
+            - config
+          additionalProperties: false
+      subresources:
+        status:
+          openAPIV3Schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: Version name for the agent revision.
+                maxLength: 255
+                pattern: '^(?!\s).*(?<!\s)$'
+              state:
+                type: string
+                description: >
+                  Agent status:
+                   * running - Passed all health checks.  Up and running
+                   * stopped - Agent is not running
+                   * failed - Failed health checks
+                enum:
+                  - running
+                  - stopped
+                  - failed
+              message:
+                type: string
+                description: 'A way to communicate details about the current status by the agent'
+          mutationStrategy:
+            type:
+              - resetOnUpdate
+---
+group: management
+scope: Environment
+kind: EdgeTraceabilityAgent
+description: Resource representing Axway Edge API Gateway traceability agent
+spec:
+  names:
+    plural: edgetraceabilityagents
+    singular: edgetraceabilityagent
+  cli:
+    shortNames:
+      - edgetas
+      - edgeta
+    columns:
+      - name: Name
+        description: The name of the Axway Edge API Gateway traceability agent.
+        jsonPath: .name
+        format: string
+      - name: Status
+        description: The current status of the Axway Edge API Gateway traceability agent.
+        jsonPath: .status.state
+        format: string
+      - name: Age
+        description: The date when the Axway Edge API Gateway traceability agent was created.
+        jsonPath: .metadata.audit.createTimestamp
+        format: date
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            dataplane:
+              type: string
+              description: The name of the Axway Edge API Gateway dataplane associated to this agent
+              x-amplify-kind-ref: EdgeDataplane
+            config:
+              type: object
+              description: Represents the Axway Edge API Gateway traceability agent config
+              properties:
+                processHeaders:
+                  type: boolean
+                  description: Configures the agent to include request and response headers in captured traffic. Defaults to true
+                excludeHeaders:
+                  type: array
+                  description: List of header names that will not be included in the captured traffic by the agent
+                  items:
+                    type: string
+            logging:
+              type: object
+              description: Logging config
+              properties:
+                level:
+                  type: string
+                  description: Defines the log level.
+                  enum:
+                    - error
+                    - warn
+                    - info
+                    - debug
+          required:
+            - dataplane
+            - config
+          additionalProperties: false
+      subresources:
+        status:
+          openAPIV3Schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: Version name for the agent revision.
+                maxLength: 255
+                pattern: '^(?!\s).*(?<!\s)$'
+              state:
+                type: string
+                description: >
+                  Agent status:
+                   * running - Passed all health checks.  Up and running
+                   * stopped - Agent is not running
+                   * failed - Failed health checks
+                enum:
+                  - running
+                  - stopped
+                  - failed
+              message:
+                type: string
+                description: 'A way to communicate details about the current status by the agent'
+          mutationStrategy:
+            type:
+              - resetOnUpdate

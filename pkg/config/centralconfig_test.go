@@ -19,29 +19,33 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	authCfg.PrivateKey = "pppp"
 	authCfg.PublicKey = "kkk"
 
-	err := cfg.Validate()
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+
+	err := cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.organizationID not set in config", err.Error())
 
 	centralConfig.TenantID = "1111"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.url not set in config", err.Error())
 
 	centralConfig.URL = "aaa"
 	centralConfig.Mode = PublishToEnvironmentAndCatalog
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.environment not set in config", err.Error())
 
 	centralConfig.Environment = "eee"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	centralConfig.APIServerVersion = ""
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.apiServerVersion not set in config", err.Error())
 
@@ -63,25 +67,28 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	authCfg.PrivateKey = "pppp"
 	authCfg.PublicKey = "kkk"
 
-	err := cfg.Validate()
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+	err := cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.organizationID not set in config", err.Error())
 
 	centralConfig.TenantID = "1111"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.url not set in config", err.Error())
 
 	centralConfig.URL = "aaa"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error central.environment not set in config", err.Error())
 
 	centralConfig.Environment = "111111"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 
@@ -89,7 +96,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "Error central.apicDeployment not set in config", err.Error())
 
 	centralConfig.APICDeployment = "aaa"
-	err = cfg.Validate()
+	err = cfgValidator.ValidateCfg()
 
 	assert.Nil(t, err)
 

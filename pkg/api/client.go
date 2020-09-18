@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
@@ -105,7 +104,7 @@ func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
 		}
 	}
 	if !hasUserAgentHeader {
-		req.Header.Set("User-Agent", cmd.BuildAgentName+"/"+cmd.BuildVersion+"-"+cmd.BuildCommitSha)
+		req.Header.Set("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
 	}
 	return req, err
 }

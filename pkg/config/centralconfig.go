@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
 )
@@ -52,6 +53,23 @@ var StringAgentModeMap = map[string]AgentMode{
 	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
 }
 
+// AgentTypeName - Holds the name Agent type
+var AgentTypeName string
+
+// AgentVersion - Holds the version of agent
+var AgentVersion string
+
+// IConfigValidator - Interface to be implemented for config validation by agent
+type IConfigValidator interface {
+	ValidateCfg() error
+}
+
+// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource
+// for agent and dataplane
+type IResourceConfigCallback interface {
+	ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error
+}
+
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
@@ -65,6 +83,7 @@ type CentralConfig interface {
 	GetEnvironmentID() string
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
+	GetAgentName() string
 	GetTeamName() string
 	GetTeamID() string
 	SetTeamID(teamID string)
@@ -83,7 +102,6 @@ type CentralConfig interface {
 	GetAPIServerSecretsURL() string
 	GetSubscriptionURL() string
 	GetCatalogItemSubscriptionsURL(string) string
-	Validate() error
 	GetSubscriptionConfig() SubscriptionConfig
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
@@ -97,12 +115,14 @@ type CentralConfig interface {
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
+	IConfigValidator
 	AgentType                 AgentType
 	Mode                      AgentMode     `config:"mode"`
 	TenantID                  string        `config:"organizationID"`
 	TeamName                  string        `config:"team"`
 	APICDeployment            string        `config:"deployment"`
 	Environment               string        `config:"environment"`
+	AgentName                 string        `config:"agentName"`
 	URL                       string        `config:"url"`
 	PlatformURL               string        `config:"platformURL"`
 	APIServerVersion          string        `config:"apiServerVersion"`
@@ -183,6 +203,11 @@ func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
+}
+
+// GetAgentName - Returns the agent name
+func (c *CentralConfiguration) GetAgentName() string {
+	return c.AgentName
 }
 
 // GetTeamName - Returns the team name
@@ -320,13 +345,12 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 	return c.PollInterval
 }
 
-// Validate - Validates the config
-func (c *CentralConfiguration) Validate() (err error) {
+// ValidateCfg - Validates the config
+func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
 			c.validateConfig()
 			c.Auth.validate()
-			c.TLS.Validate()
 		},
 		Catch: func(e error) {
 			err = e
@@ -404,6 +428,7 @@ const (
 	pathSSLMinVersion         = "central.ssl.minVersion"
 	pathSSLMaxVersion         = "central.ssl.maxVersion"
 	pathEnvironment           = "central.environment"
+	pathAgentName             = "central.agentName"
 	pathDeployment            = "central.deployment"
 	pathMode                  = "central.mode"
 	pathTeam                  = "central.team"
@@ -433,6 +458,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathSSLMinVersion, TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
 	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
 
 	if agentType == TraceabilityAgent {
@@ -454,6 +480,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TenantID:     props.StringPropertyValue(pathTenantID),
 		PollInterval: props.DurationPropertyValue(pathPollInterval),
 		Environment:  props.StringPropertyValue(pathEnvironment),
+		AgentName:    props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
@@ -487,15 +514,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 
 		// set the notifications
-		subscriptionConfig, err := ParseSubscriptionConfig(props)
-		if err != nil {
-			return nil, err
-		}
+		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
 	}
 
 	return cfg, nil
