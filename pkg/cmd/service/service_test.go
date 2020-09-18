@@ -8,13 +8,14 @@ import (
 )
 
 type mockDaemon struct {
-	installCalled bool
-	removeCalled  bool
-	startCalled   bool
-	stopCalled    bool
-	statusCalled  bool
-	runCalled     bool
-	enableCalled  bool
+	installCalled     bool
+	removeCalled      bool
+	startCalled       bool
+	stopCalled        bool
+	statusCalled      bool
+	runCalled         bool
+	enableCalled      bool
+	serviceNameCalled bool
 }
 
 func (m *mockDaemon) GetTemplate() string      { return "" }
@@ -57,6 +58,11 @@ func (m *mockDaemon) Enable() (string, error) {
 	return "", nil
 }
 
+func (m *mockDaemon) GetServiceName() string {
+	m.serviceNameCalled = true
+	return ""
+}
+
 func newMockAgentService() *AgentService {
 	return &AgentService{
 		service:     &mockDaemon{},
@@ -81,6 +87,7 @@ func TestGenServiceCmd(t *testing.T) {
 	assert.Contains(t, cmd.Long, argDescriptions["stop"], "The stop description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["status"], "The status description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["enable"], "The enable description was not included in the long description")
+	assert.Contains(t, cmd.Long, argDescriptions["name"], "The name description was not included in the long description")
 }
 
 func TestRunGenServiceCmd(t *testing.T) {
@@ -137,4 +144,10 @@ func TestHandleService(t *testing.T) {
 	err = a.HandleServiceFlag("enable")
 	assert.Nil(t, err, "Unexpected error returned")
 	assert.True(t, a.service.(*mockDaemon).enableCalled)
+
+	// Service Name
+	a = newMockAgentService()
+	err = a.HandleServiceFlag("name")
+	assert.Nil(t, err, "Unexpected error returned")
+	assert.True(t, a.service.(*mockDaemon).serviceNameCalled)
 }
