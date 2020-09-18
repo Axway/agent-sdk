@@ -41,6 +41,9 @@ type Daemon interface {
 
 	// setGroup - sets the group that executes the service
 	SetGroup(string) error
+
+	// GetServiceName - gets the name of the service
+	GetServiceName() string
 }
 
 // Executable interface defines controlling methods of executable service

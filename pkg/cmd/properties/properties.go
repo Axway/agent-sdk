@@ -198,7 +198,7 @@ func (p *properties) nameToFlagName(name string) (flagName string) {
 }
 
 // String array containing any sensitive data that needs to be masked with "*" (asterisks)
-// Add any senstivate data here using flattened key format
+// Add any sensitive data here using flattened key format
 var maskValues = make([]string, 0)
 
 func (p *properties) addPropertyToFlatMap(key, value string) {

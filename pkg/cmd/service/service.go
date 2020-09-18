@@ -47,15 +47,17 @@ func newAgentService() (*AgentService, error) {
 	}, nil
 }
 
-// HandleServiceFlag - handles the action needed based ont eh service flag value
+// HandleServiceFlag - handles the action needed based on the service flag value
 func (a *AgentService) HandleServiceFlag(command string) error {
 	var err error
 	var status string
-	// complete teh appropriate action for the service
+	var serviceName string
+	// complete the appropriate action for the service
 	switch strings.ToLower(command) {
 	case "install":
 		log.Debug("installing the agent service")
 		log.Infof("service will look for config file at %s", a.Path)
+		log.Infof("name of service to be installed: %s", a.service.GetServiceName())
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
 		_, err = a.service.Install(a.PathArg, a.Path)
@@ -66,7 +68,7 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		log.Debug("starting the agent service")
 		_, err = a.service.Start()
 	case "stop":
-		log.Debug("stoping the agent service")
+		log.Debug("stopping the agent service")
 		_, err = a.service.Stop()
 	case "status":
 		log.Debug("getting the agent service status")
@@ -74,6 +76,9 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 	case "enable":
 		log.Debug("setting the agent to start on reboot")
 		_, err = a.service.Enable()
+	case "name":
+		log.Debug("getting the service name")
+		serviceName = a.service.GetServiceName()
 	default:
 		err = fmt.Errorf("unknown value of '%s' given", command)
 	}
@@ -85,6 +90,9 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		log.Debugf("service %s command succeeded", strings.ToLower(command))
 		if status != "" {
 			log.Info(status)
+		}
+		if serviceName != "" {
+			log.Info(serviceName)
 		}
 	}
 	return err

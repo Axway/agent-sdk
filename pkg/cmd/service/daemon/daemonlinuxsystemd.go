@@ -230,6 +230,11 @@ func (linux *systemDRecord) GetTemplate() string {
 	return systemDConfig
 }
 
+// GetServiceName - gets service name
+func (linux *systemDRecord) GetServiceName() string {
+	return linux.name + serviceSuffix
+}
+
 // SetTemplate - sets service config template
 func (linux *systemDRecord) SetTemplate(tplStr string) error {
 	systemDConfig = tplStr
