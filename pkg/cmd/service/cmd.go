@@ -16,6 +16,7 @@ var argDescriptions = map[string]string{
 	"stop":    "stop the installed service",
 	"status":  "get the status of the installed service",
 	"enable":  "enable the service to persist on reboots of the OS",
+	"name":    "get the name of the service",
 }
 
 // GenServiceCmd - generates the command version for a Beat.
