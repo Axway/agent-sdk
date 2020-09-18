@@ -46,6 +46,7 @@ type Client interface {
 	GetUserEmailAddress(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
 	GetCatalogItemName(ID string) (string, error)
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 }
 
 type tokenGetter interface {
@@ -422,4 +423,35 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	return platformTeams, nil
+}
+
+// ExecuteAPI - execute the api
+func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:      method,
+		URL:         url,
+		QueryParams: queryParam,
+		Headers:     headers,
+		Body:        buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, errors.Wrap(ErrNetwork, err.Error())
+	}
+
+	switch response.Code {
+	case http.StatusOK:
+		return response.Body, nil
+	case http.StatusUnauthorized:
+		return nil, ErrAuthentication
+	default:
+		logResponseErrors(response.Body)
+		return nil, ErrRequestQuery
+	}
 }

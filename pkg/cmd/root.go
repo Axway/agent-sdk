@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"reflect"
 	"strings"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/agent"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
@@ -52,6 +52,11 @@ type agentRootCommand struct {
 	initConfigHandler InitConfigHandler
 	agentType         corecfg.AgentType
 	props             properties.Properties
+}
+
+func init() {
+	corecfg.AgentTypeName = BuildAgentName
+	corecfg.AgentVersion = BuildVersion + "-" + BuildCommitSha
 }
 
 // NewRootCmd - Creates a new Agent Root Command
@@ -152,16 +157,25 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
+	err = agent.Initialize(centralCfg)
+	if err != nil {
+		return err
+	}
+
 	// Initialize Agent Config
 	agentCfg, err := c.initConfigHandler(centralCfg)
 	if err != nil {
 		return err
 	}
 
+	err = agent.ApplyResouceToConfig(agentCfg)
+	if err != nil {
+		return err
+	}
 	c.GetProperties().DebugLogProperties()
 
 	// Validate Agent Config
-	err = c.validateAgentConfig(agentCfg)
+	err = config.ValidateConfig(agentCfg)
 	if err != nil {
 		return err
 	}
@@ -190,57 +204,27 @@ func (c *agentRootCommand) setupLogger() {
 	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 }
 
-// validateAgentConfig - Validates the agent config
-// Uses reflection to get the Validate method on the config struct or
-// struct variable.
-// Makes call to Validate method except if the struct variable is of CentralConfig type
-// as the validation for CentralConfig is already done during parseCentralConfig
-func (c *agentRootCommand) validateAgentConfig(agentCfg interface{}) error {
-	// Check if top level struct has Validate. If it does then call Validate
-	// only at top level
-	if objInterface, ok := agentCfg.(interface{ Validate() error }); ok {
-		return objInterface.Validate()
-	}
-
-	// If the parameter is of struct pointer, use indirection to get the
-	// real value object
-	v := reflect.ValueOf(agentCfg)
-	if v.Kind() == reflect.Ptr {
-		v = reflect.Indirect(v)
-	}
-
-	// Look for Validate method on struct properties and invoke it
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).CanInterface() {
-			fieldInterface := v.Field(i).Interface()
-			// Skip the property it is CentralConfig type as its already Validated
-			// during parseCentralConfig
-			if _, ok := fieldInterface.(corecfg.CentralConfig); !ok {
-				if objInterface, ok := fieldInterface.(interface{ Validate() error }); ok {
-					err := objInterface.Validate()
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
 // run - Executes the agent command
 func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	err = c.initConfig()
-
+	statusText := ""
 	if err == nil {
 		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
-		err = c.commandHandler()
-		if err != nil {
-			log.Error(err.Error())
+		if c.commandHandler != nil {
+			err = c.commandHandler()
+			if err != nil {
+				log.Error(err.Error())
+				statusText = err.Error()
+			}
 		}
+	} else {
+		statusText = err.Error()
 	}
-
+	status := agent.AgentStopped
+	if statusText != "" {
+		status = agent.AgentFailed
+	}
+	agent.UpdateStatus(status, statusText)
 	return
 }
 

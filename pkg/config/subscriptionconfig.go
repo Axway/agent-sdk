@@ -79,6 +79,7 @@ type ApprovalConfig struct {
 // SubscriptionConfiguration - Structure to hold the subscription config
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
+	IConfigValidator
 	Approval      *ApprovalConfig     `config:"approval"`
 	Notifications *NotificationConfig `config:"notifications"`
 	Types         []NotificationType
@@ -129,7 +130,7 @@ func AddApprovalConfigProperties(props properties.Properties) {
 }
 
 // ParseSubscriptionConfig -
-func ParseSubscriptionConfig(props properties.Properties) (SubscriptionConfig, error) {
+func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	// Determine the auth type
 	authTypeString := props.StringPropertyValue(pathSubscriptionsNotificationsSMTPAuth)
 	authType := NoAuth
@@ -186,12 +187,7 @@ func ParseSubscriptionConfig(props properties.Properties) (SubscriptionConfig, e
 		},
 	}
 
-	// Validate properties
-	if err := cfg.validate(); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return cfg
 }
 
 // NewSubscriptionConfig - Creates the default subscription config
@@ -332,7 +328,8 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() Webho
 	return s.Approval.SubscriptionApprovalWebhook
 }
 
-func (s *SubscriptionConfiguration) validate() error {
+// ValidateCfg - Validates the subscription config
+func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.Webhook.GetURL() != "" {
 		s.SetNotificationType(NotifyWebhook)
 		log.Debug("Webhook notification set")

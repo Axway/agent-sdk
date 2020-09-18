@@ -170,13 +170,13 @@ type TLSConfig interface {
 	GetMinVersion() TLSVersion
 	GetMaxVersion() TLSVersion
 	BuildTLSConfig() *tls.Config
-	Validate() error
 }
 
 // TLSConfiguration - A Config structure is used to configure a TLS client or server.
 // After one has been passed to a TLS function it must not be modified. A Config may be reused;
 // the tls package will also not modify it.
 type TLSConfiguration struct {
+	IConfigValidator
 	// NextProtos is a list of supported application level protocols, in order of preference.
 	NextProtos []string `config:"nextProtos,replace"`
 
@@ -280,8 +280,8 @@ func (c *TLSConfiguration) GetMaxVersion() TLSVersion {
 	return c.MaxVersion
 }
 
-// Validate - Validates the config
-func (c *TLSConfiguration) Validate() (err error) {
+// ValidateCfg - Validates the config
+func (c *TLSConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
 			c.validateConfig()

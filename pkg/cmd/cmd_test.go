@@ -188,10 +188,6 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	assert.Contains(t, "Test return error from init config handler, Traceability Agent", errBuf.String())
 }
 
-type IAgentCfgWithValidate interface {
-	Validate() error
-}
-
 type agentConfig struct {
 	bProp                 bool
 	dProp                 time.Duration
@@ -201,7 +197,7 @@ type agentConfig struct {
 	agentValidationCalled bool
 }
 
-func (a *agentConfig) Validate() error {
+func (a *agentConfig) ValidateCfg() error {
 	a.agentValidationCalled = true
 	if a.sProp == "" {
 		return errors.New("agentConfig: String prop not set")
@@ -215,7 +211,7 @@ type configWithValidation struct {
 	AgentCfg               *agentConfig
 }
 
-func (c *configWithValidation) Validate() error {
+func (c *configWithValidation) ValidateCfg() error {
 	c.configValidationCalled = true
 	if c.AgentCfg.sProp == "" {
 		return errors.New("configWithValidation: String prop not set")
@@ -226,7 +222,7 @@ func (c *configWithValidation) Validate() error {
 type configWithNoValidation struct {
 	configValidationCalled bool
 	CentralCfg             corecfg.CentralConfig
-	AgentCfg               IAgentCfgWithValidate
+	AgentCfg               corecfg.IConfigValidator
 }
 
 func TestRootCmdAgentConfigValidation(t *testing.T) {
