@@ -127,25 +127,12 @@
       "regex": true,
       "scanner": "GoSec",
       "classification": "False Positive",
-      "component": "pathAuthKeyPassword       = \"central.auth.keyPassword\"",
+      "component": "pathAuthKeyPassword\\s*= \"central.auth.keyPassword\"",
       "justification": "This is just a constant declaration of a command line property",
       "version": "",
       "ids": [
         "G101"
       ]
-    },
-		{
-			"path": ".*source\\.codeaurora\\.org\\/quic\\/chrome4sdp\\/chromium\\/src\\/third_party\\/dnscrypt-proxy\\/-2\\.0\\.44",
-      "regex": true,
-			"scanner": "whitesource",
-			"component": ".*source\\.codeaurora\\.org\\/quic\\/chrome4sdp\\/chromium\\/src\\/third_party\\/dnscrypt-proxy\\/",
-			"version": "2.0.44",
-      "classification": "Deferred",
-      "justification": "APIGOV-16210",
-      "until": "2020-09-24",
-			"ids": [
-				"CVE-2020-14040"
-			]
-		}
+    }
   ]
 }
