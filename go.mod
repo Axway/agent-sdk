@@ -19,6 +19,7 @@ require (
 	github.com/tidwall/gjson v1.6.0
 	go.uber.org/zap v1.15.0 // indirect
 	golang.org/x/sys v0.0.0-20200620081246-981b61492c35 // indirect
+	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/tools v0.0.0-20200619210111-0f592d2728bb // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/yaml.v2 v2.3.0 // indirect
