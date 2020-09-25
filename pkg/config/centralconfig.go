@@ -250,7 +250,7 @@ func (c *CentralConfiguration) SetProxyEnvironmentVariable() (err error) {
 	return
 }
 
-// GetCatalogItemsURL - Returns the URL for catalog items API
+// GetCatalogItemsURL - Returns the unifiedcatalog URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
@@ -305,12 +305,12 @@ func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
 	return c.GetEnvironmentURL() + "/secrets"
 }
 
-// GetSubscriptionURL - Returns the APIServer URL for services API instances
+// GetSubscriptionURL - Returns the unifiedcatalog URL for subscriptions list
 func (c *CentralConfiguration) GetSubscriptionURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
 }
 
-// GetCatalogItemSubscriptionsURL - Returns the APIServer URL for catalog item subscriptions
+// GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
 func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
 	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
 }
