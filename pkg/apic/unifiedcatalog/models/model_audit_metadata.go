@@ -9,9 +9,13 @@
  */
 
 package unifiedcatalog
+
 import (
-	"time"
+	// GENERATE: The following code has been modified after code generation
+	// "time"
+	time "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 )
+
 // AuditMetadata Audit information
 type AuditMetadata struct {
 	// The creation time

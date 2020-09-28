@@ -101,8 +101,9 @@ type CentralConfig interface {
 	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
 	GetSubscriptionURL() string
-	GetCatalogItemSubscriptionsURL(string) string
 	GetSubscriptionConfig() SubscriptionConfig
+	GetCatalogItemSubscriptionsURL(string) string
+	GetCatalogItemSubscriptionStatesURL(string, string) string
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -313,6 +314,11 @@ func (c *CentralConfiguration) GetSubscriptionURL() string {
 // GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
 func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
 	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
+}
+
+// GetCatalogItemSubscriptionStatesURL - Returns the unifiedcatalog URL for catalog item subscription states
+func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID, subscriptionID string) string {
+	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
 }
 
 // GetAuthConfig - Returns the Auth Config
