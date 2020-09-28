@@ -2,9 +2,11 @@ package apic
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	uc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
@@ -23,12 +25,6 @@ const (
 	SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
 )
 
-// SubscriptionProperties -
-type SubscriptionProperties struct {
-	Key    string            `json:"key"`
-	Values map[string]string `json:"value"`
-}
-
 // Subscription -
 type Subscription interface {
 	GetID() string
@@ -44,43 +40,25 @@ type Subscription interface {
 
 // CentralSubscription -
 type CentralSubscription struct {
-	ID                      string                      `json:"id"`
-	Properties              []SubscriptionProperties    `json:"properties"`
-	State                   string                      `json:"state"`
-	StateDescription        string                      `json:"stateDescription"`
-	CatalogItemID           string                      `json:"catalogItemId"`
-	OwningTeamID            string                      `json:"owningTeamId"`
-	Deletable               bool                        `json:"deletable"`
-	Name                    string                      `json:"name"`
-	NextPossibleStates      []string                    `json:"nextPossibleStates"`
-	AllowedTransitionStates []string                    `json:"allowedTransitionStates"`
-	Metadata                CentralSubscriptionMetadata `json:"metadata"`
+	CatalogItemSubscription *uc.CatalogItemSubscription `json:"catalogItemSubscription"`
 	ApicID                  string                      `json:"-"`
 	RemoteAPIID             string                      `json:"-"`
 	apicClient              *ServiceClient
 }
 
-// CentralSubscriptionMetadata -
-type CentralSubscriptionMetadata struct {
-	CreateTimestamp string `json:"createTimestamp"`
-	CreateUserID    string `json:"createUserId"`
-	ModifyTimestamp string `json:"modifyTimestamp"`
-	ModifyUserID    string `json:"modifyUserId"`
-}
-
 // GetCreatedUserID - Returns ID of the user that created the subscription
 func (s *CentralSubscription) GetCreatedUserID() string {
-	return s.Metadata.CreateUserID
+	return s.CatalogItemSubscription.Metadata.CreateUserId
 }
 
 // GetID - Returns ID of the subscription
 func (s *CentralSubscription) GetID() string {
-	return s.ID
+	return s.CatalogItemSubscription.Id
 }
 
 // GetName - Returns Name of the subscription
 func (s *CentralSubscription) GetName() string {
-	return s.Name
+	return s.CatalogItemSubscription.Name
 }
 
 // GetApicID - Returns ID of the Catalog Item or API Service instance
@@ -95,21 +73,21 @@ func (s *CentralSubscription) GetRemoteAPIID() string {
 
 // GetCatalogItemID - Returns ID of the Catalog Item
 func (s *CentralSubscription) GetCatalogItemID() string {
-	return s.CatalogItemID
+	return s.CatalogItemSubscription.CatalogItemId
 }
 
 // GetState - Returns subscription state
 func (s *CentralSubscription) GetState() SubscriptionState {
-	return SubscriptionState(s.State)
+	return SubscriptionState(s.CatalogItemSubscription.State)
 }
 
 // GetPropertyValue - Returns subscription Property value based on the key
 func (s *CentralSubscription) GetPropertyValue(key string) string {
-	if len(s.Properties) > 0 {
-		subscriptionProperties := s.Properties[0]
-		value, ok := subscriptionProperties.Values[key]
+	if len(s.CatalogItemSubscription.Properties) > 0 {
+		subscriptionProperty := s.CatalogItemSubscription.Properties[0]
+		value, ok := subscriptionProperty.Value[key]
 		if ok {
-			return value
+			return fmt.Sprintf("%v", value)
 		}
 	}
 	return ""
@@ -122,9 +100,10 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState) error {
 		return err
 	}
 
-	subStateURL := s.getServiceClient().cfg.GetCatalogItemsURL() + "/" + s.CatalogItemID + "/subscriptions/" + s.ID + "/states"
-	subState := make(map[string]string)
-	subState["state"] = string(newState)
+	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
+	subState := uc.CatalogItemSubscriptionState{
+		State: string(newState),
+	}
 
 	statePostBody, err := json.Marshal(subState)
 	if err != nil {
@@ -192,7 +171,18 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		logResponseErrors(response.Body)
 		return nil, ErrSubscriptionResp.FormatError(response.Code)
 	}
-	subscriptions := make([]CentralSubscription, 0)
+
+	subscriptions := make([]uc.CatalogItemSubscription, 0)
 	json.Unmarshal(response.Body, &subscriptions)
-	return subscriptions, nil
+
+	// build the CentralSubscriptions from the UC ones
+	centralSubscriptions := make([]CentralSubscription, 0)
+	for i := range subscriptions {
+		sub := CentralSubscription{
+			CatalogItemSubscription: &subscriptions[i],
+			apicClient:              c,
+		}
+		centralSubscriptions = append(centralSubscriptions, sub)
+	}
+	return centralSubscriptions, nil
 }

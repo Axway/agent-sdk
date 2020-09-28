@@ -106,9 +106,9 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
-	subscription.ApicID = subscription.CatalogItemID
+	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
-	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
+	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
 	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
 		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
 	}
@@ -150,7 +150,7 @@ func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscri
 			}
 		}
 		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
-			subscription.ID, apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
+			subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
 	}
 }
 
@@ -160,7 +160,7 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 		invokeProcessor = sm.validator(&subscription)
 	}
 	if invokeProcessor {
-		processorList, ok := sm.processorMap[SubscriptionState(subscription.State)]
+		processorList, ok := sm.processorMap[SubscriptionState(subscription.GetState())]
 		if ok {
 			for _, processor := range processorList {
 				processor(&subscription)

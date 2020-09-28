@@ -10,6 +10,7 @@ import (
 	"time"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	uc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,17 +43,19 @@ func TestProcessorRegistration(t *testing.T) {
 	assert.Equal(t, sf1.Pointer(), sf2.Pointer(), "Verify registered unsubscribe initiated subscription processor")
 }
 
-func createSubscription(ID, state, catalogID string, subscriptionProps map[string]string) Subscription {
+func createSubscription(ID, state, catalogID string, subscriptionProps map[string]interface{}) Subscription {
 	return &CentralSubscription{
-		ID:    ID,
-		State: state,
-		Properties: []SubscriptionProperties{
-			{
-				Key:    "profile",
-				Values: subscriptionProps,
+		CatalogItemSubscription: &uc.CatalogItemSubscription{
+			Id:    ID,
+			State: state,
+			Properties: []uc.CatalogItemProperty{
+				{
+					Key:   "profile",
+					Value: subscriptionProps,
+				},
 			},
+			CatalogItemId: catalogID,
 		},
-		CatalogItemID: catalogID,
 	}
 }
 
@@ -67,14 +70,18 @@ func createServiceClientForSubscriptions(server *httptest.Server) (*ServiceClien
 func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 	// Start a local HTTP server
 	subscriptionList := make([]Subscription, 0)
-	subscriptionList = append(subscriptionList, createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"}))
-	subscriptionList = append(subscriptionList, createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]string{"orgId": "22222"}))
+	subscriptionList = append(subscriptionList, createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"}))
+	subscriptionList = append(subscriptionList, createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]interface{}{"orgId": "22222"}))
 	sendList := true
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		b := []byte("")
 		if strings.Contains(req.RequestURI, "/subscriptions") {
 			if sendList {
-				b, _ = json.Marshal(subscriptionList)
+				ucSubscriptionList := make([]uc.CatalogItemSubscription, 0)
+				for _, sub := range subscriptionList {
+					ucSubscriptionList = append(ucSubscriptionList, *(sub.(*CentralSubscription)).CatalogItemSubscription)
+				}
+				b, _ = json.Marshal(ucSubscriptionList)
 				sendList = false
 			} else {
 				b = []byte("[]")
@@ -165,19 +172,19 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 func TestSubscriptionUpdate(t *testing.T) {
 	// Start a local HTTP server
 	subscriptionMap := make(map[string]Subscription)
-	subscriptionMap["11111"] = createSubscription("11111", "APPROVED", "11111", map[string]string{"orgId": "11111"})
-	subscriptionMap["22222"] = createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]string{"orgId": "22222"})
+	subscriptionMap["11111"] = createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"})
+	subscriptionMap["22222"] = createSubscription("22222", "UNSUBSCRIBE_INITIATED", "22222", map[string]interface{}{"orgId": "22222"})
 
 	sendList := true
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		b := []byte("")
 		if strings.Contains(req.RequestURI, "/subscriptions") {
 			if sendList {
-				subscriptionList := make([]Subscription, 0)
-				for _, subscription := range subscriptionMap {
-					subscriptionList = append(subscriptionList, subscription)
+				ucSubscriptionList := make([]uc.CatalogItemSubscription, 0)
+				for _, sub := range subscriptionMap {
+					ucSubscriptionList = append(ucSubscriptionList, *(sub.(*CentralSubscription)).CatalogItemSubscription)
 				}
-				b, _ = json.Marshal(subscriptionList)
+				b, _ = json.Marshal(ucSubscriptionList)
 				sendList = false
 			} else {
 				b = []byte("[]")
@@ -187,13 +194,13 @@ func TestSubscriptionUpdate(t *testing.T) {
 			subState := make(map[string]string)
 			json.NewDecoder(req.Body).Decode(&subState)
 			subscription := subscriptionMap["11111"]
-			(subscription.(*CentralSubscription)).State = subState["state"]
+			(subscription.(*CentralSubscription)).CatalogItemSubscription.State = subState["state"]
 		}
 		if strings.Contains(req.RequestURI, "/22222/subscriptions/22222/state") {
 			subState := make(map[string]string)
 			json.NewDecoder(req.Body).Decode(&subState)
 			subscription := subscriptionMap["22222"]
-			(subscription.(*CentralSubscription)).State = subState["state"]
+			(subscription.(*CentralSubscription)).CatalogItemSubscription.State = subState["state"]
 		}
 		// Send response to be tested
 		rw.Write(b)
@@ -218,8 +225,8 @@ func TestSubscriptionUpdate(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	client.GetSubscriptionManager().Stop()
 
-	assert.Equal(t, SubscriptionActive, subscriptionMap["11111"].GetState())
-	assert.Equal(t, SubscriptionUnsubscribed, subscriptionMap["22222"].GetState())
+	assert.Equal(t, SubscriptionActive, (subscriptionMap["11111"]).GetState())
+	assert.Equal(t, SubscriptionUnsubscribed, (subscriptionMap["22222"]).GetState())
 }
 
 func TestBlacklist(t *testing.T) {
