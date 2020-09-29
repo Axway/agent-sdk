@@ -50,6 +50,6 @@ func createEdgeTraceabilityAgentStatusResource(status, message string) *v1alpha1
 	return &agentRes
 }
 
-func mergeEdgTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
+func mergeEdgeTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
 	// Nothing to merge
 }

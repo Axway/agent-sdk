@@ -264,7 +264,7 @@ func mergeResourceWithConfig() {
 	case v1alpha1.EdgeDiscoveryAgentResource:
 		mergeEdgeDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.EdgeTraceabilityAgentResource:
-		mergeEdgTraceabilityAgentWithConfig(agent.cfg)
+		mergeEdgeTraceabilityAgentWithConfig(agent.cfg)
 	case v1alpha1.AWSDiscoveryAgentResource:
 		mergeAWSDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.AWSTraceabilityAgentResource:
