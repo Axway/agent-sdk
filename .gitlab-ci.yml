@@ -202,9 +202,9 @@ include:
   - project: "scurity/gitlabci"
     ref: master
     file: "/.gitlab-ci-dependencycheck.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-gosec.yml"
+  # - project: "scurity/gitlabci"
+  #   ref: master
+  #   file: "/.gitlab-ci-gosec.yml"
   - project: "scurity/gitlabci"
     ref: master
     file: "/.gitlab-ci-whitesource.yml"
@@ -212,13 +212,13 @@ include:
     ref: master
     file: "/.gitlab-ci-csr.yml"
 
-gosec:
-  retry: 0
-  except:
-    - schedules
-    - tags
-    - web
-    - triggers
+# gosec:
+#   retry: 0
+#   except:
+#     - schedules
+#     - tags
+#     - web
+#     - triggers
 
 dependencycheck:
   retry: 0
@@ -246,13 +246,13 @@ fetch-fortify:
     variables:
       - $CI_PIPELINE_SOURCE == "pipeline"
 
-gosec:on-schedule:
-  retry: 0
-  before_script:
-    - git config --global http.sslVerify false
-    - git fetch && git checkout master
-    - *get-latest-version
-    - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
+# gosec:on-schedule:
+#   retry: 0
+#   before_script:
+#     - git config --global http.sslVerify false
+#     - git fetch && git checkout master
+#     - *get-latest-version
+#     - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
 
 dependencycheck:on-schedule:
   retry: 0
@@ -274,7 +274,7 @@ run-csr:
   dependencies:
     - fetch-fortify
     - dependencycheck
-    - gosec
+  # - gosec
     - whitesource
   <<: *only-feature
 
@@ -282,7 +282,7 @@ update-csr:
   dependencies:
     - fetch-fortify
     - dependencycheck:on-schedule
-    - gosec:on-schedule
+  # - gosec:on-schedule
     - whitesource:on-schedule
 
 ############################################################

@@ -10,70 +10,10 @@
     "twistlock": false,
     "zap": false,
     "yarn": false,
-    "gosec": true,
+    "gosec": false,
     "whitesource": true
   },
   "suppressions": [
-    {
-      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/coreos\\/etcd\\/3\\.3\\.10.*",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Originally: APIGOV-12765. The vulnerable package not used by agent. ",
-      "component": "etcd",
-      "version": "3.3.10.*",
-      "ids": [
-        "CVE-2018-16886"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.2, which is incorrect (@rconan)",
-      "component": "go-windows-terminal-sequences",
-      "version": "v1.0.2",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
-      "component": "go-windows",
-      "version": "v1.0.1",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
-      "component": "go-sysinfo",
-      "version": "v1.3.0",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "",
-      "component": "tools",
-      "version": ".*",
-      "ids": [
-        "CVE-2018-18749"
-      ]
-    },
     {
       "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
       "regex": true,
@@ -87,52 +27,17 @@
       ]
     },
     {
-      "path": ".*pkg\\/config\\/tlsconfig\\.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "justification": "InsecureSkipVerify is configurable, and the default value is set to false.",
-      "component": "InsecureSkipVerify: c.InsecureSkipVerify",
-      "version": "",
-      "ids": [
-        "G402"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "We do not use this library to do any serialization or deserialization.",
-      "component": "multierror",
-      "version": "",
-      "ids": [
-        "CVE-2017-18365"
-      ]
-    },
-    {
-      "path": ".*api\\/mockhttpclient.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "justification": "This is only present in the junit tests and not a part of the product.",
-      "component": "os.Open\\(filepath\\)",
-      "version": "",
-      "ids": [
-        "G304"
-      ]
-    },
-    {
-      "path": ".*config\\/centralconfig\\.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "component": "pathAuthKeyPassword\\s*= \"central.auth.keyPassword\"",
-      "justification": "This is just a constant declaration of a command line property",
-      "version": "",
-      "ids": [
-        "G101"
-      ]
-    }
+			"path": ".*github.com\\/elastic\\/go-ucfg-v0\\.8\\.3",
+			"regex": true,
+      "scanner": "whitesource",
+			"component": "github.com\\/elastic\\/go-ucfg",
+			"version": "v0.8.3",
+      "classification": "Deferred",
+      "justification": "APIGOV-16210",
+      "until": "2020-10-06",
+			"ids": [
+				"CVE-2019-11254"
+			]
+		}    
   ]
 }
