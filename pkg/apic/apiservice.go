@@ -27,23 +27,29 @@ import (
 // createService - creates new APIServerService and necessary resources
 // return the itemID from the APIServerService
 func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
-	serviceName := sanitizeAPIName(serviceBody.RestAPIID + serviceBody.Stage)
+	externalAPIID := sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
 
-	// add api
-	_, err := c.processService(serviceBody, http.MethodPost, c.cfg.GetServicesURL(), serviceName)
-	if err != nil {
-		return "", err
+	apiServiceInstance, err := c.getAPIServiceByName(serviceBody.RestAPIID)
+
+	if apiServiceInstance != nil {
+		log.Infof("API Server Service %s already exists.  Using existing API Server Service", serviceBody.RestAPIID)
+	} else {
+		// add api
+		_, err := c.processService(serviceBody, http.MethodPost, c.cfg.GetServicesURL(), serviceBody.RestAPIID, externalAPIID)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// process revision and instance
-	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody, serviceName)
+	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody, serviceBody.RestAPIID, externalAPIID)
 	if err != nil {
 		return "", err
 	}
 
 	// process consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPost, c.cfg.GetConsumerInstancesURL(), serviceName, revisionName)
+		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPost, c.cfg.GetConsumerInstancesURL(), serviceBody.RestAPIID, externalAPIID, revisionName)
 	}
 	log.Debugf("Create service returning itemID: [%v]", itemID)
 	return itemID, err
@@ -52,22 +58,22 @@ func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 // updateService - updates APIServerService based on  sanitized name and necessary resources.
 // return the itemID from the APIServerService
 func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
-	serviceName := sanitizeAPIName(serviceBody.RestAPIID + serviceBody.Stage)
+	externalAPIID := sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
 
-	_, err := c.processService(serviceBody, http.MethodPut, c.cfg.GetServicesURL()+"/"+serviceName, serviceName)
+	_, err := c.processService(serviceBody, http.MethodPut, c.cfg.GetServicesURL()+"/"+serviceBody.RestAPIID, serviceBody.RestAPIID, externalAPIID)
 	if err != nil {
 		return "", err
 	}
 
-	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody, serviceName)
+	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody, serviceBody.RestAPIID, externalAPIID)
 	if err != nil {
 		return "", err
 	}
 
 	// add/update consumer instance
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		consumerInstancesURL := c.cfg.GetConsumerInstancesURL() + "/" + serviceName
-		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPut, consumerInstancesURL, serviceName, revisionName)
+		consumerInstancesURL := c.cfg.GetConsumerInstancesURL() + "/" + externalAPIID
+		itemID, err = c.processConsumerInstance(serviceBody, http.MethodPut, consumerInstancesURL, serviceBody.RestAPIID, externalAPIID, revisionName)
 	}
 
 	log.Debugf("Update service returning itemID: [%v]", itemID)
@@ -79,13 +85,13 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 //	2. updateService - when a major change to an existing api is being published, ie. security profile, version
 //		1. add new API Service Revision
 //		2. add new API Service Instance
-func (c *ServiceClient) processRevisionAndInstance(serviceBody ServiceBody, serviceName string) (string, string, error) {
+func (c *ServiceClient) processRevisionAndInstance(serviceBody ServiceBody, restAPIID, externalAPIID string) (string, string, error) {
 	revisionURL := c.cfg.GetRevisionsURL()
 	instanceURL := c.cfg.GetInstancesURL()
 
 	// Get revisions for the service and use the latest one as last reference
 	revisionFilter := map[string]string{
-		"query": "metadata.references.name==" + serviceName,
+		"query": "metadata.references.name==" + restAPIID,
 		"sort":  "metadata.audit.createTimestamp,DESC",
 	}
 	revisions, err := c.getAPIRevisions(revisionFilter)
@@ -94,7 +100,7 @@ func (c *ServiceClient) processRevisionAndInstance(serviceBody ServiceBody, serv
 	}
 
 	// Derive the name of the revision + instance using the service name and count of existing revisions
-	revisionName := serviceName + "." + strconv.Itoa(len(revisions)+1)
+	revisionName := externalAPIID + "." + strconv.Itoa(len(revisions)+1)
 	httpMethod := http.MethodPost
 
 	var previousRevision *APIServer
@@ -108,12 +114,12 @@ func (c *ServiceClient) processRevisionAndInstance(serviceBody ServiceBody, serv
 		previousRevision = &revisions[0]
 	}
 
-	err = c.processRevision(serviceBody, httpMethod, revisionURL, revisionName, serviceName, previousRevision)
+	err = c.processRevision(serviceBody, httpMethod, revisionURL, revisionName, restAPIID, externalAPIID, previousRevision)
 	if err != nil {
 		return "", "", err
 	}
 
-	itemID, err := c.processInstance(serviceBody, httpMethod, instanceURL, revisionName, revisionName)
+	itemID, err := c.processInstance(serviceBody, httpMethod, instanceURL, revisionName, restAPIID, externalAPIID)
 	if err != nil {
 		return "", "", err
 	}
@@ -187,6 +193,34 @@ func (c *ServiceClient) getAPIServiceInstanceByName(instanceName string) (*APISe
 	return apiInstance, nil
 }
 
+// getAPIServiceByName - Returns the API service for specified name
+func (c *ServiceClient) getAPIServiceByName(name string) (*APIServer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetServicesURL() + "/" + name,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		if response.Code != http.StatusNotFound {
+			logResponseErrors(response.Body)
+		}
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+	apiService := new(APIServer)
+	json.Unmarshal(response.Body, apiService)
+	return apiService, nil
+}
+
 // getAPIServerConsumerInstance -
 func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string, queryParams map[string]string) (*APIServer, error) {
 	headers, err := c.createHeader()
@@ -233,7 +267,7 @@ func (c *ServiceClient) consumerInstanceExists(name string) bool {
 }
 
 //processService -
-func (c *ServiceClient) processService(serviceBody ServiceBody, httpMethod, servicesURL, name string) (string, error) {
+func (c *ServiceClient) processService(serviceBody ServiceBody, httpMethod, servicesURL, restAPIID, externalAPIID string) (string, error) {
 	// spec needs to adhere to environment schema
 	var spec interface{}
 	if serviceBody.Image != "" {
@@ -250,7 +284,8 @@ func (c *ServiceClient) processService(serviceBody ServiceBody, httpMethod, serv
 		}
 	}
 
-	buffer, err := c.createAPIServerBody(serviceBody, spec, name, nil)
+	serviceBody.NameToPush = serviceBody.APIName
+	buffer, err := c.createAPIServerBody(serviceBody, spec, restAPIID, externalAPIID, nil)
 	if err != nil {
 		return "", err
 	}
@@ -260,14 +295,14 @@ func (c *ServiceClient) processService(serviceBody ServiceBody, httpMethod, serv
 }
 
 //processRevision -
-func (c *ServiceClient) processRevision(serviceBody ServiceBody, httpMethod, revisionsURL, name, sericeName string, previousRevision *APIServer) error {
+func (c *ServiceClient) processRevision(serviceBody ServiceBody, httpMethod, revisionsURL, revisionName, restAPIID, externalAPIID string, previousRevision *APIServer) error {
 	revisionDefinition := RevisionDefinition{
 		Type:  c.getRevisionDefinitionType(serviceBody),
 		Value: serviceBody.Swagger,
 	}
 
 	spec := APIServiceRevisionSpec{
-		APIService: sericeName,
+		APIService: restAPIID,
 		Definition: revisionDefinition,
 	}
 
@@ -278,14 +313,14 @@ func (c *ServiceClient) processRevision(serviceBody ServiceBody, httpMethod, rev
 		revAttributes[AttrPreviousAPIServiceRevisionID] = previousRevision.Metadata.ID
 	}
 
-	buffer, err := c.createAPIServerBody(serviceBody, spec, name, revAttributes)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, revisionName, externalAPIID, revAttributes)
 	if err != nil {
 		return err
 	}
 
 	_, err = c.apiServiceDeployAPI(httpMethod, revisionsURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		_, err = c.rollbackAPIService(serviceBody, name)
+		_, err = c.rollbackAPIService(serviceBody, restAPIID, revisionName)
 		return err
 	}
 
@@ -293,7 +328,7 @@ func (c *ServiceClient) processRevision(serviceBody ServiceBody, httpMethod, rev
 }
 
 //processInstance -
-func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, instancesURL, name, revisionName string) (string, error) {
+func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, instancesURL, revisionName, restAPIID, externalAPIID string) (string, error) {
 	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(serviceBody))
 
 	// reset the name here to include the stage
@@ -302,14 +337,14 @@ func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, ins
 		InstanceEndPoint:   endPoints,
 	}
 
-	buffer, err := c.createAPIServerBody(serviceBody, spec, name, nil)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, revisionName, externalAPIID, nil)
 	if err != nil {
 		return "", err
 	}
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		_, err = c.rollbackAPIService(serviceBody, name)
+		_, err = c.rollbackAPIService(serviceBody, restAPIID, externalAPIID)
 		return "", err
 	}
 
@@ -317,8 +352,9 @@ func (c *ServiceClient) processInstance(serviceBody ServiceBody, httpMethod, ins
 }
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance
-func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, name, apiInstanceName string) (string, error) {
+func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMethod, instancesURL, restAPIID, externalAPIID, apiInstanceName string) (string, error) {
 	var doc = ""
+	apiServerName := externalAPIID
 	if serviceBody.Documentation != nil {
 		var err error
 		doc, err = strconv.Unquote(string(serviceBody.Documentation))
@@ -372,27 +408,27 @@ func (c *ServiceClient) processConsumerInstance(serviceBody ServiceBody, httpMet
 		},
 	}
 
-	buffer, err := c.createAPIServerBody(serviceBody, spec, name, nil)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, apiServerName, externalAPIID, nil)
 	if err != nil {
 		return "", err
 	}
 
 	itemID, err := c.apiServiceDeployAPI(httpMethod, instancesURL, buffer)
 	if err != nil && httpMethod != http.MethodPut {
-		return c.rollbackAPIService(serviceBody, name)
+		return c.rollbackAPIService(serviceBody, restAPIID, externalAPIID)
 	}
 
 	return itemID, err
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
+func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, restAPIID, externalAPIID string) (string, error) {
 	spec := APIServiceSpec{}
-	buffer, err := c.createAPIServerBody(serviceBody, spec, name, nil)
+	buffer, err := c.createAPIServerBody(serviceBody, spec, restAPIID, externalAPIID, nil)
 	if err != nil {
 		return "", err
 	}
-	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, buffer)
+	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+externalAPIID, buffer)
 }
 
 // deleteConsumerInstance -
@@ -459,18 +495,18 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 }
 
 // createAPIServerBody - create APIServer for server, revision, and instance
-func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interface{}, name string, attributes map[string]interface{}) ([]byte, error) {
+func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interface{}, apiServerName, externalAPIID string, attributes map[string]interface{}) ([]byte, error) {
 	if attributes == nil {
 		attributes = make(map[string]interface{})
 	}
 
-	attributes[AttrExternalAPIID] = serviceBody.RestAPIID
+	attributes[AttrExternalAPIID] = externalAPIID
 	attributes[AttrCreatedBy] = serviceBody.CreatedBy
 
 	newtags := c.mapToTagsArray(serviceBody.Tags)
 
 	apiServer := APIServer{
-		Name:       name,
+		Name:       apiServerName,
 		Title:      serviceBody.NameToPush,
 		Attributes: attributes,
 		Spec:       spec,
