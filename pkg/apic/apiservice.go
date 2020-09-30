@@ -94,7 +94,7 @@ func (c *ServiceClient) processRevisionAndInstance(serviceBody ServiceBody, rest
 		"query": "metadata.references.name==" + restAPIID,
 		"sort":  "metadata.audit.createTimestamp,DESC",
 	}
-	revisions, err := c.getAPIRevisions(revisionFilter)
+	revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)
 	if err != nil {
 		return "", "", err
 	}
@@ -137,7 +137,7 @@ func isValidAuthPolicy(auth string) bool {
 }
 
 // getAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) getAPIRevisions(queryParams map[string]string) ([]APIServer, error) {
+func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]APIServer, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -162,7 +162,21 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string) ([]APISer
 	}
 	revisions := make([]APIServer, 0)
 	json.Unmarshal(response.Body, &revisions)
-	return revisions, nil
+
+	apiServerRevisions := make([]APIServer, 0)
+
+	//create array and filter by stage name. Check the stage name as this does not apply for v7
+	if stage != "" {
+		for _, apiServer := range revisions {
+			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
+				apiServerRevisions = append(apiServerRevisions, apiServer)
+			}
+		}
+	} else {
+		apiServerRevisions = revisions
+	}
+
+	return apiServerRevisions, nil
 }
 
 // getAPIServiceInstanceByName - Returns the API service instance for specified name
