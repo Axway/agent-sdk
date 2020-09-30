@@ -42,6 +42,9 @@ func TestCreateService(t *testing.T) {
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
 		{
+			RespCode: http.StatusNotFound,
+		},
+		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusCreated,
 		},
@@ -71,6 +74,9 @@ func TestCreateService(t *testing.T) {
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
 		{
+			RespCode: http.StatusNotFound,
+		},
+		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusRequestTimeout,
 		},
@@ -82,6 +88,9 @@ func TestCreateService(t *testing.T) {
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusOK,
@@ -110,6 +119,9 @@ func TestCreateService(t *testing.T) {
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
 		{
+			RespCode: http.StatusNotFound,
+		},
+		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusRequestTimeout,
 		},
@@ -133,6 +145,9 @@ func TestCreateService(t *testing.T) {
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusRequestTimeout,
