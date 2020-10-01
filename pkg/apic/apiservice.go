@@ -522,7 +522,7 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interf
 
 	externalAPIID := sanitizeAPIName(serviceBody.RestAPIID)
 	if serviceBody.Stage != "" {
-		externalAPIID = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
+		externalAPIID = fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage)
 	}
 	attributes[AttrExternalAPIID] = externalAPIID
 	attributes[AttrCreatedBy] = serviceBody.CreatedBy
