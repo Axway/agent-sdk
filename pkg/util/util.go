@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"strings"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/subosito/gotenv"
 )
 
@@ -38,4 +40,23 @@ func MaskValue(sensitiveData string) string {
 		maskedValue += "*"
 	}
 	return maskedValue
+}
+
+// PrintDataInterface - prints contents of the interface only if in debug mode
+func PrintDataInterface(data interface{}) {
+	if strings.ToLower(log.GetLevel().String()) == "debug" {
+		PrettyPrint(data)
+	}
+}
+
+// PrettyPrint - print the contents of the obj
+func PrettyPrint(data interface{}) {
+	var p []byte
+	//    var err := error
+	p, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%s \n", p)
 }
