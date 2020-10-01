@@ -28,6 +28,7 @@ import (
 // return the itemID from the APIServerService
 func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 	externalAPIID := sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
+	log.Debugf("Create service, externalAPIID - %s", externalAPIID)
 
 	apiServiceInstance, err := c.getAPIServiceByName(serviceBody.RestAPIID)
 
@@ -59,6 +60,7 @@ func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 // return the itemID from the APIServerService
 func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 	externalAPIID := sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
+	log.Debugf("Update service, externalAPIID - %s", externalAPIID)
 
 	_, err := c.processService(serviceBody, http.MethodPut, c.cfg.GetServicesURL()+"/"+serviceBody.RestAPIID, serviceBody.RestAPIID, externalAPIID)
 	if err != nil {
@@ -527,7 +529,24 @@ func (c *ServiceClient) createAPIServerBody(serviceBody ServiceBody, spec interf
 		Tags:       newtags,
 	}
 
+	// I might remove this or move this out to util later...  I just need it for now for debugging...
+	if strings.ToLower(log.GetLevel().String()) == "debug" {
+		PrettyPrint(apiServer)
+	}
+
 	return json.Marshal(apiServer)
+}
+
+// PrettyPrint - print the contents of the obj
+func PrettyPrint(data interface{}) {
+	var p []byte
+	//    var err := error
+	p, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%s \n", p)
 }
 
 func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]EndPoint, error) {
