@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -26,13 +27,15 @@ type AuthConfig interface {
 // AuthConfiguration -
 type AuthConfiguration struct {
 	AuthConfig
-	URL        string        `config:"url"`
-	Realm      string        `config:"realm"`
-	ClientID   string        `config:"clientId"`
-	PrivateKey string        `config:"privateKey"`
-	PublicKey  string        `config:"publicKey"`
-	KeyPwd     string        `config:"keyPassword"`
-	Timeout    time.Duration `config:"timeout"`
+	URL            string        `config:"url"`
+	Realm          string        `config:"realm"`
+	ClientID       string        `config:"clientId"`
+	PrivateKey     string        `config:"privateKey"`
+	PublicKey      string        `config:"publicKey"`
+	PrivateKeyData string        `config:"privateKeyData"`
+	PublicKeyData  string        `config:"publicKeyData"`
+	KeyPwd         string        `config:"keyPassword"`
+	Timeout        time.Duration `config:"timeout"`
 }
 
 func newAuthConfig() AuthConfig {
@@ -56,13 +59,19 @@ func (a *AuthConfiguration) validate() {
 
 	if a.GetPrivateKey() == "" {
 		exception.Throw(errors.New("Error auth.privatekey not set in config"))
+	} else {
+		if !fileExists(a.GetPrivateKey()) {
+			saveKeyData(a.GetPrivateKey(), os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA"))
+		}
 	}
 
 	if a.GetPublicKey() == "" {
 		exception.Throw(errors.New("Error auth.publickey not set in config"))
+	} else {
+		if !fileExists(a.GetPublicKey()) {
+			saveKeyData(a.GetPublicKey(), os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA"))
+		}
 	}
-
-	return
 }
 
 // GetTokenURL - Returns the token URL
@@ -91,12 +100,12 @@ func (a *AuthConfiguration) GetClientID() string {
 	return a.ClientID
 }
 
-// GetPrivateKey - Returns the token audience URL
+// GetPrivateKey - Returns the privatekey file path
 func (a *AuthConfiguration) GetPrivateKey() string {
 	return a.PrivateKey
 }
 
-// GetPublicKey - Returns the token audience URL
+// GetPublicKey - Returns the public key file path
 func (a *AuthConfiguration) GetPublicKey() string {
 	return a.PublicKey
 }
@@ -117,4 +126,9 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func saveKeyData(filename string, data string) {
+	dataBytes := []byte(data)
+	ioutil.WriteFile(filename, dataBytes, 0600)
 }
