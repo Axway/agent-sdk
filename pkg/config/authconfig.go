@@ -100,7 +100,7 @@ func (a *AuthConfiguration) GetClientID() string {
 	return a.ClientID
 }
 
-// GetPrivateKey - Returns the privatekey file path
+// GetPrivateKey - Returns the private key file path
 func (a *AuthConfiguration) GetPrivateKey() string {
 	return a.PrivateKey
 }
