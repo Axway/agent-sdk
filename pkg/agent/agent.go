@@ -13,6 +13,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // AgentStatus - status for Agent resource
@@ -38,6 +39,7 @@ type agentData struct {
 	dataplaneResource *apiV1.ResourceInstance
 	apicClient        apic.Client
 	cfg               *config.CentralConfiguration
+	tokenRequester    *apicauth.PlatformTokenGetter
 	loggerName        string
 	logLevel          string
 	logFormat         string
@@ -59,6 +61,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 	// Init apic client
 	agent.apicClient = apic.New(centralCfg)
+	initalizeTokenRequester(centralCfg)
 
 	// Get Agent Resources
 	err = RefreshResources()
@@ -73,6 +76,27 @@ func Initialize(centralCfg config.CentralConfig) error {
 	setupSignalProcessor()
 	updateAgentStatus(AgentRunning, "")
 	return nil
+}
+
+// initalizeTokenRequester - Create a new auth token requestor
+func initalizeTokenRequester(centralCfg config.CentralConfig) {
+	agent.tokenRequester = apicauth.NewPlatformTokenGetter(
+		centralCfg.GetAuthConfig().GetPrivateKey(),
+		centralCfg.GetAuthConfig().GetPublicKey(),
+		centralCfg.GetAuthConfig().GetKeyPassword(),
+		centralCfg.GetAuthConfig().GetTokenURL(),
+		centralCfg.GetAuthConfig().GetAudience(),
+		centralCfg.GetAuthConfig().GetClientID(),
+		centralCfg.GetAuthConfig().GetTimeout(),
+	)
+}
+
+// GetCentralAuthToken - Returns the Auth token from AxwayID to make API call to Central
+func GetCentralAuthToken() (string, error) {
+	if agent.tokenRequester == nil {
+		return "", apic.ErrAuthenticationCall
+	}
+	return agent.tokenRequester.GetToken()
 }
 
 // SetupLogging - Setup agent logging

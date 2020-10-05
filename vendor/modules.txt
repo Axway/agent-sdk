@@ -6,13 +6,31 @@ github.com/davecgh/go-spew/spew
 github.com/dgrijalva/jwt-go
 # github.com/elastic/beats/v7 v7.7.1
 github.com/elastic/beats/v7/libbeat/beat
+github.com/elastic/beats/v7/libbeat/cloudid
 github.com/elastic/beats/v7/libbeat/common
+github.com/elastic/beats/v7/libbeat/common/atomic
+github.com/elastic/beats/v7/libbeat/common/backoff
+github.com/elastic/beats/v7/libbeat/common/cfgwarn
+github.com/elastic/beats/v7/libbeat/common/dtfmt
 github.com/elastic/beats/v7/libbeat/common/file
+github.com/elastic/beats/v7/libbeat/common/fmtstr
+github.com/elastic/beats/v7/libbeat/common/match
 github.com/elastic/beats/v7/libbeat/common/reload
+github.com/elastic/beats/v7/libbeat/common/transport
+github.com/elastic/beats/v7/libbeat/common/transport/tlscommon
+github.com/elastic/beats/v7/libbeat/conditions
 github.com/elastic/beats/v7/libbeat/feature
 github.com/elastic/beats/v7/libbeat/logp
 github.com/elastic/beats/v7/libbeat/management
+github.com/elastic/beats/v7/libbeat/monitoring
+github.com/elastic/beats/v7/libbeat/monitoring/report
+github.com/elastic/beats/v7/libbeat/outputs
+github.com/elastic/beats/v7/libbeat/outputs/outil
+github.com/elastic/beats/v7/libbeat/outputs/transport
 github.com/elastic/beats/v7/libbeat/paths
+github.com/elastic/beats/v7/libbeat/plugin
+github.com/elastic/beats/v7/libbeat/publisher
+github.com/elastic/beats/v7/libbeat/testing
 # github.com/elastic/go-sysinfo v1.3.0
 github.com/elastic/go-sysinfo
 github.com/elastic/go-sysinfo/internal/registry
@@ -34,6 +52,8 @@ github.com/elastic/go-windows
 github.com/emersion/go-sasl
 # github.com/emersion/go-smtp v0.13.0
 github.com/emersion/go-smtp
+# github.com/fatih/color v1.7.0
+github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.9.0
@@ -66,6 +86,10 @@ github.com/joeshaw/multierror
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
+# github.com/mattn/go-colorable v0.0.9
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.3
+github.com/mattn/go-isatty
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/pelletier/go-toml v1.2.0
@@ -115,6 +139,9 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zaptest/observer
+# golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+golang.org/x/net/internal/socks
+golang.org/x/net/proxy
 # golang.org/x/sys v0.0.0-20200620081246-981b61492c35
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

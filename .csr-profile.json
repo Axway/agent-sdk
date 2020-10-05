@@ -38,6 +38,17 @@
 			"ids": [
 				"CVE-2019-11254"
 			]
-		}    
+    },
+    {
+      "path": "packetbeat\\-v7\\.7\\.1",
+      "scanner": "whitesource",
+      "classification": "False Positive",
+      "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
+      "component": "packetbeat",
+      "version": "v7\\.7\\.1",
+      "ids": [
+          "CVE-2020-26160"
+      ]
+    }
   ]
 }
