@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
@@ -59,4 +61,15 @@ func PrettyPrint(data interface{}) {
 		return
 	}
 	fmt.Printf("%s \n", p)
+}
+
+// GetProxyURL - need to provide my own function (instead of http.ProxyURL()) to handle empty url. Returning nil
+// means "no proxy"
+func GetProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
+	return func(*http.Request) (*url.URL, error) {
+		if fixedURL == nil || fixedURL.Host == "" {
+			return nil, nil
+		}
+		return fixedURL, nil
+	}
 }

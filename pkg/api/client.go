@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -57,7 +58,7 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 		httpCli = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: cfg.BuildTLSConfig(),
-				Proxy:           getProxyURL(url),
+				Proxy:           util.GetProxyURL(url),
 			},
 		}
 	}
@@ -65,17 +66,6 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 	httpCli.Timeout = time.Second * 10
 	return &httpClient{
 		httpClient: httpCli,
-	}
-}
-
-// need to provide my own function (instead of http.ProxyURL()) to handle empty url. Returning nil
-// means "no proxy"
-func getProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
-	return func(*http.Request) (*url.URL, error) {
-		if fixedURL == nil || fixedURL.Host == "" {
-			return nil, nil
-		}
-		return fixedURL, nil
 	}
 }
 
