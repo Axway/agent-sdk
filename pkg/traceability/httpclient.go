@@ -12,6 +12,7 @@ import (
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/agent"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/outputs"
@@ -70,26 +71,8 @@ type httpEventMetadata struct {
 
 // NewHTTPClient instantiate a client.
 func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
-	proxy := http.ProxyFromEnvironment
-	if s.Proxy != nil {
-		proxy = http.ProxyURL(s.Proxy)
-	}
-
-	var dialer, tlsDialer transport.Dialer
-	var err error
-
-	dialer = transport.NetDialer(s.Timeout)
-	tlsDialer, err = transport.TLSDialer(dialer, s.TLS, s.Timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	if st := s.Observer; st != nil {
-		dialer = transport.StatsDialer(dialer, st)
-		tlsDialer = transport.StatsDialer(tlsDialer, st)
-	}
-
 	var encoder bodyEncoder
+	var err error
 	compression := s.CompressionLevel
 	if compression == 0 {
 		encoder = newJSONEncoder(nil)
@@ -99,14 +82,14 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 			return nil, err
 		}
 	}
+
 	client := &HTTPClient{
 		Connection: Connection{
 			URL: s.URL,
 			http: &http.Client{
 				Transport: &http.Transport{
-					Dial:    dialer.Dial,
-					DialTLS: tlsDialer.Dial,
-					Proxy:   proxy,
+					TLSClientConfig: s.TLS.ToConfig(),
+					Proxy:           util.GetProxyURL(s.Proxy),
 				},
 				Timeout: s.Timeout,
 			},
@@ -193,6 +176,8 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 	case status >= 300:
 		// retry
 		return data, err
+	case status == 0:
+		debugf("Transport error :%s", err.Error())
 	}
 
 	return nil, nil
