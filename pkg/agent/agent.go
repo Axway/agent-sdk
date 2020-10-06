@@ -2,16 +2,20 @@ package agent
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
 	apiV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -72,7 +76,47 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 	setupSignalProcessor()
 	updateAgentStatus(AgentRunning, "")
+
+	// only do continuous healthchecking in binary agents
+	if !isRunningInDockerContainer() {
+		go runPeriodicHealthChecks()
+	}
+
 	return nil
+}
+
+func runPeriodicHealthChecks() {
+	for {
+		if hc.RunChecks() != hc.OK {
+			log.Error(errors.ErrHealthCheck)
+			os.Exit(1)
+		}
+		// Set sleep to throttle loop
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func isRunningInDockerContainer() bool {
+	// docker creates a .dockerenv file at the root
+	// of the directory tree inside the container.
+	// if this file exists then the viewer is running
+	// from inside a container so return true
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
+	if err != nil {
+		return false
+	}
+
+	// Convert []byte to string and print to screen
+	text := string(bytes)
+	if strings.Contains(text, ":/docker") {
+		return true
+	}
+
+	return false
 }
 
 // SetupLogging - Setup agent logging
