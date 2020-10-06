@@ -43,6 +43,13 @@
 | 1402 | error in overriding configuration using file with environment variables                                     | pkg/config/ErrEnvConfigOverride               |
 | 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes                            | pkg/config/ErrStatusHealthCheckPeriod         |
 | 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 and 300 seconds                       | pkg/config/ErrStatusHealthCheckInterval       |
+|      | 1500-1599 - errors related to traceability output transport                                                 |                                               |
+| 1500 | could not set proxy                                                                                         | pkg/traceability/ErrSettingProxy              |
+| 1501 | failed to publish events                                                                                    | pkg/traceability/ErrFailedPublishing          |
+| 1502 | error closing connectino with Condor                                                                        | pkg/traceability/ErrClosingCondorConnection   |
+| 1503 | http transport is not connected                                                                             | pkg/traceability/ErrHTTPNotConnected          |
+| 1504 | failed to encode the json content                                                                           | pkg/traceability/ErrJSONEncodeFailed          |
+| 1505 | invalid traceability config                                                                                 | pkg/traceability/ErrInvalidConfig             |
 |      | 1900-1910 - errors managing agent service                                                                   |                                               |
 | 1900 | unsupported system for service installation                                                                 | pkg/cmd/service/daemon/ErrUnsupportedSystem   |
 | 1901 | systemd is required for service installation                                                                | pkg/cmd/service/daemon/ErrNeedSystemd         |
