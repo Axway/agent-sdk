@@ -74,7 +74,7 @@ find_errors() {
 
       # figure out the pakage alias, if any
       errors_pkg_name=`echo $has_pkg | sed -e "s/^import//" | awk '{print $1}' | grep -v $import_path | grep -v import`.
-      if [ -z "$errors_pkg_name" ]; then
+      if [ "$errors_pkg_name" == "." ]; then
         errors_pkg_name="errors".
       fi
 
