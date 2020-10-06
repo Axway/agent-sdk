@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 # constants for path to error package
 pkg_path="util/errors"
@@ -61,7 +60,7 @@ find_errors() {
     # different processing for errors in the errors package
     if grep -q ${pkg_path} <<<"$file"; then  
       err_pkg="true"
-      # fild uses in the error package itself
+      # find uses in the error package itself
       has_pkg=`grep "= New" $file`
     else
       # find modules that import the errors package
@@ -84,6 +83,8 @@ find_errors() {
         errors_pkg_name=""
       fi
 
+echo ${errors_pkg_name}
+echo $file
       check_file_for_error_lines "${errors_pkg_name}New(" $file ""
       check_file_for_error_lines "${errors_pkg_name}Newf(" $file "true"
     fi
