@@ -62,7 +62,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 
 	// Init apic client
-	agent.apicClient = apic.New(centralCfg)
+	agent.apicClient = nil //apic.New(centralCfg)
 
 	// Get Agent Resources
 	err = RefreshResources()
