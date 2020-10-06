@@ -83,8 +83,6 @@ find_errors() {
         errors_pkg_name=""
       fi
 
-echo ${errors_pkg_name}
-echo $file
       check_file_for_error_lines "${errors_pkg_name}New(" $file ""
       check_file_for_error_lines "${errors_pkg_name}Newf(" $file "true"
     fi
