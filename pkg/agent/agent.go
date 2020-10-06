@@ -91,8 +91,8 @@ func runPeriodicHealthChecks() {
 			log.Error(errors.ErrHealthCheck)
 			os.Exit(1)
 		}
-		// Set sleep to throttle loop
-		time.Sleep(5 * time.Second)
+		// Set sleep time based on configured interval
+		time.Sleep(hc.GetStatusConfig().GetHealthCheckInterval())
 	}
 }
 
@@ -101,9 +101,11 @@ func isRunningInDockerContainer() bool {
 	// of the directory tree inside the container.
 	// if this file exists then the viewer is running
 	// from inside a container so return true
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
+
+	// NOTE: This check might work, but the one following this is probably better
+	// if _, err := os.Stat("/.dockerenv"); err == nil {
+	// 	return true
+	// }
 
 	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
 	if err != nil {

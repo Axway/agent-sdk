@@ -59,6 +59,11 @@ func SetStatusConfig(statusCfg corecfg.StatusConfig) {
 	statusConfig = statusCfg
 }
 
+// GetStatusConfig - Set the status config globally
+func GetStatusConfig() corecfg.StatusConfig {
+	return statusConfig
+}
+
 // WaitForReady - Iterate through all healthchecks, returns OK once ready or returns Fail if timeout is reached
 func WaitForReady() error {
 	timeout := time.After(statusConfig.GetHealthCheckPeriod())
