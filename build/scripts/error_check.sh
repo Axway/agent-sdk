@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 # constants for path to error package
 pkg_path="util/errors"
