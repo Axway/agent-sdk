@@ -151,6 +151,7 @@ check_for_dependency_errors() {
 
 check_errors_markdown() {
   for err in "${error_names[@]}"; do
+    echo $err
     # check the errors are in the markdown
     if ! grep -q "$err" ./errors.md; then
       RC=1
@@ -160,6 +161,7 @@ check_errors_markdown() {
 
   for code in "${error_codes[@]}"; do
     # check the errors are in the markdown
+    echo $code
     if ! grep -q "$code" ./errors.md; then
       RC=1
       echo Error code $code was not in the errors.md filen
