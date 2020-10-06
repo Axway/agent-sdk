@@ -40,8 +40,8 @@
 |      | 1400-1499 - for setting and parsing configuration errors                                                    |                                               |
 | 1401 | error parsing subscription approval mode                                                                    | pkg/config/ErrSubscriptionApprovalModeInvalid |
 | 1402 | error in overriding configuration using file with environment variables                                     | pkg/config/ErrEnvConfigOverride               |
-| 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes")                          | pkg/config/ErrStatusHealthCheckPeriod
-| 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 and 300 seconds")                     | pkg/config/ErrStatusHealthCheckInterval
+| 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes"                           | pkg/config/ErrStatusHealthCheckPeriod
+| 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 and 300 seconds"                      | pkg/config/ErrStatusHealthCheckInterval
 |      | 1900-1910 - errors managing agent service                                                                   |                                               |
 | 1900 | unsupported system for service installation                                                                 | pkg/cmd/service/daemon/ErrUnsupportedSystem   |
 | 1901 | systemd is required for service installation                                                                | pkg/cmd/service/daemon/ErrNeedSystemd         |
