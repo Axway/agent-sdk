@@ -42,7 +42,7 @@ func (c *ServiceClient) createService(serviceBody ServiceBody) (string, error) {
 	}
 
 	// Update description title after creating APIService to inlcude the stage name if it exists
-	c.postAPIServiceUpdate(serviceBody)
+	serviceBody = c.postAPIServiceUpdate(serviceBody)
 
 	// process revision and instance
 	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody)
@@ -69,7 +69,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 	}
 
 	// Update description and title after updating APIService to inlcude the stage name if it exists
-	c.postAPIServiceUpdate(serviceBody)
+	serviceBody = c.postAPIServiceUpdate(serviceBody)
 
 	itemID, revisionName, err := c.processRevisionAndInstance(serviceBody)
 	if err != nil {
@@ -88,11 +88,13 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 
 // postApiServiceUpdate - called after APIService was created or updated.
 // Update description and title after updating or creating APIService to inlcude the stage name if it exists
-func (c *ServiceClient) postAPIServiceUpdate(serviceBody ServiceBody) {
+func (c *ServiceClient) postAPIServiceUpdate(serviceBody ServiceBody) ServiceBody {
 	if serviceBody.Stage != "" {
 		serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage + ")"
 		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
 	}
+
+	return serviceBody
 }
 
 // processRevisionAndInstance - This is being called from
