@@ -90,7 +90,7 @@ func (c *ServiceClient) updateService(serviceBody ServiceBody) (string, error) {
 // Update description and title after updating or creating APIService to inlcude the stage name if it exists
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody ServiceBody) ServiceBody {
 	if serviceBody.Stage != "" {
-		serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage + ")"
+		serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage
 		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
 	}
 
