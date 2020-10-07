@@ -100,16 +100,9 @@ func runPeriodicHealthChecks() {
 }
 
 func isRunningInDockerContainer() bool {
-	// docker creates a .dockerenv file at the root
-	// of the directory tree inside the container.
-	// if this file exists then the viewer is running
-	// from inside a container so return true
-
-	// NOTE: This check might work, but the one following this is probably better
-	// if _, err := os.Stat("/.dockerenv"); err == nil {
-	// 	return true
-	// }
-
+	// Within the cgroup file, if you are not in a docker container all entries are like this devices:/
+	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
+	// So, all we need to do is see if ":/docker" exists somewhere in the file.
 	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
 	if err != nil {
 		return false
