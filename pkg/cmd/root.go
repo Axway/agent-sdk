@@ -148,6 +148,11 @@ func (c *agentRootCommand) initConfig() error {
 
 	// Init the healthcheck API
 	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
+	err = statusCfg.ValidateConfig()
+	if err != nil {
+		return err
+	}
+
 	hc.SetStatusConfig(statusCfg)
 	hc.HandleRequests()
 

@@ -7,6 +7,7 @@
 |      | 1000-1099 - for general agent errors                                                                        |                                               |
 | 1001 | initialization error checking for dependencies to respond, possibly network or settings                     | pkg/util/errors/ErrInitServicesNotReady       |
 | 1002 | timeout error checking for dependencies to respond, possibly network or settings                            | pkg/util/errors/ErrTimeoutServicesNotReady    |
+| 1003 | Periodic health checker failed.  Services are not ready                                                     | pkg/util/errorsErrHealthCheck                 |
 |      | 1100-1299 - for apic package errors                                                                         |                                               |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                     |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery                  |
@@ -40,6 +41,8 @@
 |      | 1400-1499 - for setting and parsing configuration errors                                                    |                                               |
 | 1401 | error parsing subscription approval mode                                                                    | pkg/config/ErrSubscriptionApprovalModeInvalid |
 | 1402 | error in overriding configuration using file with environment variables                                     | pkg/config/ErrEnvConfigOverride               |
+| 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes                            | pkg/config/ErrStatusHealthCheckPeriod         |
+| 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 and 300 seconds                       | pkg/config/ErrStatusHealthCheckInterval       |
 |      | 1500-1599 - errors related to traceability output transport                                                 |                                               |
 | 1500 | could not set proxy                                                                                         | pkg/traceability/ErrSettingProxy              |
 | 1501 | failed to publish events                                                                                    | pkg/traceability/ErrFailedPublishing          |
