@@ -32,9 +32,8 @@
       "scanner": "whitesource",
 			"component": "github.com\\/elastic\\/go-ucfg",
 			"version": "v0.8.3",
-      "classification": "Deferred",
-      "justification": "APIGOV-16210",
-      "until": "2020-10-06",
+      "classification": "False Positive",
+      "justification": "kubernetes libraries are not used by agents",
 			"ids": [
 				"CVE-2019-11254"
 			]
