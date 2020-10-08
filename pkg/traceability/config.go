@@ -27,6 +27,7 @@ type Config struct {
 	Backoff          Backoff           `config:"backoff"`
 	EscapeHTML       bool              `config:"escape_html"`
 	Protocol         string            `config:"protocol"`
+	Hosts            []string          `config:"hosts"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
