@@ -123,7 +123,7 @@ type EmailTemplate struct {
 // AddApprovalConfigProperties -
 func AddApprovalConfigProperties(props properties.Properties) {
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
