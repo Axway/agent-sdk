@@ -108,7 +108,6 @@ func (sm *subscriptionManager) processSubscriptions() {
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
-	log.Debugf("preprocessSubscriptions (subscription.ApicID: %s, subscription.apicClient: %s", subscription.ApicID, subscription.apicClient)
 
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
 	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
@@ -118,28 +117,25 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
 	consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(consumerInstanceName, nil)
-	log.Debugf("consumerInstance (consumerInstance Name: %s, consumerInstance Metadata.ID: %s", consumerInstance.Name, consumerInstance.Metadata.ID)
 	if err == nil {
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
 			sm.setSubscripitionInfo(subscription, consumerInstance)
 		} else {
+			log.Debug("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
 		}
 	}
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *APIServer) {
-	log.Debug("preprocessSubscriptionForAPIServiceInstance - START")
 	if consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
-		log.Debug("consumerInstance.Metadata not nil and consumerInstance.Metadata.References > 0")
 		for _, reference := range consumerInstance.Metadata.References {
-			log.Debug("range on consumerInstance.Metadata.References")
 			if reference.Kind == "APIServiceInstance" {
-				log.Debugf("reference.Kind = APIServiceInstance. reference.ID : %s", reference.ID)
 				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
 				if err == nil {
-					log.Debugf("Got apiServiceInstance (name : %s)", apiServiceInstance.Name)
 					sm.setSubscripitionInfo(subscription, apiServiceInstance)
+				} else {
+					log.Errorf(err.Error())
 				}
 			}
 		}
@@ -152,11 +148,9 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *APIServer) {
 	if apiServerResource != nil && apiServerResource.Metadata != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
-		log.Debugf("setSubscripitionInfo (subscription.ApicID : %s)", subscription.ApicID)
 		for name, value := range apiServerResource.Attributes {
 			if name == AttrExternalAPIID {
 				subscription.RemoteAPIID = value.(string)
-				log.Debugf("setSubscripitionInfo (subscription.RemoteAPIID : %s)", subscription.RemoteAPIID)
 			}
 		}
 		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
