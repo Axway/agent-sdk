@@ -15,8 +15,7 @@
   },
   "suppressions": [
     {
-      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
-      "regex": true,
+      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc\\-ecosystem\\/go\\-grpc\\-prometheus\\/1\\.2\\.0",
       "scanner": "dependency-check",
       "classification": "False Positive",
       "justification": "Originally: APIGOV-12766. Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent. Also the vulnerable package is incorrectly reported (Vulnerablity in  github.com/prometheus/prometheus package and not github.com/grpc-ecosystem/go-grpc-prometheus).",
@@ -27,10 +26,9 @@
       ]
     },
     {
-			"path": ".*github.com\\/elastic\\/go-ucfg-v0\\.8\\.3",
-			"regex": true,
+			"path": ".*github.com\\/elastic\\/go\\-ucfg\\-v0\\.8\\.3",
       "scanner": "whitesource",
-			"component": "github.com\\/elastic\\/go-ucfg",
+			"component": "github.com\\/elastic\\/go\\-ucfg",
 			"version": "v0.8.3",
       "classification": "False Positive",
       "justification": "kubernetes libraries are not used by agents",
