@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -63,4 +64,10 @@ func TestAuhConfig(t *testing.T) {
 	authCfg.KeyPwd = "xxx"
 	assert.Equal(t, "xxx", cfg.GetKeyPassword())
 	assert.Equal(t, 30*time.Second, cfg.GetTimeout())
+
+	// cleanup files
+	err = os.Remove("ppp")
+	assert.Nil(t, err)
+	err = os.Remove("bbbb")
+	assert.Nil(t, err)
 }

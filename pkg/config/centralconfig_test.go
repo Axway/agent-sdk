@@ -53,6 +53,8 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 
 	assert.Equal(t, "aaa/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
 	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
+
+	cleanupFiles()
 }
 
 func TestTraceabilityAgentConfig(t *testing.T) {
@@ -109,6 +111,8 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = centralConfig.SetProxyEnvironmentVariable()
 	assert.Nil(t, err)
 	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTP_PROXY"))
+
+	cleanupFiles()
 }
 
 func TestTeamConfig(t *testing.T) {
@@ -129,9 +133,17 @@ func TestTeamConfig(t *testing.T) {
 
 	// Should be nil, not yet set
 	assert.Equal(t, "", centralConfig.GetTeamID(), "Team ID was expected to be blank as it has not yet been set")
-	
+
 	//Set it and validate
 	teamID := "abc12:34567:def89:12345:67890"
 	centralConfig.SetTeamID(teamID)
 	assert.Equal(t, teamID, centralConfig.GetTeamID(), "The Team ID was not set appropriately")
+
+	cleanupFiles()
+}
+
+func cleanupFiles() {
+	// cleanup files
+	os.Remove("pppp")
+	os.Remove("kkk")
 }
