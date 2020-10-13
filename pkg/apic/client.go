@@ -338,12 +338,12 @@ func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, catalogI
 	return c.getSubscriptionsForCatalogItem(states, catalogItemID)
 }
 
-// GetSubscriptionDefinitonPropertiesForCatalogItem -
+// GetSubscriptionDefinitionPropertiesForCatalogItem -
 func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error) {
 	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key)
 }
 
-// UpdateSubscriptionDefinitonPropertiesForCatalogItem -
+// UpdateSubscriptionDefinitionPropertiesForCatalogItem -
 func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error {
 	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key, subscriptionSchema)
 }
