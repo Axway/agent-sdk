@@ -31,6 +31,9 @@
 | 1152 | error parsing filter in configuration. Invalid selector expression                                          | pkg/filter/ErrFilterSelectorExpr              |
 | 1153 | error parsing filter in configuration. Invalid operator                                                     | pkg/filter/ErrFilterOperator                  |
 | 1154 | error parsing filter in configuration. Unrecognized condition                                               | pkg/filter/ErrFilterCondition                 |
+| 1155 | error getting subscription schema in AMPLIFY Central                                                        | pkg/apic/ErrSubscriptionSchemaGet             |
+| 1156 | error getting subscription definition properties in AMPLIFY Central                                         | pkg/apic/ErrGetSubscriptionDefProperties      |
+| 1157 | error updating subscription definition properties in AMPLIFY Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties   |
 |      | 1300-1399 - for subscription notification errors                                                            |                                               |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification        |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications     |

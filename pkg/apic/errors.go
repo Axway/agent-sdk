@@ -26,8 +26,8 @@ var (
 	ErrCreateWebhook = errors.New(1145, "unable to create webhook")
 	ErrCreateSecret  = errors.New(1146, "unable to create secret")
 
-	ErrSubscriptionSchemaGet           = errors.New(1147, "error getting subscription schema in AMPLIFY Central")
-	ErrGetSubscriptionDefProperties    = errors.New(1148, "error getting subscription definition properties in AMPLIFY Central")
-	ErrUpdateSubscriptionDefProperties = errors.New(1149, "error updating subscription definition properties in AMPLIFY Central")
-	ErrGetSubscriptionSchema           = errors.New(1150, "error getting subscription schema in AMPLIFY Central")
+	ErrSubscriptionSchemaGet           = errors.New(1155, "error getting subscription schema in AMPLIFY Central")
+	ErrGetSubscriptionDefProperties    = errors.New(1156, "error getting subscription definition properties in AMPLIFY Central")
+	ErrUpdateSubscriptionDefProperties = errors.New(1157, "error updating subscription definition properties in AMPLIFY Central")
+	ErrGetSubscriptionSchema           = errors.New(1158, "error getting subscription schema in AMPLIFY Central")
 )

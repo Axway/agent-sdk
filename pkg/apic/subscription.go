@@ -218,7 +218,7 @@ func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
 
 	ss, err = s.getServiceClient().GetSubscriptionSchema(orgID)
 	if err != nil {
-		return agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
+		return agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
 	}
 
 	prop1 := ss.GetProperty(appNameKey)
