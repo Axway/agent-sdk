@@ -101,3 +101,63 @@ func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogI
 	}
 	return subscriptions, nil
 }
+
+func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), key),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, errors.New(strconv.Itoa(response.Code))
+	}
+
+	ss := NewSubscriptionSchema("")
+	err = json.Unmarshal(response.Body, &ss)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss, nil
+}
+
+func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error {
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
+
+	body, err := json.Marshal(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), key),
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return errors.New(strconv.Itoa(response.Code))
+	}
+
+	return nil
+}

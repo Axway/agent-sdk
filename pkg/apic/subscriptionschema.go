@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
@@ -13,13 +14,15 @@ import (
 // SubscriptionSchema -
 type SubscriptionSchema interface {
 	AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string)
+	GetProperty(name string) SubscriptionSchemaPropertyDefinition
 	AddUniqueKey(keyName string)
 	GetSubscriptionName() string
 	mapStringInterface() (map[string]interface{}, error)
 	rawJSON() (json.RawMessage, error)
 }
 
-type subscriptionSchemaPropertyDefinition struct {
+// SubscriptionSchemaPropertyDefinition -
+type SubscriptionSchemaPropertyDefinition struct {
 	Type        string   `json:"type"`
 	Description string   `json:"description"`
 	Enum        []string `json:"enum,omitempty"`
@@ -31,7 +34,7 @@ type subscriptionSchema struct {
 	SchemaType        string                                          `json:"type"`
 	SchemaVersion     string                                          `json:"$schema"`
 	SchemaDescription string                                          `json:"description"`
-	Properties        map[string]subscriptionSchemaPropertyDefinition `json:"properties"`
+	Properties        map[string]SubscriptionSchemaPropertyDefinition `json:"properties"`
 	Required          []string                                        `json:"required,omitempty"`
 	UniqueKeys        []string                                        `json:"x-axway-unique-keys,omitempty"`
 }
@@ -43,14 +46,14 @@ func NewSubscriptionSchema(name string) SubscriptionSchema {
 		SchemaType:        "object",
 		SchemaVersion:     "http://json-schema.org/draft-04/schema#",
 		SchemaDescription: "Subscription specification for authentication",
-		Properties:        make(map[string]subscriptionSchemaPropertyDefinition),
+		Properties:        make(map[string]SubscriptionSchemaPropertyDefinition),
 		Required:          make([]string, 0),
 	}
 }
 
 // AddProperty -
 func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string) {
-	newProp := subscriptionSchemaPropertyDefinition{
+	newProp := SubscriptionSchemaPropertyDefinition{
 		Type:        dataType,
 		Description: description,
 		APICRef:     apicRefField,
@@ -61,9 +64,24 @@ func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefFi
 	}
 	ss.Properties[name] = newProp
 
-	if isRequired {
+	// required array can't contain duplicates!
+	if isRequired && !ss.contains(ss.Required, name) {
 		ss.Required = append(ss.Required, name)
 	}
+}
+
+func (ss *subscriptionSchema) contains(items []string, s string) bool {
+	for _, item := range items {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+// GetProperty -
+func (ss *subscriptionSchema) GetProperty(name string) SubscriptionSchemaPropertyDefinition {
+	return ss.Properties[name]
 }
 
 // GetSubscriptionName -
@@ -87,13 +105,12 @@ func (ss *subscriptionSchema) rawJSON() (json.RawMessage, error) {
 
 // mapStringInterface -
 func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, error) {
-	var stringMap map[string]interface{}
-
 	schemaBuffer, err := json.Marshal(ss)
 	if err != nil {
 		return nil, err
 	}
 
+	var stringMap map[string]interface{}
 	json.Unmarshal(schemaBuffer, &stringMap)
 	if err != nil {
 		return nil, err
@@ -124,7 +141,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.POST)
+		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
 	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
 		logResponseErrors(response.Body)
@@ -150,7 +167,6 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 	if err != nil {
 		return err
 	}
-
 	request := coreapi.Request{
 		Method:  coreapi.PUT,
 		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
@@ -160,7 +176,7 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return agenterrors.Wrap(agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error()), coreapi.PUT)
+		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
 	if !(response.Code == http.StatusOK) {
 		logResponseErrors(response.Body)
@@ -185,7 +201,7 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 		Schema: v1alpha1.ConsumerSubscriptionDefinitionSpecSchema{
 			Properties: []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
 				{
-					Key:   "profile",
+					Key:   profileKey,
 					Value: catalogSubscriptionSchema,
 				},
 			},
@@ -201,4 +217,56 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 	}
 
 	return json.Marshal(apiServerService)
+}
+
+// GetSubscriptionSchema - Gets the subscription schema for the specified name.
+func (c *ServiceClient) GetSubscriptionSchema(schemaName string) (SubscriptionSchema, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetAPIServerSubscriptionDefinitionURL(), schemaName),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+	}
+
+	if response.Code != http.StatusOK {
+		logResponseErrors(response.Body)
+		return nil, ErrSubscriptionResp.FormatError(response.Code)
+	}
+
+	subscriptionDef := new(v1alpha1.ConsumerSubscriptionDefinition)
+	err = json.Unmarshal(response.Body, subscriptionDef)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+	}
+
+	val := c.getProfilePropValue(subscriptionDef)
+	bytes, err := json.Marshal(val)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+	}
+
+	ss := NewSubscriptionSchema(schemaName)
+	err = json.Unmarshal(bytes, &ss)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+	}
+	return ss, nil
+}
+
+func (c *ServiceClient) getProfilePropValue(subscriptionDef *v1alpha1.ConsumerSubscriptionDefinition) map[string]interface{} {
+	for _, prop := range subscriptionDef.Spec.Schema.Properties {
+		if prop.Key == profileKey {
+			return prop.Value
+		}
+	}
+	return nil
 }

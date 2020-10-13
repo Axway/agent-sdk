@@ -25,6 +25,12 @@ const (
 	SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
 )
 
+const (
+	appNameKey              = "appName"
+	subscriptionAppNameType = "string"
+	profileKey              = "profile"
+)
+
 // Subscription -
 type Subscription interface {
 	GetID() string
@@ -36,6 +42,7 @@ type Subscription interface {
 	GetState() SubscriptionState
 	GetPropertyValue(key string) string
 	UpdateState(newState SubscriptionState) error
+	UpdateProperties(applName, orgID string) error
 }
 
 // CentralSubscription -
@@ -185,4 +192,70 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		centralSubscriptions = append(centralSubscriptions, sub)
 	}
 	return centralSubscriptions, nil
+}
+
+// UpdateProperties -
+func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
+	catalogItemID := s.GetCatalogItemID()
+	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
+	if ss == nil || ss != nil {
+		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
+	}
+
+	prop := ss.GetProperty(appNameKey)
+	apps := append(prop.Enum, appName)
+	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
+
+	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	err = s.updatePropertyValue(profileKey, map[string]interface{}{appNameKey: appName})
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	ss, err = s.getServiceClient().GetSubscriptionSchema(orgID)
+	if err != nil {
+		return agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
+	}
+
+	prop1 := ss.GetProperty(appNameKey)
+	apps = append(prop1.Enum, appName)
+	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
+	err = s.getServiceClient().UpdateSubscriptionSchema(ss)
+	return err
+}
+
+// UpdatePropertyValue - Updates the property value of the subscription
+func (s *CentralSubscription) updatePropertyValue(key string, value map[string]interface{}) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), key)
+	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
 }

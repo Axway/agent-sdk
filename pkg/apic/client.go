@@ -38,13 +38,16 @@ type Client interface {
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	GetSubscriptionSchema(name string) (SubscriptionSchema, error)
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
 	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
 	GetUserEmailAddress(ID string) (string, error)
-	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
+	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
+	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error)
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 }
@@ -331,8 +334,18 @@ func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*API
 }
 
 // GetSubscriptionsForCatalogItem -
-func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
-	return c.getSubscriptionsForCatalogItem(states, instanceID)
+func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
+	return c.getSubscriptionsForCatalogItem(states, catalogItemID)
+}
+
+// GetSubscriptionDefinitonPropertiesForCatalogItem -
+func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error) {
+	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key)
+}
+
+// UpdateSubscriptionDefinitonPropertiesForCatalogItem -
+func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error {
+	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key, subscriptionSchema)
 }
 
 // GetUserEmailAddress - request the user email
