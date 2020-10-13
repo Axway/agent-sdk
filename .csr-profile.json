@@ -12,5 +12,18 @@
     "yarn": false,
     "gosec": false,
     "whitesource": true
-  }
+  },
+  "suppressions": [
+    {
+      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
+      "regex": true,
+      "scanner": "dependency-check",
+      "classification": "False Positive",
+      "justification": "Originally: APIGOV-12766. Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent. Also the vulnerable package is incorrectly reported (Vulnerablity in  github.com/prometheus/prometheus package and not github.com/grpc-ecosystem/go-grpc-prometheus).",
+      "component": "go-grpc-prometheus",
+      "version": "1.2.0",
+      "ids": [
+        "CVE-2019-3826"
+      ]
+    }]
 }
