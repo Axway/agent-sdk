@@ -25,5 +25,30 @@
       "ids": [
         "CVE-2019-3826"
       ]
-    }]
+    },
+    {
+			"path": ".*github.com\\/elastic\\/go-ucfg-v0\\.8\\.3",
+			"regex": true,
+      "scanner": "whitesource",
+			"component": "github.com\\/elastic\\/go-ucfg",
+			"version": "v0.8.3",
+      "classification": "Deferred",
+      "justification": "APIGOV-16210",
+      "until": "2020-10-06",
+			"ids": [
+				"CVE-2019-11254"
+			]
+    },
+    {
+      "path": "packetbeat\\-v7\\.7\\.1",
+      "scanner": "whitesource",
+      "classification": "False Positive",
+      "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
+      "component": "packetbeat",
+      "version": "v7\\.7\\.1",
+      "ids": [
+          "CVE-2020-26160"
+      ]
+    }
+  ]
 }
