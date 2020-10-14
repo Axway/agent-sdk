@@ -14,7 +14,7 @@ import (
 // SubscriptionSchema -
 type SubscriptionSchema interface {
 	AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string)
-	GetProperty(name string) SubscriptionSchemaPropertyDefinition
+	GetProperty(name string) *SubscriptionSchemaPropertyDefinition
 	AddUniqueKey(keyName string)
 	GetSubscriptionName() string
 	mapStringInterface() (map[string]interface{}, error)
@@ -80,8 +80,11 @@ func (ss *subscriptionSchema) contains(items []string, s string) bool {
 }
 
 // GetProperty -
-func (ss *subscriptionSchema) GetProperty(name string) SubscriptionSchemaPropertyDefinition {
-	return ss.Properties[name]
+func (ss *subscriptionSchema) GetProperty(name string) *SubscriptionSchemaPropertyDefinition {
+	if val, ok := ss.Properties[name]; ok {
+		return &val
+	}
+	return nil
 }
 
 // GetSubscriptionName -
