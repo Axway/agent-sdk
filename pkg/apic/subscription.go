@@ -198,7 +198,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
 	catalogItemID := s.GetCatalogItemID()
 	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
-	if ss == nil || ss != nil {
+	if ss == nil || err != nil {
 		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
 	}
 
