@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,4 +67,88 @@ func TestGetSubscriptionsForCatalogItem(t *testing.T) {
 	subscriptions, err = client.GetSubscriptionsForCatalogItem(nil, "0000")
 	assert.NotNil(t, err)
 	assert.Nil(t, subscriptions)
+}
+
+func TestGetSubscriptionDefinitionPropertiesForCatalogItem(t *testing.T) {
+	client, httpClientMock := GetTestServiceClient()
+	wd, _ := os.Getwd()
+
+	// fail
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			ErrString: "Resource Not Found",
+		},
+	})
+	schema, err := client.getSubscriptionDefinitionPropertiesForCatalogItem("id", "profile")
+	assert.NotNil(t, err)
+	assert.Nil(t, schema)
+
+	// fail
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
+	})
+	schema, err = client.getSubscriptionDefinitionPropertiesForCatalogItem("id", "profile")
+	assert.NotNil(t, err)
+	assert.Nil(t, schema)
+
+	// success
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			FileName: wd + "/testdata/catalogitemsubscriptiondefprofile.json",
+			RespCode: http.StatusOK,
+		},
+	})
+	schema, err = client.getSubscriptionDefinitionPropertiesForCatalogItem("id", "profile")
+	assert.Nil(t, err)
+	assert.NotNil(t, schema)
+	prop := schema.GetProperty("appName")
+	assert.NotNil(t, prop)
+
+	assert.True(t, arrContains(prop.Enum, "DaleApp"))
+	assert.False(t, arrContains(prop.Enum, "FooApp"))
+}
+
+func TestUpdateSubscriptionDefinitionPropertiesForCatalogItem(t *testing.T) {
+	client, httpClientMock := GetTestServiceClient()
+	wd, _ := os.Getwd()
+
+	// get a schema
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			FileName: wd + "/testdata/catalogitemsubscriptiondefprofile.json",
+			RespCode: http.StatusOK,
+		},
+	})
+	schema, err := client.getSubscriptionDefinitionPropertiesForCatalogItem("id", "profile")
+	assert.Nil(t, err)
+	assert.NotNil(t, schema)
+
+	// fail
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			ErrString: "Resource Not Found",
+		},
+	})
+	err = client.updateSubscriptionDefinitionPropertiesForCatalogItem("id", "profile", schema)
+	assert.NotNil(t, err)
+
+	// fail
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
+	})
+	err = client.updateSubscriptionDefinitionPropertiesForCatalogItem("id", "profile", schema)
+	assert.NotNil(t, err)
+
+	// success
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusOK,
+		},
+	})
+	err = client.updateSubscriptionDefinitionPropertiesForCatalogItem("id", "profile", schema)
+	assert.Nil(t, err)
 }

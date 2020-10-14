@@ -1,0 +1,27 @@
+{
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "required": [
+        "appName"
+    ],
+    "properties": {
+        "appName": {
+            "enum": [
+                "Create an application",
+                "DaleApp",
+                "e4ef91a77508bc0b01751de3f9e62cc8",
+                "e4ef91a77508bc0b01751e1ed50d2e24",
+                "e4ef91a77508bc0b01751e2340f52fbe",
+                "e4ef91a77508bc0b01751e2798b2313f",
+                "e4ef91a77508bc0b01751e2a32623323",
+                "e4ef91a77508bc0b01751eccb58f347f",
+                "e4ef91a77508bc0b017522e0da233c2a",
+                "e4ef91a77508bc0b0175231a8d3e3dcf",
+                "e4ef91a77508bc0b01752320ab433f17"
+            ],
+            "type": "string",
+            "description": ""
+        }
+    },
+    "description": "Subscription specification for authentication"
+}
