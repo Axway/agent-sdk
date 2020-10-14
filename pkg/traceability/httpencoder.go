@@ -15,15 +15,8 @@ type bodyEncoder interface {
 }
 
 type bulkBodyEncoder interface {
-	bulkWriter
-
 	AddHeader(*http.Header)
 	Reset()
-}
-
-type bulkWriter interface {
-	Add(meta, obj interface{}) error
-	AddRaw(raw interface{}) error
 }
 
 type jsonEncoder struct {
@@ -60,26 +53,6 @@ func (b *jsonEncoder) Marshal(obj interface{}) error {
 	return enc.Encode(obj)
 }
 
-func (b *jsonEncoder) AddRaw(raw interface{}) error {
-	enc := json.NewEncoder(b.buf)
-	return enc.Encode(raw)
-}
-
-func (b *jsonEncoder) Add(meta, obj interface{}) error {
-	enc := json.NewEncoder(b.buf)
-	pos := b.buf.Len()
-
-	if err := enc.Encode(meta); err != nil {
-		b.buf.Truncate(pos)
-		return err
-	}
-	if err := enc.Encode(obj); err != nil {
-		b.buf.Truncate(pos)
-		return err
-	}
-	return nil
-}
-
 func newGzipEncoder(level int, buf *bytes.Buffer) (*gzipEncoder, error) {
 	if buf == nil {
 		buf = bytes.NewBuffer(nil)
@@ -112,26 +85,4 @@ func (b *gzipEncoder) Marshal(obj interface{}) error {
 	enc := json.NewEncoder(b.gzip)
 	err := enc.Encode(obj)
 	return err
-}
-
-func (b *gzipEncoder) AddRaw(raw interface{}) error {
-	enc := json.NewEncoder(b.gzip)
-	return enc.Encode(raw)
-}
-
-func (b *gzipEncoder) Add(meta, obj interface{}) error {
-	enc := json.NewEncoder(b.gzip)
-	pos := b.buf.Len()
-
-	if err := enc.Encode(meta); err != nil {
-		b.buf.Truncate(pos)
-		return err
-	}
-	if err := enc.Encode(obj); err != nil {
-		b.buf.Truncate(pos)
-		return err
-	}
-
-	b.gzip.Flush()
-	return nil
 }

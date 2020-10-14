@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,10 +160,14 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 	}
 
 	var events = make([]eventRaw, len(data))
+	timeStamp := time.Now()
 	for i, event := range data {
 		events[i] = client.makeHTTPEvent(&event.Content)
+		if i == 0 {
+			timeStamp = event.Content.Timestamp
+		}
 	}
-	status, _, err := client.request(events, client.headers)
+	status, _, err := client.request(events, client.headers, timeStamp)
 	if err != nil {
 		if err == ErrJSONEncodeFailed {
 			debugf("Failed to publish event: %s", err.Error())
@@ -183,7 +188,7 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 	return nil, nil
 }
 
-func (conn *Connection) request(body interface{}, headers map[string]string) (int, []byte, error) {
+func (conn *Connection) request(body interface{}, headers map[string]string, eventTime time.Time) (int, []byte, error) {
 	urlStr := conn.URL
 	if strings.HasSuffix(urlStr, "/") {
 		urlStr = strings.TrimSuffix(urlStr, "/")
@@ -192,16 +197,16 @@ func (conn *Connection) request(body interface{}, headers map[string]string) (in
 	if err := conn.encoder.Marshal(body); err != nil {
 		return 0, nil, ErrJSONEncodeFailed
 	}
-	return conn.execRequest(urlStr, conn.encoder.Reader(), headers)
+	return conn.execRequest(urlStr, conn.encoder.Reader(), headers, eventTime)
 }
 
-func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string) (int, []byte, error) {
+func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	err = conn.addHeaders(&req.Header, body)
+	err = conn.addHeaders(&req.Header, body, eventTime)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -209,7 +214,7 @@ func (conn *Connection) execRequest(url string, body io.Reader, headers map[stri
 	return conn.execHTTPRequest(req, headers)
 }
 
-func (conn *Connection) addHeaders(header *http.Header, body io.Reader) error {
+func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTime time.Time) error {
 	token, err := agent.GetCentralAuthToken()
 	if err != nil {
 		return err
@@ -218,6 +223,8 @@ func (conn *Connection) addHeaders(header *http.Header, body io.Reader) error {
 	header.Add("Authorization", "Bearer "+token)
 	header.Add("axway-target-flow", "api-central-v8")
 	header.Add("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
+	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().UnixNano(), 10))
+
 	if body != nil {
 		conn.encoder.AddHeader(header)
 	}

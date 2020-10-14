@@ -108,6 +108,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
+
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
 	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
 		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
@@ -120,6 +121,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscri
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
 			sm.setSubscripitionInfo(subscription, consumerInstance)
 		} else {
+			log.Debug("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
 		}
 	}
@@ -129,9 +131,11 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 	if consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
 		for _, reference := range consumerInstance.Metadata.References {
 			if reference.Kind == "APIServiceInstance" {
-				apiServiceInstane, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
+				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
 				if err == nil {
-					sm.setSubscripitionInfo(subscription, apiServiceInstane)
+					sm.setSubscripitionInfo(subscription, apiServiceInstance)
+				} else {
+					log.Errorf(err.Error())
 				}
 			}
 		}
