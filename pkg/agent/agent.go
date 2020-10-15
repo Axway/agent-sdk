@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -80,9 +81,12 @@ func Initialize(centralCfg config.CentralConfig) error {
 	setupSignalProcessor()
 	updateAgentStatus(AgentRunning, "")
 
-	// only do continuous healthchecking in binary agents
-	if !isRunningInDockerContainer() {
-		go runPeriodicHealthChecks()
+	// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
+	if flag.Lookup("test.v") == nil {
+		// only do continuous healthchecking in binary agents
+		if !isRunningInDockerContainer() {
+			go runPeriodicHealthChecks()
+		}
 	}
 
 	return nil

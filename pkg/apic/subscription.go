@@ -25,6 +25,12 @@ const (
 	SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
 )
 
+const (
+	appNameKey              = "appName"
+	subscriptionAppNameType = "string"
+	profileKey              = "profile"
+)
+
 // Subscription -
 type Subscription interface {
 	GetID() string
@@ -34,8 +40,9 @@ type Subscription interface {
 	GetCatalogItemID() string
 	GetCreatedUserID() string
 	GetState() SubscriptionState
-	GetPropertyValue(key string) string
+	GetPropertyValue(propertyKey string) string
 	UpdateState(newState SubscriptionState) error
+	UpdateProperties(appName, orgID string) error
 }
 
 // CentralSubscription -
@@ -82,10 +89,10 @@ func (s *CentralSubscription) GetState() SubscriptionState {
 }
 
 // GetPropertyValue - Returns subscription Property value based on the key
-func (s *CentralSubscription) GetPropertyValue(key string) string {
+func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
 	if len(s.CatalogItemSubscription.Properties) > 0 {
 		subscriptionProperty := s.CatalogItemSubscription.Properties[0]
-		value, ok := subscriptionProperty.Value[key]
+		value, ok := subscriptionProperty.Value[propertyKey]
 		if ok {
 			return fmt.Sprintf("%v", value)
 		}
@@ -185,4 +192,66 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		centralSubscriptions = append(centralSubscriptions, sub)
 	}
 	return centralSubscriptions, nil
+}
+
+// UpdateProperties -
+func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
+	catalogItemID := s.GetCatalogItemID()
+
+	// First need to get the subscriptionDefProperties for the catalog item
+	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
+	if ss == nil || err != nil {
+		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
+	}
+
+	// update the appName in the enum
+	prop := ss.GetProperty(appNameKey)
+	apps := append(prop.Enum, appName)
+	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
+
+	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
+	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	// Now we can update the appname in the subscription itself
+	err = s.updatePropertyValue(profileKey, map[string]interface{}{appNameKey: appName})
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	return nil
+}
+
+// UpdatePropertyValue - Updates the property value of the subscription
+func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[string]interface{}) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
+	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
 }

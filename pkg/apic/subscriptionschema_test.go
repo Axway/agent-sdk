@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"testing"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,4 +77,41 @@ func TestUpdateSubscriptionSchema(t *testing.T) {
 	mockHTTPClient.ResponseCode = http.StatusOK
 	err = svcClient.UpdateSubscriptionSchema(apiKeySchema)
 	assert.Nil(t, err)
+}
+
+func TestContains(t *testing.T) {
+	items := []string{"c", "d", "e"}
+	b := util.StringArrayContains(items, "b")
+	assert.False(t, b)
+
+	b = util.StringArrayContains(items, "c")
+	assert.True(t, b)
+}
+
+func TestGetProperty(t *testing.T) {
+	_, _, schema := commonSetup(t)
+	p := schema.GetProperty("prop3")
+	assert.Nil(t, p)
+
+	p = schema.GetProperty("prop1")
+	assert.NotNil(t, p)
+	assert.Equal(t, "someproperty", p.Description)
+}
+
+func TestGetProfilePropValue(t *testing.T) {
+	svcClient, _, _ := commonSetup(t)
+	sc := svcClient.(*ServiceClient)
+	def := &v1alpha1.ConsumerSubscriptionDefinition{}
+	p := sc.getProfilePropValue(def)
+	assert.Nil(t, p)
+
+	props := v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
+		Key:   profileKey,
+		Value: map[string]interface{}{"key1": "value1"},
+	}
+
+	def.Spec.Schema.Properties = []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{props}
+	p = sc.getProfilePropValue(def)
+	assert.NotNil(t, p)
+	assert.Equal(t, "value1", p["key1"])
 }

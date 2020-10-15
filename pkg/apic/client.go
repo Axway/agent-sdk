@@ -44,7 +44,9 @@ type Client interface {
 	DeleteConsumerInstance(instanceName string) error
 	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
 	GetUserEmailAddress(ID string) (string, error)
-	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
+	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
+	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 }
@@ -331,8 +333,18 @@ func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*API
 }
 
 // GetSubscriptionsForCatalogItem -
-func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
-	return c.getSubscriptionsForCatalogItem(states, instanceID)
+func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
+	return c.getSubscriptionsForCatalogItem(states, catalogItemID)
+}
+
+// GetSubscriptionDefinitionPropertiesForCatalogItem -
+func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {
+	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey)
+}
+
+// UpdateSubscriptionDefinitionPropertiesForCatalogItem -
+func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error {
+	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey, subscriptionSchema)
 }
 
 // GetUserEmailAddress - request the user email

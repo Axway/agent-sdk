@@ -73,3 +73,13 @@ func GetProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
 		return fixedURL, nil
 	}
 }
+
+// StringArrayContains - does the given array of strings contain the specified string?
+func StringArrayContains(items []string, s string) bool {
+	for _, item := range items {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}

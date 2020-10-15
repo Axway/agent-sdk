@@ -104,6 +104,8 @@ type CentralConfig interface {
 	GetSubscriptionConfig() SubscriptionConfig
 	GetCatalogItemSubscriptionsURL(string) string
 	GetCatalogItemSubscriptionStatesURL(string, string) string
+	GetCatalogItemSubscriptionPropertiesURL(string, string) string
+	GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -319,6 +321,16 @@ func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID stri
 // GetCatalogItemSubscriptionStatesURL - Returns the unifiedcatalog URL for catalog item subscription states
 func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID, subscriptionID string) string {
 	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties
+func (c *CentralConfiguration) GetCatalogItemSubscriptionPropertiesURL(catalogItemID, subscriptionID string) string {
+	return fmt.Sprintf("%s/%s/properties", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetCatalogItemSubscriptionDefinitionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription definition properties
+func (c *CentralConfiguration) GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID string) string {
+	return fmt.Sprintf("%s/%s/%s/properties", c.GetCatalogItemsURL(), catalogItemID, "subscriptionDefinition")
 }
 
 // GetAuthConfig - Returns the Auth Config
