@@ -107,8 +107,6 @@ func TestGetSubscriptionSchema(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	_, _, schema := commonSetup(t)
-
 	items := []string{"c", "d", "e"}
 	b := util.StringArrayContains(items, "b")
 	assert.False(t, b)
