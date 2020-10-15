@@ -73,3 +73,13 @@ func GetProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
 		return fixedURL, nil
 	}
 }
+
+func StringArrayContains(items []string, s string) bool {
+	for _, item := range items {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+

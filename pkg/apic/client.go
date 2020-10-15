@@ -46,8 +46,8 @@ type Client interface {
 	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
 	GetUserEmailAddress(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
-	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error)
-	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error
+	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 }
@@ -339,13 +339,13 @@ func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, catalogI
 }
 
 // GetSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error) {
-	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key)
+func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {
+	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey)
 }
 
 // UpdateSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error {
-	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key, subscriptionSchema)
+func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error {
+	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey, subscriptionSchema)
 }
 
 // GetUserEmailAddress - request the user email

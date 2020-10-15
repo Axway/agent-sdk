@@ -102,7 +102,7 @@ func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogI
 	return subscriptions, nil
 }
 
-func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string) (SubscriptionSchema, error) {
+func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalo
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), key),
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), propertyKey),
 		Headers: headers,
 	}
 
@@ -132,7 +132,7 @@ func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalo
 	return ss, nil
 }
 
-func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, key string, subscriptionSchema SubscriptionSchema) error {
+func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error {
 	headers, err := c.createHeader()
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(cat
 
 	request := coreapi.Request{
 		Method:  coreapi.PUT,
-		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), key),
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID), propertyKey),
 		Headers: headers,
 		Body:    body,
 	}

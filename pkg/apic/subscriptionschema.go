@@ -8,6 +8,7 @@ import (
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 )
 
@@ -65,18 +66,9 @@ func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefFi
 	ss.Properties[name] = newProp
 
 	// required array can't contain duplicates!
-	if isRequired && !ss.contains(ss.Required, name) {
+	if isRequired && !util.StringArrayContains(ss.Required, name) {
 		ss.Required = append(ss.Required, name)
 	}
-}
-
-func (ss *subscriptionSchema) contains(items []string, s string) bool {
-	for _, item := range items {
-		if item == s {
-			return true
-		}
-	}
-	return false
 }
 
 // GetProperty -
@@ -237,7 +229,7 @@ func (c *ServiceClient) GetSubscriptionSchema(schemaName string) (SubscriptionSc
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
 	}
 
 	if response.Code != http.StatusOK {
@@ -248,19 +240,19 @@ func (c *ServiceClient) GetSubscriptionSchema(schemaName string) (SubscriptionSc
 	subscriptionDef := new(v1alpha1.ConsumerSubscriptionDefinition)
 	err = json.Unmarshal(response.Body, subscriptionDef)
 	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
 	}
 
 	val := c.getProfilePropValue(subscriptionDef)
 	bytes, err := json.Marshal(val)
 	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
 	}
 
 	ss := NewSubscriptionSchema(schemaName)
 	err = json.Unmarshal(bytes, &ss)
 	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionSchemaGet, err.Error())
+		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
 	}
 	return ss, nil
 }

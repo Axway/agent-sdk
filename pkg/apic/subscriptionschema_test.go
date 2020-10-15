@@ -8,6 +8,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -108,12 +109,11 @@ func TestGetSubscriptionSchema(t *testing.T) {
 func TestContains(t *testing.T) {
 	_, _, schema := commonSetup(t)
 
-	ss := schema.(*subscriptionSchema)
 	items := []string{"c", "d", "e"}
-	b := ss.contains(items, "b")
+	b := util.StringArrayContains(items, "b")
 	assert.False(t, b)
 
-	b = ss.contains(items, "c")
+	b = util.StringArrayContains(items, "c")
 	assert.True(t, b)
 }
 
