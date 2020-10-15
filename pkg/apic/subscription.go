@@ -221,20 +221,7 @@ func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
 		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
 	}
 
-	// Now we need to get the consumerInstanceSubscription schema
-	ss, err = s.getServiceClient().GetSubscriptionSchema(orgID)
-	if err != nil {
-		return agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
-	}
-
-	// update the appName in the enum
-	prop1 := ss.GetProperty(appNameKey)
-	apps = append(prop1.Enum, appName)
-	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
-
-	// update the the consumerInstanceSubscription schema
-	err = s.getServiceClient().UpdateSubscriptionSchema(ss)
-	return err
+	return nil
 }
 
 // UpdatePropertyValue - Updates the property value of the subscription

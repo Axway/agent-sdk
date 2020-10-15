@@ -57,25 +57,6 @@ func TestUpdateProperties(t *testing.T) {
 	err = subscription.UpdateProperties("11111", "11111")
 	assert.NotNil(t, err)
 
-	// failure
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: wd + "/testdata/catalogitemsubscriptiondefprofile.json",
-			RespCode: http.StatusOK,
-		},
-		{
-			RespCode: http.StatusOK, // update status
-		},
-		{
-			RespCode: http.StatusOK, // update property
-		},
-		{
-			RespCode: http.StatusBadRequest, // get schema
-		},
-	})
-	err = subscription.UpdateProperties("11111", "11111")
-	assert.NotNil(t, err)
-
 	// success
 	mockHTTPClient.SetResponses([]api.MockResponse{
 		{
@@ -87,13 +68,6 @@ func TestUpdateProperties(t *testing.T) {
 		},
 		{
 			RespCode: http.StatusOK, // update property
-		},
-		{
-			FileName: "./testdata/consumersubscriptiondef.json", // getschema
-			RespCode: http.StatusOK,
-		},
-		{
-			RespCode: http.StatusOK, // update properties
 		},
 	})
 	err = subscription.UpdateProperties("11111", "11111")

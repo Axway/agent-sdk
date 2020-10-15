@@ -79,33 +79,6 @@ func TestUpdateSubscriptionSchema(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestGetSubscriptionSchema(t *testing.T) {
-	svcClient, mockHTTPClient, _ := commonSetup(t)
-
-	// this return code should fail
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			RespCode:  http.StatusBadRequest,
-			ErrString: "badnews",
-		},
-	})
-	schema, err := svcClient.GetSubscriptionSchema("test")
-	assert.NotNil(t, err)
-	assert.Nil(t, schema)
-
-	// this will return a schema but fail
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/consumersubscriptiondef.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-	})
-	schema, err = svcClient.GetSubscriptionSchema("f82eaa75-42a3-41b7-bff4-cc05e2fa0612")
-	assert.Nil(t, err)
-	assert.NotNil(t, schema)
-	assert.Equal(t, "f82eaa75-42a3-41b7-bff4-cc05e2fa0612", schema.GetSubscriptionName())
-}
-
 func TestContains(t *testing.T) {
 	items := []string{"c", "d", "e"}
 	b := util.StringArrayContains(items, "b")

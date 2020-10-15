@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
@@ -212,49 +211,6 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 	}
 
 	return json.Marshal(apiServerService)
-}
-
-// GetSubscriptionSchema - Gets the subscription schema for the specified name.
-func (c *ServiceClient) GetSubscriptionSchema(schemaName string) (SubscriptionSchema, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     fmt.Sprintf("%s/%s", c.cfg.GetAPIServerSubscriptionDefinitionURL(), schemaName),
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
-	}
-
-	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return nil, ErrSubscriptionResp.FormatError(response.Code)
-	}
-
-	subscriptionDef := new(v1alpha1.ConsumerSubscriptionDefinition)
-	err = json.Unmarshal(response.Body, subscriptionDef)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
-	}
-
-	val := c.getProfilePropValue(subscriptionDef)
-	bytes, err := json.Marshal(val)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
-	}
-
-	ss := NewSubscriptionSchema(schemaName)
-	err = json.Unmarshal(bytes, &ss)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrGetSubscriptionSchema, err.Error())
-	}
-	return ss, nil
 }
 
 func (c *ServiceClient) getProfilePropValue(subscriptionDef *v1alpha1.ConsumerSubscriptionDefinition) map[string]interface{} {

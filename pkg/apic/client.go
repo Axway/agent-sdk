@@ -38,7 +38,6 @@ type Client interface {
 	UpdateService(ID string, serviceBody ServiceBody) (string, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
-	GetSubscriptionSchema(name string) (SubscriptionSchema, error)
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
