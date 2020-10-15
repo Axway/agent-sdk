@@ -42,7 +42,7 @@ type Subscription interface {
 	GetState() SubscriptionState
 	GetPropertyValue(propertyKey string) string
 	UpdateState(newState SubscriptionState) error
-	UpdateProperties(appName, orgID string) error
+	UpdateProperties(appName string) error
 }
 
 // CentralSubscription -
@@ -195,7 +195,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 }
 
 // UpdateProperties -
-func (s *CentralSubscription) UpdateProperties(appName, orgID string) error {
+func (s *CentralSubscription) UpdateProperties(appName string) error {
 	catalogItemID := s.GetCatalogItemID()
 
 	// First need to get the subscriptionDefProperties for the catalog item

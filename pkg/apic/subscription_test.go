@@ -25,7 +25,7 @@ func TestUpdateProperties(t *testing.T) {
 			RespCode: http.StatusBadRequest,
 		},
 	})
-	err := subscription.UpdateProperties("11111", "11111")
+	err := subscription.UpdateProperties("11111")
 	assert.NotNil(t, err)
 
 	// fail
@@ -38,7 +38,7 @@ func TestUpdateProperties(t *testing.T) {
 			RespCode: http.StatusBadRequest, // update status
 		},
 	})
-	err = subscription.UpdateProperties("11111", "11111")
+	err = subscription.UpdateProperties("11111")
 	assert.NotNil(t, err)
 
 	// failure
@@ -54,7 +54,7 @@ func TestUpdateProperties(t *testing.T) {
 			RespCode: http.StatusBadRequest, // update property
 		},
 	})
-	err = subscription.UpdateProperties("11111", "11111")
+	err = subscription.UpdateProperties("11111")
 	assert.NotNil(t, err)
 
 	// success
@@ -70,7 +70,7 @@ func TestUpdateProperties(t *testing.T) {
 			RespCode: http.StatusOK, // update property
 		},
 	})
-	err = subscription.UpdateProperties("11111", "11111")
+	err = subscription.UpdateProperties("11111")
 	assert.Nil(t, err)
 
 }
