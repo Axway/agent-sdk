@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/notification"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
@@ -119,7 +121,8 @@ func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscri
 	consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(consumerInstanceName, nil)
 	if err == nil {
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
-			sm.setSubscripitionInfo(subscription, consumerInstance)
+			resource, _ := consumerInstance.AsInstance()
+			sm.setSubscripitionInfo(subscription, resource)
 		} else {
 			log.Debug("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
@@ -127,13 +130,14 @@ func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscri
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *APIServer) {
-	if consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *v1alpha1.ConsumerInstance) {
+	if consumerInstance != nil && len(consumerInstance.Metadata.References) > 0 {
 		for _, reference := range consumerInstance.Metadata.References {
 			if reference.Kind == "APIServiceInstance" {
 				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
 				if err == nil {
-					sm.setSubscripitionInfo(subscription, apiServiceInstance)
+					resource, _ := apiServiceInstance.AsInstance()
+					sm.setSubscripitionInfo(subscription, resource)
 				} else {
 					log.Errorf(err.Error())
 				}
@@ -145,12 +149,12 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 // setSubscripitionInfo - Sets subscription identifier that will be used as references
 // - ApicID - using the metadata of API server resoure metadata.id
 // - RemoteAPIID - using the attribute externalAPIID on API server resource
-func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *APIServer) {
-	if apiServerResource != nil && apiServerResource.Metadata != nil {
+func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
+	if apiServerResource != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
 		for name, value := range apiServerResource.Attributes {
 			if name == AttrExternalAPIID {
-				subscription.RemoteAPIID = value.(string)
+				subscription.RemoteAPIID = value
 			}
 		}
 		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",

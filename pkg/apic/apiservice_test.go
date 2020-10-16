@@ -66,10 +66,9 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	svcID, err := client.createService(serviceBody)
+	apiSvc, err := client.PublishService(serviceBody)
 	assert.Nil(t, err)
-	assert.NotNil(t, svcID)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
@@ -82,9 +81,9 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
@@ -112,9 +111,9 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
@@ -139,9 +138,9 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
@@ -173,9 +172,9 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 }
 
 func TestUpdateService(t *testing.T) {
@@ -184,15 +183,19 @@ func TestUpdateService(t *testing.T) {
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
 		{
+			FileName: "./testdata/apiservice.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to get the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/empty-list.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -200,7 +203,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // for call to check existance of the consumerInstance
+			FileName: "./testdata/empty-list.json", // for call to check existance of the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -209,10 +212,9 @@ func TestUpdateService(t *testing.T) {
 		},
 	})
 
-	svcID, err := client.updateService(serviceBody)
+	apiSvc, err := client.PublishService(serviceBody)
 	assert.Nil(t, err)
-	assert.NotNil(t, svcID)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 
 	// this is a failure test
 	httpClient.SetResponses([]api.MockResponse{
@@ -222,38 +224,42 @@ func TestUpdateService(t *testing.T) {
 		},
 	})
 
-	svcID, err = client.updateService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this is a failure test
 	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
 		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/empty-list.json", // for call to get the serviceRevision
 			RespCode: http.StatusRequestTimeout,
-		},
-		{
-			FileName: "./testdata/instancenotfound.json", // for call to update the serviceInstance
-			RespCode: http.StatusNoContent,
 		},
 	})
 
-	svcID, err = client.updateService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this is a failure test
 	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
 		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
+			FileName: "./testdata/empty-list.json", // this for call to get the revisions
 			RespCode: http.StatusOK,
 		},
 		{
@@ -264,24 +270,24 @@ func TestUpdateService(t *testing.T) {
 			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
 			RespCode: http.StatusRequestTimeout,
 		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to test if consumerInstanceExists
-			RespCode: http.StatusNotFound,
-		},
 	})
 
-	svcID, err = client.updateService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this is another success test
 	httpClient.SetResponses([]api.MockResponse{
 		{
+			FileName: "./testdata/apiservice.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
+			FileName: "./testdata/empty-list.json", // this for call to get the revision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -293,14 +299,18 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // for call to create the consumerInstance
+			FileName: "./testdata/empty-list.json", // for call to get the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 	})
 
-	svcID, err = client.updateService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.Nil(t, err)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 }
 
 func TestDeleteConsumerInstance(t *testing.T) {

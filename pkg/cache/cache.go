@@ -21,6 +21,7 @@ type Cache interface {
 	GetItem(key string) (*Item, error)
 	GetBySecondaryKey(secondaryKey string) (interface{}, error)
 	GetItemBySecondaryKey(secondaryKey string) (*Item, error)
+	GetKeys() []string
 	HasItemChanged(key string, data interface{}) (bool, error)
 	HasItemBySecondaryKeyChanged(secondaryKey string, data interface{}) (bool, error)
 	Set(key string, data interface{}) error
@@ -298,6 +299,15 @@ func (c *itemCache) GetItemBySecondaryKey(secondaryKey string) (*Item, error) {
 	}
 
 	return c.get(key)
+}
+
+// GetKeys - Returns the keys in cache
+func (c *itemCache) GetKeys() []string {
+	keys := []string{}
+	for key := range c.Items {
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 // HasItemChanged - Check if the item has changed

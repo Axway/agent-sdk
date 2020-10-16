@@ -2,6 +2,7 @@ package apic
 
 import (
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
 
@@ -24,6 +25,7 @@ const (
 const (
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
 	AttrExternalAPIID                = "externalAPIID"
+	AttrExternalAPIName              = "externalAPIName"
 	AttrCreatedBy                    = "createdBy"
 )
 
@@ -53,6 +55,18 @@ const (
 	MinorChange = "MINOR"
 )
 
+type serviceContext struct {
+	serviceName      string
+	serviceAction    actionType
+	currentRevision  string
+	revisionCount    int
+	previousRevision *v1alpha1.APIServiceRevision
+	revisionAction   actionType
+	currentInstance  string
+	instanceAction   actionType
+	consumerInstance string
+}
+
 //ServiceBody -
 type ServiceBody struct {
 	NameToPush        string `json:",omitempty"`
@@ -77,6 +91,8 @@ type ServiceBody struct {
 	APIUpdateSeverity string `json:",omitempty"`
 	State             string
 	Status            string
+	ServiceAttributes map[string]string
+	serviceContext    serviceContext
 }
 
 // ServiceClient -
@@ -102,89 +118,6 @@ type APIServerInfo struct {
 	Environment      APIServerInfoProperty `json:"environment,omitempty"`
 }
 
-// APIServerScope -
-type APIServerScope struct {
-	ID   string `json:"id,omitempty"`
-	Kind string `json:"kind,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
-// APIServerReference -
-type APIServerReference struct {
-	ID   string `json:"id,omitempty"`
-	Kind string `json:"kind,omitempty"`
-	Name string `json:"name,omitempty"`
-	Type string `json:"type,omitempty"`
-}
-
-// APIServerMetadata -
-type APIServerMetadata struct {
-	ID         string               `json:"id,omitempty"`
-	Scope      *APIServerScope      `json:"scope,omitempty"`
-	References []APIServerReference `json:"references,omitempty"`
-}
-
-// APIServer -
-type APIServer struct {
-	Name       string                 `json:"name"`
-	Kind       string                 `json:"kind,omitempty"`
-	Title      string                 `json:"title"`
-	Tags       []string               `json:"tags"`
-	Attributes map[string]interface{} `json:"attributes"`
-	Spec       interface{}            `json:"spec"`
-	Metadata   *APIServerMetadata     `json:"metadata,omitempty"`
-}
-
-// APIServiceSpec -
-type APIServiceSpec struct {
-	Description string          `json:"description"`
-	Icon        *APIServiceIcon `json:"icon,omitempty"`
-}
-
-// APIServiceRevisionSpec -
-type APIServiceRevisionSpec struct {
-	APIService string             `json:"apiService"`
-	Definition RevisionDefinition `json:"definition"`
-}
-
-// RevisionDefinition -
-type RevisionDefinition struct {
-	Type  string `json:"type,omitempty"`
-	Value []byte `json:"value,omitempty"`
-}
-
-// APIServiceIcon -
-type APIServiceIcon struct {
-	ContentType string `json:"contentType"`
-	Data        string `json:"data"`
-}
-
-// APIServerInstanceSpec -
-type APIServerInstanceSpec struct {
-	APIServiceRevision string     `json:"apiServiceRevision,omitempty"`
-	InstanceEndPoint   []EndPoint `json:"endpoint,omitempty"`
-}
-
-// EndPoint -
-type EndPoint struct {
-	Host     string   `json:"host,omitempty"`
-	Port     int      `json:"port,omitempty"`
-	Protocol string   `json:"protocol,omitempty"`
-	Routing  BasePath `json:"routing,omitempty"`
-}
-
-// BasePath -
-type BasePath struct {
-	Path string `json:"basePath,omitempty"`
-}
-
-//EnvironmentSpec - structure of environment returned when not using API Server
-type EnvironmentSpec struct {
-	ID       string      `json:"id,omitempty"`
-	Name     string      `json:"name,omitempty"`
-	Metadata interface{} `json:"metadata,omitempty"`
-}
-
 // PlatformUserInfo - Represents user resource from platform
 type PlatformUserInfo struct {
 	Success bool `json:"success"`
@@ -201,7 +134,7 @@ type PlatformUserInfo struct {
 
 // PlatformTeam - represents team from Central Client registry
 type PlatformTeam struct {
-	ID    string `json:"guid"`
+	ID      string `json:"guid"`
 	Name    string `json:"name"`
 	Default bool   `json:"default"`
 }

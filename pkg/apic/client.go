@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
@@ -34,15 +35,14 @@ type SubscriptionValidator func(subscription Subscription) bool
 
 // Client - interface
 type Client interface {
-	CreateService(serviceBody ServiceBody) (string, error)
-	UpdateService(ID string, serviceBody ServiceBody) (string, error)
+	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
-	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
+	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
 	GetUserEmailAddress(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
 	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
@@ -213,7 +213,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 
-		err = c.updateEnvironmentStatus(*apiEnvironment)
+		err = c.updateEnvironmentStatus(apiEnvironment)
 		if err != nil {
 			return err
 		}
@@ -231,27 +231,16 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error {
+func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment *v1alpha1.Environment) error {
 	attribute := "x-axway-agent"
-	attributes := apiEnvironment.Attributes
-
 	// check to see if x-axway-agent has already been set
-	if _, found := attributes[attribute]; found {
+	if _, found := apiEnvironment.Attributes[attribute]; found {
 		log.Debugf("Environment attribute: %s is already set.", attribute)
 		return nil
 	}
+	apiEnvironment.Attributes[attribute] = "true"
 
-	attributes[attribute] = "true"
-
-	apiServer := APIServer{
-		Name:       apiEnvironment.Name,
-		Title:      apiEnvironment.Title,
-		Attributes: attributes,
-		Spec:       apiEnvironment.Spec,
-		Tags:       apiEnvironment.Tags,
-	}
-
-	buffer, err := json.Marshal(apiServer)
+	buffer, err := json.Marshal(apiEnvironment)
 	if err != nil {
 		return nil
 	}
@@ -264,7 +253,7 @@ func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error 
 	return nil
 }
 
-func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, error) {
+func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {
 	queryParams := map[string]string{}
 
 	// do a request for the environment
@@ -274,17 +263,13 @@ func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, e
 	}
 
 	// Get env id from apiServerEnvByte
-	var apiEnvironment APIServer
+	var apiEnvironment v1alpha1.Environment
 	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
-	if apiEnvironment.Metadata == nil {
-		return nil, ErrEnvironmentQuery
-	}
-
 	if apiEnvironment.Metadata.ID == "" {
 		return nil, ErrEnvironmentQuery
 	}
@@ -315,36 +300,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrRequestQuery
 	}
 
-}
-
-// GetCatalogItemIDForConsumerInstance -
-func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
-	return c.getCatalogItemIDForConsumerInstance(instanceID)
-}
-
-// DeleteConsumerInstance -
-func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
-	return c.deleteConsumerInstance(instanceName)
-}
-
-// GetConsumerInstanceByID -
-func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error) {
-	return c.getConsumerInstanceByID((consumerInstanceID))
-}
-
-// GetSubscriptionsForCatalogItem -
-func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error) {
-	return c.getSubscriptionsForCatalogItem(states, catalogItemID)
-}
-
-// GetSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {
-	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey)
-}
-
-// UpdateSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error {
-	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey, subscriptionSchema)
 }
 
 // GetUserEmailAddress - request the user email
