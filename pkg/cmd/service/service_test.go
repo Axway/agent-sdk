@@ -13,6 +13,7 @@ type mockDaemon struct {
 	startCalled       bool
 	stopCalled        bool
 	statusCalled      bool
+	logsCalled        bool
 	runCalled         bool
 	enableCalled      bool
 	serviceNameCalled bool
@@ -20,6 +21,7 @@ type mockDaemon struct {
 
 func (m *mockDaemon) GetTemplate() string      { return "" }
 func (m *mockDaemon) SetTemplate(string) error { return nil }
+func (m *mockDaemon) SetEnvFile(string) error  { return nil }
 func (m *mockDaemon) SetUser(string) error     { return nil }
 func (m *mockDaemon) SetGroup(string) error    { return nil }
 
@@ -48,6 +50,11 @@ func (m *mockDaemon) Status() (string, error) {
 	return "", nil
 }
 
+func (m *mockDaemon) Logs() (string, error) {
+	m.logsCalled = true
+	return "", nil
+}
+
 func (m *mockDaemon) Run(e daemon.Executable) (string, error) {
 	m.runCalled = true
 	return "", nil
@@ -72,6 +79,7 @@ func newMockAgentService() *AgentService {
 		PathArg:     "--pathConfig",
 		User:        "user",
 		Group:       "group",
+		EnvFile:     "./filename",
 	}
 }
 
@@ -85,6 +93,7 @@ func TestGenServiceCmd(t *testing.T) {
 	assert.Contains(t, cmd.Long, argDescriptions["remove"], "The remove description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["start"], "The start description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["stop"], "The stop description was not included in the long description")
+	assert.Contains(t, cmd.Long, argDescriptions["logs"], "The status description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["status"], "The status description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["enable"], "The enable description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["name"], "The name description was not included in the long description")
@@ -132,6 +141,12 @@ func TestHandleService(t *testing.T) {
 	err = a.HandleServiceFlag("stop")
 	assert.Nil(t, err, "Unexpected error returned")
 	assert.True(t, a.service.(*mockDaemon).stopCalled)
+
+	// Logs
+	a = newMockAgentService()
+	err = a.HandleServiceFlag("logs")
+	assert.Nil(t, err, "Unexpected error returned")
+	assert.True(t, a.service.(*mockDaemon).logsCalled)
 
 	// Status
 	a = newMockAgentService()
