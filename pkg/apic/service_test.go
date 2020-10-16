@@ -58,7 +58,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 
 	// Test oas3 object
@@ -70,13 +70,13 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
-	assert.Equal(t, 8080, endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(8080), endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
 	assert.Equal(t, "petstore.swagger.io", endPoints[1].Host, "The second returned end point had an unexpected value for it's host")
-	assert.Equal(t, 80, endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(80), endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[1].Protocol, "The second returned end point had an unexpected value for it's protocol")
 	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(443), endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
 
 	// Test oas3 object, with templated server URLs
@@ -87,7 +87,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
 	type verification struct {
 		Host     string
-		Port     int
+		Port     int32
 		Protocol string
 		Found    bool
 	}
@@ -160,7 +160,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
 	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(8065), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 }
 

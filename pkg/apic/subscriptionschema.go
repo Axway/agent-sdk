@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
@@ -202,12 +203,15 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 		},
 	}
 
-	apiServerService := APIServer{
-		Name:       subscriptionSchema.GetSubscriptionName(),
-		Title:      "Subscription definition created by agent",
-		Attributes: nil,
-		Spec:       spec,
-		Tags:       nil,
+	apiServerService := v1alpha1.ConsumerSubscriptionDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1alpha1.ConsumerSubscriptionDefinitionGVK(),
+			Name:             subscriptionSchema.GetSubscriptionName(),
+			Title:            "Subscription definition created by agent",
+			Attributes:       nil,
+			Tags:             nil,
+		},
+		Spec: spec,
 	}
 
 	return json.Marshal(apiServerService)

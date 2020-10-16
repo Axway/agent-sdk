@@ -14,6 +14,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
 	apiV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cache"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
@@ -50,6 +51,8 @@ type agentData struct {
 	logFormat         string
 	logOutput         string
 	logPath           string
+
+	apiMap cache.Cache
 }
 
 var agent = agentData{}
@@ -57,6 +60,7 @@ var agent = agentData{}
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
 	agent.cfg = centralCfg.(*config.CentralConfiguration)
+	agent.apiMap = cache.New()
 
 	// validate the central config
 	err := config.ValidateConfig(centralCfg)
@@ -89,7 +93,15 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 	}
 
+	startAPIServiceCache()
+
 	return nil
+}
+
+// InitializeForTest - Initialize for test
+func InitializeForTest(apicClient apic.Client) {
+	agent.apiMap = cache.New()
+	agent.apicClient = apicClient
 }
 
 func runPeriodicHealthChecks() {
@@ -101,6 +113,19 @@ func runPeriodicHealthChecks() {
 		// Set sleep time based on configured interval
 		time.Sleep(hc.GetStatusConfig().GetHealthCheckInterval())
 	}
+}
+
+func startAPIServiceCache() {
+	// Load the cache before the agents start discovering the APIs from remote gateway
+	updateAPICache()
+
+	// Start period update of the cache by querying API server resources published by the agent
+	go func() {
+		for {
+			time.Sleep(agent.cfg.PollInterval)
+			updateAPICache()
+		}
+	}()
 }
 
 func isRunningInDockerContainer() bool {
@@ -163,9 +188,17 @@ func SetupLogging(agentName, logLevel, logFormat, logOutput, logPath string) {
 	log.SetupLogging(agent.loggerName, agent.logLevel, agent.logFormat, agent.logOutput, agent.logPath)
 }
 
-// GetAPICClient - Returns the apic client
-func GetAPICClient() apic.Client {
+// GetCentralClient - Returns the APIC Client
+func GetCentralClient() apic.Client {
 	return agent.apicClient
+}
+
+// GetAPICache - Returns the cache
+func GetAPICache() cache.Cache {
+	if agent.apiMap == nil {
+		agent.apiMap = cache.New()
+	}
+	return agent.apiMap
 }
 
 // GetAgentResource - Returns Agent resource

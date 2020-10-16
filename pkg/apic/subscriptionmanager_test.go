@@ -10,6 +10,8 @@ import (
 	"time"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	uc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -102,15 +104,18 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(serverInfo)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/11111") {
-			apiserverRes := APIServer{
-				Name:  "11111",
-				Title: "ConsumerInstance_11111",
-				Metadata: &APIServerMetadata{
-					ID: "11111",
-					References: []APIServerReference{
-						{
-							ID:   "11111",
-							Kind: "APIServiceInstance",
+			apiserverRes := v1alpha1.ConsumerInstance{
+				ResourceMeta: v1.ResourceMeta{
+					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
+					Name:             "11111",
+					Title:            "ConsumerInstance_11111",
+					Metadata: v1.Metadata{
+						ID: "11111",
+						References: []v1.Reference{
+							{
+								ID:   "11111",
+								Kind: "APIServiceInstance",
+							},
 						},
 					},
 				},
@@ -118,16 +123,51 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/22222") {
-			apiserverRes := APIServer{
-				Name:  "22222",
-				Title: "ConsumerInstance_22222",
-				Metadata: &APIServerMetadata{
-					ID: "22222",
-					References: []APIServerReference{
-						{
-							ID:   "22222",
-							Kind: "APIServiceInstance",
+			apiserverRes := v1alpha1.ConsumerInstance{
+				ResourceMeta: v1.ResourceMeta{
+					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
+					Name:             "22222",
+					Title:            "ConsumerInstance_22222",
+					Metadata: v1.Metadata{
+						ID: "22222",
+						References: []v1.Reference{
+							{
+								ID:   "22222",
+								Kind: "APIServiceInstance",
+							},
 						},
+					},
+				},
+			}
+			b, _ = json.Marshal(apiserverRes)
+		}
+		if strings.Contains(req.RequestURI, "/apiserviceinstances/11111") {
+			apiserverRes := v1alpha1.APIServiceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
+					Name:             "11111",
+					Title:            "APIServiceInstance_11111",
+					Metadata: v1.Metadata{
+						ID: "11111",
+					},
+					Attributes: map[string]string{
+						AttrExternalAPIID: "1111",
+					},
+				},
+			}
+			b, _ = json.Marshal(apiserverRes)
+		}
+		if strings.Contains(req.RequestURI, "/apiserviceinstances/22222") {
+			apiserverRes := v1alpha1.APIServiceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
+					Name:             "22222",
+					Title:            "APIServiceInstance_2222",
+					Metadata: v1.Metadata{
+						ID: "22222",
+					},
+					Attributes: map[string]string{
+						AttrExternalAPIID: "2222",
 					},
 				},
 			}
