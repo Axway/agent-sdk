@@ -22,6 +22,7 @@ import (
 
 // Constants for cmd flags
 const (
+	PathConfigFlag        = "pathConfig"
 	EnvFileFlag           = "envFile"
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
@@ -94,18 +95,18 @@ func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
 	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
 	c.props.AddStringProperty("log.maskedValues", "", "List of key words in the config to be masked (e.g. pwd, password, secret, key")
-	c.props.AddStringPersistentFlag("pathConfig", ".", "Configuration file path for the agent")
-	c.props.AddStringProperty(EnvFileFlag, "", EnvFileFlagDesciption)
+	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Configuration file path for the agent")
+	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
-	envFile := c.props.StringPropertyValue(EnvFileFlag)
+	_, envFile := c.props.StringFlagValue(EnvFileFlag)
 	err := util.LoadEnvFromFile(envFile)
 	if err != nil {
 		return errors.Wrap(config.ErrEnvConfigOverride, err.Error())
 	}
 
-	_, configFilePath := c.props.StringFlagValue("pathConfig")
+	_, configFilePath := c.props.StringFlagValue(PathConfigFlag)
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)

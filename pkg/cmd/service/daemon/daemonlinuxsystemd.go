@@ -1,13 +1,18 @@
 package daemon
 
 import (
+	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
+
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd"
 )
 
 const (
 	systemctl     = "systemctl"
+	journalctl    = "journalctl"
 	serviceSuffix = ".service"
 )
 
@@ -18,17 +23,18 @@ type systemDRecord struct {
 	dependencies []string
 	user         string
 	group        string
+	envFile      string
 }
 
 // Standard service path for systemD daemons
-func (linux *systemDRecord) servicePath() string {
-	return "/etc/systemd/system/" + linux.name + serviceSuffix
+func (s *systemDRecord) servicePath() string {
+	return "/etc/systemd/system/" + s.serviceName()
 }
 
 // Is a service installed
-func (linux *systemDRecord) isInstalled() bool {
+func (s *systemDRecord) isInstalled() bool {
 
-	if _, err := fs.Stat(linux.servicePath()); err == nil {
+	if _, err := fs.Stat(s.servicePath()); err == nil {
 		return true
 	}
 
@@ -36,8 +42,8 @@ func (linux *systemDRecord) isInstalled() bool {
 }
 
 // Check service is running
-func (linux *systemDRecord) checkRunning() (string, bool) {
-	output, err := execCmd(systemctl, "status", linux.name+serviceSuffix)
+func (s *systemDRecord) checkRunning() (string, bool) {
+	output, err := execCmd(systemctl, "status", s.serviceName())
 	if err == nil {
 		if matched, err := regexp.MatchString("Active: active", string(output)); err == nil && matched {
 			reg := regexp.MustCompile("Main PID: ([0-9]+)")
@@ -52,18 +58,22 @@ func (linux *systemDRecord) checkRunning() (string, bool) {
 	return "Service is stopped", false
 }
 
+func (s *systemDRecord) serviceName() string {
+	return s.name + serviceSuffix
+}
+
 // Install the service
-func (linux *systemDRecord) Install(args ...string) (string, error) {
-	installAction := "Install " + linux.description + ":"
+func (s *systemDRecord) Install(args ...string) (string, error) {
+	installAction := "Install " + s.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
 		return installAction + failed, err
 	}
 
-	srvPath := linux.servicePath()
+	srvPath := s.servicePath()
 
-	if linux.isInstalled() {
-		return installAction + failed, ErrAlreadyInstalled.FormatError(linux.name + serviceSuffix)
+	if s.isInstalled() {
+		return installAction + failed, ErrAlreadyInstalled.FormatError(s.serviceName())
 	}
 
 	file, err := fs.Create(srvPath)
@@ -71,7 +81,7 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
-	execPatch, err := executablePath(linux.name)
+	execPatch, err := executablePath(s.name)
 	if err != nil {
 		file.Close()
 		return installAction + failed, err
@@ -83,16 +93,20 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
+	if s.envFile != "" {
+		args = append(args, fmt.Sprintf("--%s", cmd.EnvFileFlag), s.envFile)
+	}
+
 	if err := templ.Execute(
 		file,
 		&struct {
 			Name, Description, Dependencies, User, Group, Path, Args string
 		}{
-			linux.name,
-			linux.description,
-			strings.Join(linux.dependencies, " "),
-			linux.user,
-			linux.group,
+			s.name,
+			s.description,
+			strings.Join(s.dependencies, " "),
+			s.user,
+			s.group,
 			execPatch,
 			strings.Join(args, " "),
 		},
@@ -111,26 +125,26 @@ func (linux *systemDRecord) Install(args ...string) (string, error) {
 }
 
 // Remove the service
-func (linux *systemDRecord) Remove() (string, error) {
-	removeAction := "Removing " + linux.description + ":"
+func (s *systemDRecord) Remove() (string, error) {
+	removeAction := "Removing " + s.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
 		return removeAction + failed, err
 	}
 
-	if !linux.isInstalled() {
-		return removeAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	if !s.isInstalled() {
+		return removeAction + failed, ErrNotInstalled.FormatError(s.serviceName())
 	}
 
-	if _, ok := linux.checkRunning(); ok {
-		return removeAction + failed, ErrCurrentlyRunning.FormatError(linux.name + serviceSuffix)
+	if _, ok := s.checkRunning(); ok {
+		return removeAction + failed, ErrCurrentlyRunning.FormatError(s.serviceName())
 	}
 
-	if _, err := execCmd(systemctl, "disable", linux.name+serviceSuffix); err != nil {
+	if _, err := execCmd(systemctl, "disable", s.serviceName()); err != nil {
 		return removeAction + failed, err
 	}
 
-	if err := fs.Remove(linux.servicePath()); err != nil {
+	if err := fs.Remove(s.servicePath()); err != nil {
 		return removeAction + failed, err
 	}
 
@@ -138,22 +152,22 @@ func (linux *systemDRecord) Remove() (string, error) {
 }
 
 // Start the service
-func (linux *systemDRecord) Start() (string, error) {
-	startAction := "Starting " + linux.description + ":"
+func (s *systemDRecord) Start() (string, error) {
+	startAction := "Starting " + s.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
 		return startAction + failed, err
 	}
 
-	if !linux.isInstalled() {
-		return startAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	if !s.isInstalled() {
+		return startAction + failed, ErrNotInstalled.FormatError(s.serviceName())
 	}
 
-	if _, ok := linux.checkRunning(); ok {
-		return startAction + failed, ErrAlreadyRunning.FormatError(linux.name + serviceSuffix)
+	if _, ok := s.checkRunning(); ok {
+		return startAction + failed, ErrAlreadyRunning.FormatError(s.serviceName())
 	}
 
-	if _, err := execCmd(systemctl, "start", linux.name+serviceSuffix); err != nil {
+	if _, err := execCmd(systemctl, "start", s.serviceName()); err != nil {
 		return startAction + failed, err
 	}
 
@@ -161,22 +175,22 @@ func (linux *systemDRecord) Start() (string, error) {
 }
 
 // Stop the service
-func (linux *systemDRecord) Stop() (string, error) {
-	stopAction := "Stopping " + linux.description + ":"
+func (s *systemDRecord) Stop() (string, error) {
+	stopAction := "Stopping " + s.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
 		return stopAction + failed, err
 	}
 
-	if !linux.isInstalled() {
-		return stopAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	if !s.isInstalled() {
+		return stopAction + failed, ErrNotInstalled.FormatError(s.serviceName())
 	}
 
-	if _, ok := linux.checkRunning(); !ok {
-		return stopAction + failed, ErrAlreadyStopped.FormatError(linux.name + serviceSuffix)
+	if _, ok := s.checkRunning(); !ok {
+		return stopAction + failed, ErrAlreadyStopped.FormatError(s.serviceName())
 	}
 
-	if _, err := execCmd(systemctl, "stop", linux.name+serviceSuffix); err != nil {
+	if _, err := execCmd(systemctl, "stop", s.serviceName()); err != nil {
 		return stopAction + failed, err
 	}
 
@@ -184,41 +198,61 @@ func (linux *systemDRecord) Stop() (string, error) {
 }
 
 // Status - Get service status
-func (linux *systemDRecord) Status() (string, error) {
+func (s *systemDRecord) Status() (string, error) {
 
 	if ok, err := checkPrivileges(); !ok {
 		return "", err
 	}
 
-	if !linux.isInstalled() {
-		return statNotInstalled, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	if !s.isInstalled() {
+		return statNotInstalled, ErrNotInstalled.FormatError(s.serviceName())
 	}
 
-	statusAction, _ := linux.checkRunning()
+	statusAction, _ := s.checkRunning()
 
 	return statusAction, nil
 }
 
+// Logs - Get service logs
+func (s *systemDRecord) Logs() (string, error) {
+
+	if !s.isInstalled() {
+		return statNotInstalled, ErrNotInstalled.FormatError(s.serviceName())
+	}
+
+	var data []byte
+	var err error
+
+	// run journalctl with --no-pager (get akk output), -b (logs on current boot only), -u service_name
+	if data, err = execCmd(journalctl, "--no-pager", "-b", "-u", s.serviceName()); err != nil {
+		return "", err
+	}
+
+	dataOutput := fmt.Sprintf("%s\nSee `journalctl -h` for alternative options to the `journalctl -u %s` command", string(data), s.serviceName())
+
+	return dataOutput, nil
+}
+
 // Run - Run service
-func (linux *systemDRecord) Run(e Executable) (string, error) {
-	runAction := "Running " + linux.description + ":"
+func (s *systemDRecord) Run(e Executable) (string, error) {
+	runAction := "Running " + s.description + ":"
 	e.Run()
 	return runAction + " completed.", nil
 }
 
 // Status - Get service status
-func (linux *systemDRecord) Enable() (string, error) {
-	enableAction := "Enabling " + linux.description + ":"
+func (s *systemDRecord) Enable() (string, error) {
+	enableAction := "Enabling " + s.description + ":"
 
 	if ok, err := checkPrivileges(); !ok {
 		return enableAction + failed, err
 	}
 
-	if !linux.isInstalled() {
-		return enableAction + failed, ErrNotInstalled.FormatError(linux.name + serviceSuffix)
+	if !s.isInstalled() {
+		return enableAction + failed, ErrNotInstalled.FormatError(s.serviceName())
 	}
 
-	if _, err := execCmd(systemctl, "enable", linux.name+serviceSuffix); err != nil {
+	if _, err := execCmd(systemctl, "enable", s.serviceName()); err != nil {
 		return enableAction + failed, err
 	}
 
@@ -226,30 +260,38 @@ func (linux *systemDRecord) Enable() (string, error) {
 }
 
 // GetTemplate - gets service config template
-func (linux *systemDRecord) GetTemplate() string {
+func (s *systemDRecord) GetTemplate() string {
 	return systemDConfig
 }
 
 // GetServiceName - gets service name
-func (linux *systemDRecord) GetServiceName() string {
-	return linux.name + serviceSuffix
+func (s *systemDRecord) GetServiceName() string {
+	return s.serviceName()
 }
 
 // SetTemplate - sets service config template
-func (linux *systemDRecord) SetTemplate(tplStr string) error {
+func (s *systemDRecord) SetTemplate(tplStr string) error {
 	systemDConfig = tplStr
 	return nil
 }
 
+// SetEnvFile - sets the envFile that will be used by the service
+func (s *systemDRecord) SetEnvFile(envFile string) error {
+	// set the absolute path, incase it is relative
+	envFileAbsolute, _ := filepath.Abs(envFile)
+	s.envFile = envFileAbsolute
+	return nil
+}
+
 // SetUser - sets the user that will execute the service
-func (linux *systemDRecord) SetUser(user string) error {
-	linux.user = user
+func (s *systemDRecord) SetUser(user string) error {
+	s.user = user
 	return nil
 }
 
 // SetGroup - sets the group that will execute the service
-func (linux *systemDRecord) SetGroup(group string) error {
-	linux.group = group
+func (s *systemDRecord) SetGroup(group string) error {
+	s.group = group
 	return nil
 }
 
@@ -259,8 +301,6 @@ Requires={{.Dependencies}}
 After={{.Dependencies}}
 
 [Service]
-PIDFile=/var/run/{{.Name}}.pid
-ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
 ExecStart={{.Path}} {{.Args}}
 User={{.User}}
 Group={{.Group}}

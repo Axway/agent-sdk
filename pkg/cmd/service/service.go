@@ -30,6 +30,7 @@ type AgentService struct {
 	Description string
 	Path        string
 	PathArg     string
+	EnvFile     string
 	User        string
 	Group       string
 }
@@ -58,6 +59,8 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		log.Debug("installing the agent service")
 		log.Infof("service will look for config file at %s", a.Path)
 		log.Infof("name of service to be installed: %s", a.service.GetServiceName())
+
+		a.service.SetEnvFile(a.EnvFile)
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
 		_, err = a.service.Install(a.PathArg, a.Path)
@@ -76,6 +79,11 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 	case "enable":
 		log.Debug("setting the agent to start on reboot")
 		_, err = a.service.Enable()
+	case "logs":
+		var logs string
+		log.Debug("getting the service logs")
+		logs, err = a.service.Logs()
+		log.Info(logs)
 	case "name":
 		log.Debug("getting the service name")
 		serviceName = a.service.GetServiceName()
