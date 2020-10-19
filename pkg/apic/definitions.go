@@ -24,6 +24,7 @@ const (
 // Constants for attributes
 const (
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
+	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
 	AttrExternalAPIID                = "externalAPIID"
 	AttrExternalAPIName              = "externalAPIName"
 	AttrCreatedBy                    = "createdBy"
@@ -63,6 +64,8 @@ type serviceContext struct {
 	previousRevision *v1alpha1.APIServiceRevision
 	revisionAction   actionType
 	currentInstance  string
+	instanceCount    int
+	previousInstance *v1alpha1.APIServiceInstance
 	instanceAction   actionType
 	consumerInstance string
 }

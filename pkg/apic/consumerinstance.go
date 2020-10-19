@@ -125,7 +125,11 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	_, err = c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, err = c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				err = rollbackErr
+			}
+			return err
 		}
 	} else {
 		serviceBody.serviceContext.consumerInstance = consumerInstanceName
@@ -248,18 +252,4 @@ func (c *ServiceClient) deleteConsumerInstance(name string) error {
 		return err
 	}
 	return nil
-}
-
-func (c *ServiceClient) consumerInstanceExists(name string) bool {
-	params := map[string]string{
-		"fields": "name",
-	}
-	consumerInstance, err := c.getAPIServerConsumerInstance(name, params)
-	if err != nil {
-		if err.Error() != strconv.Itoa(http.StatusNotFound) {
-			log.Errorf("Error getting consumerInstance '%v', %v", name, err.Error())
-		}
-		return false
-	}
-	return consumerInstance != nil
 }

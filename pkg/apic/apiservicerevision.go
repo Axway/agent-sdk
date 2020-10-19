@@ -81,7 +81,11 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	_, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, err = c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				err = rollbackErr
+			}
+			return err
 		}
 	} else {
 		serviceBody.serviceContext.currentRevision = revisionName
