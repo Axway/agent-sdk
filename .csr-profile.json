@@ -37,7 +37,7 @@
       ]
     },
     {
-      "path": "packetbeat\\-v7\\.7\\.1",
+      "path": ".*",
       "scanner": "whitesource",
       "classification": "False Positive",
       "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
