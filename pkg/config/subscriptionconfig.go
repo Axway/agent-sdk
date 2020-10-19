@@ -48,6 +48,7 @@ type SubscriptionConfig interface {
 	GetUnsubscribeFailedTemplate() *EmailTemplate
 	GetSubscriptionApprovalMode() string
 	GetSubscriptionApprovalWebhookConfig() WebhookConfig
+	GetIssueNewCredentials() bool
 }
 
 // NotificationConfig -
@@ -80,13 +81,15 @@ type ApprovalConfig struct {
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
 	IConfigValidator
-	Approval      *ApprovalConfig     `config:"approval"`
-	Notifications *NotificationConfig `config:"notifications"`
-	Types         []NotificationType
+	IssueNewCredentials bool                `config:"issueNewCredentials"`
+	Approval            *ApprovalConfig     `config:"approval"`
+	Notifications       *NotificationConfig `config:"notifications"`
+	Types               []NotificationType
 }
 
 // These constants are the paths that the settings is at in a config file
 const (
+	pathSubscriptionsIssueNewCredentials                       = "central.subscriptions.issueNewCredentials"
 	pathSubscriptionsApprovalMode                              = "central.subscriptions.approval.mode"
 	pathSubscriptionsApprovalWebhookURL                        = "central.subscriptions.approval.webhook.url"
 	pathSubscriptionsApprovalWebhookHeaders                    = "central.subscriptions.approval.webhook.headers"
@@ -120,13 +123,34 @@ type EmailTemplate struct {
 	APIKey  string `config:"apikeys"`
 }
 
-// AddApprovalConfigProperties -
-func AddApprovalConfigProperties(props properties.Properties) {
+// AddSubscriptionConfigProperties -
+func AddSubscriptionConfigProperties(props properties.Properties) {
+	props.AddBoolProperty(pathSubscriptionsIssueNewCredentials, true, "Create new application credentials for each new subscription")
+
 	// subscription approvals
 	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
+
+	// subscription notifications
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPHost, "", "SMTP server where the email notifications will originate from")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPPort, "", "Port of the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPFrom, "", "Email address which will represent the sender")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPIdentity, "", "foobar")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPAuth, "", "The authentication type based on the email server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserName, "", "Login user for the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserPassword, "", "Login password for the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeSubject, "Subscription Notification", "Subject of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "", "Body of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Removal Notification", "Subject of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnubscribeBody, "", "Body of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject, "Subscription Failed Notification", "Subject of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "", "Body of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject, "Subscription Removal Failed Notification", "Subject of the email notification for action unsubscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "", "Body of the email notification for action unsubscribe failed")
 }
 
 // ParseSubscriptionConfig -
@@ -144,6 +168,7 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	}
 
 	cfg := &SubscriptionConfiguration{
+		IssueNewCredentials: props.BoolPropertyValue(pathSubscriptionsIssueNewCredentials),
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 			SubscriptionApprovalWebhook: &WebhookConfiguration{
@@ -193,6 +218,7 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 // NewSubscriptionConfig - Creates the default subscription config
 func NewSubscriptionConfig() SubscriptionConfig {
 	return &SubscriptionConfiguration{
+		IssueNewCredentials: true,
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode:    ManualApproval,
 			SubscriptionApprovalWebhook: NewWebhookConfig(),
@@ -326,6 +352,11 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalMode() string {
 // GetSubscriptionApprovalWebhookConfig - Returns the Config for the subscription webhook
 func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() WebhookConfig {
 	return s.Approval.SubscriptionApprovalWebhook
+}
+
+// GetIssueNewCredentials - Returns the issueNewCredentials value
+func (s *SubscriptionConfiguration) GetIssueNewCredentials() bool {
+	return s.IssueNewCredentials
 }
 
 // ValidateCfg - Validates the subscription config
