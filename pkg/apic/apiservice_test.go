@@ -1,7 +1,9 @@
 package apic
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 
@@ -49,10 +51,6 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusCreated,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
 		},
@@ -95,19 +93,12 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusRequestTimeout,
 		},
 		{
-			FileName: "./testdata/instancenotfound.json", // this for call to create the serviceInstance
-			RespCode: http.StatusNoContent,
-		},
-		{
-			RespCode: http.StatusOK, // this for call to rollback
+			FileName: "./testdata/empty-list.json", // this for call to rollback apiservice
+			RespCode: http.StatusOK,
 		},
 	})
 
@@ -122,11 +113,7 @@ func TestCreateService(t *testing.T) {
 		},
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusRequestTimeout,
-		},
-		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
-			RespCode: http.StatusOK,
+			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
@@ -135,6 +122,10 @@ func TestCreateService(t *testing.T) {
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusRequestTimeout,
+		},
+		{
+			FileName: "./testdata/empty-list.json", // this for call to rollback apiservice
+			RespCode: http.StatusOK,
 		},
 	})
 
@@ -149,11 +140,7 @@ func TestCreateService(t *testing.T) {
 		},
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusRequestTimeout,
-		},
-		{
-			FileName: "./testdata/empty-list.json", // this for call to create the service
-			RespCode: http.StatusOK,
+			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
@@ -161,7 +148,7 @@ func TestCreateService(t *testing.T) {
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			RespCode: http.StatusOK,
+			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
@@ -180,7 +167,7 @@ func TestCreateService(t *testing.T) {
 func TestUpdateService(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
-	// this should be a full go right path
+	// tests for updating existing revision
 	httpClient.SetResponses([]api.MockResponse{
 		{
 			FileName: "./testdata/apiservice.json", // for call to get the service
@@ -191,11 +178,15 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to get the serviceRevision
+			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // for call to update the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingserviceinstances.json", // for call to get instance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -203,7 +194,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // for call to check existance of the consumerInstance
+			FileName: "./testdata/existingconsumerinstances.json", // for call to check existance of the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -212,7 +203,9 @@ func TestUpdateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err := client.PublishService(serviceBody)
+	cloneServiceBody := serviceBody
+	cloneServiceBody.APIUpdateSeverity = "MINOR"
+	apiSvc, err := client.PublishService(cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 
@@ -228,7 +221,7 @@ func TestUpdateService(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 
-	// this is a failure test
+	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
 			FileName: "./testdata/apiservice.json", // for call to get the service
@@ -239,27 +232,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // for call to get the serviceRevision
-			RespCode: http.StatusRequestTimeout,
-		},
-	})
-
-	apiSvc, err = client.PublishService(serviceBody)
-	assert.NotNil(t, err)
-	assert.Nil(t, apiSvc)
-
-	// this is a failure test
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // for call to get the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apiservice.json", // for call to update the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/empty-list.json", // this for call to get the revisions
+			FileName: "./testdata/existingservicerevisions.json", // this for call to get the revision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -267,39 +240,15 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			RespCode: http.StatusRequestTimeout,
-		},
-	})
-
-	apiSvc, err = client.PublishService(serviceBody)
-	assert.NotNil(t, err)
-	assert.Nil(t, apiSvc)
-
-	// this is another success test
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // for call to get the service
+			FileName: "./testdata/existingserviceinstances.json", // for call to get the serviceInstance
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service
+			FileName: "./testdata/serviceinstancejson", // for call to update the serviceinstance
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/empty-list.json", // this for call to get the revision
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/empty-list.json", // for call to get the consumerInstance
+			FileName: "./testdata/existingconsumerinstances.json", // for call to get the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -307,8 +256,13 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 	})
+	// Test oas2 object
+	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
+	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	apiSvc, err = client.PublishService(serviceBody)
+	cloneServiceBody = serviceBody
+	cloneServiceBody.Swagger = oas2Bytes
+	apiSvc, err = client.PublishService(cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 }

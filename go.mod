@@ -3,23 +3,32 @@ module git.ecd.axway.org/apigov/apic_agents_sdk
 go 1.13
 
 require (
-	git.ecd.axway.org/apigov/aws_apigw_traceability_agent v0.0.15 // indirect
 	git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
-	git.ecd.axway.org/apigov/v7_discovery_agent v0.0.15 // indirect
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0
 	github.com/getkin/kin-openapi v0.9.0
+	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f
-	github.com/klauspost/cpuid v1.3.1 // indirect
+	github.com/kr/pretty v0.2.0 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.1
+	go.uber.org/zap v1.15.0 // indirect
+	golang.org/x/sys v0.0.0-20200620081246-981b61492c35 // indirect
+	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/tools v0.0.0-20200619210111-0f592d2728bb // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
+	gopkg.in/ini.v1 v1.52.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
 
 replace (
