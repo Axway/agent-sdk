@@ -486,7 +486,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
-		AddApprovalConfigProperties(props)
+		AddSubscriptionConfigProperties(props)
 	}
 }
 
