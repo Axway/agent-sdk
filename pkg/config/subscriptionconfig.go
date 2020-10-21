@@ -48,7 +48,6 @@ type SubscriptionConfig interface {
 	GetUnsubscribeFailedTemplate() *EmailTemplate
 	GetSubscriptionApprovalMode() string
 	GetSubscriptionApprovalWebhookConfig() WebhookConfig
-	GetIssueNewCredentials() bool
 }
 
 // NotificationConfig -
@@ -81,15 +80,13 @@ type ApprovalConfig struct {
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
 	IConfigValidator
-	IssueNewCredentials bool                `config:"issueNewCredentials"`
-	Approval            *ApprovalConfig     `config:"approval"`
-	Notifications       *NotificationConfig `config:"notifications"`
-	Types               []NotificationType
+	Approval      *ApprovalConfig     `config:"approval"`
+	Notifications *NotificationConfig `config:"notifications"`
+	Types         []NotificationType
 }
 
 // These constants are the paths that the settings is at in a config file
 const (
-	pathSubscriptionsIssueNewCredentials                       = "central.subscriptions.issueNewCredentials"
 	pathSubscriptionsApprovalMode                              = "central.subscriptions.approval.mode"
 	pathSubscriptionsApprovalWebhookURL                        = "central.subscriptions.approval.webhook.url"
 	pathSubscriptionsApprovalWebhookHeaders                    = "central.subscriptions.approval.webhook.headers"
@@ -125,8 +122,6 @@ type EmailTemplate struct {
 
 // AddSubscriptionConfigProperties -
 func AddSubscriptionConfigProperties(props properties.Properties) {
-	props.AddBoolProperty(pathSubscriptionsIssueNewCredentials, true, "Create new application credentials for each new subscription")
-
 	// subscription approvals
 	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
@@ -168,7 +163,6 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	}
 
 	cfg := &SubscriptionConfiguration{
-		IssueNewCredentials: props.BoolPropertyValue(pathSubscriptionsIssueNewCredentials),
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 			SubscriptionApprovalWebhook: &WebhookConfiguration{
@@ -218,7 +212,6 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 // NewSubscriptionConfig - Creates the default subscription config
 func NewSubscriptionConfig() SubscriptionConfig {
 	return &SubscriptionConfiguration{
-		IssueNewCredentials: true,
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode:    ManualApproval,
 			SubscriptionApprovalWebhook: NewWebhookConfig(),
@@ -352,11 +345,6 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalMode() string {
 // GetSubscriptionApprovalWebhookConfig - Returns the Config for the subscription webhook
 func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() WebhookConfig {
 	return s.Approval.SubscriptionApprovalWebhook
-}
-
-// GetIssueNewCredentials - Returns the issueNewCredentials value
-func (s *SubscriptionConfiguration) GetIssueNewCredentials() bool {
-	return s.IssueNewCredentials
 }
 
 // ValidateCfg - Validates the subscription config
