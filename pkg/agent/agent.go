@@ -167,27 +167,6 @@ func GetCentralAuthToken() (string, error) {
 	return agent.tokenRequester.GetToken()
 }
 
-// SetupLogging - Setup agent logging
-func SetupLogging(agentName, logLevel, logFormat, logOutput, logPath string) {
-	if agentName != "" {
-		agent.loggerName = agentName
-	}
-	if logLevel != "" {
-		agent.logLevel = logLevel
-	}
-	if logFormat != "" {
-		agent.logFormat = logFormat
-	}
-	if logOutput != "" {
-		agent.logOutput = logOutput
-	}
-	if logPath != "" {
-		agent.logPath = logPath
-	}
-
-	log.SetupLogging(agent.loggerName, agent.logLevel, agent.logFormat, agent.logOutput, agent.logPath)
-}
-
 // GetCentralClient - Returns the APIC Client
 func GetCentralClient() apic.Client {
 	return agent.apicClient
@@ -379,9 +358,5 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 		cfg.TagsToPublish = resCfgAdditionalTags
 	}
 
-	logLevel := agent.logLevel
-	if strings.ToUpper(agent.logLevel) == "INFO" && strings.ToUpper(resCfgLogLevel) != "INFO" {
-		logLevel = resCfgLogLevel
-	}
-	SetupLogging("", logLevel, "", "", "")
+	log.GlobalLoggerConfig.Level(agent.logLevel).Apply()
 }

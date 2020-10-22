@@ -91,9 +91,9 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Log yaml properties and command flags
 	assertStringCmdFlag(t, rootCmd, "log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
-	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line, package)")
+	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line)")
 	assertStringCmdFlag(t, rootCmd, "log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
-	assertStringCmdFlag(t, rootCmd, "log.path", "logPath", "logs", "Log file path if output type is file or both")
+	assertStringCmdFlag(t, rootCmd, "log.file.path", "logFilePath", "logs", "Log file path if output type is file or both")
 }
 
 func TestRootCmdConfigFileLoad(t *testing.T) {
@@ -445,8 +445,10 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"file",
-		"--logPath",
+		"--logFilePath",
 		"./tmplogs",
+		"--logFileName",
+		"test_with_non_defaults.log",
 	},
 	)
 	// Make sure to delete file
@@ -475,8 +477,10 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"both",
-		"--logPath",
+		"--logFilePath",
 		"./tmplogs",
+		"--logFileName",
+		"test_with_non_defaults.log",
 	},
 	)
 	rescueStdout := os.Stdout
