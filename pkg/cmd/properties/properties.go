@@ -217,7 +217,5 @@ func (p *properties) MaskValues(maskedKeys string) {
 
 func (p *properties) DebugLogProperties() {
 	data, _ := json.MarshalIndent(p.flattenedProperties, "", " ")
-	if strings.ToLower(log.GetLevel().String()) == "debug" {
-		fmt.Printf("%s\n", data)
-	}
+	log.Debugf("%s\n", data)
 }

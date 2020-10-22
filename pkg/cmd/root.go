@@ -78,6 +78,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 	c.props = properties.NewProperties(c.rootCmd)
 	c.addBaseProps()
+	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
 	corecfg.AddCentralConfigProperties(c.props, agentType)
 	corecfg.AddStatusConfigProperties(c.props)
@@ -90,11 +91,6 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
-	c.props.AddStringProperty("log.level", "info", "Log level (debug, info, warn, error)")
-	c.props.AddStringProperty("log.format", "json", "Log format (json, line, package)")
-	c.props.AddStringProperty("log.output", "stdout", "Log output type (stdout, file, both)")
-	c.props.AddStringProperty("log.path", "logs", "Log file path if output type is file or both")
-	c.props.AddStringProperty("log.maskedValues", "", "List of key words in the config to be masked (e.g. pwd, password, secret, key")
 	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Configuration file path for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
 }
@@ -145,15 +141,18 @@ func (c *agentRootCommand) checkStatusFlag() {
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
-	c.setupLogger()
+	_, err := corecfg.ParseAndSetupLogConfig(c.GetProperties())
+	if err != nil {
+		return err
+	}
 
-	// Init the healthcheck API
 	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
 	err = statusCfg.ValidateConfig()
 	if err != nil {
 		return err
 	}
 
+	// Init the healthcheck API
 	hc.SetStatusConfig(statusCfg)
 	hc.HandleRequests()
 
@@ -193,21 +192,6 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	return err
-}
-
-// parse the logger config values and setup the logger
-func (c *agentRootCommand) setupLogger() {
-	logLevel := c.props.StringPropertyValue("log.level")
-	logFormat := c.props.StringPropertyValue("log.format")
-	logOutput := c.props.StringPropertyValue("log.output")
-	logPath := c.props.StringPropertyValue("log.path")
-	maskedValues := c.props.StringPropertyValue("log.maskedValues")
-	// Only attempt to mask values if the key maskValues AND key words for maskValues exist
-	if maskedValues != "" {
-		c.props.MaskValues(maskedValues)
-	}
-
-	log.SetupLogging(c.agentName, logLevel, logFormat, logOutput, logPath)
 }
 
 // run - Executes the agent command

@@ -6,9 +6,9 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/sirupsen/logrus"
 	"github.com/subosito/gotenv"
 )
 
@@ -46,7 +46,7 @@ func MaskValue(sensitiveData string) string {
 
 // PrintDataInterface - prints contents of the interface only if in debug mode
 func PrintDataInterface(data interface{}) {
-	if strings.ToLower(log.GetLevel().String()) == "debug" {
+	if log.GetLevel() == logrus.DebugLevel {
 		PrettyPrint(data)
 	}
 }
