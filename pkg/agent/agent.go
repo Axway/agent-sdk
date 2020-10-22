@@ -305,13 +305,13 @@ func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 		agentRes := edgeDiscoveryAgent(res)
 		return agentRes.Spec.Dataplane
 	case v1alpha1.EdgeTraceabilityAgentResource:
-		agentRes := edgeTraceabilitAgent(res)
+		agentRes := edgeTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	case v1alpha1.AWSDiscoveryAgentResource:
 		agentRes := awsDiscoveryAgent(res)
 		return agentRes.Spec.Dataplane
 	case v1alpha1.AWSTraceabilityAgentResource:
-		agentRes := awsTraceabilitAgent(res)
+		agentRes := awsTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	default:
 		panic("Unsupported agent type")
@@ -358,5 +358,10 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 		cfg.TagsToPublish = resCfgAdditionalTags
 	}
 
-	log.GlobalLoggerConfig.Level(agent.logLevel).Apply()
+	logLevel := agent.logLevel
+	if strings.ToUpper(agent.logLevel) == "INFO" && strings.ToUpper(resCfgLogLevel) != "INFO" {
+		logLevel = resCfgLogLevel
+	}
+	agent.logLevel = logLevel
+	log.GlobalLoggerConfig.Level(logLevel).Apply()
 }

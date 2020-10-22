@@ -33,7 +33,7 @@ func mergeAWSDiscoveryAgentWithConfig(cfg *config.CentralConfiguration) {
 	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
 }
 
-func awsTraceabilitAgent(res *apiV1.ResourceInstance) *v1alpha1.AWSTraceabilityAgent {
+func awsTraceabilityAgent(res *apiV1.ResourceInstance) *v1alpha1.AWSTraceabilityAgent {
 	agentRes := &v1alpha1.AWSTraceabilityAgent{}
 	agentRes.FromInstance(res)
 

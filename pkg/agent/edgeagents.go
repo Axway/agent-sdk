@@ -33,7 +33,7 @@ func mergeEdgeDiscoveryAgentWithConfig(cfg *config.CentralConfiguration) {
 	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
 }
 
-func edgeTraceabilitAgent(res *apiV1.ResourceInstance) *v1alpha1.EdgeTraceabilityAgent {
+func edgeTraceabilityAgent(res *apiV1.ResourceInstance) *v1alpha1.EdgeTraceabilityAgent {
 	agentRes := &v1alpha1.EdgeTraceabilityAgent{}
 	agentRes.FromInstance(res)
 
