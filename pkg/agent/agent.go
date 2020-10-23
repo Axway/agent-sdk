@@ -106,12 +106,18 @@ func InitializeForTest(apicClient apic.Client) {
 
 func runPeriodicHealthChecks() {
 	for {
+		// Initial check done by the agents startup, so wait for the next interval
+		// Use the default wait time of 30s if status config is not set yet
+		waitInterval := 30 * time.Second
+		if hc.GetStatusConfig() != nil {
+			waitInterval = hc.GetStatusConfig().GetHealthCheckInterval()
+		}
+		// Set sleep time based on configured interval
+		time.Sleep(waitInterval)
 		if hc.RunChecks() != hc.OK {
 			log.Error(errors.ErrHealthCheck)
 			os.Exit(1)
 		}
-		// Set sleep time based on configured interval
-		time.Sleep(hc.GetStatusConfig().GetHealthCheckInterval())
 	}
 }
 

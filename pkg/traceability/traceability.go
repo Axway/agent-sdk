@@ -171,10 +171,13 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		}
 	}
 
+	publishCount := len(batch.Events())
+	logp.Info("Publishing %d events", publishCount)
 	err := client.transportClient.Publish(batch)
 	if err != nil {
 		return err
 	}
+	logp.Info("Published %d events", publishCount-len(batch.Events()))
 	return nil
 }
 
