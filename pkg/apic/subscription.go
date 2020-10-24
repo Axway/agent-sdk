@@ -41,7 +41,7 @@ type Subscription interface {
 	GetCreatedUserID() string
 	GetState() SubscriptionState
 	GetPropertyValue(propertyKey string) string
-	UpdateState(newState SubscriptionState) error
+	UpdateState(newState SubscriptionState, description string) error
 	UpdateProperties(appName string) error
 }
 
@@ -101,7 +101,7 @@ func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
 }
 
 // UpdateState - Updates the state of subscription
-func (s *CentralSubscription) UpdateState(newState SubscriptionState) error {
+func (s *CentralSubscription) UpdateState(newState SubscriptionState, description string) error {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return err
@@ -109,7 +109,8 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState) error {
 
 	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
 	subState := uc.CatalogItemSubscriptionState{
-		State: string(newState),
+		Description: description,
+		State:       string(newState),
 	}
 
 	statePostBody, err := json.Marshal(subState)

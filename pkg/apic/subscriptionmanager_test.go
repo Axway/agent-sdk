@@ -252,10 +252,10 @@ func TestSubscriptionUpdate(t *testing.T) {
 	assert.NotNil(t, client)
 
 	approvedProcessor := func(subscription Subscription) {
-		subscription.UpdateState(SubscriptionActive)
+		subscription.UpdateState(SubscriptionActive, "approved")
 	}
 	unsubscribedProcessor := func(subscription Subscription) {
-		subscription.UpdateState(SubscriptionUnsubscribed)
+		subscription.UpdateState(SubscriptionUnsubscribed, "unsubscribed")
 	}
 
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionApproved, approvedProcessor)

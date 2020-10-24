@@ -33,7 +33,7 @@
 | 1154 | error parsing filter in configuration. Unrecognized condition                                               | pkg/filter/ErrFilterCondition                 |
 | 1155 | error getting subscription definition properties in AMPLIFY Central                                         | pkg/apic/ErrGetSubscriptionDefProperties      |
 | 1156 | error updating subscription definition properties in AMPLIFY Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties   |
-|      | 1300-1399 - for subscription notification errors                                                            |                                               |
+| 1157 | error getting catalog item API server info properties                                                       | pkg/apic/ErrGetCatalogItemServerInfoProperties |      | 1300-1399 - for subscription notification errors                                                            |                                               |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification        |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications     |
 | 1302 | error creating data for sending subscription notification                                                   | pkg/notify/ErrSubscriptionData                |

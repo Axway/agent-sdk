@@ -7,6 +7,7 @@ import (
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/notification"
+	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -97,7 +98,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
 				sm.preprocessSubscription(&subscription)
-				if subscription.ApicID != "" {
+				if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
 					sm.invokeProcessor(subscription)
 				}
 			}
@@ -112,9 +113,16 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 	subscription.apicClient = sm.apicClient
 
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
-	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+	if err != nil {
+		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
+		return
 	}
+	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
+		log.Debugf("Unable to process subscription '%s' because environment names don't match: catalog item is in '%s' but agent is configured for '%s'", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
+		return
+	}
+
+	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
@@ -166,6 +174,7 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 	invokeProcessor := true
 	if sm.validator != nil {
 		invokeProcessor = sm.validator(&subscription)
+		invokeProcessor = true
 	}
 	if invokeProcessor {
 		processorList, ok := sm.processorMap[SubscriptionState(subscription.GetState())]
