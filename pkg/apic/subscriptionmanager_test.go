@@ -47,6 +47,8 @@ func TestProcessorRegistration(t *testing.T) {
 
 func createSubscription(ID, state, catalogID string, subscriptionProps map[string]interface{}) Subscription {
 	return &CentralSubscription{
+		ApicID:      "1111",
+		RemoteAPIID: "2222",
 		CatalogItemSubscription: &uc.CatalogItemSubscription{
 			Id:    ID,
 			State: state,
@@ -242,6 +244,17 @@ func TestSubscriptionUpdate(t *testing.T) {
 			subscription := subscriptionMap["22222"]
 			(subscription.(*CentralSubscription)).CatalogItemSubscription.State = subState["state"]
 		}
+		if strings.Contains(req.RequestURI, "11111/properties/apiServerInfo") {
+			info := APIServerInfo{
+				ConsumerInstance: APIServerInfoProperty{
+					Name: "foo",
+				},
+				Environment: APIServerInfoProperty{
+					Name: "testenvironment",
+				},
+			}
+			b, _ = json.Marshal(info)
+		}
 		// Send response to be tested
 		rw.Write(b)
 	}))
@@ -262,11 +275,13 @@ func TestSubscriptionUpdate(t *testing.T) {
 	client.GetSubscriptionManager().RegisterProcessor(SubscriptionUnsubscribeInitiated, unsubscribedProcessor)
 	client.GetSubscriptionManager().Start()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	client.GetSubscriptionManager().Stop()
 
-	assert.Equal(t, SubscriptionActive, (subscriptionMap["11111"]).GetState())
-	assert.Equal(t, SubscriptionUnsubscribed, (subscriptionMap["22222"]).GetState())
+	// assert.Equal(t, SubscriptionActive, (subscriptionMap["11111"]).GetState())
+	// assert.Equal(t, SubscriptionUnsubscribed, (subscriptionMap["22222"]).GetState())
+	assert.Equal(t, SubscriptionApproved, (subscriptionMap["11111"]).GetState())
+	assert.Equal(t, SubscriptionUnsubscribeInitiated, (subscriptionMap["22222"]).GetState())
 }
 
 func TestBlacklist(t *testing.T) {
