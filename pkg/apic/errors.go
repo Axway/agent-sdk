@@ -28,4 +28,5 @@ var (
 
 	ErrGetSubscriptionDefProperties    = errors.New(1155, "error getting subscription definition properties in AMPLIFY Central")
 	ErrUpdateSubscriptionDefProperties = errors.New(1156, "error updating subscription definition properties in AMPLIFY Central")
+	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 )
