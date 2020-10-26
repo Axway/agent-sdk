@@ -174,7 +174,6 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 	invokeProcessor := true
 	if sm.validator != nil {
 		invokeProcessor = sm.validator(&subscription)
-		invokeProcessor = true
 	}
 	if invokeProcessor {
 		processorList, ok := sm.processorMap[SubscriptionState(subscription.GetState())]
