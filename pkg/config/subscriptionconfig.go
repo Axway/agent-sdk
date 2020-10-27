@@ -372,7 +372,13 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 
 	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())
 
-	s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
+	// only validate the webhook approval config settings if the approval mode is for webhook
+	if s.GetSubscriptionApprovalMode() == WebhookApproval {
+		err := s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -387,6 +393,11 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
 	webhookConfig := s.Notifications.Webhook.(*WebhookConfiguration)
 	webhookConfig.webhookHeaders = map[string]string{}
+
+	// webhook headers for subscription notification cannot be empty
+	if webhookConfig.Headers == "" {
+		return errors.New("central.subscriptions.notifications.headers cannot be empty")
+	}
 	webhookConfig.Headers = strings.Replace(webhookConfig.Headers, ", ", ",", -1)
 	headersValues := strings.Split(webhookConfig.Headers, ",Header=")
 	for _, headerValue := range headersValues {
