@@ -45,7 +45,7 @@
 | 1401 | error parsing subscription approval mode                                                                    | pkg/config/ErrSubscriptionApprovalModeInvalid |
 | 1402 | error in overriding configuration using file with environment variables                                     | pkg/config/ErrEnvConfigOverride               |
 | 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes                            | pkg/config/ErrStatusHealthCheckPeriod         |
-| 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 and 300 seconds                       | pkg/config/ErrStatusHealthCheckInterval       |
+| 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 seconds and 5 minutes                 | pkg/config/ErrStatusHealthCheckInterval       |
 | 1410 | invalid configuration settings for the logging setup                                                        | pkg/config/ErrInvalidLogConfig                |
 |      | 1500-1599 - errors related to traceability output transport                                                 |                                               |
 | 1500 | could not set proxy                                                                                         | pkg/traceability/ErrSettingProxy              |
