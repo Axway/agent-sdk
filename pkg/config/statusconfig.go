@@ -56,7 +56,7 @@ const (
 func AddStatusConfigProperties(props properties.Properties) {
 	props.AddIntProperty(pathPort, 8989, "The port that will serve the status endpoints")
 	props.AddDurationProperty(pathHealthcheckPeriod, 3*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
-	props.AddDurationProperty(pathHealthcheckInterval, 30*time.Second, "Time in seconds between running periodic health checker (binary agents only)")
+	props.AddDurationProperty(pathHealthcheckInterval, 30*time.Second, "Time between running periodic health checker. Can be between 30 seconds and 5 minutes (binary agents only)")
 	props.AddBoolFlag("status", "Get the status of all the Health Checks")
 }
 
