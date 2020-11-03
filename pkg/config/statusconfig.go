@@ -11,7 +11,7 @@ type StatusConfig interface {
 	GetPort() int
 	GetHealthCheckPeriod() time.Duration
 	GetHealthCheckInterval() time.Duration
-	ValidateConfig() error
+	ValidateCfg() error
 }
 
 // StatusConfiguration -
