@@ -147,7 +147,7 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
-	err = statusCfg.ValidateConfig()
+	err = statusCfg.ValidateCfg()
 	if err != nil {
 		return err
 	}

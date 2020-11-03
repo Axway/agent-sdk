@@ -347,7 +347,7 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() Webho
 	return s.Approval.SubscriptionApprovalWebhook
 }
 
-// ValidateCfg - Validates the subscription config
+// ValidateCfg - Validates the config, implementing IConfigInterface
 func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.Webhook.GetURL() != "" {
 		s.SetNotificationType(NotifyWebhook)

@@ -363,7 +363,7 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 	return c.PollInterval
 }
 
-// ValidateCfg - Validates the config
+// ValidateCfg - Validates the config, implementing IConfigInterface
 func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {

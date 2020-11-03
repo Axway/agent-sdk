@@ -11,7 +11,7 @@ type StatusConfig interface {
 	GetPort() int
 	GetHealthCheckPeriod() time.Duration
 	GetHealthCheckInterval() time.Duration
-	ValidateConfig() error
+	ValidateCfg() error
 }
 
 // StatusConfiguration -
@@ -70,8 +70,8 @@ func ParseStatusConfig(props properties.Properties) (StatusConfig, error) {
 	return cfg, nil
 }
 
-// ValidateConfig -
-func (a *StatusConfiguration) ValidateConfig() error {
+// ValidateCfg - Validates the config, implementing IConfigInterface
+func (a *StatusConfiguration) ValidateCfg() error {
 	mins := a.GetHealthCheckPeriod().Minutes()
 	if mins < 1 || mins > 5 {
 		return ErrStatusHealthCheckPeriod
