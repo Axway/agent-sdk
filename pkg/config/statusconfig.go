@@ -18,8 +18,8 @@ type StatusConfig interface {
 type StatusConfiguration struct {
 	StatusConfig
 	Port                int           `config:"port"`
-	HealthCheckPeriod   time.Duration `config:"healthCheckPeriod"`
-	HealthCheckInterval time.Duration `config:"healthCheckInterval"` // this for binary agents only
+	HealthCheckPeriod   time.Duration `config:"healthCheckPeriod" validate:"min=1m, max=5m"`
+	HealthCheckInterval time.Duration `config:"healthCheckInterval" validate:"min=30s, max=5m"` // this for binary agents only
 }
 
 // NewStatusConfig - create a new status config
