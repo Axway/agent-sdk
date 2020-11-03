@@ -29,6 +29,26 @@ func TestWebookConfig(t *testing.T) {
 	assert.Equal(t, m, cfg.GetWebhookHeaders())
 	assert.Equal(t, "1234", cfg.GetSecret())
 
+	// this one should be all good with no headers
+	cfg = &WebhookConfiguration{
+		URL:     "https://foo.bar:4567",
+		Headers: "",
+		Secret:  "1234",
+	}
+
+	err = cfg.ValidateConfig()
+	assert.Nil(t, err)
+
+	// this one should be all good with no secret
+	cfg = &WebhookConfiguration{
+		URL:     "https://foo.bar:4567",
+		Headers: "Header=contentType,Value=application/json",
+		Secret:  "",
+	}
+
+	err = cfg.ValidateConfig()
+	assert.Nil(t, err)
+
 	// this one should be bad url
 	cfg = &WebhookConfiguration{
 		URL:     "xxxf",
