@@ -280,7 +280,7 @@ func (c *TLSConfiguration) GetMaxVersion() TLSVersion {
 	return c.MaxVersion
 }
 
-// ValidateCfg - Validates the config
+// ValidateCfg - Validates the config, implementing IConfigInterface
 func (c *TLSConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {

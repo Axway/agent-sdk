@@ -70,7 +70,7 @@ func ParseStatusConfig(props properties.Properties) (StatusConfig, error) {
 	return cfg, nil
 }
 
-// ValidateCfg -
+// ValidateCfg - Validates the config, implementing IConfigInterface
 func (a *StatusConfiguration) ValidateCfg() error {
 	mins := a.GetHealthCheckPeriod().Minutes()
 	if mins < 1 || mins > 5 {
