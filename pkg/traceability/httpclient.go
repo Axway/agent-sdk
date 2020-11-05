@@ -15,7 +15,6 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/outputs/outil"
 	"github.com/elastic/beats/v7/libbeat/outputs/transport"
@@ -53,14 +52,6 @@ type Connection struct {
 	http      *http.Client
 	connected bool
 	encoder   bodyEncoder
-}
-
-type eventRaw map[string]json.RawMessage
-
-type event struct {
-	Timestamp time.Time         `json:"@timestamp"`
-	Metadata  httpEventMetadata `json:"@metadata"`
-	Fields    common.MapStr     `json:"-"`
 }
 
 // Meta defines common event metadata to be stored in '@metadata'
@@ -159,7 +150,7 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 		return data, ErrHTTPNotConnected
 	}
 
-	var events = make([]eventRaw, len(data))
+	var events = make([]json.RawMessage, len(data))
 	timeStamp := time.Now()
 	for i, event := range data {
 		events[i] = client.makeHTTPEvent(&event.Content)
@@ -222,8 +213,9 @@ func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTim
 
 	header.Add("Authorization", "Bearer "+token)
 	header.Add("axway-target-flow", "api-central-v8")
+	header.Add("Capture-Org-ID", agent.GetCentralConfig().GetTenantID())
 	header.Add("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
-	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().UnixNano(), 10))
+	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().Unix(), 10))
 
 	if body != nil {
 		conn.encoder.AddHeader(header)
@@ -260,24 +252,10 @@ func closing(c io.Closer) {
 	c.Close()
 }
 
-func (client *HTTPClient) makeHTTPEvent(v *beat.Event) map[string]json.RawMessage {
-	type event0 event
-	e := event{
-		Timestamp: v.Timestamp.UTC(),
-		Metadata: httpEventMetadata{
-			Beat:    client.beatInfo.Beat + "_http",
-			Version: client.beatInfo.Version,
-			Type:    "_doc",
-		},
-		Fields: v.Fields,
-	}
-	b, _ := json.Marshal(event0(e))
+func (client *HTTPClient) makeHTTPEvent(v *beat.Event) json.RawMessage {
+	var eventData json.RawMessage
+	msg := v.Fields["message"].(string)
+	json.Unmarshal([]byte(msg), &eventData)
 
-	var eventMap map[string]json.RawMessage
-	json.Unmarshal(b, &eventMap)
-	for j, k := range e.Fields {
-		b, _ = json.Marshal(k)
-		eventMap[j] = b
-	}
-	return eventMap
+	return eventData
 }
