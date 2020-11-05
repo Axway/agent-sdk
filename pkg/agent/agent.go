@@ -178,6 +178,11 @@ func GetCentralClient() apic.Client {
 	return agent.apicClient
 }
 
+// GetCentralConfig - Returns the APIC Client
+func GetCentralConfig() config.CentralConfig {
+	return agent.cfg
+}
+
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
 	if agent.apiMap == nil {

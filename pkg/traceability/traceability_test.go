@@ -277,7 +277,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, group)
 	traceabilityClient := group.Clients[0].(*Client)
-	batch := createBatch("somemessage")
+	batch := createBatch("{\"f1\":\"test\"}")
 	traceabilityClient.Connect()
 	err = traceabilityClient.Publish(batch)
 	traceabilityClient.Close()
@@ -287,17 +287,8 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
 	event := publishedMessages[0]
-
-	metadata := event["@metadata"]
-	buf, _ := json.Marshal(metadata)
-	var httpMetadata httpEventMetadata
-	err = json.Unmarshal(buf, &httpMetadata)
-	msg := event["message"]
-
 	assert.Nil(t, err)
-	assert.Equal(t, "test-beat_http", httpMetadata.Beat)
-	assert.Equal(t, "1.0", httpMetadata.Version)
-	assert.Equal(t, "somemessage", msg)
+	assert.Equal(t, "test", event["f1"])
 	assert.True(t, batch.acked)
 }
 
@@ -316,12 +307,12 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 		url.Hostname() + ":" + url.Port(),
 	}
 
-	eventProcessor := &testEventProcessor{msgValue: "processedValue"}
+	eventProcessor := &testEventProcessor{msgValue: "{\"f1\":\"test\"}"}
 	SetOutputEventProcessor(eventProcessor)
 	group, err := createTransport(testConfig)
 	assert.Nil(t, err)
 	traceabilityClient := group.Clients[0].(*Client)
-	batch := createBatch("somemessage")
+	batch := createBatch("{\"f0\":\"dummy\"}")
 
 	traceabilityClient.Connect()
 	err = traceabilityClient.Publish(batch)
@@ -332,8 +323,8 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
 	event := publishedMessages[0]
-	msg := event["message"]
-	assert.Equal(t, "processedValue", msg)
+	assert.Equal(t, "test", event["f1"])
+	assert.Nil(t, event["f0"])
 	assert.True(t, batch.acked)
 
 	SetOutputEventProcessor(nil)
@@ -358,7 +349,7 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, group)
 	traceabilityClient := group.Clients[0].(*Client)
-	batch := createBatch("somemessage")
+	batch := createBatch("{\"f1\":\"test\"}")
 
 	traceabilityClient.Connect()
 	err = traceabilityClient.Publish(batch)
@@ -370,16 +361,9 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	assert.Equal(t, 1, len(publishedMessages))
 
 	event := publishedMessages[0]
-	metadata := event["@metadata"]
-	buf, _ := json.Marshal(metadata)
-	var httpMetadata httpEventMetadata
-	err = json.Unmarshal(buf, &httpMetadata)
-	msg := event["message"]
 
 	assert.Nil(t, err)
-	assert.Equal(t, "test-beat_http", httpMetadata.Beat)
-	assert.Equal(t, "1.0", httpMetadata.Version)
-	assert.Equal(t, "somemessage", msg)
+	assert.Equal(t, "test", event["f1"])
 	assert.True(t, batch.acked)
 }
 
