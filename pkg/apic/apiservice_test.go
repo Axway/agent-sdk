@@ -170,7 +170,7 @@ func TestUpdateService(t *testing.T) {
 	// tests for updating existing revision
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice.json", // for call to get the service
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
 			RespCode: http.StatusOK,
 		},
 		{
@@ -224,7 +224,7 @@ func TestUpdateService(t *testing.T) {
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice.json", // for call to get the service
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
 			RespCode: http.StatusOK,
 		},
 		{

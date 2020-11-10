@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"testing"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
@@ -112,6 +113,8 @@ func TestRunGenServiceCmd(t *testing.T) {
 
 	assert.Nil(t, err, "Error expected to be returned from command Execute")
 	assert.True(t, a.service.(*mockDaemon).installCalled)
+
+	os.Remove("./filename")
 }
 
 func TestHandleService(t *testing.T) {

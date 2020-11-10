@@ -180,9 +180,11 @@ func (c *agentRootCommand) initConfig() error {
 	c.GetProperties().DebugLogProperties()
 
 	// Validate Agent Config
-	err = config.ValidateConfig(agentCfg)
-	if err != nil {
-		return err
+	if agentCfg != nil {
+		err = config.ValidateConfig(agentCfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Check the sync flag

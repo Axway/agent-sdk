@@ -153,7 +153,7 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// Get revisions for the service and use the latest one as last reference
 		revisionFilter := map[string]string{
-			"query": "metadata.references.name==" + serviceBody.RestAPIID,
+			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
 		revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)

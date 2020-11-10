@@ -244,6 +244,9 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 		return cfg, nil
 	}
 
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -267,6 +270,8 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	assert.Contains(t, "configWithValidation: String prop not set", errBuf.String())
 	assert.Equal(t, true, cfg.configValidationCalled)
 	assert.Equal(t, false, cfg.AgentCfg.agentValidationCalled)
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdAgentConfigChildValidation(t *testing.T) {
@@ -287,6 +292,10 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 		}
 		return cfg, nil
 	}
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -311,6 +320,8 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	assert.Contains(t, "agentConfig: String prop not set", errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	assert.Equal(t, true, cfg.AgentCfg.(*agentConfig).agentValidationCalled)
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdHandlersWithError(t *testing.T) {
@@ -368,6 +379,11 @@ func TestRootCmdHandlers(t *testing.T) {
 		cmdHandlerInvoked = true
 		return nil
 	}
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -396,6 +412,9 @@ func TestRootCmdHandlers(t *testing.T) {
 	assert.Equal(t, 30*time.Second, agentCfg.dProp)
 	assert.Equal(t, 555, agentCfg.iProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func noOpInitConfigHandler(centralConfig corecfg.CentralConfig) (interface{}, error) {
@@ -409,6 +428,10 @@ func noOpCmdHandler() error {
 func TestRootCommandLoggerStdout(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -434,11 +457,18 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 
 	assert.Equal(t, "info", logData["level"])
 	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -466,11 +496,18 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	assert.Equal(t, "info", logData["level"])
 	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -502,4 +539,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
 	assert.Nil(t, err)
 	assert.Equal(t, out, dat)
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }

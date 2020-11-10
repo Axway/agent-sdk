@@ -61,7 +61,11 @@ func (a *AuthConfiguration) validate() {
 		exception.Throw(errors.New("Error auth.privatekey not set in config"))
 	} else {
 		if !fileExists(a.GetPrivateKey()) {
-			saveKeyData(a.GetPrivateKey(), os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA"))
+			privateKeyData := os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA")
+			if privateKeyData == "" {
+				exception.Throw(errors.New("Error auth.privatekey not set in config"))
+			}
+			saveKeyData(a.GetPrivateKey(), privateKeyData)
 		}
 	}
 
@@ -69,7 +73,11 @@ func (a *AuthConfiguration) validate() {
 		exception.Throw(errors.New("Error auth.publickey not set in config"))
 	} else {
 		if !fileExists(a.GetPublicKey()) {
-			saveKeyData(a.GetPublicKey(), os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA"))
+			publicKeyData := os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA")
+			if publicKeyData == "" {
+				exception.Throw(errors.New("Error auth.publickey not set in config"))
+			}
+			saveKeyData(a.GetPublicKey(), publicKeyData)
 		}
 	}
 }

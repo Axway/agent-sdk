@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -16,8 +17,9 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	authCfg.PrivateKey = "pppp"
-	authCfg.PublicKey = "kkk"
+	tmpFile, _ := ioutil.TempFile(".", "test*")
+	authCfg.PrivateKey = "./" + tmpFile.Name()
+	authCfg.PublicKey = "./" + tmpFile.Name()
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.True(t, ok)
@@ -54,7 +56,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, "aaa/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
 	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
 
-	cleanupFiles()
+	cleanupFiles(tmpFile.Name())
 }
 
 func TestTraceabilityAgentConfig(t *testing.T) {
@@ -66,8 +68,9 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	authCfg.PrivateKey = "pppp"
-	authCfg.PublicKey = "kkk"
+	tmpFile, _ := ioutil.TempFile(".", "test*")
+	authCfg.PrivateKey = "./" + tmpFile.Name()
+	authCfg.PublicKey = "./" + tmpFile.Name()
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.True(t, ok)
@@ -112,7 +115,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTP_PROXY"))
 
-	cleanupFiles()
+	cleanupFiles(tmpFile.Name())
 }
 
 func TestTeamConfig(t *testing.T) {
@@ -124,8 +127,9 @@ func TestTeamConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	authCfg.PrivateKey = "pppp"
-	authCfg.PublicKey = "kkk"
+	tmpFile, _ := ioutil.TempFile(".", "test*")
+	authCfg.PrivateKey = "./" + tmpFile.Name()
+	authCfg.PublicKey = "./" + tmpFile.Name()
 	centralConfig.TenantID = "1111"
 	centralConfig.URL = "aaa"
 	centralConfig.Environment = "111111"
@@ -139,11 +143,10 @@ func TestTeamConfig(t *testing.T) {
 	centralConfig.SetTeamID(teamID)
 	assert.Equal(t, teamID, centralConfig.GetTeamID(), "The Team ID was not set appropriately")
 
-	cleanupFiles()
+	cleanupFiles(tmpFile.Name())
 }
 
-func cleanupFiles() {
+func cleanupFiles(fileName string) {
 	// cleanup files
-	os.Remove("pppp")
-	os.Remove("kkk")
+	os.Remove("./" + fileName)
 }
