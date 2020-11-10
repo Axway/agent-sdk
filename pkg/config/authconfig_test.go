@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -49,12 +50,13 @@ func TestAuhConfig(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error auth.privatekey not set in config", err.Error())
 
-	authCfg.PrivateKey = "ppp"
+	fs, err := ioutil.TempFile(".", "test*")
+	authCfg.PrivateKey = "./" + fs.Name()
 	err = validateAuth(cfg)
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error auth.publickey not set in config", err.Error())
 
-	authCfg.PublicKey = "bbbb"
+	authCfg.PublicKey = "./" + fs.Name()
 	err = validateAuth(cfg)
 	assert.Nil(t, err)
 
@@ -66,8 +68,6 @@ func TestAuhConfig(t *testing.T) {
 	assert.Equal(t, 30*time.Second, cfg.GetTimeout())
 
 	// cleanup files
-	err = os.Remove("ppp")
-	assert.Nil(t, err)
-	err = os.Remove("bbbb")
+	err = os.Remove("./" + fs.Name())
 	assert.Nil(t, err)
 }

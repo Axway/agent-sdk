@@ -28,15 +28,6 @@ const (
 	deleteAPI            = iota
 )
 
-type serviceExecution int
-
-const (
-	addAPIServerSpec serviceExecution = iota + 1
-	addAPIServerRevisionSpec
-	addAPIServerInstanceSpec
-	deleteAPIServerSpec
-)
-
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error) {
 	apiSvc, err := c.processService(&serviceBody)
@@ -127,7 +118,7 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 
 func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
 	attributes := make(map[string]string)
-	externalAPIID := sanitizeAPIName(serviceBody.RestAPIID)
+	externalAPIID := serviceBody.RestAPIID
 
 	// check to see if its an APIService
 	if !isAPIService && serviceBody.Stage != "" {

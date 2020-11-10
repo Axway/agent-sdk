@@ -9,6 +9,7 @@ import (
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/google/uuid"
 )
 
 func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceSpec {
@@ -54,7 +55,8 @@ func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, se
 
 //processService -
 func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
-	serviceName := sanitizeAPIName(serviceBody.RestAPIID)
+	uuid, _ := uuid.NewUUID()
+	serviceName := uuid.String()
 
 	// Default action to create service
 	serviceURL := c.cfg.GetServicesURL()
@@ -62,12 +64,13 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	serviceBody.serviceContext.serviceAction = addAPI
 
 	// If service exists, update existing service
-	apiService, err := c.getAPIServiceByName(serviceName)
+	apiService, err := c.getAPIServiceByExternalAPIID(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 
 	if apiService != nil {
+		serviceName = apiService.Name
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
 		serviceURL += "/" + serviceName
@@ -90,17 +93,21 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 }
 
 // getAPIServiceByName - Returns the API service for specified name
-func (c *ServiceClient) getAPIServiceByName(name string) (*v1alpha1.APIService, error) {
-	name = sanitizeAPIName(name)
+func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
+	query := map[string]string{
+		"query": "attributes." + AttrExternalAPIID + "==\"" + serviceBody.RestAPIID + "\"",
+	}
+
 	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     c.cfg.GetServicesURL() + "/" + name,
-		Headers: headers,
+		Method:      coreapi.GET,
+		URL:         c.cfg.GetServicesURL(),
+		Headers:     headers,
+		QueryParams: query,
 	}
 
 	response, err := c.apiClient.Send(request)
@@ -114,9 +121,12 @@ func (c *ServiceClient) getAPIServiceByName(name string) (*v1alpha1.APIService, 
 		}
 		return nil, nil
 	}
-	apiService := new(v1alpha1.APIService)
-	json.Unmarshal(response.Body, apiService)
-	return apiService, nil
+	apiServices := make([]v1alpha1.APIService, 0)
+	json.Unmarshal(response.Body, &apiServices)
+	if len(apiServices) > 0 {
+		return &apiServices[0], nil
+	}
+	return nil, nil
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created

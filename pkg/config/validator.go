@@ -10,6 +10,9 @@ import "reflect"
 func ValidateConfig(cfg interface{}) error {
 	// Check if top level struct has Validate. If it does then call Validate
 	// only at top level
+	if cfg == nil {
+		return nil
+	}
 
 	if objInterface, ok := cfg.(IConfigValidator); ok {
 		err := objInterface.ValidateCfg()

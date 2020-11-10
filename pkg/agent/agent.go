@@ -70,21 +70,25 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 	// Init apic client
 	agent.apicClient = apic.New(centralCfg)
-	initalizeTokenRequester(centralCfg)
+	initializeTokenRequester(centralCfg)
 
-	// Get Agent Resources
-	err = RefreshResources()
-	if err != nil {
-		return err
+	if getAgentResourceType() != "" {
+		// Get Agent Resources
+		err = RefreshResources()
+		if err != nil {
+			return err
+		}
+
+		// merge agent resource config with central config
+		mergeResourceWithConfig()
+		// Do we still want to validate central config after merge???
+
+		updateAgentStatus(AgentRunning, "")
+	} else if agent.cfg.AgentName != "" {
+		return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 	}
 
-	// merge agent resource config with central config
-	mergeResourceWithConfig()
-	// Do we still want to validate central config after merge???
-
 	setupSignalProcessor()
-	updateAgentStatus(AgentRunning, "")
-
 	// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
 	if flag.Lookup("test.v") == nil {
 		// only do continuous healthchecking in binary agents
@@ -152,8 +156,8 @@ func isRunningInDockerContainer() bool {
 	return false
 }
 
-// initalizeTokenRequester - Create a new auth token requestor
-func initalizeTokenRequester(centralCfg config.CentralConfig) {
+// initializeTokenRequester - Create a new auth token requestor
+func initializeTokenRequester(centralCfg config.CentralConfig) {
 	agent.tokenRequester = apicauth.NewPlatformTokenGetter(
 		centralCfg.GetAuthConfig().GetPrivateKey(),
 		centralCfg.GetAuthConfig().GetPublicKey(),

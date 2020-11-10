@@ -27,7 +27,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
 	}
 
-	subscriptionDefinitionName := c.cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix
+	subscriptionDefinitionName := ""
 	if serviceBody.SubscriptionName != "" {
 		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
@@ -92,9 +92,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
-	consumerInstanceName := sanitizeAPIName(serviceBody.RestAPIID)
+	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
-		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage))
+		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
 	}
 
 	httpMethod := http.MethodPost
