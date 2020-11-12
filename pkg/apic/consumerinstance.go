@@ -15,19 +15,7 @@ import (
 )
 
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {
-	enableSubscription := serviceBody.AuthPolicy != Passthrough
-	// if there isn't a registered subscription schema, do not enable subscriptions
-	if enableSubscription && c.RegisteredSubscriptionSchema == nil {
-		enableSubscription = false
-	}
-
-	if enableSubscription {
-		log.Debug("Subscriptions will be enabled for consumer instances")
-	} else {
-		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
-	}
-
-	subscriptionDefinitionName := ""
+	subscriptionDefinitionName := c.cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix
 	if serviceBody.SubscriptionName != "" {
 		subscriptionDefinitionName = serviceBody.SubscriptionName
 	}
@@ -41,6 +29,8 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	if serviceBody.State == "" {
 		serviceBody.State = PublishedState
 	}
+
+	enableSubscription := c.enableSubscription(serviceBody)
 
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
@@ -59,6 +49,22 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
 	}
+}
+
+func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
+	enableSubscription := serviceBody.AuthPolicy != Passthrough
+	// if there isn't a registered subscription schema, do not enable subscriptions,
+	// or if the status is not PUBLISHED, do not enable subscriptions
+	if enableSubscription && c.RegisteredSubscriptionSchema == nil || serviceBody.Status != PublishedStatus {
+		enableSubscription = false
+	}
+
+	if enableSubscription {
+		log.Debug("Subscriptions will be enabled for consumer instances")
+	} else {
+		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
+	}
+	return enableSubscription
 }
 
 func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName, doc string) *v1alpha1.ConsumerInstance {
