@@ -15,10 +15,7 @@ import (
 )
 
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {
-	subscriptionDefinitionName := c.cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix
-	if serviceBody.SubscriptionName != "" {
-		subscriptionDefinitionName = serviceBody.SubscriptionName
-	}
+	subscriptionDefinitionName := serviceBody.SubscriptionName
 
 	autoSubscribe := false
 	if c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalMode() == corecfg.AutoApproval {
