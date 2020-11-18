@@ -135,8 +135,6 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 	externalAPIID := serviceBody.RestAPIID
 	// check to see if its an APIService
 	if !isAPIService && serviceBody.Stage != "" {
-		// TBD - Should the following assignment be removed and keep separate attribute for apiid and stage ????
-		// Removing this has an impact on assigning the remoteAPIID on received subscription.
 		attributes[AttrExternalAPIStage] = serviceBody.Stage
 	}
 
