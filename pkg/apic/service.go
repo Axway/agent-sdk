@@ -15,7 +15,6 @@ import (
 	corealpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/core/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
-	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 
@@ -118,12 +117,6 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 
 func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
 	attributes := make(map[string]string)
-	externalAPIID := serviceBody.RestAPIID
-
-	// check to see if its an APIService
-	if !isAPIService && serviceBody.Stage != "" {
-		externalAPIID = fmt.Sprintf("%s-%s", serviceBody.RestAPIID, serviceBody.Stage)
-	}
 
 	// Add attributes from resource if present
 	if additionalAttr != nil {
@@ -137,6 +130,14 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 		for key, val := range serviceBody.ServiceAttributes {
 			attributes[key] = val
 		}
+	}
+
+	externalAPIID := serviceBody.RestAPIID
+	// check to see if its an APIService
+	if !isAPIService && serviceBody.Stage != "" {
+		// TBD - Should the following assignment be removed and keep separate attribute for apiid and stage ????
+		// Removing this has an impact on assigning the remoteAPIID on received subscription.
+		attributes[AttrExternalAPIStage] = serviceBody.Stage
 	}
 
 	attributes[AttrExternalAPIID] = externalAPIID
@@ -198,9 +199,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 	}
 	//  Check to see if rollback was processed
 	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		log.Debug("API service has been removed.")
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
+		return "", nil
 	}
 
 	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {

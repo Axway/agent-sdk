@@ -130,7 +130,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscri
 	if err == nil {
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
 			resource, _ := consumerInstance.AsInstance()
-			sm.setSubscripitionInfo(subscription, resource)
+			sm.setSubscriptionInfo(subscription, resource)
 		} else {
 			log.Debug("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
@@ -145,7 +145,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
 				if err == nil {
 					resource, _ := apiServiceInstance.AsInstance()
-					sm.setSubscripitionInfo(subscription, resource)
+					sm.setSubscriptionInfo(subscription, resource)
 				} else {
 					log.Errorf(err.Error())
 				}
@@ -154,19 +154,22 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 	}
 }
 
-// setSubscripitionInfo - Sets subscription identifier that will be used as references
-// - ApicID - using the metadata of API server resoure metadata.id
+// setSubscriptionInfo - Sets subscription identifier that will be used as references
+// - ApicID - using the metadata of API server resource metadata.id
 // - RemoteAPIID - using the attribute externalAPIID on API server resource
-func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
+// - RemoteAPIStage - using the attribute externalAPIStage on API server resource (if present)
+func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
 	if apiServerResource != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
-		for name, value := range apiServerResource.Attributes {
-			if name == AttrExternalAPIID {
-				subscription.RemoteAPIID = value
-			}
+		subscription.RemoteAPIID = apiServerResource.Attributes[AttrExternalAPIID]
+		subscription.RemoteAPIStage = apiServerResource.Attributes[AttrExternalAPIStage]
+		if subscription.RemoteAPIStage != "" {
+			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
+				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
+		} else {
+			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s, Remote API Stage: %s)",
+				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID, subscription.RemoteAPIStage)
 		}
-		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
-			subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
 	}
 }
 

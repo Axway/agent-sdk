@@ -37,6 +37,7 @@ type Subscription interface {
 	GetName() string
 	GetApicID() string
 	GetRemoteAPIID() string
+	GetRemoteAPIStage() string
 	GetCatalogItemID() string
 	GetCreatedUserID() string
 	GetState() SubscriptionState
@@ -50,6 +51,7 @@ type CentralSubscription struct {
 	CatalogItemSubscription *uc.CatalogItemSubscription `json:"catalogItemSubscription"`
 	ApicID                  string                      `json:"-"`
 	RemoteAPIID             string                      `json:"-"`
+	RemoteAPIStage          string                      `json:"-"`
 	apicClient              *ServiceClient
 }
 
@@ -73,9 +75,14 @@ func (s *CentralSubscription) GetApicID() string {
 	return s.ApicID
 }
 
-// GetRemoteAPIID - Returns ID of the API on remote gatewat
+// GetRemoteAPIID - Returns ID of the API on remote gateway
 func (s *CentralSubscription) GetRemoteAPIID() string {
 	return s.RemoteAPIID
+}
+
+// GetRemoteAPIStage - Returns the stage name of the API on remote gateway
+func (s *CentralSubscription) GetRemoteAPIStage() string {
+	return s.RemoteAPIStage
 }
 
 // GetCatalogItemID - Returns ID of the Catalog Item

@@ -32,6 +32,9 @@ const (
 // AgentResourceType - Holds the type for agent resource in Central
 var AgentResourceType string
 
+// APIValidator - Callback for validating the API
+type APIValidator func(apiID, stageName string) bool
+
 // dataplaneResourceTypeMap - Agent Resource map
 var dataplaneResourceTypeMap = map[string]string{
 	v1alpha1.EdgeDiscoveryAgentResource:    v1alpha1.EdgeDataplaneResource,
@@ -52,7 +55,8 @@ type agentData struct {
 	logOutput         string
 	logPath           string
 
-	apiMap cache.Cache
+	apiMap       cache.Cache
+	apiValidator APIValidator
 }
 
 var agent = agentData{}
@@ -134,6 +138,7 @@ func startAPIServiceCache() {
 		for {
 			time.Sleep(agent.cfg.PollInterval)
 			updateAPICache()
+			validateConsumerInstances()
 		}
 	}()
 }
