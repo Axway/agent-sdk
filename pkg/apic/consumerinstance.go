@@ -79,7 +79,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 
 func (c *ServiceClient) updateConsumerInstanceResource(revision *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
 	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, true)
+	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
 	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	revision.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
 }

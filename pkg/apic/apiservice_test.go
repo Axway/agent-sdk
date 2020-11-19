@@ -276,8 +276,7 @@ func TestDeleteConsumerInstance(t *testing.T) {
 
 	httpClient.ResponseCode = http.StatusNoContent
 	err = client.deleteConsumerInstance("12345")
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), strconv.Itoa(http.StatusNoContent))
+	assert.Nil(t, err)
 
 	httpClient.ResponseCode = http.StatusOK
 	err = client.deleteConsumerInstance("12345")

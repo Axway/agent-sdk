@@ -54,3 +54,8 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 	}
 	return err
 }
+
+// RegisterAPIValidator - Registers callback for validating the API on gateway
+func RegisterAPIValidator(apiValidator APIValidator) {
+	agent.apiValidator = apiValidator
+}

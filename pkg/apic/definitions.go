@@ -27,6 +27,7 @@ const (
 	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
 	AttrExternalAPIID                = "externalAPIID"
 	AttrExternalAPIName              = "externalAPIName"
+	AttrExternalAPIStage             = "externalAPIStage"
 	AttrCreatedBy                    = "createdBy"
 )
 
