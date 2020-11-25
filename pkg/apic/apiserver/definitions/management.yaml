@@ -1128,6 +1128,11 @@ spec:
                   path:
                     type: string
                     description: The path on which this spec was discovered
+                  labels:
+                    type: object
+                    description: The labels for the pod this spec was discovered on
+                    additionalProperties:
+                      type: string
 ---
 group: management
 kind: MeshDiscovery
