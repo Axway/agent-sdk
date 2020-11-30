@@ -35,6 +35,9 @@ var AgentResourceType string
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
+// ConfigChangeHandler - Callback for Config change event
+type ConfigChangeHandler func()
+
 // dataplaneResourceTypeMap - Agent Resource map
 var dataplaneResourceTypeMap = map[string]string{
 	v1alpha1.EdgeDiscoveryAgentResource:    v1alpha1.EdgeDataplaneResource,
@@ -48,6 +51,7 @@ type agentData struct {
 	dataplaneResource *apiV1.ResourceInstance
 	apicClient        apic.Client
 	cfg               *config.CentralConfiguration
+	agentCfg          interface{}
 	tokenRequester    *apicauth.PlatformTokenGetter
 	loggerName        string
 	logLevel          string
@@ -55,16 +59,20 @@ type agentData struct {
 	logOutput         string
 	logPath           string
 
-	apiMap       cache.Cache
-	apiValidator APIValidator
+	apiMap                     cache.Cache
+	apiValidator               APIValidator
+	configChangeHandler        ConfigChangeHandler
+	agentResourceChangeHandler ConfigChangeHandler
+	isInitialized              bool
 }
 
 var agent = agentData{}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
-	agent.cfg = centralCfg.(*config.CentralConfiguration)
 	agent.apiMap = cache.New()
+
+	agent.cfg = centralCfg.(*config.CentralConfiguration)
 
 	// validate the central config
 	err := config.ValidateConfig(centralCfg)
@@ -76,33 +84,26 @@ func Initialize(centralCfg config.CentralConfig) error {
 	agent.apicClient = apic.New(centralCfg)
 	initializeTokenRequester(centralCfg)
 
-	if getAgentResourceType() != "" {
-		// Get Agent Resources
-		err = RefreshResources()
-		if err != nil {
-			return err
+	if !agent.isInitialized {
+		if getAgentResourceType() != "" {
+			fetchConfig()
+			updateAgentStatus(AgentRunning, "")
+		} else if agent.cfg.AgentName != "" {
+			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 		}
 
-		// merge agent resource config with central config
-		mergeResourceWithConfig()
-		// Do we still want to validate central config after merge???
-
-		updateAgentStatus(AgentRunning, "")
-	} else if agent.cfg.AgentName != "" {
-		return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
-	}
-
-	setupSignalProcessor()
-	// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
-	if flag.Lookup("test.v") == nil {
-		// only do continuous healthchecking in binary agents
-		if !isRunningInDockerContainer() {
-			go runPeriodicHealthChecks()
+		setupSignalProcessor()
+		// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
+		if flag.Lookup("test.v") == nil {
+			// only do continuous healthchecking in binary agents
+			if !isRunningInDockerContainer() {
+				go runPeriodicHealthChecks()
+			}
 		}
+
+		startAPIServiceCache()
 	}
-
-	startAPIServiceCache()
-
+	agent.isInitialized = true
 	return nil
 }
 
@@ -110,6 +111,21 @@ func Initialize(centralCfg config.CentralConfig) error {
 func InitializeForTest(apicClient apic.Client) {
 	agent.apiMap = cache.New()
 	agent.apicClient = apicClient
+}
+
+// GetConfigChangeHandler - returns registered config change handler
+func GetConfigChangeHandler() ConfigChangeHandler {
+	return agent.configChangeHandler
+}
+
+// OnConfigChange - Registers handler for config change event
+func OnConfigChange(configChangeHandler ConfigChangeHandler) {
+	agent.configChangeHandler = configChangeHandler
+}
+
+// OnAgentResourceChange - Registers handler for resource change event
+func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
+	agent.agentResourceChangeHandler = agentResourceChangeHandler
 }
 
 func runPeriodicHealthChecks() {
@@ -139,6 +155,7 @@ func startAPIServiceCache() {
 			time.Sleep(agent.cfg.PollInterval)
 			updateAPICache()
 			validateConsumerInstances()
+			fetchConfig()
 		}
 	}()
 }
@@ -215,8 +232,23 @@ func UpdateStatus(status, description string) {
 	updateAgentStatus(status, description)
 }
 
-// RefreshResources - Gets the agent and dataplane resources from API server
-func RefreshResources() error {
+func fetchConfig() error {
+	// Get Agent Resources
+	err := refreshResources()
+	if err != nil {
+		return err
+	}
+
+	// merge agent resource config with central config
+	mergeResourceWithConfig()
+	if agent.agentResourceChangeHandler != nil {
+		agent.agentResourceChangeHandler()
+	}
+	return nil
+}
+
+// refreshResources - Gets the agent and dataplane resources from API server
+func refreshResources() error {
 	// IMP - To be removed once the model is in production
 	if agent.cfg.GetAgentName() == "" {
 		return nil
@@ -390,5 +422,7 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 		logLevel = resCfgLogLevel
 	}
 	agent.logLevel = logLevel
-	log.GlobalLoggerConfig.Level(logLevel).Apply()
+	if logLevel != "" {
+		log.GlobalLoggerConfig.Level(logLevel).Apply()
+	}
 }

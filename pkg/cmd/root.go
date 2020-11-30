@@ -10,6 +10,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
@@ -53,6 +54,9 @@ type agentRootCommand struct {
 	initConfigHandler InitConfigHandler
 	agentType         corecfg.AgentType
 	props             properties.Properties
+	statusCfg         corecfg.StatusConfig
+	centralCfg        corecfg.CentralConfig
+	agentCfg          interface{}
 }
 
 func init() {
@@ -119,6 +123,12 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Infof("Config file changed : %s", e.Name)
+		c.onConfigChange()
+	})
+
 	c.checkStatusFlag()
 	agentsync.SetSyncMode(c.GetProperties())
 	return nil
@@ -138,6 +148,14 @@ func (c *agentRootCommand) checkStatusFlag() {
 	}
 }
 
+func (c *agentRootCommand) onConfigChange() {
+	c.initConfig()
+	agentConfigChangeHandler := agent.GetConfigChangeHandler()
+	if agentConfigChangeHandler != nil {
+		agentConfigChangeHandler()
+	}
+}
+
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
@@ -146,54 +164,42 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
-	err = statusCfg.ValidateCfg()
+	c.statusCfg, err = corecfg.ParseStatusConfig(c.GetProperties())
+	err = c.statusCfg.ValidateCfg()
 	if err != nil {
 		return err
 	}
-
-	// Init the healthcheck API
-	hc.SetStatusConfig(statusCfg)
-	hc.HandleRequests()
 
 	// Init Central Config
-	centralCfg, err := corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
+	c.centralCfg, err = corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {
 		return err
 	}
 
-	err = agent.Initialize(centralCfg)
+	err = agent.Initialize(c.centralCfg)
 	if err != nil {
 		return err
 	}
 
 	// Initialize Agent Config
-	agentCfg, err := c.initConfigHandler(centralCfg)
+	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
 		return err
 	}
 
-	err = agent.ApplyResouceToConfig(agentCfg)
-	if err != nil {
-		return err
-	}
-	c.GetProperties().DebugLogProperties()
+	if c.agentCfg != nil {
+		err := agent.ApplyResouceToConfig(c.agentCfg)
+		if err != nil {
+			return err
+		}
 
-	// Validate Agent Config
-	if agentCfg != nil {
-		err = config.ValidateConfig(agentCfg)
+		// Validate Agent Config
+		err = config.ValidateConfig(c.agentCfg)
 		if err != nil {
 			return err
 		}
 	}
-
-	// Check the sync flag
-	exitcode := agentsync.CheckSyncFlag()
-	if exitcode > -1 {
-		os.Exit(exitcode)
-	}
-
-	return err
+	return nil
 }
 
 // run - Executes the agent command
@@ -201,6 +207,17 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	err = c.initConfig()
 	statusText := ""
 	if err == nil {
+		agent.OnAgentResourceChange(c.onConfigChange)
+		// Init the healthcheck API
+		hc.SetStatusConfig(c.statusCfg)
+		hc.HandleRequests()
+
+		// Check the sync flag
+		exitcode := agentsync.CheckSyncFlag()
+		if exitcode > -1 {
+			os.Exit(exitcode)
+		}
+
 		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 		if c.commandHandler != nil {
 			err = c.commandHandler()
