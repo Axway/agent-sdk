@@ -17,6 +17,7 @@ import (
 func resetResources() {
 	agent.agentResource = nil
 	agent.dataplaneResource = nil
+	agent.isInitialized = false
 }
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
@@ -159,7 +160,7 @@ func TestEdgeAgentInitialize(t *testing.T) {
 
 	AgentResourceType = v1alpha1.EdgeTraceabilityAgentResource
 	cfg.AgentName = "v7-traceability"
-	resetResources()
+	agent.isInitialized = false
 	err = Initialize(cfg)
 	assert.Nil(t, err)
 
@@ -175,6 +176,22 @@ func TestEdgeAgentInitialize(t *testing.T) {
 	ApplyResouceToConfig(agentCfg)
 
 	assert.True(t, agentCfg.resourceChanged)
+
+	// Test for resource change
+	edgeDataplaneRes = createEdgeDataplaneRes("111", "v7-dataplane", "localhost", 9075, 8090)
+	resetResources()
+
+	agentResChangeHandlerCall := 0
+	OnAgentResourceChange(func() { agentResChangeHandlerCall++ })
+
+	err = Initialize(cfg)
+	assert.Nil(t, err)
+
+	da = GetAgentResource()
+	dp = GetDataplaneResource()
+	assertResource(t, dp, edgeDataplaneRes)
+	assertResource(t, da, edgeTraceabilitAgentRes)
+	assert.Equal(t, 1, agentResChangeHandlerCall)
 }
 
 func TestAgentConfigOverride(t *testing.T) {

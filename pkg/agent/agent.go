@@ -16,6 +16,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cache"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
@@ -47,17 +48,20 @@ var dataplaneResourceTypeMap = map[string]string{
 }
 
 type agentData struct {
-	agentResource     *apiV1.ResourceInstance
-	dataplaneResource *apiV1.ResourceInstance
-	apicClient        apic.Client
-	cfg               *config.CentralConfiguration
-	agentCfg          interface{}
-	tokenRequester    *apicauth.PlatformTokenGetter
-	loggerName        string
-	logLevel          string
-	logFormat         string
-	logOutput         string
-	logPath           string
+	agentResource         *apiV1.ResourceInstance
+	dataplaneResource     *apiV1.ResourceInstance
+	prevAgentResource     *apiV1.ResourceInstance
+	prevDataplaneResource *apiV1.ResourceInstance
+
+	apicClient     apic.Client
+	cfg            *config.CentralConfiguration
+	agentCfg       interface{}
+	tokenRequester *apicauth.PlatformTokenGetter
+	loggerName     string
+	logLevel       string
+	logFormat      string
+	logOutput      string
+	logPath        string
 
 	apiMap                     cache.Cache
 	apiValidator               APIValidator
@@ -234,38 +238,58 @@ func UpdateStatus(status, description string) {
 
 func fetchConfig() error {
 	// Get Agent Resources
-	err := refreshResources()
+	isChanged, err := refreshResources()
 	if err != nil {
 		return err
 	}
 
-	// merge agent resource config with central config
-	mergeResourceWithConfig()
-	if agent.agentResourceChangeHandler != nil {
-		agent.agentResourceChangeHandler()
+	if isChanged {
+		// merge agent resource config with central config
+		mergeResourceWithConfig()
+		if agent.agentResourceChangeHandler != nil {
+			agent.agentResourceChangeHandler()
+		}
 	}
 	return nil
 }
 
 // refreshResources - Gets the agent and dataplane resources from API server
-func refreshResources() error {
+func refreshResources() (bool, error) {
 	// IMP - To be removed once the model is in production
 	if agent.cfg.GetAgentName() == "" {
-		return nil
+		return false, nil
 	}
 
 	var err error
 	agent.agentResource, err = getAgentResource()
 	if err != nil {
-		return err
+		return false, err
 	}
 	// Get Dataplane Resources
 	agent.dataplaneResource, err = getDataplaneResource(agent.agentResource)
 	if err != nil {
-		return err
+		return false, err
 	}
 
+<<<<<<< HEAD
 	return nil
+=======
+	isChanged := true
+	if agent.prevAgentResource != nil && agent.prevDataplaneResource != nil {
+		agentResHash, _ := util.ComputeHash(agent.agentResource)
+		dataplaneResHash, _ := util.ComputeHash(agent.dataplaneResource)
+
+		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
+		prevDataplaneResHash, _ := util.ComputeHash(agent.prevDataplaneResource)
+		if prevAgentResHash == agentResHash && prevDataplaneResHash == dataplaneResHash {
+			isChanged = false
+		}
+	}
+
+	agent.prevAgentResource = agent.agentResource
+	agent.prevDataplaneResource = agent.dataplaneResource
+	return isChanged, nil
+>>>>>>> 43ca183... APIGOV-16629 - Updates to call resource change handler only if the resources are updated + fix for failing unit test
 }
 
 func setupSignalProcessor() {
