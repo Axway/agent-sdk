@@ -1,8 +1,16 @@
 package v1
 
+// Error an error in an ErrorResponse
+type Error struct {
+	Status int                    `json:"status,omitempty"`
+	Title  string                 `json:"title,omitempty"`
+	Detail string                 `json:"detail,omitempty"`
+	Meta   map[string]interface{} `json:"meta:,omitempty"`
+}
+
 // ErrorResponse Detail for standard error responses.
 type ErrorResponse struct {
-	Errors []map[string]map[string]interface{} `json:"errors,omitempty"`
+	Errors []Error `json:"errors,omitempty"`
 }
 
 // GroupKind the Group and Kind of the resource
@@ -37,6 +45,8 @@ type Reference struct {
 	Kind string `json:"kind,omitempty"`
 	// The name of the resource that it is reffering to.
 	Name string `json:"name,omitempty"`
+	// The name of the scope of the resource that it is reffering to.
+	Scope string `json:"scope,omitempty"`
 	// Defines the type of the reference: * soft - spec property that has this reference will get nulled out if the referenced resource gets removed. * hard - dictates that the current resource will get removed when the referenced resource gets removed.
 	Type string `json:"type,omitempty"`
 }
@@ -66,21 +76,38 @@ type Metadata struct {
 	State string `json:"state,omitempty"`
 }
 
-// ResourceMeta metadata for a ResourceInstance
-type ResourceMeta struct {
-	GroupVersionKind
-	Name     string   `json:"name"`
-	Title    string   `json:"title,omitempty"`
-	Metadata Metadata `json:"metadata,omitempty"`
-	// Custom attributes added to objects.
-	Attributes map[string]string `json:"attributes,omitempty"`
-	// List of tags.
-	Tags []string `json:"tags,omitempty"`
+// EventPayload -
+type EventPayload struct {
+	GroupKind
+	Scope      MetadataScope     `json:"scope"`
+	Tags       []string          `json:"tags"`
+	Attributes map[string]string `json:"attributes"`
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	References []Reference       `json:"references"`
 }
 
-// ResourceInstance API Server generic resource structure.
-type ResourceInstance struct {
-	ResourceMeta
-	// Resource instance specs.
-	Spec map[string]interface{} `json:"spec"`
+// EventType -
+type EventType string
+
+const (
+	// ResourceEntryCreatedEvent -
+	ResourceEntryCreatedEvent EventType = "ResourceEntryCreatedEvent"
+	// ResourceEntryDeletedEvent -
+	ResourceEntryDeletedEvent EventType = "ResourceEntryDeletedEvent"
+	// ResourceEntryUpdatedEvent -
+	ResourceEntryUpdatedEvent EventType = "ResourceEntryUpdatedEvent"
+)
+
+// Event is an API Server event concerning a resource
+type Event struct {
+	ID      string
+	Type    EventType
+	Payload EventPayload
+}
+
+// Finalizer Finalizer on the API server resource.
+type Finalizer struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
 }

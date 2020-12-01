@@ -11,7 +11,7 @@ package v1alpha1
 
 // ConsumerSubscriptionDefinitionSpec struct for ConsumerSubscriptionDefinitionSpec
 type ConsumerSubscriptionDefinitionSpec struct {
-	Schema ConsumerSubscriptionDefinitionSpecSchema `json:"schema,omitempty"`
 	// List of Webhook kind resource names that dictates what webhooks will be invoked on subscription changes.
-	Webhooks []string `json:"webhooks,omitempty"`
+	Webhooks []string                                 `json:"webhooks,omitempty"`
+	Schema   ConsumerSubscriptionDefinitionSpecSchema `json:"schema,omitempty"`
 }

@@ -83,7 +83,7 @@ type Event struct {
 	Duration    int         `json:"duration,omitempty"`
 	Direction   string      `json:"direction,omitempty"`
 	Status      string      `json:"status,omitempty"`
-	Protocol    interface{} `json:"protocol,omitempty"`
+	Protocol    Protocol `json:"protocol,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events

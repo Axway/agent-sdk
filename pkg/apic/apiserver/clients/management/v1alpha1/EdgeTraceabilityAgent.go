@@ -11,21 +11,28 @@ import (
 
 // EdgeTraceabilityAgentClient -
 type EdgeTraceabilityAgentClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedEdgeTraceabilityAgentClient -
+type UnscopedEdgeTraceabilityAgentClient struct {
+	client v1.Unscoped
 }
 
 // NewEdgeTraceabilityAgentClient -
-func NewEdgeTraceabilityAgentClient(cb *v1.ClientBase) (*EdgeTraceabilityAgentClient, error) {
-	client, err := cb.ForKind(v1alpha1.EdgeTraceabilityAgentGVK())
+func NewEdgeTraceabilityAgentClient(c v1.Base) (*UnscopedEdgeTraceabilityAgentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.EdgeTraceabilityAgentGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &EdgeTraceabilityAgentClient{client}, nil
+	return &UnscopedEdgeTraceabilityAgentClient{client}, nil
+
 }
 
 // WithScope -
-func (c *EdgeTraceabilityAgentClient) WithScope(scope string) *EdgeTraceabilityAgentClient {
+func (c *UnscopedEdgeTraceabilityAgentClient) WithScope(scope string) *EdgeTraceabilityAgentClient {
 	return &EdgeTraceabilityAgentClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *EdgeTraceabilityAgentClient) Update(res *v1alpha1.EdgeTraceabilityAgent
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.EdgeTraceabilityAgent{}
 
 	// Updates the resource in place

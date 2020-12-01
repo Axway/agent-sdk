@@ -11,8 +11,8 @@ package v1alpha1
 
 // AwsTraceabilityAgentSpecConfig Represents the AWS traceability agent config
 type AwsTraceabilityAgentSpecConfig struct {
-	// List of header names that will not be included in the captured traffic by the agent
-	ExcludeHeaders []string `json:"excludeHeaders,omitempty"`
 	// Configures the agent to include request and response headers in captured traffic. Defaults to true
 	ProcessHeaders bool `json:"processHeaders,omitempty"`
+	// List of header names that will not be included in the captured traffic by the agent
+	ExcludeHeaders []string `json:"excludeHeaders,omitempty"`
 }

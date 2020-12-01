@@ -11,24 +11,19 @@ import (
 
 // IntegrationClient -
 type IntegrationClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewIntegrationClient -
-func NewIntegrationClient(cb *v1.ClientBase) (*IntegrationClient, error) {
-	client, err := cb.ForKind(v1alpha1.IntegrationGVK())
+func NewIntegrationClient(c v1.Base) (*IntegrationClient, error) {
+
+	client, err := c.ForKind(v1alpha1.IntegrationGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &IntegrationClient{client}, nil
-}
 
-// WithScope -
-func (c *IntegrationClient) WithScope(scope string) *IntegrationClient {
-	return &IntegrationClient{
-		c.client.WithScope(scope),
-	}
 }
 
 // List -
@@ -105,6 +100,10 @@ func (c *IntegrationClient) Update(res *v1alpha1.Integration) (*v1alpha1.Integra
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.Integration{}
 
 	// Updates the resource in place

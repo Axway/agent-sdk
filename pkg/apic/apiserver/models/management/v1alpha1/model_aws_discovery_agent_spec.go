@@ -11,8 +11,8 @@ package v1alpha1
 
 // AwsDiscoveryAgentSpec struct for AwsDiscoveryAgentSpec
 type AwsDiscoveryAgentSpec struct {
-	Config AwsDiscoveryAgentSpecConfig `json:"config"`
 	// The name of the AWS dataplane associated to this agent
-	Dataplane string                       `json:"dataplane"`
-	Logging   AwsDiscoveryAgentSpecLogging `json:"logging,omitempty"`
+	Dataplane string                        `json:"dataplane"`
+	Config    AwsDiscoveryAgentSpecConfig   `json:"config"`
+	Logging   EdgeDiscoveryAgentSpecLogging `json:"logging,omitempty"`
 }

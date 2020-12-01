@@ -11,21 +11,28 @@ import (
 
 // EdgeDataplaneClient -
 type EdgeDataplaneClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedEdgeDataplaneClient -
+type UnscopedEdgeDataplaneClient struct {
+	client v1.Unscoped
 }
 
 // NewEdgeDataplaneClient -
-func NewEdgeDataplaneClient(cb *v1.ClientBase) (*EdgeDataplaneClient, error) {
-	client, err := cb.ForKind(v1alpha1.EdgeDataplaneGVK())
+func NewEdgeDataplaneClient(c v1.Base) (*UnscopedEdgeDataplaneClient, error) {
+
+	client, err := c.ForKind(v1alpha1.EdgeDataplaneGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &EdgeDataplaneClient{client}, nil
+	return &UnscopedEdgeDataplaneClient{client}, nil
+
 }
 
 // WithScope -
-func (c *EdgeDataplaneClient) WithScope(scope string) *EdgeDataplaneClient {
+func (c *UnscopedEdgeDataplaneClient) WithScope(scope string) *EdgeDataplaneClient {
 	return &EdgeDataplaneClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *EdgeDataplaneClient) Update(res *v1alpha1.EdgeDataplane) (*v1alpha1.Edg
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.EdgeDataplane{}
 
 	// Updates the resource in place

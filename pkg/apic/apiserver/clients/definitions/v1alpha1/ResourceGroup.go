@@ -11,24 +11,19 @@ import (
 
 // ResourceGroupClient -
 type ResourceGroupClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewResourceGroupClient -
-func NewResourceGroupClient(cb *v1.ClientBase) (*ResourceGroupClient, error) {
-	client, err := cb.ForKind(v1alpha1.ResourceGroupGVK())
+func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ResourceGroupGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &ResourceGroupClient{client}, nil
-}
 
-// WithScope -
-func (c *ResourceGroupClient) WithScope(scope string) *ResourceGroupClient {
-	return &ResourceGroupClient{
-		c.client.WithScope(scope),
-	}
 }
 
 // List -
@@ -105,6 +100,10 @@ func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup) (*v1alpha1.Res
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ResourceGroup{}
 
 	// Updates the resource in place

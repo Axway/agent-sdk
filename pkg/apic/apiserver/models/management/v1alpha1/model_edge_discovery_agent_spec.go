@@ -11,8 +11,8 @@ package v1alpha1
 
 // EdgeDiscoveryAgentSpec struct for EdgeDiscoveryAgentSpec
 type EdgeDiscoveryAgentSpec struct {
-	Config EdgeDiscoveryAgentSpecConfig `json:"config"`
 	// The name of the Axway Edge API Gateway dataplane associated to this agent
-	Dataplane string                       `json:"dataplane"`
-	Logging   AwsDiscoveryAgentSpecLogging `json:"logging,omitempty"`
+	Dataplane string                        `json:"dataplane"`
+	Config    EdgeDiscoveryAgentSpecConfig  `json:"config"`
+	Logging   EdgeDiscoveryAgentSpecLogging `json:"logging,omitempty"`
 }

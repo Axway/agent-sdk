@@ -11,21 +11,28 @@ import (
 
 // AWSDiscoveryAgentClient -
 type AWSDiscoveryAgentClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedAWSDiscoveryAgentClient -
+type UnscopedAWSDiscoveryAgentClient struct {
+	client v1.Unscoped
 }
 
 // NewAWSDiscoveryAgentClient -
-func NewAWSDiscoveryAgentClient(cb *v1.ClientBase) (*AWSDiscoveryAgentClient, error) {
-	client, err := cb.ForKind(v1alpha1.AWSDiscoveryAgentGVK())
+func NewAWSDiscoveryAgentClient(c v1.Base) (*UnscopedAWSDiscoveryAgentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.AWSDiscoveryAgentGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &AWSDiscoveryAgentClient{client}, nil
+	return &UnscopedAWSDiscoveryAgentClient{client}, nil
+
 }
 
 // WithScope -
-func (c *AWSDiscoveryAgentClient) WithScope(scope string) *AWSDiscoveryAgentClient {
+func (c *UnscopedAWSDiscoveryAgentClient) WithScope(scope string) *AWSDiscoveryAgentClient {
 	return &AWSDiscoveryAgentClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *AWSDiscoveryAgentClient) Update(res *v1alpha1.AWSDiscoveryAgent) (*v1al
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.AWSDiscoveryAgent{}
 
 	// Updates the resource in place

@@ -13,8 +13,8 @@ package v1alpha1
 type CommandLineInterfaceSpecNames struct {
 	// Defines the name used to access resources in this group. Also provided as default in the autocomplete for listing commands.
 	Plural string `json:"plural"`
-	// Defines the short names that the cli can use to fetch a resource in the group.
-	ShortNames []string `json:"shortNames"`
 	// Defines the name used to access a resource in this group. Also provided as default in the autocomplete for single resource access commands.
 	Singular string `json:"singular"`
+	// Defines the short names that the cli can use to fetch a resource in the group.
+	ShortNames []string `json:"shortNames"`
 }

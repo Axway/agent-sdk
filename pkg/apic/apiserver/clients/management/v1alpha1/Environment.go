@@ -11,24 +11,19 @@ import (
 
 // EnvironmentClient -
 type EnvironmentClient struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
 // NewEnvironmentClient -
-func NewEnvironmentClient(cb *v1.ClientBase) (*EnvironmentClient, error) {
-	client, err := cb.ForKind(v1alpha1.EnvironmentGVK())
+func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.EnvironmentGVK())
 	if err != nil {
 		return nil, err
 	}
 
 	return &EnvironmentClient{client}, nil
-}
 
-// WithScope -
-func (c *EnvironmentClient) WithScope(scope string) *EnvironmentClient {
-	return &EnvironmentClient{
-		c.client.WithScope(scope),
-	}
 }
 
 // List -
@@ -105,6 +100,10 @@ func (c *EnvironmentClient) Update(res *v1alpha1.Environment) (*v1alpha1.Environ
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.Environment{}
 
 	// Updates the resource in place

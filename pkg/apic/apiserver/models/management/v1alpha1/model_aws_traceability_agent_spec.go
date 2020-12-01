@@ -11,8 +11,8 @@ package v1alpha1
 
 // AwsTraceabilityAgentSpec struct for AwsTraceabilityAgentSpec
 type AwsTraceabilityAgentSpec struct {
-	Config AwsTraceabilityAgentSpecConfig `json:"config"`
 	// The name of the AWS dataplane associated to this agent
-	Dataplane string                       `json:"dataplane"`
-	Logging   AwsDiscoveryAgentSpecLogging `json:"logging,omitempty"`
+	Dataplane string                         `json:"dataplane"`
+	Config    AwsTraceabilityAgentSpecConfig `json:"config"`
+	Logging   EdgeDiscoveryAgentSpecLogging  `json:"logging,omitempty"`
 }

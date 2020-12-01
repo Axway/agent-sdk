@@ -11,6 +11,6 @@ package v1alpha1
 
 // EdgeDataplaneSpec struct for EdgeDataplaneSpec
 type EdgeDataplaneSpec struct {
-	ApiGatewayManager EdgeDataplaneSpecApiGatewayManager `json:"apiGatewayManager,omitempty"`
 	ApiManager        EdgeDataplaneSpecApiManager        `json:"apiManager,omitempty"`
+	ApiGatewayManager EdgeDataplaneSpecApiGatewayManager `json:"apiGatewayManager,omitempty"`
 }

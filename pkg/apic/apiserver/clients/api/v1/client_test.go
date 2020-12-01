@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	management "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 )
 
@@ -78,7 +80,7 @@ var mockEnvUpdated = &apiv1.ResourceInstance{}
 var mockAPISvc = &apiv1.ResourceInstance{}
 var client = &Client{}
 
-func createEnv(client *Client) (*apiv1.ResourceInstance, error) {
+func createEnv(client Unscoped) (*apiv1.ResourceInstance, error) {
 	created, err := client.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
@@ -107,7 +109,7 @@ func TestMain(m *testing.M) {
 			"123",
 		),
 	).ForKind(management.EnvironmentGVK())
-	client = newClient
+	client = newClient.(*Client)
 	if err != nil {
 		log.Fatalf("Error in test setup: %s", err)
 		os.Exit(1)
@@ -227,7 +229,7 @@ func TestScoped(t *testing.T) {
 	}()
 
 	svcClient, err := client.ForKind(management.APIServiceGVK())
-	svcClient = svcClient.WithScope(env.Name)
+	svcClient = svcClient.WithScope(env.Name).(*Client)
 
 	svc, err := svcClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -271,12 +273,68 @@ func TestListWithQuery(t *testing.T) {
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
-		JSON([]*apiv1.ResourceInstance{mockEnv})
+		JSON([]*apiv1.ResourceInstance{mockEnv, mockEnv})
 
 	_, err := client.List(WithQuery(And(TagsIn("test"), AttrIn("attr", "val"))))
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}
+}
+
+func Test_listAll(t *testing.T) {
+	// Follow the link headers
+	defer gock.Off()
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(200).
+		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		JSON([]*apiv1.ResourceInstance{mockEnv})
+
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(200).
+		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		JSON([]*apiv1.ResourceInstance{mockEnv})
+
+	items, err := client.List(WithQuery(TagsIn("test")))
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+	assert.Equal(t, 2, len(items))
+
+	// handle an error from the client
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(500).
+		SetError(&url.Error{})
+
+	_, err = client.List()
+	assert.NotNil(t, err)
+
+	// handle a successful response, but a 500 error
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(500)
+
+	_, err = client.List()
+	assert.NotNil(t, err)
+
+	// handle a successful request, then a failed request
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(200).
+		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		JSON([]*apiv1.ResourceInstance{mockEnv})
+
+	gock.New("http://localhost:8080/apis").
+		Get("/management/v1alpha1/environments").
+		Reply(500).
+		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		JSON([]*apiv1.ResourceInstance{})
+
+	items, err = client.List()
+	assert.Equal(t, 0, len(items))
+	assert.NotNil(t, err)
 }
 
 func TestJWTAuth(t *testing.T) {
@@ -406,7 +464,9 @@ func TestUpdateError(t *testing.T) {
 }
 
 func TestHTTPClient(t *testing.T) {
-	client, err := NewClient(
+	newClient := &http.Client{}
+
+	client := NewClient(
 		"http://localhost:8080/apis",
 		BasicAuth(
 			"admin",
@@ -414,13 +474,8 @@ func TestHTTPClient(t *testing.T) {
 			"admin",
 			"123",
 		),
-	).ForKind(management.EnvironmentGVK())
-	if err != nil {
-		t.Fatalf("Error: %s", err)
-	}
-
-	newClient := &http.Client{}
-	HTTPClient(newClient)(client.ClientBase)
+		HTTPClient(newClient),
+	)
 
 	if newClient != client.client {
 		t.Fatalf("Error: expected client.client to be %v but received %v", newClient, client.client)
