@@ -367,7 +367,7 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 		// these are all OK
 	case "":
 	default:
-		return ErrSubscriptionApprovalModeInvalid
+		return ErrBadConfig.FormatError(pathSubscriptionsApprovalMode)
 	}
 
 	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())

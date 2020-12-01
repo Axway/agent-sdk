@@ -232,6 +232,7 @@ func RefreshResources() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -290,8 +291,14 @@ func getDataplaneResource(agentResource *apiV1.ResourceInstance) (*apiV1.Resourc
 	if err != nil {
 		return nil, err
 	}
+
 	dataplane := apiV1.ResourceInstance{}
+
 	json.Unmarshal(response, &dataplane)
+
+	// Set the data plane name
+	agent.cfg.SetDataPlaneName(dataplane.Title)
+
 	return &dataplane, nil
 }
 
