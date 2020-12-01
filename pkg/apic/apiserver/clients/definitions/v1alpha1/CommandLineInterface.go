@@ -11,21 +11,28 @@ import (
 
 // CommandLineInterfaceClient -
 type CommandLineInterfaceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedCommandLineInterfaceClient -
+type UnscopedCommandLineInterfaceClient struct {
+	client v1.Unscoped
 }
 
 // NewCommandLineInterfaceClient -
-func NewCommandLineInterfaceClient(cb *v1.ClientBase) (*CommandLineInterfaceClient, error) {
-	client, err := cb.ForKind(v1alpha1.CommandLineInterfaceGVK())
+func NewCommandLineInterfaceClient(c v1.Base) (*UnscopedCommandLineInterfaceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.CommandLineInterfaceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &CommandLineInterfaceClient{client}, nil
+	return &UnscopedCommandLineInterfaceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *CommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfaceClient {
+func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfaceClient {
 	return &CommandLineInterfaceClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *CommandLineInterfaceClient) Update(res *v1alpha1.CommandLineInterface) 
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.CommandLineInterface{}
 
 	// Updates the resource in place

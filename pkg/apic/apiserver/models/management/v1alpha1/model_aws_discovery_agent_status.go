@@ -11,10 +11,10 @@ package v1alpha1
 
 // AwsDiscoveryAgentStatus struct for AwsDiscoveryAgentStatus
 type AwsDiscoveryAgentStatus struct {
-	// A way to communicate details about the current status by the agent
-	Message string `json:"message,omitempty"`
-	// Agent status:  * running - Passed all health checks.  Up and running  * stopped - Agent is not running  * failed - Failed health checks
-	State string `json:"state,omitempty"`
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`
+	// Agent status:  * running - Passed all health checks.  Up and running  * stopped - Agent is not running  * failed - Failed health checks
+	State string `json:"state,omitempty"`
+	// A way to communicate details about the current status by the agent
+	Message string `json:"message,omitempty"`
 }

@@ -11,21 +11,28 @@ import (
 
 // AWSTraceabilityAgentClient -
 type AWSTraceabilityAgentClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedAWSTraceabilityAgentClient -
+type UnscopedAWSTraceabilityAgentClient struct {
+	client v1.Unscoped
 }
 
 // NewAWSTraceabilityAgentClient -
-func NewAWSTraceabilityAgentClient(cb *v1.ClientBase) (*AWSTraceabilityAgentClient, error) {
-	client, err := cb.ForKind(v1alpha1.AWSTraceabilityAgentGVK())
+func NewAWSTraceabilityAgentClient(c v1.Base) (*UnscopedAWSTraceabilityAgentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.AWSTraceabilityAgentGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &AWSTraceabilityAgentClient{client}, nil
+	return &UnscopedAWSTraceabilityAgentClient{client}, nil
+
 }
 
 // WithScope -
-func (c *AWSTraceabilityAgentClient) WithScope(scope string) *AWSTraceabilityAgentClient {
+func (c *UnscopedAWSTraceabilityAgentClient) WithScope(scope string) *AWSTraceabilityAgentClient {
 	return &AWSTraceabilityAgentClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *AWSTraceabilityAgentClient) Update(res *v1alpha1.AWSTraceabilityAgent) 
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.AWSTraceabilityAgent{}
 
 	// Updates the resource in place

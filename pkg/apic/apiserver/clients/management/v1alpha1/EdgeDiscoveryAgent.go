@@ -11,21 +11,28 @@ import (
 
 // EdgeDiscoveryAgentClient -
 type EdgeDiscoveryAgentClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedEdgeDiscoveryAgentClient -
+type UnscopedEdgeDiscoveryAgentClient struct {
+	client v1.Unscoped
 }
 
 // NewEdgeDiscoveryAgentClient -
-func NewEdgeDiscoveryAgentClient(cb *v1.ClientBase) (*EdgeDiscoveryAgentClient, error) {
-	client, err := cb.ForKind(v1alpha1.EdgeDiscoveryAgentGVK())
+func NewEdgeDiscoveryAgentClient(c v1.Base) (*UnscopedEdgeDiscoveryAgentClient, error) {
+
+	client, err := c.ForKind(v1alpha1.EdgeDiscoveryAgentGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &EdgeDiscoveryAgentClient{client}, nil
+	return &UnscopedEdgeDiscoveryAgentClient{client}, nil
+
 }
 
 // WithScope -
-func (c *EdgeDiscoveryAgentClient) WithScope(scope string) *EdgeDiscoveryAgentClient {
+func (c *UnscopedEdgeDiscoveryAgentClient) WithScope(scope string) *EdgeDiscoveryAgentClient {
 	return &EdgeDiscoveryAgentClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *EdgeDiscoveryAgentClient) Update(res *v1alpha1.EdgeDiscoveryAgent) (*v1
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.EdgeDiscoveryAgent{}
 
 	// Updates the resource in place

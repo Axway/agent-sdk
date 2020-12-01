@@ -26,3 +26,7 @@ analysis.json
 *cover.out
 coverage.html
 cache_save_file.json
+
+openapitools.json
+main-resources.json
+sub-resources.json

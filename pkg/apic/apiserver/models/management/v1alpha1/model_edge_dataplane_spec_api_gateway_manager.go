@@ -13,8 +13,8 @@ package v1alpha1
 type EdgeDataplaneSpecApiGatewayManager struct {
 	// The host name where Axway API Gateway Manager is deployed
 	Host string `json:"host,omitempty"`
-	// Interval the agent will poll API Gateway. Defaults to '1m' indicating 1 minute. The value is a sequence of number with unit suffix. Example '30s', '1m30s'. Valid units:  * 'h' - Hours  * 'm' - Minutes  * 's' - Seconds
-	PollInterval string `json:"pollInterval,omitempty"`
 	// The Axway API Gateway Manager admin port. Defaults to 8090
 	Port int32 `json:"port,omitempty"`
+	// Interval the agent will poll API Gateway. Defaults to '1m' indicating 1 minute. The value is a sequence of number with unit suffix. Example '30s', '1m30s'. Valid units:  * 'h' - Hours  * 'm' - Minutes  * 's' - Seconds
+	PollInterval string `json:"pollInterval,omitempty"`
 }

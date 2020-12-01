@@ -4,7 +4,21 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 )
+
+// QueryStringer helps print a query
+type QueryStringer struct {
+	QueryNode
+}
+
+func (qs QueryStringer) String() string {
+	v := rsqlVisitor{strings.Builder{}}
+	v.Visit(qs)
+
+	return v.String()
+}
 
 // Visitor visits a QueryNode
 type Visitor interface {
@@ -36,6 +50,15 @@ func (n *attrNode) Accept(v Visitor) {
 
 func (n tagNode) Accept(v Visitor) {
 	v.Visit(n)
+}
+
+type referenceNode struct {
+	gvk  apiv1.GroupVersionKind
+	name string
+}
+
+func (r *referenceNode) Accept(v Visitor) {
+	v.Visit(r)
 }
 
 // AttrIn creates a query that matches resources with attribute key and  any of values
@@ -105,6 +128,14 @@ func And(first, second QueryNode, rest ...QueryNode) QueryNode {
 	return andNode(append(nodes, rest...))
 }
 
+// Reference create a query by reference to resource kind and name
+func Reference(gvk apiv1.GroupVersionKind, name string) QueryNode {
+	return &referenceNode{
+		gvk:  gvk,
+		name: name,
+	}
+}
+
 // rsqlVisitor builds an RSQL string by visiting QueryNodes
 type rsqlVisitor struct {
 	b strings.Builder
@@ -161,6 +192,8 @@ func (rv *rsqlVisitor) Visit(node QueryNode) {
 		default:
 			rv.b.WriteString(fmt.Sprintf(`attributes.%s=in=("%s")`, n.key, strings.Join(n.values, `","`)))
 		}
+	case *referenceNode:
+		rv.b.WriteString(fmt.Sprintf(`metadata.references.name==%s;metadata.references.kind==%s`, n.name, n.gvk.GroupKind.Kind))
 	default:
 		panic(fmt.Sprintf("unknown node type %v", n))
 	}

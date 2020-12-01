@@ -8,6 +8,7 @@
 package v1_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -33,7 +34,7 @@ func TestQueries(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	env1, err := cEnv.Create(&v1.ResourceInstance{
+	env1, err := cEnv.Create(context.Background(), &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Name: fmt.Sprintf("env1.%d", time.Now().Unix()),
 			Attributes: map[string]string{
@@ -51,10 +52,10 @@ func TestQueries(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 	defer func() {
-		cEnv.Delete(env1)
+		cEnv.Delete(context.Background(), env1)
 	}()
 
-	env2, err := cEnv.Create(&v1.ResourceInstance{
+	env2, err := cEnv.Create(context.Background(), &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Name: fmt.Sprintf("env2.%d", time.Now().Unix()),
 			Attributes: map[string]string{
@@ -72,7 +73,7 @@ func TestQueries(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 	defer func() {
-		cEnv.Delete(env2)
+		cEnv.Delete(context.Background(), env2)
 	}()
 
 	testCases := []struct {
@@ -125,7 +126,7 @@ func TestQueries(t *testing.T) {
 	for i, _ := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			ris, err := cEnv.List(WithQuery(tc.query))
+			ris, err := cEnv.List(context.Background(), WithQuery(tc.query))
 			if err != nil {
 				t.Errorf("Failed due: %s", err)
 			}

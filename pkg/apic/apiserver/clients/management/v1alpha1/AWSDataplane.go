@@ -11,21 +11,28 @@ import (
 
 // AWSDataplaneClient -
 type AWSDataplaneClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedAWSDataplaneClient -
+type UnscopedAWSDataplaneClient struct {
+	client v1.Unscoped
 }
 
 // NewAWSDataplaneClient -
-func NewAWSDataplaneClient(cb *v1.ClientBase) (*AWSDataplaneClient, error) {
-	client, err := cb.ForKind(v1alpha1.AWSDataplaneGVK())
+func NewAWSDataplaneClient(c v1.Base) (*UnscopedAWSDataplaneClient, error) {
+
+	client, err := c.ForKind(v1alpha1.AWSDataplaneGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &AWSDataplaneClient{client}, nil
+	return &UnscopedAWSDataplaneClient{client}, nil
+
 }
 
 // WithScope -
-func (c *AWSDataplaneClient) WithScope(scope string) *AWSDataplaneClient {
+func (c *UnscopedAWSDataplaneClient) WithScope(scope string) *AWSDataplaneClient {
 	return &AWSDataplaneClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *AWSDataplaneClient) Update(res *v1alpha1.AWSDataplane) (*v1alpha1.AWSDa
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.AWSDataplane{}
 
 	// Updates the resource in place

@@ -11,21 +11,28 @@ import (
 
 // APIServiceInstanceClient -
 type APIServiceInstanceClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedAPIServiceInstanceClient -
+type UnscopedAPIServiceInstanceClient struct {
+	client v1.Unscoped
 }
 
 // NewAPIServiceInstanceClient -
-func NewAPIServiceInstanceClient(cb *v1.ClientBase) (*APIServiceInstanceClient, error) {
-	client, err := cb.ForKind(v1alpha1.APIServiceInstanceGVK())
+func NewAPIServiceInstanceClient(c v1.Base) (*UnscopedAPIServiceInstanceClient, error) {
+
+	client, err := c.ForKind(v1alpha1.APIServiceInstanceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &APIServiceInstanceClient{client}, nil
+	return &UnscopedAPIServiceInstanceClient{client}, nil
+
 }
 
 // WithScope -
-func (c *APIServiceInstanceClient) WithScope(scope string) *APIServiceInstanceClient {
+func (c *UnscopedAPIServiceInstanceClient) WithScope(scope string) *APIServiceInstanceClient {
 	return &APIServiceInstanceClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *APIServiceInstanceClient) Update(res *v1alpha1.APIServiceInstance) (*v1
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.APIServiceInstance{}
 
 	// Updates the resource in place

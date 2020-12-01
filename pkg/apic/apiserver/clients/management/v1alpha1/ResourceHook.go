@@ -11,21 +11,28 @@ import (
 
 // ResourceHookClient -
 type ResourceHookClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedResourceHookClient -
+type UnscopedResourceHookClient struct {
+	client v1.Unscoped
 }
 
 // NewResourceHookClient -
-func NewResourceHookClient(cb *v1.ClientBase) (*ResourceHookClient, error) {
-	client, err := cb.ForKind(v1alpha1.ResourceHookGVK())
+func NewResourceHookClient(c v1.Base) (*UnscopedResourceHookClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ResourceHookGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResourceHookClient{client}, nil
+	return &UnscopedResourceHookClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ResourceHookClient) WithScope(scope string) *ResourceHookClient {
+func (c *UnscopedResourceHookClient) WithScope(scope string) *ResourceHookClient {
 	return &ResourceHookClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *ResourceHookClient) Update(res *v1alpha1.ResourceHook) (*v1alpha1.Resou
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ResourceHook{}
 
 	// Updates the resource in place

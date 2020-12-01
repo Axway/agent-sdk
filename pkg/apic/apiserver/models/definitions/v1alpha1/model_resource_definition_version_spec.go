@@ -11,14 +11,14 @@ package v1alpha1
 
 // ResourceDefinitionVersionSpec struct for ResourceDefinitionVersionSpec
 type ResourceDefinitionVersionSpec struct {
-	// The name of the version to be used in the resource definition.
-	Name string `json:"name"`
 	// A reference to a resource definition.
 	ResourceDefinition string `json:"resourceDefinition"`
+	// The name of the version to be used in the resource definition.
+	Name string `json:"name"`
 	// Defines if this version is currently served by the server.
 	Served bool `json:"served"`
-	// Defines the strucure of the spec for this resource version.
-	Spec map[string]interface{} `json:"spec,omitempty"`
 	// Defines if this version is used when storing the resource instance details.
 	Storage bool `json:"storage"`
+	// Defines the strucure of the spec for this resource version.
+	Spec map[string]interface{} `json:"spec,omitempty"`
 }

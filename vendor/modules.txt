@@ -1,4 +1,4 @@
-# git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
+# git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20201120013009-db7cb48b361b
 git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
@@ -54,7 +54,7 @@ github.com/emersion/go-sasl
 github.com/emersion/go-smtp
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
-# github.com/fsnotify/fsnotify v1.4.7 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
+# github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.9.0
 github.com/getkin/kin-openapi/jsoninfo
@@ -63,11 +63,11 @@ github.com/getkin/kin-openapi/openapi3
 github.com/ghodss/yaml
 # github.com/gofrs/uuid v3.3.0+incompatible
 github.com/gofrs/uuid
-# github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f
+# github.com/google/uuid v1.1.2
 github.com/google/uuid
 # github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542
 github.com/h2non/parth
-# github.com/hashicorp/hcl v1.0.0
+# github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
 github.com/hashicorp/hcl/hcl/parser
@@ -90,8 +90,11 @@ github.com/magiconair/properties
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mitchellh/mapstructure v1.1.2
+# github.com/mitchellh/mapstructure v1.3.2
 github.com/mitchellh/mapstructure
+# github.com/opentracing/opentracing-go v1.2.0
+github.com/opentracing/opentracing-go
+github.com/opentracing/opentracing-go/log
 # github.com/pelletier/go-toml v1.6.0
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
@@ -117,18 +120,20 @@ github.com/spf13/cobra
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.7.0
+# github.com/spf13/viper v1.7.1
 github.com/spf13/viper
 # github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# github.com/tidwall/gjson v1.6.1
+# github.com/tidwall/gjson v1.6.3
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
 github.com/tidwall/match
 # github.com/tidwall/pretty v1.0.2
 github.com/tidwall/pretty
+# github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
+github.com/tomnomnom/linkheader
 # go.uber.org/atomic v1.6.0
 go.uber.org/atomic
 # go.uber.org/multierr v1.5.0
@@ -141,10 +146,10 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zaptest/observer
-# golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+# golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/sys v0.0.0-20200620081246-981b61492c35
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -161,7 +166,7 @@ gopkg.in/ini.v1
 gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+# gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 gopkg.in/yaml.v3
 # howett.net/plist v0.0.0-20181124034731-591f970eefbb
 howett.net/plist

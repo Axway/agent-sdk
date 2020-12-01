@@ -11,21 +11,28 @@ import (
 
 // ConsumerSubscriptionDefinitionClient -
 type ConsumerSubscriptionDefinitionClient struct {
-	client *v1.Client
+	client v1.Scoped
+}
+
+// UnscopedConsumerSubscriptionDefinitionClient -
+type UnscopedConsumerSubscriptionDefinitionClient struct {
+	client v1.Unscoped
 }
 
 // NewConsumerSubscriptionDefinitionClient -
-func NewConsumerSubscriptionDefinitionClient(cb *v1.ClientBase) (*ConsumerSubscriptionDefinitionClient, error) {
-	client, err := cb.ForKind(v1alpha1.ConsumerSubscriptionDefinitionGVK())
+func NewConsumerSubscriptionDefinitionClient(c v1.Base) (*UnscopedConsumerSubscriptionDefinitionClient, error) {
+
+	client, err := c.ForKind(v1alpha1.ConsumerSubscriptionDefinitionGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &ConsumerSubscriptionDefinitionClient{client}, nil
+	return &UnscopedConsumerSubscriptionDefinitionClient{client}, nil
+
 }
 
 // WithScope -
-func (c *ConsumerSubscriptionDefinitionClient) WithScope(scope string) *ConsumerSubscriptionDefinitionClient {
+func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *ConsumerSubscriptionDefinitionClient {
 	return &ConsumerSubscriptionDefinitionClient{
 		c.client.WithScope(scope),
 	}
@@ -105,6 +112,10 @@ func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubs
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.ConsumerSubscriptionDefinition{}
 
 	// Updates the resource in place

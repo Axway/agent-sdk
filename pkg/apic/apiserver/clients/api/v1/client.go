@@ -2,13 +2,18 @@ package v1
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
+	"github.com/tomnomnom/linkheader"
+
+	ot "github.com/opentracing/opentracing-go"
 )
 
 // HTTPClient allows you to replace the default client for different use cases
@@ -18,6 +23,7 @@ func HTTPClient(client *http.Client) Options {
 	}
 }
 
+// Authenticate Basic authentication
 func (ba *basicAuth) Authenticate(req *http.Request) error {
 	req.SetBasicAuth(ba.user, ba.pass)
 	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
@@ -25,6 +31,7 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 	return nil
 }
 
+// Authenticate JWT Authentication
 func (j *jwtAuth) Authenticate(req *http.Request) error {
 	t, err := j.tokenGetter.GetToken()
 	if err != nil {
@@ -33,6 +40,10 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
 	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
 	return nil
+}
+
+type modifier interface {
+	Modify()
 }
 
 // BasicAuth auth with user/pass
@@ -61,6 +72,7 @@ func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, tim
 // NewClient creates a new HTTP client
 func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
+		tracer: ot.NoopTracer{},
 		client: &http.Client{},
 		url:    baseURL,
 		auth:   noopAuth{},
@@ -73,8 +85,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 	return c
 }
 
-// ForKind registers a client with a given group/version
-func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (*Client, error) {
+func (cb *ClientBase) forKindInternal(gvk apiv1.GroupVersionKind) (*Client, error) {
 	resource, ok := apiv1.GetResource(gvk.GroupKind)
 	if !ok {
 		return nil, fmt.Errorf("no resource for gvk: %s", gvk)
@@ -104,11 +115,32 @@ func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (*Client, error) {
 	}, nil
 }
 
+// ForKindCtx registers a client with a given group/version
+func (cb *ClientBase) ForKindCtx(gvk apiv1.GroupVersionKind) (UnscopedCtx, error) {
+	c, err := cb.forKindInternal(gvk)
+	return &ClientCtx{*c}, err
+}
+
+// ForKind registers a client with a given group/version
+func (cb *ClientBase) ForKind(gvk apiv1.GroupVersionKind) (Unscoped, error) {
+	return cb.forKindInternal(gvk)
+}
+
 const (
 	// baseURL/group/version/scopeResource/scope/resource
 	scopedURLFormat   = "%s/%s/%s/%s/%s/%s"
 	unscopedURLFormat = "%s/%s/%s/%s"
 )
+
+// ClientCtx -
+type ClientCtx struct {
+	Client
+}
+
+// WithScope -
+func (c *ClientCtx) WithScope(scope string) ScopedCtx {
+	return c
+}
 
 func (c *Client) url() string {
 	// unscoped
@@ -120,6 +152,38 @@ func (c *Client) url() string {
 	}
 
 	return url
+}
+
+// handleError handles an api-server error response. caller should close body.
+func handleError(res *http.Response) error {
+	var errors Errors
+	errRes := apiv1.ErrorResponse{}
+	err := json.NewDecoder(res.Body).Decode(&errRes)
+	if err != nil {
+		errors = []apiv1.Error{{
+			Status: 0,
+			Detail: err.Error(),
+		}}
+	} else {
+		errors = errRes.Errors
+	}
+
+	switch res.StatusCode {
+	case 400:
+		return BadRequestError{errors}
+	case 401:
+		return UnauthorizedError{errors}
+	case 403:
+		return ForbiddenError{errors}
+	case 404:
+		return NotFoundError{errors}
+	case 409:
+		return ConflictError{errors}
+	case 500:
+		return InternalServerError{errors}
+	default:
+		return UnexpectedError{res.StatusCode, errors}
+	}
 }
 
 func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
@@ -136,7 +200,7 @@ func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
 }
 
 // WithScope creates a request within the given scope. ex: env/$name/services
-func (c *Client) WithScope(scope string) *Client {
+func (c *Client) WithScope(scope string) Scoped {
 	return &Client{
 		ClientBase:    c.ClientBase,
 		version:       c.version,
@@ -148,15 +212,20 @@ func (c *Client) WithScope(scope string) *Client {
 }
 
 // WithQuery applies a query on the list operation
-func WithQuery(n QueryNode) func(*listOptions) {
+func WithQuery(n QueryNode) ListOptions {
 	return func(lo *listOptions) {
 		lo.query = n
 	}
 }
 
-// List returns a list of resources
+// List -
 func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequest("GET", c.url(), nil)
+	return c.ListCtx(context.Background(), options...)
+}
+
+// ListCtx returns a list of resources
+func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +234,8 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 	if err != nil {
 		return nil, err
 	}
-	opts := listOptions{}
 
+	opts := listOptions{}
 	for _, o := range options {
 		o(&opts)
 	}
@@ -178,31 +247,59 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 		q.Add("query", rv.String())
 		req.URL.RawQuery = q.Encode()
 	}
+	return c.listAll(req)
+}
 
-	c.auth.Authenticate(req)
-
+func (c *Client) doOneRequest(req *http.Request) ([]*apiv1.ResourceInstance, linkheader.Links, error) {
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to get resource list: %s", res.Status)
+		return nil, nil, handleError(res)
 	}
 	dec := json.NewDecoder(res.Body)
-	objs := []*apiv1.ResourceInstance{}
+	var objs []*apiv1.ResourceInstance
 	err = dec.Decode(&objs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	links := linkheader.Parse(res.Header.Get("Link"))
+	return objs, links.FilterByRel("next"), nil
+}
 
+// fetch all items based on the Link headers
+func (c *Client) listAll(req *http.Request) ([]*apiv1.ResourceInstance, error) {
+	var objs []*apiv1.ResourceInstance
+	for {
+		res, links, err := c.doOneRequest(req)
+		if err != nil {
+			return nil, err
+		}
+		objs = append(objs, res...)
+		if links == nil || len(links) == 0 {
+			break
+		}
+		link := links[0]
+		parsedLink, err := url.Parse(link.URL)
+		if err != nil {
+			return nil, err
+		}
+		req.URL.RawQuery = parsedLink.RawQuery
+	}
 	return objs, nil
 }
 
-// Get returns a single resource
+// Get -
 func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequest("GET", c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
+	return c.GetCtx(context.Background(), name)
+}
+
+// GetCtx returns a single resource
+func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +316,7 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to get resource for %s: %s", name, res.Status)
+		return nil, handleError(res)
 	}
 	dec := json.NewDecoder(res.Body)
 	obj := &apiv1.ResourceInstance{}
@@ -231,9 +328,14 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	return obj, nil
 }
 
-// Delete deletes a single resource
+// Delete -
 func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
-	req, err := http.NewRequest("DELETE", c.urlForResource(&ri.ResourceMeta), nil)
+	return c.DeleteCtx(context.Background(), ri)
+}
+
+// DeleteCtx deletes a single resource
+func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.urlForResource(&ri.ResourceMeta), nil)
 	if err != nil {
 		return err
 	}
@@ -250,17 +352,19 @@ func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 202 && res.StatusCode != 204 {
-		return fmt.Errorf("Failed to delete resource: %s", res.Status)
-	}
-	if err != nil {
-		return err
+		return handleError(res)
 	}
 
 	return nil
 }
 
-// Create creates a single resource
+// Create -
 func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return c.CreateCtx(context.Background(), ri)
+}
+
+// CreateCtx creates a single resource
+func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 
@@ -269,7 +373,7 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.url(), buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url(), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +390,7 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 	defer res.Body.Close()
 
 	if res.StatusCode != 201 {
-		return nil, fmt.Errorf("Failed to create resource: %s", res.Status)
+		return nil, handleError(res)
 	}
 
 	dec := json.NewDecoder(res.Body)
@@ -299,8 +403,13 @@ func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 	return obj, err
 }
 
-// Update updates a single resource
+// Update -
 func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	return c.UpdateCtx(context.Background(), ri)
+}
+
+// UpdateCtx updates a single resource
+func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 
@@ -309,7 +418,7 @@ func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", c.urlForResource(&ri.ResourceMeta), buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.urlForResource(&ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -326,9 +435,13 @@ func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, er
 		return nil, err
 	}
 	defer res.Body.Close()
-
+	switch res.StatusCode {
+	case 200:
+	case 404:
+	default:
+	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("Failed to Update resource: %s", res.Status)
+		return nil, handleError(res)
 	}
 
 	dec := json.NewDecoder(res.Body)

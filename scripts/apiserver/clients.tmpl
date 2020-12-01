@@ -11,25 +11,43 @@ import (
 
 // {{.res.kind}}Client -
 type {{.res.kind}}Client struct {
-	client *v1.Client
+	client v1.Scoped
 }
 
+{{ if .res.scope }}
+// Unscoped{{.res.kind}}Client -
+type Unscoped{{.res.kind}}Client struct {
+	client v1.Unscoped
+}
+{{ end }}
+
+{{ if .res.scope }}
 // New{{.res.kind}}Client -
-func New{{.res.kind}}Client(cb *v1.ClientBase) (*{{.res.kind}}Client, error) {
-	client, err := cb.ForKind(v1alpha1.{{.res.kind}}GVK())
+func New{{.res.kind}}Client(c v1.Base) (*Unscoped{{.res.kind}}Client, error) {
+{{ else }}
+// New{{.res.kind}}Client -
+func New{{.res.kind}}Client(c v1.Base) (*{{.res.kind}}Client, error) {
+{{ end }}
+	client, err := c.ForKind(v1alpha1.{{.res.kind}}GVK())
 	if err != nil {
 		return nil, err
 	}
 
+{{ if .res.scope }}
+	return &Unscoped{{.res.kind}}Client{client}, nil
+{{ else }}
 	return &{{.res.kind}}Client{client}, nil
+{{ end }}
 }
 
+{{ if .res.scope }}
 // WithScope -
-func (c *{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Client {
+func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Client {
 	return &{{.res.kind}}Client{
 		c.client.WithScope(scope),
 	}
 }
+{{ end }}
 
 // List -
 func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.res.kind}}, error) {
@@ -105,6 +123,10 @@ func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.
 		return nil, err
 	}
 	resource, err := c.client.Update(ri)
+	if err != nil {
+		return nil, err
+	}
+
 	updated := &v1alpha1.{{.res.kind}}{}
 
 	// Updates the resource in place
