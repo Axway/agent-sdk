@@ -9,7 +9,7 @@ variables:
   PACKAGE_NAME: apic-agents-sdk
   BINTRAY_NAMESPACE: agent
   DOCKER_DRIVER: overlay2
-  DEPENDENCY_CHECK_FLAGS: "--scan=**/*"
+  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --suppression=dc-suppressions.xml"
   AWS_DISCOVERY_PROJECT_ID: 7397
   V7_DISCOVERY_PROJECT_ID: 7540
   FORTIFY_PROJECT: "10566"
@@ -120,7 +120,7 @@ stages:
   cd ${GOPATH}/src/git.ecd.axway.org/apigov/apic_agents_sdk
 
 .get-latest-version: &get-latest-version |
-  if [ $(git --version | grep -Eo '2.*') ]; then 
+  if [ $(git --version | grep -Eo '2.*') ]; then
     export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
   else
     export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
@@ -235,7 +235,7 @@ whitesource:
     - tags
     - web
     - triggers
-    
+
 fetch-fortify:
   retry: 0
   except:
@@ -269,7 +269,7 @@ whitesource:on-schedule:
     - git fetch && git checkout master
     - *get-latest-version
     - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
-    
+
 run-csr:
   dependencies:
     - fetch-fortify
