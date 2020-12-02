@@ -90,19 +90,18 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.deployment, please set and/or check its value", err.Error())
+
+	centralConfig.APICDeployment = "aaa"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
 
 	centralConfig.Environment = "111111"
 	err = cfgValidator.ValidateCfg()
 
 	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
-
-	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.deployment, please set and/or check its value", err.Error())
-
-	centralConfig.APICDeployment = "aaa"
-	err = cfgValidator.ValidateCfg()
-
 	assert.Nil(t, err)
 
 	centralConfig.ProxyURL = "https://foo.bar:1234"

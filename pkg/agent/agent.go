@@ -271,9 +271,6 @@ func refreshResources() (bool, error) {
 		return false, err
 	}
 
-<<<<<<< HEAD
-	return nil
-=======
 	isChanged := true
 	if agent.prevAgentResource != nil && agent.prevDataplaneResource != nil {
 		agentResHash, _ := util.ComputeHash(agent.agentResource)
@@ -289,7 +286,6 @@ func refreshResources() (bool, error) {
 	agent.prevAgentResource = agent.agentResource
 	agent.prevDataplaneResource = agent.dataplaneResource
 	return isChanged, nil
->>>>>>> 43ca183... APIGOV-16629 - Updates to call resource change handler only if the resources are updated + fix for failing unit test
 }
 
 func setupSignalProcessor() {

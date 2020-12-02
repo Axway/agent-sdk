@@ -93,6 +93,38 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	return c
 }
 
+// NewCmd - Creates a new Agent Root Command using existing cmd
+func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
+	c := &agentRootCommand{
+		agentName:         exeName,
+		commandHandler:    commandHandler,
+		initConfigHandler: initConfigHandler,
+		agentType:         agentType,
+	}
+	c.rootCmd = rootCmd
+	c.rootCmd.Use = c.agentName
+	c.rootCmd.Short = desc
+	c.rootCmd.Version = fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha)
+	c.rootCmd.RunE = c.run
+	c.rootCmd.PreRunE = c.initialize
+
+	c.props = properties.NewProperties(c.rootCmd)
+	if agentType == corecfg.TraceabilityAgent {
+		c.props.SetAliasKeyPrefix(c.agentName)
+	}
+
+	c.addBaseProps()
+	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	agentsync.AddSyncConfigProperties(c.props)
+	corecfg.AddCentralConfigProperties(c.props, agentType)
+	corecfg.AddStatusConfigProperties(c.props)
+
+	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
+
+	// Call the config add props
+	return c
+}
+
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Configuration file path for the agent")

@@ -83,13 +83,14 @@ func New(cfg corecfg.CentralConfig) Client {
 	}
 
 	// set the default webhook if one has been configured
-	webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	if webCfg != nil && webCfg.IsConfigured() {
-		serviceClient.DefaultSubscriptionApprovalWebhook = webCfg
+	if cfg.GetSubscriptionConfig() != nil {
+		webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
+		if webCfg != nil && webCfg.IsConfigured() {
+			serviceClient.DefaultSubscriptionApprovalWebhook = webCfg
+		}
+
+		serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
 	}
-
-	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
-
 	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
 	return serviceClient
 }

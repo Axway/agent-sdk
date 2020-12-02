@@ -2,6 +2,7 @@ package properties
 
 import (
 	"encoding/json"
+	goflag "flag"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -39,12 +40,14 @@ type Properties interface {
 	// Log Properties
 	MaskValues(name string)
 	DebugLogProperties()
+	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
 type properties struct {
 	Properties
 	rootCmd             *cobra.Command
 	flattenedProperties map[string]string
+	aliasKeyPrefix      string
 }
 
 // NewProperties - Creates a new Properties struct
@@ -57,9 +60,18 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 	return cmdprops
 }
 
+func (p *properties) SetAliasKeyPrefix(aliasKeyPrefix string) {
+	p.aliasKeyPrefix = aliasKeyPrefix
+}
+
 func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 	if err := viper.BindPFlag(key, flg); err != nil {
 		panic(err)
+	}
+	if p.aliasKeyPrefix != "" {
+		if err := viper.BindPFlag(p.aliasKeyPrefix+"."+key, flg); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -73,7 +85,13 @@ func (p *properties) AddStringProperty(name string, defaultVal string, descripti
 
 func (p *properties) AddStringPersistentFlag(flagName string, defaultVal string, description string) {
 	if p.rootCmd != nil {
-		p.rootCmd.PersistentFlags().String(flagName, "", description)
+		flg := goflag.CommandLine.Lookup(flagName)
+		if flg == nil {
+			goflag.CommandLine.String(flagName, "", description)
+			flg = goflag.CommandLine.Lookup(flagName)
+		}
+
+		p.rootCmd.PersistentFlags().AddGoFlag(flg)
 	}
 }
 
@@ -144,7 +162,16 @@ func (p *properties) convertStringToSlice(value string) []string {
 }
 
 func (p *properties) StringPropertyValue(name string) string {
-	s := viper.GetString(name)
+	var s string
+	if p.aliasKeyPrefix != "" {
+		s = viper.GetString(p.aliasKeyPrefix + "." + name)
+		if strings.Index(s, "${") == 0 {
+			s = viper.GetString(name)
+		}
+	} else {
+		s = viper.GetString(name)
+	}
+
 	p.addPropertyToFlatMap(name, s)
 	return s
 }
@@ -160,19 +187,52 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
-	d := viper.GetDuration(name)
+	var d time.Duration
+	if p.aliasKeyPrefix != "" {
+		s := viper.GetString(p.aliasKeyPrefix + "." + name)
+		if strings.Index(s, "${") == 0 {
+			d = viper.GetDuration(name)
+		} else {
+			d, _ = time.ParseDuration(s)
+		}
+	} else {
+		d = viper.GetDuration(name)
+	}
+
 	p.addPropertyToFlatMap(name, d.String())
 	return d
 }
 
 func (p *properties) IntPropertyValue(name string) int {
-	i := viper.GetInt(name)
+	var i int
+	if p.aliasKeyPrefix != "" {
+		s := viper.GetString(p.aliasKeyPrefix + "." + name)
+		if strings.Index(s, "${") == 0 {
+			i = viper.GetInt(name)
+		} else {
+			i, _ = strconv.Atoi(s)
+		}
+	} else {
+		i = viper.GetInt(name)
+	}
+
 	p.addPropertyToFlatMap(name, strconv.Itoa(i))
 	return i
 }
 
 func (p *properties) BoolPropertyValue(name string) bool {
-	b := viper.GetBool(name)
+	var b bool
+	if p.aliasKeyPrefix != "" {
+		s := viper.GetString(p.aliasKeyPrefix + "." + name)
+		if strings.Index(s, "${") == 0 {
+			b = viper.GetBool(name)
+		} else {
+			b, _ = strconv.ParseBool(s)
+		}
+	} else {
+		b = viper.GetBool(name)
+	}
+
 	p.addPropertyToFlatMap(name, strconv.FormatBool(b))
 	return b
 }
