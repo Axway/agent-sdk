@@ -52,47 +52,8 @@
       "scanner": "dependency-check",
       "component": "go\\-grpc\\-middleware",
       "classification": "No Risk",
-      "justification": "GRPC is not used by the agents - this is being incorrectly reported against C libs; to be removed sometime",
+      "justification": "GRPC is not used by the agents",
       "version": "1\\.0\\.0",
-      "ids": [
-        "CVE-2017-7860",
-        "CVE-2017-7861",
-        "CVE-2017-8359",
-        "CVE-2017-9431",
-        "CVE-2020-7768"
-      ]
-    },
-    {
-      "path": ".*spf13/viper/go\\.mod:github\\.com/grpc\\-ecosystem/go\\-grpc\\-prometheus/1\\.2\\.0",
-      "scanner": "dependency-check",
-      "component": "go\\-grpc\\-prometheus",
-      "classification": "No Risk",
-      "justification": "GRPC is not used by the agents - this is being incorrectly reported against C libs; to be removed sometime",
-      "version": "1\\.2\\.0",
-      "ids": [
-        "CVE-2017-8359",
-        "CVE-2017-9431",
-        "CVE-2020-7768"
-      ]
-    },
-    {
-      "path": ".*spf13/viper/go\\.mod:github\\.com/github\\.com/grpc\\-ecosystem/grpc\\-gateway/1\\.9\\.0",
-      "scanner": "dependency-check",
-      "component": "grpc\\-gateway",
-      "classification": "No Risk",
-      "justification": "GRPC is not used by the agents - this is being incorrectly reported against C libs; to be removed sometime",
-      "version": "1\\.9\\.0",
-      "ids": [
-        "CVE-2020-7768"
-      ]
-    },
-    {
-      "path": ".*spf13/viper/go\\.mod:github\\.com/tmc/grpc\\-websocket\\-proxy/0\\.0\\.0\\-20190109142713\\-0ad062ec5ee5",
-      "scanner": "dependency-check",
-      "component": "grpc\\-websocket\\-proxy",
-      "classification": "No Risk",
-      "justification": "GRPC is not used by the agents - this is being incorrectly reported against C libs; to be removed sometime",
-      "version": "0\\.0\\.0\\-20190109142713\\-0ad062ec5ee5",
       "ids": [
         "CVE-2017-7860",
         "CVE-2017-7861",
