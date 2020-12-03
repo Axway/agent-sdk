@@ -174,7 +174,11 @@ func (c *agentRootCommand) checkStatusFlag() {
 			Host:   fmt.Sprintf("localhost:%d", statusPort),
 			Path:   "status",
 		}
-		statusOut, _ := hc.GetHealthcheckOutput(urlObj.String())
+		statusOut, err := hc.GetHealthcheckOutput(urlObj.String())
+		if err != nil {
+			fmt.Println("Error in getting status : " + err.Error())
+			os.Exit(1)
+		}
 		fmt.Println(statusOut)
 		os.Exit(0)
 	}
