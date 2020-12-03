@@ -235,6 +235,9 @@ func (c *agentRootCommand) initConfig() error {
 			return err
 		}
 	}
+	// Init the healthcheck API
+	hc.SetStatusConfig(c.statusCfg)
+	hc.HandleRequests()
 	return nil
 }
 
@@ -243,10 +246,9 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	err = c.initConfig()
 	statusText := ""
 	if err == nil {
+		// Register resource change handler to re-initialize config on resource change
+		// This should trigger config init and applyresourcechange handlers
 		agent.OnAgentResourceChange(c.onConfigChange)
-		// Init the healthcheck API
-		hc.SetStatusConfig(c.statusCfg)
-		hc.HandleRequests()
 
 		// Check the sync flag
 		exitcode := agentsync.CheckSyncFlag()
