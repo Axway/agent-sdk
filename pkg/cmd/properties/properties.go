@@ -54,7 +54,7 @@ type properties struct {
 var expansionRegEx *regexp.Regexp
 
 func init() {
-	expansionRegEx = regexp.MustCompile(`\$\{(\w+):(.*)\}`)
+	expansionRegEx = regexp.MustCompile(`\$\{(\w+):(.*)\}|\$\{(\w+)\}`)
 }
 
 // NewProperties - Creates a new Properties struct
@@ -177,13 +177,22 @@ func (p *properties) parseStringValueForKey(key string) string {
 			if len(expSlice) > 2 {
 				envVar := string(expSlice[1])
 				defaultVal := ""
-				if len(expSlice) >= 3 {
-					defaultVal = strings.Trim(string(expSlice[2]), "\"")
+				if envVar == "" {
+					if len(expSlice) >= 4 {
+						envVar = strings.Trim(string(expSlice[3]), "\"")
+					}
+				} else {
+					if len(expSlice) >= 3 {
+						defaultVal = strings.Trim(string(expSlice[2]), "\"")
+					}
 				}
-				s = os.Getenv(envVar)
-				if s == "" {
-					if defaultVal != "" {
-						s = defaultVal
+
+				if envVar != "" {
+					s = os.Getenv(envVar)
+					if s == "" {
+						if defaultVal != "" {
+							s = defaultVal
+						}
 					}
 				}
 			}
