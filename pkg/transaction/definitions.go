@@ -36,7 +36,7 @@ type Summary struct {
 	Duration     int          `json:"duration,omitempty"`
 	Application  *Application `json:"application,omitempty"`
 	Product      string       `json:"product,omitempty"`
-	Team         *Team       `json:"team,omitempty"`
+	Team         *Team        `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
 	Runtime    *Runtime    `json:"runtime,omitempty"`
@@ -51,8 +51,9 @@ type Application struct {
 
 // Team  - Represents the team used in transaction summary event
 type Team struct {
-	ID   string `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 }
+
 // Proxy - Represents the proxy definition in summary event
 type Proxy struct {
 	ID       string `json:"id,omitempty"`
@@ -83,7 +84,7 @@ type Event struct {
 	Duration    int         `json:"duration,omitempty"`
 	Direction   string      `json:"direction,omitempty"`
 	Status      string      `json:"status,omitempty"`
-	Protocol    Protocol `json:"protocol,omitempty"`
+	Protocol    interface{} `json:"protocol,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events
