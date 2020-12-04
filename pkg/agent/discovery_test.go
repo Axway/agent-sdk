@@ -10,6 +10,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,7 +53,7 @@ func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
-
+func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
 func TestDiscoveryCache(t *testing.T) {
 	emptyAPISvc := []v1.ResourceInstance{}
 	apiSvc1 := v1.ResourceInstance{

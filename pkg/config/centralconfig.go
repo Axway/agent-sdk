@@ -439,11 +439,10 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathPlatformURL))
 	}
 
-	c.validatePublishToEnvironmentModeConfig()
-
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
+		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
 	}
 }
@@ -499,13 +498,13 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
+	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
-		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
-		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
 		props.AddBoolProperty(pathAppendDataPlaneToTitle, true, "When true API titles and descriptions will be appended with data plane name or, when no data plane exists, the gateway type")
 		AddSubscriptionConfigProperties(props)
@@ -542,14 +541,14 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	// Set the Proxy Environment Variable
 	cfg.SetProxyEnvironmentVariable()
+	cfg.URL = props.StringPropertyValue(pathURL)
+	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
+	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
-		cfg.URL = props.StringPropertyValue(pathURL)
-		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
-		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendDataPlaneToTitle = props.BoolPropertyValue(pathAppendDataPlaneToTitle)

@@ -10,6 +10,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
@@ -53,6 +54,9 @@ type agentRootCommand struct {
 	initConfigHandler InitConfigHandler
 	agentType         corecfg.AgentType
 	props             properties.Properties
+	statusCfg         corecfg.StatusConfig
+	centralCfg        corecfg.CentralConfig
+	agentCfg          interface{}
 }
 
 func init() {
@@ -77,6 +81,38 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		PreRunE: c.initialize,
 	}
 	c.props = properties.NewProperties(c.rootCmd)
+	c.addBaseProps()
+	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	agentsync.AddSyncConfigProperties(c.props)
+	corecfg.AddCentralConfigProperties(c.props, agentType)
+	corecfg.AddStatusConfigProperties(c.props)
+
+	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
+
+	// Call the config add props
+	return c
+}
+
+// NewCmd - Creates a new Agent Root Command using existing cmd
+func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
+	c := &agentRootCommand{
+		agentName:         exeName,
+		commandHandler:    commandHandler,
+		initConfigHandler: initConfigHandler,
+		agentType:         agentType,
+	}
+	c.rootCmd = rootCmd
+	c.rootCmd.Use = c.agentName
+	c.rootCmd.Short = desc
+	c.rootCmd.Version = fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha)
+	c.rootCmd.RunE = c.run
+	c.rootCmd.PreRunE = c.initialize
+
+	c.props = properties.NewProperties(c.rootCmd)
+	if agentType == corecfg.TraceabilityAgent {
+		c.props.SetAliasKeyPrefix(c.agentName)
+	}
+
 	c.addBaseProps()
 	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
@@ -119,6 +155,12 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Infof("Config file changed : %s", e.Name)
+		c.onConfigChange()
+	})
+
 	c.checkStatusFlag()
 	agentsync.SetSyncMode(c.GetProperties())
 	return nil
@@ -132,9 +174,21 @@ func (c *agentRootCommand) checkStatusFlag() {
 			Host:   fmt.Sprintf("localhost:%d", statusPort),
 			Path:   "status",
 		}
-		statusOut, _ := hc.GetHealthcheckOutput(urlObj.String())
+		statusOut, err := hc.GetHealthcheckOutput(urlObj.String())
+		if err != nil {
+			fmt.Println("Error in getting status : " + err.Error())
+			os.Exit(1)
+		}
 		fmt.Println(statusOut)
 		os.Exit(0)
+	}
+}
+
+func (c *agentRootCommand) onConfigChange() {
+	c.initConfig()
+	agentConfigChangeHandler := agent.GetConfigChangeHandler()
+	if agentConfigChangeHandler != nil {
+		agentConfigChangeHandler()
 	}
 }
 
@@ -146,54 +200,45 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	statusCfg, err := corecfg.ParseStatusConfig(c.GetProperties())
-	err = statusCfg.ValidateCfg()
+	c.statusCfg, err = corecfg.ParseStatusConfig(c.GetProperties())
+	err = c.statusCfg.ValidateCfg()
 	if err != nil {
 		return err
 	}
-
-	// Init the healthcheck API
-	hc.SetStatusConfig(statusCfg)
-	hc.HandleRequests()
 
 	// Init Central Config
-	centralCfg, err := corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
+	c.centralCfg, err = corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {
 		return err
 	}
 
-	err = agent.Initialize(centralCfg)
+	err = agent.Initialize(c.centralCfg)
 	if err != nil {
 		return err
 	}
 
 	// Initialize Agent Config
-	agentCfg, err := c.initConfigHandler(centralCfg)
+	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
 		return err
 	}
 
-	err = agent.ApplyResouceToConfig(agentCfg)
-	if err != nil {
-		return err
-	}
-	c.GetProperties().DebugLogProperties()
+	if c.agentCfg != nil {
+		err := agent.ApplyResouceToConfig(c.agentCfg)
+		if err != nil {
+			return err
+		}
 
-	// Validate Agent Config
-	if agentCfg != nil {
-		err = config.ValidateConfig(agentCfg)
+		// Validate Agent Config
+		err = config.ValidateConfig(c.agentCfg)
 		if err != nil {
 			return err
 		}
 	}
-
-	// Check the sync flag
-	exitcode := agentsync.CheckSyncFlag()
-	if exitcode > -1 {
-		os.Exit(exitcode)
-	}
-
-	return err
+	// Init the healthcheck API
+	hc.SetStatusConfig(c.statusCfg)
+	hc.HandleRequests()
+	return nil
 }
 
 // run - Executes the agent command
@@ -201,6 +246,16 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	err = c.initConfig()
 	statusText := ""
 	if err == nil {
+		// Register resource change handler to re-initialize config on resource change
+		// This should trigger config init and applyresourcechange handlers
+		agent.OnAgentResourceChange(c.onConfigChange)
+
+		// Check the sync flag
+		exitcode := agentsync.CheckSyncFlag()
+		if exitcode > -1 {
+			os.Exit(exitcode)
+		}
+
 		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 		if c.commandHandler != nil {
 			err = c.commandHandler()
