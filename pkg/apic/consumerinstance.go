@@ -86,6 +86,12 @@ func (c *ServiceClient) updateConsumerInstanceResource(revision *v1alpha1.Consum
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
+
+	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
+		log.Warnf("API inbound policy (%s) is not supported. Catalog asset cannot be created. ", serviceBody.AuthPolicy)
+		return nil
+	}
+
 	var doc = ""
 	if serviceBody.Documentation != nil {
 		var err error
