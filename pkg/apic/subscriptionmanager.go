@@ -21,6 +21,7 @@ type SubscriptionManager interface {
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
 	AddBlacklistItem(id string)
 	RemoveBlacklistItem(id string)
+	OnConfigChange(apicClient *ServiceClient)
 }
 
 // subscriptionManager -
@@ -53,6 +54,11 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	return subscriptionMgr
 }
 
+// OnConfigChange - config change handler
+func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
+	sm.apicClient = apicClient
+}
+
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	processorList, ok := sm.processorMap[state]
@@ -83,6 +89,8 @@ func (sm *subscriptionManager) pollSubscriptions() {
 					}
 				}
 			}
+			ticker.Stop()
+			ticker = time.NewTicker(sm.apicClient.cfg.GetPollInterval())
 		case <-sm.publishQuitChannel:
 			return
 		}

@@ -84,9 +84,14 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return err
 	}
 
-	// Init apic client
-	agent.apicClient = apic.New(centralCfg)
 	initializeTokenRequester(centralCfg)
+
+	// Init apic client
+	if agent.apicClient == nil {
+		agent.apicClient = apic.New(centralCfg)
+	} else {
+		agent.apicClient.OnConfigChange(centralCfg)
+	}
 
 	if !agent.isInitialized {
 		if getAgentResourceType() != "" {

@@ -49,6 +49,7 @@ type Client interface {
 	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
+	OnConfigChange(cfg corecfg.CentralConfig)
 }
 
 type tokenGetter interface {
@@ -65,6 +66,16 @@ func (p *platformTokenGetter) GetToken() (string, error) {
 
 // New -
 func New(cfg corecfg.CentralConfig) Client {
+
+	serviceClient := &ServiceClient{}
+	serviceClient.OnConfigChange(cfg)
+
+	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
+	return serviceClient
+}
+
+// OnConfigChange - config change handler
+func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 	tokenURL := cfg.GetAuthConfig().GetTokenURL()
 	aud := cfg.GetAuthConfig().GetAudience()
 	priKey := cfg.GetAuthConfig().GetPrivateKey()
@@ -72,27 +83,27 @@ func New(cfg corecfg.CentralConfig) Client {
 	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
 	clientID := cfg.GetAuthConfig().GetClientID()
 	authTimeout := cfg.GetAuthConfig().GetTimeout()
-	platformTokenGetter := &platformTokenGetter{
+
+	c.cfg = cfg
+	c.tokenRequester = &platformTokenGetter{
 		requester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
 	}
-	serviceClient := &ServiceClient{
-		cfg:                       cfg,
-		tokenRequester:            platformTokenGetter,
-		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
-		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
-	}
+	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL())
+	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
 	// set the default webhook if one has been configured
 	if cfg.GetSubscriptionConfig() != nil {
 		webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
 		if webCfg != nil && webCfg.IsConfigured() {
-			serviceClient.DefaultSubscriptionApprovalWebhook = webCfg
+			c.DefaultSubscriptionApprovalWebhook = webCfg
 		}
 
-		serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
+		if c.subscriptionMgr == nil {
+			c.subscriptionMgr = newSubscriptionManager(c)
+		} else {
+			c.subscriptionMgr.OnConfigChange(c)
+		}
 	}
-	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
-	return serviceClient
 }
 
 // mapToTagsArray -
