@@ -40,6 +40,7 @@ func TestIsValidAuthPolicy(t *testing.T) {
 
 func TestCreateService(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
+	serviceBody.AuthPolicy = "pass-through"
 
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
