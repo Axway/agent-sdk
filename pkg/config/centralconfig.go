@@ -519,6 +519,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TenantID:     props.StringPropertyValue(pathTenantID),
 		PollInterval: props.DurationPropertyValue(pathPollInterval),
 		Environment:  props.StringPropertyValue(pathEnvironment),
+		TeamName:     props.StringPropertyValue(pathTeam),
 		AgentName:    props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),

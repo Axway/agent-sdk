@@ -4,32 +4,24 @@ go 1.13
 
 require (
 	git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20201120013009-db7cb48b361b
+	git.ecd.axway.org/apigov/v7_traceability_agent v0.0.20 // indirect
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/getkin/kin-openapi v0.9.0
-	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/google/uuid v1.1.2
-	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
 	github.com/spf13/cobra v1.0.0
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.3
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	go.uber.org/zap v1.15.0 // indirect
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/tools v0.0.0-20200619210111-0f592d2728bb // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
-	gopkg.in/ini.v1 v1.52.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
 
 replace (
