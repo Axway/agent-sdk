@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"time"
@@ -46,39 +45,47 @@ func newAuthConfig() AuthConfig {
 
 func (a *AuthConfiguration) validate() {
 	if a.URL == "" {
-		exception.Throw(errors.New("Error auth.url not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
 	}
 
 	if a.GetRealm() == "" {
-		exception.Throw(errors.New("Error auth.realm not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthRealm))
 	}
 
 	if a.GetClientID() == "" {
-		exception.Throw(errors.New("Error auth.clientid not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthClientID))
 	}
 
 	if a.GetPrivateKey() == "" {
-		exception.Throw(errors.New("Error auth.privatekey not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
 	} else {
 		if !fileExists(a.GetPrivateKey()) {
 			privateKeyData := os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA")
 			if privateKeyData == "" {
-				exception.Throw(errors.New("Error auth.privatekey not set in config"))
+				exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
 			}
 			saveKeyData(a.GetPrivateKey(), privateKeyData)
+		}
+		// Validate that the file is readable
+		if _, err := os.Open(a.GetPrivateKey()); err != nil {
+			exception.Throw(ErrReadingKeyFile.FormatError("private key", a.GetPrivateKey()))
 		}
 	}
 
 	if a.GetPublicKey() == "" {
-		exception.Throw(errors.New("Error auth.publickey not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
 	} else {
 		if !fileExists(a.GetPublicKey()) {
 			publicKeyData := os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA")
 			if publicKeyData == "" {
-				exception.Throw(errors.New("Error auth.publickey not set in config"))
+				exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
 			}
 			saveKeyData(a.GetPublicKey(), publicKeyData)
 		}
+	}
+	// Validate that the file is readable
+	if _, err := os.Open(a.GetPublicKey()); err != nil {
+		exception.Throw(ErrReadingKeyFile.FormatError("public key", a.GetPublicKey()))
 	}
 }
 
