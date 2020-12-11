@@ -33,6 +33,9 @@ go get git.ecd.axway.org/apigov/apic_agents_sdk/
 
 [Utilities](./docs/utilities/index.md)
 
-[Sample discovery agent](https://git.ecd.axway.org/vchauhan/beano/-/tree/master/azure_discovery_agent)
+## Sample projects
+The developers can use the stubs packaged as zip file to build agents using the Agent SDK. The zip files contains code for sample discovery and traceability agent respectively, build scripts and instructions in README.md to make modifications to implement their own agents.
 
-[Sample traceability agent](https://git.ecd.axway.org/vchauhan/beano/-/tree/master/azure_traceability_agent)
+[Download the stub project with sample discovery agent](https://git.ecd.axway.org/vchauhan/beano/-/blob/master/sample_projects/apic_discovery_agent.zip)
+
+[Download the stub project with sample traceability agent](https://git.ecd.axway.org/vchauhan/beano/-/blob/master/sample_projects/apic_traceability_agent.zip)
