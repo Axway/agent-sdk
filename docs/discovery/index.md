@@ -626,6 +626,11 @@ go build -tags static_all \
 	-a -o ${WORKSPACE}/bin/discovery_agent ${WORKSPACE}/main.go
 ```
 
+#### Pre-requisites for executing the agent
+* An Axway AMPLIFY Central subscription in the AMPLIFY™ platform. See [Get started with AMPLIFY Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
+* An AMPLIFY Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
+* An AMPLIFY Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
+
 ### Executing Discovery Agent
 The Agent built using AMPLIFY Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
 
@@ -729,8 +734,3 @@ Flags:
       --synchronize                                                            Run the sync process for the discovery agent
   -v, --version                                                                version for azure_discovery_agent
 ```
-
-#### Pre-requisites for executing the agent
-* An Axway AMPLIFY Central subscription in the AMPLIFY™ platform. See [Get started with AMPLIFY Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
-* An AMPLIFY Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
-* An AMPLIFY Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
