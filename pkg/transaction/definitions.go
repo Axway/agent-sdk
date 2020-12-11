@@ -33,7 +33,7 @@ type LogEvent struct {
 type Summary struct {
 	Status       string       `json:"status,omitempty"`
 	StatusDetail string       `json:"statusDetail,omitempty"`
-	Duration     int          `json:"duration,omitempty"`
+	Duration     int          `json:"duration"`
 	Application  *Application `json:"application,omitempty"`
 	Product      string       `json:"product,omitempty"`
 	Team         *Team        `json:"team,omitempty"`
@@ -81,7 +81,7 @@ type Event struct {
 	ParentID    string      `json:"parentId,omitempty"`
 	Source      string      `json:"source,omitempty"`
 	Destination string      `json:"destination,omitempty"`
-	Duration    int         `json:"duration,omitempty"`
+	Duration    int         `json:"duration"`
 	Direction   string      `json:"direction,omitempty"`
 	Status      string      `json:"status,omitempty"`
 	Protocol    interface{} `json:"protocol,omitempty"`
