@@ -10,6 +10,7 @@ import (
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // SubscriptionSchema -
@@ -117,6 +118,7 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	log.Debugf("Register subscripiton schema name '%s'", subscriptionSchema.GetSubscriptionName())
 	c.RegisteredSubscriptionSchema = subscriptionSchema
 
 	//Add API Server resource - SubscriptionDefinition

@@ -56,6 +56,10 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 		enableSubscription = false
 	}
 
+	if c.RegisteredSubscriptionSchema == nil {
+		log.Debug("Registered subscription schema is null")
+	}
+
 	if enableSubscription {
 		log.Debug("Subscriptions will be enabled for consumer instances")
 	} else {

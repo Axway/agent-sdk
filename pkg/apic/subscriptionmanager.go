@@ -120,6 +120,15 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
 
+	log.Debugf("Process subscription subscription.ApicID - '%s'", subscription.ApicID)
+	log.Debugf("Process subscription subscription.apicClient - '%s'", subscription.apicClient)
+
+	if subscription.GetCatalogItemID() != "" {
+		log.Debugf("Subscription catalog itme id '%s'", subscription.GetCatalogItemID())
+	} else {
+		log.Debug("Subscription catalog item id is empty.")
+	}
+
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
