@@ -126,7 +126,7 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 		return
 	}
 	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
-		log.Debugf("Unable to process subscription '%s' because environment names don't match: catalog item is in '%s' but agent is configured for '%s'", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
+		log.Debugf("Subscription '%s' skipped because its catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
 		return
 	}
 
