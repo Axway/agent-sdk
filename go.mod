@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20201120013009-db7cb48b361b
-	git.ecd.axway.org/apigov/v7_traceability_agent v0.0.20 // indirect
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0
@@ -22,6 +21,7 @@ require (
 	github.com/tidwall/gjson v1.6.3
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	gopkg.in/h2non/gock.v1 v1.0.15
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
 
 replace (
