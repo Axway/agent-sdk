@@ -14,6 +14,7 @@ import (
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 
@@ -352,6 +353,7 @@ func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*
 	}
 
 	apiServerInfoURL := c.cfg.GetCatalogItemsURL() + "/" + catalogID + "/properties/apiServerInfo"
+	log.Debugf("Get apiServerInfo api - '%s'", apiServerInfoURL)
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
