@@ -7,21 +7,27 @@ import (
 const (
 	// RFC3339Z api-server time lacks the colon in timezone
 	RFC3339Z = "2006-01-02T15:04:05Z0700"
+
+	// RFC3339Z_ time with the colon in timezone
+	RFC3339Z_ = "2006-01-02T15:04:05Z07:00"
 )
 
-// Time -
+// Time - time
 type Time time.Time
 
-// UnmarshalJSON -
+// UnmarshalJSON - unmarshal json for time
 func (t *Time) UnmarshalJSON(bytes []byte) error {
 	tt, err := time.Parse(`"`+RFC3339Z+`"`, string(bytes))
 
+	if err == nil {
+		*t = Time(tt)
+		return nil
+	}
+	tt, err = time.Parse(`"`+RFC3339Z_+`"`, string(bytes))
 	if err != nil {
 		return err
 	}
-
 	*t = Time(tt)
-
 	return nil
 }
 
