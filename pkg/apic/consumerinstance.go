@@ -56,10 +56,6 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 		enableSubscription = false
 	}
 
-	if c.RegisteredSubscriptionSchema == nil {
-		log.Debug("Registered subscription schema is null")
-	}
-
 	if enableSubscription {
 		log.Debug("Subscriptions will be enabled for consumer instances")
 	} else {
@@ -92,7 +88,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(revision *v1alpha1.Consum
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
 
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		log.Warnf("API inbound policy (%s) is not supported. Catalog asset cannot be created. ", serviceBody.AuthPolicy)
+		log.Warnf("'%s' has an inbound policy of (%s) and is not supported. Catalog asset will not be created. ", serviceBody.APIName, serviceBody.AuthPolicy)
 		return nil
 	}
 
