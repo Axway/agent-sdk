@@ -10,6 +10,7 @@ import (
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
 	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,6 +19,7 @@ type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
+func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
 func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }

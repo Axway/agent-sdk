@@ -11,8 +11,8 @@ debug
 *.log
 
 # Ignore key files in root
-private_key.pem
-public_key*
+/private_key.pem
+/public_key*
 
 # ignores if running sonarscanner locally
 .scannerwork

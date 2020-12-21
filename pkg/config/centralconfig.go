@@ -2,8 +2,6 @@ package config
 
 import (
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -109,7 +107,6 @@ type CentralConfig interface {
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
 	GetProxyURL() string
-	SetProxyEnvironmentVariable() error
 	GetPollInterval() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendDataPlaneToTitle() bool
@@ -241,21 +238,6 @@ func (c *CentralConfiguration) GetURL() string {
 // GetProxyURL - Returns the central Proxy URL
 func (c *CentralConfiguration) GetProxyURL() string {
 	return c.ProxyURL
-}
-
-// SetProxyEnvironmentVariable - Set the proxy environment variable so the APIC auth uses the same proxy
-func (c *CentralConfiguration) SetProxyEnvironmentVariable() (err error) {
-	if c.GetProxyURL() != "" {
-		urlInfo, err := url.Parse(c.GetProxyURL())
-		if err == nil {
-			if urlInfo.Scheme == "https" {
-				os.Setenv("HTTPS_PROXY", c.GetProxyURL())
-			} else if urlInfo.Scheme == "http" {
-				os.Setenv("HTTP_PROXY", c.GetProxyURL())
-			}
-		}
-	}
-	return
 }
 
 // GetCatalogItemsURL - Returns the unifiedcatalog URL for catalog items API
@@ -540,8 +522,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		ProxyURL: proxyURL,
 	}
 
-	// Set the Proxy Environment Variable
-	cfg.SetProxyEnvironmentVariable()
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)

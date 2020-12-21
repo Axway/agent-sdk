@@ -1,5 +1,3 @@
-# git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20201120013009-db7cb48b361b
-git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible

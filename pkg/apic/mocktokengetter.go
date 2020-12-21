@@ -11,3 +11,6 @@ var MockTokenGetter = &mockTokenGetter{}
 func (m *mockTokenGetter) GetToken() (string, error) {
 	return "testToken", nil
 }
+
+// Close -
+func (m *mockTokenGetter) Close() error { return nil }

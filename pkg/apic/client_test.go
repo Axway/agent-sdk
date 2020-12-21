@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 func TestNewClient(t *testing.T) {
 	cfg := corecfg.NewCentralConfig(corecfg.DiscoveryAgent)
-	client := New(cfg)
+	client := New(cfg, MockTokenGetter)
 	assert.NotNil(t, client)
 }
 
@@ -131,9 +131,7 @@ func TestHealthCheck(t *testing.T) {
 	requester := svcClient.tokenRequester
 
 	// swap out mock for a real tokenRequester
-	svcClient.tokenRequester = &platformTokenGetter{
-		requester: apicauth.NewPlatformTokenGetter("", "", "", "", "", "", 1*time.Second),
-	}
+	svcClient.tokenRequester = auth.NewPlatformTokenGetter("", "", "", "", "", "", 1*time.Second)
 
 	// failure
 	status := svcClient.healthcheck("Client Test")
