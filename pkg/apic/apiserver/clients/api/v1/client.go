@@ -10,7 +10,7 @@ import (
 	"time"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	"github.com/tomnomnom/linkheader"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -61,7 +61,7 @@ func BasicAuth(user, password, tenantID, instanceID string) Options {
 // JWTAuth auth with token
 func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
 	return func(c *ClientBase) {
-		tokenGetter := apicauth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
+		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,

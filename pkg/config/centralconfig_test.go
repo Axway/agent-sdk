@@ -104,16 +104,6 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 	assert.Nil(t, err)
 
-	centralConfig.ProxyURL = "https://foo.bar:1234"
-	err = centralConfig.SetProxyEnvironmentVariable()
-	assert.Nil(t, err)
-	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTPS_PROXY"))
-
-	centralConfig.ProxyURL = "http://foo1.bar:1234"
-	err = centralConfig.SetProxyEnvironmentVariable()
-	assert.Nil(t, err)
-	assert.Equal(t, centralConfig.ProxyURL, os.Getenv("HTTP_PROXY"))
-
 	cleanupFiles(tmpFile.Name())
 }
 

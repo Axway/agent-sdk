@@ -1,5 +1,6 @@
-// Package apicauth implements the apic service account token management.
-package apicauth
+// Package auth implements the apic service account token management.
+// Contributed by Xenon team
+package auth
 
 import (
 	"crypto/sha256"
@@ -22,12 +23,14 @@ import (
 
 	"math/big"
 
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
-var log logrus.FieldLogger = logrus.WithField("package", "apicauth")
+var log logrus.FieldLogger = logrus.WithField("package", "auth")
 
 // SetLog sets the logger for the package.
 func SetLog(newLog logrus.FieldLogger) {
@@ -39,6 +42,11 @@ func closeHelper(closer io.Closer) {
 	if err := closer.Close(); err != nil {
 		log.Warnf("Failed to close: %v", closer)
 	}
+}
+
+// PlatformTokenGetter - Interface for token getter
+type PlatformTokenGetter interface {
+	tokenGetterCloser
 }
 
 // ApicAuth provides authentication methods for calls agains APIC Cloud services.
@@ -82,8 +90,8 @@ func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID stri
 }
 
 // NewPlatformTokenGetter returns a token getter for axway ID
-func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) *PlatformTokenGetter {
-	return &PlatformTokenGetter{
+func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) PlatformTokenGetter {
+	return &platformTokenGetter{
 		aud,
 		clientID,
 		&platformTokenGenerator{
@@ -94,6 +102,26 @@ func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID str
 			privKey:   privKey,
 			publicKey: publicKey,
 			password:  password,
+		},
+		&tokenHolder{},
+	}
+}
+
+// NewPlatformTokenGetterWithCentralConfig returns a token getter for axway ID
+func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) PlatformTokenGetter {
+	return &platformTokenGetter{
+		centralCfg.GetAuthConfig().GetAudience(),
+		centralCfg.GetAuthConfig().GetClientID(),
+		&platformTokenGenerator{
+			url:       centralCfg.GetAuthConfig().GetTokenURL(),
+			timeout:   centralCfg.GetAuthConfig().GetTimeout(),
+			tlsConfig: centralCfg.GetTLSConfig(),
+			proxyURL:  centralCfg.GetProxyURL(),
+		},
+		&keyReader{
+			privKey:   centralCfg.GetAuthConfig().GetPrivateKey(),
+			publicKey: centralCfg.GetAuthConfig().GetPublicKey(),
+			password:  centralCfg.GetAuthConfig().GetKeyPassword(),
 		},
 		&tokenHolder{},
 	}
@@ -241,8 +269,10 @@ func (kr *keyReader) getPassword() ([]byte, error) {
 }
 
 type platformTokenGenerator struct {
-	url     string        // url for access token generation
-	timeout time.Duration // timeout for the http request
+	url       string           // url for access token generation
+	timeout   time.Duration    // timeout for the http request
+	tlsConfig config.TLSConfig // TLS Config
+	proxyURL  string           // ProxyURL
 }
 
 // prepareInitialToken prepares a token for an access request
@@ -266,9 +296,27 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 
 	return requestToken, nil
 }
+func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
+	client := http.Client{Timeout: ptg.timeout}
+	httpTransport := &http.Transport{}
+
+	if ptg.tlsConfig != nil {
+		httpTransport.TLSClientConfig = ptg.tlsConfig.BuildTLSConfig()
+	}
+
+	if ptg.proxyURL != "" {
+		url, err := url.Parse(ptg.proxyURL)
+		if err != nil {
+			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
+		}
+		httpTransport.Proxy = util.GetProxyURL(url)
+	}
+	client.Transport = httpTransport
+	return client
+}
 
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
-	client := http.Client{Timeout: ptg.timeout}
+	client := ptg.getHTTPClient()
 	log.Debugf("token to be used: %s", requestToken)
 	resp, err := client.PostForm(ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
@@ -314,8 +362,8 @@ func (th *tokenHolder) getCachedToken() string {
 	return ""
 }
 
-// PlatformTokenGetter can get an access token from apic platform.
-type PlatformTokenGetter struct {
+// platformTokenGetter can get an access token from apic platform.
+type platformTokenGetter struct {
 	aud      string // audience for the token
 	clientID string // id of the account
 	*platformTokenGenerator
@@ -324,12 +372,12 @@ type PlatformTokenGetter struct {
 }
 
 // Close a PlatformTokenGetter
-func (ptp *PlatformTokenGetter) Close() error {
+func (ptp *platformTokenGetter) Close() error {
 	return nil
 }
 
 // fetchNewToken fetches a new token from the platform and updates the token cache.
-func (ptp *PlatformTokenGetter) fetchNewToken() (string, error) {
+func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 	privateKey, err := ptp.getPrivateKey()
 	if err != nil {
 		return "", err
@@ -376,7 +424,7 @@ func (ptp *PlatformTokenGetter) fetchNewToken() (string, error) {
 }
 
 // GetToken returns a token from cache if not expired or fetches a new token
-func (ptp *PlatformTokenGetter) GetToken() (string, error) {
+func (ptp *platformTokenGetter) GetToken() (string, error) {
 	if token := ptp.getCachedToken(); token != "" {
 		return token, nil
 	}

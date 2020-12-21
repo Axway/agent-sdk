@@ -8,11 +8,11 @@ import (
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // constants for auth policy types
@@ -35,6 +35,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 
 // Client - interface
 type Client interface {
+	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
@@ -52,42 +53,20 @@ type Client interface {
 	OnConfigChange(cfg corecfg.CentralConfig)
 }
 
-type tokenGetter interface {
-	GetToken() (string, error)
-}
-
-type platformTokenGetter struct {
-	requester *apicauth.PlatformTokenGetter
-}
-
-func (p *platformTokenGetter) GetToken() (string, error) {
-	return p.requester.GetToken()
-}
-
 // New -
-func New(cfg corecfg.CentralConfig) Client {
+func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
 
 	serviceClient := &ServiceClient{}
-	serviceClient.OnConfigChange(cfg)
+	serviceClient.SetTokenGetter(tokenRequester)
 
+	serviceClient.OnConfigChange(cfg)
 	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
 	return serviceClient
 }
 
 // OnConfigChange - config change handler
 func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
-	tokenURL := cfg.GetAuthConfig().GetTokenURL()
-	aud := cfg.GetAuthConfig().GetAudience()
-	priKey := cfg.GetAuthConfig().GetPrivateKey()
-	pubKey := cfg.GetAuthConfig().GetPublicKey()
-	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
-	clientID := cfg.GetAuthConfig().GetClientID()
-	authTimeout := cfg.GetAuthConfig().GetTimeout()
-
 	c.cfg = cfg
-	c.tokenRequester = &platformTokenGetter{
-		requester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
-	}
 	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
@@ -107,6 +86,11 @@ func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 
 	// complete the API server healthcheck to retrieve the environment and team ids
 	c.checkAPIServerHealth()
+}
+
+// SetTokenGetter - sets the token getter
+func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) {
+	c.tokenRequester = tokenRequester
 }
 
 // mapToTagsArray -

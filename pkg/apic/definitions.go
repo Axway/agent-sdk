@@ -3,6 +3,7 @@ package apic
 import (
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 )
 
@@ -99,7 +100,7 @@ type ServiceBody struct {
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester                     tokenGetter
+	tokenRequester                     auth.TokenGetter
 	cfg                                corecfg.CentralConfig
 	apiClient                          coreapi.Client
 	DefaultSubscriptionSchema          SubscriptionSchema

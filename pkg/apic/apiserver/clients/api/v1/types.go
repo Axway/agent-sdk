@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	ot "github.com/opentracing/opentracing-go"
 )
 
@@ -32,7 +32,7 @@ type basicAuth struct {
 
 type jwtAuth struct {
 	tenantID    string
-	tokenGetter *apicauth.PlatformTokenGetter
+	tokenGetter auth.PlatformTokenGetter
 }
 
 // ClientBase for grouping a client, auth method and url together
