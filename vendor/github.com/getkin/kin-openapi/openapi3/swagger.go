@@ -11,12 +11,12 @@ import (
 type Swagger struct {
 	ExtensionProps
 	OpenAPI      string               `json:"openapi" yaml:"openapi"` // Required
-	Components   Components           `json:"components,omitempty" yaml:"components,omitempty"`
-	Info         *Info                `json:"info" yaml:"info"`   // Required
-	Paths        Paths                `json:"paths" yaml:"paths"` // Required
-	Security     SecurityRequirements `json:"security,omitempty" yaml:"security,omitempty"`
+	Info         *Info                `json:"info" yaml:"info"`       // Required
 	Servers      Servers              `json:"servers,omitempty" yaml:"servers,omitempty"`
+	Paths        Paths                `json:"paths" yaml:"paths"` // Required
+	Components   Components           `json:"components,omitempty" yaml:"components,omitempty"`
 	Tags         Tags                 `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Security     SecurityRequirements `json:"security,omitempty" yaml:"security,omitempty"`
 	ExternalDocs *ExternalDocs        `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 }
 
@@ -48,57 +48,34 @@ func (swagger *Swagger) AddServer(server *Server) {
 
 func (swagger *Swagger) Validate(c context.Context) error {
 	if swagger.OpenAPI == "" {
-		return errors.New("value of openapi must be a non-empty JSON string")
+		return errors.New("Variable 'openapi' must be a non-empty JSON string")
 	}
-
-	// NOTE: only mention info/components/paths/... key in this func's errors.
-
-	{
-		wrap := func(e error) error { return fmt.Errorf("invalid components: %v", e) }
-		if err := swagger.Components.Validate(c); err != nil {
-			return wrap(err)
+	if err := swagger.Components.Validate(c); err != nil {
+		return fmt.Errorf("Error when validating Components: %s", err.Error())
+	}
+	if v := swagger.Security; v != nil {
+		if err := v.Validate(c); err != nil {
+			return fmt.Errorf("Error when validating Security: %s", err.Error())
 		}
 	}
-
-	{
-		wrap := func(e error) error { return fmt.Errorf("invalid info: %v", e) }
-		if v := swagger.Info; v != nil {
-			if err := v.Validate(c); err != nil {
-				return wrap(err)
-			}
-		} else {
-			return wrap(errors.New("must be a JSON object"))
+	if v := swagger.Servers; v != nil {
+		if err := v.Validate(c); err != nil {
+			return fmt.Errorf("Error when validating Servers: %s", err.Error())
 		}
 	}
-
-	{
-		wrap := func(e error) error { return fmt.Errorf("invalid paths: %v", e) }
-		if v := swagger.Paths; v != nil {
-			if err := v.Validate(c); err != nil {
-				return wrap(err)
-			}
-		} else {
-			return wrap(errors.New("must be a JSON object"))
+	if v := swagger.Paths; v != nil {
+		if err := v.Validate(c); err != nil {
+			return fmt.Errorf("Error when validating Paths: %s", err.Error())
 		}
+	} else {
+		return errors.New("Variable 'paths' must be a JSON object")
 	}
-
-	{
-		wrap := func(e error) error { return fmt.Errorf("invalid security: %v", e) }
-		if v := swagger.Security; v != nil {
-			if err := v.Validate(c); err != nil {
-				return wrap(err)
-			}
+	if v := swagger.Info; v != nil {
+		if err := v.Validate(c); err != nil {
+			return fmt.Errorf("Error when validating Info: %s", err.Error())
 		}
+	} else {
+		return errors.New("Variable 'info' must be a JSON object")
 	}
-
-	{
-		wrap := func(e error) error { return fmt.Errorf("invalid servers: %v", e) }
-		if v := swagger.Servers; v != nil {
-			if err := v.Validate(c); err != nil {
-				return wrap(err)
-			}
-		}
-	}
-
 	return nil
 }

@@ -10,72 +10,12 @@
     "twistlock": false,
     "zap": false,
     "yarn": false,
-    "gosec": true
+    "gosec": false,
+    "whitesource": true
   },
   "suppressions": [
     {
-      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/coreos\\/etcd\\/3\\.3\\.10.*",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Originally: APIGOV-12765. The vulnerable package not used by agent. ",
-      "component": "etcd",
-      "version": "3.3.10.*",
-      "ids": [
-        "CVE-2018-16886"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.2, which is incorrect (@rconan)",
-      "component": "go-windows-terminal-sequences",
-      "version": "v1.0.2",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
-      "component": "go-windows",
-      "version": "v1.0.1",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Dependency Check has detected this as Git using the following CPE; cpe:2.3:a:git_for_windows_project:git_for_windows:1.0.1, which is incorrect (@rconan)",
-      "component": "go-sysinfo",
-      "version": "v1.3.0",
-      "ids": [
-        "CVE-2016-9274"
-      ]
-    },
-    {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "",
-      "component": "tools",
-      "version": ".*",
-      "ids": [
-        "CVE-2018-18749"
-      ]
-    },
-    {
-      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc-ecosystem\\/go-grpc-prometheus\\/1\\.2\\.0",
-      "regex": true,
+      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc\\-ecosystem\\/go\\-grpc\\-prometheus\\/1\\.2\\.0",
       "scanner": "dependency-check",
       "classification": "False Positive",
       "justification": "Originally: APIGOV-12766. Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent. Also the vulnerable package is incorrectly reported (Vulnerablity in  github.com/prometheus/prometheus package and not github.com/grpc-ecosystem/go-grpc-prometheus).",
@@ -86,51 +26,40 @@
       ]
     },
     {
-      "path": ".*pkg\\/config\\/tlsconfig\\.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
+      "path": ".*github.com\\/elastic\\/go\\-ucfg\\-v0\\.8\\.3",
+      "scanner": "whitesource",
+      "component": "github.com\\/elastic\\/go\\-ucfg",
+      "version": "v0.8.3",
       "classification": "False Positive",
-      "justification": "InsecureSkipVerify is configurable, and the default value is set to false.",
-      "component": "InsecureSkipVerify: c.InsecureSkipVerify",
-      "version": "",
+      "justification": "kubernetes libraries are not used by agents",
       "ids": [
-        "G402"
+        "CVE-2019-11254"
       ]
     },
     {
-      "path": ".*Gopkg\\.lock",
-      "regex": true,
+      "path": ".*",
+      "scanner": "whitesource",
+      "classification": "False Positive",
+      "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
+      "component": "packetbeat",
+      "version": "v7\\.7\\.1",
+      "ids": [
+          "CVE-2020-26160"
+      ]
+    },
+    {
+      "path": ".*spf13/viper/go\\.mod:github\\.com/grpc\\-ecosystem/go\\-grpc\\-middleware/1\\.0\\.0",
       "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "We do not use this library to do any serialization or deserialization.",
-      "component": "multierror",
-      "version": "",
+      "component": "go\\-grpc\\-middleware",
+      "classification": "No Risk",
+      "justification": "GRPC is not used by the agents",
+      "version": "1\\.0\\.0",
       "ids": [
-        "CVE-2017-18365"
-      ]
-    },
-    {
-      "path": ".*config\\/centralconfig\\.go:.*",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "component": "pathAuthKeyPassword       = \"central.auth.keyPassword\"",
-      "justification": "This is just a constant declaration of a command line property",
-      "version": "",
-      "ids": [
-        "G101"
-      ]
-    },
-    {
-      "path": ".*api\\/mockclient\\.go",
-      "regex": true,
-      "scanner": "GoSec",
-      "classification": "False Positive",
-      "justification": "This is only present in the junit tests and not a part of the product.",
-      "component": "os.Open(filepath)",
-      "version": "",
-      "ids": [
-        "G304"
+        "CVE-2017-7860",
+        "CVE-2017-7861",
+        "CVE-2017-8359",
+        "CVE-2017-9431",
+        "CVE-2020-7768"
       ]
     }
   ]

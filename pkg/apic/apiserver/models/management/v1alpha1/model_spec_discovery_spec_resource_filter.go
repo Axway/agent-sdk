@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// SpecDiscoverySpecResourceFilter Pod filter.
+// SpecDiscoverySpecResourceFilter Filter pod resources by name or labels.
 type SpecDiscoverySpecResourceFilter struct {
-	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 	Names       []string          `json:"names,omitempty"`
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }

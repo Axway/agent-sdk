@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	corecmd "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,9 @@ var argDescriptions = map[string]string{
 	"start":   "start the installed service",
 	"stop":    "stop the installed service",
 	"status":  "get the status of the installed service",
+	"logs":    "get the logs of the service",
 	"enable":  "enable the service to persist on reboots of the OS",
+	"name":    "get the name of the service",
 }
 
 // GenServiceCmd - generates the command version for a Beat.
@@ -53,6 +56,9 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 			}
 			globalAgentService.PathArg = fmt.Sprintf("--%s", pathArg)
 			globalAgentService.Path = cmd.Flag(pathArg).Value.String()
+			if pflag := cmd.Flag(corecmd.EnvFileFlag); pflag != nil {
+				globalAgentService.EnvFile = pflag.Value.String()
+			}
 			if globalAgentService.Path == "." || globalAgentService.Path == "" {
 				var err error
 				globalAgentService.Path, err = os.Getwd()

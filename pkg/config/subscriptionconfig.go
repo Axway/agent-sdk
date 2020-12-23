@@ -79,6 +79,7 @@ type ApprovalConfig struct {
 // SubscriptionConfiguration - Structure to hold the subscription config
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
+	IConfigValidator
 	Approval      *ApprovalConfig     `config:"approval"`
 	Notifications *NotificationConfig `config:"notifications"`
 	Types         []NotificationType
@@ -119,17 +120,36 @@ type EmailTemplate struct {
 	APIKey  string `config:"apikeys"`
 }
 
-// AddApprovalConfigProperties -
-func AddApprovalConfigProperties(props properties.Properties) {
+// AddSubscriptionConfigProperties -
+func AddSubscriptionConfigProperties(props properties.Properties) {
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mdoe to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
+
+	// subscription notifications
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPHost, "", "SMTP server where the email notifications will originate from")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPPort, "", "Port of the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPFrom, "", "Email address which will represent the sender")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPIdentity, "", "foobar")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPAuth, "", "The authentication type based on the email server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserName, "", "Login user for the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserPassword, "", "Login password for the SMTP server")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeSubject, "Subscription Notification", "Subject of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "", "Body of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Removal Notification", "Subject of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnubscribeBody, "", "Body of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject, "Subscription Failed Notification", "Subject of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "", "Body of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject, "Subscription Removal Failed Notification", "Subject of the email notification for action unsubscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "", "Body of the email notification for action unsubscribe failed")
 }
 
 // ParseSubscriptionConfig -
-func ParseSubscriptionConfig(props properties.Properties) (SubscriptionConfig, error) {
+func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	// Determine the auth type
 	authTypeString := props.StringPropertyValue(pathSubscriptionsNotificationsSMTPAuth)
 	authType := NoAuth
@@ -186,12 +206,7 @@ func ParseSubscriptionConfig(props properties.Properties) (SubscriptionConfig, e
 		},
 	}
 
-	// Validate properties
-	if err := cfg.validate(); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return cfg
 }
 
 // NewSubscriptionConfig - Creates the default subscription config
@@ -332,7 +347,8 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() Webho
 	return s.Approval.SubscriptionApprovalWebhook
 }
 
-func (s *SubscriptionConfiguration) validate() error {
+// ValidateCfg - Validates the config, implementing IConfigInterface
+func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.Webhook.GetURL() != "" {
 		s.SetNotificationType(NotifyWebhook)
 		log.Debug("Webhook notification set")
@@ -351,12 +367,18 @@ func (s *SubscriptionConfiguration) validate() error {
 		// these are all OK
 	case "":
 	default:
-		return ErrSubscriptionApprovalModeInvalid
+		return ErrBadConfig.FormatError(pathSubscriptionsApprovalMode)
 	}
 
 	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())
 
-	s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
+	// only validate the webhook approval config settings if the approval mode is for webhook
+	if s.GetSubscriptionApprovalMode() == WebhookApproval {
+		err := s.Approval.SubscriptionApprovalWebhook.ValidateConfig()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -371,6 +393,11 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 	// Header=contentType,Value=application/json, Header=Elements-Formula-Instance-Id,Value=440874, Header=Authorization,Value=User F+rYQSfu0w5yIa5q7uNs2MKYcIok8pYpgAUwJtXFnzc=, Organization a1713018bbde8f54f4f55ff8c3bd8bfe
 	webhookConfig := s.Notifications.Webhook.(*WebhookConfiguration)
 	webhookConfig.webhookHeaders = map[string]string{}
+
+	// webhook headers for subscription notification cannot be empty
+	if webhookConfig.Headers == "" {
+		return errors.New("central.subscriptions.notifications.headers cannot be empty")
+	}
 	webhookConfig.Headers = strings.Replace(webhookConfig.Headers, ", ", ",", -1)
 	headersValues := strings.Split(webhookConfig.Headers, ",Header=")
 	for _, headerValue := range headersValues {

@@ -19,8 +19,6 @@ package beat
 
 import (
 	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/instrumentation"
-	"github.com/elastic/beats/v7/libbeat/keystore"
 	"github.com/elastic/beats/v7/libbeat/management"
 )
 
@@ -68,11 +66,7 @@ type Beat struct {
 
 	Fields []byte // Data from fields.yml
 
-	Manager management.Manager // manager
-
-	Keystore keystore.Keystore
-
-	Instrumentation instrumentation.Instrumentation // instrumentation holds an APM agent for capturing and reporting traces
+	ConfigManager management.ConfigManager // config manager
 }
 
 // BeatConfig struct contains the basic configuration of every beat

@@ -3,7 +3,7 @@
 WORKSPACE ?= $$(pwd)
 
 GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
-	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models) 
+	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models)
 
 export GOFLAGS := -mod=vendor
 
@@ -53,8 +53,8 @@ sonar: test-sonar
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
 
-apiserver-generate: ## generate api server resources
-	./scripts/apiserver/apiserver_generate.sh
+apiserver-generate: # generate api server resources. ex: make apiserver-generate https apicentral.axway.com 443
+	./scripts/apiserver/apiserver_generate.sh $(protocol) $(host) $(port)
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh

@@ -1,18 +1,13 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -55,6 +50,23 @@ var StringAgentModeMap = map[string]AgentMode{
 	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
 }
 
+// AgentTypeName - Holds the name Agent type
+var AgentTypeName string
+
+// AgentVersion - Holds the version of agent
+var AgentVersion string
+
+// IConfigValidator - Interface to be implemented for config validation by agent
+type IConfigValidator interface {
+	ValidateCfg() error
+}
+
+// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource
+// for agent and dataplane
+type IResourceConfigCallback interface {
+	ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error
+}
+
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
@@ -68,7 +80,10 @@ type CentralConfig interface {
 	GetEnvironmentID() string
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
+	GetAgentName() string
 	GetTeamName() string
+	GetTeamID() string
+	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
@@ -83,36 +98,45 @@ type CentralConfig interface {
 	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
 	GetSubscriptionURL() string
-	GetCatalogItemSubscriptionsURL(string) string
-	Validate() error
 	GetSubscriptionConfig() SubscriptionConfig
+	GetCatalogItemSubscriptionsURL(string) string
+	GetCatalogItemSubscriptionStatesURL(string, string) string
+	GetCatalogItemSubscriptionPropertiesURL(string, string) string
+	GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
 	GetProxyURL() string
-	SetProxyEnvironmentVariable() error
 	GetPollInterval() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
+	GetAppendDataPlaneToTitle() bool
+	SetDataPlaneName(name string)
+	GetDataPlaneName() string
 }
 
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
 	CentralConfig
+	IConfigValidator
 	AgentType                 AgentType
 	Mode                      AgentMode     `config:"mode"`
 	TenantID                  string        `config:"organizationID"`
 	TeamName                  string        `config:"team"`
 	APICDeployment            string        `config:"deployment"`
 	Environment               string        `config:"environment"`
+	AgentName                 string        `config:"agentName"`
 	URL                       string        `config:"url"`
 	PlatformURL               string        `config:"platformURL"`
 	APIServerVersion          string        `config:"apiServerVersion"`
 	TagsToPublish             string        `config:"additionalTags"`
+	AppendDataPlaneToTitle    bool          `config:"appendDataPlaneToTitle"`
 	Auth                      AuthConfig    `config:"auth"`
 	TLS                       TLSConfig     `config:"ssl"`
 	PollInterval              time.Duration `config:"pollInterval"`
 	ProxyURL                  string        `config:"proxyUrl"`
 	environmentID             string
+	teamID                    string
+	dataPlaneName             string
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 }
 
@@ -127,6 +151,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PollInterval:              60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
+		AppendDataPlaneToTitle:    true,
 	}
 }
 
@@ -185,9 +210,24 @@ func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
 }
 
+// GetAgentName - Returns the agent name
+func (c *CentralConfiguration) GetAgentName() string {
+	return c.AgentName
+}
+
 // GetTeamName - Returns the team name
 func (c *CentralConfiguration) GetTeamName() string {
 	return c.TeamName
+}
+
+// GetTeamID - Returns the team ID
+func (c *CentralConfiguration) GetTeamID() string {
+	return c.teamID
+}
+
+// SetTeamID - Sets the team ID
+func (c *CentralConfiguration) SetTeamID(teamID string) {
+	c.teamID = teamID
 }
 
 // GetURL - Returns the central base URL
@@ -200,22 +240,7 @@ func (c *CentralConfiguration) GetProxyURL() string {
 	return c.ProxyURL
 }
 
-// SetProxyEnvironmentVariable - Set the proxy environment variable so the APIC auth uses the same proxy
-func (c *CentralConfiguration) SetProxyEnvironmentVariable() (err error) {
-	if c.GetProxyURL() != "" {
-		urlInfo, err := url.Parse(c.GetProxyURL())
-		if err == nil {
-			if urlInfo.Scheme == "https" {
-				os.Setenv("HTTPS_PROXY", c.GetProxyURL())
-			} else if urlInfo.Scheme == "http" {
-				os.Setenv("HTTP_PROXY", c.GetProxyURL())
-			}
-		}
-	}
-	return
-}
-
-// GetCatalogItemsURL - Returns the URL for catalog items API
+// GetCatalogItemsURL - Returns the unifiedcatalog URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
@@ -270,14 +295,29 @@ func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
 	return c.GetEnvironmentURL() + "/secrets"
 }
 
-// GetSubscriptionURL - Returns the APIServer URL for services API instances
+// GetSubscriptionURL - Returns the unifiedcatalog URL for subscriptions list
 func (c *CentralConfiguration) GetSubscriptionURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
 }
 
-// GetCatalogItemSubscriptionsURL - Returns the APIServer URL for catalog item subscriptions
+// GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
 func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
 	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
+}
+
+// GetCatalogItemSubscriptionStatesURL - Returns the unifiedcatalog URL for catalog item subscription states
+func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID, subscriptionID string) string {
+	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties
+func (c *CentralConfiguration) GetCatalogItemSubscriptionPropertiesURL(catalogItemID, subscriptionID string) string {
+	return fmt.Sprintf("%s/%s/properties", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetCatalogItemSubscriptionDefinitionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription definition properties
+func (c *CentralConfiguration) GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID string) string {
+	return fmt.Sprintf("%s/%s/%s/properties", c.GetCatalogItemsURL(), catalogItemID, "subscriptionDefinition")
 }
 
 // GetAuthConfig - Returns the Auth Config
@@ -310,13 +350,55 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 	return c.PollInterval
 }
 
-// Validate - Validates the config
-func (c *CentralConfiguration) Validate() (err error) {
+// GetAppendDataPlaneToTitle - Returns the value of append data plane type to title attribute
+func (c *CentralConfiguration) GetAppendDataPlaneToTitle() bool {
+	return c.AppendDataPlaneToTitle
+}
+
+// SetDataPlaneName - Sets the data plane name, will be appended to resources, if setting true
+func (c *CentralConfiguration) SetDataPlaneName(name string) {
+	c.dataPlaneName = name
+}
+
+// GetDataPlaneName - Returns the value fo the data plane name
+func (c *CentralConfiguration) GetDataPlaneName() string {
+	return c.dataPlaneName
+}
+
+const (
+	pathTenantID               = "central.organizationID"
+	pathURL                    = "central.url"
+	pathPlatformURL            = "central.platformURL"
+	pathAuthPrivateKey         = "central.auth.privateKey"
+	pathAuthPublicKey          = "central.auth.publicKey"
+	pathAuthKeyPassword        = "central.auth.keyPassword"
+	pathAuthURL                = "central.auth.url"
+	pathAuthRealm              = "central.auth.realm"
+	pathAuthClientID           = "central.auth.clientId"
+	pathAuthTimeout            = "central.auth.timeout"
+	pathSSLNextProtos          = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify  = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites        = "central.ssl.cipherSuites"
+	pathSSLMinVersion          = "central.ssl.minVersion"
+	pathSSLMaxVersion          = "central.ssl.maxVersion"
+	pathEnvironment            = "central.environment"
+	pathAgentName              = "central.agentName"
+	pathDeployment             = "central.deployment"
+	pathMode                   = "central.mode"
+	pathTeam                   = "central.team"
+	pathPollInterval           = "central.pollInterval"
+	pathProxyURL               = "central.proxyUrl"
+	pathAPIServerVersion       = "central.apiServerVersion"
+	pathAdditionalTags         = "central.additionalTags"
+	pathAppendDataPlaneToTitle = "central.appendDataPlaneToTitle"
+)
+
+// ValidateCfg - Validates the config, implementing IConfigInterface
+func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
 			c.validateConfig()
 			c.Auth.validate()
-			c.TLS.Validate()
 		},
 		Catch: func(e error) {
 			err = e
@@ -328,85 +410,59 @@ func (c *CentralConfiguration) Validate() (err error) {
 
 func (c *CentralConfiguration) validateConfig() {
 	if c.GetTenantID() == "" {
-		exception.Throw(errors.New("Error central.organizationID not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathTenantID))
 	}
 
 	if c.GetURL() == "" {
-		exception.Throw(errors.New("Error central.url not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathURL))
 	}
 
 	if c.GetPlatformURL() == "" {
-		exception.Throw(errors.New("Error central.platformURL not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathPlatformURL))
 	}
-
-	c.validatePublishToEnvironmentModeConfig()
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
+		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
 	}
 }
 
 func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetPollInterval() <= 0 {
-		exception.Throw(errors.New("Error central.pollInterval not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathPollInterval))
 	}
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 	if !c.IsPublishToEnvironmentOnlyMode() && !c.IsPublishToEnvironmentAndCatalogMode() {
-		exception.Throw(errors.New("Error central.mode not configured for publishToEnvironment or publishToEnvironmentAndCatalog"))
+		exception.Throw(ErrBadConfig.FormatError(pathMode))
 	}
 
 	if c.GetEnvironmentName() == "" {
-		exception.Throw(errors.New("Error central.environment not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
 
 	if c.APIServerVersion == "" {
-		exception.Throw(errors.New("Error central.apiServerVersion not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAPIServerVersion))
 	}
 }
 
 func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetAPICDeployment() == "" {
-		exception.Throw(errors.New("Error central.apicDeployment not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathDeployment))
 	}
 	if c.GetEnvironmentName() == "" {
-		exception.Throw(errors.New("Error central.environment not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
 }
-
-const (
-	pathTenantID              = "central.organizationID"
-	pathURL                   = "central.url"
-	pathPlatformURL           = "central.platformURL"
-	pathAuthPrivateKey        = "central.auth.privateKey"
-	pathAuthPublicKey         = "central.auth.publicKey"
-	pathAuthKeyPassword       = "central.auth.keyPassword"
-	pathAuthURL               = "central.auth.url"
-	pathAuthRealm             = "central.auth.realm"
-	pathAuthClientID          = "central.auth.clientId"
-	pathAuthTimeout           = "central.auth.timeout"
-	pathSSLNextProtos         = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites       = "central.ssl.cipherSuites"
-	pathSSLMinVersion         = "central.ssl.minVersion"
-	pathSSLMaxVersion         = "central.ssl.maxVersion"
-	pathEnvironment           = "central.environment"
-	pathDeployment            = "central.deployment"
-	pathMode                  = "central.mode"
-	pathTeam                  = "central.team"
-	pathPollInterval          = "central.pollInterval"
-	pathProxyURL              = "central.proxyUrl"
-	pathAPIServerVersion      = "central.apiServerVersion"
-	pathAdditionalTags        = "central.additionalTags"
-)
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
+	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
@@ -422,17 +478,18 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathSSLMinVersion, TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
 	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
+	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
+	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
-		props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
-		props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
-		props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
-		AddApprovalConfigProperties(props)
+		props.AddBoolProperty(pathAppendDataPlaneToTitle, true, "When true API titles and descriptions will be appended with data plane name or, when no data plane exists, the gateway type")
+		AddSubscriptionConfigProperties(props)
 	}
 }
 
@@ -444,6 +501,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TenantID:     props.StringPropertyValue(pathTenantID),
 		PollInterval: props.DurationPropertyValue(pathPollInterval),
 		Environment:  props.StringPropertyValue(pathEnvironment),
+		TeamName:     props.StringPropertyValue(pathTeam),
+		AgentName:    props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
@@ -463,66 +522,22 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		ProxyURL: proxyURL,
 	}
 
-	// Set the Proxy Environment Variable
-	cfg.SetProxyEnvironmentVariable()
+	cfg.URL = props.StringPropertyValue(pathURL)
+	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
+	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
-		cfg.URL = props.StringPropertyValue(pathURL)
-		cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
-		cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
+		cfg.AppendDataPlaneToTitle = props.BoolPropertyValue(pathAppendDataPlaneToTitle)
 
 		// set the notifications
-		subscriptionConfig, err := ParseSubscriptionConfig(props)
-		if err != nil {
-			return nil, err
-		}
+		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 	}
 
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	// attempt to log CentralConfiguration to console
-	// logCentralConfig(cfg)
-
 	return cfg, nil
-}
-
-// logCentralConfig - log config values to the console
-// 	1. Clone the current CentralConfiguration
-// 	2. Inject the clone with masked values for sensitive data
-// 	3. Print CentralConiguration to the console (only in debug mode)
-func logCentralConfig(centralConfig *CentralConfiguration) {
-
-	// log central config to the console
-	if strings.ToLower(log.GetLevel().String()) != "debug" {
-		return
-	}
-
-	// Clone CentralConfiguration for debug purposes
-	centralConfigClone := centralConfig
-
-	maskSensitiveData(centralConfigClone, centralConfig)
-
-	data, _ := json.MarshalIndent(centralConfigClone, "", " ")
-	log.Debug("********** Central configuration values - START **********")
-	fmt.Printf("%s\n", data)
-	log.Debug("********** Central configuration values - FINISH **********")
-}
-
-// maskSensitveData - this function will hold any sensitive data that needs to be masked
-func maskSensitiveData(centralConfigClone, centralConfig *CentralConfiguration) {
-	// mask auth key password
-	authDebug := centralConfigClone.GetAuthConfig().(*AuthConfiguration)
-	authDebug.KeyPwd = util.MaskValue(centralConfig.Auth.GetKeyPassword())
-
-	// mask email server password
-	subscriptionDebug := centralConfigClone.GetSubscriptionConfig().(*SubscriptionConfiguration)
-	subscriptionDebug.Notifications.SMTP.Password = util.MaskValue((centralConfig.GetSubscriptionConfig().GetSMTPPassword()))
 }

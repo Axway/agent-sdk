@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -26,13 +26,15 @@ type AuthConfig interface {
 // AuthConfiguration -
 type AuthConfiguration struct {
 	AuthConfig
-	URL        string        `config:"url"`
-	Realm      string        `config:"realm"`
-	ClientID   string        `config:"clientId"`
-	PrivateKey string        `config:"privateKey"`
-	PublicKey  string        `config:"publicKey"`
-	KeyPwd     string        `config:"keyPassword"`
-	Timeout    time.Duration `config:"timeout"`
+	URL            string        `config:"url"`
+	Realm          string        `config:"realm"`
+	ClientID       string        `config:"clientId"`
+	PrivateKey     string        `config:"privateKey"`
+	PublicKey      string        `config:"publicKey"`
+	PrivateKeyData string        `config:"privateKeyData"`
+	PublicKeyData  string        `config:"publicKeyData"`
+	KeyPwd         string        `config:"keyPassword"`
+	Timeout        time.Duration `config:"timeout"`
 }
 
 func newAuthConfig() AuthConfig {
@@ -43,26 +45,48 @@ func newAuthConfig() AuthConfig {
 
 func (a *AuthConfiguration) validate() {
 	if a.URL == "" {
-		exception.Throw(errors.New("Error auth.url not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
 	}
 
 	if a.GetRealm() == "" {
-		exception.Throw(errors.New("Error auth.realm not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthRealm))
 	}
 
 	if a.GetClientID() == "" {
-		exception.Throw(errors.New("Error auth.clientid not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthClientID))
 	}
 
 	if a.GetPrivateKey() == "" {
-		exception.Throw(errors.New("Error auth.privatekey not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
+	} else {
+		if !fileExists(a.GetPrivateKey()) {
+			privateKeyData := os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA")
+			if privateKeyData == "" {
+				exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
+			}
+			saveKeyData(a.GetPrivateKey(), privateKeyData)
+		}
+		// Validate that the file is readable
+		if _, err := os.Open(a.GetPrivateKey()); err != nil {
+			exception.Throw(ErrReadingKeyFile.FormatError("private key", a.GetPrivateKey()))
+		}
 	}
 
 	if a.GetPublicKey() == "" {
-		exception.Throw(errors.New("Error auth.publickey not set in config"))
+		exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
+	} else {
+		if !fileExists(a.GetPublicKey()) {
+			publicKeyData := os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA")
+			if publicKeyData == "" {
+				exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
+			}
+			saveKeyData(a.GetPublicKey(), publicKeyData)
+		}
 	}
-
-	return
+	// Validate that the file is readable
+	if _, err := os.Open(a.GetPublicKey()); err != nil {
+		exception.Throw(ErrReadingKeyFile.FormatError("public key", a.GetPublicKey()))
+	}
 }
 
 // GetTokenURL - Returns the token URL
@@ -91,12 +115,12 @@ func (a *AuthConfiguration) GetClientID() string {
 	return a.ClientID
 }
 
-// GetPrivateKey - Returns the token audience URL
+// GetPrivateKey - Returns the private key file path
 func (a *AuthConfiguration) GetPrivateKey() string {
 	return a.PrivateKey
 }
 
-// GetPublicKey - Returns the token audience URL
+// GetPublicKey - Returns the public key file path
 func (a *AuthConfiguration) GetPublicKey() string {
 	return a.PublicKey
 }
@@ -117,4 +141,9 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func saveKeyData(filename string, data string) {
+	dataBytes := []byte(data)
+	ioutil.WriteFile(filename, dataBytes, 0600)
 }

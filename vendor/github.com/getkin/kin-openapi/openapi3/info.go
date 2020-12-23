@@ -3,6 +3,7 @@ package openapi3
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/getkin/kin-openapi/jsoninfo"
 )
@@ -29,22 +30,22 @@ func (value *Info) UnmarshalJSON(data []byte) error {
 func (value *Info) Validate(c context.Context) error {
 	if contact := value.Contact; contact != nil {
 		if err := contact.Validate(c); err != nil {
-			return err
+			return fmt.Errorf("Error when validating Contact: %s", err.Error())
 		}
 	}
 
 	if license := value.License; license != nil {
 		if err := license.Validate(c); err != nil {
-			return err
+			return fmt.Errorf("Error when validating License: %s", err.Error())
 		}
 	}
 
 	if value.Version == "" {
-		return errors.New("value of version must be a non-empty JSON string")
+		return errors.New("Variable 'version' must be a non-empty JSON string")
 	}
 
 	if value.Title == "" {
-		return errors.New("value of title must be a non-empty JSON string")
+		return errors.New("Variable 'title' must be a non-empty JSON string")
 	}
 
 	return nil
@@ -87,7 +88,7 @@ func (value *License) UnmarshalJSON(data []byte) error {
 
 func (value *License) Validate(c context.Context) error {
 	if value.Name == "" {
-		return errors.New("value of license name must be a non-empty JSON string")
+		return errors.New("Variable 'name' must be a non-empty JSON string")
 	}
 	return nil
 }

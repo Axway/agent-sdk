@@ -60,7 +60,7 @@ find_errors() {
     # different processing for errors in the errors package
     if grep -q ${pkg_path} <<<"$file"; then  
       err_pkg="true"
-      # fild uses in the error package itself
+      # find uses in the error package itself
       has_pkg=`grep "= New" $file`
     else
       # find modules that import the errors package
@@ -74,7 +74,7 @@ find_errors() {
 
       # figure out the pakage alias, if any
       errors_pkg_name=`echo $has_pkg | sed -e "s/^import//" | awk '{print $1}' | grep -v $import_path | grep -v import`.
-      if [ -z "$errors_pkg_name" ]; then
+      if [ "$errors_pkg_name" == "." ]; then
         errors_pkg_name="errors".
       fi
 
@@ -162,7 +162,7 @@ check_errors_markdown() {
     # check the errors are in the markdown
     if ! grep -q "$code" ./errors.md; then
       RC=1
-      echo Error code $code was not in the errors.md filen
+      echo Error code $code was not in the errors.md file
     fi
   done
 }

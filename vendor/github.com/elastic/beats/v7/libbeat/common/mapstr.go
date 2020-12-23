@@ -96,26 +96,20 @@ func (m MapStr) deepUpdateMap(d MapStr, overwrite bool) {
 }
 
 func deepUpdateValue(old interface{}, val MapStr, overwrite bool) interface{} {
+	if old == nil {
+		return val
+	}
+
 	switch sub := old.(type) {
 	case MapStr:
-		if sub == nil {
-			return val
-		}
-
 		sub.deepUpdateMap(val, overwrite)
 		return sub
 	case map[string]interface{}:
-		if sub == nil {
-			return val
-		}
-
 		tmp := MapStr(sub)
 		tmp.deepUpdateMap(val, overwrite)
 		return tmp
 	default:
-		// We reach the default branch if old is no map or if old == nil.
-		// In either case we return `val`, such that the old value is completely
-		// replaced when merging.
+		// This should never happen
 		return val
 	}
 }

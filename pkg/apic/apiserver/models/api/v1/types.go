@@ -76,6 +76,7 @@ type Metadata struct {
 	State string `json:"state,omitempty"`
 }
 
+// EventPayload -
 type EventPayload struct {
 	GroupKind
 	Scope      MetadataScope     `json:"scope"`
@@ -86,11 +87,15 @@ type EventPayload struct {
 	References []Reference       `json:"references"`
 }
 
+// EventType -
 type EventType string
 
 const (
+	// ResourceEntryCreatedEvent -
 	ResourceEntryCreatedEvent EventType = "ResourceEntryCreatedEvent"
+	// ResourceEntryDeletedEvent -
 	ResourceEntryDeletedEvent EventType = "ResourceEntryDeletedEvent"
+	// ResourceEntryUpdatedEvent -
 	ResourceEntryUpdatedEvent EventType = "ResourceEntryUpdatedEvent"
 )
 
@@ -99,4 +104,10 @@ type Event struct {
 	ID      string
 	Type    EventType
 	Payload EventPayload
+}
+
+// Finalizer Finalizer on the API server resource.
+type Finalizer struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
 }

@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
+	"github.com/tomnomnom/linkheader"
 )
 
 // HTTPClient allows you to replace the default client for different use cases
@@ -20,6 +22,7 @@ func HTTPClient(client *http.Client) Options {
 	}
 }
 
+// Authenticate Basic authentication
 func (ba *basicAuth) Authenticate(req *http.Request) error {
 	req.SetBasicAuth(ba.user, ba.pass)
 	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
@@ -33,6 +36,7 @@ func (ba *basicAuth) impersonate(req *http.Request, toImpersonate string) error 
 	return nil
 }
 
+// Authenticate JWT Authentication
 func (j *jwtAuth) Authenticate(req *http.Request) error {
 	t, err := j.tokenGetter.GetToken()
 	if err != nil {
@@ -41,6 +45,10 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
 	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
 	return nil
+}
+
+type modifier interface {
+	Modify()
 }
 
 // BasicAuth auth with user/pass
@@ -62,7 +70,7 @@ func BasicAuth(user, password, tenantID, instanceID string) Options {
 // JWTAuth auth with token
 func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
 	return func(c *ClientBase) {
-		tokenGetter := apicauth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
+		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,
@@ -217,7 +225,7 @@ func (c *Client) WithScope(scope string) Scoped {
 }
 
 // WithQuery applies a query on the list operation
-func WithQuery(n QueryNode) func(*listOptions) {
+func WithQuery(n QueryNode) ListOptions {
 	return func(lo *listOptions) {
 		lo.query = n
 	}
@@ -252,23 +260,48 @@ func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.
 		q.Add("query", rv.String())
 		req.URL.RawQuery = q.Encode()
 	}
+	return c.listAll(req)
+}
 
+func (c *Client) doOneRequest(req *http.Request) ([]*apiv1.ResourceInstance, linkheader.Links, error) {
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, handleError(res)
+		return nil, nil, handleError(res)
 	}
 	dec := json.NewDecoder(res.Body)
-	objs := []*apiv1.ResourceInstance{}
+	var objs []*apiv1.ResourceInstance
 	err = dec.Decode(&objs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	links := linkheader.Parse(res.Header.Get("Link"))
+	return objs, links.FilterByRel("next"), nil
+}
 
+// fetch all items based on the Link headers
+func (c *Client) listAll(req *http.Request) ([]*apiv1.ResourceInstance, error) {
+	var objs []*apiv1.ResourceInstance
+	for {
+		res, links, err := c.doOneRequest(req)
+		if err != nil {
+			return nil, err
+		}
+		objs = append(objs, res...)
+		if links == nil || len(links) == 0 {
+			break
+		}
+		link := links[0]
+		parsedLink, err := url.Parse(link.URL)
+		if err != nil {
+			return nil, err
+		}
+		req.URL.RawQuery = parsedLink.RawQuery
+	}
 	return objs, nil
 }
 

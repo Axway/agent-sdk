@@ -1,27 +1,33 @@
-# git.ecd.axway.org/apigov/service-mesh-agent v0.0.0-20200403174456-0ed253ddefa8
-git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth
-# github.com/BurntSushi/toml v0.3.1
-github.com/BurntSushi/toml
-# github.com/armon/go-radix v1.0.0
-github.com/armon/go-radix
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
 github.com/dgrijalva/jwt-go
-# github.com/elastic/beats/v7 v7.9.1
+# github.com/elastic/beats/v7 v7.7.1
 github.com/elastic/beats/v7/libbeat/beat
+github.com/elastic/beats/v7/libbeat/cloudid
 github.com/elastic/beats/v7/libbeat/common
-github.com/elastic/beats/v7/libbeat/common/bus
+github.com/elastic/beats/v7/libbeat/common/atomic
+github.com/elastic/beats/v7/libbeat/common/backoff
+github.com/elastic/beats/v7/libbeat/common/cfgwarn
+github.com/elastic/beats/v7/libbeat/common/dtfmt
 github.com/elastic/beats/v7/libbeat/common/file
+github.com/elastic/beats/v7/libbeat/common/fmtstr
+github.com/elastic/beats/v7/libbeat/common/match
 github.com/elastic/beats/v7/libbeat/common/reload
 github.com/elastic/beats/v7/libbeat/common/transport
 github.com/elastic/beats/v7/libbeat/common/transport/tlscommon
+github.com/elastic/beats/v7/libbeat/conditions
 github.com/elastic/beats/v7/libbeat/feature
-github.com/elastic/beats/v7/libbeat/instrumentation
-github.com/elastic/beats/v7/libbeat/keystore
 github.com/elastic/beats/v7/libbeat/logp
 github.com/elastic/beats/v7/libbeat/management
+github.com/elastic/beats/v7/libbeat/monitoring
+github.com/elastic/beats/v7/libbeat/monitoring/report
+github.com/elastic/beats/v7/libbeat/outputs
+github.com/elastic/beats/v7/libbeat/outputs/outil
+github.com/elastic/beats/v7/libbeat/outputs/transport
 github.com/elastic/beats/v7/libbeat/paths
+github.com/elastic/beats/v7/libbeat/plugin
+github.com/elastic/beats/v7/libbeat/publisher
 github.com/elastic/beats/v7/libbeat/testing
 # github.com/elastic/go-sysinfo v1.3.0
 github.com/elastic/go-sysinfo
@@ -46,24 +52,20 @@ github.com/emersion/go-sasl
 github.com/emersion/go-smtp
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
-# github.com/fsnotify/fsnotify v1.4.7 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
+# github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
 github.com/fsnotify/fsnotify
-# github.com/getkin/kin-openapi v0.21.0
+# github.com/getkin/kin-openapi v0.9.0
 github.com/getkin/kin-openapi/jsoninfo
 github.com/getkin/kin-openapi/openapi3
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
-# github.com/gofrs/uuid v3.3.0+incompatible
+# github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
-# github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f
+# github.com/google/uuid v1.1.2
 github.com/google/uuid
 # github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542
 github.com/h2non/parth
-# github.com/hashicorp/errwrap v1.0.0
-github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.1.0
-github.com/hashicorp/go-multierror
-# github.com/hashicorp/hcl v1.0.0
+# github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
 github.com/hashicorp/hcl/hcl/parser
@@ -80,37 +82,31 @@ github.com/inconshreveable/mousetrap
 github.com/joeshaw/multierror
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/magefile/mage v1.10.0
-github.com/magefile/mage/mg
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.0.9
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.3
 github.com/mattn/go-isatty
-# github.com/mitchellh/mapstructure v1.1.2
+# github.com/mitchellh/mapstructure v1.3.2
 github.com/mitchellh/mapstructure
 # github.com/opentracing/opentracing-go v1.2.0
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/log
-# github.com/pelletier/go-toml v1.2.0
+# github.com/pelletier/go-toml v1.4.0
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/procfs v0.0.11
+# github.com/prometheus/procfs v0.0.9-0.20191208103036-42f6e295b56f
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/santhosh-tekuri/jsonschema v1.2.4
-github.com/santhosh-tekuri/jsonschema
-github.com/santhosh-tekuri/jsonschema/decoders
-github.com/santhosh-tekuri/jsonschema/formats
-github.com/santhosh-tekuri/jsonschema/loader
-github.com/santhosh-tekuri/jsonschema/mediatypes
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
+# github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
+github.com/snowzach/rotatefilehook
 # github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
@@ -122,48 +118,25 @@ github.com/spf13/cobra
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.7.0
+# github.com/spf13/viper v1.7.1
 github.com/spf13/viper
 # github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# github.com/tidwall/gjson v1.6.1
+# github.com/tidwall/gjson v1.6.4
 github.com/tidwall/gjson
-# github.com/tidwall/match v1.0.1
+# github.com/tidwall/match v1.0.2
 github.com/tidwall/match
 # github.com/tidwall/pretty v1.0.2
 github.com/tidwall/pretty
-# go.elastic.co/apm v1.7.2
-go.elastic.co/apm
-go.elastic.co/apm/apmconfig
-go.elastic.co/apm/internal/apmcontext
-go.elastic.co/apm/internal/apmhostutil
-go.elastic.co/apm/internal/apmhttputil
-go.elastic.co/apm/internal/apmlog
-go.elastic.co/apm/internal/apmschema
-go.elastic.co/apm/internal/apmstrings
-go.elastic.co/apm/internal/apmversion
-go.elastic.co/apm/internal/configutil
-go.elastic.co/apm/internal/iochan
-go.elastic.co/apm/internal/pkgerrorsutil
-go.elastic.co/apm/internal/ringbuffer
-go.elastic.co/apm/internal/wildcard
-go.elastic.co/apm/model
-go.elastic.co/apm/stacktrace
-go.elastic.co/apm/transport
-# go.elastic.co/ecszap v0.1.1-0.20200424093508-cdd95a104193
-go.elastic.co/ecszap
-go.elastic.co/ecszap/internal
-# go.elastic.co/fastjson v1.0.0
-go.elastic.co/fastjson
-# go.uber.org/atomic v1.5.0
+# github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
+github.com/tomnomnom/linkheader
+# go.uber.org/atomic v1.4.0
 go.uber.org/atomic
-# go.uber.org/multierr v1.3.0
+# go.uber.org/multierr v1.1.1-0.20170829224307-fb7d312c2c04
 go.uber.org/multierr
-# go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
-go.uber.org/tools/update-license
-# go.uber.org/zap v1.14.0
+# go.uber.org/zap v1.10.0
 go.uber.org/zap
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/bufferpool
@@ -171,81 +144,26 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zaptest/observer
-# golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-golang.org/x/crypto/pbkdf2
-# golang.org/x/lint v0.0.0-20200130185559-910be7a94367
-golang.org/x/lint
-golang.org/x/lint/golint
-# golang.org/x/mod v0.3.0
-golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+# golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/sys v0.0.0-20200620081246-981b61492c35
-golang.org/x/sys/internal/unsafeheader
+# golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc/eventlog
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.0.0-20200701041122-1837592efa10
-golang.org/x/tools/go/analysis
-golang.org/x/tools/go/analysis/passes/inspect
-golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/go/ast/inspector
-golang.org/x/tools/go/buildutil
-golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/go/packages
-golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/analysisinternal
-golang.org/x/tools/internal/event
-golang.org/x/tools/internal/event/core
-golang.org/x/tools/internal/event/keys
-golang.org/x/tools/internal/event/label
-golang.org/x/tools/internal/gocommand
-golang.org/x/tools/internal/packagesinternal
-golang.org/x/tools/internal/typesinternal
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
 # gopkg.in/h2non/gock.v1 v1.0.15
 gopkg.in/h2non/gock.v1
 # gopkg.in/ini.v1 v1.51.0
 gopkg.in/ini.v1
+# gopkg.in/natefinch/lumberjack.v2 v2.0.0
+gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+# gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.0.1-2019.2.3
-honnef.co/go/tools/arg
-honnef.co/go/tools/cmd/staticcheck
-honnef.co/go/tools/config
-honnef.co/go/tools/deprecated
-honnef.co/go/tools/facts
-honnef.co/go/tools/functions
-honnef.co/go/tools/go/types/typeutil
-honnef.co/go/tools/internal/cache
-honnef.co/go/tools/internal/passes/buildssa
-honnef.co/go/tools/internal/renameio
-honnef.co/go/tools/internal/sharedcheck
-honnef.co/go/tools/lint
-honnef.co/go/tools/lint/lintdsl
-honnef.co/go/tools/lint/lintutil
-honnef.co/go/tools/lint/lintutil/format
-honnef.co/go/tools/loader
-honnef.co/go/tools/printf
-honnef.co/go/tools/simple
-honnef.co/go/tools/ssa
-honnef.co/go/tools/ssautil
-honnef.co/go/tools/staticcheck
-honnef.co/go/tools/staticcheck/vrp
-honnef.co/go/tools/stylecheck
-honnef.co/go/tools/unused
-honnef.co/go/tools/version
 # howett.net/plist v0.0.0-20181124034731-591f970eefbb
 howett.net/plist

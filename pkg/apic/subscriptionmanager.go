@@ -4,7 +4,10 @@ import (
 	"sync"
 	"time"
 
+	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/notification"
+	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 )
 
@@ -18,6 +21,7 @@ type SubscriptionManager interface {
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
 	AddBlacklistItem(id string)
 	RemoveBlacklistItem(id string)
+	OnConfigChange(apicClient *ServiceClient)
 }
 
 // subscriptionManager -
@@ -50,6 +54,11 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	return subscriptionMgr
 }
 
+// OnConfigChange - config change handler
+func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
+	sm.apicClient = apicClient
+}
+
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	processorList, ok := sm.processorMap[state]
@@ -80,6 +89,8 @@ func (sm *subscriptionManager) pollSubscriptions() {
 					}
 				}
 			}
+			ticker.Stop()
+			ticker = time.NewTicker(sm.apicClient.cfg.GetPollInterval())
 		case <-sm.publishQuitChannel:
 			return
 		}
@@ -95,7 +106,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
 				sm.preprocessSubscription(&subscription)
-				if subscription.ApicID != "" {
+				if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
 					sm.invokeProcessor(subscription)
 				}
 			}
@@ -106,51 +117,67 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
-	subscription.ApicID = subscription.CatalogItemID
+	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
-	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.CatalogItemID)
-	if err == nil && apiserverInfo.Environment.Name == sm.apicClient.cfg.GetEnvironmentName() {
-		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+
+	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID())
+	if err != nil {
+		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
+		return
 	}
+	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
+		log.Debugf("Subscription '%s' skipped because its catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
+		return
+	}
+
+	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
 	consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(consumerInstanceName, nil)
 	if err == nil {
 		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
-			sm.setSubscripitionInfo(subscription, consumerInstance)
+			resource, _ := consumerInstance.AsInstance()
+			sm.setSubscriptionInfo(subscription, resource)
 		} else {
+			log.Debug("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
 		}
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *APIServer) {
-	if consumerInstance.Metadata != nil && len(consumerInstance.Metadata.References) > 0 {
+func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subscription *CentralSubscription, consumerInstance *v1alpha1.ConsumerInstance) {
+	if consumerInstance != nil && len(consumerInstance.Metadata.References) > 0 {
 		for _, reference := range consumerInstance.Metadata.References {
 			if reference.Kind == "APIServiceInstance" {
-				apiServiceInstane, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
+				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
 				if err == nil {
-					sm.setSubscripitionInfo(subscription, apiServiceInstane)
+					resource, _ := apiServiceInstance.AsInstance()
+					sm.setSubscriptionInfo(subscription, resource)
+				} else {
+					log.Errorf(err.Error())
 				}
 			}
 		}
 	}
 }
 
-// setSubscripitionInfo - Sets subscription identifier that will be used as references
-// - ApicID - using the metadata of API server resoure metadata.id
+// setSubscriptionInfo - Sets subscription identifier that will be used as references
+// - ApicID - using the metadata of API server resource metadata.id
 // - RemoteAPIID - using the attribute externalAPIID on API server resource
-func (sm *subscriptionManager) setSubscripitionInfo(subscription *CentralSubscription, apiServerResource *APIServer) {
-	if apiServerResource != nil && apiServerResource.Metadata != nil {
+// - RemoteAPIStage - using the attribute externalAPIStage on API server resource (if present)
+func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
+	if apiServerResource != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
-		for name, value := range apiServerResource.Attributes {
-			if name == AttrExternalAPIID {
-				subscription.RemoteAPIID = value.(string)
-			}
+		subscription.RemoteAPIID = apiServerResource.Attributes[AttrExternalAPIID]
+		subscription.RemoteAPIStage = apiServerResource.Attributes[AttrExternalAPIStage]
+		if subscription.RemoteAPIStage != "" {
+			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
+				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
+		} else {
+			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s, Remote API Stage: %s)",
+				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID, subscription.RemoteAPIStage)
 		}
-		log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
-			subscription.ID, apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
 	}
 }
 
@@ -160,7 +187,7 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 		invokeProcessor = sm.validator(&subscription)
 	}
 	if invokeProcessor {
-		processorList, ok := sm.processorMap[SubscriptionState(subscription.State)]
+		processorList, ok := sm.processorMap[SubscriptionState(subscription.GetState())]
 		if ok {
 			for _, processor := range processorList {
 				processor(&subscription)

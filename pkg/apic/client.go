@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
 	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
 )
 
 // constants for auth policy types
@@ -35,61 +35,62 @@ type SubscriptionValidator func(subscription Subscription) bool
 
 // Client - interface
 type Client interface {
-	CreateService(serviceBody ServiceBody) (string, error)
-	UpdateService(ID string, serviceBody ServiceBody) (string, error)
+	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
+	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteConsumerInstance(instanceName string) error
-	GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error)
+	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
 	GetUserEmailAddress(ID string) (string, error)
-	GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error)
+	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
+	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
-}
-
-type tokenGetter interface {
-	GetToken() (string, error)
-}
-
-type platformTokenGetter struct {
-	requester *apicauth.PlatformTokenGetter
-}
-
-func (p *platformTokenGetter) GetToken() (string, error) {
-	return p.requester.GetToken()
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
+	OnConfigChange(cfg corecfg.CentralConfig)
 }
 
 // New -
-func New(cfg corecfg.CentralConfig) Client {
-	tokenURL := cfg.GetAuthConfig().GetTokenURL()
-	aud := cfg.GetAuthConfig().GetAudience()
-	priKey := cfg.GetAuthConfig().GetPrivateKey()
-	pubKey := cfg.GetAuthConfig().GetPublicKey()
-	keyPwd := cfg.GetAuthConfig().GetKeyPassword()
-	clientID := cfg.GetAuthConfig().GetClientID()
-	authTimeout := cfg.GetAuthConfig().GetTimeout()
-	platformTokenGetter := &platformTokenGetter{
-		requester: apicauth.NewPlatformTokenGetter(priKey, pubKey, keyPwd, tokenURL, aud, clientID, authTimeout),
-	}
-	serviceClient := &ServiceClient{
-		cfg:                       cfg,
-		tokenRequester:            platformTokenGetter,
-		apiClient:                 coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
-		DefaultSubscriptionSchema: NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
-	}
+func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
 
-	// set the default webhook if one has been configured
-	webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	if webCfg != nil && webCfg.IsConfigured() {
-		serviceClient.DefaultSubscriptionApprovalWebhook = webCfg
-	}
+	serviceClient := &ServiceClient{}
+	serviceClient.SetTokenGetter(tokenRequester)
 
-	serviceClient.subscriptionMgr = newSubscriptionManager(serviceClient)
-
+	serviceClient.OnConfigChange(cfg)
 	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
 	return serviceClient
+}
+
+// OnConfigChange - config change handler
+func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
+	c.cfg = cfg
+	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL())
+	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
+
+	// set the default webhook if one has been configured
+	if cfg.GetSubscriptionConfig() != nil {
+		webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
+		if webCfg != nil && webCfg.IsConfigured() {
+			c.DefaultSubscriptionApprovalWebhook = webCfg
+		}
+
+		if c.subscriptionMgr == nil {
+			c.subscriptionMgr = newSubscriptionManager(c)
+		} else {
+			c.subscriptionMgr.OnConfigChange(c)
+		}
+	}
+
+	// complete the API server healthcheck to retrieve the environment and team ids
+	c.checkAPIServerHealth()
+}
+
+// SetTokenGetter - sets the token getter
+func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) {
+	c.tokenRequester = tokenRequester
 }
 
 // mapToTagsArray -
@@ -127,10 +128,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-func isUnitTesting() bool {
-	return strings.HasSuffix(os.Args[0], ".test")
-}
-
 func logResponseErrors(body []byte) {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
@@ -156,6 +153,11 @@ func (c *ServiceClient) createHeader() (map[string]string, error) {
 // GetSubscriptionManager -
 func (c *ServiceClient) GetSubscriptionManager() SubscriptionManager {
 	return c.subscriptionMgr
+}
+
+// SetSubscriptionManager -
+func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
+	c.subscriptionMgr = mgr
 }
 
 func (c *ServiceClient) healthcheck(name string) *hc.Status {
@@ -210,43 +212,34 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 
-		// Validate if team exists
-		if c.cfg.GetTeamName() != "" {
-			_, err := c.getTeamByName(c.cfg.GetTeamName())
-			if err != nil {
-				return err
-			}
-		}
-
-		err = c.updateEnvironmentStatus(*apiEnvironment)
+		err = c.updateEnvironmentStatus(apiEnvironment)
 		if err != nil {
 			return err
 		}
 	}
+
+	if c.cfg.GetTeamID() == "" {
+		// Validate if team exists
+		team, err := c.getCentralTeam(c.cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+		// Set the team Id
+		c.cfg.SetTeamID(team.ID)
+	}
 	return nil
 }
 
-func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error {
+func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment *v1alpha1.Environment) error {
 	attribute := "x-axway-agent"
-	attributes := apiEnvironment.Attributes
-
 	// check to see if x-axway-agent has already been set
-	if _, found := attributes[attribute]; found {
+	if _, found := apiEnvironment.Attributes[attribute]; found {
 		log.Debugf("Environment attribute: %s is already set.", attribute)
 		return nil
 	}
+	apiEnvironment.Attributes[attribute] = "true"
 
-	attributes[attribute] = "true"
-
-	apiServer := APIServer{
-		Name:       apiEnvironment.Name,
-		Title:      apiEnvironment.Title,
-		Attributes: attributes,
-		Spec:       apiEnvironment.Spec,
-		Tags:       apiEnvironment.Tags,
-	}
-
-	buffer, err := json.Marshal(apiServer)
+	buffer, err := json.Marshal(apiEnvironment)
 	if err != nil {
 		return nil
 	}
@@ -259,7 +252,7 @@ func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment APIServer) error 
 	return nil
 }
 
-func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, error) {
+func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {
 	queryParams := map[string]string{}
 
 	// do a request for the environment
@@ -269,17 +262,13 @@ func (c *ServiceClient) getEnvironment(headers map[string]string) (*APIServer, e
 	}
 
 	// Get env id from apiServerEnvByte
-	var apiEnvironment APIServer
+	var apiEnvironment v1alpha1.Environment
 	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
-	if apiEnvironment.Metadata == nil {
-		return nil, ErrEnvironmentQuery
-	}
-
 	if apiEnvironment.Metadata.ID == "" {
 		return nil, ErrEnvironmentQuery
 	}
@@ -310,26 +299,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrRequestQuery
 	}
 
-}
-
-// GetCatalogItemIDForConsumerInstance -
-func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
-	return c.getCatalogItemIDForConsumerInstance(instanceID)
-}
-
-// DeleteConsumerInstance -
-func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
-	return c.deleteConsumerInstance(instanceName)
-}
-
-// GetConsumerInstanceByID -
-func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*APIServer, error) {
-	return c.getConsumerInstanceByID((consumerInstanceID))
-}
-
-// GetSubscriptionsForCatalogItem -
-func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
-	return c.getSubscriptionsForCatalogItem(states, instanceID)
 }
 
 // GetUserEmailAddress - request the user email
@@ -363,10 +332,15 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	return email, nil
 }
 
-// getTeamByName - returns the team based on team name
-func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
-	queryParams := map[string]string{
-		"query": fmt.Sprintf("name==\"%s\"", teamName),
+// getCentralTeam - returns the team based on team name
+func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+	// Query for the default, if no teamName is given
+	queryParams := map[string]string{}
+
+	if teamName != "" {
+		queryParams = map[string]string{
+			"query": fmt.Sprintf("name==\"%s\"", teamName),
+		}
 	}
 	platformTeams, err := c.getTeam(queryParams)
 	if err != nil {
@@ -377,7 +351,19 @@ func (c *ServiceClient) getTeamByName(teamName string) (*PlatformTeam, error) {
 		return nil, ErrTeamNotFound.FormatError(teamName)
 	}
 
-	return &platformTeams[0], nil
+	team := platformTeams[0]
+	if teamName == "" {
+		// Loop through to find the default team
+		for i, platformTeam := range platformTeams {
+			if platformTeam.Default {
+				// Found the default, set as the team var and break
+				team = platformTeams[i]
+				break
+			}
+		}
+	}
+
+	return &team, nil
 }
 
 // getTeam - returns the team ID based on filter
@@ -388,7 +374,7 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	// Get the teams using Client registry service instead of from platform.
-	// Platform teams API require access and DOSA accound will not have the access
+	// Platform teams API require access and DOSA account will not have the access
 	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
 
 	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
@@ -403,4 +389,35 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	return platformTeams, nil
+}
+
+// ExecuteAPI - execute the api
+func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:      method,
+		URL:         url,
+		QueryParams: queryParam,
+		Headers:     headers,
+		Body:        buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, errors.Wrap(ErrNetwork, err.Error())
+	}
+
+	switch response.Code {
+	case http.StatusOK:
+		return response.Body, nil
+	case http.StatusUnauthorized:
+		return nil, ErrAuthentication
+	default:
+		logResponseErrors(response.Body)
+		return nil, ErrRequestQuery
+	}
 }

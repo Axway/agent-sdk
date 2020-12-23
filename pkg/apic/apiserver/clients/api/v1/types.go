@@ -8,7 +8,7 @@ import (
 	"net/http/httputil"
 
 	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/service-mesh-agent/pkg/apicauth"
+	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
 	ot "github.com/opentracing/opentracing-go"
 )
 
@@ -45,7 +45,7 @@ type basicAuth struct {
 
 type jwtAuth struct {
 	tenantID    string
-	tokenGetter *apicauth.PlatformTokenGetter
+	tokenGetter auth.PlatformTokenGetter
 }
 
 type requestDoer interface {
@@ -101,24 +101,29 @@ type Client struct {
 	query         string
 }
 
+// Base -
 type Base interface {
 	ForKind(apiv1.GroupVersionKind) (Unscoped, error)
 }
 
+// BaseCtx -
 type BaseCtx interface {
 	ForKindCtx(apiv1.GroupVersionKind) (UnscopedCtx, error)
 }
 
+// UnscopedCtx -
 type UnscopedCtx interface {
 	ScopedCtx
 	WithScope(name string) ScopedCtx
 }
 
+// Unscoped -
 type Unscoped interface {
 	Scoped
 	WithScope(name string) Scoped
 }
 
+// ScopedCtx -
 type ScopedCtx interface {
 	CreateCtx(context.Context, *apiv1.ResourceInstance, ...CreateOption) (*apiv1.ResourceInstance, error)
 	DeleteCtx(context.Context, *apiv1.ResourceInstance) error
@@ -148,18 +153,22 @@ type createOptions struct {
 	impersonateUserID string
 }
 
+// ListOptions -
 type ListOptions func(*listOptions)
 
 type listOptions struct {
 	query QueryNode
 }
 
+// EventHandler -
 type EventHandler interface {
 	Handle(*apiv1.Event)
 }
 
+// EventHandlerFunc -
 type EventHandlerFunc func(*apiv1.Event)
 
+// Handle -
 func (ehf EventHandlerFunc) Handle(ev *apiv1.Event) {
 	ehf(ev)
 }

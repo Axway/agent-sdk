@@ -11,10 +11,10 @@ package v1alpha1
 
 // ApiSpecSpecDefinition struct for ApiSpecSpecDefinition
 type ApiSpecSpecDefinition struct {
-	// Consistent hash of the value.
-	Hash string `json:"hash,omitempty"`
 	// The type of the api specification. Example oas3, oas2, wsdl, protobuf.
 	Type string `json:"type,omitempty"`
 	// Base64 encoded value of the api specification.
 	Value string `json:"value,omitempty"`
+	// Consistent hash of the value.
+	Hash string `json:"hash,omitempty"`
 }

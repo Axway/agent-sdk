@@ -40,13 +40,21 @@ func buildConfig() (config.SubscriptionConfig, error) {
 	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.subject", "unsubscribe failed subject", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.body", "unsubscribe failed body", "")
 
-	return config.ParseSubscriptionConfig(props)
+	cfg := config.ParseSubscriptionConfig(props)
+	err := config.ValidateConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func TestSubscriptionNotification(t *testing.T) {
 	cfg, err := buildConfig()
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
+
+	assert.Nil(t, err)
+
 	SetSubscriptionConfig(cfg)
 
 	catalogID := "12345"
@@ -67,7 +75,8 @@ func TestSubscriptionNotification(t *testing.T) {
 	subNotif.SetCatalogItemInfo(catalogID, catalogName, catalogItemURL)
 	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
 
-	subNotif.apiClient = &coreapi.MockClient{}
+	// set up a mock HTTP client
+	subNotif.apiClient = &coreapi.MockHTTPClient{}
 
 	// Set the authtemplate based on the authtype
 	subNotif.SetAuthorizationTemplate("")           // try a bad value

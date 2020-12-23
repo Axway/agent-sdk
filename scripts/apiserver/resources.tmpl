@@ -40,7 +40,7 @@ func init() {
 type {{.res.kind}} struct {
 	apiv1.ResourceMeta
 	{{range $field, $isNotEmpty := .res.fields}}
-		{{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{$field | strings.ToLower}}"`
+		{{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{$field | strings.ToLower}}"`
 	{{end}}
 }
 
@@ -56,7 +56,7 @@ func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
 		return err
 	}
 
-	spec := &{{if .res.fields.spec }}{{$.res.kind | strings.ReplaceAll "API" "Api"}}Spec{{else}}struct{}{{end}}{}
+	spec := &{{if .res.fields.spec }}{{$.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws"}}Spec{{else}}struct{}{{end}}{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err

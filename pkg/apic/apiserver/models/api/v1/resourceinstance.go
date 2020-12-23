@@ -7,10 +7,12 @@ type ResourceInstance struct {
 	Spec map[string]interface{} `json:"spec"`
 }
 
+// AsInstance -
 func (ri *ResourceInstance) AsInstance() (*ResourceInstance, error) {
 	return ri, nil
 }
 
+// FromInstance -
 func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 	*ri = *from
 

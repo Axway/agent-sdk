@@ -16,9 +16,12 @@ func TestSubscriptionWebhookConfig(t *testing.T) {
 	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
 	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Value=application/json", "")
 
-	cfg, err := ParseSubscriptionConfig(props)
-	assert.Nil(t, err)
+	cfg := ParseSubscriptionConfig(props)
 	assert.NotNil(t, cfg)
+
+	err := ValidateConfig(cfg)
+	assert.Nil(t, err)
+
 	assert.Equal(t, "https://foo.bar", cfg.GetWebhookURL())
 	m := map[string]string{"contentType": "application/json"}
 	assert.Equal(t, m, cfg.GetWebhookHeaders())
@@ -36,8 +39,10 @@ func TestSubscriptionWebhookConfig(t *testing.T) {
 	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "x", "")
 	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Value=application/json", "")
 
-	cfg, err = ParseSubscriptionConfig(props)
-	assert.Nil(t, cfg)
+	cfg = ParseSubscriptionConfig(props)
+	err = ValidateConfig(cfg)
+
+	assert.NotNil(t, cfg)
 	assert.NotNil(t, err)
 	assert.Equal(t, "central.subscriptions.notifications.webhook is not a valid URL", err.Error())
 
@@ -49,10 +54,40 @@ func TestSubscriptionWebhookConfig(t *testing.T) {
 	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
 	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Valaaaue=application/json", "")
 
-	cfg, err = ParseSubscriptionConfig(props)
-	assert.Nil(t, cfg)
+	cfg = ParseSubscriptionConfig(props)
+	err = ValidateConfig(cfg)
+
 	assert.NotNil(t, err)
 	assert.Equal(t, "could not parse value of central.subscriptions.notifications.headers", err.Error())
+
+	// this one should be empty header
+	rootCmd = &cobra.Command{
+		Use: "test",
+	}
+	props = properties.NewProperties(rootCmd)
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "", "")
+
+	cfg = ParseSubscriptionConfig(props)
+	err = ValidateConfig(cfg)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "central.subscriptions.notifications.headers cannot be empty", err.Error())
+
+	// this one should be ok, approval mode webhook
+	rootCmd = &cobra.Command{
+		Use: "test",
+	}
+	props = properties.NewProperties(rootCmd)
+	props.AddStringProperty("central.subscriptions.approval.mode", "webhook", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.url", "https://foo.bar", "")
+	props.AddStringProperty("central.subscriptions.notifications.webhook.headers", "Header=contentType,Value=application/json", "")
+
+	cfg = ParseSubscriptionConfig(props)
+	err = ValidateConfig(cfg)
+
+	assert.Nil(t, err)
+	// assert.Equal(t, "central.subscriptions.notifications.headers cannot be empty", err.Error())
 }
 
 func TestSubscriptionSMTPConfig(t *testing.T) {
@@ -82,9 +117,11 @@ func TestSubscriptionSMTPConfig(t *testing.T) {
 	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.subject", "unsubscribe failed subject", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.body", "unsubscribe failed body", "")
 
-	cfg, err := ParseSubscriptionConfig(props)
-	assert.Nil(t, err)
+	cfg := ParseSubscriptionConfig(props)
 	assert.NotNil(t, cfg)
+
+	err := ValidateConfig(cfg)
+	assert.Nil(t, err)
 
 	types := cfg.GetNotificationTypes()
 	assert.NotNil(t, types)

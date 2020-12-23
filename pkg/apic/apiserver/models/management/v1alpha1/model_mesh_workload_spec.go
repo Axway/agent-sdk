@@ -11,7 +11,10 @@ package v1alpha1
 
 // MeshWorkloadSpec struct for MeshWorkloadSpec
 type MeshWorkloadSpec struct {
-	Labels    map[string]string       `json:"labels,omitempty"`
-	Ports     []MeshWorkloadSpecPorts `json:"ports,omitempty"`
-	Resources []string                `json:"resources,omitempty"`
+	// References to k8sresources making up the workload.
+	Resources []string `json:"resources,omitempty"`
+	// Labels from the k8sresources making up the workload.
+	Labels map[string]string `json:"labels,omitempty"`
+	// Discovered ports on the workload.
+	Ports []MeshWorkloadSpecPorts `json:"ports,omitempty"`
 }

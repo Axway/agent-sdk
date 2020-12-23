@@ -11,8 +11,8 @@ package v1alpha1
 
 // SpecDiscoverySpecTargetsExactPaths struct for SpecDiscoverySpecTargetsExactPaths
 type SpecDiscoverySpecTargetsExactPaths struct {
-	// headers to add to the query
-	Headers map[string]string `json:"headers,omitempty"`
 	// path to api definition
 	Path string `json:"path,omitempty"`
+	// headers to add to the query
+	Headers map[string]string `json:"headers,omitempty"`
 }

@@ -45,6 +45,7 @@ func GetResource(gv GroupKind) (r string, ok bool) {
 	return
 }
 
+// GVKSet -
 func GVKSet() []GroupVersionKind {
 	res := make([]GroupVersionKind, len(gvkSet))
 

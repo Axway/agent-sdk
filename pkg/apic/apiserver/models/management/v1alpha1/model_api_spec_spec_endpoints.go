@@ -11,14 +11,14 @@ package v1alpha1
 
 // ApiSpecSpecEndpoints struct for ApiSpecSpecEndpoints
 type ApiSpecSpecEndpoints struct {
+	// The type of the endpoint.
+	Type string `json:"type,omitempty"`
 	// The host of the pod <namespace>.<pod-name>
 	Host string `json:"host,omitempty"`
-	// The labels for the pod this spec was discovered on
-	Labels map[string]string `json:"labels,omitempty"`
-	// The path on which this spec was discovered
-	Path string `json:"path,omitempty"`
-	// The port of the pod on which this spec was discovered
+	// The port of the pod on which this spec was discovered.
 	Port string `json:"port,omitempty"`
-	// The type of the endpoint
-	Type string `json:"type,omitempty"`
+	// The path on which this spec was discovered.
+	Path string `json:"path,omitempty"`
+	// The labels for the pod this spec was discovered on.
+	Labels map[string]string `json:"labels,omitempty"`
 }

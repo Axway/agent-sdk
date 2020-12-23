@@ -33,14 +33,23 @@ type Daemon interface {
 	// Enable - sets the service to persist reboots
 	Enable() (string, error)
 
+	// Logs - gets the service logs
+	Logs() (string, error)
+
 	// Run - run executable service
 	Run(e Executable) (string, error)
+
+	// SetEnvFile - sets the environment file argument for generating the agent command
+	SetEnvFile(string) error
 
 	// SetUser - sets the user that executes the service
 	SetUser(string) error
 
 	// setGroup - sets the group that executes the service
 	SetGroup(string) error
+
+	// GetServiceName - gets the name of the service
+	GetServiceName() string
 }
 
 // Executable interface defines controlling methods of executable service

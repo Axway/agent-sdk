@@ -29,10 +29,10 @@ var (
 	ErrNotACertificate = errors.New("file is not a certificate")
 
 	// ErrCertificateNoKey indicate a configuration error with missing key file
-	ErrKeyUnspecified = errors.New("key file not configured")
+	ErrCertificateNoKey = errors.New("key file not configured")
 
 	// ErrKeyNoCertificate indicate a configuration error with missing certificate file
-	ErrCertificateUnspecified = errors.New("certificate file not configured")
+	ErrKeyNoCertificate = errors.New("certificate file not configured")
 )
 
 var tlsCipherSuites = map[string]tlsCipherSuite{
@@ -65,10 +65,6 @@ var tlsCipherSuites = map[string]tlsCipherSuite{
 	"RSA-AES-128-GCM-SHA256": tlsCipherSuite(tls.TLS_RSA_WITH_AES_128_GCM_SHA256),
 	"RSA-AES-256-CBC-SHA":    tlsCipherSuite(tls.TLS_RSA_WITH_AES_256_CBC_SHA),
 	"RSA-AES-256-GCM-SHA384": tlsCipherSuite(tls.TLS_RSA_WITH_AES_256_GCM_SHA384),
-
-	"TLS-AES-128-GCM-SHA256":       tlsCipherSuite(tls.TLS_AES_128_GCM_SHA256),
-	"TLS-AES-256-GCM-SHA384":       tlsCipherSuite(tls.TLS_AES_256_GCM_SHA384),
-	"TLS-CHACHA20-POLY1305-SHA256": tlsCipherSuite(tls.TLS_CHACHA20_POLY1305_SHA256),
 }
 
 var tlsCipherSuitesInverse = make(map[tlsCipherSuite]string, len(tlsCipherSuites))
@@ -261,9 +257,9 @@ func (c *CertificateConfig) Validate() error {
 
 	switch {
 	case hasCertificate && !hasKey:
-		return ErrKeyUnspecified
+		return ErrCertificateNoKey
 	case !hasCertificate && hasKey:
-		return ErrCertificateUnspecified
+		return ErrKeyNoCertificate
 	}
 	return nil
 }

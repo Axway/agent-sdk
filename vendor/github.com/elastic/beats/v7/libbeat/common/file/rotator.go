@@ -18,7 +18,6 @@
 package file
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -302,7 +301,7 @@ func (r *Rotator) openFile() error {
 
 	r.file, err = os.OpenFile(r.filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, r.permissions)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to open new file '%s'", r.filename))
+		return errors.Wrap(err, "failed to open new file")
 	}
 	if r.redirectStderr {
 		RedirectStandardError(r.file)

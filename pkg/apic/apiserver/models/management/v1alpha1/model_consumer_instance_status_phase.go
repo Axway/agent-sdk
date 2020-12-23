@@ -15,11 +15,11 @@ import (
 
 // ConsumerInstanceStatusPhase struct for ConsumerInstanceStatusPhase
 type ConsumerInstanceStatusPhase struct {
+	Name string `json:"name"`
 	// The criticality of the last update
 	Level string `json:"level"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
-	Name    string `json:"name"`
 	// Time of the current phase.
 	TransitionTime time.Time `json:"transitionTime"`
+	// Description of the phase.
+	Message string `json:"message,omitempty"`
 }

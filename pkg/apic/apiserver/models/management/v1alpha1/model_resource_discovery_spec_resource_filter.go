@@ -11,6 +11,6 @@ package v1alpha1
 
 // ResourceDiscoverySpecResourceFilter Resource filter.
 type ResourceDiscoverySpecResourceFilter struct {
-	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 	Names       []string          `json:"names,omitempty"`
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }

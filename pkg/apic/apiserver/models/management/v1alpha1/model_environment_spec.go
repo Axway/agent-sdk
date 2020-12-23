@@ -12,6 +12,6 @@ package v1alpha1
 // EnvironmentSpec struct for EnvironmentSpec
 type EnvironmentSpec struct {
 	Description string              `json:"description,omitempty"`
-	Icon        EnvironmentSpecIcon `json:"icon,omitempty"`
 	Variables   map[string]string   `json:"variables,omitempty"`
+	Icon        EnvironmentSpecIcon `json:"icon,omitempty"`
 }

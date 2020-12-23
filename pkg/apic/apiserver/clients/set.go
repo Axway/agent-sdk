@@ -6,16 +6,13 @@ package clients
 
 import (
 	"fmt"
+
 	cAPIV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
 	definitions_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1"
 	management_v1alpha1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1"
 )
 
 type Set struct {
-	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
-	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
-	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
-	CommandLineInterfaceDefinitionsV1alpha1          *definitions_v1alpha1.UnscopedCommandLineInterfaceClient
 	EnvironmentManagementV1alpha1                    *management_v1alpha1.EnvironmentClient
 	APIServiceManagementV1alpha1                     *management_v1alpha1.UnscopedAPIServiceClient
 	APIServiceRevisionManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceRevisionClient
@@ -28,11 +25,21 @@ type Set struct {
 	K8SResourceManagementV1alpha1                    *management_v1alpha1.UnscopedK8SResourceClient
 	ResourceDiscoveryManagementV1alpha1              *management_v1alpha1.UnscopedResourceDiscoveryClient
 	MeshManagementV1alpha1                           *management_v1alpha1.MeshClient
-	MeshServiceManagementV1alpha1                    *management_v1alpha1.UnscopedMeshServiceClient
-	MeshWorkloadManagementV1alpha1                   *management_v1alpha1.UnscopedMeshWorkloadClient
 	SpecDiscoveryManagementV1alpha1                  *management_v1alpha1.UnscopedSpecDiscoveryClient
 	APISpecManagementV1alpha1                        *management_v1alpha1.UnscopedAPISpecClient
-	MeshDiscoveryManagementV1alpha1                  *management_v1alpha1.UnscopedMeshDiscoveryClient
+	MeshWorkloadManagementV1alpha1                   *management_v1alpha1.UnscopedMeshWorkloadClient
+	AWSDataplaneManagementV1alpha1                   *management_v1alpha1.UnscopedAWSDataplaneClient
+	AWSDiscoveryAgentManagementV1alpha1              *management_v1alpha1.UnscopedAWSDiscoveryAgentClient
+	AWSTraceabilityAgentManagementV1alpha1           *management_v1alpha1.UnscopedAWSTraceabilityAgentClient
+	EdgeDataplaneManagementV1alpha1                  *management_v1alpha1.UnscopedEdgeDataplaneClient
+	EdgeDiscoveryAgentManagementV1alpha1             *management_v1alpha1.UnscopedEdgeDiscoveryAgentClient
+	EdgeTraceabilityAgentManagementV1alpha1          *management_v1alpha1.UnscopedEdgeTraceabilityAgentClient
+	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
+	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
+	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
+	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
+	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
+	CommandLineInterfaceDefinitionsV1alpha1          *definitions_v1alpha1.UnscopedCommandLineInterfaceClient
 }
 
 func New(b cAPIV1.Base) *Set {
@@ -40,22 +47,6 @@ func New(b cAPIV1.Base) *Set {
 
 	var err error
 
-	s.ResourceGroupDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceGroupClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceGroup: %s", err))
-	}
-	s.ResourceDefinitionDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceDefinitionClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceDefinition: %s", err))
-	}
-	s.ResourceDefinitionVersionDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceDefinitionVersionClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceDefinitionVersion: %s", err))
-	}
-	s.CommandLineInterfaceDefinitionsV1alpha1, err = definitions_v1alpha1.NewCommandLineInterfaceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.CommandLineInterface: %s", err))
-	}
 	s.EnvironmentManagementV1alpha1, err = management_v1alpha1.NewEnvironmentClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Environment: %s", err))
@@ -104,14 +95,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Mesh: %s", err))
 	}
-	s.MeshServiceManagementV1alpha1, err = management_v1alpha1.NewMeshServiceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshService: %s", err))
-	}
-	s.MeshWorkloadManagementV1alpha1, err = management_v1alpha1.NewMeshWorkloadClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshWorkload: %s", err))
-	}
 	s.SpecDiscoveryManagementV1alpha1, err = management_v1alpha1.NewSpecDiscoveryClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.SpecDiscovery: %s", err))
@@ -120,9 +103,57 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpec: %s", err))
 	}
-	s.MeshDiscoveryManagementV1alpha1, err = management_v1alpha1.NewMeshDiscoveryClient(b)
+	s.MeshWorkloadManagementV1alpha1, err = management_v1alpha1.NewMeshWorkloadClient(b)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshDiscovery: %s", err))
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshWorkload: %s", err))
+	}
+	s.AWSDataplaneManagementV1alpha1, err = management_v1alpha1.NewAWSDataplaneClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.AWSDataplane: %s", err))
+	}
+	s.AWSDiscoveryAgentManagementV1alpha1, err = management_v1alpha1.NewAWSDiscoveryAgentClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.AWSDiscoveryAgent: %s", err))
+	}
+	s.AWSTraceabilityAgentManagementV1alpha1, err = management_v1alpha1.NewAWSTraceabilityAgentClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.AWSTraceabilityAgent: %s", err))
+	}
+	s.EdgeDataplaneManagementV1alpha1, err = management_v1alpha1.NewEdgeDataplaneClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.EdgeDataplane: %s", err))
+	}
+	s.EdgeDiscoveryAgentManagementV1alpha1, err = management_v1alpha1.NewEdgeDiscoveryAgentClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.EdgeDiscoveryAgent: %s", err))
+	}
+	s.EdgeTraceabilityAgentManagementV1alpha1, err = management_v1alpha1.NewEdgeTraceabilityAgentClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.EdgeTraceabilityAgent: %s", err))
+	}
+	s.WebhookManagementV1alpha1, err = management_v1alpha1.NewWebhookClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Webhook: %s", err))
+	}
+	s.SecretManagementV1alpha1, err = management_v1alpha1.NewSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/management/v1alpha1.Secret: %s", err))
+	}
+	s.ResourceGroupDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceGroupClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceGroup: %s", err))
+	}
+	s.ResourceDefinitionDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceDefinitionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceDefinition: %s", err))
+	}
+	s.ResourceDefinitionVersionDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceDefinitionVersionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.ResourceDefinitionVersion: %s", err))
+	}
+	s.CommandLineInterfaceDefinitionsV1alpha1, err = definitions_v1alpha1.NewCommandLineInterfaceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.CommandLineInterface: %s", err))
 	}
 	return s
 }

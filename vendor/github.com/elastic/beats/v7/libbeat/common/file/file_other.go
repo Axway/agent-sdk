@@ -26,8 +26,8 @@ import (
 )
 
 type StateOS struct {
-	Inode  uint64 `json:"inode," struct:"inode"`
-	Device uint64 `json:"device," struct:"device"`
+	Inode  uint64 `json:"inode,"`
+	Device uint64 `json:"device,"`
 }
 
 // GetOSState returns the FileStateOS for non windows systems
@@ -67,9 +67,4 @@ func ReadOpen(path string) (*os.File, error) {
 func IsRemoved(f *os.File) bool {
 	_, err := os.Stat(f.Name())
 	return err != nil
-}
-
-// InodeString returns the inode in string.
-func (s *StateOS) InodeString() string {
-	return strconv.FormatUint(s.Inode, 10)
 }

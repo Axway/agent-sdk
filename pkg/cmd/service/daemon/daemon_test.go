@@ -225,6 +225,36 @@ func TestStop(t *testing.T) {
 	assert.Equal(t, "systemctl stop daemon.service", fakeOutput.cmds[2])
 }
 
+func TestLogs(t *testing.T) {
+	execCmd = fakeExecCommand
+	fakeOutput = fakeCommand{
+		calls:   0,
+		outputs: []string{"1000"},
+	}
+	mOSFS := mockOSFS{}
+	fs = &mOSFS
+
+	daemon, err := newDaemon("daemon", "desc", []string{"network"})
+	assert.Nil(t, err, "Error was not nil")
+	assert.NotNil(t, daemon, "The daemon object was not returned")
+
+	output, err := daemon.Status()
+	assert.NotNil(t, output, "Expected an output to be returned")
+	assert.NotNil(t, err, "expected an error since we were not root")
+
+	execCmd = fakeExecCommand
+	fakeOutput = fakeCommand{
+		calls:   0,
+		outputs: []string{"0", "Active: active"},
+	}
+
+	output, err = daemon.Logs()
+	assert.NotNil(t, output, "Expected an output to be returned")
+	assert.Nil(t, err, "don't expect error for status command")
+	assert.Len(t, fakeOutput.cmds, 1)
+	assert.Equal(t, "journalctl --no-pager -b -u daemon.service", fakeOutput.cmds[0])
+}
+
 func TestStatus(t *testing.T) {
 	execCmd = fakeExecCommand
 	fakeOutput = fakeCommand{

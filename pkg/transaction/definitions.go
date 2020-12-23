@@ -33,20 +33,25 @@ type LogEvent struct {
 type Summary struct {
 	Status       string       `json:"status,omitempty"`
 	StatusDetail string       `json:"statusDetail,omitempty"`
-	Duration     int          `json:"duration,omitempty"`
+	Duration     int          `json:"duration"`
 	Application  *Application `json:"application,omitempty"`
 	Product      string       `json:"product,omitempty"`
-	Team         string       `json:"team,omitempty"`
+	Team         *Team        `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
 	Runtime    *Runtime    `json:"runtime,omitempty"`
 	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
 }
 
-// Application  - Represnts the application used in transaction summary event
+// Application  - Represents the application used in transaction summary event
 type Application struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
+}
+
+// Team  - Represents the team used in transaction summary event
+type Team struct {
+	ID string `json:"id,omitempty"`
 }
 
 // Proxy - Represents the proxy definition in summary event
@@ -76,7 +81,7 @@ type Event struct {
 	ParentID    string      `json:"parentId,omitempty"`
 	Source      string      `json:"source,omitempty"`
 	Destination string      `json:"destination,omitempty"`
-	Duration    int         `json:"duration,omitempty"`
+	Duration    int         `json:"duration"`
 	Direction   string      `json:"direction,omitempty"`
 	Status      string      `json:"status,omitempty"`
 	Protocol    interface{} `json:"protocol,omitempty"`

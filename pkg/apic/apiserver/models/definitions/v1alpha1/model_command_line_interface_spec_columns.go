@@ -11,12 +11,12 @@ package v1alpha1
 
 // CommandLineInterfaceSpecColumns struct for CommandLineInterfaceSpecColumns
 type CommandLineInterfaceSpecColumns struct {
-	// The description of the column data.
-	Description string `json:"description,omitempty"`
-	// The JSONPath used to fetch data for the column starting from the root.
-	JsonPath string `json:"jsonPath"`
 	// The name of the column for the resource.
 	Name string `json:"name"`
 	// The type of the column.
 	Type string `json:"type"`
+	// The JSONPath used to fetch data for the column starting from the root.
+	JsonPath string `json:"jsonPath"`
+	// The description of the column data.
+	Description string `json:"description,omitempty"`
 }

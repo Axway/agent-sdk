@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -45,40 +44,10 @@ func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	return authPolicy
 }
 
-func createServiceClient(tlsCfg corecfg.TLSConfig) (*ServiceClient, *corecfg.CentralConfiguration) {
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		TeamName: "test",
-		Auth: &corecfg.AuthConfiguration{
-			URL:      "http://localhost:8888",
-			Realm:    "Broker",
-			ClientID: "dummy",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-
-	if tlsCfg != nil {
-		cfg.TLS = tlsCfg
-	}
-	c := New(cfg)
-	return c.(*ServiceClient), cfg
-}
-
 func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
-	c, _ := createServiceClient(nil)
+	c, _ := GetTestServiceClient()
+	assert.NotNil(t, c)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
@@ -89,7 +58,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 
 	// Test oas3 object
@@ -101,13 +70,13 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
-	assert.Equal(t, 8080, endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(8080), endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
 	assert.Equal(t, "petstore.swagger.io", endPoints[1].Host, "The second returned end point had an unexpected value for it's host")
-	assert.Equal(t, 80, endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(80), endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[1].Protocol, "The second returned end point had an unexpected value for it's protocol")
 	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
-	assert.Equal(t, 443, endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(443), endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
 
 	// Test oas3 object, with templated server URLs
@@ -118,7 +87,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 
 	type verification struct {
 		Host     string
-		Port     int
+		Port     int32
 		Protocol string
 		Found    bool
 	}
@@ -191,7 +160,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
 	assert.Equal(t, "lbean006.lab.phx.axway.int", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, 8065, endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(8065), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 }
 

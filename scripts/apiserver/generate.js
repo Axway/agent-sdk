@@ -1,172 +1,267 @@
-const { execSync } = require('child_process');
 /**
- Takes an array of api-server resource definition and flattens the versions array of each resource
- {
- 	"group": "management",
- 	"kind": "APIService",
- 	"spec": {
- 		"versions": [ { "name": "v1alpha1", "schema": {} }, { "name": "v1alpha2", "schema": {} } ]
- 	},
- }
- which becomes
- [
- 	{ "group": "management", "kind": "APIService", "version": "v1alpha1", "schema": {} },
- 	{ "group": "management", "kind": "APIService", "version": "v1alpha2","schema": {} }
- ]
+ * Resources for the api server are fetched from the provided host and types are generated based on OAS doc retrieved.
+ * Resources are split into "main resources" and "sub resources". Main resources are generated from the go template.
+ * A resource and a client are generated together. This allows for an easy way to customize the behavior of the generated types.
+ * Sub resources are generated from the openapi-generator and will be referenced by the main api server resources.
+ *
+ * A "main resource" would be something like APIService, SpecDiscovery or AWSDataPlane. Their files are named based on the name of the resource.
+ * You will find the APIService type in the APIService.go file.
+ *
+ * A "sub resource" would be another type that the main resource depends on like APIServiceSpec or AWSDataPlaneSpec.
+ * These files are generated from the openapi-generator and their name comes from the generator.
+ * The APIServiceSpec type will be found in the model_api_service_spec.go file.
+ *
+ *
+ */
 
- This gets passed into the openapi-generator command to create go code
-*/
+const { execSync } = require('child_process');
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
 
-const newGroupedResource = (group, version) => ({
-  group,
-  version,
-  openapi: {
-    components: {
-      schemas: {},
-    },
-    paths: {},
-    openapi: '3.0.2',
-    info: {
-      title: 'API Server specification.',
-      version: 'SNAPSHOT',
-    },
-  },
-});
+const clientsPath = 'pkg/apic/apiserver/clients/';
+const modelsPath = 'pkg/apic/apiserver/models/';
+const resourcesTmplPath = 'scripts/apiserver/resources.tmpl';
+const clientsTmplPath = 'scripts/apiserver/clients.tmpl';
 
-// Checks if spec is equal to {type: 'object', additionalProperties: false} and ignore the order of the keys
-const isSpecEmpty = (spec) => {
-  if (Object.keys(spec).length === 2) {
-    return spec['type'] === 'object' && spec['additionalProperties'] === false;
-  }
-  return false;
+const fetch = () => {
+	const [, , protocol, host, port] = process.argv;
+	if (!protocol || !host || !port) {
+		throw new Error(
+			'Protocol, host, and port are required. Ex: node generate.js https apicentral.axway.com 443',
+			`protocol: ${protocol}, host: ${host}, port: ${port}`
+		);
+	}
+
+	const options = {
+		hostname: host,
+		port: Number(port),
+		path: '/apis/docs',
+		method: 'GET',
+		headers: {
+			'content-type': 'application/json',
+		},
+	};
+
+	return new Promise((resolve, reject) => {
+		const h = protocol === 'http' ? http : https;
+		const req = h.request(options, res => {
+			let body = '';
+			res.on('data', chunk => {
+				body += chunk;
+			});
+			res.on('end', () => {
+				resolve(JSON.parse(body));
+			});
+		});
+		req.on('error', err => reject(err));
+		req.end();
+	});
 };
 
-// Convert the yaml definitions to an array of json objects.
-const resources = JSON.parse(
-  execSync(`cat pkg/apic/apiserver/definitions/*.yaml | yq r - -d* -j --collect`).toString()
-)
-  // Pull each version out and add the group, kind, & scope values
-  .map((resource) =>
-    resource.spec.versions.map((version) => ({
-      ...version,
-      group: resource.group,
-      kind: resource.kind,
-      scope: resource.scope,
-      version: version.name,
-      names: resource.spec.names,
-    }))
-  )
-  // Since versions is an array, each element is an array of objects. Flatten the 2-d array
-  .reduce((acc, value) => acc.concat(value));
+fetch()
+	.then(resources => {
+		const [subResources, mainResources] = createMainAndSubResources(resources);
+		// uncomment to see how the resources are grouped
+		// fs.writeFileSync('./sub-resources.json', JSON.stringify(subResources));
+		// fs.writeFileSync('./main-resources.json', JSON.stringify(mainResources));
+		delete subResources.api; // the api resources are common resources, and have been written manually.
+		writeSubResources(subResources);
+	        writeMainResources(mainResources);
 
-// Create initial grouped resources with no schemas defined.
-// Grouped Resources contain a schema with all resources that belong to a resource identified by its group & kind
-const initGroupedResources = resources.reduce((acc, resource) => {
-  if (acc.length === 0) {
-    acc.push(newGroupedResource(resource.group, resource.version));
-  } else {
-    let isResourceGroupFound = acc.some(
-      (obj) => obj.group === resource.group && obj.version === resource.version
-    );
-    if (!isResourceGroupFound) {
-      acc.push(newGroupedResource(resource.group, resource.version));
-    }
-  }
+		writeSet(mainResources);
+	})
+	.catch(err => console.log('ERROR: ', err));
 
-  return acc;
-}, []);
+// sub resources are grouped together into their corresponding group & version. For each version found in each group the openapi-generator will be used
+// to create the resources. This allows us to split resources up into their logical groups and give them their own package.
+// If there are two groups, such as "management" and "definitions", and each have one version, "v1alpha1", then the generator will
+// run twice to create the resource in the appropriate package based on its group and version.
+const writeSubResources = subResources => {
+	for (let groupKey in subResources) {
+		const groupObj = subResources[groupKey];
+		for (let versionKey in groupObj) {
+			const data = JSON.stringify(groupObj[versionKey]);
+			const res = execSync(
+				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${versionKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
+			);
+		}
+	}
+};
 
-// Add all resources to a GroupedResource's schema by its group & kind values.
-const groupedResources = resources.reduce((acc, currentResource) => {
-  const { group, kind, schema, subresources, version } = currentResource;
-  const groupedResource = acc.find(
-    (resource) => resource.group === group && resource.version === version
-  );
+const writeMainResources = mainResources => {
+	for (let groupKey in mainResources) {
+		const groupObj = mainResources[groupKey];
 
-  if (schema && schema.openAPIV3Schema && schema.openAPIV3Schema.constructor === Object) {
-    groupedResource.openapi.components.schemas = {
-      ...groupedResource.openapi.components.schemas,
-      [`${kind}SPEC`]: schema.openAPIV3Schema,
-    };
-  } else {
-    console.error('ERROR: schema or schema.openAPIV3Schema is not an object', schema);
-  }
-  if (subresources && subresources.constructor === Object) {
-    const subresourceKeys = Object.entries(subresources).map(([key, value]) => [
-      `${kind}${key.toUpperCase()}`,
-      value.openAPIV3Schema,
-    ]);
-    groupedResource.openapi.components.schemas = {
-      ...groupedResource.openapi.components.schemas,
-      ...subresourceKeys.reduce((acc, value) => {
-        acc[value[0]] = value[1];
-        return acc;
-      }, {}),
-    };
-  }
-  return acc;
-}, initGroupedResources);
+		for (let versionKey in groupObj) {
+			const spec = groupObj[versionKey];
+			const { schemas } = spec.components;
 
-// Create packages based on the group & version
-for (groupedResource of groupedResources) {
-  const { group, openapi, version } = groupedResource;
-  const res = execSync(
-    `openapi-generator generate -g go -i /dev/stdin --package-name ${version} --output pkg/apic/apiserver/models/${group}/${version} --global-property modelDocs=false,models << 'EOF'\n${JSON.stringify(
-      openapi
-    )}\nEOF`
-  );
-  console.log(res.toString());
+			for (let schemaKey in schemas) {
+				const resource = createGomplateResource(schemas[schemaKey]);
+				const { group, version, kind, fields } = resource;
+				const file = `${group}/${version}/${kind}.go`;
+
+				markEmptySpecs(fields);
+
+				const input = `\'${JSON.stringify(resource)}\'`;
+				// make the folders if they do not exist
+				execSync(`mkdir -p ${clientsPath}${group}/${version}`).toString();
+				execSync(`mkdir -p ${modelsPath}${group}/${version}`).toString();
+
+				// create the models using the go template
+				const model = `${modelsPath}${file}`;
+				execSync(
+					`echo ${input} | gomplate --context res="stdin:?type=application/json" -f ${resourcesTmplPath} --out "${model}"`
+				);
+				console.log(`Created model ${model}`);
+
+				// creat the clients using the go template
+				const client = `${clientsPath}${file}`;
+				execSync(
+					`echo ${input} | gomplate --context res="stdin:?type=application/json" -f ${clientsTmplPath} --out "${client}"`).toString();
+				console.log(`Created client ${client}`);
+			}
+		}
+	}
+};
+
+const createMainAndSubResources = spec => {
+	// main resources are passed to the go template. subresources are passed to the openapi-generator
+	const mainResources = {};
+	const subResources = Object.keys(spec.components.schemas).reduce((acc, schemaKey) => {
+		addResourceToGroupVersion(
+			spec.components.schemas[schemaKey]['x-axway-group'] ? mainResources : acc,
+			spec,
+			schemaKey
+		);
+		return acc;
+	}, {});
+        return [subResources, mainResources];
+};
+
+const addResourceToGroupVersion = (acc, spec, schemaKey) => {
+	const { schemas } = spec.components;
+	const [group, version, kind] = schemaKey.split('.');
+	// if the group does not exist, create the grouped resource
+	if (!acc[group]) {
+		acc[group] = {
+			[version]: createOasSchema(spec.openapi, {
+				[kind]: schemas[schemaKey],
+			}),
+		};
+	}
+	// if the group exists, but the version does not
+	else if (acc[group] && !acc[group][version]) {
+		acc[group][version] = createOasSchema(spec.openapi, {
+			[kind]: schemas[schemaKey],
+		});
+	}
+	// if the group and the version already exist
+	else if (acc[group] && acc[group][version]) {
+		acc[group][version].components.schemas = {
+			...acc[group][version].components.schemas,
+			[kind]: schemas[schemaKey],
+		};
+	}
+};
+
+// Gets the unique fields for the particular resource so that the resources.tmpl file can generate the fields
+const filterFields = resource => {
+	const { properties } = resource;
+	const fields = {};
+
+	const commonFields = new Set([
+		'group',
+		'apiVersion',
+		'kind',
+		'name',
+		'title',
+		'metadata',
+		'finalizers',
+		'attributes',
+		'tags',
+	]);
+
+	for (key in properties) {
+		if (!commonFields.has(key)) {
+			fields[key] = properties[key];
+		}
+	}
+	return fields;
+};
+
+// openapi-generator does not create a file when the resource is empty, like MeshSpec, which is an empty object with no keys.
+// To check for this we must check if a file was generated. If we have a resource for something like MeshSpec, but no file generated then set the MeshSpec value to false.
+const markEmptySpecs = fields => {
+	for (key in fields) {
+		const { $ref } = fields[key];
+		const [, , , gvk] = $ref.split('/');
+		const [group, version, kind] = gvk.split('.');
+		try {
+			let file =
+				'model_' +
+				kind
+					.replace('API', 'Api')
+					.replace('AWS', 'Aws')
+					.replace(/([A-Z])/g, ' $1')
+					.trim()
+					.replace(/\W/g, '_')
+					.toLowerCase();
+			fs.readFileSync(`${modelsPath}/${group}/${version}/${file}.go`);
+			fields[key] = true;
+		} catch (e) {
+			if (e.code === 'ENOENT') {
+				fields[key] = false;
+			} else {
+				console.log('Error reading file: ', e);
+			}
+		}
+	}
+};
+
+// Resources are grouped into their own mini oas spec so that the openapi-generator can be used to group related resources.
+const createOasSchema = (openapi, schemas) => {
+	return {
+		openapi,
+		paths: {},
+		info: {
+			title: 'API Server specification.',
+			version: 'SNAPSHOT',
+		},
+		components: {
+			schemas,
+		},
+	};
+};
+
+// The main API Server resources get passed into here, like APISpec, Environment, etc. Used to format the object before parsing it with the resources.tmpl file.
+const createGomplateResource = resource => {
+	return {
+		group: resource['x-axway-group'],
+		kind: resource['x-axway-kind'],
+		version: resource['x-axway-version'],
+		scoped: resource['x-axway-scoped'],
+		scope: resource['x-axway-scopes'] ? resource['x-axway-scopes'][0].kind : null, // temporarily pass the first scope in until the template can handle multiple scopes.
+		resource: resource['x-axway-plural'],
+		fields: filterFields(resource),
+	};
+};
+
+
+// The clients Set is generated from all the main resources.
+const writeSet = resources => {
+        var setResources = []
+        Object.entries(resources).forEach(([group, versions]) => {
+                Object.entries(versions).forEach(([version, versionFields]) =>{
+                        kinds = Object.entries(versionFields.components.schemas).map(([kind, {'x-axway-scoped':scoped}]) => {return {kind, scoped}})
+                        setResources.push({group, version, kinds})
+                })
+        })
+        const setInput = JSON.stringify({set: setResources}, null, 2)
+
+        execSync(
+                `gomplate --context input='stdin:?type=application/json' -f scripts/apiserver/set.tmpl --out "pkg/apic/apiserver/clients/set.go"`,
+                {input: setInput}
+        )
 }
-
-const gomplateResources = resources.map((resource) => ({
-  kind: resource.kind,
-  version: resource.version,
-  group: resource.group,
-  scope: resource.scope || null,
-  resource: resource.names.plural,
-  fields: {
-    spec: !isSpecEmpty(resource.schema.openAPIV3Schema),
-    ...Object.entries(resource.subresources || {})
-      .map(([key, value]) => [key, !isSpecEmpty(value.openAPIV3Schema)])
-      .reduce((acc, value) => {
-        acc[value[0]] = value[1];
-        return acc;
-      }, {}),
-  },
-}));
-
-// The main struct & client for each resource is generated via gomplate
-for (resource of gomplateResources) {
-  const input = `\'${JSON.stringify(resource)}\'`;
-  execSync(
-    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/resources.tmpl --out "pkg/apic/apiserver/models/${resource.group}/${resource.version}/${resource.kind}.go"`
-  );
-  execSync(`mkdir -p pkg/apic/apiserver/clients/${resource.group}/${resource.version}`);
-  execSync(
-    `echo ${input} | gomplate --context res="stdin:?type=application/json" -f scripts/apiserver/clients.tmpl --out "pkg/apic/apiserver/clients/${resource.group}/${resource.version}/${resource.kind}.go"`
-  );
-  console.log(`Created ${resource.group}/${resource.version}/${resource.kind}.go`);
-}
-
-const setResources = resources.reduce((acc, currentResource) => {
-    const { group, kind, scope, version } = currentResource;
-    var setResource = acc.find(
-        (resource) => resource.group === group && resource.version === version
-    );
-
-    if (setResource == undefined) {
-        setResource = { kinds: [], group, version}
-        acc.push(setResource)
-    }
-
-    setResource.kinds.push({
-        kind,
-        scoped: (scope != undefined) || (scope != null)
-    })
-
-    return acc},
-                                      [])
-
-const setInput = JSON.stringify({set: setResources})
-
-execSync(`gomplate --context input='stdin:?type=application/json' -f scripts/apiserver/set.tmpl --out "pkg/apic/apiserver/clients/set.go"`, {input: setInput})

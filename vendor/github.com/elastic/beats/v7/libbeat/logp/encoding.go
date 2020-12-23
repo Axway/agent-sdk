@@ -19,8 +19,6 @@ package logp
 
 import (
 	"go.uber.org/zap/zapcore"
-
-	"go.elastic.co/ecszap"
 )
 
 var baseEncodingConfig = zapcore.EncoderConfig{
@@ -38,44 +36,30 @@ var baseEncodingConfig = zapcore.EncoderConfig{
 	EncodeName:     zapcore.FullNameEncoder,
 }
 
-type encoderCreator func(cfg zapcore.EncoderConfig) zapcore.Encoder
-
 func buildEncoder(cfg Config) zapcore.Encoder {
-	var encCfg zapcore.EncoderConfig
-	var encCreator encoderCreator
 	if cfg.JSON {
-		encCfg = JSONEncoderConfig()
-		encCreator = zapcore.NewJSONEncoder
+		return zapcore.NewJSONEncoder(jsonEncoderConfig())
 	} else if cfg.ToSyslog {
-		encCfg = SyslogEncoderConfig()
-		encCreator = zapcore.NewConsoleEncoder
+		return zapcore.NewConsoleEncoder(syslogEncoderConfig())
 	} else {
-		encCfg = ConsoleEncoderConfig()
-		encCreator = zapcore.NewConsoleEncoder
+		return zapcore.NewConsoleEncoder(consoleEncoderConfig())
 	}
-
-	if cfg.ECSEnabled {
-		encCfg = ecszap.ECSCompatibleEncoderConfig(encCfg)
-	}
-	return encCreator(encCfg)
 }
 
-func JSONEncoderConfig() zapcore.EncoderConfig {
+func jsonEncoderConfig() zapcore.EncoderConfig {
 	return baseEncodingConfig
 }
 
-func ConsoleEncoderConfig() zapcore.EncoderConfig {
+func consoleEncoderConfig() zapcore.EncoderConfig {
 	c := baseEncodingConfig
 	c.EncodeLevel = zapcore.CapitalLevelEncoder
 	c.EncodeName = bracketedNameEncoder
 	return c
 }
 
-func SyslogEncoderConfig() zapcore.EncoderConfig {
-	c := ConsoleEncoderConfig()
-	// Time is generally added by syslog.
-	// But when logging with ECS the empty TimeKey will be
-	// ignored and @timestamp is still added to log line
+func syslogEncoderConfig() zapcore.EncoderConfig {
+	c := consoleEncoderConfig()
+	// Time is added by syslog.
 	c.TimeKey = ""
 	return c
 }

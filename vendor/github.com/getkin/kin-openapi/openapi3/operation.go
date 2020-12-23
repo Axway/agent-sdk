@@ -71,12 +71,14 @@ func (operation *Operation) AddResponse(status int, response *Response) {
 		responses = NewResponses()
 		operation.Responses = responses
 	}
-	code := "default"
-	if status != 0 {
-		code = strconv.FormatInt(int64(status), 10)
-	}
-	responses[code] = &ResponseRef{
-		Value: response,
+	if status == 0 {
+		responses["default"] = &ResponseRef{
+			Value: response,
+		}
+	} else {
+		responses[strconv.FormatInt(int64(status), 10)] = &ResponseRef{
+			Value: response,
+		}
 	}
 }
 
@@ -96,7 +98,7 @@ func (operation *Operation) Validate(c context.Context) error {
 			return err
 		}
 	} else {
-		return errors.New("value of responses must be a JSON object")
+		return errors.New("Variable 'Responses' must be a JSON object")
 	}
 	return nil
 }

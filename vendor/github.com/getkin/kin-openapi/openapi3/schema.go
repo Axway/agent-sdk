@@ -73,12 +73,10 @@ type Schema struct {
 	ExclusiveMin bool `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
 	ExclusiveMax bool `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
 	// Properties
-	Nullable        bool        `json:"nullable,omitempty" yaml:"nullable,omitempty"`
-	ReadOnly        bool        `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
-	WriteOnly       bool        `json:"writeOnly,omitempty" yaml:"writeOnly,omitempty"`
-	AllowEmptyValue bool        `json:"allowEmptyValue,omitempty" yaml:"allowEmptyValue,omitempty"`
-	XML             interface{} `json:"xml,omitempty" yaml:"xml,omitempty"`
-	Deprecated      bool        `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+	Nullable  bool        `json:"nullable,omitempty" yaml:"nullable,omitempty"`
+	ReadOnly  bool        `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
+	WriteOnly bool        `json:"writeOnly,omitempty" yaml:"writeOnly,omitempty"`
+	XML       interface{} `json:"xml,omitempty" yaml:"xml,omitempty"`
 
 	// Number
 	Min        *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
@@ -397,7 +395,7 @@ func (schema *Schema) WithAdditionalProperties(v *Schema) *Schema {
 func (schema *Schema) IsEmpty() bool {
 	if schema.Type != "" || schema.Format != "" || len(schema.Enum) != 0 ||
 		schema.UniqueItems || schema.ExclusiveMin || schema.ExclusiveMax ||
-		schema.Nullable ||
+		!schema.Nullable ||
 		schema.Min != nil || schema.Max != nil || schema.MultipleOf != nil ||
 		schema.MinLength != 0 || schema.MaxLength != nil || schema.Pattern != "" ||
 		schema.MinItems != 0 || schema.MaxItems != nil ||
@@ -1110,12 +1108,12 @@ func (schema *Schema) visitJSONObject(value map[string]interface{}, fast bool) (
 			if fast {
 				return errSchema
 			}
-			return markSchemaErrorKey(&SchemaError{
+			return &SchemaError{
 				Value:       value,
 				Schema:      schema,
 				SchemaField: "required",
 				Reason:      fmt.Sprintf("Property '%s' is missing", k),
-			}, k)
+			}
 		}
 	}
 	return

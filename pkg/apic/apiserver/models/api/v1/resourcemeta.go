@@ -1,5 +1,6 @@
 package v1
 
+// Meta -
 type Meta interface {
 	GetName() string
 	GetGroupVersionKind() GroupVersionKind
@@ -20,8 +21,11 @@ type ResourceMeta struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 	// List of tags.
 	Tags []string `json:"tags,omitempty"`
+	// Finalizer on the API server resource
+	Finalizers []Finalizer
 }
 
+// GetName -
 func (rm *ResourceMeta) GetName() string {
 	if rm == nil {
 		return ""
@@ -30,10 +34,12 @@ func (rm *ResourceMeta) GetName() string {
 	return rm.Name
 }
 
+// SetName -
 func (rm *ResourceMeta) SetName(name string) {
 	rm.Name = name
 }
 
+// GetMetadata -
 func (rm *ResourceMeta) GetMetadata() Metadata {
 	if rm == nil {
 		return Metadata{}
@@ -42,6 +48,7 @@ func (rm *ResourceMeta) GetMetadata() Metadata {
 	return rm.Metadata
 }
 
+// GetGroupVersionKind -
 func (rm *ResourceMeta) GetGroupVersionKind() GroupVersionKind {
 	if rm == nil {
 		return GroupVersionKind{}
@@ -50,6 +57,7 @@ func (rm *ResourceMeta) GetGroupVersionKind() GroupVersionKind {
 	return rm.GroupVersionKind
 }
 
+// GetAttributes -
 func (rm *ResourceMeta) GetAttributes() map[string]string {
 	if rm == nil {
 		return map[string]string{}
@@ -58,6 +66,7 @@ func (rm *ResourceMeta) GetAttributes() map[string]string {
 	return rm.Attributes
 }
 
+// SetAttributes -
 func (rm *ResourceMeta) SetAttributes(attrs map[string]string) {
 	if rm == nil {
 		return
@@ -66,6 +75,7 @@ func (rm *ResourceMeta) SetAttributes(attrs map[string]string) {
 	rm.Attributes = attrs
 }
 
+// GetTags -
 func (rm *ResourceMeta) GetTags() []string {
 	if rm == nil {
 		return []string{}
@@ -74,6 +84,7 @@ func (rm *ResourceMeta) GetTags() []string {
 	return rm.Tags
 }
 
+// SetTags -
 func (rm *ResourceMeta) SetTags(tags []string) {
 	if rm == nil {
 		return

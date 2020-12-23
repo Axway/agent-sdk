@@ -59,6 +59,11 @@ func SetStatusConfig(statusCfg corecfg.StatusConfig) {
 	statusConfig = statusCfg
 }
 
+// GetStatusConfig - Set the status config globally
+func GetStatusConfig() corecfg.StatusConfig {
+	return statusConfig
+}
+
 // WaitForReady - Iterate through all healthchecks, returns OK once ready or returns Fail if timeout is reached
 func WaitForReady() error {
 	timeout := time.After(statusConfig.GetHealthCheckPeriod())
@@ -102,6 +107,8 @@ func executeCheck(check *statusCheck) {
 	}
 }
 
+var server *http.Server
+
 //HandleRequests - starts the http server
 func HandleRequests() {
 	if !globalHealthChecker.registered {
@@ -110,8 +117,14 @@ func HandleRequests() {
 		globalHealthChecker.registered = true
 	}
 
+	// Close the server if already running. This can happen due to config/agent resource change
+	if server != nil {
+		server.Close()
+	}
+
 	if statusConfig.GetPort() > 0 {
-		go http.ListenAndServe(fmt.Sprintf(":%d", statusConfig.GetPort()), nil)
+		server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
+		go server.ListenAndServe()
 	}
 }
 

@@ -11,8 +11,8 @@ package v1alpha1
 
 // ResourceDefinitionSpecReferences struct for ResourceDefinitionSpecReferences
 type ResourceDefinitionSpecReferences struct {
-	// A list of resources that the current resources is beging referenced from.
-	FromResources []ResourceDefinitionSpecReferencesFromResources `json:"fromResources,omitempty"`
 	// A list of resources that the current resources has references to.
-	ToResources []ResourceDefinitionSpecReferencesFromResources `json:"toResources,omitempty"`
+	ToResources []ResourceDefinitionSpecReferencesToResources `json:"toResources,omitempty"`
+	// A list of resources that the current resources is beging referenced from.
+	FromResources []ResourceDefinitionSpecReferencesToResources `json:"fromResources,omitempty"`
 }

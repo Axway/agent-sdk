@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"testing"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
@@ -8,17 +9,20 @@ import (
 )
 
 type mockDaemon struct {
-	installCalled bool
-	removeCalled  bool
-	startCalled   bool
-	stopCalled    bool
-	statusCalled  bool
-	runCalled     bool
-	enableCalled  bool
+	installCalled     bool
+	removeCalled      bool
+	startCalled       bool
+	stopCalled        bool
+	statusCalled      bool
+	logsCalled        bool
+	runCalled         bool
+	enableCalled      bool
+	serviceNameCalled bool
 }
 
 func (m *mockDaemon) GetTemplate() string      { return "" }
 func (m *mockDaemon) SetTemplate(string) error { return nil }
+func (m *mockDaemon) SetEnvFile(string) error  { return nil }
 func (m *mockDaemon) SetUser(string) error     { return nil }
 func (m *mockDaemon) SetGroup(string) error    { return nil }
 
@@ -47,6 +51,11 @@ func (m *mockDaemon) Status() (string, error) {
 	return "", nil
 }
 
+func (m *mockDaemon) Logs() (string, error) {
+	m.logsCalled = true
+	return "", nil
+}
+
 func (m *mockDaemon) Run(e daemon.Executable) (string, error) {
 	m.runCalled = true
 	return "", nil
@@ -55,6 +64,11 @@ func (m *mockDaemon) Run(e daemon.Executable) (string, error) {
 func (m *mockDaemon) Enable() (string, error) {
 	m.enableCalled = true
 	return "", nil
+}
+
+func (m *mockDaemon) GetServiceName() string {
+	m.serviceNameCalled = true
+	return ""
 }
 
 func newMockAgentService() *AgentService {
@@ -66,6 +80,7 @@ func newMockAgentService() *AgentService {
 		PathArg:     "--pathConfig",
 		User:        "user",
 		Group:       "group",
+		EnvFile:     "./filename",
 	}
 }
 
@@ -79,8 +94,10 @@ func TestGenServiceCmd(t *testing.T) {
 	assert.Contains(t, cmd.Long, argDescriptions["remove"], "The remove description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["start"], "The start description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["stop"], "The stop description was not included in the long description")
+	assert.Contains(t, cmd.Long, argDescriptions["logs"], "The status description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["status"], "The status description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["enable"], "The enable description was not included in the long description")
+	assert.Contains(t, cmd.Long, argDescriptions["name"], "The name description was not included in the long description")
 }
 
 func TestRunGenServiceCmd(t *testing.T) {
@@ -96,6 +113,8 @@ func TestRunGenServiceCmd(t *testing.T) {
 
 	assert.Nil(t, err, "Error expected to be returned from command Execute")
 	assert.True(t, a.service.(*mockDaemon).installCalled)
+
+	os.Remove("./filename")
 }
 
 func TestHandleService(t *testing.T) {
@@ -126,6 +145,12 @@ func TestHandleService(t *testing.T) {
 	assert.Nil(t, err, "Unexpected error returned")
 	assert.True(t, a.service.(*mockDaemon).stopCalled)
 
+	// Logs
+	a = newMockAgentService()
+	err = a.HandleServiceFlag("logs")
+	assert.Nil(t, err, "Unexpected error returned")
+	assert.True(t, a.service.(*mockDaemon).logsCalled)
+
 	// Status
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("status")
@@ -137,4 +162,10 @@ func TestHandleService(t *testing.T) {
 	err = a.HandleServiceFlag("enable")
 	assert.Nil(t, err, "Unexpected error returned")
 	assert.True(t, a.service.(*mockDaemon).enableCalled)
+
+	// Service Name
+	a = newMockAgentService()
+	err = a.HandleServiceFlag("name")
+	assert.Nil(t, err, "Unexpected error returned")
+	assert.True(t, a.service.(*mockDaemon).serviceNameCalled)
 }

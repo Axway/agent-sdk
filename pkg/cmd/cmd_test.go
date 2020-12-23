@@ -91,9 +91,9 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Log yaml properties and command flags
 	assertStringCmdFlag(t, rootCmd, "log.level", "logLevel", "info", "Log level (debug, info, warn, error)")
-	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line, package)")
+	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line)")
 	assertStringCmdFlag(t, rootCmd, "log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
-	assertStringCmdFlag(t, rootCmd, "log.path", "logPath", "logs", "Log file path if output type is file or both")
+	assertStringCmdFlag(t, rootCmd, "log.file.path", "logFilePath", "logs", "Log file path if output type is file or both")
 }
 
 func TestRootCmdConfigFileLoad(t *testing.T) {
@@ -188,10 +188,6 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	assert.Contains(t, "Test return error from init config handler, Traceability Agent", errBuf.String())
 }
 
-type IAgentCfgWithValidate interface {
-	Validate() error
-}
-
 type agentConfig struct {
 	bProp                 bool
 	dProp                 time.Duration
@@ -201,7 +197,7 @@ type agentConfig struct {
 	agentValidationCalled bool
 }
 
-func (a *agentConfig) Validate() error {
+func (a *agentConfig) ValidateCfg() error {
 	a.agentValidationCalled = true
 	if a.sProp == "" {
 		return errors.New("agentConfig: String prop not set")
@@ -215,7 +211,7 @@ type configWithValidation struct {
 	AgentCfg               *agentConfig
 }
 
-func (c *configWithValidation) Validate() error {
+func (c *configWithValidation) ValidateCfg() error {
 	c.configValidationCalled = true
 	if c.AgentCfg.sProp == "" {
 		return errors.New("configWithValidation: String prop not set")
@@ -226,7 +222,7 @@ func (c *configWithValidation) Validate() error {
 type configWithNoValidation struct {
 	configValidationCalled bool
 	CentralCfg             corecfg.CentralConfig
-	AgentCfg               IAgentCfgWithValidate
+	AgentCfg               corecfg.IConfigValidator
 }
 
 func TestRootCmdAgentConfigValidation(t *testing.T) {
@@ -248,6 +244,9 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 		return cfg, nil
 	}
 
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -271,6 +270,8 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	assert.Contains(t, "configWithValidation: String prop not set", errBuf.String())
 	assert.Equal(t, true, cfg.configValidationCalled)
 	assert.Equal(t, false, cfg.AgentCfg.agentValidationCalled)
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdAgentConfigChildValidation(t *testing.T) {
@@ -291,6 +292,10 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 		}
 		return cfg, nil
 	}
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -315,6 +320,8 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	assert.Contains(t, "agentConfig: String prop not set", errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	assert.Equal(t, true, cfg.AgentCfg.(*agentConfig).agentValidationCalled)
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdHandlersWithError(t *testing.T) {
@@ -372,6 +379,11 @@ func TestRootCmdHandlers(t *testing.T) {
 		cmdHandlerInvoked = true
 		return nil
 	}
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -400,6 +412,9 @@ func TestRootCmdHandlers(t *testing.T) {
 	assert.Equal(t, 30*time.Second, agentCfg.dProp)
 	assert.Equal(t, 555, agentCfg.iProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func noOpInitConfigHandler(centralConfig corecfg.CentralConfig) (interface{}, error) {
@@ -413,6 +428,10 @@ func noOpCmdHandler() error {
 func TestRootCommandLoggerStdout(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -438,19 +457,28 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 
 	assert.Equal(t, "info", logData["level"])
 	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"file",
-		"--logPath",
+		"--logFilePath",
 		"./tmplogs",
+		"--logFileName",
+		"test_with_non_defaults.log",
 	},
 	)
 	// Make sure to delete file
@@ -468,19 +496,28 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	assert.Equal(t, "info", logData["level"])
 	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"both",
-		"--logPath",
+		"--logFilePath",
 		"./tmplogs",
+		"--logFileName",
+		"test_with_non_defaults.log",
 	},
 	)
 	rescueStdout := os.Stdout
@@ -502,4 +539,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
 	assert.Nil(t, err)
 	assert.Equal(t, out, dat)
+
+	// Remove the test keys file
+	os.Remove("./" + tmpFile.Name())
 }

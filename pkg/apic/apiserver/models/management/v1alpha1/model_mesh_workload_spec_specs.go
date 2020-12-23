@@ -9,7 +9,8 @@
 
 package v1alpha1
 
-// MeshWorkloadSpecSpecs struct for MeshWorkloadSpecSpecs
+// MeshWorkloadSpecSpecs API specs exposed by this workload on this pod.
 type MeshWorkloadSpecSpecs struct {
+	// Array of references to apispecs discovered by the discovery agent.
 	DiscoveredSpecs []string `json:"discoveredSpecs,omitempty"`
 }

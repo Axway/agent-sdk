@@ -33,13 +33,18 @@ const logSelector = "tls"
 
 // LoadCertificate will load a certificate from disk and return a tls.Certificate or error
 func LoadCertificate(config *CertificateConfig) (*tls.Certificate, error) {
-	if err := config.Validate(); err != nil {
-		return nil, err
-	}
-
 	certificate := config.Certificate
 	key := config.Key
-	if certificate == "" {
+
+	hasCertificate := certificate != ""
+	hasKey := key != ""
+
+	switch {
+	case hasCertificate && !hasKey:
+		return nil, ErrCertificateNoKey
+	case !hasCertificate && hasKey:
+		return nil, ErrKeyNoCertificate
+	case !hasCertificate && !hasKey:
 		return nil, nil
 	}
 

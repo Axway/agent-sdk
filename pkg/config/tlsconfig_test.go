@@ -10,7 +10,11 @@ import (
 func TestTLSConfig(t *testing.T) {
 	cfg := NewTLSConfig()
 
-	err := cfg.Validate()
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+
+	err := cfgValidator.ValidateCfg()
 	assert.Nil(t, err)
 
 	assert.Equal(t, cfg.IsInsecureSkipVerify(), false)
@@ -22,8 +26,11 @@ func TestTLSConfig(t *testing.T) {
 
 func TestBuildTLSConfig(t *testing.T) {
 	cfg := NewTLSConfig()
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
 
-	err := cfg.Validate()
+	err := cfgValidator.ValidateCfg()
 	assert.Nil(t, err)
 
 	cfg2 := cfg.BuildTLSConfig()
@@ -40,7 +47,11 @@ func TestBuildTLSConfig(t *testing.T) {
 
 func TestValidate(t *testing.T) {
 	cfg := NewTLSConfig()
-	err := cfg.Validate()
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+
+	err := cfgValidator.ValidateCfg()
 	assert.Nil(t, err)
 
 	cfg2, ok := cfg.(*TLSConfiguration)
@@ -49,28 +60,35 @@ func TestValidate(t *testing.T) {
 	min := cfg2.MinVersion
 
 	cfg2.MinVersion = TLSVersion(0)
-	err = cfg2.Validate()
+	cfgValidator2, _ := cfg.(IConfigValidator)
+
+	err = cfgValidator2.ValidateCfg()
 	assert.Nil(t, err)
 
 	cfg2.MinVersion = TLSVersion(455)
-	err = cfg2.Validate()
+	cfgValidator2, _ = cfg.(IConfigValidator)
+
+	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error: ssl.minVersion not valid in config", err.Error())
 	cfg2.MinVersion = min
 
 	max := cfg2.MaxVersion
 	cfg2.MaxVersion = TLSVersion(0)
-	err = cfg2.Validate()
+	cfgValidator2, _ = cfg.(IConfigValidator)
+	err = cfgValidator2.ValidateCfg()
 	assert.Nil(t, err)
 
 	cfg2.MaxVersion = TLSVersion(455)
-	err = cfg2.Validate()
+	cfgValidator2, _ = cfg.(IConfigValidator)
+	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error: ssl.maxVersion not valid in config", err.Error())
 	cfg2.MaxVersion = max
 
 	cfg2.CipherSuites = []TLSCipherSuite{TLSCipherSuite(888)}
-	err = cfg2.Validate()
+	cfgValidator2, _ = cfg.(IConfigValidator)
+	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "Error: ssl.cipherSuites not valid in config", err.Error())
 }

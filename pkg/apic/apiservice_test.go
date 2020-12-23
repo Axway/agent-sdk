@@ -1,12 +1,13 @@
 package apic
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 
 	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,36 +31,6 @@ var serviceBody = ServiceBody{
 	// SubscriptionName: proxy.OrganizationID,
 }
 
-func newServiceClient() *ServiceClient {
-
-	webhook := &corecfg.WebhookConfiguration{
-		URL:     "http://foo.bar",
-		Headers: "Header=contentType,Value=application/json",
-		Secret:  "",
-	}
-
-	subscriptions := corecfg.SubscriptionConfiguration{
-		Approval: &corecfg.ApprovalConfig{
-			SubscriptionApprovalMode:    "webhook",
-			SubscriptionApprovalWebhook: webhook,
-		},
-	}
-
-	cfg := &corecfg.CentralConfiguration{
-		Mode: corecfg.PublishToEnvironmentAndCatalog,
-		Auth: &corecfg.AuthConfiguration{
-			URL: "http://localhost:8888",
-		},
-		SubscriptionConfiguration: &subscriptions,
-	}
-	return &ServiceClient{
-		cfg:                                cfg,
-		tokenRequester:                     MockTokenGetter,
-		apiClient:                          &api.MockClient{ResponseCode: http.StatusOK},
-		DefaultSubscriptionApprovalWebhook: webhook,
-	}
-}
-
 func TestIsValidAuthPolicy(t *testing.T) {
 	assert.False(t, isValidAuthPolicy("foobar"))
 	assert.True(t, isValidAuthPolicy(Apikey))
@@ -68,372 +39,333 @@ func TestIsValidAuthPolicy(t *testing.T) {
 }
 
 func TestCreateService(t *testing.T) {
-	client := newServiceClient()
-	mockClient := setupMocks(client)
+	client, httpClient := GetTestServiceClient()
+	serviceBody.AuthPolicy = "pass-through"
 
 	// this should be a full go right path
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusCreated,
+			RespCode: http.StatusNotFound,
 		},
 		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			respCode: http.StatusCreated,
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			respCode: http.StatusCreated,
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			respCode: http.StatusOK,
+			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
 		},
-	}
+	})
 
-	svcID, err := client.createService(serviceBody)
+	apiSvc, err := client.PublishService(serviceBody)
 	assert.Nil(t, err)
-	assert.NotNil(t, svcID)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 
 	// this should fail
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusRequestTimeout,
+			RespCode: http.StatusNotFound,
 		},
-	}
-	mockClient.respCount = 0
+		{
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusRequestTimeout,
+		},
+	})
 
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusOK,
+			RespCode: http.StatusNotFound,
 		},
 		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			respCode: http.StatusRequestTimeout,
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusRequestTimeout,
 		},
 		{
-			fileName: "./testdata/instancenotfound.json", // this for call to create the serviceInstance
-			respCode: http.StatusNoContent,
+			FileName: "./testdata/empty-list.json", // this for call to rollback apiservice
+			RespCode: http.StatusOK,
 		},
-		{
-			respCode: http.StatusOK, // this for call to rollback
-		},
-	}
+	})
 
-	mockClient.respCount = 0
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusRequestTimeout,
+			RespCode: http.StatusNotFound,
 		},
 		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			respCode: http.StatusCreated,
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			respCode: http.StatusRequestTimeout,
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusRequestTimeout,
 		},
-	}
+		{
+			FileName: "./testdata/empty-list.json", // this for call to rollback apiservice
+			RespCode: http.StatusOK,
+		},
+	})
 
-	mockClient.respCount = 0
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
 	// this should fail
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // this for call to create the service
-			respCode: http.StatusRequestTimeout,
+			RespCode: http.StatusNotFound,
 		},
 		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			respCode: http.StatusCreated,
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			respCode: http.StatusOK,
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			respCode: http.StatusRequestTimeout,
+			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusRequestTimeout,
 		},
 		{
-			respCode: http.StatusOK, // this for call to rollback
+			RespCode: http.StatusOK, // this for call to rollback
 		},
-	}
+	})
 
-	mockClient.respCount = 0
-	svcID, err = client.createService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 }
 
 func TestUpdateService(t *testing.T) {
-	client := newServiceClient()
-	mockClient := setupMocks(client)
+	client, httpClient := GetTestServiceClient()
 
-	// this should be a full go right path
-	mockClient.responses = []mockResponse{
+	// tests for updating existing revision
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // for call to update the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice.json", // for call to update the service
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			respCode: http.StatusOK,
+			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			respCode: http.StatusOK,
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json", // for call to check existance of the consumerInstance
-			respCode: http.StatusOK,
+			FileName: "./testdata/existingserviceinstances.json", // for call to get instance
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
-			respCode: http.StatusOK,
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
+			RespCode: http.StatusOK,
 		},
-	}
+		{
+			FileName: "./testdata/existingconsumerinstances.json", // for call to check existance of the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			RespCode: http.StatusOK,
+		},
+	})
 
-	svcID, err := client.updateService(serviceBody)
+	cloneServiceBody := serviceBody
+	cloneServiceBody.APIUpdateSeverity = "MINOR"
+	apiSvc, err := client.PublishService(cloneServiceBody)
 	assert.Nil(t, err)
-	assert.NotNil(t, svcID)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 
 	// this is a failure test
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json",
-			respCode: http.StatusRequestTimeout,
+			FileName: "./testdata/apiservice.json",
+			RespCode: http.StatusRequestTimeout,
 		},
-	}
+	})
 
-	mockClient.respCount = 0
-	svcID, err = client.updateService(serviceBody)
+	apiSvc, err = client.PublishService(serviceBody)
 	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
+	assert.Nil(t, apiSvc)
 
-	// this is a failure test
-	mockClient.responses = []mockResponse{
+	// tests for updating existing instance with same endpoint
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			fileName: "./testdata/apiservice.json", // for call to update the service
-			respCode: http.StatusOK,
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			respCode: http.StatusRequestTimeout,
+			FileName: "./testdata/apiservice.json", // for call to update the service
+			RespCode: http.StatusOK,
 		},
 		{
-			fileName: "./testdata/instancenotfound.json", // for call to update the serviceInstance
-			respCode: http.StatusNoContent,
+			FileName: "./testdata/existingservicerevisions.json", // this for call to get the revision
+			RespCode: http.StatusOK,
 		},
-	}
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingserviceinstances.json", // for call to get the serviceInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/serviceinstancejson", // for call to update the serviceinstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingconsumerinstances.json", // for call to get the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			RespCode: http.StatusOK,
+		},
+	})
+	// Test oas2 object
+	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
+	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	mockClient.respCount = 0
-	svcID, err = client.updateService(serviceBody)
-	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
-
-	// this is a failure test
-	mockClient.responses = []mockResponse{
-		{
-			fileName: "./testdata/apiservice.json", // for call to update the service
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			respCode: http.StatusRequestTimeout,
-		},
-		{
-			fileName: "./testdata/consumerinstance.json", // for call to test if consumerInstanceExists
-			respCode: http.StatusNotFound,
-		},
-	}
-
-	mockClient.respCount = 0
-	svcID, err = client.updateService(serviceBody)
-	assert.NotNil(t, err)
-	assert.Equal(t, "", svcID)
-
-	// this is another success test
-	mockClient.responses = []mockResponse{
-		{
-			fileName: "./testdata/apiservice.json", // for call to update the service
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/empty-list.json", // this for call to create the service
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			respCode: http.StatusOK,
-		},
-		{
-			fileName: "./testdata/consumerinstance.json", // for call to create the consumerInstance
-			respCode: http.StatusOK,
-		},
-	}
-
-	mockClient.respCount = 0
-	svcID, err = client.updateService(serviceBody)
+	cloneServiceBody = serviceBody
+	cloneServiceBody.Swagger = oas2Bytes
+	apiSvc, err = client.PublishService(cloneServiceBody)
 	assert.Nil(t, err)
-	assert.Equal(t, "e4ecaab773dbc4850173e45f35b8026f", svcID)
+	assert.NotNil(t, apiSvc)
 }
 
 func TestDeleteConsumerInstance(t *testing.T) {
-	client := newServiceClient()
-	mock := client.apiClient.(*api.MockClient)
-	mock.ResponseCode = http.StatusRequestTimeout
+	client, httpClient := GetTestServiceClient()
+	httpClient.ResponseCode = http.StatusRequestTimeout
 	err := client.deleteConsumerInstance("12345")
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Error(), strconv.Itoa(http.StatusRequestTimeout))
 
-	mock.ResponseCode = http.StatusNoContent
+	httpClient.ResponseCode = http.StatusNoContent
 	err = client.deleteConsumerInstance("12345")
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), strconv.Itoa(http.StatusNoContent))
+	assert.Nil(t, err)
 
-	mock.ResponseCode = http.StatusOK
+	httpClient.ResponseCode = http.StatusOK
 	err = client.deleteConsumerInstance("12345")
 	assert.Nil(t, err)
 }
 
 func TestGetConsumerInstanceByID(t *testing.T) {
-	client := newServiceClient()
-	mock := client.apiClient.(*api.MockClient)
+	client, httpClient := GetTestServiceClient()
 
 	// bad
-	mock.SetResponse("./testdata/instancenotfound.json", http.StatusBadRequest)
+	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusBadRequest)
 	instance, err := client.GetConsumerInstanceByID("")
 	assert.NotNil(t, err)
 	assert.Nil(t, instance)
 
 	// not found
-	mock.SetResponse("./testdata/instancenotfound.json", http.StatusOK)
+	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusOK)
 	instance, err = client.GetConsumerInstanceByID("e4ecaab773dbc4850173e45f35b8026g")
 	assert.NotNil(t, err)
 	assert.Nil(t, instance)
 
 	// good
-	mock.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
+	httpClient.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
 	instance, err = client.GetConsumerInstanceByID("e4ecaab773dbc4850173e45f35b8026f")
 	assert.Nil(t, err)
 	assert.Equal(t, "daleapi", instance.Name)
 }
 func TestRegisterSubscriptionWebhook(t *testing.T) {
-	client := newServiceClient()
-	mockClient := setupMocks(client)
+	client, httpClient := GetTestServiceClient()
 
 	// go right
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			respCode: http.StatusCreated, // for call to createSecret
+			RespCode: http.StatusCreated, // for call to createSecret
 		},
 		{
-			respCode: http.StatusCreated, // for call to createWebhook
+			RespCode: http.StatusCreated, // for call to createWebhook
 		},
-	}
+	})
 
 	err := client.RegisterSubscriptionWebhook()
 	assert.Nil(t, err)
 
 	// go wrong
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			respCode: http.StatusConflict, // for call to createSecret
+			RespCode: http.StatusConflict, // for call to createSecret
 		},
 		{
-			respCode: http.StatusOK, // for call to update the secret
+			RespCode: http.StatusOK, // for call to update the secret
 		},
 		{
-			respCode: http.StatusRequestTimeout, // for call to createWebhook
+			RespCode: http.StatusRequestTimeout, // for call to createWebhook
 		},
-	}
+	})
 
-	mockClient.respCount = 0
 	err = client.RegisterSubscriptionWebhook()
 	assert.NotNil(t, err)
 
 	// go right
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			respCode: http.StatusConflict, // for call to createSecret
+			RespCode: http.StatusConflict, // for call to createSecret
 		},
 		{
-			respCode: http.StatusOK, // for call to update the secret
+			RespCode: http.StatusOK, // for call to update the secret
 		},
 		{
-			respCode: http.StatusCreated, // for call to createWebhook
+			RespCode: http.StatusCreated, // for call to createWebhook
 		},
-	}
+	})
 
-	mockClient.respCount = 0
 	err = client.RegisterSubscriptionWebhook()
 	assert.Nil(t, err)
 
 	// go right
-	mockClient.responses = []mockResponse{
+	httpClient.SetResponses([]api.MockResponse{
 		{
-			respCode: http.StatusCreated, // for call to createSecret
+			RespCode: http.StatusCreated, // for call to createSecret
 		},
 		{
-			respCode: http.StatusConflict, // for call to createWebhook
+			RespCode: http.StatusConflict, // for call to createWebhook
 		},
 		{
-			respCode: http.StatusOK, // for call to update the webhook
+			RespCode: http.StatusOK, // for call to update the webhook
 		},
-	}
+	})
 
-	mockClient.respCount = 0
 	err = client.RegisterSubscriptionWebhook()
 	assert.Nil(t, err)
 }
