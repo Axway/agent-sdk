@@ -881,7 +881,7 @@ spec:
                 type: string
             resource:
               type: string
-              x-amplify-kind-ref: K8SResource
+              x-amplify-kind-ref: K8SCluster/K8SResource
               x-amplify-kind-ref-type: soft
             workloads:
               type: array
@@ -954,7 +954,7 @@ spec:
               type: array
               items:
                 type: string
-                x-amplify-kind-ref: K8SResource
+                x-amplify-kind-ref: K8SCluster/K8SResource
                 x-amplify-kind-ref-type: soft
             labels:
               type: object
