@@ -23,8 +23,7 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.0
-	github.com/tidwall/gjson v1.6.4
-	github.com/tidwall/match v1.0.2 // indirect
+	github.com/tidwall/gjson v1.6.7
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/text v0.3.3 // indirect
