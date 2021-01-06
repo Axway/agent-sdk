@@ -36,6 +36,6 @@ go get github.com/Axway/agent-sdk/
 ## Sample projects
 The developers can use the stubs packaged as zip file to build agents using the Agent SDK. The zip files contains code for sample discovery and traceability agent respectively, build scripts and instructions in README.md to make modifications to implement their own agents.
 
-[Download the stub project with sample discovery agent](./samples/apic_discovery_agent.zip)
+[Download the stub project with sample discovery agent](https://github.com/Axway/agent-sdk/raw/main/samples/apic_discovery_agent.zip)
 
-[Download the stub project with sample traceability agent](./samples/apic_traceability_agent.zip)
+[Download the stub project with sample traceability agent](https://github.com/Axway/agent-sdk/raw/main/samples/apic_traceability_agent.zip)
