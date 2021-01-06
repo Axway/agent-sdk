@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"

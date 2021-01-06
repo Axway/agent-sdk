@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strconv"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {

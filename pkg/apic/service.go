@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 

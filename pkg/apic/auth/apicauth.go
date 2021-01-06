@@ -23,8 +23,8 @@ import (
 
 	"math/big"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"

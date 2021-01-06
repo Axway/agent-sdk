@@ -1,8 +1,8 @@
 package config
 
 import (
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // LogConfig - Interface for logging config

@@ -13,7 +13,7 @@ package unifiedcatalog
 import (
 	// GENERATE: The following code has been modified after code generation
 	// "time"
-	time "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // AuditMetadata Audit information

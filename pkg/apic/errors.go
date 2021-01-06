@@ -1,6 +1,6 @@
 package apic
 
-import "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+import "github.com/Axway/agent-sdk/pkg/util/errors"
 
 // Errors hit when validating AMPLIFY Central connectivity
 var (
@@ -26,7 +26,7 @@ var (
 	ErrCreateWebhook = errors.New(1145, "unable to create webhook")
 	ErrCreateSecret  = errors.New(1146, "unable to create secret")
 
-	ErrGetSubscriptionDefProperties    = errors.New(1155, "error getting subscription definition properties in AMPLIFY Central")
-	ErrUpdateSubscriptionDefProperties = errors.New(1156, "error updating subscription definition properties in AMPLIFY Central")
+	ErrGetSubscriptionDefProperties       = errors.New(1155, "error getting subscription definition properties in AMPLIFY Central")
+	ErrUpdateSubscriptionDefProperties    = errors.New(1156, "error updating subscription definition properties in AMPLIFY Central")
 	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 )

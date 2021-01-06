@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/agent"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/agent"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
 )

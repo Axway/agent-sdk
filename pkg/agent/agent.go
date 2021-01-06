@@ -10,17 +10,17 @@ import (
 	"syscall"
 	"time"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
-	apiV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cache"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
-	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // AgentStatus - status for Agent resource

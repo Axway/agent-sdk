@@ -7,7 +7,7 @@ The Agent SDK helps in reducing complexity in implementing against the direct AM
 ## Installation 
 Use the following command to install the AMPLIFY Central Agents SDK 
 
-go get git.ecd.axway.org/apigov/apic_agents_sdk/
+go get github.com/Axway/agent-sdk/
 
 ## Packages
 
@@ -36,6 +36,6 @@ go get git.ecd.axway.org/apigov/apic_agents_sdk/
 ## Sample projects
 The developers can use the stubs packaged as zip file to build agents using the Agent SDK. The zip files contains code for sample discovery and traceability agent respectively, build scripts and instructions in README.md to make modifications to implement their own agents.
 
-[Download the stub project with sample discovery agent](https://git.ecd.axway.org/vchauhan/beano/-/blob/master/sample_projects/apic_discovery_agent.zip)
+[Download the stub project with sample discovery agent - TBD]
 
-[Download the stub project with sample traceability agent](https://git.ecd.axway.org/vchauhan/beano/-/blob/master/sample_projects/apic_traceability_agent.zip)
+[Download the stub project with sample traceability agent - TBD]

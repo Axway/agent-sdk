@@ -7,7 +7,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
-	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 var (

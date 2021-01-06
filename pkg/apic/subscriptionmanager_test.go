@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	uc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

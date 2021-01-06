@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
 func TestNewClient(t *testing.T) {

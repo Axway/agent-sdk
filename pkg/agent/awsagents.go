@@ -3,9 +3,9 @@ package agent
 import (
 	"strings"
 
-	apiV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
 )
 
 func awsDiscoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.AWSDiscoveryAgent {

@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )

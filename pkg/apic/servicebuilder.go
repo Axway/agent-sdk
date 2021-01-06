@@ -1,7 +1,7 @@
 package apic
 
 import (
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/config"
 )
 
 // ServiceBuilder - Interface to build the service body

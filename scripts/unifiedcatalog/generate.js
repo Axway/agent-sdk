@@ -4,7 +4,7 @@ const packagename = "unifiedcatalog";
 const stdin = "./unifiedcatalog.json";
 const group = "models";
 const version = "v1";
-//const proj="git.ecd.axway.org/apigov/apic_agents_sdk"
+//const proj="github.com/Axway/agent-sdk"
 
 const getResourceFile = execSync(
     `curl https://apicentral.axway.com/api/unifiedCatalog/${version}/docs -o ${stdin} --silent`,

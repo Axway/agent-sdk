@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	ot "github.com/opentracing/opentracing-go"
 )
 

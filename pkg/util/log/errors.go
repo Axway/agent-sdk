@@ -1,6 +1,6 @@
 package log
 
-import configerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+import configerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 // Log Config Errors
 var (

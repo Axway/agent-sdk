@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"testing"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/util"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 

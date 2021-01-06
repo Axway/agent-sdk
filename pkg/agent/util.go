@@ -3,7 +3,7 @@ package agent
 import (
 	"reflect"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/config"
 )
 
 // ApplyResouceToConfig - applies the resources to agent configs

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	uc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/unifiedcatalog/models"
-	agenterrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
+	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 // SubscriptionState - Type definition for subscription state

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
-	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // HTTP const definitions

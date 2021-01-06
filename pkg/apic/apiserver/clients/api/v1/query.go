@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // QueryStringer helps print a query
