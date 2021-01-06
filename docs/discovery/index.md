@@ -253,7 +253,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 ```
 
 ### Filtering
-The Agent SDK provides github.com/vivekschauhan/agents-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to AMPLIFY Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
+The Agent SDK provides github.com/Axway/agent-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to AMPLIFY Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
 The conditional expression must have "tag" as the prefix/selector in the symbol name. For e.g.
 
 ```
