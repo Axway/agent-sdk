@@ -212,6 +212,9 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
+	// must set the hc config now, because the healthchecker loop startes in agent.Initialize
+	hc.SetStatusConfig(c.statusCfg)
+
 	err = agent.Initialize(c.centralCfg)
 	if err != nil {
 		return err
@@ -235,8 +238,8 @@ func (c *agentRootCommand) initConfig() error {
 			return err
 		}
 	}
+
 	// Init the healthcheck API
-	hc.SetStatusConfig(c.statusCfg)
 	hc.HandleRequests()
 	return nil
 }
