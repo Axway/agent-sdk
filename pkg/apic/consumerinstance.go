@@ -57,9 +57,9 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	}
 
 	if enableSubscription {
-		log.Debug("Subscriptions will be enabled for consumer instances")
+		log.Debugf("Subscriptions will be enabled for '%s'", serviceBody.APIName)
 	} else {
-		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
+		log.Debugf("Subscriptions will be disabled for '%s', either because the authPolicy is pass-through or there is not a registered subscription schema", serviceBody.APIName)
 	}
 	return enableSubscription
 }
