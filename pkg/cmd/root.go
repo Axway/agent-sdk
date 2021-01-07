@@ -212,7 +212,7 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	// must set the hc config now, because the healthchecker loop startes in agent.Initialize
+	// must set the hc config now, because the healthchecker loop starts in agent.Initialize
 	hc.SetStatusConfig(c.statusCfg)
 
 	err = agent.Initialize(c.centralCfg)
