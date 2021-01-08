@@ -189,10 +189,8 @@ func (p *properties) parseStringValueForKey(key string) string {
 
 				if envVar != "" {
 					s = os.Getenv(envVar)
-					if s == "" {
-						if defaultVal != "" {
-							s = defaultVal
-						}
+					if s == "" && defaultVal != "" {
+						s = defaultVal
 					}
 				}
 			}

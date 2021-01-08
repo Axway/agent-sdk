@@ -56,6 +56,11 @@ func (a *AuthConfiguration) validate() {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthClientID))
 	}
 
+	a.validatePrivateKey()
+	a.validatePublicKey()
+}
+
+func (a *AuthConfiguration) validatePrivateKey() {
 	if a.GetPrivateKey() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
 	} else {
@@ -71,7 +76,9 @@ func (a *AuthConfiguration) validate() {
 			exception.Throw(ErrReadingKeyFile.FormatError("private key", a.GetPrivateKey()))
 		}
 	}
+}
 
+func (a *AuthConfiguration) validatePublicKey() {
 	if a.GetPublicKey() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
 	} else {
@@ -82,10 +89,10 @@ func (a *AuthConfiguration) validate() {
 			}
 			saveKeyData(a.GetPublicKey(), publicKeyData)
 		}
-	}
-	// Validate that the file is readable
-	if _, err := os.Open(a.GetPublicKey()); err != nil {
-		exception.Throw(ErrReadingKeyFile.FormatError("public key", a.GetPublicKey()))
+		// Validate that the file is readable
+		if _, err := os.Open(a.GetPublicKey()); err != nil {
+			exception.Throw(ErrReadingKeyFile.FormatError("public key", a.GetPublicKey()))
+		}
 	}
 }
 
