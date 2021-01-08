@@ -7,9 +7,9 @@ package v1alpha1
 import (
 	"fmt"
 
-	v1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/clients/api/v1"
-	apiv1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/axway-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
 
 type ResourceDefinitionVersionMergeFunc func(*v1alpha1.ResourceDefinitionVersion, *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error)
