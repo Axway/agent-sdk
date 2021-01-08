@@ -5,9 +5,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/service/daemon"
+	"github.com/Axway/agent-sdk/pkg/cmd/service/daemon"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (

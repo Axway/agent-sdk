@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/exception"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
 // AgentType - Defines the type of agent

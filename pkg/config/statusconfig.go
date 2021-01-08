@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 )
 
 // StatusConfig - Interface for status config

@@ -1,6 +1,6 @@
 package filter
 
-import "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+import "github.com/Axway/agent-sdk/pkg/util/errors"
 
 // Errors hit while parsing the APIMANAGER_FILTER
 var (

@@ -3,7 +3,7 @@ package v1
 import (
 	"testing"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestRSQL(t *testing.T) {

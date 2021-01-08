@@ -1,6 +1,6 @@
 package daemon
 
-import "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+import "github.com/Axway/agent-sdk/pkg/util/errors"
 
 // Errors that are hit while managing an Agent's service
 var (

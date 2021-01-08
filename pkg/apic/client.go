@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
-	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // constants for auth policy types

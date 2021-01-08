@@ -14,5 +14,5 @@ type EdgeTraceabilityAgentSpec struct {
 	// The name of the Axway Edge API Gateway dataplane associated to this agent
 	Dataplane string                          `json:"dataplane"`
 	Config    EdgeTraceabilityAgentSpecConfig `json:"config"`
-	Logging   AwsDiscoveryAgentSpecLogging    `json:"logging,omitempty"`
+	Logging   EdgeDiscoveryAgentSpecLogging   `json:"logging,omitempty"`
 }

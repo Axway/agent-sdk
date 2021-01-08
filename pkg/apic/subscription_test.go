@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 

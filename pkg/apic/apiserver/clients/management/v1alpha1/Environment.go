@@ -7,9 +7,9 @@ package v1alpha1
 import (
 	"fmt"
 
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/clients/api/v1"
-	apiv1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 type EnvironmentMergeFunc func(*v1alpha1.Environment, *v1alpha1.Environment) (*v1alpha1.Environment, error)

@@ -32,7 +32,7 @@ stages:
 ############################################################
 .except-feature: &except-feature
   only:
-    - master
+    - main
     - dev
     - tags
   except:
@@ -55,7 +55,7 @@ stages:
 
 .only-protected: &only-protected
   only:
-    - master
+    - main
     - dev
   except:
     - web
@@ -63,16 +63,16 @@ stages:
 
 .all: &all
   only:
-    - master
+    - main
     - dev
     - /^APIGOV-.*$/
   except:
     - web
     - triggers
 
-.only-master: &only-master
+.only-main: &only-main
   only:
-    - master
+    - main
   except:
     - web
     - triggers
@@ -115,10 +115,10 @@ stages:
   update-ca-certificates
 
 .prepare-path: &prepare-path |
-  mkdir -p ${GOPATH}/src/git.ecd.axway.org/apigov
-  cd ${GOPATH}/src/git.ecd.axway.org/apigov
-  ln -s ${CI_PROJECT_DIR} apic_agents_sdk
-  cd ${GOPATH}/src/git.ecd.axway.org/apigov/apic_agents_sdk
+  mkdir -p ${GOPATH}/src/github.com/Axway
+  cd ${GOPATH}/src/github.com/Axway
+  ln -s ${CI_PROJECT_DIR} agent-sdk
+  cd ${GOPATH}/src/github.com/Axway/agent-sdk
 
 .get-latest-version: &get-latest-version |
   if [ $(git --version | grep -Eo '2.*') ]; then
@@ -298,7 +298,7 @@ trigger-aws-apigw-discovery-agent:
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-master
+  <<: *only-main
 
 trigger-v7-discovery-agent:
   stage: update-dep
@@ -309,7 +309,7 @@ trigger-v7-discovery-agent:
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-master
+  <<: *only-main
 
 trigger-azure-discovery-agent:
   stage: update-dep
@@ -320,7 +320,7 @@ trigger-azure-discovery-agent:
     - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-master
+  <<: *only-main
 
   ############################################################
 # Section for release stage

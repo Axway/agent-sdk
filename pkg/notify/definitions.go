@@ -1,9 +1,9 @@
 package notify
 
 import (
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/config"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 var globalCfg corecfg.SubscriptionConfig

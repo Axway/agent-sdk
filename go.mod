@@ -1,4 +1,4 @@
-module git.ecd.axway.org/apigov/apic_agents_sdk
+module github.com/Axway/agent-sdk
 
 go 1.13
 

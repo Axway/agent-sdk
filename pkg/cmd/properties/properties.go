@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"

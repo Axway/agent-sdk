@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/tidwall/gjson"
 )
 

@@ -1,4 +1,7 @@
+# this for notifications for pull requests
+* @dfeldick @sbolosan @jcollins-axway @kflan-io @vivekschauhan
+
 #.csr-profile.json requires SPOC approval for any modifications
 # @dfeldick - Primary SPOC
 # @vchauhan- Secondary SPOC
-.csr-profile.json @dfeldick @vchauhan @mdenihan @rconan @jcollins @sbolosan @kflanagan
+.csr-profile.json @dfeldick @vivekschauhan @mdenihan @rconan @jcollins-axway @sbolosan @kflan-io

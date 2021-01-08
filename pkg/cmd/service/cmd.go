@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	corecmd "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

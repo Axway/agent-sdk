@@ -620,12 +620,6 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 ### Building the Agent
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
 
-When using modules, the dependencies are resolved by downloading modules from their source repositories into the module cache. The dependency modules are typically distributed over version control system available over public internet. Currently the Agents SDK is hosted in a private repo under https://git.ecd.axway.org/apigov/apic_agents_sdk, so the following variable can be set to resolve Agent SDK dependency from the private repository.
-
-```
-export GOPRIVATE="git.ecd.axway.org/apigov"
-```
-
 The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file. 
 
 Run the following commands to resolve the dependencies
@@ -637,10 +631,10 @@ go mod verify
 To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system. 
 The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to setup agent name, version, commit SHA and build time.
 
-- git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildTime
-- git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildVersion
-- git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildCommitSha
-- git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildAgentName
+- github.com/Axway/agent-sdk/pkg/cmd.BuildTime
+- github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
+- github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha
+- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName
 
 The following is an example of the build command that can be configured in the Makefile
 
@@ -649,10 +643,10 @@ The following is an example of the build command that can be configured in the M
 export version=`cat version` && \
 export commit_id=`git rev-parse --short HEAD` && \
 go build -tags static_all \
-	-ldflags="-X 'git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildTime=$${time}' \
-			-X 'git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildVersion=$${version}' \
-			-X 'git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
-			-X 'git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent'" \
+	-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${time}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent'" \
 	-a -o ${WORKSPACE}/bin/apic_traceability_agent ${WORKSPACE}/main.go
 ```
 

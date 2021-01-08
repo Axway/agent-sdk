@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )

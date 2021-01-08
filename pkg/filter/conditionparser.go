@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"strings"
 
-	utilerrors "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 // ConditionParser - Represents the filter condition parser

@@ -14,5 +14,5 @@ type AwsTraceabilityAgentSpec struct {
 	// The name of the AWS dataplane associated to this agent
 	Dataplane string                         `json:"dataplane"`
 	Config    AwsTraceabilityAgentSpecConfig `json:"config"`
-	Logging   AwsDiscoveryAgentSpecLogging   `json:"logging,omitempty"`
+	Logging   EdgeDiscoveryAgentSpecLogging  `json:"logging,omitempty"`
 }

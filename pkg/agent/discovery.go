@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
-	apiV1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // IsAPIPublished  - Returns true if the API Service is already published

@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strconv"
 
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {
@@ -57,9 +57,9 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	}
 
 	if enableSubscription {
-		log.Debug("Subscriptions will be enabled for consumer instances")
+		log.Debugf("Subscriptions will be enabled for '%s'", serviceBody.APIName)
 	} else {
-		log.Debug("Subscriptions will be disabled for consumer instances, either because the authPolicy is pass-through or there is not a registered subscription schema")
+		log.Debugf("Subscriptions will be disabled for '%s', either because the authPolicy is pass-through or there is not a registered subscription schema", serviceBody.APIName)
 	}
 	return enableSubscription
 }

@@ -6,18 +6,18 @@ import (
 	"os"
 	"strings"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/agent"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd/agentsync"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/agentsync"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/cmd/properties"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/errors"
-	hc "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/healthcheck"
-	log "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
 	"github.com/spf13/viper"
 )
 
@@ -32,7 +32,7 @@ const (
 type CommandHandler func() error
 
 // InitConfigHandler - Handler to be invoked on config initialization
-type InitConfigHandler func(centralConfig corecfg.CentralConfig) (interface{}, error)
+type InitConfigHandler func(centralConfig config.CentralConfig) (interface{}, error)
 
 // AgentRootCmd - Root Command for the Agents
 type AgentRootCmd interface {
@@ -40,7 +40,7 @@ type AgentRootCmd interface {
 	Execute() error
 
 	// Get the agentType
-	GetAgentType() corecfg.AgentType
+	GetAgentType() config.AgentType
 	AddCommand(*cobra.Command)
 
 	GetProperties() properties.Properties
@@ -52,20 +52,20 @@ type agentRootCommand struct {
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
-	agentType         corecfg.AgentType
+	agentType         config.AgentType
 	props             properties.Properties
-	statusCfg         corecfg.StatusConfig
-	centralCfg        corecfg.CentralConfig
+	statusCfg         config.StatusConfig
+	centralCfg        config.CentralConfig
 	agentCfg          interface{}
 }
 
 func init() {
-	corecfg.AgentTypeName = BuildAgentName
-	corecfg.AgentVersion = BuildVersion + "-" + BuildCommitSha
+	config.AgentTypeName = BuildAgentName
+	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
 }
 
 // NewRootCmd - Creates a new Agent Root Command
-func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
+func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType) AgentRootCmd {
 	c := &agentRootCommand{
 		agentName:         exeName,
 		commandHandler:    commandHandler,
@@ -82,10 +82,10 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 	c.props = properties.NewProperties(c.rootCmd)
 	c.addBaseProps()
-	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
-	corecfg.AddCentralConfigProperties(c.props, agentType)
-	corecfg.AddStatusConfigProperties(c.props)
+	config.AddCentralConfigProperties(c.props, agentType)
+	config.AddStatusConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
@@ -94,7 +94,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 }
 
 // NewCmd - Creates a new Agent Root Command using existing cmd
-func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType corecfg.AgentType) AgentRootCmd {
+func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType) AgentRootCmd {
 	c := &agentRootCommand{
 		agentName:         exeName,
 		commandHandler:    commandHandler,
@@ -109,15 +109,15 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.rootCmd.PreRunE = c.initialize
 
 	c.props = properties.NewProperties(c.rootCmd)
-	if agentType == corecfg.TraceabilityAgent {
+	if agentType == config.TraceabilityAgent {
 		c.props.SetAliasKeyPrefix(c.agentName)
 	}
 
 	c.addBaseProps()
-	corecfg.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
-	corecfg.AddCentralConfigProperties(c.props, agentType)
-	corecfg.AddStatusConfigProperties(c.props)
+	config.AddCentralConfigProperties(c.props, agentType)
+	config.AddStatusConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
@@ -195,22 +195,25 @@ func (c *agentRootCommand) onConfigChange() {
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
-	_, err := corecfg.ParseAndSetupLogConfig(c.GetProperties())
+	_, err := config.ParseAndSetupLogConfig(c.GetProperties())
 	if err != nil {
 		return err
 	}
 
-	c.statusCfg, err = corecfg.ParseStatusConfig(c.GetProperties())
+	c.statusCfg, err = config.ParseStatusConfig(c.GetProperties())
 	err = c.statusCfg.ValidateCfg()
 	if err != nil {
 		return err
 	}
 
 	// Init Central Config
-	c.centralCfg, err = corecfg.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
+	c.centralCfg, err = config.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {
 		return err
 	}
+
+	// must set the hc config now, because the healthchecker loop starts in agent.Initialize
+	hc.SetStatusConfig(c.statusCfg)
 
 	err = agent.Initialize(c.centralCfg)
 	if err != nil {
@@ -235,8 +238,8 @@ func (c *agentRootCommand) initConfig() error {
 			return err
 		}
 	}
+
 	// Init the healthcheck API
-	hc.SetStatusConfig(c.statusCfg)
 	hc.HandleRequests()
 	return nil
 }
@@ -283,7 +286,7 @@ func (c *agentRootCommand) Execute() error {
 	return c.rootCmd.Execute()
 }
 
-func (c *agentRootCommand) GetAgentType() corecfg.AgentType {
+func (c *agentRootCommand) GetAgentType() config.AgentType {
 	return c.agentType
 }
 

@@ -1,10 +1,10 @@
 package apic
 
 import (
-	coreapi "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 // Various consts for use

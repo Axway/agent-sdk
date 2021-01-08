@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 	"github.com/subosito/gotenv"
 )

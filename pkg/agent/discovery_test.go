@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic"
-	v1 "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/api/v1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/apic/auth"
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.ecd.axway.org/apigov/apic_agents_sdk/pkg/api"
-	corecfg "git.ecd.axway.org/apigov/apic_agents_sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/api"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 // GetTestServiceClient - return a true ServiceClient, but with mocks for tokengetter and the HTTPClient and dummy values
