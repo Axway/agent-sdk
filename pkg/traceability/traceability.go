@@ -26,9 +26,10 @@ const (
 	minWindowSize             int = 1
 	defaultStartMaxWindowSize int = 10
 	defaultPort                   = 5044
+	traceabilityStr               = "traceability"
 )
 
-var debugf = logp.MakeDebug("traceability")
+var debugf = logp.MakeDebug(traceabilityStr)
 
 // Client - struct
 type Client struct {
@@ -36,7 +37,7 @@ type Client struct {
 }
 
 func init() {
-	outputs.RegisterType("traceability", makeTraceabilityAgent)
+	outputs.RegisterType(traceabilityStr, makeTraceabilityAgent)
 }
 
 // SetOutputEventProcessor -
@@ -182,7 +183,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 }
 
 func (client *Client) String() string {
-	return "traceability"
+	return traceabilityStr
 }
 
 // updateEvent - updates the private field events in publisher.Batch

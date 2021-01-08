@@ -65,15 +65,13 @@ func validateConsumerInstances() {
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" {
-			if !agent.apiValidator(externalAPIID, externalAPIStage) {
-				log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				err = agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
-				if err != nil {
-					log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
-				} else {
-					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				}
+		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+			log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
+			err = agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+			if err != nil {
+				log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+			} else {
+				log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
 			}
 		}
 	}

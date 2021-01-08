@@ -159,11 +159,9 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 		}
 	}
 	status, _, err := client.request(events, client.headers, timeStamp)
-	if err != nil {
-		if err == ErrJSONEncodeFailed {
-			debugf("Failed to publish event: %s", err.Error())
-			return nil, nil
-		}
+	if err != nil && err == ErrJSONEncodeFailed {
+		debugf("Failed to publish event: %s", err.Error())
+		return nil, nil
 	}
 	switch {
 	case status == 500 || status == 400: //server error or bad input, don't retry
