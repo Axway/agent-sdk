@@ -81,10 +81,10 @@ func TestUpdateSubscriptionSchema(t *testing.T) {
 
 func TestContains(t *testing.T) {
 	items := []string{"c", "d", "e"}
-	b := util.StringArrayContains(items, "b")
+	b := util.StringSliceContains(items, "b")
 	assert.False(t, b)
 
-	b = util.StringArrayContains(items, "c")
+	b = util.StringSliceContains(items, "c")
 	assert.True(t, b)
 }
 

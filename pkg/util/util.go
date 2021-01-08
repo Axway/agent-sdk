@@ -74,12 +74,29 @@ func GetProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
 	}
 }
 
-// StringArrayContains - does the given array of strings contain the specified string?
-func StringArrayContains(items []string, s string) bool {
+// StringSliceContains - does the given string slice contain the specified string?
+func StringSliceContains(items []string, s string) bool {
 	for _, item := range items {
 		if item == s {
 			return true
 		}
 	}
 	return false
+}
+
+// RemoveDuplicateValuesFromStringSlice - remove duplicate values from a string slice
+func RemoveDuplicateValuesFromStringSlice(strSlice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+
+	// If the key(values of the slice) is not equal
+	// to the already present value in new slice (list)
+	// then we append it. else we jump on another element.
+	for _, entry := range strSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

@@ -65,8 +65,8 @@ func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefFi
 	}
 	ss.Properties[name] = newProp
 
-	// required array can't contain duplicates!
-	if isRequired && !util.StringArrayContains(ss.Required, name) {
+	// required slice can't contain duplicates!
+	if isRequired && !util.StringSliceContains(ss.Required, name) {
 		ss.Required = append(ss.Required, name)
 	}
 }
