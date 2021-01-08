@@ -28,6 +28,10 @@ func ValidateConfig(cfg interface{}) error {
 		v = reflect.Indirect(v)
 	}
 
+	return validateFields(cfg, v)
+}
+
+func validateFields(cfg interface{}, v reflect.Value) error {
 	// Look for Validate method on struct properties and invoke it
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).CanInterface() {
