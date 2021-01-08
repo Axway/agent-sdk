@@ -43,6 +43,11 @@ type ConsumerSubscriptionDefinition struct {
 
 // FromInstance converts a ResourceInstance to a ConsumerSubscriptionDefinition
 func (res *ConsumerSubscriptionDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *ConsumerSubscriptionDefinition) AsInstance() (*apiv1.ResourceInstance
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = ConsumerSubscriptionDefinitionGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

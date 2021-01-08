@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/tomnomnom/linkheader"
-
-	ot "github.com/opentracing/opentracing-go"
 )
 
 // HTTPClient allows you to replace the default client for different use cases
@@ -28,6 +27,12 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 	req.SetBasicAuth(ba.user, ba.pass)
 	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
 	req.Header.Set("X-Axway-Instance-Id", ba.instanceID)
+	return nil
+}
+
+func (ba *basicAuth) impersonate(req *http.Request, toImpersonate string) error {
+	req.Header.Set("X-Axway-User-Id", toImpersonate)
+
 	return nil
 }
 
@@ -49,12 +54,16 @@ type modifier interface {
 // BasicAuth auth with user/pass
 func BasicAuth(user, password, tenantID, instanceID string) Options {
 	return func(c *ClientBase) {
-		c.auth = &basicAuth{
+		ba := &basicAuth{
 			user:       user,
 			pass:       password,
 			tenantID:   tenantID,
 			instanceID: instanceID,
 		}
+
+		c.auth = ba
+
+		c.impersonator = ba
 	}
 }
 
@@ -69,13 +78,27 @@ func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, tim
 	}
 }
 
+type Logger interface {
+	Log(kv ...interface{}) error
+}
+
+type noOpLogger struct{}
+
+func (noOpLogger) Log(kv ...string) error { return nil }
+
+func WithLogger(log Logger) Options {
+	return func(cb *ClientBase) {
+		cb.client = loggingDoerWrapper{log, cb.client}
+	}
+}
+
 // NewClient creates a new HTTP client
 func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
-		tracer: ot.NoopTracer{},
-		client: &http.Client{},
-		url:    baseURL,
-		auth:   noopAuth{},
+		client:       &http.Client{},
+		url:          baseURL,
+		auth:         noopAuth{},
+		impersonator: noImpersonator{},
 	}
 
 	for _, o := range options {
@@ -132,26 +155,12 @@ const (
 	unscopedURLFormat = "%s/%s/%s/%s"
 )
 
-// ClientCtx -
 type ClientCtx struct {
 	Client
 }
 
-// WithScope -
 func (c *ClientCtx) WithScope(scope string) ScopedCtx {
 	return c
-}
-
-func (c *Client) url() string {
-	// unscoped
-	url := fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
-
-	// scoped
-	if c.scopeResource != "" {
-		url = fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, c.scope, c.resource)
-	}
-
-	return url
 }
 
 // handleError handles an api-server error response. caller should close body.
@@ -186,17 +195,21 @@ func handleError(res *http.Response) error {
 	}
 }
 
-func (c *Client) urlForResource(rm *apiv1.ResourceMeta) string {
+func (c *Client) url(rm apiv1.ResourceMeta) string {
 	if c.scopeResource != "" {
 		scope := c.scope
 		if c.scope == "" {
 			scope = rm.Metadata.Scope.Name
 		}
 
-		return fmt.Sprintf(scopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.scopeResource, scope, c.resource, rm.Name)
+		return fmt.Sprintf(scopedURLFormat, c.ClientBase.url, c.group, c.version, c.scopeResource, scope, c.resource)
 	}
 
-	return fmt.Sprintf(unscopedURLFormat+"/%s", c.ClientBase.url, c.group, c.version, c.resource, rm.Name)
+	return fmt.Sprintf(unscopedURLFormat, c.ClientBase.url, c.group, c.version, c.resource)
+}
+
+func (c *Client) urlForResource(rm apiv1.ResourceMeta) string {
+	return c.url(rm) + "/" + rm.Name
 }
 
 // WithScope creates a request within the given scope. ex: env/$name/services
@@ -225,7 +238,7 @@ func (c *Client) List(options ...ListOptions) ([]*apiv1.ResourceInstance, error)
 
 // ListCtx returns a list of resources
 func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url(apiv1.ResourceMeta{}), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -292,14 +305,14 @@ func (c *Client) listAll(req *http.Request) ([]*apiv1.ResourceInstance, error) {
 	return objs, nil
 }
 
-// Get -
 func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	return c.GetCtx(context.Background(), name)
 }
 
-// GetCtx returns a single resource
-func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.urlForResource(&apiv1.ResourceMeta{Name: name}), nil)
+// GetCtx2 returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
+// If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
+func (c *Client) GetCtx2(ctx context.Context, toGet *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(toGet.ResourceMeta), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -328,14 +341,55 @@ func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstan
 	return obj, nil
 }
 
-// Delete -
+// GetCtx returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
+// If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
+func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstance, error) {
+	split := strings.SplitN(name, `/`, 2)
+
+	url := ""
+
+	if len(split) == 2 {
+		url = c.urlForResource(apiv1.ResourceMeta{Name: split[1], Metadata: apiv1.Metadata{Scope: apiv1.MetadataScope{Name: split[0]}}})
+	} else {
+		url = c.urlForResource(apiv1.ResourceMeta{Name: name})
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.auth.Authenticate(req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, handleError(res)
+	}
+	dec := json.NewDecoder(res.Body)
+	obj := &apiv1.ResourceInstance{}
+	err = dec.Decode(&obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
 func (c *Client) Delete(ri *apiv1.ResourceInstance) error {
 	return c.DeleteCtx(context.Background(), ri)
 }
 
 // DeleteCtx deletes a single resource
 func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.urlForResource(&ri.ResourceMeta), nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", c.urlForResource(ri.ResourceMeta), nil)
 	if err != nil {
 		return err
 	}
@@ -354,26 +408,41 @@ func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) erro
 	if res.StatusCode != 202 && res.StatusCode != 204 {
 		return handleError(res)
 	}
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-// Create -
-func (c *Client) Create(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return c.CreateCtx(context.Background(), ri)
+func CUserID(userID string) CreateOption {
+	return func(co *createOptions) {
+		co.impersonateUserID = userID
+	}
+}
+
+// Create creates a single resource
+func (c *Client) Create(ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
+	return c.CreateCtx(context.Background(), ri, opts...)
 }
 
 // CreateCtx creates a single resource
-func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts ...CreateOption) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
+
+	co := createOptions{}
+
+	for _, opt := range opts {
+		opt(&co)
+	}
 
 	err := enc.Encode(ri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url(), buf)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.url(ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -382,6 +451,13 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+
+	if co.impersonateUserID != "" {
+		err = c.impersonator.impersonate(req, co.impersonateUserID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -403,22 +479,75 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 	return obj, err
 }
 
-// Update -
-func (c *Client) Update(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	return c.UpdateCtx(context.Background(), ri)
+func UUserID(userID string) UpdateOption {
+	return func(co *updateOptions) {
+		co.impersonateUserID = userID
+	}
+}
+
+type MergeFunc func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error)
+
+// Merge option first fetches the resource and then
+// applies the merge function and uses the result for the actual update
+// fetched will be the old resource
+// new will be the resource passed to the Update call
+// If the resource doesn't exist it will fetched will be set to null
+// If the merge function returns an error, the update operation will be cancelled
+func Merge(merge MergeFunc) UpdateOption {
+	return func(co *updateOptions) {
+		co.mergeFunc = merge
+	}
+}
+
+// Update updates a single resource. If the merge option is passed it will first fetch the resource and then apply the merge function.
+func (c *Client) Update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
+	return c.UpdateCtx(context.Background(), ri, opts...)
 }
 
 // UpdateCtx updates a single resource
-func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
+
+	uo := updateOptions{}
+
+	for _, opt := range opts {
+		opt(&uo)
+	}
+
+	if uo.mergeFunc != nil {
+		old, err := c.GetCtx2(ctx, ri)
+		if err != nil {
+			switch err.(type) {
+			case NotFoundError:
+				old = nil
+			default:
+				return nil, err
+			}
+		}
+
+		i, err := uo.mergeFunc(old, ri)
+		if err != nil {
+			return nil, err
+		}
+		newRi, err := i.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+
+		if old == nil {
+			return c.CreateCtx(ctx, newRi, CUserID(uo.impersonateUserID))
+		}
+
+		ri = newRi
+	}
 
 	err := enc.Encode(ri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.urlForResource(&ri.ResourceMeta), buf)
+	req, err := http.NewRequestWithContext(ctx, "PUT", c.urlForResource(ri.ResourceMeta), buf)
 	if err != nil {
 		return nil, err
 	}
@@ -428,6 +557,13 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 		return nil, err
 	}
 
+	if uo.impersonateUserID != "" {
+		err = c.impersonator.impersonate(req, uo.impersonateUserID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := c.client.Do(req)
@@ -435,11 +571,6 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance) (*ap
 		return nil, err
 	}
 	defer res.Body.Close()
-	switch res.StatusCode {
-	case 200:
-	case 404:
-	default:
-	}
 	if res.StatusCode != 200 {
 		return nil, handleError(res)
 	}

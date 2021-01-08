@@ -43,6 +43,11 @@ type K8SResource struct {
 
 // FromInstance converts a ResourceInstance to a K8SResource
 func (res *K8SResource) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *K8SResource) AsInstance() (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = K8SResourceGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

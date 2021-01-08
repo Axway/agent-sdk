@@ -5,9 +5,45 @@
 package {{.res.version}}
 
 import (
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/{{.res.group}}/{{.res.version}}"
+	v1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/axway-sdk/pkg/apic/apiserver/models/{{.res.group}}/{{.res.version}}"
 )
+
+type {{.res.kind}}MergeFunc func(*{{.res.version}}.{{.res.kind}}, *{{.res.version}}.{{.res.kind}}) (*{{.res.version}}.{{.res.kind}}, error)
+
+// Merge builds a merge option for an update operation
+func {{.res.kind}}Merge(f {{.res.kind}}MergeFunc) v1.UpdateOption {
+	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
+		p, n := &{{.res.version}}.{{.res.kind}}{}, &{{.res.version}}.{{.res.kind}}{} 
+
+		switch t := prev.(type) {
+		case *{{.res.version}}.{{.res.kind}}:
+			p = t
+		case *apiv1.ResourceInstance:
+			err := p.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialise prev resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise prev resource, unxexpected resource type: %T", t)
+		}
+
+		switch t := new.(type) {
+		case *{{.res.version}}.{{.res.kind}}:
+			n = t
+		case *apiv1.ResourceInstance:
+			err := n.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialize new resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise new resource, unxexpected resource type: %T", t)
+		}
+
+		return f(p, n)
+	})
+}
 
 // {{.res.kind}}Client -
 type {{.res.kind}}Client struct {
@@ -28,7 +64,7 @@ func New{{.res.kind}}Client(c v1.Base) (*Unscoped{{.res.kind}}Client, error) {
 // New{{.res.kind}}Client -
 func New{{.res.kind}}Client(c v1.Base) (*{{.res.kind}}Client, error) {
 {{ end }}
-	client, err := c.ForKind(v1alpha1.{{.res.kind}}GVK())
+	client, err := c.ForKind({{.res.version}}.{{.res.kind}}GVK())
 	if err != nil {
 		return nil, err
 	}
@@ -47,19 +83,54 @@ func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Clie
 		c.client.WithScope(scope),
 	}
 }
+
+// Get - 
+func (c *Unscoped{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &{{.res.version}}.{{.res.kind}}{}
+	service.FromInstance(ri)
+
+	return service, nil
+}
+
+// Update - 
+func (c *Unscoped{{.res.kind}}Client) Update(res *{{.res.version}}.{{.res.kind}}, opts ...v1.UpdateOption) (*{{.res.version}}.{{.res.kind}}, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	updated := &{{.res.version}}.{{.res.kind}}{}
+
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}
 {{ end }}
 
 // List -
-func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*{{.res.version}}.{{.res.kind}}, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.{{.res.kind}}, len(riList))
+	result := make([]*{{.res.version}}.{{.res.kind}}, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.{{.res.kind}}{}
+		result[i] = &{{.res.version}}.{{.res.kind}}{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -70,20 +141,20 @@ func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*v1alpha1.{{.re
 }
 
 // Get -
-func (c *{{.res.kind}}Client) Get(name string) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Get(name string) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.{{.res.kind}}{}
+	service := &{{.res.version}}.{{.res.kind}}{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
+func (c *{{.res.kind}}Client) Delete(res *{{.res.version}}.{{.res.kind}}) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -94,19 +165,19 @@ func (c *{{.res.kind}}Client) Delete(res *v1alpha1.{{.res.kind}}) error {
 }
 
 // Create -
-func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Create(res *{{.res.version}}.{{.res.kind}}, opts ...v1.CreateOption) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	created := &v1alpha1.{{.res.kind}}{}
+	created := &{{.res.version}}.{{.res.kind}}{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -117,17 +188,17 @@ func (c *{{.res.kind}}Client) Create(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.
 }
 
 // Update -
-func (c *{{.res.kind}}Client) Update(res *v1alpha1.{{.res.kind}}) (*v1alpha1.{{.res.kind}}, error) {
+func (c *{{.res.kind}}Client) Update(res *{{.res.version}}.{{.res.kind}}, opts ...v1.UpdateOption) (*{{.res.version}}.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	updated := &v1alpha1.{{.res.kind}}{}
+	updated := &{{.res.version}}.{{.res.kind}}{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

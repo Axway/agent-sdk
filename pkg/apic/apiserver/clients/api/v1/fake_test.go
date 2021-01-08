@@ -103,12 +103,12 @@ func TestFakeScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	ri, err := noScope.WithScope("muhName").Get("muhResource")
+	_, err = noScope.WithScope("muhName").Get("muhResource")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	ri, err = noScope.WithScope("muhName").Update(
+	ri, err := noScope.WithScope("muhName").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.K8SResourceGVK(),
@@ -177,46 +177,52 @@ func TestFakeQueries(t *testing.T) {
 		query    v1.QueryNode
 		expected []string
 	}{{
-		"common attribute and value",
-		v1.AttrIn("attr", "val"),
-		[]string{"env1", "env2"},
-	}, {
-		"common tag",
-		v1.TagsIn("tag"),
-		[]string{"env1", "env2"},
-	}, {
-		"tag with one match",
-		v1.TagsIn("tag1"),
+		"query names",
+		v1.Names("env1"),
 		[]string{"env1"},
-	}, {
-		"two tags",
-		v1.TagsIn("tag1", "tag2"),
-		[]string{"env1", "env2"},
-	}, {
-		"attribute with two values",
-		v1.AttrIn("diffattr", "val1"),
-		[]string{"env1"},
-	}, {
-		"any attr",
-		v1.AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
-		[]string{"env1", "env2"},
-	}, {
-		"all attr",
-		v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
-		[]string{"env1"},
-	}, {
-		"all attr and one tag",
-		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag")),
-		[]string{"env1"},
-	}, {
-		"all attr and one tag no result",
-		v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
-		[]string{},
-	}, {
-		"all attr or one tag",
-		v1.Or(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
-		[]string{"env1", "env2"},
 	},
+
+		{
+			"common attribute and value",
+			v1.AttrIn("attr", "val"),
+			[]string{"env1", "env2"},
+		}, {
+			"common tag",
+			v1.TagsIn("tag"),
+			[]string{"env1", "env2"},
+		}, {
+			"tag with one match",
+			v1.TagsIn("tag1"),
+			[]string{"env1"},
+		}, {
+			"two tags",
+			v1.TagsIn("tag1", "tag2"),
+			[]string{"env1", "env2"},
+		}, {
+			"attribute with two values",
+			v1.AttrIn("diffattr", "val1"),
+			[]string{"env1"},
+		}, {
+			"any attr",
+			v1.AnyAttr(map[string]string{"attr1": "val1", "attr2": "val2"}),
+			[]string{"env1", "env2"},
+		}, {
+			"all attr",
+			v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}),
+			[]string{"env1"},
+		}, {
+			"all attr and one tag",
+			v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag")),
+			[]string{"env1"},
+		}, {
+			"all attr and one tag no result",
+			v1.And(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
+			[]string{},
+		}, {
+			"all attr or one tag",
+			v1.Or(v1.AllAttr(map[string]string{"attr1": "val1", "diffattr": "val1"}), v1.TagsIn("tag2")),
+			[]string{"env1", "env2"},
+		},
 	}
 
 	for i := range testCases {
@@ -291,10 +297,135 @@ func apisvc(name string, scopeName string, opts ...buildOption) *apiv1.ResourceI
 	return ri
 }
 
+func TestFakeUpdateMerge(t *testing.T) {
+	old := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Tags: []string{"old"},
+		},
+	}
+
+	update := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Attributes: map[string]string{},
+			Tags:       []string{"new"},
+		},
+	}
+
+	merged := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{},
+			Name:             "name",
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "myenv",
+				},
+				References: []apiv1.Reference{},
+			},
+			Attributes: map[string]string{},
+			Tags:       []string{"old", "new"},
+		},
+	}
+
+	testCases := []struct {
+		name     string
+		old      apiv1.Interface
+		update   apiv1.Interface
+		mf       v1.MergeFunc
+		expected apiv1.Interface
+	}{{
+		name:   "it's a create",
+		old:    nil,
+		update: update,
+		mf: func(fetched, new apiv1.Interface) (apiv1.Interface, error) {
+			return new, nil
+		},
+		expected: update,
+	}, {
+		name:   "it's an overwrite",
+		old:    old,
+		update: update,
+		mf: func(fetched, new apiv1.Interface) (apiv1.Interface, error) {
+			return new, nil
+		},
+		expected: update,
+	}, {
+		name:   "it's a merge",
+		old:    old,
+		update: update,
+		mf: func(fetched, new apiv1.Interface) (apiv1.Interface, error) {
+			ri, err := fetched.AsInstance()
+			if err != nil {
+				return nil, err
+			}
+			ri.Tags = append(ri.Tags, new.GetTags()...)
+
+			return ri, nil
+		},
+		expected: merged,
+	}}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := v1.NewFakeClient(&management.Environment{ResourceMeta: apiv1.ResourceMeta{Name: "myenv"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			us, err := b.ForKind(management.APIServiceGVK())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.old != nil {
+				i, err := tc.old.AsInstance()
+				if err != nil {
+					t.Fatalf("Failed due: %s", err)
+				}
+				_, err = us.Create(i)
+				if err != nil {
+					t.Error("Failed to create old resource: ", err)
+				}
+			}
+			i, err := tc.update.AsInstance()
+			if err != nil {
+				t.Fatalf("Failed due: %s", err)
+			}
+
+			r, err := us.Update(i, v1.Merge(tc.mf))
+			if err != nil {
+				t.Errorf("Failed to update: %s", err)
+				return
+			}
+
+			if !reflect.DeepEqual(r.GetTags(), tc.expected.GetTags()) {
+				t.Errorf("Expected tags %+v; Got: %+v ", tc.expected.GetTags(), r.GetTags())
+			}
+
+		})
+	}
+}
+
 func TestFake(t *testing.T) {
 	testCases := []struct {
 		name           string
-		init           []*apiv1.ResourceInstance
+		init           []apiv1.Interface
 		add            []*apiv1.ResourceInstance
 		update         []*apiv1.ResourceInstance
 		delete         []*apiv1.ResourceInstance
@@ -304,7 +435,7 @@ func TestFake(t *testing.T) {
 		expectedAfter  []string
 	}{{
 		"attr list after delete",
-		[]*apiv1.ResourceInstance{
+		[]apiv1.Interface{
 			env("env1"),
 			apisvc("svc1", "env1", withAttr(map[string]string{"attr": "val"})),
 		},
@@ -317,7 +448,7 @@ func TestFake(t *testing.T) {
 		[]string{},
 	}, {
 		"attr list after update",
-		[]*apiv1.ResourceInstance{
+		[]apiv1.Interface{
 			env("env1"),
 			apisvc("svc1", "env1"),
 		},
@@ -330,7 +461,7 @@ func TestFake(t *testing.T) {
 		[]string{"svc1"},
 	}, {
 		"tags list after delete",
-		[]*apiv1.ResourceInstance{
+		[]apiv1.Interface{
 			env("env1"),
 			apisvc("svc1", "env1", withTags([]string{"tag1"})),
 		},
@@ -343,7 +474,7 @@ func TestFake(t *testing.T) {
 		[]string{},
 	}, {
 		"tags list after update",
-		[]*apiv1.ResourceInstance{
+		[]apiv1.Interface{
 			env("env1"),
 			apisvc("svc1", "env1"),
 		},
@@ -356,7 +487,7 @@ func TestFake(t *testing.T) {
 		[]string{"svc1"},
 	}, {
 		"attribute and tags list after add",
-		[]*apiv1.ResourceInstance{
+		[]apiv1.Interface{
 			env("env1"),
 			apisvc("svc1", "env1", withAttr(map[string]string{"attr1": "val1"}), withTags([]string{"tag1"})),
 		},

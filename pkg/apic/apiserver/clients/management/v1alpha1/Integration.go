@@ -5,9 +5,47 @@
 package v1alpha1
 
 import (
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"fmt"
+
+	v1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/axway-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
+
+type IntegrationMergeFunc func(*v1alpha1.Integration, *v1alpha1.Integration) (*v1alpha1.Integration, error)
+
+// Merge builds a merge option for an update operation
+func IntegrationMerge(f IntegrationMergeFunc) v1.UpdateOption {
+	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
+		p, n := &v1alpha1.Integration{}, &v1alpha1.Integration{}
+
+		switch t := prev.(type) {
+		case *v1alpha1.Integration:
+			p = t
+		case *apiv1.ResourceInstance:
+			err := p.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialise prev resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise prev resource, unxexpected resource type: %T", t)
+		}
+
+		switch t := new.(type) {
+		case *v1alpha1.Integration:
+			n = t
+		case *apiv1.ResourceInstance:
+			err := n.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialize new resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise new resource, unxexpected resource type: %T", t)
+		}
+
+		return f(p, n)
+	})
+}
 
 // IntegrationClient -
 type IntegrationClient struct {
@@ -71,14 +109,14 @@ func (c *IntegrationClient) Delete(res *v1alpha1.Integration) error {
 }
 
 // Create -
-func (c *IntegrationClient) Create(res *v1alpha1.Integration) (*v1alpha1.Integration, error) {
+func (c *IntegrationClient) Create(res *v1alpha1.Integration, opts ...v1.CreateOption) (*v1alpha1.Integration, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +132,12 @@ func (c *IntegrationClient) Create(res *v1alpha1.Integration) (*v1alpha1.Integra
 }
 
 // Update -
-func (c *IntegrationClient) Update(res *v1alpha1.Integration) (*v1alpha1.Integration, error) {
+func (c *IntegrationClient) Update(res *v1alpha1.Integration, opts ...v1.UpdateOption) (*v1alpha1.Integration, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}

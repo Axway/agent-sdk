@@ -21,7 +21,7 @@ var (
 )
 
 const (
-	SecretScope = "Environment"
+	SecretScope = "Integration"
 
 	SecretResource = "secrets"
 )
@@ -43,6 +43,11 @@ type Secret struct {
 
 // FromInstance converts a ResourceInstance to a Secret
 func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = SecretGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

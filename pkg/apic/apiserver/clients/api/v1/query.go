@@ -44,6 +44,12 @@ type attrNode struct {
 
 type tagNode []string
 
+type namesNode []string
+
+func (n namesNode) Accept(v Visitor) {
+	v.Visit(n)
+}
+
 func (n *attrNode) Accept(v Visitor) {
 	v.Visit(n)
 }
@@ -72,6 +78,15 @@ func AttrIn(key string, values ...string) QueryNode {
 // TagsIn creates a query that matches resources with any of the tag values
 func TagsIn(values ...string) QueryNode {
 	return tagNode(values)
+}
+
+func AllTags(values ...string) QueryNode {
+	subNodes := make([]QueryNode, len(values))
+	for i, value := range values {
+		subNodes[i] = TagsIn(value)
+	}
+
+	return andNode(subNodes)
 }
 
 // AnyAttr creates a query that matches resources with any of the attributes
@@ -108,6 +123,11 @@ func AllAttr(attrs map[string]string) QueryNode {
 		i++
 	}
 	return andNode(nodes)
+}
+
+// Names creates a query that matches any of the passed names
+func Names(names ...string) QueryNode {
+	return namesNode(names)
 }
 
 // Or creates a query that ors two or more subqueries
@@ -154,6 +174,7 @@ func (rv *rsqlVisitor) String() string {
 func (rv *rsqlVisitor) Visit(node QueryNode) {
 
 	switch n := node.(type) {
+
 	case andNode:
 		rv.b.WriteString("(")
 		children := []QueryNode(n)
@@ -174,6 +195,15 @@ func (rv *rsqlVisitor) Visit(node QueryNode) {
 			}
 		}
 		rv.b.WriteString(")")
+	case namesNode:
+		switch len(n) {
+		case 0:
+			rv.b.WriteString(`name==""`)
+		case 1:
+			rv.b.WriteString(fmt.Sprintf(`name=="%s"`, n[0]))
+		default:
+			rv.b.WriteString(fmt.Sprintf(`name=in=("%s")`, strings.Join(n, `","`)))
+		}
 	case tagNode:
 		switch len(n) {
 		case 0:

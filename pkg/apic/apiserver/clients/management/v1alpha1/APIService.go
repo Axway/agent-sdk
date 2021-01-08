@@ -5,9 +5,47 @@
 package v1alpha1
 
 import (
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"fmt"
+
+	v1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/clients/api/v1"
+	apiv1 "github.com/Axway/axway-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/axway-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
+
+type APIServiceMergeFunc func(*v1alpha1.APIService, *v1alpha1.APIService) (*v1alpha1.APIService, error)
+
+// Merge builds a merge option for an update operation
+func APIServiceMerge(f APIServiceMergeFunc) v1.UpdateOption {
+	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
+		p, n := &v1alpha1.APIService{}, &v1alpha1.APIService{}
+
+		switch t := prev.(type) {
+		case *v1alpha1.APIService:
+			p = t
+		case *apiv1.ResourceInstance:
+			err := p.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialise prev resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise prev resource, unxexpected resource type: %T", t)
+		}
+
+		switch t := new.(type) {
+		case *v1alpha1.APIService:
+			n = t
+		case *apiv1.ResourceInstance:
+			err := n.FromInstance(t)
+			if err != nil {
+				return nil, fmt.Errorf("merge: failed to unserialize new resource: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("merge: failed to unserialise new resource, unxexpected resource type: %T", t)
+		}
+
+		return f(p, n)
+	})
+}
 
 // APIServiceClient -
 type APIServiceClient struct {
@@ -36,6 +74,41 @@ func (c *UnscopedAPIServiceClient) WithScope(scope string) *APIServiceClient {
 	return &APIServiceClient{
 		c.client.WithScope(scope),
 	}
+}
+
+// Get -
+func (c *UnscopedAPIServiceClient) Get(name string) (*v1alpha1.APIService, error) {
+	ri, err := c.client.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	service := &v1alpha1.APIService{}
+	service.FromInstance(ri)
+
+	return service, nil
+}
+
+// Update -
+func (c *UnscopedAPIServiceClient) Update(res *v1alpha1.APIService, opts ...v1.UpdateOption) (*v1alpha1.APIService, error) {
+	ri, err := res.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	resource, err := c.client.Update(ri, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	updated := &v1alpha1.APIService{}
+
+	// Updates the resource in place
+	err = updated.FromInstance(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, nil
 }
 
 // List -
@@ -83,14 +156,14 @@ func (c *APIServiceClient) Delete(res *v1alpha1.APIService) error {
 }
 
 // Create -
-func (c *APIServiceClient) Create(res *v1alpha1.APIService) (*v1alpha1.APIService, error) {
+func (c *APIServiceClient) Create(res *v1alpha1.APIService, opts ...v1.CreateOption) (*v1alpha1.APIService, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri)
+	cri, err := c.client.Create(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +179,12 @@ func (c *APIServiceClient) Create(res *v1alpha1.APIService) (*v1alpha1.APIServic
 }
 
 // Update -
-func (c *APIServiceClient) Update(res *v1alpha1.APIService) (*v1alpha1.APIService, error) {
+func (c *APIServiceClient) Update(res *v1alpha1.APIService, opts ...v1.UpdateOption) (*v1alpha1.APIService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
 	}
-	resource, err := c.client.Update(ri)
+	resource, err := c.client.Update(ri, opts...)
 	if err != nil {
 		return nil, err
 	}
