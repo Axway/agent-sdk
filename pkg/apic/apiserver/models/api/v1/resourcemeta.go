@@ -1,7 +1,7 @@
 package v1
 
-// Resource -
-type Resource interface {
+// Meta
+type Meta interface {
 	GetName() string
 	GetGroupVersionKind() GroupVersionKind
 	GetMetadata() Metadata

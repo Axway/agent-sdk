@@ -45,6 +45,11 @@ type EdgeTraceabilityAgent struct {
 
 // FromInstance converts a ResourceInstance to a EdgeTraceabilityAgent
 func (res *EdgeTraceabilityAgent) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -74,5 +79,8 @@ func (res *EdgeTraceabilityAgent) AsInstance() (*apiv1.ResourceInstance, error) 
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = EdgeTraceabilityAgentGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

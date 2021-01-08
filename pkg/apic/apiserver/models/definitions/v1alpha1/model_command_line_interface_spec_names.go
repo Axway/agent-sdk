@@ -17,4 +17,6 @@ type CommandLineInterfaceSpecNames struct {
 	Singular string `json:"singular"`
 	// Defines the short names that the cli can use to fetch a resource in the group.
 	ShortNames []string `json:"shortNames"`
+	// Defines the short names alias that the cli can use to fetch a resource in the group.
+	ShortNamesAlias []string `json:"shortNamesAlias,omitempty"`
 }

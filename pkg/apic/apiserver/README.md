@@ -10,9 +10,9 @@ For information regarding gomplate, see https://github.com/hairyhenderson/gompla
 # Pre-requisites
 In order to generate the code you need the following tools. Note that these instructions have been tested on linux. Mac instructions may vary.
 1. install node: `sudo apt install nodejs`
-2. install openapi-generator: `npm install @openapitools/openapi-generator-cli -g`
+2. install openapi-generator: `npm install @openapitools/openapi-generator-cli" -g`
+// openapi generator 5.0.0+ refactored the go generation and it breaks some things
+2.1 openapi-generator-cli version-manager set 4
 3. install gomplate: `GO111MODULE=yes go get github.com/hairyhenderson/gomplate/cmd/gomplate`
 
 You should now be all set to run `make apiserver-generate $PROTOCOL $HOST $PORT`. ex: `make apiserver-generate https apicentral.axway.com 443`
-
-Good luck!!!

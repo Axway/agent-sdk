@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// MeshDiscoverySpec struct for MeshDiscoverySpec
-type MeshDiscoverySpec struct {
-	Selectors      map[string]interface{} `json:"selectors,omitempty"`
-	EnvironmentRef string                 `json:"environmentRef,omitempty"`
+// MeshWorkloadSpecSpecs API specs exposed by this workload on this pod.
+type MeshWorkloadSpecSpecs struct {
+	// Array of references to apispecs discovered by the discovery agent.
+	DiscoveredSpecs []string `json:"discoveredSpecs,omitempty"`
 }

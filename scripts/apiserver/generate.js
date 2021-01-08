@@ -10,6 +10,8 @@
  * A "sub resource" would be another type that the main resource depends on like APIServiceSpec or AWSDataPlaneSpec.
  * These files are generated from the openapi-generator and their name comes from the generator.
  * The APIServiceSpec type will be found in the model_api_service_spec.go file.
+ *
+ *
  */
 
 const { execSync } = require('child_process');
@@ -65,7 +67,9 @@ fetch()
 		// fs.writeFileSync('./main-resources.json', JSON.stringify(mainResources));
 		delete subResources.api; // the api resources are common resources, and have been written manually.
 		writeSubResources(subResources);
-		writeMainResources(mainResources);
+	        writeMainResources(mainResources);
+
+		writeSet(mainResources);
 	})
 	.catch(err => console.log('ERROR: ', err));
 
@@ -79,9 +83,8 @@ const writeSubResources = subResources => {
 		for (let versionKey in groupObj) {
 			const data = JSON.stringify(groupObj[versionKey]);
 			const res = execSync(
-				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${versionKey} --output ${modelsPath}${groupKey}/${versionKey} -DmodelDocs=false -Dmodels << 'EOF'\n${data}\nEOF`
+				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${versionKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
 			);
-			console.log(res.toString());
 		}
 	}
 };
@@ -103,8 +106,8 @@ const writeMainResources = mainResources => {
 
 				const input = `\'${JSON.stringify(resource)}\'`;
 				// make the folders if they do not exist
-				execSync(`mkdir -p ${clientsPath}${group}/${version}`);
-				execSync(`mkdir -p ${modelsPath}${group}/${version}`);
+				execSync(`mkdir -p ${clientsPath}${group}/${version}`).toString();
+				execSync(`mkdir -p ${modelsPath}${group}/${version}`).toString();
 
 				// create the models using the go template
 				const model = `${modelsPath}${file}`;
@@ -116,8 +119,7 @@ const writeMainResources = mainResources => {
 				// creat the clients using the go template
 				const client = `${clientsPath}${file}`;
 				execSync(
-					`echo ${input} | gomplate --context res="stdin:?type=application/json" -f ${clientsTmplPath} --out "${client}"`
-				);
+					`echo ${input} | gomplate --context res="stdin:?type=application/json" -f ${clientsTmplPath} --out "${client}"`).toString();
 				console.log(`Created client ${client}`);
 			}
 		}
@@ -135,7 +137,7 @@ const createMainAndSubResources = spec => {
 		);
 		return acc;
 	}, {});
-	return [subResources, mainResources];
+        return [subResources, mainResources];
 };
 
 const addResourceToGroupVersion = (acc, spec, schemaKey) => {
@@ -245,3 +247,21 @@ const createGomplateResource = resource => {
 		fields: filterFields(resource),
 	};
 };
+
+
+// The clients Set is generated from all the main resources.
+const writeSet = resources => {
+        var setResources = []
+        Object.entries(resources).forEach(([group, versions]) => {
+                Object.entries(versions).forEach(([version, versionFields]) =>{
+                        kinds = Object.entries(versionFields.components.schemas).map(([kind, {'x-axway-scoped':scoped}]) => {return {kind, scoped}})
+                        setResources.push({group, version, kinds})
+                })
+        })
+        const setInput = JSON.stringify({set: setResources}, null, 2)
+
+        execSync(
+                `gomplate --context input='stdin:?type=application/json' -f scripts/apiserver/set.tmpl --out "pkg/apic/apiserver/clients/set.go"`,
+                {input: setInput}
+        )
+}

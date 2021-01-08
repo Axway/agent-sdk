@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"html/template"
 	"strings"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -16,7 +17,7 @@ func (e Errors) Error() string {
 
 	b.WriteRune('[')
 	for i, err := range e {
-		b.WriteString(fmt.Sprintf("{\"status\": %d, \"detail\": \"%s\"}", err.Status, err.Detail))
+		b.WriteString(fmt.Sprintf("{\"status\": %d, \"detail\": \"%s\"}", err.Status, template.JSEscapeString(err.Detail)))
 		if i < len(e)-1 {
 			b.WriteRune(',')
 		}

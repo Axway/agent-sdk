@@ -43,6 +43,11 @@ type ResourceDefinitionVersion struct {
 
 // FromInstance converts a ResourceInstance to a ResourceDefinitionVersion
 func (res *ResourceDefinitionVersion) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+
 	m, err := json.Marshal(ri.Spec)
 	if err != nil {
 		return err
@@ -72,5 +77,8 @@ func (res *ResourceDefinitionVersion) AsInstance() (*apiv1.ResourceInstance, err
 		return nil, err
 	}
 
-	return &apiv1.ResourceInstance{ResourceMeta: res.ResourceMeta, Spec: spec}, nil
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = ResourceDefinitionVersionGVK()
+
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }
