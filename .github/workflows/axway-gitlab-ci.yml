@@ -1,0 +1,32 @@
+# This is a basic workflow that is manually triggered
+
+name: Axway-GitLab-Mirror-CI
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  push:
+    branches: [ '**' ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "greet"
+  axway-gitlab-ci:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - uses: actions/checkout@v2
+
+    # Runs a single command using the runners shell
+    - name: Trigger GitLab mirror pull and CI pipeline
+      uses: vivekschauhan/gitlab-mirror-and-ci-action@master
+      with:
+        args: "https://git.ecd.axway.org/vchauhan/apic_agents_sdk"
+      env:
+        GITLAB_HOSTNAME: "git.ecd.axway.org"
+        GITLAB_USERNAME: "vchauhan"
+        GITLAB_PASSWORD: ${{ secrets.GITLAB_TOKEN }}
+        GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
