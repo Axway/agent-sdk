@@ -61,6 +61,23 @@
         "CVE-2017-9431",
         "CVE-2020-7768"
       ]
-    }
+    },
+    {
+      "path": ".*apic_traceability_agent\\.zip/.*",
+      "scanner": "dependency-check",
+      "classification": "No Risk",
+      "justification": "docker package not used by traceability agent sample. The package is referenced as dependency from libbeat",
+      "component": "docker",
+      "version": ".*",
+      "ids": [
+          "CVE-2018-15514",
+          "CVE-2019-13139",
+          "CVE-2019-13509",
+          "CVE-2019-15752",
+          "CVE-2019-16884",
+          "CVE-2019-5736",
+          "CVE-2020-14298"
+      ]
+  }
   ]
 }
