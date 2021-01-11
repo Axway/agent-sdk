@@ -40,9 +40,9 @@ stages:
     - triggers
 
 .only-feature: &only-feature
-  only:
-    - /^APIGOV-.*$/
   except:
+    - main
+    - dev
     - web
     - triggers
 
