@@ -35,20 +35,7 @@ error-check:
 	./build/scripts/error_check.sh ./pkg
 
 sonar: test-sonar
-	sonar-scanner -X \
-		-Dsonar.host.url=http://quality1.ecd.axway.int \
-		-Dsonar.language=go \
-		-Dsonar.projectName=APIC_AGENTS_SDK \
-		-Dsonar.projectVersion=1.0 \
-		-Dsonar.projectKey=APIC_AGENTS_SDK \
-		-Dsonar.sourceEncoding=UTF-8 \
-		-Dsonar.projectBaseDir=${WORKSPACE} \
-		-Dsonar.sources=. \
-		-Dsonar.tests=. \
-		-Dsonar.exclusions=**/mock/**,**/vendor/**,**/apiserver/clients/**,**/apiserver/models/**,**/api/v1/**,**/mock*.go \
-		-Dsonar.test.inclusions=**/*test*.go \
-		-Dsonar.go.tests.reportPaths=goreport.json \
-		-Dsonar.go.coverage.reportPaths=gocoverage.out
+	./sonar.sh $(mode)
 
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
