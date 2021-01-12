@@ -146,14 +146,26 @@ test:
     - make test
   <<: *only-feature
 
-sonar:
-  stage: sonar
+.sonar-template: &sonar-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   before_script:
     - *prepare-path
     - *configure-git-ssh
+
+sonar-preview:
+  stage: test
+  <<: *sonar-template
+  script:
+    - make sonar mode=preview
+  allow_failure: true
+  <<: *only-feature
+
+sonar:
+  stage: sonar
+  <<: *sonar-template
   script:
     - make sonar
+  allow_failure: true
   <<: *only-protected
 
 ############################################################
