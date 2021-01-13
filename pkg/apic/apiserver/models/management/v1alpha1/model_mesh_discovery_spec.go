@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// MeshWorkloadSpecSpecs API specs exposed by this workload on this port.
-type MeshWorkloadSpecSpecs struct {
-	// Array of references to apispecs discovered by the discovery agent.
-	DiscoveredSpecs []string `json:"discoveredSpecs,omitempty"`
+// MeshDiscoverySpec struct for MeshDiscoverySpec
+type MeshDiscoverySpec struct {
+	// Target environment.
+	EnvironmentRef string `json:"environmentRef,omitempty"`
 }
