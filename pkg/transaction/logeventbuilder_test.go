@@ -222,7 +222,7 @@ func TestSummaryBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Transaction status not set in summary log event", err.Error())
+	assert.Equal(t, "Status property not set in transaction summary event", err.Error())
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetDuration(10).
@@ -238,7 +238,7 @@ func TestSummaryBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Transaction entry point details are not set in summary log event", err.Error())
+	assert.Equal(t, "Transaction entry point details are not set in transaction summary event", err.Error())
 
 	// Test with explicitly setting properties that are set thru agent config by default
 	logEvent, err = NewTransactionSummaryBuilder().
