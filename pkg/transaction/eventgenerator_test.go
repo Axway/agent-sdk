@@ -18,15 +18,15 @@ type Config struct {
 	Central corecfg.CentralConfig `config:"central"`
 }
 
-func createMapperTestConfig(authURL, tenantID, env, envName string) *Config {
-	return &Config{
+func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID string) *Config {
+	cfg := &Config{
 		Central: &corecfg.CentralConfiguration{
 			AgentType:                 corecfg.TraceabilityAgent,
 			URL:                       "https://apicentral.axway.com",
 			PlatformURL:               "https://platform.axway.com",
 			Mode:                      corecfg.PublishToEnvironmentAndCatalog,
 			TenantID:                  tenantID,
-			APICDeployment:            env,
+			APICDeployment:            apicDeployment,
 			Environment:               envName,
 			APIServerVersion:          "v1alpha1",
 			SubscriptionConfiguration: corecfg.NewSubscriptionConfig(),
@@ -40,6 +40,8 @@ func createMapperTestConfig(authURL, tenantID, env, envName string) *Config {
 			},
 		},
 	}
+	cfg.Central.SetEnvironmentID(envID)
+	return cfg
 }
 
 func TestCreateEventWithValidTokenRequest(t *testing.T) {
@@ -49,7 +51,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	}))
 	defer s.Close()
 
-	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "1111")
+	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	// authCfg := cfg.Central.GetAuthConfig()
 	agent.Initialize(cfg.Central)
 
@@ -89,7 +91,7 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	}))
 	defer s.Close()
 
-	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "1111")
+	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	agent.Initialize(cfg.Central)
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
