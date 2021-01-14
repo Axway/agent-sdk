@@ -507,6 +507,7 @@ type LogEvent struct {
 	TransactionID      string   `json:"transactionId"`
 	Environment        string   `json:"environment,omitempty"`
 	APICDeployment     string   `json:"apicDeployment,omitempty"`
+	EnvironmentName    string   `json:"environmentName"`
 	EnvironmentID      string   `json:"environmentId"`
 	TenantID           string   `json:"tenantId"`
 	TrcbltPartitionID  string   `json:"trcbltPartitionId"`
@@ -518,7 +519,140 @@ type LogEvent struct {
 }
 ```
 
-The traffic log entry from different API gateway can be in different formats, so the agents can parse the received log entry and map the entries to TransactionSummary or TransactionEvent log events. The mapped LogEvent object can then be used to construct beat.Event using the transaction.EventGenerator. The agents can construct event generator using transaction.NewEventGenerator() method.
+The traffic log entry from different API gateways can be in different formats, so the agents can parse the received log entry and map the entries to TransactionSummary or TransactionEvent log events. The Agent SDK provides the following set of builders to setup the both type of log events.
+
+```
+// SummaryBuilder - Interface to build the log event of type transaction summary
+type SummaryBuilder interface {
+	SetTimestamp(timestamp int64) SummaryBuilder
+	SetTransactionID(transactionID string) SummaryBuilder
+	SetAPICDeployment(apicDeployment string) SummaryBuilder
+	SetEnvironmentName(environmentName string) SummaryBuilder
+	SetEnvironmentID(environmentID string) SummaryBuilder
+	SetTenantID(tenantID string) SummaryBuilder
+	SetTrcbltPartitionID(trcbltPartitionID string) SummaryBuilder
+	SetTargetPath(targetPath string) SummaryBuilder
+	SetResourcePath(resourcePath string) SummaryBuilder
+
+	SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder
+	SetDuration(duration int) SummaryBuilder
+	SetApplication(appID, appName string) SummaryBuilder
+	SetProduct(product string) SummaryBuilder
+	SetTeam(teamID string) SummaryBuilder
+	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
+	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
+	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
+
+	Build() (*LogEvent, error)
+}
+
+// EventBuilder - Interface to build the log event of type transaction event
+type EventBuilder interface {
+	SetTimestamp(timestamp int64) EventBuilder
+	SetTransactionID(transactionID string) EventBuilder
+	SetAPICDeployment(apicDeployment string) EventBuilder
+	SetEnvironmentName(environmentName string) EventBuilder
+	SetEnvironmentID(environmentID string) EventBuilder
+	SetTenantID(tenantID string) EventBuilder
+	SetTrcbltPartitionID(trcbltPartitionID string) EventBuilder
+	SetTargetPath(targetPath string) EventBuilder
+	SetResourcePath(resourcePath string) EventBuilder
+
+	SetID(id string) EventBuilder
+	SetParentID(parentID string) EventBuilder
+	SetSource(source string) EventBuilder
+	SetDestination(destination string) EventBuilder
+	SetDuration(duration int) EventBuilder
+	SetDirection(direction string) EventBuilder
+	SetStatus(status TxEventStatus) EventBuilder
+	SetProtocolDetail(protocolDetail interface{}) EventBuilder
+
+	Build() (*LogEvent, error)
+}
+
+// HTTPProtocolBuilder - Interface to build the HTTP protocol details for transaction event
+type HTTPProtocolBuilder interface {
+	SetURI(uri string) HTTPProtocolBuilder
+	SetVersion(version string) HTTPProtocolBuilder
+	SetArgs(args string) HTTPProtocolBuilder
+	SetMethod(method string) HTTPProtocolBuilder
+	SetStatus(status int, statusText string) HTTPProtocolBuilder
+	SetUserAgent(userAgent string) HTTPProtocolBuilder
+	SetHost(host string) HTTPProtocolBuilder
+	SetByteLength(byteReceived, byteSent int) HTTPProtocolBuilder
+	SetRemoteAddress(remoteName string, remoteAddr string, remotePort int) HTTPProtocolBuilder
+	SetLocalAddress(localAddr string, localPort int) HTTPProtocolBuilder
+	SetSSLProperties(sslProtocol, sslServerName, sslSubject string) HTTPProtocolBuilder
+	SetAuthSubjectID(authSubjectID string) HTTPProtocolBuilder
+	SetHeaders(requestHeaders, responseHeaders string) HTTPProtocolBuilder
+	SetIndexedHeaders(indexedRequestHeaders, indexedResponseHeaders string) HTTPProtocolBuilder
+	SetPayload(requestPayload, responsePayload string) HTTPProtocolBuilder
+	SetWAFStatus(wasStatus int) HTTPProtocolBuilder
+
+	Build() (TransportProtocol, error)
+}
+
+// JMSProtocolBuilder - Interface to build the JMS protocol details for transaction log event
+type JMSProtocolBuilder interface {
+	SetMessageID(messageID string) JMSProtocolBuilder
+	SetCorrelationID(correlationID string) JMSProtocolBuilder
+	SetAuthSubjectID(authSubjectID string) JMSProtocolBuilder
+	SetDestination(destination string) JMSProtocolBuilder
+	SetProviderURL(providerURL string) JMSProtocolBuilder
+	SetDeliveryMode(deliveryMode int) JMSProtocolBuilder
+	SetPriority(priority int) JMSProtocolBuilder
+	SetReplyTo(replyTo string) JMSProtocolBuilder
+	SetRedelivered(redelivered int) JMSProtocolBuilder
+	SetTimestamp(timestamp int) JMSProtocolBuilder
+	SetExpiration(expiration int) JMSProtocolBuilder
+	SetJMSType(jmsType string) JMSProtocolBuilder
+	SetStatus(status string) JMSProtocolBuilder
+	SetStatusText(statusText string) JMSProtocolBuilder
+
+	Build() (TransportProtocol, error)
+}
+```
+
+The sample code below demonstrates building up the transaction summary log event
+```
+ 	txSummary, err := transaction.NewTransactionSummaryBuilder().
+		SetTimestamp(eventTime).
+		SetTransactionID(txID).
+		SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+		SetTeam(teamID).
+		SetEntryPoint("http", method, uri, host).
+		SetProxy("unknown", "", 0).
+		Build()
+```
+
+Below is an example code for building transaction event with HTTP protocol details
+```
+	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
+		SetURI(txDetails.URI).
+		SetMethod(txDetails.Method).
+		SetStatus(txDetails.StatusCode, http.StatusText(txDetails.StatusCode)).
+		SetHost(txDetails.SourceHost).
+		SetHeaders(m.buildHeaders(txDetails.RequestHeaders), m.buildHeaders(txDetails.ResponseHeaders)).
+		SetByteLength(txDetails.RequestBytes, txDetails.ResponseBytes).
+		SetRemoteAddress("", txDetails.DesHost, txDetails.DestPort).
+		SetLocalAddress(txDetails.SourceHost, txDetails.SourcePort).
+		Build()
+	...
+	...
+	txEvent, err := transaction.NewTransactionEventBuilder().
+		SetTimestamp(eventTime).
+		SetTransactionID(txID).
+		SetID(eventID).
+		SetParentID(parentEventID).
+		SetSource(txDetails.SourceHost + ":" + strconv.Itoa(txDetails.SourcePort)).
+		SetDestination(txDetails.DesHost + ":" + strconv.Itoa(txDetails.DestPort)).
+		SetDirection(direction).
+		SetStatus(m.getTransactionEventStatus(txDetails.StatusCode)).
+		SetProtocolDetail(httpProtocolDetails).
+		Build()
+```
+
+The mapped LogEvent object can then be used to construct beat.Event using the transaction.EventGenerator. The agents can construct event generator using transaction.NewEventGenerator() method.
 
 Below is the sample code for the custom beat generating the events. The sample does not demonstrate how the agent collects the log entry for API Gateway and is left up to agent implementation.
 
