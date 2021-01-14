@@ -12,6 +12,36 @@ const SummaryEventProxyIDPrefix = "remoteApiId_"
 // SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
 const SummaryEventApplicationIDPrefix = "remoteAppId_"
 
+// TxEventStatus - Type def for transaction event status
+type TxEventStatus string
+
+// Constants for transaction event status
+const (
+	// TxEventStatusPass - Constant for Pass transaction event status
+	TxEventStatusPass TxEventStatus = "Pass"
+
+	// TxEventStatusFail - Constant for Fail transaction event status
+	TxEventStatusFail TxEventStatus = "Fail"
+)
+
+// TxSummaryStatus - Type def for transaction event status
+type TxSummaryStatus string
+
+// Constants for transaction summary status
+const (
+	// TxSummaryStatusSuccess - Constant for Success transaction summary status
+	TxSummaryStatusSuccess TxSummaryStatus = "Success"
+
+	// TxSummaryStatusFailure - Constant for Success transaction summary status
+	TxSummaryStatusFailure TxSummaryStatus = "Failure"
+
+	// TxSummaryStatusException - Constant for Exception transaction summary status
+	TxSummaryStatusException TxSummaryStatus = "Exception"
+
+	// TxSummaryStatusUnknown - Constant for Exception transaction summary status
+	TxSummaryStatusUnknown TxSummaryStatus = "Unknown"
+)
+
 // LogEvent - Log event to be sent to Condor
 type LogEvent struct {
 	Version            string   `json:"version"`
@@ -19,6 +49,7 @@ type LogEvent struct {
 	TransactionID      string   `json:"transactionId"`
 	Environment        string   `json:"environment,omitempty"`
 	APICDeployment     string   `json:"apicDeployment,omitempty"`
+	EnvironmentName    string   `json:"environmentName,omitempty"`
 	EnvironmentID      string   `json:"environmentId"`
 	TenantID           string   `json:"tenantId"`
 	TrcbltPartitionID  string   `json:"trcbltPartitionId"`
@@ -75,16 +106,19 @@ type EntryPoint struct {
 	Host   string `json:"host,omitempty"`
 }
 
+// TransportProtocol - Interface for transport protocol detail
+type TransportProtocol interface{}
+
 // Event - Represents the transaction detail event
 type Event struct {
-	ID          string      `json:"id,omitempty"`
-	ParentID    string      `json:"parentId,omitempty"`
-	Source      string      `json:"source,omitempty"`
-	Destination string      `json:"destination,omitempty"`
-	Duration    int         `json:"duration"`
-	Direction   string      `json:"direction,omitempty"`
-	Status      string      `json:"status,omitempty"`
-	Protocol    interface{} `json:"protocol,omitempty"`
+	ID          string            `json:"id,omitempty"`
+	ParentID    string            `json:"parentId,omitempty"`
+	Source      string            `json:"source,omitempty"`
+	Destination string            `json:"destination,omitempty"`
+	Duration    int               `json:"duration"`
+	Direction   string            `json:"direction,omitempty"`
+	Status      string            `json:"status,omitempty"`
+	Protocol    TransportProtocol `json:"protocol,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events
