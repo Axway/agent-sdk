@@ -140,7 +140,7 @@ func AddSubscriptionConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "", "Body of the email notification for action subscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Removal Notification", "Subject of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Subscription Removal Notification", "Subject of the email notification for action unsubscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnubscribeBody, "", "Body of the email notification for action unsubscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject, "Subscription Failed Notification", "Subject of the email notification for action subscribe failed")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "", "Body of the email notification for action subscribe failed")
