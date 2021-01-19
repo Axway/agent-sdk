@@ -309,9 +309,12 @@ func (c *Client) Get(name string) (*apiv1.ResourceInstance, error) {
 	return c.GetCtx(context.Background(), name)
 }
 
-// GetCtx2 returns a single resource. If client is unscoped then name can be "<scopeName>/<name>".
-// If client is scoped then name can be "<name>" or "<scopeName>/<name>" but <scopeName> is ignored.
+// GetCtx2 returns a single resource.
 func (c *Client) GetCtx2(ctx context.Context, toGet *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if toGet.Name == "" {
+		return nil, fmt.Errorf("empty resource name")
+	}
+
 	req, err := http.NewRequestWithContext(ctx, "GET", c.urlForResource(toGet.ResourceMeta), nil)
 	if err != nil {
 		return nil, err
@@ -348,10 +351,26 @@ func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstan
 
 	url := ""
 
-	if len(split) == 2 {
+	switch len(split) {
+	case 2:
+		if split[0] == "" {
+			return nil, fmt.Errorf("empty scope name")
+		}
+
+		if split[1] == "" {
+			return nil, fmt.Errorf("empty resource name")
+		}
+
 		url = c.urlForResource(apiv1.ResourceMeta{Name: split[1], Metadata: apiv1.Metadata{Scope: apiv1.MetadataScope{Name: split[0]}}})
-	} else {
+	case 1:
+		if split[0] == "" {
+			return nil, fmt.Errorf("empty resource name")
+		}
+
 		url = c.urlForResource(apiv1.ResourceMeta{Name: name})
+	default:
+		return nil, fmt.Errorf("invalid resource name")
+
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
