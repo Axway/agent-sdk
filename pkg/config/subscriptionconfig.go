@@ -105,7 +105,7 @@ const (
 	pathSubscriptionsNotificationsSMTPSubscribeOauth           = "central.subscriptions.notifications.smtp.subscribe.oauth"
 	pathSubscriptionsNotificationsSMTPSubscribeAPIKeys         = "central.subscriptions.notifications.smtp.subscribe.apikeys"
 	pathSubscriptionsNotificationsSMTPUnsubscribeSubject       = "central.subscriptions.notifications.smtp.unsubscribe.subject"
-	pathSubscriptionsNotificationsSMTPUnubscribeBody           = "central.subscriptions.notifications.smtp.unsubscribe.body"
+	pathSubscriptionsNotificationsSMTPUnsubscribeBody          = "central.subscriptions.notifications.smtp.unsubscribe.body"
 	pathSubscriptionsNotificationsSMTPSubscribeFailedSubject   = "central.subscriptions.notifications.smtp.subscribeFailed.subject"
 	pathSubscriptionsNotificationsSMTPSubscribeFailedBody      = "central.subscriptions.notifications.smtp.subscribeFailed.body"
 	pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject = "central.subscriptions.notifications.smtp.unsubscribeFailed.subject"
@@ -137,15 +137,15 @@ func AddSubscriptionConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserName, "", "Login user for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserPassword, "", "Login password for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeSubject, "Subscription Notification", "Subject of the email notification for action subscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "", "Body of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "Subscription created for Catalog Item: ${catalogItemName} <br/> ${authtemplate}", "Body of the email notification for action subscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Removal Notification", "Subject of the email notification for action unsubscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnubscribeBody, "", "Body of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Subscription Removal Notification", "Subject of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeBody, "Subscription for Catalog Item: ${catalogItemName} has been unsubscribed", "Body of the email notification for action unsubscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject, "Subscription Failed Notification", "Subject of the email notification for action subscribe failed")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "", "Body of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "Could not subscribe to CatalogItem: ${catalogItemName}", "Body of the email notification for action subscribe failed")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject, "Subscription Removal Failed Notification", "Subject of the email notification for action unsubscribe failed")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "", "Body of the email notification for action unsubscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "Could not unsubscribe to Catalog Item: ${catalogItemURL} ${catalogItemName}", "Body of the email notification for action unsubscribe failed")
 }
 
 // ParseSubscriptionConfig -
@@ -192,7 +192,7 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 				},
 				Unsubscribe: &EmailTemplate{
 					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeSubject),
-					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnubscribeBody),
+					Body:    props.StringPropertyValue(pathSubscriptionsNotificationsSMTPUnsubscribeBody),
 				},
 				SubscribeFailed: &EmailTemplate{
 					Subject: props.StringPropertyValue(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject),
