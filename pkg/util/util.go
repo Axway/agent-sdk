@@ -81,7 +81,7 @@ func GetURLHostName(urlString string) string {
 		fmt.Println(err)
 		return ""
 	}
-	return host.String()
+	return host.Hostname()
 }
 
 // StringSliceContains - does the given string slice contain the specified string?
