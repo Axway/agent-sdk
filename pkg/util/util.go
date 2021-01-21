@@ -74,6 +74,16 @@ func GetProxyURL(fixedURL *url.URL) func(*http.Request) (*url.URL, error) {
 	}
 }
 
+// GetURLHostName - return the host name of the passed in URL
+func GetURLHostName(urlString string) string {
+	host, err := url.Parse(urlString)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return host.String()
+}
+
 // StringSliceContains - does the given string slice contain the specified string?
 func StringSliceContains(items []string, s string) bool {
 	for _, item := range items {
