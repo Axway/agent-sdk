@@ -137,7 +137,7 @@ func AddSubscriptionConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserName, "", "Login user for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserPassword, "", "Login password for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeSubject, "Subscription Notification", "Subject of the email notification for action subscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "Subscription created for Catalog Item: ${catalogItemName} <br/> ${authtemplate}", "Body of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "Subscription created for Catalog Item: ${catalogItemName}", "Body of the email notification for action subscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Subscription Removal Notification", "Subject of the email notification for action unsubscribe")
