@@ -91,19 +91,25 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 				b = []byte("[]")
 			}
 		}
-		if strings.Contains(req.RequestURI, "/11111/properties/apiServerInfo") {
-			serverInfo := APIServerInfo{
-				ConsumerInstance: APIServerInfoProperty{Name: "11111", ID: "11111"},
-				Environment:      APIServerInfoProperty{Name: "test", ID: "00000"},
+		if strings.Contains(req.RequestURI, "/11111/subscriptions/11111/relationships") {
+			subsRelations := []uc.EntityRelationship{
+				{Type: "API_SERVER_CONSUMER_INSTANCE_ID", Value: "11111", Key: "apiServerInfo"},
+				{Type: "API_SERVER_CONSUMER_INSTANCE_NAME", Value: "11111", Key: "apiServerInfo"},
+				{Type: "API_SERVER_ENVIRONMENT_ID", Value: "00000", Key: "apiServerInfo"},
+				{Type: "API_SERVER_ENVIRONMENT_NAME", Value: "test", Key: "apiServerInfo"},
 			}
-			b, _ = json.Marshal(serverInfo)
+
+			b, _ = json.Marshal(subsRelations)
 		}
-		if strings.Contains(req.RequestURI, "/22222/properties/apiServerInfo") {
-			serverInfo := APIServerInfo{
-				ConsumerInstance: APIServerInfoProperty{Name: "22222", ID: "22222"},
-				Environment:      APIServerInfoProperty{Name: "test", ID: "00000"},
+		if strings.Contains(req.RequestURI, "/22222/subscriptions/22222/relationships") {
+			subsRelations := []uc.EntityRelationship{
+				{Type: "API_SERVER_CONSUMER_INSTANCE_ID", Value: "22222", Key: "apiServerInfo"},
+				{Type: "API_SERVER_CONSUMER_INSTANCE_NAME", Value: "22222", Key: "apiServerInfo"},
+				{Type: "API_SERVER_ENVIRONMENT_ID", Value: "00000", Key: "apiServerInfo"},
+				{Type: "API_SERVER_ENVIRONMENT_NAME", Value: "test", Key: "apiServerInfo"},
 			}
-			b, _ = json.Marshal(serverInfo)
+
+			b, _ = json.Marshal(subsRelations)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/11111") {
 			apiserverRes := v1alpha1.ConsumerInstance{
@@ -244,16 +250,13 @@ func TestSubscriptionUpdate(t *testing.T) {
 			subscription := subscriptionMap["22222"]
 			(subscription.(*CentralSubscription)).CatalogItemSubscription.State = subState["state"]
 		}
-		if strings.Contains(req.RequestURI, "11111/properties/apiServerInfo") {
-			info := APIServerInfo{
-				ConsumerInstance: APIServerInfoProperty{
-					Name: "foo",
-				},
-				Environment: APIServerInfoProperty{
-					Name: "testenvironment",
-				},
+		if strings.Contains(req.RequestURI, "11111/subscriptions/11111/relationships") {
+			subsRelations := []uc.EntityRelationship{
+				{Type: "API_SERVER_CONSUMER_INSTANCE_NAME", Value: "foo", Key: "apiServerInfo"},
+				{Type: "API_SERVER_ENVIRONMENT_NAME", Value: "testenvironment", Key: "apiServerInfo"},
 			}
-			b, _ = json.Marshal(info)
+
+			b, _ = json.Marshal(subsRelations)
 		}
 		// Send response to be tested
 		rw.Write(b)

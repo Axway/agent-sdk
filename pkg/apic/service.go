@@ -13,8 +13,8 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	unifiedcatalog "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 
@@ -346,18 +346,17 @@ func (c *ServiceClient) createWebhook() error {
 }
 
 // getCatalogItemAPIServerInfoProperty -
-func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*APIServerInfo, error) {
+func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID, subscriptionID string) (*APIServerInfo, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	apiServerInfoURL := c.cfg.GetCatalogItemsURL() + "/" + catalogID + "/properties/apiServerInfo"
-	log.Debugf("Get apiServerInfo api - '%s'", apiServerInfoURL)
+	subscriptionRelationshipsURL := c.cfg.GetCatalogItemSubscriptionRelationshipURL(catalogID, subscriptionID)
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     apiServerInfoURL,
+		URL:     subscriptionRelationshipsURL,
 		Headers: headers,
 	}
 
@@ -370,7 +369,23 @@ func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID string) (*
 		return nil, errors.New(strconv.Itoa(response.Code))
 	}
 
+	relationships := make([]unifiedcatalog.EntityRelationship, 0)
+	json.Unmarshal(response.Body, &relationships)
 	apiserverInfo := new(APIServerInfo)
-	json.Unmarshal(response.Body, apiserverInfo)
+	for _, relationship := range relationships {
+		if relationship.Key == "apiServerInfo" {
+			switch relationship.Type {
+			case "API_SERVER_CONSUMER_INSTANCE_ID":
+				apiserverInfo.ConsumerInstance.ID = relationship.Value
+			case "API_SERVER_CONSUMER_INSTANCE_NAME":
+				apiserverInfo.ConsumerInstance.Name = relationship.Value
+			case "API_SERVER_ENVIRONMENT_ID":
+				apiserverInfo.Environment.ID = relationship.Value
+			case "API_SERVER_ENVIRONMENT_NAME":
+				apiserverInfo.Environment.Name = relationship.Value
+			}
+		}
+	}
+
 	return apiserverInfo, nil
 }
