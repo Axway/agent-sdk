@@ -235,6 +235,8 @@ include:
 
 dependencycheck:
   retry: 0
+  variables:
+    DS_EXCLUDED_PATHS: "*.zip"
   except:
     - schedules
     - tags
