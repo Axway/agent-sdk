@@ -5,7 +5,7 @@ The AMPLIFY Central Agent SDK provides APIs and utilities that developers can us
 The Agent SDK helps in reducing complexity in implementing against the direct AMPLIFY Central REST API interface and hides low level plumbing to provide discovery and traceability related features. 
 
 ## Installation 
-Use the following command to install the AMPLIFY Central Agents SDK 
+Make sure you have [Golang installed](https://golang.org/doc/install) and then use the following command to install the AMPLIFY Central Agents SDK 
 
 go get github.com/Axway/agent-sdk/
 
