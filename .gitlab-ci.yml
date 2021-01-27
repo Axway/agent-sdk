@@ -160,13 +160,13 @@ sonar-preview:
   allow_failure: true
   <<: *only-feature
 
-# sonar:
-#   stage: sonar
-#   <<: *sonar-template
-#   script:
-#     - make sonar
-#   allow_failure: true
-#   <<: *only-protected
+sonar:
+  stage: sonar
+  <<: *sonar-template
+  script:
+    - make sonar
+  allow_failure: true
+  <<: *only-protected
 
 ############################################################
 # Section for lint builds stage
