@@ -9,7 +9,7 @@ variables:
   PACKAGE_NAME: apic-agents-sdk
   BINTRAY_NAMESPACE: agent
   DOCKER_DRIVER: overlay2
-  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude ',git' --exclude /tmp/*  --exclude /tmp --exclude '/tmp/*' --exclude='/tmp/*' --suppression=dc-suppressions.xml"
+  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude ',git' --exclude /tmp/*  --exclude /tmp --exclude \'/tmp/**\' --exclude='/tmp/*' --suppression=dc-suppressions.xml"
   AWS_DISCOVERY_PROJECT_ID: 7397
   V7_DISCOVERY_PROJECT_ID: 7540
   AZURE_DISCOVERY_PROJECT_ID: 8585
