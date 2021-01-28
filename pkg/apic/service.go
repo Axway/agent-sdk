@@ -107,14 +107,14 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 }
 
 // postApiServiceUpdate - called after APIService was created or updated.
-// Update description and title after updating or creating APIService to inlcude the stage name if it exists
+// Update description and title after updating or creating APIService to include the stage name if it exists
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	if serviceBody.Stage != "" {
 		if c.cfg.GetAppendDataPlaneToTitle() {
 			serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage
 		}
 		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
-	} else if c.cfg.GetAppendDataPlaneToTitle() {
+	} else if c.cfg.GetAppendDataPlaneToTitle() && c.cfg.GetDataPlaneName() != "" {
 		// Append the Dataplane Name
 		serviceBody.NameToPush = fmt.Sprintf("%v (%v)", serviceBody.NameToPush, c.cfg.GetDataPlaneName())
 	}
