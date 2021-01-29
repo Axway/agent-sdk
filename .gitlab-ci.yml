@@ -5,7 +5,7 @@ image: docker:dind
 ############################################################
 include:
   - project: "scurity/gitlabci"
-    ref: APIGOV-17450
+    ref: master
     file: "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
@@ -115,49 +115,13 @@ stages:
 ############################################################
 # Section for build command scripts
 ############################################################
-#.configure-git-ssh: &configure-git-ssh |
-#  apk update && apk add openssl
-#  which ssh-agent || ( apk add openssh-client )
-#  mkdir -p ~/.ssh
-#  chmod 700 ~/.ssh
-#  echo "$GIT_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-#  chmod 700 ~/.ssh/id_rsa
-#  eval $(ssh-agent -s)
-#  ssh-add ~/.ssh/id_rsa
-#  echo "$GIT_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
-#  chmod 644 ~/.ssh/known_hosts
-#  echo -n | openssl s_client -showcerts -connect git.ecd.axway.org:443 2>/dev/null  | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > ~/git.ecd.axway.org.pem
-#  git config --global http."https://git.ecd.axway.org/".sslCAInfo ~/git.ecd.axway.org.pem
-#  git config --global url."git@git.ecd.axway.org:".insteadOf "https://git.ecd.axway.org/"
-#  git config --global push.default matching
-#  git config --global user.email "builder-lphxmjtnt11@axway.com"
-#  git config --global user.name "builder-lphxmjtnt11"
-#  git config --global push.followTags true
-#  git remote set-url --push origin "git@git.ecd.axway.org:${CI_PROJECT_PATH}.git"
-#
-#.configure-artifactory-curl: &configure-artifactory-curl |
-#  cp /AxwayRootCA.crt /usr/local/share/ca-certificates/AxwayRootCA.crt
-#  cp /AxwayRootCANew.crt /usr/local/share/ca-certificates/AxwayRootCANew.crt
-#  update-ca-certificates
-#
-#.prepare-path: &prepare-path |
-#  mkdir -p ${GOPATH}/src/github.com/Axway
-#  cd ${GOPATH}/src/github.com/Axway
-#  ln -s ${CI_PROJECT_DIR} agent-sdk
-#  cd ${GOPATH}/src/github.com/Axway/agent-sdk
-#
+
 .get-latest-version: &get-latest-version |
   if [ $(git --version | grep -Eo '2.*') ]; then
     export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
   else
     export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
   fi
-#
-#.get-ca-certs: &get-ca-certs |
-#  cat $AXWAY_ROOT_CA > /AxwayRootCA.crt
-#  echo "" >> /AxwayRootCA.crt
-#  cat $AXWAY_ROOT_CA_NEW > /AxwayRootCANew.crt
-#  echo "" >> /AxwayRootCANew.crt
 
 ############################################################
 # Section for test and sonar
@@ -166,9 +130,6 @@ test:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   extends: configssh
-  #before_script:
-  #  - *prepare-path
-  #  - *configure-git-ssh
   script:
     - make test
   <<: *only-feature
@@ -176,9 +137,6 @@ test:
 .sonar-template: &sonar-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   extends: configssh
-  #before_script:
-  #  - *prepare-path
-  #  - *configure-git-ssh
 
 sonar-preview:
   stage: test
@@ -202,8 +160,6 @@ sonar:
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
   extends: configssh
-  #before_script:
-  #  - *prepare-path
   script:
     - make lint
 
@@ -225,9 +181,6 @@ error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   extends: configssh
-  #before_script:
-  #  - *prepare-path
-  #  - *configure-git-ssh
   script:
     - make error-check
   <<: *only-feature
@@ -315,8 +268,6 @@ trigger-aws-apigw-discovery-agent:
   extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-      # - *get-ca-certs
-      #- *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -327,8 +278,6 @@ trigger-v7-discovery-agent:
   extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-      #- *get-ca-certs
-      #- *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -339,8 +288,6 @@ trigger-azure-discovery-agent:
   extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-      #  - *get-ca-certs
-      #  - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -365,9 +312,6 @@ release-promotion:
   variables:
     GIT_STRATEGY: clone
   extends: configssh
-  #before_script:
-  #  - *prepare-path
-  #  - *configure-git-ssh
   script:
     - chmod +x ./build/scripts/promote.sh
     - ./build/scripts/promote.sh
