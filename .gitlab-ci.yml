@@ -146,12 +146,12 @@ stages:
 #  ln -s ${CI_PROJECT_DIR} agent-sdk
 #  cd ${GOPATH}/src/github.com/Axway/agent-sdk
 #
-#.get-latest-version: &get-latest-version |
-#  if [ $(git --version | grep -Eo '2.*') ]; then
-#    export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
-#  else
-#    export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
-#  fi
+.get-latest-version: &get-latest-version |
+  if [ $(git --version | grep -Eo '2.*') ]; then
+    export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
+  else
+    export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+  fi
 #
 #.get-ca-certs: &get-ca-certs |
 #  cat $AXWAY_ROOT_CA > /AxwayRootCA.crt
@@ -165,18 +165,20 @@ stages:
 test:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
+  #before_script:
+  #  - *prepare-path
+  #  - *configure-git-ssh
   script:
     - make test
   <<: *only-feature
 
 .sonar-template: &sonar-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
+  #before_script:
+  #  - *prepare-path
+  #  - *configure-git-ssh
 
 sonar-preview:
   stage: test
@@ -199,8 +201,9 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
-  before_script:
-    - *prepare-path
+  extends: configssh
+  #before_script:
+  #  - *prepare-path
   script:
     - make lint
 
@@ -221,9 +224,10 @@ lint-sonar:
 error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
+  #before_script:
+  #  - *prepare-path
+  #  - *configure-git-ssh
   script:
     - make error-check
   <<: *only-feature
@@ -308,10 +312,11 @@ update-csr:
 trigger-aws-apigw-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
+      # - *get-ca-certs
+      #- *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -319,10 +324,11 @@ trigger-aws-apigw-discovery-agent:
 trigger-v7-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
+      #- *get-ca-certs
+      #- *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -330,10 +336,11 @@ trigger-v7-discovery-agent:
 trigger-azure-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
+      #  - *get-ca-certs
+      #  - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -357,9 +364,10 @@ release-promotion:
   when: manual
   variables:
     GIT_STRATEGY: clone
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
+  #before_script:
+  #  - *prepare-path
+  #  - *configure-git-ssh
   script:
     - chmod +x ./build/scripts/promote.sh
     - ./build/scripts/promote.sh
