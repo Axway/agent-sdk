@@ -126,14 +126,12 @@ stages:
 test:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
   script:
     - make test
   <<: *only-feature
 
 .sonar-template: &sonar-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
 
 sonar-preview:
   stage: test
@@ -156,7 +154,6 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
-  extends: configssh
   script:
     - make lint
 
@@ -177,7 +174,6 @@ lint-sonar:
 error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
   script:
     - make error-check
   <<: *only-feature
@@ -269,29 +265,3 @@ trigger-azure-discovery-agent:
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
-
-  ############################################################
-# Section for release stage
-############################################################
-# Release Promotion job - Creates a tag from master branch
-#   - Job runs only if pipeline triggered from Gitlab Web UI or trigger
-#   - Job requires PROMOTION_TYPE environment variable with either of the following values
-#       "major" - master branch is promoted with major number
-#       "minor" - master branch is promoted with minor number
-#       "patch" - master branch is promoted with patch number
-# Note :
-#   Job completion creates tags using current version of master and updates version of master
-#   based on the promotion type. New Pipelines will be triggered for the new tag and updated
-#   master.
-release-promotion:
-  stage: release
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  when: manual
-  variables:
-    GIT_STRATEGY: clone
-  extends: configssh
-  script:
-    - chmod +x ./build/scripts/promote.sh
-    - ./build/scripts/promote.sh
-  allow_failure: false
-  <<: *only-release
