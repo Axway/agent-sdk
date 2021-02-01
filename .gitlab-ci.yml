@@ -4,7 +4,7 @@ image: docker:dind
 # Section for security tool includes
 ############################################################
 include:
-  - project: "scurity/gitlabci"
+  - project: "beano-cicd/gitlabci"
     ref: master
     file: "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
