@@ -5,9 +5,9 @@ image: docker:dind
 ############################################################
 #
 include:
-  - project: "apigov/beano_cicd"
-    ref: master
-    file: "/.gitlab-ci-config-ssh.yml"
+  # - project: "apigov/beano_cicd"
+  #   ref: master
+  #   file: "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
     file: "/.gitlab-ci-prepcsr.yml"
