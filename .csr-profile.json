@@ -14,7 +14,42 @@
     "whitesource": true
   },
   "suppressions": [
-    {
+	{
+		"path": ".*/github\\.com/prometheus/procfs",
+		"scanner": "dependency-check",
+		"classification": "Deferred",
+		"justification": "APIGOV-17491",
+		"until": "2021-03-01",
+		"component": "procfs",
+		"version": "0\\.0\\.9\\-0\\.20191208103036\\-42f6e295b56f",
+		"ids": [
+			"CVE-2019-3826"
+		]
+	},
+	{
+		"path": ".*/elastic/go\\-sysinfo/go\\.mod:github\\.com/prometheus/procfs/0\\.0\\.0\\-20190425082905\\-87a4384529e0",
+		"scanner": "dependency-check",
+		"classification": "Deferred",
+		"justification": "APIGOV-17491",
+		"until": "2021-03-01",
+		"component": "procfs",
+		"version": "0\\.0\\.0\\-20190425082905\\-87a4384529e0",
+		"ids": [
+			"CVE-2019-3826"
+		]
+	},
+	{
+		"path": ".*spf13/viper/go\\.mod:github\\.com/prometheus/client_golang/0\\.9\\.3",
+		"scanner": "dependency-check",
+		"classification": "Deferred",
+		"justification": "APIGOV-17491",
+		"until": "2021-03-01",
+		"component": "client_golang",
+		"version": "0\\.9\\.3",
+		"ids": [
+			"CVE-2019-3826"
+		]
+	}, {
       "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc\\-ecosystem\\/go\\-grpc\\-prometheus\\/1\\.2\\.0",
       "scanner": "dependency-check",
       "classification": "False Positive",
