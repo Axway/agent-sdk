@@ -239,7 +239,7 @@ update-csr:
 trigger-aws-apigw-discovery-agent:
   stage: update-dep
   when: manual
-  extends: config-artifactory
+  extends: .config-artifactory
   before_script:
     - apk update && apk add curl ca-certificates
   script:
@@ -249,7 +249,7 @@ trigger-aws-apigw-discovery-agent:
 trigger-v7-discovery-agent:
   stage: update-dep
   when: manual
-  extends: config-artifactory
+  extends: .config-artifactory
   before_script:
     - apk update && apk add curl ca-certificates
   script:
@@ -259,7 +259,7 @@ trigger-v7-discovery-agent:
 trigger-azure-discovery-agent:
   stage: update-dep
   when: manual
-  extends: config-artifactory
+  extends: .config-artifactory
   before_script:
     - apk update && apk add curl ca-certificates
   script:
