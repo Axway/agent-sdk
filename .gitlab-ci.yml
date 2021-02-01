@@ -1,5 +1,28 @@
 image: docker:dind
 
+############################################################
+# Section for security tool includes
+############################################################
+include:
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-config-ssh.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-prepcsr.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-fortify.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-dependencycheck.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-whitesource.yml"
+  - project: "scurity/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-csr.yml"
+
 variables:
   GO111MODULE: "on"
   GOPRIVATE: "git.ecd.axway.org"
@@ -89,36 +112,6 @@ stages:
 ############################################################
 # Section for build command scripts
 ############################################################
-.configure-git-ssh: &configure-git-ssh |
-  apk update && apk add openssl
-  which ssh-agent || ( apk add openssh-client )
-  mkdir -p ~/.ssh
-  chmod 700 ~/.ssh
-  echo "$GIT_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-  chmod 700 ~/.ssh/id_rsa
-  eval $(ssh-agent -s)
-  ssh-add ~/.ssh/id_rsa
-  echo "$GIT_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
-  chmod 644 ~/.ssh/known_hosts
-  echo -n | openssl s_client -showcerts -connect git.ecd.axway.org:443 2>/dev/null  | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > ~/git.ecd.axway.org.pem
-  git config --global http."https://git.ecd.axway.org/".sslCAInfo ~/git.ecd.axway.org.pem
-  git config --global url."git@git.ecd.axway.org:".insteadOf "https://git.ecd.axway.org/"
-  git config --global push.default matching
-  git config --global user.email "builder-lphxmjtnt11@axway.com"
-  git config --global user.name "builder-lphxmjtnt11"
-  git config --global push.followTags true
-  git remote set-url --push origin "git@git.ecd.axway.org:${CI_PROJECT_PATH}.git"
-
-.configure-artifactory-curl: &configure-artifactory-curl |
-  cp /AxwayRootCA.crt /usr/local/share/ca-certificates/AxwayRootCA.crt
-  cp /AxwayRootCANew.crt /usr/local/share/ca-certificates/AxwayRootCANew.crt
-  update-ca-certificates
-
-.prepare-path: &prepare-path |
-  mkdir -p ${GOPATH}/src/github.com/Axway
-  cd ${GOPATH}/src/github.com/Axway
-  ln -s ${CI_PROJECT_DIR} agent-sdk
-  cd ${GOPATH}/src/github.com/Axway/agent-sdk
 
 .get-latest-version: &get-latest-version |
   if [ $(git --version | grep -Eo '2.*') ]; then
@@ -127,30 +120,20 @@ stages:
     export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
   fi
 
-.get-ca-certs: &get-ca-certs |
-  cat $AXWAY_ROOT_CA > /AxwayRootCA.crt
-  echo "" >> /AxwayRootCA.crt
-  cat $AXWAY_ROOT_CA_NEW > /AxwayRootCANew.crt
-  echo "" >> /AxwayRootCANew.crt
-
 ############################################################
 # Section for test and sonar
 ############################################################
 test:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
   script:
     - make test
   <<: *only-feature
 
 .sonar-template: &sonar-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
 
 sonar-preview:
   stage: test
@@ -173,8 +156,7 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
-  before_script:
-    - *prepare-path
+  extends: configssh
   script:
     - make lint
 
@@ -195,43 +177,10 @@ lint-sonar:
 error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
   script:
     - make error-check
   <<: *only-feature
-
-############################################################
-# Section for security tools
-############################################################
-include:
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-prepcsr.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-fortify.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-dependencycheck.yml"
-  # - project: "scurity/gitlabci"
-  #   ref: master
-  #   file: "/.gitlab-ci-gosec.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-whitesource.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-csr.yml"
-
-# gosec:
-#   retry: 0
-#   except:
-#     - schedules
-#     - tags
-#     - web
-#     - triggers
 
 dependencycheck:
   retry: 0
@@ -259,14 +208,6 @@ fetch-fortify:
     variables:
       - $CI_PIPELINE_SOURCE == "pipeline"
 
-# gosec:on-schedule:
-#   retry: 0
-#   before_script:
-#     - git config --global http.sslVerify false
-#     - git fetch && git checkout master
-#     - *get-latest-version
-#     - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
-
 dependencycheck:on-schedule:
   retry: 0
   before_script:
@@ -287,7 +228,6 @@ run-csr:
   dependencies:
     - fetch-fortify
     - dependencycheck
-  # - gosec
     - whitesource
   <<: *only-feature
 
@@ -295,7 +235,6 @@ update-csr:
   dependencies:
     - fetch-fortify
     - dependencycheck:on-schedule
-  # - gosec:on-schedule
     - whitesource:on-schedule
 
 ############################################################
@@ -304,10 +243,9 @@ update-csr:
 trigger-aws-apigw-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -315,10 +253,9 @@ trigger-aws-apigw-discovery-agent:
 trigger-v7-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -326,10 +263,9 @@ trigger-v7-discovery-agent:
 trigger-azure-discovery-agent:
   stage: update-dep
   when: manual
+  extends: configart
   before_script:
     - apk update && apk add curl ca-certificates
-    - *get-ca-certs
-    - *configure-artifactory-curl
   script:
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
   <<: *only-main
@@ -353,9 +289,7 @@ release-promotion:
   when: manual
   variables:
     GIT_STRATEGY: clone
-  before_script:
-    - *prepare-path
-    - *configure-git-ssh
+  extends: configssh
   script:
     - chmod +x ./build/scripts/promote.sh
     - ./build/scripts/promote.sh
