@@ -159,7 +159,6 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: ${SECURITY_IMAGE}
-  extends: .prepare-path
   script:
     - echo "linttemplate"
     - echo ${SECURITY_IMAGE}
@@ -167,6 +166,7 @@ sonar:
     - echo ${GIT_GOLANG_REPO_PATH}
     - echo ${CI_PROJECT_DIR}
     - echo ${GIT_REPO_NAME}
+    - *prepare-path-script
     - make lint
 
 lint-test:
