@@ -1,7 +1,7 @@
 image: docker:dind
 
 ############################################################
-# Section for security tool includes
+# Section for external includes
 ############################################################
 include:
   - project: "apigov/beano_cicd"
