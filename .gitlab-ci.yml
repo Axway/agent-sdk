@@ -7,25 +7,17 @@ image: docker:dind
 include:
   - project: "apigov/beano_cicd"
     ref: master
-    file: "/.gitlab-ci-beano.yml"
-  - project: "apigov/beano_cicd"
-    ref: master
-    file: "/.gitlab-ci-config-ssh.yml"
+    file:
+      - "/.gitlab-ci-beano.yml"
+      - "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
-    file: "/.gitlab-ci-prepcsr.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-fortify.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-dependencycheck.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-whitesource.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-csr.yml"
+    file:
+      - "/.gitlab-ci-prepcsr.yml"
+      - "/.gitlab-ci-fortify.yml"
+      - "/.gitlab-ci-dependencycheck.yml"
+      - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-csr.yml"
 
 variables:
   GO111MODULE: "on"
@@ -159,6 +151,7 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: ${SECURITY_IMAGE}
+  extends: .prepare-path
   script:
     - echo "linttemplate"
     - echo ${SECURITY_IMAGE}
@@ -166,7 +159,6 @@ sonar:
     - echo ${GIT_GOLANG_REPO_PATH}
     - echo ${CI_PROJECT_DIR}
     - echo ${GIT_REPO_NAME}
-    - *prepare-path-script
     - make lint
 
 lint-test:
