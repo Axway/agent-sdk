@@ -30,6 +30,8 @@ variables:
 
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
+  GIT_REPO_NAME: agent-sdk
+  GIT_GOLANG_REPO_PATH: src/github.com/Axway
   BINTRAY_NAMESPACE: agent
   DOCKER_DRIVER: overlay2
   DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"
@@ -128,10 +130,8 @@ test:
   script:
     - echo "GOPATH = ${GOPATH}"
     - echo "CIPROJECT_DIR = ${CI_PROJECT_DIR}"
-    - echo "CIPROJECT_NAME = ${CI_PROJECT_NAME}"
-    - echo "CIPROJECT_NAMESPACE = ${CI_PROJECT_NAMESPACE}"
-    - echo "CIPROJECT_ROOT_NAMESPACE = ${CI_PROJECT_ROOT_NAMESPACE}"
-    - echo "CIPROJECT_PATH = ${CI_PROJECT_PATH}"
+    - echo "GIT_REPO_NAME = ${GIT_REPO_NAME}"
+    - echo "GOLANG_REPO = ${GIT_REPO_NAME}"
     - make test
   <<: *only-feature
 
