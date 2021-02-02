@@ -7,9 +7,6 @@ include:
   - project: "apigov/beano_cicd"
     ref: master
     file: "/.gitlab-ci-config-ssh.yml"
-  - project: "apigov/beano_cicd"
-    ref: master
-    file: "/.gitlab-ci-beano.yml"
   - project: "scurity/gitlabci"
     ref: master
     file: "/.gitlab-ci-prepcsr.yml"
@@ -239,32 +236,26 @@ update-csr:
 ############################################################
 # Section for triggering agent updates
 ############################################################
-trigger-aws-apigw-discovery-agent:
+.trigger-downstream-agent:
   stage: update-dep
   when: manual
   extends: .config-artifactory
-  before_script:
-    - apk update && apk add curl ca-certificates
   script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
+    - apk update && apk add curl ca-certificates
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${PROJECT_ID}/trigger/pipeline
   <<: *only-main
+
+trigger-aws-apigw-discovery-agent:
+  before_script:
+    - export PROJECT_ID=${AWS_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
 
 trigger-v7-discovery-agent:
-  stage: update-dep
-  when: manual
-  extends: .config-artifactory
   before_script:
-    - apk update && apk add curl ca-certificates
-  script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-main
+    - export PROJECT_ID=${V7_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
 
 trigger-azure-discovery-agent:
-  stage: update-dep
-  when: manual
-  extends: .config-artifactory
   before_script:
-    - apk update && apk add curl ca-certificates
-  script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-main
+    - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
