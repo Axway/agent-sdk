@@ -123,15 +123,15 @@ stages:
 # Section for test and sonar
 ############################################################
 test:
-  echo "GOPATH = ${GOPATH}"
-  echo "CIPROJECT_DIR = ${CI_PROJECT_DIR}"
-  echo "CIPROJECT_NAME = ${CI_PROJECT_NAME}"
-  echo "CIPROJECT_NAMESPACE = ${CI_PROJECT_NAMESPACE}"
-  echo "CIPROJECT_ROOT_NAMESPACE = ${CI_PROJECT_ROOT_NAMESPACE}"
-  echo "CIPROJECT_PATH = ${CI_PROJECT_PATH}"
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
   script:
+    - echo "GOPATH = ${GOPATH}"
+    - echo "CIPROJECT_DIR = ${CI_PROJECT_DIR}"
+    - echo "CIPROJECT_NAME = ${CI_PROJECT_NAME}"
+    - echo "CIPROJECT_NAMESPACE = ${CI_PROJECT_NAMESPACE}"
+    - echo "CIPROJECT_ROOT_NAMESPACE = ${CI_PROJECT_ROOT_NAMESPACE}"
+    - echo "CIPROJECT_PATH = ${CI_PROJECT_PATH}"
     - make test
   <<: *only-feature
 
