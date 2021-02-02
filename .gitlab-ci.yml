@@ -7,6 +7,9 @@ include:
   - project: "apigov/beano_cicd"
     ref: master
     file: "/.gitlab-ci-config-ssh.yml"
+  - project: "apigov/beano_cicd"
+    ref: master
+    file: "/.gitlab-ci-beano.yml"
   - project: "scurity/gitlabci"
     ref: master
     file: "/.gitlab-ci-prepcsr.yml"
@@ -126,17 +129,13 @@ stages:
 ############################################################
 test:
   stage: test
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
+  image: ${SECURITY_IMAGE}
   script:
-    - echo "GOPATH = ${GOPATH}"
-    - echo "CIPROJECT_DIR = ${CI_PROJECT_DIR}"
-    - echo "GIT_REPO_NAME = ${GIT_REPO_NAME}"
-    - echo "GOLANG_REPO = ${GIT_REPO_NAME}"
     - make test
   <<: *only-feature
 
 .sonar-template: &sonar-template
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
+  image: ${SECURITY_IMAGE}
 
 sonar-preview:
   stage: test
@@ -158,7 +157,7 @@ sonar:
 # Section for lint builds stage
 ############################################################
 .lint-template: &lint-template
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
+  image: ${SECURITY_IMAGE}
   script:
     - make lint
 
@@ -177,7 +176,7 @@ lint-sonar:
 ############################################################
 error_check:
   stage: test
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
+  image: ${SECURITY_IMAGE}
   script:
     - make error-check
   <<: *only-feature
