@@ -175,6 +175,7 @@ error_check:
   stage: test
   image: ${SECURITY_IMAGE}
   script:
+    - echo ${SECURITY_IMAGE}
     - make error-check
   <<: *only-feature
 
