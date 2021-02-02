@@ -112,7 +112,6 @@ stages:
 ############################################################
 # Section for build command scripts
 ############################################################
-
 .get-latest-version: &get-latest-version |
   if [ $(git --version | grep -Eo '2.*') ]; then
     export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
@@ -170,7 +169,6 @@ lint-sonar:
 ############################################################
 # Section for error check tools
 ############################################################
-
 error_check:
   stage: test
   image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
