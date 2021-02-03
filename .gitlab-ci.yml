@@ -151,7 +151,6 @@ sonar:
 ############################################################
 .lint-template: &lint-template
   image: ${SECURITY_IMAGE}
-  extends: .prepare-path
   script:
     - echo "linttemplate"
     - echo ${SECURITY_IMAGE}
