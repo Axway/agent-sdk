@@ -156,7 +156,7 @@ sonar:
   cd ${GOPATH}/src/github.com/Axway/agent-sdk
 
 .lint-template: &lint-template
-  image: ${BASE_IMAGE}
+  image: ${BUILD_IMAGE}
   before_script:
     - *prep-path
   script:
