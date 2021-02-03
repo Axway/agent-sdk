@@ -27,6 +27,7 @@ type ServiceBuilder interface {
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
 	SetServiceEndpoints(endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) ServiceBuilder
+	SetOverrideDefaultEndpoints(shouldOverride bool) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -148,6 +149,10 @@ func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]str
 
 func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) ServiceBuilder {
 	b.serviceBody.Endpoints = endpoints
+	return b
+}
+func (b *serviceBodyBuilder) SetOverrideDefaultEndpoints(shouldOverride bool) ServiceBuilder {
+	b.serviceBody.OverrideDefaultEndpoints = shouldOverride
 	return b
 }
 

@@ -51,7 +51,11 @@ func (c *ServiceClient) updateInstanceResource(instance *v1alpha1.APIServiceInst
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
 	if serviceBody.Endpoints != nil && len(serviceBody.Endpoints) > 0 {
-		endPoints = append(endPoints, serviceBody.Endpoints...)
+		if serviceBody.OverrideDefaultEndpoints == true {
+			endPoints = serviceBody.Endpoints
+		} else {
+			endPoints = append(endPoints, serviceBody.Endpoints...)
+		}
 	}
 	err := c.setInstanceAction(serviceBody, endPoints)
 	if err != nil {
