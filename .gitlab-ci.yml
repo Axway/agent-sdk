@@ -3,11 +3,12 @@ image: docker:dind
 ############################################################
 # Section for external includes
 ############################################################
-#
 include:
   - project: "apigov/beano_cicd"
     ref: master
-    file: "/.gitlab-ci-beano.yml"
+    file: 
+      - "/.gitlab-ci-beano.yml"
+      - "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
@@ -147,12 +148,6 @@ sonar:
 ############################################################
 # Section for lint builds stage
 ############################################################
-.prep-path: &prep-path |
-  mkdir -p ${GOPATH}/src/github.com/Axway
-  cd ${GOPATH}/src/github.com/Axway
-  ln -s ${CI_PROJECT_DIR} agent-sdk
-  cd ${GOPATH}/src/github.com/Axway/agent-sdk
-
 .lint-template: &lint-template
   image: ${BUILD_IMAGE}
   extends: .prepare-path
