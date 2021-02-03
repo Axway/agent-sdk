@@ -149,8 +149,17 @@ sonar:
 ############################################################
 # Section for lint builds stage
 ############################################################
+.prep-path: &prep-path |
+  mkdir -p ${GOPATH}/src/github.com/Axway
+  cd ${GOPATH}/src/github.com/Axway
+  ln -s ${CI_PROJECT_DIR} agent-sdk
+  cd ${GOPATH}/src/github.com/Axway/agent-sdk
+
 .lint-template: &lint-template
-  image: ${SECURITY_IMAGE}
+  # image: ${SECURITY_IMAGE}
+  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
+  before_script:
+    - *prep-path
   script:
     - echo "linttemplate"
     - echo ${SECURITY_IMAGE}
