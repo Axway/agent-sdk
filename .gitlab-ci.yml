@@ -157,8 +157,7 @@ sonar:
 
 .lint-template: &lint-template
   image: ${BUILD_IMAGE}
-  before_script:
-    - *prep-path
+  extends: .prepare-path
   script:
     - make lint
 
