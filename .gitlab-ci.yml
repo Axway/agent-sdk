@@ -1,27 +1,22 @@
 image: docker:dind
 
 ############################################################
-# Section for security tool includes
+# Section for external includes
 ############################################################
 include:
+  - project: "apigov/beano_cicd"
+    ref: master
+    file: 
+      - "/.gitlab-ci-beano.yml"
+      - "/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
-    file: "/.gitlab-ci-config-ssh.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-prepcsr.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-fortify.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-dependencycheck.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-whitesource.yml"
-  - project: "scurity/gitlabci"
-    ref: master
-    file: "/.gitlab-ci-csr.yml"
+    file:
+      - "/.gitlab-ci-prepcsr.yml"
+      - "/.gitlab-ci-fortify.yml"
+      - "/.gitlab-ci-dependencycheck.yml"
+      - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-csr.yml"
 
 variables:
   GO111MODULE: "on"
@@ -30,6 +25,8 @@ variables:
 
   PROJECT: beano
   PACKAGE_NAME: apic-agents-sdk
+  GIT_REPO_NAME: agent-sdk
+  GIT_GOLANG_REPO_PATH: src/github.com/Axway
   BINTRAY_NAMESPACE: agent
   DOCKER_DRIVER: overlay2
   DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"
@@ -112,7 +109,6 @@ stages:
 ############################################################
 # Section for build command scripts
 ############################################################
-
 .get-latest-version: &get-latest-version |
   if [ $(git --version | grep -Eo '2.*') ]; then
     export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
@@ -125,15 +121,13 @@ stages:
 ############################################################
 test:
   stage: test
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
+  image: ${SECURITY_IMAGE}
   script:
     - make test
   <<: *only-feature
 
 .sonar-template: &sonar-template
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
+  image: ${SECURITY_IMAGE}
 
 sonar-preview:
   stage: test
@@ -155,8 +149,8 @@ sonar:
 # Section for lint builds stage
 ############################################################
 .lint-template: &lint-template
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
-  extends: configssh
+  image: ${BUILD_IMAGE}
+  extends: .prepare-path
   script:
     - make lint
 
@@ -173,12 +167,11 @@ lint-sonar:
 ############################################################
 # Section for error check tools
 ############################################################
-
 error_check:
   stage: test
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  extends: configssh
+  image: ${SECURITY_IMAGE}
   script:
+    - echo ${SECURITY_IMAGE}
     - make error-check
   <<: *only-feature
 
@@ -240,58 +233,26 @@ update-csr:
 ############################################################
 # Section for triggering agent updates
 ############################################################
-trigger-aws-apigw-discovery-agent:
+.trigger-downstream-agent:
   stage: update-dep
   when: manual
-  extends: configart
-  before_script:
-    - apk update && apk add curl ca-certificates
+  extends: .config-artifactory
   script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AWS_DISCOVERY_PROJECT_ID}/trigger/pipeline
+    - apk update && apk add curl ca-certificates
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
   <<: *only-main
+
+trigger-aws-apigw-discovery-agent:
+  before_script:
+    - export PROJECT_ID=${AWS_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
 
 trigger-v7-discovery-agent:
-  stage: update-dep
-  when: manual
-  extends: configart
   before_script:
-    - apk update && apk add curl ca-certificates
-  script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${V7_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-main
+    - export PROJECT_ID=${V7_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
 
 trigger-azure-discovery-agent:
-  stage: update-dep
-  when: manual
-  extends: configart
   before_script:
-    - apk update && apk add curl ca-certificates
-  script:
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${AZURE_DISCOVERY_PROJECT_ID}/trigger/pipeline
-  <<: *only-main
-
-  ############################################################
-# Section for release stage
-############################################################
-# Release Promotion job - Creates a tag from master branch
-#   - Job runs only if pipeline triggered from Gitlab Web UI or trigger
-#   - Job requires PROMOTION_TYPE environment variable with either of the following values
-#       "major" - master branch is promoted with major number
-#       "minor" - master branch is promoted with minor number
-#       "patch" - master branch is promoted with patch number
-# Note :
-#   Job completion creates tags using current version of master and updates version of master
-#   based on the promotion type. New Pipelines will be triggered for the new tag and updated
-#   master.
-release-promotion:
-  stage: release
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-security:latest
-  when: manual
-  variables:
-    GIT_STRATEGY: clone
-  extends: configssh
-  script:
-    - chmod +x ./build/scripts/promote.sh
-    - ./build/scripts/promote.sh
-  allow_failure: false
-  <<: *only-release
+    - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
+  extends: .trigger-downstream-agent
