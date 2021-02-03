@@ -156,8 +156,7 @@ sonar:
   cd ${GOPATH}/src/github.com/Axway/agent-sdk
 
 .lint-template: &lint-template
-  # image: ${SECURITY_IMAGE}
-  image: beano.swf-artifactory.lab.phx.axway.int/beano-alpine-base:latest
+  image: ${SECURITY_IMAGE}
   before_script:
     - *prep-path
   script:
