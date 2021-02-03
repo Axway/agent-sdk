@@ -7,9 +7,7 @@ image: docker:dind
 include:
   - project: "apigov/beano_cicd"
     ref: master
-    file:
-      - "/.gitlab-ci-beano.yml"
-      - "/.gitlab-ci-config-ssh.yml"
+    file: "/.gitlab-ci-beano.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
