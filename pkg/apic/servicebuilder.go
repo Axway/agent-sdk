@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -25,6 +26,7 @@ type ServiceBuilder interface {
 	SetState(state string) ServiceBuilder
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
+	SetServiceEndpoints(endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -44,6 +46,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			State:             PublishedStatus,
 			Status:            PublishedStatus,
 			ServiceAttributes: make(map[string]string),
+			Endpoints: make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0),
 		},
 	}
 
@@ -140,6 +143,11 @@ func (b *serviceBodyBuilder) SetStatus(status string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder {
 	b.serviceBody.ServiceAttributes = serviceAttribute
+	return b
+}
+
+func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) ServiceBuilder {
+	b.serviceBody.Endpoints = endpoints
 	return b
 }
 
