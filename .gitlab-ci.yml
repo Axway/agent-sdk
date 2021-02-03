@@ -239,7 +239,7 @@ update-csr:
   extends: .config-artifactory
   script:
     - apk update && apk add curl ca-certificates
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master https://git.ecd.axway.org/api/v4/projects/${PROJECT_ID}/trigger/pipeline
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
   <<: *only-main
 
 trigger-aws-apigw-discovery-agent:
