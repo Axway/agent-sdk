@@ -57,7 +57,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	} else {
 		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
 		if err != nil {
-			log.Errorf("failed to create endpoints: %s", err)
+			return fmt.Errorf("failed to create endpoints for '%': %s", serviceBody.APIName, err)
 		}
 	}
 
