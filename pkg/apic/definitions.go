@@ -97,7 +97,6 @@ type ServiceBody struct {
 	ServiceAttributes map[string]string
 	serviceContext    serviceContext
 	Endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint
-	OverrideDefaultEndpoints bool
 }
 
 // ServiceClient -

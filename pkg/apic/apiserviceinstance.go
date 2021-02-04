@@ -49,15 +49,19 @@ func (c *ServiceClient) updateInstanceResource(instance *v1alpha1.APIServiceInst
 
 //processInstance -
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
-	if serviceBody.Endpoints != nil && len(serviceBody.Endpoints) > 0 {
-		if serviceBody.OverrideDefaultEndpoints == true {
-			endPoints = serviceBody.Endpoints
-		} else {
-			endPoints = append(endPoints, serviceBody.Endpoints...)
+	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
+	var err error
+
+	if len(serviceBody.Endpoints) > 0 {
+		endPoints = serviceBody.Endpoints
+	} else {
+		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
+		if err != nil {
+			log.Errorf("failed to create endpoints: %s", err)
 		}
 	}
-	err := c.setInstanceAction(serviceBody, endPoints)
+
+	err = c.setInstanceAction(serviceBody, endPoints)
 	if err != nil {
 		return err
 	}
