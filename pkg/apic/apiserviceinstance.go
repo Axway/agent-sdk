@@ -122,14 +122,22 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 		if err != nil {
 			return err
 		}
-		if instances != nil {
-			serviceBody.serviceContext.instanceCount = len(instances)
-			if len(instances) > 0 {
-				serviceBody.serviceContext.previousInstance = &instances[0]
-				// if the endpoints are same update the current instance otherwise create new instance
-				if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
-					serviceBody.serviceContext.instanceAction = updateAPI
+
+		if len(instances) > 0 {
+			splitName := strings.Split(instances[0].Name, ".")
+			if len(splitName) == 2 {
+				instanceCount, err := strconv.Atoi(splitName[1])
+				if err != nil {
+					return fmt.Errorf("failed to convert instance count from to an int: %s", err)
 				}
+				serviceBody.serviceContext.instanceCount = instanceCount
+			} else {
+				return fmt.Errorf("unable to determine the next instance version. previous instance: %s", instances[0].Name)
+			}
+			serviceBody.serviceContext.previousInstance = &instances[0]
+			// if the endpoints are same update the current instance otherwise create new instance
+			if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
+				serviceBody.serviceContext.instanceAction = updateAPI
 			}
 		}
 	}
