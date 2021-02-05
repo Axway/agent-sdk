@@ -149,7 +149,7 @@ sonar:
 # Section for lint builds stage
 ############################################################
 .lint-template: &lint-template
-  image: ${BUILD_IMAGE}
+  image: ${ALPINE_BASE_IMAGE}
   extends: .prepare-path
   script:
     - make lint
