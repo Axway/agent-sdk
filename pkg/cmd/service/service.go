@@ -16,7 +16,7 @@ var (
 	// Description -
 	Description string
 
-	dependencies = []string{"network"}
+	dependencies = []string{"network-online.target"}
 
 	globalAgentService *AgentService
 
