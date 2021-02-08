@@ -46,7 +46,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			State:             PublishedStatus,
 			Status:            PublishedStatus,
 			ServiceAttributes: make(map[string]string),
-			Endpoints: make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0),
+			Endpoints:         make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0),
 		},
 	}
 

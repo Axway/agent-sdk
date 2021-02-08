@@ -52,14 +52,14 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
 	var err error
 
-	// To set your own endpoints call call SetServiceEndpoints on the ServiceBodyBuilder.
+	// To set your own endpoints call SetServiceEndpoints on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(serviceBody.Endpoints) > 0 {
 		endPoints = serviceBody.Endpoints
 	} else {
 		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
 		if err != nil {
-			return fmt.Errorf("failed to create endpoints for '%': %s", serviceBody.APIName, err)
+			return fmt.Errorf("failed to create endpoints for '%s': %s", serviceBody.APIName, err)
 		}
 	}
 
