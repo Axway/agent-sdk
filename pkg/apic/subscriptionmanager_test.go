@@ -47,10 +47,12 @@ func TestProcessorRegistration(t *testing.T) {
 
 func createSubscription(ID, state, catalogID string, subscriptionProps map[string]interface{}) Subscription {
 	return &CentralSubscription{
-		ApicID:      "1111",
-		RemoteAPIID: "2222",
+		ApicID:         "1111",
+		RemoteAPIID:    "2222",
+		RemoteAPIStage: "stage",
 		CatalogItemSubscription: &uc.CatalogItemSubscription{
 			Id:    ID,
+			Name:  "testsubscription",
 			State: state,
 			Properties: []uc.CatalogItemProperty{
 				{
@@ -59,6 +61,9 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 				},
 			},
 			CatalogItemId: catalogID,
+			Metadata: uc.AuditMetadata{
+				CreateUserId: "bbunny",
+			},
 		},
 	}
 }
