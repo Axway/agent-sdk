@@ -72,5 +72,46 @@ func TestUpdateProperties(t *testing.T) {
 	})
 	err = subscription.UpdateProperties("11111")
 	assert.Nil(t, err)
+}
 
+func TestUpdateState(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	assert.NotNil(t, svcClient)
+	assert.NotNil(t, mockHTTPClient)
+
+	subscription := createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"})
+	cs := subscription.(*CentralSubscription)
+	cs.apicClient = svcClient
+
+	// fail
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusBadRequest,
+		},
+	})
+	err := subscription.UpdateState("FAILED", "failure")
+	assert.NotNil(t, err)
+
+	// success
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusOK, // update state
+		},
+	})
+	err = subscription.UpdateState("FAILED", "failure")
+	assert.Nil(t, err)
+}
+
+func TestGetters(t *testing.T) {
+	subscription := createSubscription("11111", "APPROVED", "22222", map[string]interface{}{"orgId": "33333"})
+	assert.Equal(t, "bbunny", subscription.GetCreatedUserID())
+	assert.Equal(t, "11111", subscription.GetID())
+	assert.Equal(t, "testsubscription", subscription.GetName())
+	assert.Equal(t, "1111", subscription.GetApicID())
+	assert.Equal(t, "2222", subscription.GetRemoteAPIID())
+	assert.Equal(t, "stage", subscription.GetRemoteAPIStage())
+	assert.Equal(t, "22222", subscription.GetCatalogItemID())
+	assert.Equal(t, SubscriptionApproved, subscription.GetState())
+	assert.Equal(t, "33333", subscription.GetPropertyValue("orgId"))
+	assert.Equal(t, "", subscription.GetPropertyValue("foo"))
 }

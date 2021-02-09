@@ -1,6 +1,7 @@
 package util
 
 import (
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -34,4 +35,48 @@ func TestRemoveDuplicateValuesFromStringSlice(t *testing.T) {
 func TestMaskValue(t *testing.T) {
 	value := MaskValue("12345")
 	assert.Equal(t, "*****", value)
+}
+
+func TestGetURLHostName(t *testing.T) {
+	host := GetURLHostName("http://axway.com/abcd")
+	assert.Equal(t, host, "axway.com")
+
+	host = GetURLHostName("axway")
+	assert.Equal(t, "", host)
+}
+
+func TestGetProxyURL(t *testing.T) {
+	url := &url.URL{
+		Scheme: "http",
+		Host:   "axway.com",
+		Path:   "abcd",
+	}
+
+	proxyurl := GetProxyURL(url)
+	// assert.Nil(t, err)
+	assert.NotNil(t, proxyurl)
+
+	u, err := proxyurl(nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, u)
+	assert.Equal(t, url, u)
+
+	url.Host = ""
+	proxyurl = GetProxyURL(url)
+	u, err = proxyurl(nil)
+	assert.Nil(t, err)
+	assert.Nil(t, u)
+
+	proxyurl = GetProxyURL(nil)
+	u, err = proxyurl(nil)
+	assert.Nil(t, err)
+	assert.Nil(t, u)
+}
+
+func TestLoadEnvFromFile(t *testing.T) {
+	err := LoadEnvFromFile("foobar")
+	assert.NotNil(t, err)
+
+	err = LoadEnvFromFile("./testdata/env_vars.txt")
+	assert.Nil(t, err)
 }
