@@ -7,6 +7,7 @@ include:
   - project: "apigov/beano_cicd"
     ref: master
     file: 
+      - "/gitlabci/.gitlab-ci-common.yml"
       - "/gitlabci/.gitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
