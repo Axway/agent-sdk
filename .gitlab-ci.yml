@@ -39,6 +39,8 @@ variables:
   WS_CONFIG_FILE: "whitesource.config"
   WS_PROJECT_ID: "APIC_Agents_SDK"
 
+  CSR_SUPPRESSION_LIST: "../csr-suppressions/amplify-central/golang-agents-common.json"
+
 stages:
   - test
   - sonar
