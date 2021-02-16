@@ -15,28 +15,6 @@
   },
   "suppressions": [
     {
-      "path": ".*github\\.com/prometheus/.*",
-      "scanner": "dependency-check",
-      "classification": "No Risk",
-      "justification": "Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent.",
-      "component": ".*",
-      "version": ".*",
-      "ids": [
-        "CVE-2019-3826"
-      ]
-    },
-    {
-      "path": ".*/elastic/go\\-sysinfo/go\\.mod:github\\.com/prometheus/procfs/0\\.0\\.0\\-20190425082905\\-87a4384529e0",
-      "scanner": "dependency-check",
-      "classification": "No Risk",
-      "justification": "Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent.",
-      "component": ".*",
-      "version": ".*",
-      "ids": [
-        "CVE-2019-3826"
-      ]
-    },
-    {
       "path": ".*github.com\\/elastic\\/go\\-ucfg\\-v0\\.8\\.3",
       "scanner": "whitesource",
       "component": "github.com\\/elastic\\/go\\-ucfg",
@@ -45,32 +23,6 @@
       "justification": "kubernetes libraries are not used by agents",
       "ids": [
         "CVE-2019-11254"
-      ]
-    },
-    {
-      "path": ".*",
-      "scanner": "whitesource",
-      "classification": "False Positive",
-      "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
-      "component": "packetbeat",
-      "version": "v7\\.7\\.1",
-      "ids": [
-          "CVE-2020-26160"
-      ]
-    },
-    {
-      "path": ".*spf13/viper/go\\.mod:github\\.com/grpc\\-ecosystem/go\\-grpc\\-middleware/1\\.0\\.0",
-      "scanner": "dependency-check",
-      "component": "go\\-grpc\\-middleware",
-      "classification": "No Risk",
-      "justification": "GRPC is not used by the agents",
-      "version": "1\\.0\\.0",
-      "ids": [
-        "CVE-2017-7860",
-        "CVE-2017-7861",
-        "CVE-2017-8359",
-        "CVE-2017-9431",
-        "CVE-2020-7768"
       ]
     },
     {
