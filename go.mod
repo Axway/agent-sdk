@@ -10,6 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/getkin/kin-openapi v0.9.0
 	github.com/google/uuid v1.1.2
+	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
