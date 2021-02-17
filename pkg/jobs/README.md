@@ -36,17 +36,17 @@ type MyJob struct {
   jobs.Job // implements interface
 }
 
-func (*j MyJob) Status() error {
+func (j *MyJob) Status() error {
   // continually called determining the status of any dependencies for the job
   // returning an error means the job should not be executed
 }
 
-func (*j MyJob) Ready() bool {
+func (j *MyJob) Ready() bool {
   // called prior to executing the job the first time
   // return true when the job can begin execution, false otherwise
 }
 
-func (*j MyJob) Execute() error {
+func (j *MyJob) Execute() error {
   // called each time the job should be executed
   // returning an error stops continuous jobs from executing
 }
@@ -221,15 +221,15 @@ type FirstJob struct {
   jobs.Job // implements interface
 }
 
-func (*j FirstJob) Status() error {
+func (j *FirstJob) Status() error {
   ...
 }
 
-func (*j FirstJob) Ready() bool {
+func (j *FirstJob) Ready() bool {
   ...
 }
 
-func (*j FirstJob) Execute() error {
+func (j *FirstJob) Execute() error {
   ...
 }
 
@@ -238,15 +238,15 @@ type SecondJob struct {
   firstJobID string
 }
 
-func (*j SecondJob) Status() error {
+func (j *SecondJob) Status() error {
   ...
 }
 
-func (*j SecondJob) Ready() bool {
+func (j *SecondJob) Ready() bool {
   ...
 }
 
-func (*j SecondJob) Execute() error {
+func (j *SecondJob) Execute() error {
   jobs.JobLock(j.firstJobID)
   defer jobs.JobUnlock(j.firstJobID)
   ...
