@@ -8,37 +8,6 @@ achieved again.
 
 When using the jobs library, remember that the main process of the agent can not exit, otherwise all jobs will exit
 
-## Implementing the job interface
-
-Before registering a job, the Job interface has to be implemented for your job
-
-```go
-package main
-
-import (
-  github.com/Axway/agent-sdk/pkg/jobs
-)
-
-type myJob struct {
-  jobs.Job // implements interface
-}
-
-func (*j myJob) Status() error {
-  // continually called determining the status of any dependencies for the job
-  // returning an error means the job should not be executed
-}
-
-func (*j myJob) Ready() bool {
-  // called prior to executing the job the first time
-  // return true when the job can begin execution, false otherwise
-}
-
-func (*j myJob) Execute() error {
-  // called each time the job should be executed
-  // returning an error stops continuous jobs from executing
-}
-```
-
 ## Job status
 
 The following are the possible job status values that can be returned by the GetJobStatus method
@@ -51,6 +20,37 @@ The following are the possible job status values that can be returned by the Get
 | Stopped      | Returned when a continuous job is in a non-working state and is waiting to be restarted |
 | Failed       | Returned when a single run or retry job does not Execute without error                  |
 | Finished     | Returned when a single run or retry job Executes properly                               |
+
+## Implementing the job interface
+
+Before registering a job, the Job interface has to be implemented for your job
+
+```go
+package main
+
+import (
+  github.com/Axway/agent-sdk/pkg/jobs
+)
+
+type MyJob struct {
+  jobs.Job // implements interface
+}
+
+func (*j MyJob) Status() error {
+  // continually called determining the status of any dependencies for the job
+  // returning an error means the job should not be executed
+}
+
+func (*j MyJob) Ready() bool {
+  // called prior to executing the job the first time
+  // return true when the job can begin execution, false otherwise
+}
+
+func (*j MyJob) Execute() error {
+  // called each time the job should be executed
+  // returning an error stops continuous jobs from executing
+}
+```
 
 ## Job types
 
@@ -72,6 +72,7 @@ import (
 )
 
 func main() {
+  myJob := MyJob{}
   jobID, err := jobs.RegisterSingleRunJob(myJob)
   if err != nil {
     panic(err) // error registering the job
@@ -98,6 +99,7 @@ import (
 )
 
 func main() {
+  myJob := MyJob{}
   retries := 3
   jobID, err := jobs.RegisterRetryJob(myJob, retries)
   if err != nil {
@@ -125,6 +127,7 @@ import (
 )
 
 func main() {
+  myJob := MyJob{}
   interval := 30 * time.Second
   jobID, err := jobs.RegisterIntervalJob(myJob, interval)
   if err != nil {
@@ -190,11 +193,78 @@ import (
 )
 
 func main() {
+  myJob := MyJob{}
   runHalfPastHour := "0 30 * * * * *"
   jobID, err := jobs.RegisterScheduledJob(myJob, runHalfPastHour)
   if err != nil {
     panic(err) // error registering the job
   }
   fmt.Println(GetJobStatus(jobID))
+}
+```
+
+## Job locks
+
+All continuous jobs (Interval and Scheduled) create locks that the agent can use to prevent the job from running at the same time as another process or job.
+The job will lock itself prior to calling its Execute function and unlock itself after Execute has finished
+
+Here is an example of how to create 2 jobs that can not execute at the same time.
+
+```go
+package main
+
+import (
+  github.com/Axway/agent-sdk/pkg/jobs
+)
+
+type FirstJob struct {
+  jobs.Job // implements interface
+}
+
+func (*j FirstJob) Status() error {
+  ...
+}
+
+func (*j FirstJob) Ready() bool {
+  ...
+}
+
+func (*j FirstJob) Execute() error {
+  ...
+}
+
+type SecondJob struct {
+  jobs.Job // implements interface
+  firstJobID string
+}
+
+func (*j SecondJob) Status() error {
+  ...
+}
+
+func (*j SecondJob) Ready() bool {
+  ...
+}
+
+func (*j SecondJob) Execute() error {
+  jobs.JobLock(j.firstJobID)
+  defer jobs.JobUnlock(j.firstJobID)
+  ...
+}
+
+func main() {
+  myFirstJob := FirstJob{}
+  jobID, err := jobs.RegisterIntervalJob(myFirstJob, 30 * time.Second)
+  if err != nil {
+    panic(err) // error registering the job
+  }
+
+  mySecondJob := jobID{
+    firstJobID: jobID,
+  }
+  _, err := jobs.RegisterIntervalJob(mySecondJob, 30 * time.Second)
+  if err != nil {
+    panic(err) // error registering the job
+  }
 }
 ```
