@@ -40,11 +40,11 @@ func TestPoolCoordination(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		if !wasStopped && testPool.GetStatus() == statusToString[PoolStatusStopped] {
 			wasStopped = true
-			assert.Greater(t, sJob.executions, 1, "The scheduled job ran at least once before failure")
+			assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once before failure")
 			sJob.executions = 0
-			assert.Greater(t, iJob.executions, 1, "The interval job ran at least once before failure")
+			assert.GreaterOrEqual(t, iJob.executions, 1, "The interval job did not run at least once before failure")
 			iJob.executions = 0
-			assert.Greater(t, failJob.executions, 1, "The failing interval ran at least once before failure")
+			assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once before failure")
 			failJob.executions = 0
 		}
 		if wasStopped && testPool.GetStatus() == statusToString[PoolStatusRunning] {
@@ -54,9 +54,9 @@ func TestPoolCoordination(t *testing.T) {
 	}
 	time.Sleep(time.Second) // give enough time for scheduled job to run at least once more
 
-	assert.Greater(t, sJob.executions, 1, "The scheduled job ran at least once after failure")
-	assert.Greater(t, iJob.executions, 1, "The interval job ran at least once after failure")
-	assert.Greater(t, failJob.executions, 1, "The failing interval ran at least once after failure")
+	assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once after failure")
+	assert.GreaterOrEqual(t, iJob.executions, 1, "The interval job did not run at least once after failure")
+	assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once after failure")
 	assert.True(t, wasStopped, "The pool status never showed as stopped")
 	assert.True(t, stoppedThenStarted, "The pool status never restarted after it was stopped")
 	assert.True(t, failJob.wasFailed, "The fail job never reported as failed")

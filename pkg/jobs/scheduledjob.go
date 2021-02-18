@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gorhill/cronexpr"
@@ -68,7 +67,6 @@ func (b *scheduleJob) start() {
 		select {
 		case _ = <-b.stopChan:
 			b.status = JobStatusStopped
-			fmt.Printf("Stopping %s\n", b.GetID())
 			return
 		case _ = <-b.sleepChan:
 			break
