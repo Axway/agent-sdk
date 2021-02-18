@@ -1,5 +1,5 @@
 # this for notifications for pull requests
-* @Axway/agent-sdk
+* @Axway/Agent-SDK
 
 #.csr-profile.json requires SPOC approval for any modifications
-.csr-profile.json @Axway/agent-sdk
+.csr-profile.json @Axway/Agent-SDK
