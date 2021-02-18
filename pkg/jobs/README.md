@@ -56,7 +56,7 @@ func (j *MyJob) Execute() error {
 
 ### Single run jobs
 
-Single run jobs ae used to run a specific task exactly once, regardless of pass or fail.
+Single run jobs are used to run a specific task exactly once, regardless of pass or fail.
 
 #### Register Single run job
 

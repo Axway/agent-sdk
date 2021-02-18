@@ -21,6 +21,7 @@ go get github.com/Axway/agent-sdk/
 | cmd          | This package provides the implementation of the root command line processor                                                                         |
 | config       | This package provides the base configuration required by Agent SDK to communicate with AMPLIFY Central                                              |
 | filter       | This package provides the filter implementation to allow discovering APIs based on certain conditions                                               |
+| jobs         | This package provides a tooling to coordinate agent tasks [SDK Jobs](./pkg/jobs/README.md)                                                          |
 | notification | This package contains structs that can be used for creating notifications and subscribers to those notifications                                    |
 | notify       | This package contains the subscription notification setup for the agents to send SMTP and/or webhook notification for subscription process outcomes |
 | transaction  | This package holds definitions of event and interfaces to process them for traceability                                                             |
