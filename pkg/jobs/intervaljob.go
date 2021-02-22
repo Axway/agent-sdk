@@ -2,12 +2,14 @@ package jobs
 
 import (
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type intervalJobProps struct {
-	interval  time.Duration
-	sleepChan chan bool
-	stopChan  chan bool
+	interval time.Duration
+	stopChan chan bool
 }
 
 type intervalJob struct {
@@ -25,9 +27,8 @@ func newIntervalJob(newJob Job, interval time.Duration, failJobChan chan string)
 			failChan: failJobChan,
 		},
 		intervalJobProps{
-			interval:  interval,
-			sleepChan: make(chan bool),
-			stopChan:  make(chan bool),
+			interval: interval,
+			stopChan: make(chan bool),
 		},
 	}
 
@@ -35,39 +36,35 @@ func newIntervalJob(newJob Job, interval time.Duration, failJobChan chan string)
 	return &thisJob, nil
 }
 
-func (b *intervalJob) sleep() {
-	time.Sleep(b.interval)
-	b.sleepChan <- true
-}
-
 //start - calls the Execute function from the Job definition
 func (b *intervalJob) start() {
+	log.Debugf("Starting %v job %v", JobTypeInterval, b.id)
 	b.waitForReady()
 
-	b.status = JobStatusRunning
+	ticker := time.NewTicker(b.interval)
+	defer ticker.Stop()
+	b.SetStatus(JobStatusRunning)
 	for {
 		// Non-blocking channel read, if stopped then exit
 		select {
-		case _ = <-b.stopChan:
-			b.status = JobStatusStopped
+		case <-b.stopChan:
+			b.SetStatus(JobStatusStopped)
 			return
-		default:
+		case <-ticker.C:
 			b.executeCronJob()
-		}
-
-		go b.sleep()
-		//Non-blocking sleep, incase a stopped is pushed before the interval is up
-		select {
-		case _ = <-b.stopChan:
-			b.status = JobStatusStopped
-			return
-		case _ = <-b.sleepChan:
-			break
+			if b.err != nil {
+				b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeInterval, b.id)
+				log.Error(b.err)
+				b.SetStatus(JobStatusStopped)
+			}
+			ticker.Stop()
+			ticker = time.NewTicker(b.interval)
 		}
 	}
 }
 
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
+	log.Debugf("Stopping %v job %v", JobTypeInterval, b.id)
 	b.stopChan <- true
 }

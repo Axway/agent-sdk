@@ -116,12 +116,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 
 		setupSignalProcessor()
-		// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
-		if flag.Lookup("test.v") == nil {
-			// only do continuous healthchecking in binary agents
-			if !isRunningInDockerContainer() {
-				go runPeriodicHealthChecks()
-			}
+		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
+		if flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
+			hc.StartPeriodicHealthCheck()
 		}
 
 		startAPIServiceCache()
@@ -149,23 +146,6 @@ func OnConfigChange(configChangeHandler ConfigChangeHandler) {
 // OnAgentResourceChange - Registers handler for resource change event
 func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 	agent.agentResourceChangeHandler = agentResourceChangeHandler
-}
-
-func runPeriodicHealthChecks() {
-	for {
-		// Initial check done by the agents startup, so wait for the next interval
-		// Use the default wait time of 30s if status config is not set yet
-		waitInterval := 30 * time.Second
-		if hc.GetStatusConfig() != nil {
-			waitInterval = hc.GetStatusConfig().GetHealthCheckInterval()
-		}
-		// Set sleep time based on configured interval
-		time.Sleep(waitInterval)
-		if hc.RunChecks() != hc.OK {
-			log.Error(errors.ErrHealthCheck)
-			os.Exit(1)
-		}
-	}
 }
 
 func startAPIServiceCache() {
