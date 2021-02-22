@@ -13,5 +13,5 @@ node ./scripts/apiserver/generate.js $PROTOCOL $HOST $PORT
 # update all go imports
 goimports -w=true ./pkg/apic/apiserver
 
-# run script to modify any files that need tweeking
+# run script to modify any files that need tweaking
 ./scripts/apiserver/modify_models.sh

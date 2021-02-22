@@ -72,6 +72,14 @@ type agentData struct {
 
 var agent = agentData{}
 
+// getAgentTypes - return the agent types
+func getAgentTypes() map[int]string {
+	return map[int]string{
+		1: "discoveryagents",
+		2: "traceabilityagents",
+	}
+}
+
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
 	agent.apiMap = cache.New()
@@ -315,6 +323,10 @@ func cleanUp() {
 
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
+	// Set resource for Generic Type
+	if AgentResourceType == "" {
+		AgentResourceType = getAgentTypes()[int(agent.cfg.AgentType)]
+	}
 	return AgentResourceType
 }
 
@@ -369,16 +381,36 @@ func updateAgentStatus(status, message string) error {
 	if agent.agentResource != nil {
 		agentResourceType := getAgentResourceType()
 		resource := createAgentStatusSubResource(agentResourceType, status, message)
-		buffer, err := json.Marshal(resource)
-		if err != nil {
-			return nil
+
+		// Check if there is a generic resource to update
+		var genResource interface{}
+		if agentResourceType == v1alpha1.AWSDiscoveryAgentResource || agentResourceType == v1alpha1.EdgeDiscoveryAgentResource {
+			genResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
+		} else if agentResourceType == v1alpha1.AWSTraceabilityAgentResource || agentResourceType == v1alpha1.EdgeTraceabilityAgentResource {
+			genResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
 		}
 
-		subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
-		_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
-		if err != nil {
-			return err
+		if genResource != nil {
+			err := updateAgentStatusAPI(resource, agentResourceType)
+			if err != nil {
+				log.Warn("Could not update the generic agent reference")
+			}
 		}
+		return updateAgentStatusAPI(resource, agentResourceType)
+	}
+	return nil
+}
+
+func updateAgentStatusAPI(resource interface{}, agentResourceType string) error {
+	buffer, err := json.Marshal(resource)
+	if err != nil {
+		return nil
+	}
+
+	subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
+	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -398,7 +430,8 @@ func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 		agentRes := awsTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	default:
-		panic("Unsupported agent type")
+		log.Warn("Agent type specified not linked to a dataplane type")
+		return ""
 	}
 }
 
@@ -412,9 +445,104 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 		return createAWSDiscoveryAgentStatusResource(status, message)
 	case v1alpha1.AWSTraceabilityAgentResource:
 		return createAWSTraceabilityAgentStatusResource(status, message)
+	case v1alpha1.DiscoveryAgentResource:
+		return createDiscoveryAgentStatusResource(status, message)
+	case v1alpha1.TraceabilityAgentResource:
+		return createTraceabilityAgentStatusResource(status, message)
 	default:
 		panic("Unsupported agent type")
 	}
+}
+
+func createAgentResource(agentRes interface{}) error {
+	agentResourceType := v1alpha1.DiscoveryAgentResource
+	if getAgentResourceType() == v1alpha1.AWSTraceabilityAgentResource || getAgentResourceType() == v1alpha1.EdgeTraceabilityAgentResource {
+		agentResourceType = v1alpha1.TraceabilityAgentResource
+	}
+	// Create the agent resource
+	buffer, err := json.Marshal(agentRes)
+	if err != nil {
+		return nil
+	}
+	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType
+	_, err = agent.apicClient.ExecuteAPI(coreapi.POST, resURL, nil, buffer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateAgentResource(agentRes interface{}) error {
+	// IMP - To be removed once the model is in production
+	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
+		return nil
+	}
+
+	agentResourceType := getAgentResourceType()
+
+	// Create the agent resource
+	buffer, err := json.Marshal(agentRes)
+	if err != nil {
+		return nil
+	}
+	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName()
+	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, resURL, nil, buffer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createDiscoveryAgentResource(config v1alpha1.DiscoveryAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
+	// The generic type for this discovery agent needs to be created
+	genericAgentRes := v1alpha1.DiscoveryAgent{}
+
+	genericAgentRes.Spec.Config = config
+	genericAgentRes.Spec.Logging = logging
+	genericAgentRes.Spec.DataplaneType = gatewayType
+	genericAgentRes.Name = agent.cfg.GetAgentName()
+
+	log.Debug("Creating the generic resource")
+	createAgentResource(&genericAgentRes)
+
+	log.Debug("Updating the generic resource status")
+	updateAgentStatusAPI(&genericAgentRes, v1alpha1.DiscoveryAgentResource)
+}
+
+func createDiscoveryAgentStatusResource(status, message string) *v1alpha1.DiscoveryAgent {
+	agentRes := v1alpha1.DiscoveryAgent{}
+	agentRes.Name = agent.cfg.GetAgentName()
+	agentRes.Status.Version = config.AgentVersion
+	agentRes.Status.State = status
+	agentRes.Status.Message = message
+
+	return &agentRes
+}
+
+func createTraceabilityAgentResource(config v1alpha1.TraceabilityAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
+	// The generic type for this traceability agent needs to be created
+	genericAgentRes := v1alpha1.TraceabilityAgent{}
+
+	genericAgentRes.Spec.Config = config
+	genericAgentRes.Spec.Logging = logging
+	genericAgentRes.Spec.DataplaneType = gatewayType
+	genericAgentRes.Name = agent.cfg.GetAgentName()
+
+	log.Debug("Creating the generic resource")
+	createAgentResource(&genericAgentRes)
+
+	log.Debug("Updating the generic resource status")
+	updateAgentStatusAPI(&genericAgentRes, v1alpha1.TraceabilityAgentResource)
+}
+
+func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.TraceabilityAgent {
+	agentRes := v1alpha1.TraceabilityAgent{}
+	agentRes.Name = agent.cfg.GetAgentName()
+	agentRes.Status.Version = config.AgentVersion
+	agentRes.Status.State = status
+	agentRes.Status.Message = message
+
+	return &agentRes
 }
 
 func mergeResourceWithConfig() {

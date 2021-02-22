@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AwsTraceabilityAgentSpecConfig Represents the AWS traceability agent config
-type AwsTraceabilityAgentSpecConfig struct {
+// TraceabilityAgentSpecConfig Represents the traceability agent config
+type TraceabilityAgentSpecConfig struct {
 	// Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
 	OwningTeam string `json:"owningTeam,omitempty"`
 	// Configures the agent to include request and response headers in captured traffic. Defaults to true

@@ -43,7 +43,7 @@ func createEdgeDiscoveryAgentRes(id, name, dataplane, filter string) *v1.Resourc
 		},
 		Spec: v1alpha1.EdgeDiscoveryAgentSpec{
 			Dataplane: dataplane,
-			Config: v1alpha1.EdgeDiscoveryAgentSpecConfig{
+			Config: v1alpha1.DiscoveryAgentSpecConfig{
 				Filter: filter,
 			},
 		},
@@ -62,7 +62,7 @@ func createEdgeTraceabilityAgentRes(id, name, dataplane string, processHeaders b
 		},
 		Spec: v1alpha1.EdgeTraceabilityAgentSpec{
 			Dataplane: dataplane,
-			Config: v1alpha1.EdgeTraceabilityAgentSpecConfig{
+			Config: v1alpha1.TraceabilityAgentSpecConfig{
 				ProcessHeaders: processHeaders,
 			},
 		},
