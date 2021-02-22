@@ -9,13 +9,10 @@
 
 package v1alpha1
 
-//TODO: file was auto-generated with EdgeDiscovertAgentSpecLogging
-
 // DiscoveryAgentSpec struct for DiscoveryAgentSpec
 type DiscoveryAgentSpec struct {
 	// The dataplane type that this agent connects to
 	DataplaneType string                    `json:"dataplaneType"`
 	Config        DiscoveryAgentSpecConfig  `json:"config"`
 	Logging       DiscoveryAgentSpecLogging `json:"logging,omitempty"`
-	// Logging       EdgeDiscoveryAgentSpecLogging `json:"logging,omitempty"`
 }

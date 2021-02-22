@@ -9,16 +9,12 @@
 
 package v1alpha1
 
-// TODO: file was auto-generated with AwsDiscoveryAgentSpecConfig and EdgeDiscoveryAgentSpecLogging
-
 // AwsDiscoveryAgentSpec struct for AwsDiscoveryAgentSpec
 type AwsDiscoveryAgentSpec struct {
 	// The name of the AWS dataplane associated to this agent
 	Dataplane string `json:"dataplane"`
 	// The name of the Discovery Agent associated to this agent
-	DiscoveryAgent string                   `json:"discoveryAgent,omitempty"`
-	Config         DiscoveryAgentSpecConfig `json:"config"`
-	// Config         AwsDiscoveryAgentSpecConfig   `json:"config"`
-	Logging DiscoveryAgentSpecLogging `json:"logging,omitempty"`
-	// Logging        EdgeDiscoveryAgentSpecLogging `json:"logging,omitempty"`
+	DiscoveryAgent string                    `json:"discoveryAgent,omitempty"`
+	Config         DiscoveryAgentSpecConfig  `json:"config"`
+	Logging        DiscoveryAgentSpecLogging `json:"logging,omitempty"`
 }

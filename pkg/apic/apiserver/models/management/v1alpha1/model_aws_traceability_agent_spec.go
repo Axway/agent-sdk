@@ -9,8 +9,6 @@
 
 package v1alpha1
 
-// TODO: file was auto-generated with AwsTraceabilityAgentSpecConfig and EdgeDiscoveryAgentSpecLogging
-
 // AwsTraceabilityAgentSpec struct for AwsTraceabilityAgentSpec
 type AwsTraceabilityAgentSpec struct {
 	// The name of the AWS dataplane associated to this agent
@@ -18,7 +16,5 @@ type AwsTraceabilityAgentSpec struct {
 	// The name of the Traceability Agent associated to this agent
 	TraceabilityAgent string                      `json:"traceabilityAgent,omitempty"`
 	Config            TraceabilityAgentSpecConfig `json:"config"`
-	// Config            AwsTraceabilityAgentSpecConfig `json:"config"`
-	Logging DiscoveryAgentSpecLogging `json:"logging,omitempty"`
-	// Logging           EdgeDiscoveryAgentSpecLogging  `json:"logging,omitempty"`
+	Logging           DiscoveryAgentSpecLogging   `json:"logging,omitempty"`
 }

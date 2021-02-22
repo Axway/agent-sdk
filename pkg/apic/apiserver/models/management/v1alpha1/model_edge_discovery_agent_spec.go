@@ -9,16 +9,12 @@
 
 package v1alpha1
 
-// TODO: file was auto-generated with EdgeDiscoveryAgentSpecConfig and EdgeDiscovertAgentSpecLogging
-
 // EdgeDiscoveryAgentSpec struct for EdgeDiscoveryAgentSpec
 type EdgeDiscoveryAgentSpec struct {
 	// The name of the Axway Edge API Gateway dataplane associated to this agent
 	Dataplane string `json:"dataplane"`
 	// The name of the Discovery agent Associated to this agent
-	DiscoveryAgent string                   `json:"discoveryAgent,omitempty"`
-	Config         DiscoveryAgentSpecConfig `json:"config"`
-	// Config         EdgeDiscoveryAgentSpecConfig  `json:"config"`
-	Logging DiscoveryAgentSpecLogging `json:"logging,omitempty"`
-	// Logging EdgeDiscoveryAgentSpecLogging `json:"logging,omitempty"`
+	DiscoveryAgent string                    `json:"discoveryAgent,omitempty"`
+	Config         DiscoveryAgentSpecConfig  `json:"config"`
+	Logging        DiscoveryAgentSpecLogging `json:"logging,omitempty"`
 }

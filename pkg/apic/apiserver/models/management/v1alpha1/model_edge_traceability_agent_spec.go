@@ -9,8 +9,6 @@
 
 package v1alpha1
 
-// TODO: file was auto-generated with EdgeTraceabilityAgentSpecConfig and EdgeDiscoveryAgentSpecLogging
-
 // EdgeTraceabilityAgentSpec struct for EdgeTraceabilityAgentSpec
 type EdgeTraceabilityAgentSpec struct {
 	// The name of the Axway Edge API Gateway dataplane associated to this agent
@@ -18,7 +16,5 @@ type EdgeTraceabilityAgentSpec struct {
 	// The name of the Traceability Agent associated to this agent
 	TraceabilityAgent string                      `json:"traceabilityAgent,omitempty"`
 	Config            TraceabilityAgentSpecConfig `json:"config"`
-	// Config            EdgeTraceabilityAgentSpecConfig `json:"config"`
-	Logging DiscoveryAgentSpecLogging `json:"logging,omitempty"`
-	// Logging           EdgeDiscoveryAgentSpecLogging   `json:"logging,omitempty"`
+	Logging           DiscoveryAgentSpecLogging   `json:"logging,omitempty"`
 }
