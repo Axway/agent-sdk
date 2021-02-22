@@ -3,15 +3,16 @@ package jobs
 import (
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gorhill/cronexpr"
+
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 type scheduleJobProps struct {
-	schedule      string
-	cronExp       *cronexpr.Expression
-	nextExecution time.Duration
-	sleepChan     chan bool
-	stopChan      chan bool
+	schedule string
+	cronExp  *cronexpr.Expression
+	stopChan chan bool
 }
 
 type scheduleJob struct {
@@ -23,7 +24,7 @@ type scheduleJob struct {
 func newScheduledJob(newJob Job, schedule string, failJobChan chan string) (JobExecution, error) {
 	exp, err := cronexpr.Parse(schedule)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(ErrRegisteringJob, err.Error()).FormatError("scheduled")
 	}
 
 	thisJob := scheduleJob{
@@ -34,10 +35,9 @@ func newScheduledJob(newJob Job, schedule string, failJobChan chan string) (JobE
 			failChan: failJobChan,
 		},
 		scheduleJobProps{
-			cronExp:   exp,
-			schedule:  schedule,
-			stopChan:  make(chan bool),
-			sleepChan: make(chan bool),
+			cronExp:  exp,
+			schedule: schedule,
+			stopChan: make(chan bool),
 		},
 	}
 
@@ -45,38 +45,39 @@ func newScheduledJob(newJob Job, schedule string, failJobChan chan string) (JobE
 	return &thisJob, nil
 }
 
-func (b *scheduleJob) setNextExecution() {
+func (b *scheduleJob) getNextExecution() time.Duration {
 	nextTime := b.cronExp.Next(time.Now())
-	b.nextExecution = nextTime.Sub(time.Now())
-	go b.sleep()
-}
-
-func (b *scheduleJob) sleep() {
-	time.Sleep(b.nextExecution)
-	b.sleepChan <- true
+	return nextTime.Sub(time.Now())
 }
 
 //start - calls the Execute function from the Job definition
 func (b *scheduleJob) start() {
+	log.Debugf("Starting %v job %v", JobTypeScheduled, b.id)
 	b.waitForReady()
 
-	b.status = JobStatusRunning
+	ticker := time.NewTicker(b.getNextExecution())
+	defer ticker.Stop()
+	b.SetStatus(JobStatusRunning)
 	for {
-		// Set the amount of time until the next execution then wait for it or a stop signal
-		b.setNextExecution()
+		// Non-blocking channel read, if stopped then exit
 		select {
-		case _ = <-b.stopChan:
-			b.status = JobStatusStopped
+		case <-b.stopChan:
+			b.SetStatus(JobStatusStopped)
 			return
-		case _ = <-b.sleepChan:
-			break
+		case <-ticker.C:
+			b.executeCronJob()
+			if b.err != nil {
+				b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeScheduled, b.id)
+				b.SetStatus(JobStatusStopped)
+			}
+			ticker.Stop()
+			ticker = time.NewTicker(b.getNextExecution())
 		}
-
-		b.executeCronJob()
 	}
 }
 
 //stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
+	log.Debugf("Stopping %v job %v", JobTypeScheduled, b.id)
 	b.stopChan <- true
 }

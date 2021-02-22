@@ -1,5 +1,9 @@
 package healthcheck
 
+import "time"
+
+const defaultCheckInterval = 30 * time.Second
+
 // HealthChecker - info about the service
 type healthChecker struct {
 	Name       string                  `json:"name"`

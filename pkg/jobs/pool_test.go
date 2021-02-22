@@ -38,7 +38,7 @@ func TestPoolCoordination(t *testing.T) {
 	wasStopped := false
 	stoppedThenStarted := false
 	for i := 0; i < 100; i++ {
-		if !wasStopped && testPool.GetStatus() == statusToString[PoolStatusStopped] {
+		if !wasStopped && testPool.GetStatus() == PoolStatusStopped.String() {
 			wasStopped = true
 			assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once before failure")
 			sJob.executions = 0
@@ -47,7 +47,7 @@ func TestPoolCoordination(t *testing.T) {
 			assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once before failure")
 			failJob.executions = 0
 		}
-		if wasStopped && testPool.GetStatus() == statusToString[PoolStatusRunning] {
+		if wasStopped && testPool.GetStatus() == PoolStatusRunning.String() {
 			stoppedThenStarted = true
 		}
 		time.Sleep(10 * time.Millisecond)
