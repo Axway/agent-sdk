@@ -426,7 +426,7 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 	case v1alpha1.TraceabilityAgentResource:
 		return createTraceabilityAgentStatusResource(status, message)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
 }
 
@@ -537,7 +537,7 @@ func mergeResourceWithConfig() {
 	case v1alpha1.AWSTraceabilityAgentResource:
 		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
 }
 

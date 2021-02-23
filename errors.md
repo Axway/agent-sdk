@@ -5,6 +5,7 @@
 | Code | Description                                                                                                 | Code Path                                           |
 |------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 |      | 1000-1099 - for general agent errors                                                                        |                                                     |
+| 1000 | Unsupported agent type                                                                                      | pkg/agent/ErrUnsupportedAgentType                   |
 | 1001 | initialization error checking for dependencies to respond, possibly network or settings                     | pkg/util/errors/ErrInitServicesNotReady             |
 | 1002 | timeout error checking for dependencies to respond, possibly network or settings                            | pkg/util/errors/ErrTimeoutServicesNotReady          |
 | 1003 | Periodic health checker failed.  Services are not ready                                                     | pkg/util/errorsErrHealthCheck                       |
