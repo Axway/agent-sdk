@@ -26,6 +26,7 @@ analysis.json
 *cover.out
 coverage.html
 cache_save_file.json
+pkg/config/path
 
 openapitools.json
 main-resources.json

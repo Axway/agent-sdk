@@ -134,14 +134,14 @@ func TestHealthCheck(t *testing.T) {
 	svcClient.tokenRequester = auth.NewPlatformTokenGetter("", "", "", "", "", "", 1*time.Second)
 
 	// failure
-	status := svcClient.healthcheck("Client Test")
+	status := svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.FAIL)
 	assert.True(t, strings.Contains(status.Details, "error getting authentication token"))
 
 	svcClient.tokenRequester = requester
 
 	// failure
-	status = svcClient.healthcheck("Client Test")
+	status = svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.FAIL)
 	assert.True(t, strings.Contains(status.Details, "unexpected end"))
 
@@ -152,7 +152,7 @@ func TestHealthCheck(t *testing.T) {
 	}
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	mockHTTPClient.SetResponses(responses)
-	status = svcClient.healthcheck("Client Test")
+	status = svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
 	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
 }

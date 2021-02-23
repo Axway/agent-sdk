@@ -51,6 +51,7 @@ type Client interface {
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	OnConfigChange(cfg corecfg.CentralConfig)
+	Healthcheck(name string) *hc.Status
 }
 
 // New -
@@ -60,7 +61,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	serviceClient.SetTokenGetter(tokenRequester)
 
 	serviceClient.OnConfigChange(cfg)
-	hc.RegisterHealthcheck(serverName, "central", serviceClient.healthcheck)
+	hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
 	return serviceClient
 }
 
@@ -160,7 +161,7 @@ func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
 	c.subscriptionMgr = mgr
 }
 
-func (c *ServiceClient) healthcheck(name string) *hc.Status {
+func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
 		Result: hc.OK,
