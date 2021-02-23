@@ -23,7 +23,8 @@ func createAWSDiscoveryAgentStatusResource(status, message string) *v1alpha1.AWS
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
 
-	dataplaneType := "AWS"
+	dataplaneType := awsDataplaneType
+
 	// Genenric implementation
 	if agentRes.Spec.DiscoveryAgent == "" {
 		// The generic type for this discovery agent needs to be created
@@ -62,7 +63,8 @@ func createAWSTraceabilityAgentStatusResource(status, message string) *v1alpha1.
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
 
-	dataplaneType := "AWS"
+	dataplaneType := awsDataplaneType
+
 	// Genenric implementation
 	if agentRes.Spec.TraceabilityAgent == "" {
 		// The generic type for this discovery agent needs to be created

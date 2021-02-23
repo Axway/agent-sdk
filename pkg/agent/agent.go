@@ -30,6 +30,11 @@ const (
 	AgentFailed  = "failed"
 )
 
+const (
+	awsDataplaneType  = "AWS"
+	edgeDataplaneType = "Edge"
+)
+
 // AgentResourceType - Holds the type for agent resource in Central
 var AgentResourceType string
 
@@ -45,6 +50,12 @@ var dataplaneResourceTypeMap = map[string]string{
 	v1alpha1.EdgeTraceabilityAgentResource: v1alpha1.EdgeDataplaneResource,
 	v1alpha1.AWSDiscoveryAgentResource:     v1alpha1.AWSDataplaneResource,
 	v1alpha1.AWSTraceabilityAgentResource:  v1alpha1.AWSDataplaneResource,
+}
+
+// agentTypesMap - Agent Types map
+var agentTypesMap = map[config.AgentType]string{
+	config.DiscoveryAgent:    "discoveryagents",
+	config.TraceabilityAgent: "traceabilityagents",
 }
 
 type agentData struct {
@@ -71,14 +82,6 @@ type agentData struct {
 }
 
 var agent = agentData{}
-
-// getAgentTypes - return the agent types
-func getAgentTypes() map[int]string {
-	return map[int]string{
-		1: "discoveryagents",
-		2: "traceabilityagents",
-	}
-}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
@@ -325,7 +328,7 @@ func cleanUp() {
 func getAgentResourceType() string {
 	// Set resource for Generic Type
 	if AgentResourceType == "" {
-		AgentResourceType = getAgentTypes()[int(agent.cfg.AgentType)]
+		AgentResourceType = agentTypesMap[agent.cfg.AgentType]
 	}
 	return AgentResourceType
 }
@@ -394,9 +397,9 @@ func updateAgentStatus(status, message string) error {
 			err := updateAgentStatusAPI(resource, agentResourceType)
 			if err != nil {
 				log.Warn("Could not update the generic agent reference")
+				return err
 			}
 		}
-		return updateAgentStatusAPI(resource, agentResourceType)
 	}
 	return nil
 }
