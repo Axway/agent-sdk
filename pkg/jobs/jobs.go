@@ -39,6 +39,11 @@ func JobUnlock(id string) {
 	globalPool.JobUnlock(id)
 }
 
+//GetStatus - Returns the status from the globalPool
+func GetStatus() string {
+	return globalPool.GetStatus()
+}
+
 //GetJob - Returns the Job based on the id from the globalPool
 func GetJob(id string) JobExecution {
 	return globalPool.GetJob(id)
