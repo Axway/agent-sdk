@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -17,6 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -152,15 +152,8 @@ func startAPIServiceCache() {
 	// Load the cache before the agents start discovering the APIs from remote gateway
 	updateAPICache()
 
-	// Start period update of the cache by querying API server resources published by the agent
-	go func() {
-		for {
-			time.Sleep(agent.cfg.PollInterval)
-			updateAPICache()
-			validateConsumerInstances()
-			fetchConfig()
-		}
-	}()
+	// register the update cache job
+	jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
 }
 
 func isRunningInDockerContainer() bool {
