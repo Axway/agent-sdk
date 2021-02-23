@@ -6,6 +6,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func edgeDiscoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.EdgeDiscoveryAgent {
@@ -16,13 +17,28 @@ func edgeDiscoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.EdgeDiscoveryAgen
 }
 
 func createEdgeDiscoveryAgentStatusResource(status, message string) *v1alpha1.EdgeDiscoveryAgent {
-	agentRes := v1alpha1.EdgeDiscoveryAgent{}
+	agentRes := edgeDiscoveryAgent(GetAgentResource())
 	agentRes.Name = agent.cfg.GetAgentName()
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
 
-	return &agentRes
+	dataplaneType := edgeDataplaneType
+
+	// Genenric implementation
+	if agentRes.Spec.DiscoveryAgent == "" {
+		// The generic type for this discovery agent needs to be created
+		createDiscoveryAgentResource(agentRes.Spec.Config, agentRes.Spec.Logging, dataplaneType)
+
+		log.Debug("Update the agent")
+		agentRes.Spec.DiscoveryAgent = agent.cfg.GetAgentName()
+		updateAgentResource(&agentRes)
+	}
+
+	// Update the generic resource status
+	updateAgentStatusAPI(createDiscoveryAgentStatusResource(status, message), v1alpha1.DiscoveryAgentResource)
+
+	return agentRes
 }
 
 func mergeEdgeDiscoveryAgentWithConfig(cfg *config.CentralConfiguration) {
@@ -46,6 +62,21 @@ func createEdgeTraceabilityAgentStatusResource(status, message string) *v1alpha1
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
+
+	dataplaneType := edgeDataplaneType
+
+	// Genenric implementation
+	if agentRes.Spec.TraceabilityAgent == "" {
+		// The generic type for this discovery agent needs to be created
+		createTraceabilityAgentResource(agentRes.Spec.Config, agentRes.Spec.Logging, dataplaneType)
+
+		log.Debug("Update the agent")
+		agentRes.Spec.TraceabilityAgent = agent.cfg.GetAgentName()
+		updateAgentResource(&agentRes)
+	}
+
+	// Update the generic resource status
+	updateAgentStatusAPI(createDiscoveryAgentStatusResource(status, message), v1alpha1.TraceabilityAgentResource)
 
 	return &agentRes
 }
