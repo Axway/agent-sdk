@@ -161,6 +161,7 @@ func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
 	c.subscriptionMgr = mgr
 }
 
+// Healthcheck - verify connection to the platform
 func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
