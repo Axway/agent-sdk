@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -17,6 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -116,12 +116,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 
 		setupSignalProcessor()
-		// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
-		if flag.Lookup("test.v") == nil {
-			// only do continuous healthchecking in binary agents
-			if !isRunningInDockerContainer() {
-				go runPeriodicHealthChecks()
-			}
+		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
+		if flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
+			hc.StartPeriodicHealthCheck()
 		}
 
 		startAPIServiceCache()
@@ -151,36 +148,12 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 	agent.agentResourceChangeHandler = agentResourceChangeHandler
 }
 
-func runPeriodicHealthChecks() {
-	for {
-		// Initial check done by the agents startup, so wait for the next interval
-		// Use the default wait time of 30s if status config is not set yet
-		waitInterval := 30 * time.Second
-		if hc.GetStatusConfig() != nil {
-			waitInterval = hc.GetStatusConfig().GetHealthCheckInterval()
-		}
-		// Set sleep time based on configured interval
-		time.Sleep(waitInterval)
-		if hc.RunChecks() != hc.OK {
-			log.Error(errors.ErrHealthCheck)
-			os.Exit(1)
-		}
-	}
-}
-
 func startAPIServiceCache() {
 	// Load the cache before the agents start discovering the APIs from remote gateway
 	updateAPICache()
 
-	// Start period update of the cache by querying API server resources published by the agent
-	go func() {
-		for {
-			time.Sleep(agent.cfg.PollInterval)
-			updateAPICache()
-			validateConsumerInstances()
-			fetchConfig()
-		}
-	}()
+	// register the update cache job
+	jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
 }
 
 func isRunningInDockerContainer() bool {
@@ -453,7 +426,7 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 	case v1alpha1.TraceabilityAgentResource:
 		return createTraceabilityAgentStatusResource(status, message)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
 }
 
@@ -564,7 +537,7 @@ func mergeResourceWithConfig() {
 	case v1alpha1.AWSTraceabilityAgentResource:
 		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
 }
 

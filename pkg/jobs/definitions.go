@@ -10,9 +10,9 @@ type Job interface {
 //JobExecution - the wrapper interface for every type of job
 //               controls the calling the methods defined in the Job interface
 type JobExecution interface {
-	GetStatus() string
-	GetStatusValue() JobStatus
+	GetStatus() JobStatus
 	GetID() string
+	Ready() bool
 	GetJob() JobExecution
 	Lock()
 	Unlock()
@@ -48,6 +48,10 @@ var jobStatusToString = map[JobStatus]string{
 	JobStatusFinished:     "Finished",
 }
 
+func (s JobStatus) String() string {
+	return jobStatusToString[s]
+}
+
 //PoolStatus - integer to represent the status of the jobs in the pool
 type PoolStatus int
 
@@ -60,9 +64,21 @@ const (
 	PoolStatusStopped
 )
 
-//statusToString - maps the PoolStatus integer to a string representation
-var statusToString = map[PoolStatus]string{
+//poolStatusToString - maps the PoolStatus integer to a string representation
+var poolStatusToString = map[PoolStatus]string{
 	PoolStatusInitializing: "Initializing",
 	PoolStatusRunning:      "Running",
 	PoolStatusStopped:      "Stopped",
 }
+
+func (s PoolStatus) String() string {
+	return poolStatusToString[s]
+}
+
+// Job type strings
+const (
+	JobTypeSingleRun = "single run"
+	JobTypeRetry     = "retry"
+	JobTypeInterval  = "interval"
+	JobTypeScheduled = "scheduled"
+)
