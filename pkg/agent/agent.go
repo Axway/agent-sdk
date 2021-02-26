@@ -299,7 +299,7 @@ func cleanUp() {
 
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
-	// Set resource for Generic Type
+	// Set resource for Agent Type
 	if AgentResourceType == "" {
 		AgentResourceType = agentTypesMap[agent.cfg.AgentType]
 	}

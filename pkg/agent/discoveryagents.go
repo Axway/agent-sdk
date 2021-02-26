@@ -17,7 +17,7 @@ func discoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.DiscoveryAgent {
 }
 
 func createDiscoveryAgentResource(config v1alpha1.DiscoveryAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
-	// The generic type for this discovery agent needs to be created
+	// The discovery agent resource needs to be created
 	agentResource := v1alpha1.DiscoveryAgent{}
 
 	agentResource.Spec.Config = config
@@ -25,10 +25,10 @@ func createDiscoveryAgentResource(config v1alpha1.DiscoveryAgentSpecConfig, logg
 	agentResource.Spec.DataplaneType = gatewayType
 	agentResource.Name = agent.cfg.GetAgentName()
 
-	log.Debug("Creating the generic resource")
+	log.Debug("Creating the discovery agent resource")
 	createAgentResource(&agentResource)
 
-	log.Debug("Updating the generic resource status")
+	log.Debug("Updating the discovery agent status sub-resource")
 	updateAgentStatusAPI(&agentResource, v1alpha1.DiscoveryAgentResource)
 }
 
