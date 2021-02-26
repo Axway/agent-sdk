@@ -369,13 +369,13 @@ func updateAgentStatus(status, message string) error {
 		if statusResource != nil {
 			err := updateAgentStatusAPI(statusResource, agentResourceType)
 			if err != nil {
-				log.Warn("Could not update the generic agent reference")
+				log.Warn("Could not update the agent status reference")
 				return err
 			}
 		}
 		err := updateAgentStatusAPI(resource, agentResourceType)
 		if err != nil {
-			log.Warn("Could not update the generic agent reference")
+			log.Warn("Could not update the agent status reference")
 			return err
 		}
 	}

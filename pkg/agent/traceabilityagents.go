@@ -8,18 +8,18 @@ import (
 
 func createTraceabilityAgentResource(config v1alpha1.TraceabilityAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
 	// The generic type for this traceability agent needs to be created
-	genericAgentRes := v1alpha1.TraceabilityAgent{}
+	agentResource := v1alpha1.TraceabilityAgent{}
 
-	genericAgentRes.Spec.Config = config
-	genericAgentRes.Spec.Logging = logging
-	genericAgentRes.Spec.DataplaneType = gatewayType
-	genericAgentRes.Name = agent.cfg.GetAgentName()
+	agentResource.Spec.Config = config
+	agentResource.Spec.Logging = logging
+	agentResource.Spec.DataplaneType = gatewayType
+	agentResource.Name = agent.cfg.GetAgentName()
 
 	log.Debug("Creating the generic resource")
-	createAgentResource(&genericAgentRes)
+	createAgentResource(&agentResource)
 
 	log.Debug("Updating the generic resource status")
-	updateAgentStatusAPI(&genericAgentRes, v1alpha1.TraceabilityAgentResource)
+	updateAgentStatusAPI(&agentResource, v1alpha1.TraceabilityAgentResource)
 }
 
 func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.TraceabilityAgent {
