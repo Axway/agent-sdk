@@ -299,7 +299,7 @@ func cleanUp() {
 
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
-	// Set resource for Generic Type
+	// Set resource for Agent Type
 	if AgentResourceType == "" {
 		AgentResourceType = agentTypesMap[agent.cfg.AgentType]
 	}
@@ -358,20 +358,25 @@ func updateAgentStatus(status, message string) error {
 		agentResourceType := getAgentResourceType()
 		resource := createAgentStatusSubResource(agentResourceType, status, message)
 
-		// Check if there is a generic resource to update
-		var genResource interface{}
+		// Check if there is an agent status resource to update
+		var statusResource interface{}
 		if agentResourceType == v1alpha1.AWSDiscoveryAgentResource || agentResourceType == v1alpha1.EdgeDiscoveryAgentResource {
-			genResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
+			statusResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
 		} else if agentResourceType == v1alpha1.AWSTraceabilityAgentResource || agentResourceType == v1alpha1.EdgeTraceabilityAgentResource {
-			genResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
+			statusResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
 		}
 
-		if genResource != nil {
-			err := updateAgentStatusAPI(resource, agentResourceType)
+		if statusResource != nil {
+			err := updateAgentStatusAPI(statusResource, agentResourceType)
 			if err != nil {
-				log.Warn("Could not update the generic agent reference")
+				log.Warn("Could not update the agent status reference")
 				return err
 			}
+		}
+		err := updateAgentStatusAPI(resource, agentResourceType)
+		if err != nil {
+			log.Warn("Could not update the agent status reference")
+			return err
 		}
 	}
 	return nil
@@ -469,58 +474,6 @@ func updateAgentResource(agentRes interface{}) error {
 	return nil
 }
 
-func createDiscoveryAgentResource(config v1alpha1.DiscoveryAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
-	// The generic type for this discovery agent needs to be created
-	genericAgentRes := v1alpha1.DiscoveryAgent{}
-
-	genericAgentRes.Spec.Config = config
-	genericAgentRes.Spec.Logging = logging
-	genericAgentRes.Spec.DataplaneType = gatewayType
-	genericAgentRes.Name = agent.cfg.GetAgentName()
-
-	log.Debug("Creating the generic resource")
-	createAgentResource(&genericAgentRes)
-
-	log.Debug("Updating the generic resource status")
-	updateAgentStatusAPI(&genericAgentRes, v1alpha1.DiscoveryAgentResource)
-}
-
-func createDiscoveryAgentStatusResource(status, message string) *v1alpha1.DiscoveryAgent {
-	agentRes := v1alpha1.DiscoveryAgent{}
-	agentRes.Name = agent.cfg.GetAgentName()
-	agentRes.Status.Version = config.AgentVersion
-	agentRes.Status.State = status
-	agentRes.Status.Message = message
-
-	return &agentRes
-}
-
-func createTraceabilityAgentResource(config v1alpha1.TraceabilityAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
-	// The generic type for this traceability agent needs to be created
-	genericAgentRes := v1alpha1.TraceabilityAgent{}
-
-	genericAgentRes.Spec.Config = config
-	genericAgentRes.Spec.Logging = logging
-	genericAgentRes.Spec.DataplaneType = gatewayType
-	genericAgentRes.Name = agent.cfg.GetAgentName()
-
-	log.Debug("Creating the generic resource")
-	createAgentResource(&genericAgentRes)
-
-	log.Debug("Updating the generic resource status")
-	updateAgentStatusAPI(&genericAgentRes, v1alpha1.TraceabilityAgentResource)
-}
-
-func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.TraceabilityAgent {
-	agentRes := v1alpha1.TraceabilityAgent{}
-	agentRes.Name = agent.cfg.GetAgentName()
-	agentRes.Status.Version = config.AgentVersion
-	agentRes.Status.State = status
-	agentRes.Status.Message = message
-
-	return &agentRes
-}
-
 func mergeResourceWithConfig() {
 	// IMP - To be removed once the model is in production
 	if agent.cfg.GetAgentName() == "" {
@@ -536,6 +489,10 @@ func mergeResourceWithConfig() {
 		mergeAWSDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.AWSTraceabilityAgentResource:
 		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
+	case v1alpha1.DiscoveryAgentResource:
+		mergeDiscoveryAgentWithConfig(agent.cfg)
+	case v1alpha1.TraceabilityAgentResource:
+		mergeTraceabilityAgentWithConfig(agent.cfg)
 	default:
 		panic(ErrUnsupportedAgentType)
 	}

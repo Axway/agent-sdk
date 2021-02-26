@@ -27,15 +27,15 @@ func createEdgeDiscoveryAgentStatusResource(status, message string) *v1alpha1.Ed
 
 	// Genenric implementation
 	if agentRes.Spec.DiscoveryAgent == "" {
-		// The generic type for this discovery agent needs to be created
+		// The discovery agent resource needs to be created
 		createDiscoveryAgentResource(agentRes.Spec.Config, agentRes.Spec.Logging, dataplaneType)
 
-		log.Debug("Update the agent")
+		log.Debug("Update the discovery agent")
 		agentRes.Spec.DiscoveryAgent = agent.cfg.GetAgentName()
 		updateAgentResource(&agentRes)
 	}
 
-	// Update the generic resource status
+	// Update the discovery agent status resource
 	updateAgentStatusAPI(createDiscoveryAgentStatusResource(status, message), v1alpha1.DiscoveryAgentResource)
 
 	return agentRes
@@ -67,15 +67,15 @@ func createEdgeTraceabilityAgentStatusResource(status, message string) *v1alpha1
 
 	// Genenric implementation
 	if agentRes.Spec.TraceabilityAgent == "" {
-		// The generic type for this discovery agent needs to be created
+		// The traceability agent resource needs to be created
 		createTraceabilityAgentResource(agentRes.Spec.Config, agentRes.Spec.Logging, dataplaneType)
 
-		log.Debug("Update the agent")
+		log.Debug("Update the traceability agent")
 		agentRes.Spec.TraceabilityAgent = agent.cfg.GetAgentName()
 		updateAgentResource(&agentRes)
 	}
 
-	// Update the generic resource status
+	// Update the status sub-resource
 	updateAgentStatusAPI(createDiscoveryAgentStatusResource(status, message), v1alpha1.TraceabilityAgentResource)
 
 	return &agentRes
