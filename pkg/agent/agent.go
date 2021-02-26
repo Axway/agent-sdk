@@ -358,16 +358,16 @@ func updateAgentStatus(status, message string) error {
 		agentResourceType := getAgentResourceType()
 		resource := createAgentStatusSubResource(agentResourceType, status, message)
 
-		// Check if there is an agent dataplaneType status resource to update
-		var dataplaneStatusResource interface{}
+		// Check if there is an agent status resource to update
+		var statusResource interface{}
 		if agentResourceType == v1alpha1.AWSDiscoveryAgentResource || agentResourceType == v1alpha1.EdgeDiscoveryAgentResource {
-			dataplaneStatusResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
+			statusResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
 		} else if agentResourceType == v1alpha1.AWSTraceabilityAgentResource || agentResourceType == v1alpha1.EdgeTraceabilityAgentResource {
-			dataplaneStatusResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
+			statusResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
 		}
 
-		if dataplaneStatusResource != nil {
-			err := updateAgentStatusAPI(dataplaneStatusResource, agentResourceType)
+		if statusResource != nil {
+			err := updateAgentStatusAPI(statusResource, agentResourceType)
 			if err != nil {
 				log.Warn("Could not update the generic agent reference")
 				return err
