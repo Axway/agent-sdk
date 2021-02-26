@@ -536,9 +536,32 @@ func mergeResourceWithConfig() {
 		mergeAWSDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.AWSTraceabilityAgentResource:
 		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
+	case v1alpha1.DiscoveryAgentResource:
+		mergeDiscoveryAgentWithConfig(agent.cfg)
+	case v1alpha1.TraceabilityAgentResource:
+		mergeTraceabilityAgentWithConfig(agent.cfg)
 	default:
 		panic(ErrUnsupportedAgentType)
 	}
+}
+
+func mergeDiscoveryAgentWithConfig(cfg *config.CentralConfiguration) {
+	da := discoveryAgent(GetAgentResource())
+	resCfgAdditionalTags := strings.Join(da.Spec.Config.AdditionalTags, ",")
+	resCfgTeamName := da.Spec.Config.OwningTeam
+	resCfgLogLevel := da.Spec.Logging.Level
+	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
+}
+
+func mergeTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
+	// Nothing to merge
+}
+
+func discoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.DiscoveryAgent {
+	agentRes := &v1alpha1.DiscoveryAgent{}
+	agentRes.FromInstance(res)
+
+	return agentRes
 }
 
 func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel string) {
