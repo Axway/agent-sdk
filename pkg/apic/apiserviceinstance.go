@@ -15,8 +15,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
+	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/tidwall/gjson"
+	"gopkg.in/yaml.v2"
 )
 
 func (c *ServiceClient) buildAPIServiceInstanceSpec(serviceBody *ServiceBody, endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint) v1alpha1.ApiServiceInstanceSpec {
@@ -281,37 +283,46 @@ func contains(endpts []v1alpha1.ApiServiceInstanceSpecEndpoint, endpt v1alpha1.A
 	return false
 }
 func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
+	swaggerHost := ""
+	basePath := ""
 	endPoints := []v1alpha1.ApiServiceInstanceSpecEndpoint{}
-	swaggerHost := strings.Split(gjson.Get(string(swagger), "host").String(), ":")
-	host := swaggerHost[0]
+	swaggerObj := &openapi2.Swagger{}
+	err := yaml.Unmarshal(swagger, swaggerObj)
+	schemes := make([]string, 0)
+	if err != nil {
+		swaggerHost = gjson.Get(string(swagger), "host").String()
+		protocols := gjson.Get(string(swagger), "schemes")
+		err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+		if err != nil {
+			log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
+			return nil, err
+		}
+		basePath = gjson.Get(string(swagger), "basePath").String()
+	} else {
+		swaggerHost = swaggerObj.Host
+		schemes = swaggerObj.Schemes
+		basePath = swaggerObj.BasePath
+	}
+	swaggerHostElements := strings.Split(swaggerHost, ":")
+	host := swaggerHostElements[0]
 	port := 443
-	if len(swaggerHost) > 1 {
-		swaggerPort, err := strconv.Atoi(swaggerHost[1])
+	if len(swaggerHostElements) > 1 {
+		swaggerPort, err := strconv.Atoi(swaggerHostElements[1])
 		if err == nil {
 			port = swaggerPort
 		}
 	}
-
-	schemes := make([]string, 0)
-	protocols := gjson.Get(string(swagger), "schemes")
-	err := json.Unmarshal([]byte(protocols.Raw), &schemes)
-	if err != nil {
-		log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
-		return nil, err
-	}
-
 	for _, protocol := range schemes {
 		endPoint := v1alpha1.ApiServiceInstanceSpecEndpoint{
 			Host:     host,
 			Port:     int32(port),
 			Protocol: protocol,
 			Routing: v1alpha1.ApiServiceInstanceSpecRouting{
-				BasePath: gjson.Get(string(swagger), "basePath").String(),
+				BasePath: basePath,
 			},
 		}
 		endPoints = append(endPoints, endPoint)
 	}
-
 	return endPoints, nil
 }
 
