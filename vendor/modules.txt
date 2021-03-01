@@ -115,6 +115,8 @@ github.com/pmezard/go-difflib/difflib
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
+github.com/rcrowley/go-metrics
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
 # github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c

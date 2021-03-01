@@ -86,6 +86,7 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
+	GetGateKeeperURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
@@ -128,6 +129,7 @@ type CentralConfiguration struct {
 	AgentName                 string        `config:"agentName"`
 	URL                       string        `config:"url"`
 	PlatformURL               string        `config:"platformURL"`
+	GatekeeperURL             string        `config:"gatekeeperURL"`
 	APIServerVersion          string        `config:"apiServerVersion"`
 	TagsToPublish             string        `config:"additionalTags"`
 	AppendDataPlaneToTitle    bool          `config:"appendDataPlaneToTitle"`
@@ -152,6 +154,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		TLS:                       NewTLSConfig(),
 		PollInterval:              60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
+		GatekeeperURL:             "https://gatekeeper.platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
@@ -161,6 +164,11 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
 	return c.PlatformURL
+}
+
+// GetGateKeeperURL - Returns the central base URL
+func (c *CentralConfiguration) GetGateKeeperURL() string {
+	return c.GatekeeperURL
 }
 
 // GetAgentType - Returns the agent type
@@ -382,6 +390,7 @@ const (
 	pathTenantID               = "central.organizationID"
 	pathURL                    = "central.url"
 	pathPlatformURL            = "central.platformURL"
+	pathGateKeeperURL          = "central.gatekeeperURL"
 	pathAuthPrivateKey         = "central.auth.privateKey"
 	pathAuthPublicKey          = "central.auth.publicKey"
 	pathAuthKeyPassword        = "central.auth.keyPassword"
@@ -478,6 +487,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
+	props.AddStringProperty(pathGateKeeperURL, "https://api.appcelerator.com/p/v2/partner-track", "URL of the GateKeeper")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -540,6 +550,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
+	cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 
 	if agentType == TraceabilityAgent {

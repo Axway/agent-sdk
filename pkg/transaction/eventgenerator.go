@@ -29,6 +29,9 @@ func NewEventGenerator() EventGenerator {
 		shouldAddFields: !traceability.IsHTTPTransport(),
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
+	metricEventChannel := make(chan interface{})
+	CreateMetricCollector(metricEventChannel)
+	CreatePublisher(metricEventChannel)
 	return eventGen
 }
 
@@ -37,6 +40,22 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	serializedLogEvent, err := json.Marshal(logEvent)
 	if err != nil {
 		return
+	}
+	if logEvent.TransactionSummary != nil {
+		apiID := logEvent.TransactionSummary.Proxy.ID
+		apiName := logEvent.TransactionSummary.Proxy.Name
+		statusCode := logEvent.TransactionSummary.StatusDetail
+		duration := logEvent.TransactionSummary.Duration
+		appName := ""
+		if logEvent.TransactionSummary.Application != nil {
+			appName = logEvent.TransactionSummary.Application.Name
+		}
+		teamName := ""
+		if logEvent.TransactionSummary.Team != nil {
+			teamName = logEvent.TransactionSummary.Team.ID
+		}
+
+		metricCollector.collectMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
 	}
 
 	eventData, err := e.createEventData(serializedLogEvent, eventFields)
