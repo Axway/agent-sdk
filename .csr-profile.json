@@ -14,52 +14,6 @@
     "whitesource": true
   },
   "suppressions": [
-	{
-		"path": ".*/github\\.com/prometheus/procfs",
-		"scanner": "dependency-check",
-		"classification": "Deferred",
-		"justification": "APIGOV-17491",
-		"until": "2021-03-01",
-		"component": "procfs",
-		"version": "0\\.0\\.9\\-0\\.20191208103036\\-42f6e295b56f",
-		"ids": [
-			"CVE-2019-3826"
-		]
-	},
-	{
-		"path": ".*/elastic/go\\-sysinfo/go\\.mod:github\\.com/prometheus/procfs/0\\.0\\.0\\-20190425082905\\-87a4384529e0",
-		"scanner": "dependency-check",
-		"classification": "Deferred",
-		"justification": "APIGOV-17491",
-		"until": "2021-03-01",
-		"component": "procfs",
-		"version": "0\\.0\\.0\\-20190425082905\\-87a4384529e0",
-		"ids": [
-			"CVE-2019-3826"
-		]
-	},
-	{
-		"path": ".*spf13/viper/go\\.mod:github\\.com/prometheus/client_golang/0\\.9\\.3",
-		"scanner": "dependency-check",
-		"classification": "Deferred",
-		"justification": "APIGOV-17491",
-		"until": "2021-03-01",
-		"component": "client_golang",
-		"version": "0\\.9\\.3",
-		"ids": [
-			"CVE-2019-3826"
-		]
-	}, {
-      "path": ".*spf13\\/viper\\/go\\.mod:github\\.com\\/grpc\\-ecosystem\\/go\\-grpc\\-prometheus\\/1\\.2\\.0",
-      "scanner": "dependency-check",
-      "classification": "False Positive",
-      "justification": "Originally: APIGOV-12766. Package is indirect dependency for github.com/spf13/viper/remote which is not used by agent. Also the vulnerable package is incorrectly reported (Vulnerablity in  github.com/prometheus/prometheus package and not github.com/grpc-ecosystem/go-grpc-prometheus).",
-      "component": "go-grpc-prometheus",
-      "version": "1.2.0",
-      "ids": [
-        "CVE-2019-3826"
-      ]
-    },
     {
       "path": ".*github.com\\/elastic\\/go\\-ucfg\\-v0\\.8\\.3",
       "scanner": "whitesource",
@@ -69,32 +23,6 @@
       "justification": "kubernetes libraries are not used by agents",
       "ids": [
         "CVE-2019-11254"
-      ]
-    },
-    {
-      "path": ".*",
-      "scanner": "whitesource",
-      "classification": "False Positive",
-      "justification": "packetbeats is not used by traceability agents. Only logstash and custom http transports used",
-      "component": "packetbeat",
-      "version": "v7\\.7\\.1",
-      "ids": [
-          "CVE-2020-26160"
-      ]
-    },
-    {
-      "path": ".*spf13/viper/go\\.mod:github\\.com/grpc\\-ecosystem/go\\-grpc\\-middleware/1\\.0\\.0",
-      "scanner": "dependency-check",
-      "component": "go\\-grpc\\-middleware",
-      "classification": "No Risk",
-      "justification": "GRPC is not used by the agents",
-      "version": "1\\.0\\.0",
-      "ids": [
-        "CVE-2017-7860",
-        "CVE-2017-7861",
-        "CVE-2017-8359",
-        "CVE-2017-9431",
-        "CVE-2020-7768"
       ]
     },
     {
@@ -116,6 +44,6 @@
           "CVE-2018-10892",
           "CVE-2020-27534"
       ]
-  }
+    }
   ]
 }

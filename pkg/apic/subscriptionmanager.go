@@ -2,10 +2,10 @@ package apic
 
 import (
 	"sync"
-	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/notification"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -26,11 +26,11 @@ type SubscriptionManager interface {
 
 // subscriptionManager -
 type subscriptionManager struct {
+	jobs.Job
 	isRunning           bool
 	publisher           notification.Notifier
 	publishChannel      chan interface{}
 	receiveChannel      chan interface{}
-	publishQuitChannel  chan bool
 	receiverQuitChannel chan bool
 	processorMap        map[SubscriptionState][]SubscriptionProcessor
 	validator           SubscriptionValidator
@@ -49,6 +49,11 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 		statesToQuery: make([]string, 0),
 		blacklist:     make(map[string]string),
 		blacklistLock: &sync.RWMutex{},
+	}
+
+	_, err := jobs.RegisterIntervalJob(subscriptionMgr, apicClient.cfg.GetPollInterval())
+	if err != nil {
+		log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
 	}
 
 	return subscriptionMgr
@@ -74,29 +79,27 @@ func (sm *subscriptionManager) RegisterValidator(validator SubscriptionValidator
 	sm.validator = validator
 }
 
-func (sm *subscriptionManager) pollSubscriptions() {
-	ticker := time.NewTicker(sm.apicClient.cfg.GetPollInterval())
+func (sm *subscriptionManager) Ready() bool {
+	return sm.isRunning
+}
 
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
-			if err == nil {
-				for _, subscription := range subscriptions {
-					if _, found := sm.blacklist[subscription.GetCatalogItemID()]; !found {
-						sm.publishChannel <- subscription
-					}
-				}
-			}
-			ticker.Stop()
-			ticker = time.NewTicker(sm.apicClient.cfg.GetPollInterval())
-		case <-sm.publishQuitChannel:
-			return
-		}
-		// Set sleep to throttle loop
-		time.Sleep(1 * time.Second)
+func (sm *subscriptionManager) Status() error {
+	if !sm.isRunning {
+		return ErrSubscriptionManagerDown
 	}
+	return nil
+}
+
+func (sm *subscriptionManager) Execute() error {
+	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
+	if err == nil {
+		for _, subscription := range subscriptions {
+			if _, found := sm.blacklist[subscription.GetCatalogItemID()]; !found {
+				sm.publishChannel <- subscription
+			}
+		}
+	}
+	return nil
 }
 
 func (sm *subscriptionManager) processSubscriptions() {
@@ -202,7 +205,6 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 // Start - Start processing subscriptions
 func (sm *subscriptionManager) Start() {
 	if !sm.isRunning {
-		sm.publishQuitChannel = make(chan bool)
 		sm.receiverQuitChannel = make(chan bool)
 
 		sm.publishChannel = make(chan interface{})
@@ -212,7 +214,6 @@ func (sm *subscriptionManager) Start() {
 		notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
 
 		go sm.publisher.Start()
-		go sm.pollSubscriptions()
 		go sm.processSubscriptions()
 		sm.isRunning = true
 	}
@@ -222,7 +223,6 @@ func (sm *subscriptionManager) Start() {
 func (sm *subscriptionManager) Stop() {
 	if sm.isRunning {
 		sm.publisher.Stop()
-		sm.publishQuitChannel <- true
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 	}

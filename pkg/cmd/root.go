@@ -24,6 +24,7 @@ import (
 // Constants for cmd flags
 const (
 	PathConfigFlag        = "pathConfig"
+	BeatsPathConfigFlag   = "path.config"
 	EnvFileFlag           = "envFile"
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
@@ -139,6 +140,9 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	}
 
 	_, configFilePath := c.props.StringFlagValue(PathConfigFlag)
+	if c.agentType == config.TraceabilityAgent && configFilePath == "" {
+		_, configFilePath = c.props.StringFlagValue(BeatsPathConfigFlag)
+	}
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 	viper.AddConfigPath(configFilePath)

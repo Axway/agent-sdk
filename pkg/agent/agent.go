@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -17,6 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -28,6 +28,11 @@ const (
 	AgentRunning = "running"
 	AgentStopped = "stopped"
 	AgentFailed  = "failed"
+)
+
+const (
+	awsDataplaneType  = "AWS"
+	edgeDataplaneType = "Edge"
 )
 
 // AgentResourceType - Holds the type for agent resource in Central
@@ -45,6 +50,12 @@ var dataplaneResourceTypeMap = map[string]string{
 	v1alpha1.EdgeTraceabilityAgentResource: v1alpha1.EdgeDataplaneResource,
 	v1alpha1.AWSDiscoveryAgentResource:     v1alpha1.AWSDataplaneResource,
 	v1alpha1.AWSTraceabilityAgentResource:  v1alpha1.AWSDataplaneResource,
+}
+
+// agentTypesMap - Agent Types map
+var agentTypesMap = map[config.AgentType]string{
+	config.DiscoveryAgent:    "discoveryagents",
+	config.TraceabilityAgent: "traceabilityagents",
 }
 
 type agentData struct {
@@ -105,12 +116,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 
 		setupSignalProcessor()
-		// only do the periodic healthcheck stuff if NOT in unit tests, or the tests will fail
-		if flag.Lookup("test.v") == nil {
-			// only do continuous healthchecking in binary agents
-			if !isRunningInDockerContainer() {
-				go runPeriodicHealthChecks()
-			}
+		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
+		if flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
+			hc.StartPeriodicHealthCheck()
 		}
 
 		startAPIServiceCache()
@@ -140,36 +148,12 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 	agent.agentResourceChangeHandler = agentResourceChangeHandler
 }
 
-func runPeriodicHealthChecks() {
-	for {
-		// Initial check done by the agents startup, so wait for the next interval
-		// Use the default wait time of 30s if status config is not set yet
-		waitInterval := 30 * time.Second
-		if hc.GetStatusConfig() != nil {
-			waitInterval = hc.GetStatusConfig().GetHealthCheckInterval()
-		}
-		// Set sleep time based on configured interval
-		time.Sleep(waitInterval)
-		if hc.RunChecks() != hc.OK {
-			log.Error(errors.ErrHealthCheck)
-			os.Exit(1)
-		}
-	}
-}
-
 func startAPIServiceCache() {
 	// Load the cache before the agents start discovering the APIs from remote gateway
 	updateAPICache()
 
-	// Start period update of the cache by querying API server resources published by the agent
-	go func() {
-		for {
-			time.Sleep(agent.cfg.PollInterval)
-			updateAPICache()
-			validateConsumerInstances()
-			fetchConfig()
-		}
-	}()
+	// register the update cache job
+	jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
 }
 
 func isRunningInDockerContainer() bool {
@@ -315,6 +299,10 @@ func cleanUp() {
 
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
+	// Set resource for Agent Type
+	if AgentResourceType == "" {
+		AgentResourceType = agentTypesMap[agent.cfg.AgentType]
+	}
 	return AgentResourceType
 }
 
@@ -369,16 +357,41 @@ func updateAgentStatus(status, message string) error {
 	if agent.agentResource != nil {
 		agentResourceType := getAgentResourceType()
 		resource := createAgentStatusSubResource(agentResourceType, status, message)
-		buffer, err := json.Marshal(resource)
-		if err != nil {
-			return nil
+
+		// Check if there is an agent status resource to update
+		var statusResource interface{}
+		if agentResourceType == v1alpha1.AWSDiscoveryAgentResource || agentResourceType == v1alpha1.EdgeDiscoveryAgentResource {
+			statusResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
+		} else if agentResourceType == v1alpha1.AWSTraceabilityAgentResource || agentResourceType == v1alpha1.EdgeTraceabilityAgentResource {
+			statusResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
 		}
 
-		subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
-		_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
+		if statusResource != nil {
+			err := updateAgentStatusAPI(statusResource, agentResourceType)
+			if err != nil {
+				log.Warn("Could not update the agent status reference")
+				return err
+			}
+		}
+		err := updateAgentStatusAPI(resource, agentResourceType)
 		if err != nil {
+			log.Warn("Could not update the agent status reference")
 			return err
 		}
+	}
+	return nil
+}
+
+func updateAgentStatusAPI(resource interface{}, agentResourceType string) error {
+	buffer, err := json.Marshal(resource)
+	if err != nil {
+		return nil
+	}
+
+	subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
+	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -398,7 +411,8 @@ func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 		agentRes := awsTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	default:
-		panic("Unsupported agent type")
+		log.Warn("Agent type specified not linked to a dataplane type")
+		return ""
 	}
 }
 
@@ -412,9 +426,52 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 		return createAWSDiscoveryAgentStatusResource(status, message)
 	case v1alpha1.AWSTraceabilityAgentResource:
 		return createAWSTraceabilityAgentStatusResource(status, message)
+	case v1alpha1.DiscoveryAgentResource:
+		return createDiscoveryAgentStatusResource(status, message)
+	case v1alpha1.TraceabilityAgentResource:
+		return createTraceabilityAgentStatusResource(status, message)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
+}
+
+func createAgentResource(agentRes interface{}) error {
+	agentResourceType := v1alpha1.DiscoveryAgentResource
+	if getAgentResourceType() == v1alpha1.AWSTraceabilityAgentResource || getAgentResourceType() == v1alpha1.EdgeTraceabilityAgentResource {
+		agentResourceType = v1alpha1.TraceabilityAgentResource
+	}
+	// Create the agent resource
+	buffer, err := json.Marshal(agentRes)
+	if err != nil {
+		return nil
+	}
+	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType
+	_, err = agent.apicClient.ExecuteAPI(coreapi.POST, resURL, nil, buffer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateAgentResource(agentRes interface{}) error {
+	// IMP - To be removed once the model is in production
+	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
+		return nil
+	}
+
+	agentResourceType := getAgentResourceType()
+
+	// Create the agent resource
+	buffer, err := json.Marshal(agentRes)
+	if err != nil {
+		return nil
+	}
+	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName()
+	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, resURL, nil, buffer)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func mergeResourceWithConfig() {
@@ -432,8 +489,12 @@ func mergeResourceWithConfig() {
 		mergeAWSDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.AWSTraceabilityAgentResource:
 		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
+	case v1alpha1.DiscoveryAgentResource:
+		mergeDiscoveryAgentWithConfig(agent.cfg)
+	case v1alpha1.TraceabilityAgentResource:
+		mergeTraceabilityAgentWithConfig(agent.cfg)
 	default:
-		panic("Unsupported agent type")
+		panic(ErrUnsupportedAgentType)
 	}
 }
 

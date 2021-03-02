@@ -22,7 +22,7 @@ func createAWSDiscoveryAgentRes(id, name, dataplane, filter string) *v1.Resource
 		},
 		Spec: v1alpha1.AwsDiscoveryAgentSpec{
 			Dataplane: dataplane,
-			Config: v1alpha1.AwsDiscoveryAgentSpecConfig{
+			Config: v1alpha1.DiscoveryAgentSpecConfig{
 				Filter: filter,
 			},
 		},
@@ -41,7 +41,7 @@ func createAWSTraceabilityAgentRes(id, name, dataplane string, processHeaders bo
 		},
 		Spec: v1alpha1.AwsTraceabilityAgentSpec{
 			Dataplane: dataplane,
-			Config: v1alpha1.AwsTraceabilityAgentSpecConfig{
+			Config: v1alpha1.TraceabilityAgentSpecConfig{
 				ProcessHeaders: processHeaders,
 			},
 		},

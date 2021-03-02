@@ -1,7 +1,5 @@
 # this for notifications for pull requests
-* @dfeldick @sbolosan @jcollins-axway @kflan-io @vivekschauhan
+* @Axway/Agent-SDK
 
 #.csr-profile.json requires SPOC approval for any modifications
-# @dfeldick - Primary SPOC
-# @vchauhan- Secondary SPOC
-.csr-profile.json @dfeldick @vivekschauhan @mdenihan @rconan @jcollins-axway @sbolosan @kflan-io
+.csr-profile.json @Axway/Agent-SDK

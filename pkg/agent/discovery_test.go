@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +45,9 @@ func (m *mockSvcClient) GetSubscriptionsForCatalogItem(states []string, instance
 }
 func (m *mockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
 	return nil, nil
+}
+func (m *mockSvcClient) Healthcheck(name string) *hc.Status {
+	return &hc.Status{Result: hc.OK}
 }
 
 // UpdateSubscriptionDefinitionPropertiesForCatalogItem -

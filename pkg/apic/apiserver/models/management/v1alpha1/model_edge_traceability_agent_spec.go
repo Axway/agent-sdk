@@ -12,7 +12,9 @@ package v1alpha1
 // EdgeTraceabilityAgentSpec struct for EdgeTraceabilityAgentSpec
 type EdgeTraceabilityAgentSpec struct {
 	// The name of the Axway Edge API Gateway dataplane associated to this agent
-	Dataplane string                          `json:"dataplane"`
-	Config    EdgeTraceabilityAgentSpecConfig `json:"config"`
-	Logging   EdgeDiscoveryAgentSpecLogging   `json:"logging,omitempty"`
+	Dataplane string `json:"dataplane"`
+	// The name of the Traceability Agent associated to this agent
+	TraceabilityAgent string                      `json:"traceabilityAgent,omitempty"`
+	Config            TraceabilityAgentSpecConfig `json:"config"`
+	Logging           DiscoveryAgentSpecLogging   `json:"logging,omitempty"`
 }

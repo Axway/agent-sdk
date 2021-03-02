@@ -217,3 +217,27 @@ func TestComputeKIDFromDER(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestNetAuthenticate(t *testing.T) {
+	aa := NewWithStatic("12345", "abcde")
+	if aa == nil {
+		t.Errorf("unable to create ApicAuth")
+	}
+	if aa.tenantID != "12345" {
+		t.Fail()
+	}
+
+	token, err := aa.GetToken()
+	if err != nil {
+		t.Errorf("error getting token")
+	}
+	if token != "abcde" {
+		t.Fail()
+	}
+	err = aa.AuthenticateNet(&http.Request{
+		Header: make(map[string][]string),
+	})
+	if err != nil {
+		t.Errorf("error from AuthenticateNet")
+	}
+}

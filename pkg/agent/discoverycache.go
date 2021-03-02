@@ -2,13 +2,46 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/jobs"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+type discoveryCache struct {
+	jobs.Job
+}
+
+//Ready -
+func (j *discoveryCache) Ready() bool {
+	err := j.Status()
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+//Status -
+func (j *discoveryCache) Status() error {
+	status := agent.apicClient.Healthcheck("Cache")
+	if status.Result == hc.OK {
+		return nil
+	}
+	return fmt.Errorf("could not establish a connection to APIC to update the cache")
+}
+
+//Execute -
+func (j *discoveryCache) Execute() error {
+	updateAPICache()
+	validateConsumerInstances()
+	fetchConfig()
+	return nil
+}
 
 func updateAPICache() {
 	apiServerURL := agent.cfg.GetServicesURL()
