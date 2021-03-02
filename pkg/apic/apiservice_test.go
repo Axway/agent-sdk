@@ -67,6 +67,7 @@ func TestCreateService(t *testing.T) {
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
+	defer oas2Json.Close()
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 	cloneServiceBody := serviceBody
 	cloneServiceBody.Swagger = oas2Bytes
@@ -213,6 +214,7 @@ func TestUpdateService(t *testing.T) {
 	cloneServiceBody := serviceBody
 	cloneServiceBody.APIUpdateSeverity = "MINOR"
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
+	defer oas2Json.Close()
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 	cloneServiceBody.Swagger = oas2Bytes
 	apiSvc, err := client.PublishService(cloneServiceBody)
@@ -268,6 +270,7 @@ func TestUpdateService(t *testing.T) {
 	})
 	// Test oas2 object
 	oas2Json, _ = os.Open("./testdata/petstore-swagger2.json") // OAS2
+	defer oas2Json.Close()
 	oas2Bytes, _ = ioutil.ReadAll(oas2Json)
 
 	cloneServiceBody = serviceBody
