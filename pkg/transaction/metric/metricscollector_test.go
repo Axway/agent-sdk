@@ -1,4 +1,4 @@
-package transaction
+package metric
 
 import (
 	"fmt"
@@ -51,41 +51,41 @@ func TestMetricCollector(t *testing.T) {
 	cfg.GatekeeperURL = s.URL + "/gatekeeper"
 	agent.Initialize(cfg)
 	eventChannel := make(chan interface{}, 1028)
-	metricCollector = &collector{
+	metricCollector := &collector{
+		startTime:          time.Now(),
 		lock:               &sync.Mutex{},
 		registry:           metrics.NewRegistry(),
 		apiMetricMap:       make(map[string]*APIMetric),
 		apiStatusMetricMap: make(map[string]map[string]*StatusMetric),
 		eventChannel:       eventChannel,
 	}
-	CreatePublisher(eventChannel)
-	startTime := time.Now()
-	metricCollector.collectMetric("111", "111", "200", 10, "", "")
-	metricCollector.collectMetric("111", "111", "200", 20, "", "")
-	metricCollector.collectMetric("111", "111", "200", 30, "", "")
-	metricCollector.collectMetric("111", "111", "401", 10, "", "")
-	metricCollector.collectMetric("111", "111", "401", 20, "", "")
+	NewMetricPublisher(eventChannel)
 
-	metricCollector.collectMetric("222", "222", "200", 5, "", "")
-	metricCollector.collectMetric("222", "222", "200", 5, "", "")
+	metricCollector.AddMetric("111", "111", "200", 10, "", "")
+	metricCollector.AddMetric("111", "111", "200", 20, "", "")
+	metricCollector.AddMetric("111", "111", "200", 30, "", "")
+	metricCollector.AddMetric("111", "111", "401", 10, "", "")
+	metricCollector.AddMetric("111", "111", "401", 20, "", "")
 
-	metricCollector.generateAggregation(startTime, time.Now())
+	metricCollector.AddMetric("222", "222", "200", 5, "", "")
+	metricCollector.AddMetric("222", "222", "200", 5, "", "")
+
+	metricCollector.generateEvents(metricCollector.startTime, time.Now())
 	time.Sleep(30 * time.Second)
 
-	startTime = time.Now()
 	metricCollector.apiMetricMap = make(map[string]*APIMetric)
 	metricCollector.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
 
-	metricCollector.collectMetric("111", "111", "200", 5, "", "")
-	metricCollector.collectMetric("111", "111", "200", 15, "", "")
-	metricCollector.collectMetric("111", "111", "401", 15, "", "")
-	metricCollector.collectMetric("111", "111", "401", 5, "", "")
-	metricCollector.collectMetric("111", "111", "401", 120, "", "")
+	metricCollector.AddMetric("111", "111", "200", 5, "", "")
+	metricCollector.AddMetric("111", "111", "200", 15, "", "")
+	metricCollector.AddMetric("111", "111", "401", 15, "", "")
+	metricCollector.AddMetric("111", "111", "401", 5, "", "")
+	metricCollector.AddMetric("111", "111", "401", 120, "", "")
 
-	metricCollector.collectMetric("222", "222", "200", 5, "", "")
-	metricCollector.collectMetric("222", "222", "200", 50, "", "")
-	metricCollector.collectMetric("222", "222", "400", 15, "", "")
+	metricCollector.AddMetric("222", "222", "200", 5, "", "")
+	metricCollector.AddMetric("222", "222", "200", 50, "", "")
+	metricCollector.AddMetric("222", "222", "400", 15, "", "")
 
-	metricCollector.generateAggregation(time.Now(), time.Now())
+	metricCollector.generateEvents(time.Now(), time.Now())
 	time.Sleep(30 * time.Second)
 }

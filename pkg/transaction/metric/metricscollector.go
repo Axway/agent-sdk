@@ -1,4 +1,4 @@
-package transaction
+package metric
 
 import (
 	"strings"
@@ -6,54 +6,21 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofrs/uuid"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
-// Metrics - struct to hold metrics for transaction
-type Metrics struct {
-	Count            int64   `json:"count"`
-	MaxResponseTime  int64   `json:"maxResponseTime"`
-	MinResponseTime  int64   `json:"minResponseTime"`
-	MeanResponseTime float64 `json:"meanResponseTime"`
-}
-
-// StatusMetric - struct to hold metric specific for status code based transactions
-type StatusMetric struct {
-	StatusCode string `json:"statusCode"`
-	Metrics
-}
-
-// APIMetric - struct to hold metric specific for api based transactions
-type APIMetric struct {
-	APIName       string `json:"apiName"`
-	APIID         string `json:"apiID"`
-	ObservedStart int64  `json:"observedStart,omitempty"`
-	ObservedEnd   int64  `json:"observedEnd,omitempty"`
-	Metrics
-	StatusMetrics []*StatusMetric `json:"statusCodes,omitempty"`
-}
-
-// V4EventDistribution - represents V7 distribution
-type V4EventDistribution struct {
-	Environment string `json:"environment"`
-	Version     string `json:"version"`
-}
-
-// V4Event - represents V7 event
-type V4Event struct {
-	ID           string              `json:"id"`
-	Timestamp    int64               `json:"timestamp"`
-	Event        string              `json:"event"`
-	App          string              `json:"app"` // ORG GUID
-	Version      string              `json:"version"`
-	Distribution V4EventDistribution `json:"distribution"`
-	Data         interface{}         `json:"data"`
+// Collector - interface for collecting metrics
+type Collector interface {
+	AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string)
 }
 
 // collector - collects the metrics for transactions events
 type collector struct {
+	jobs.Job
+	startTime          time.Time
 	eventChannel       chan interface{}
 	lock               *sync.Mutex
 	registry           metrics.Registry
@@ -61,11 +28,37 @@ type collector struct {
 	apiStatusMetricMap map[string]map[string]*StatusMetric
 }
 
-var metricCollector *collector
+// Status - returns the status of the metric collector
+func (c *collector) Status() error {
+	return nil
+}
 
-// CreateMetricCollector - Create metric collector
-func CreateMetricCollector(eventChannel chan interface{}) {
-	metricCollector = &collector{
+// Ready - indicates that the collector job is ready to process
+func (c *collector) Ready() bool {
+	return true
+}
+
+// Execute - process the metric collection and generation of usage/metric event
+func (c *collector) Execute() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	endTime := time.Now()
+	defer func() {
+		c.startTime = endTime
+	}()
+
+	c.generateEvents(c.startTime, endTime)
+	c.apiMetricMap = make(map[string]*APIMetric)
+	c.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
+
+	return nil
+}
+
+// NewMetricCollector - Create metric collector
+func NewMetricCollector(eventChannel chan interface{}) Collector {
+	metricCollector := &collector{
+		startTime:          time.Now(),
 		lock:               &sync.Mutex{},
 		registry:           metrics.NewRegistry(),
 		apiMetricMap:       make(map[string]*APIMetric),
@@ -74,22 +67,15 @@ func CreateMetricCollector(eventChannel chan interface{}) {
 	}
 
 	// go metrics.Log(metricCollector.registry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-	go func() {
-		freq := 30 * time.Second
-		startTime := time.Now()
-		for range time.Tick(freq) {
-			metricCollector.lock.Lock()
-			endTime := time.Now()
-			metricCollector.generateAggregation(startTime, endTime)
-			metricCollector.apiMetricMap = make(map[string]*APIMetric)
-			metricCollector.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
-			startTime = endTime
-			metricCollector.lock.Unlock()
-		}
-	}()
+	_, err := jobs.RegisterIntervalJob(metricCollector, 30*time.Second)
+	if err != nil {
+		panic(err)
+	}
+
+	return metricCollector
 }
 
-func (c *collector) generateAggregation(startTime, endTime time.Time) {
+func (c *collector) generateEvents(startTime, endTime time.Time) {
 	var transactionCount int64
 	authToken, _ := agent.GetCentralAuthToken()
 	parser := new(jwt.Parser)
@@ -104,7 +90,7 @@ func (c *collector) generateAggregation(startTime, endTime time.Time) {
 	}
 
 	if len(c.apiMetricMap) != 0 {
-		metricCollector.registry.Each(func(name string, metric interface{}) {
+		c.registry.Each(func(name string, metric interface{}) {
 			if name == "transaction.count" {
 				counterMetric := metric.(metrics.Counter)
 				transactionCount = counterMetric.Count()
@@ -135,7 +121,6 @@ func (c *collector) generateAggregation(startTime, endTime time.Time) {
 		})
 
 		for _, apiDetail := range c.apiMetricMap {
-			// aggergationEvent.APIDetails = append(aggergationEvent.APIDetails, apiDetail)
 			apiID := apiDetail.APIID
 			apiStatusMap := c.apiStatusMetricMap[apiID]
 			for _, statusDetail := range apiStatusMap {
@@ -159,9 +144,6 @@ func (c *collector) generateAggregation(startTime, endTime time.Time) {
 			}
 			c.eventChannel <- apiMetricEvent
 		}
-		// if aggergationEvent.TransactionCount != 0 {
-		// 	c.eventChannel <- aggergationEvent
-		// }
 		if transactionCount != 0 {
 			usageEventID, _ := uuid.NewV4()
 			usageEvent := V4Event{
@@ -193,9 +175,10 @@ func (c *collector) setEventMetricsFromHistogram(eventmetric *Metrics, histogram
 	eventmetric.MeanResponseTime = histogram.Mean()
 }
 
-func (c *collector) collectMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string) {
-	// c.lock.Lock()
-	// defer c.lock.Unlock()
+// AddMetric - add metric for API transaction to collection
+func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	transactionCount := c.getOrRegisterCounter("transaction.count")
 

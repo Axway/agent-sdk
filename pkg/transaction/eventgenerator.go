@@ -7,6 +7,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -21,6 +22,7 @@ type EventGenerator interface {
 // Generator - Create the events to be published to Condor
 type Generator struct {
 	shouldAddFields bool
+	collector       metric.Collector
 }
 
 // NewEventGenerator - Create a new event generator
@@ -30,8 +32,8 @@ func NewEventGenerator() EventGenerator {
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 	metricEventChannel := make(chan interface{})
-	CreateMetricCollector(metricEventChannel)
-	CreatePublisher(metricEventChannel)
+	eventGen.collector = metric.NewMetricCollector(metricEventChannel)
+	metric.NewMetricPublisher(metricEventChannel)
 	return eventGen
 }
 
@@ -55,7 +57,7 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 			teamName = logEvent.TransactionSummary.Team.ID
 		}
 
-		metricCollector.collectMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
+		e.collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
 	}
 
 	eventData, err := e.createEventData(serializedLogEvent, eventFields)
