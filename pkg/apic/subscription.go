@@ -183,6 +183,7 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 	return s.UpdateStateWithProperties(newState, description, map[string]interface{}{})
 }
 
+// GetServiceClient - returns the apic client
 func (s *CentralSubscription) GetServiceClient() *ServiceClient {
 	return s.apicClient
 }
