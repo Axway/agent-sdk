@@ -27,10 +27,15 @@ func NewSubscriptionBuilder(subscription Subscription) SubscriptionBuilder {
 	}
 }
 
+// Process - use the subscription property values and update the subscription on API Central
 func (s *subscriptionBuilder) Process() error {
+	if s.err != nil {
+		return s.err
+	}
 	return s.subscription.UpdatePropertyValues(s.propertyValues)
 }
 
+// UpdateEnumProperty - updates the catalog item with the new value that should be in the enum
 func (s *subscriptionBuilder) UpdateEnumProperty(key, newValue, dataType string) SubscriptionBuilder {
 	catalogItemID := s.subscription.GetCatalogItemID()
 
@@ -55,6 +60,7 @@ func (s *subscriptionBuilder) UpdateEnumProperty(key, newValue, dataType string)
 	return s
 }
 
+// SetStringPropertyValue - save the key/value pair to the map for the value in this subscription
 func (s *subscriptionBuilder) SetStringPropertyValue(key, value string) SubscriptionBuilder {
 	if _, ok := s.propertyValues[key]; ok {
 		s.err = fmt.Errorf("Key %v already had a value, not updated", key)
