@@ -3,7 +3,7 @@
         "group": "management",
         "apiVersion": "v1alpha1",
         "kind": "APIServiceInstance",
-        "name": "daleapi",
+        "name": "daleapi.1",
         "title": "DaleAPI (V7)",
         "metadata": {
             "id": "e4ecaab773cb08300173dab5a4220273",

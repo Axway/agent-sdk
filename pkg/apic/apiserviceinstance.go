@@ -51,8 +51,21 @@ func (c *ServiceClient) updateInstanceResource(instance *v1alpha1.APIServiceInst
 
 //processInstance -
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	endPoints, _ := c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
-	err := c.setInstanceAction(serviceBody, endPoints)
+	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
+	var err error
+
+	// To set your own endpoints call SetServiceEndpoint on the ServiceBodyBuilder.
+	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
+	if len(serviceBody.Endpoints) > 0 {
+		endPoints = serviceBody.Endpoints
+	} else {
+		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
+		if err != nil {
+			return fmt.Errorf("failed to create endpoints for '%s': %s", serviceBody.APIName, err)
+		}
+	}
+
+	err = c.setInstanceAction(serviceBody, endPoints)
 	if err != nil {
 		return err
 	}
@@ -111,14 +124,22 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 		if err != nil {
 			return err
 		}
-		if instances != nil {
-			serviceBody.serviceContext.instanceCount = len(instances)
-			if len(instances) > 0 {
-				serviceBody.serviceContext.previousInstance = &instances[0]
-				// if the endpoints are same update the current instance otherwise create new instance
-				if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
-					serviceBody.serviceContext.instanceAction = updateAPI
+
+		if len(instances) > 0 {
+			splitName := strings.Split(instances[0].Name, ".")
+			if len(splitName) == 2 {
+				instanceCount, err := strconv.Atoi(splitName[1])
+				if err != nil {
+					return fmt.Errorf("failed to convert instance count from to an int: %s", err)
 				}
+				serviceBody.serviceContext.instanceCount = instanceCount
+			} else {
+				return fmt.Errorf("unable to determine the next instance version. previous instance: %s", instances[0].Name)
+			}
+			serviceBody.serviceContext.previousInstance = &instances[0]
+			// if the endpoints are same update the current instance otherwise create new instance
+			if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
+				serviceBody.serviceContext.instanceAction = updateAPI
 			}
 		}
 	}

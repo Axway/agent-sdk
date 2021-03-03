@@ -96,6 +96,7 @@ type ServiceBody struct {
 	Status            string
 	ServiceAttributes map[string]string
 	serviceContext    serviceContext
+	Endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint
 }
 
 // ServiceClient -

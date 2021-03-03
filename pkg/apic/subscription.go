@@ -43,6 +43,7 @@ type Subscription interface {
 	GetState() SubscriptionState
 	GetPropertyValue(propertyKey string) string
 	UpdateState(newState SubscriptionState, description string) error
+	UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error
 	UpdateProperties(appName string) error
 }
 
@@ -107,8 +108,35 @@ func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
 	return ""
 }
 
-// UpdateState - Updates the state of subscription
-func (s *CentralSubscription) UpdateState(newState SubscriptionState, description string) error {
+func (s *CentralSubscription) updateProperties(properties map[string]interface{}) error {
+	if len(properties) == 0 {
+		return nil
+	}
+
+	// keep existing properties
+	var profile map[string]interface{}
+	for _, p := range s.CatalogItemSubscription.Properties {
+		if p.Key == profileKey {
+			profile = p.Value
+		}
+	}
+
+	allProps := map[string]interface{}{}
+	// keep existing properties
+	for k, v := range profile {
+		allProps[k] = v
+	}
+
+	// override with new values
+	for k, v := range properties {
+		allProps[k] = v
+	}
+
+	return s.updatePropertyValue(profileKey, allProps)
+}
+
+// UpdateStateWithProperties - Updates the state of subscription
+func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return err
@@ -133,6 +161,10 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 		Body:        statePostBody,
 	}
 
+	if err = s.updateProperties(properties); err != nil {
+		return err
+	}
+
 	response, err := s.getServiceClient().apiClient.Send(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
@@ -142,6 +174,11 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil
+}
+
+// UpdateState - Updates the state of subscription
+func (s *CentralSubscription) UpdateState(newState SubscriptionState, description string) error {
+	return s.UpdateStateWithProperties(newState, description, map[string]interface{}{})
 }
 
 func (s *CentralSubscription) getServiceClient() *ServiceClient {
