@@ -41,9 +41,11 @@ type Subscription interface {
 	GetCatalogItemID() string
 	GetCreatedUserID() string
 	GetState() SubscriptionState
+	GetServiceClient() *ServiceClient
 	GetPropertyValue(propertyKey string) string
 	UpdateState(newState SubscriptionState, description string) error
 	UpdateProperties(appName string) error
+	UpdatePropertyValues(values map[string]interface{}) error
 }
 
 // CentralSubscription -
@@ -109,12 +111,12 @@ func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
 
 // UpdateState - Updates the state of subscription
 func (s *CentralSubscription) UpdateState(newState SubscriptionState, description string) error {
-	headers, err := s.getServiceClient().createHeader()
+	headers, err := s.GetServiceClient().createHeader()
 	if err != nil {
 		return err
 	}
 
-	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
+	subStateURL := s.GetServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
 	subState := uc.CatalogItemSubscriptionState{
 		Description: description,
 		State:       string(newState),
@@ -133,7 +135,7 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 		Body:        statePostBody,
 	}
 
-	response, err := s.getServiceClient().apiClient.Send(request)
+	response, err := s.GetServiceClient().apiClient.Send(request)
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
@@ -144,7 +146,7 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 	return nil
 }
 
-func (s *CentralSubscription) getServiceClient() *ServiceClient {
+func (s *CentralSubscription) GetServiceClient() *ServiceClient {
 	return s.apicClient
 }
 
@@ -207,7 +209,7 @@ func (s *CentralSubscription) UpdateProperties(appName string) error {
 	catalogItemID := s.GetCatalogItemID()
 
 	// First need to get the subscriptionDefProperties for the catalog item
-	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
+	ss, err := s.GetServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
 	if ss == nil || err != nil {
 		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
 	}
@@ -218,7 +220,7 @@ func (s *CentralSubscription) UpdateProperties(appName string) error {
 	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
 
 	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
-	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
+	err = s.GetServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
 	if err != nil {
 		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
 	}
@@ -234,12 +236,12 @@ func (s *CentralSubscription) UpdateProperties(appName string) error {
 
 // UpdatePropertyValue - Updates the property value of the subscription
 func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[string]interface{}) error {
-	headers, err := s.getServiceClient().createHeader()
+	headers, err := s.GetServiceClient().createHeader()
 	if err != nil {
 		return err
 	}
 
-	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
+	url := fmt.Sprintf("%s/%s", s.GetServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
 	body, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -252,7 +254,39 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 		Body:    body,
 	}
 
-	response, err := s.getServiceClient().apiClient.Send(request)
+	response, err := s.GetServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
+}
+
+// UpdatePropertyValues - Updates the property values of the subscription
+func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}) error {
+	headers, err := s.GetServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/%s", s.GetServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
+	body, err := json.Marshal(values)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.GetServiceClient().apiClient.Send(request)
 	if err != nil {
 		return err
 	}

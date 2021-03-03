@@ -27,7 +27,10 @@ type SubscriptionSchemaPropertyDefinition struct {
 	Type        string   `json:"type"`
 	Description string   `json:"description"`
 	Enum        []string `json:"enum,omitempty"`
+	ReadOnly    bool     `json:"readOnly,omitempty"`
 	APICRef     string   `json:"x-axway-ref-apic,omitempty"`
+	Name        string   `json:"-"`
+	Required    bool     `json:"-"`
 }
 
 type subscriptionSchema struct {
