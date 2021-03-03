@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
 
@@ -283,27 +283,18 @@ func contains(endpts []v1alpha1.ApiServiceInstanceSpecEndpoint, endpt v1alpha1.A
 	return false
 }
 func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
-	swaggerHost := ""
-	basePath := ""
 	endPoints := []v1alpha1.ApiServiceInstanceSpecEndpoint{}
 	swaggerObj := &openapi2.Swagger{}
-	err := yaml.Unmarshal(swagger, swaggerObj)
-	schemes := make([]string, 0)
+	// lowercase the byte array to ensure keys we care about are parsed
+	err := yaml.Unmarshal(bytes.ToLower(swagger), swaggerObj)
 	if err != nil {
-		swaggerHost = gjson.Get(string(swagger), "host").String()
-		protocols := gjson.Get(string(swagger), "schemes")
-		err := json.Unmarshal([]byte(protocols.Raw), &schemes)
+		err := json.Unmarshal(swagger, swaggerObj)
 		if err != nil {
 			log.Errorf("Error getting schemas from Swagger 2.0 definition: %s", err.Error())
 			return nil, err
 		}
-		basePath = gjson.Get(string(swagger), "basePath").String()
-	} else {
-		swaggerHost = swaggerObj.Host
-		schemes = swaggerObj.Schemes
-		basePath = swaggerObj.BasePath
 	}
-	swaggerHostElements := strings.Split(swaggerHost, ":")
+	swaggerHostElements := strings.Split(swaggerObj.Host, ":")
 	host := swaggerHostElements[0]
 	port := 443
 	if len(swaggerHostElements) > 1 {
@@ -312,13 +303,13 @@ func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]v1alpha1.ApiServiceI
 			port = swaggerPort
 		}
 	}
-	for _, protocol := range schemes {
+	for _, protocol := range swaggerObj.Schemes {
 		endPoint := v1alpha1.ApiServiceInstanceSpecEndpoint{
 			Host:     host,
 			Port:     int32(port),
 			Protocol: protocol,
 			Routing: v1alpha1.ApiServiceInstanceSpecRouting{
-				BasePath: basePath,
+				BasePath: swaggerObj.BasePath,
 			},
 		}
 		endPoints = append(endPoints, endPoint)

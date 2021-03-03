@@ -60,6 +60,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
 	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "/v2", endPoints[0].Routing.BasePath, "The base path was not parsed from the JSON as expected")
 
 	// Test oas2 yaml object
 	oas2Yaml, _ := os.Open("./testdata/petstore-openapi2.yaml") // OAS2
@@ -71,6 +72,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
 	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+	assert.Equal(t, "/v1", endPoints[0].Routing.BasePath, "The base path was not parsed from the JSON as expected")
 
 	// Test oas3 object
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
