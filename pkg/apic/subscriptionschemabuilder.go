@@ -1,6 +1,6 @@
 package apic
 
-//SubscriptionSchemaBuilder -
+// SubscriptionSchemaBuilder - used to build a subscription schema for API Central
 type SubscriptionSchemaBuilder interface {
 	SetName(name string) SubscriptionSchemaBuilder
 	AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder
@@ -9,6 +9,7 @@ type SubscriptionSchemaBuilder interface {
 	Register() error
 }
 
+// schemaBuilder - hold all of the details needs to create a subscription schema
 type schemaBuilder struct {
 	err        error
 	name       string
@@ -26,11 +27,13 @@ func NewSubscriptionSchemaBuilder(apicClient Client) SubscriptionSchemaBuilder {
 	}
 }
 
+// SetName - give the subscription schema a name
 func (s *schemaBuilder) SetName(name string) SubscriptionSchemaBuilder {
 	s.name = name
 	return s
 }
 
+// AddProperty - adds a new subscription schema property to the schema
 func (s *schemaBuilder) AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder {
 	prop, err := property.Build()
 	if err == nil {
@@ -41,11 +44,13 @@ func (s *schemaBuilder) AddProperty(property SubscriptionPropertyBuilder) Subscr
 	return s
 }
 
+// AddUniqueKey - add a unique key to the schema
 func (s *schemaBuilder) AddUniqueKey(keyName string) SubscriptionSchemaBuilder {
 	s.uniqueKeys = append(s.uniqueKeys, keyName)
 	return s
 }
 
+// Register - build and register the subscription schema
 func (s *schemaBuilder) Register() error {
 	if s.err != nil {
 		return s.err
