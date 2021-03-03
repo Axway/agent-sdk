@@ -38,10 +38,8 @@ func TestSubscriptionBuilderFuncs(t *testing.T) {
 	err = builder.Process()
 	assert.NotNil(t, err)
 
-	testServiceClient, _ := GetTestServiceClient()
 	subscription = &mockSubscription{
-		catalogID:     "1234",
-		serviceClient: testServiceClient,
+		catalogID: "1234",
 	}
 	builder = NewSubscriptionBuilder(subscription).
 		UpdateEnumProperty("appName", "value1", "string").
@@ -56,8 +54,7 @@ func TestSubscriptionBuilderFuncs(t *testing.T) {
 	assert.Nil(t, err)
 
 	subscription = &mockSubscription{
-		catalogID:     "1234",
-		serviceClient: testServiceClient,
+		catalogID: "1234",
 	}
 
 	err = NewSubscriptionBuilder(subscription).

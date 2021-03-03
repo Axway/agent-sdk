@@ -2,9 +2,8 @@ package apic
 
 type mockSubscription struct {
 	Subscription
-	catalogID     string
-	serviceClient *ServiceClient
-	updateErr     error
+	catalogID string
+	updateErr error
 }
 
 func (s *mockSubscription) GetID() string                              { return "" }
