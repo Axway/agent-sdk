@@ -21,38 +21,13 @@ type Collector interface {
 type collector struct {
 	jobs.Job
 	startTime          time.Time
+	endTime            time.Time
+	orgGUID            string
 	eventChannel       chan interface{}
 	lock               *sync.Mutex
 	registry           metrics.Registry
 	apiMetricMap       map[string]*APIMetric
 	apiStatusMetricMap map[string]map[string]*StatusMetric
-}
-
-// Status - returns the status of the metric collector
-func (c *collector) Status() error {
-	return nil
-}
-
-// Ready - indicates that the collector job is ready to process
-func (c *collector) Ready() bool {
-	return true
-}
-
-// Execute - process the metric collection and generation of usage/metric event
-func (c *collector) Execute() error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	endTime := time.Now()
-	defer func() {
-		c.startTime = endTime
-	}()
-
-	c.generateEvents(c.startTime, endTime)
-	c.apiMetricMap = make(map[string]*APIMetric)
-	c.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
-
-	return nil
 }
 
 // NewMetricCollector - Create metric collector
@@ -75,104 +50,30 @@ func NewMetricCollector(eventChannel chan interface{}) Collector {
 	return metricCollector
 }
 
-func (c *collector) generateEvents(startTime, endTime time.Time) {
-	var transactionCount int64
-	authToken, _ := agent.GetCentralAuthToken()
-	parser := new(jwt.Parser)
-	parser.SkipClaimsValidation = true
-
-	claims := jwt.MapClaims{}
-	_, _, _ = parser.ParseUnverified(authToken, claims)
-	orgGUID := ""
-	claim, ok := claims["org_guid"]
-	if ok {
-		orgGUID = claim.(string)
-	}
-
-	if len(c.apiMetricMap) != 0 {
-		c.registry.Each(func(name string, metric interface{}) {
-			if name == "transaction.count" {
-				counterMetric := metric.(metrics.Counter)
-				transactionCount = counterMetric.Count()
-				counterMetric.Clear()
-			}
-			elements := strings.Split(name, ".")
-			if len(elements) > 2 {
-				apiID := elements[2]
-				apiDetail, ok := c.apiMetricMap[apiID]
-				if ok {
-					if strings.HasPrefix(name, "transaction.api") {
-						apiMetric := (metric.(metrics.Histogram))
-						c.setEventMetricsFromHistogram(&apiDetail.Metrics, apiMetric)
-						apiMetric.Clear()
-					}
-					if strings.HasPrefix(name, "transaction.status") {
-						statusCode := elements[3]
-						apiStatusMap := c.apiStatusMetricMap[apiID]
-						statusCodeDetail, ok := apiStatusMap[statusCode]
-						if ok {
-							statusMetric := (metric.(metrics.Histogram))
-							c.setEventMetricsFromHistogram(&statusCodeDetail.Metrics, statusMetric)
-							statusMetric.Clear()
-						}
-					}
-				}
-			}
-		})
-
-		for _, apiDetail := range c.apiMetricMap {
-			apiID := apiDetail.APIID
-			apiStatusMap := c.apiStatusMetricMap[apiID]
-			for _, statusDetail := range apiStatusMap {
-				apiDetail.StatusMetrics = append(apiDetail.StatusMetrics, statusDetail)
-			}
-			detail := apiDetail
-			detail.ObservedStart = startTime.UnixNano() / 1e6
-			detail.ObservedEnd = endTime.UnixNano() / 1e6
-			apiMetricEventID, _ := uuid.NewV4()
-			apiMetricEvent := V4Event{
-				ID:        apiMetricEventID.String(),
-				Timestamp: startTime.UnixNano() / 1e6,
-				Event:     "api.transaction.metric",
-				App:       orgGUID,
-				Version:   "4",
-				Distribution: V4EventDistribution{
-					Environment: agent.GetCentralConfig().GetEnvironmentName(),
-					Version:     "1",
-				},
-				Data: detail,
-			}
-			c.eventChannel <- apiMetricEvent
-		}
-		if transactionCount != 0 {
-			usageEventID, _ := uuid.NewV4()
-			usageEvent := V4Event{
-				ID:        usageEventID.String(),
-				Timestamp: startTime.UnixNano() / 1e6,
-				Event:     "usage." + agent.GetCentralConfig().GetEnvironmentName() + ".transactions",
-				App:       orgGUID,
-				Version:   "4",
-				Distribution: V4EventDistribution{
-					Environment: agent.GetCentralConfig().GetEnvironmentName(),
-					Version:     "1",
-				},
-				Data: map[string]interface{}{
-					"value":         transactionCount,
-					"observedStart": startTime.UnixNano() / 1e6,
-					"observedEnd":   endTime.UnixNano() / 1e6,
-				},
-			}
-			c.eventChannel <- usageEvent
-		}
-	}
-
+// Status - returns the status of the metric collector
+func (c *collector) Status() error {
+	return nil
 }
 
-func (c *collector) setEventMetricsFromHistogram(eventmetric *Metrics, histogram metrics.Histogram) {
-	eventmetric.Count = histogram.Count()
-	eventmetric.MaxResponseTime = histogram.Max()
-	eventmetric.MinResponseTime = histogram.Min()
-	eventmetric.MeanResponseTime = histogram.Mean()
+// Ready - indicates that the collector job is ready to process
+func (c *collector) Ready() bool {
+	return true
+}
+
+// Execute - process the metric collection and generation of usage/metric event
+func (c *collector) Execute() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.endTime = time.Now()
+	c.orgGUID = c.getOrgGUID()
+	defer func() {
+		c.startTime = c.endTime
+	}()
+
+	c.generateEvents()
+
+	return nil
 }
 
 // AddMetric - add metric for API transaction to collection
@@ -198,12 +99,157 @@ func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64,
 
 	_, ok = apiStatusMap[statusCode]
 	if !ok {
-		apiStatusMap[statusCode] = &StatusMetric{StatusCode: statusCode}
+		apiStatusMap[statusCode] = &StatusMetric{
+			APIMetric: APIMetric{
+				APIName: apiName,
+				APIID:   apiID,
+			},
+			StatusCode: statusCode}
 	}
 
 	transactionCount.Inc(1)
 	apiDuration.Update(duration)
 	apiStatusDuration.Update(duration)
+}
+
+func (c *collector) cleanup() {
+	c.apiMetricMap = make(map[string]*APIMetric)
+	c.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
+}
+
+func (c *collector) getOrgGUID() string {
+	authToken, _ := agent.GetCentralAuthToken()
+	parser := new(jwt.Parser)
+	parser.SkipClaimsValidation = true
+
+	claims := jwt.MapClaims{}
+	_, _, _ = parser.ParseUnverified(authToken, claims)
+
+	claim, ok := claims["org_guid"]
+	if ok {
+		return claim.(string)
+	}
+	return ""
+}
+
+func (c *collector) generateEvents() {
+	defer c.cleanup()
+
+	if len(c.apiMetricMap) != 0 {
+		c.registry.Each(c.processMetricFromRegistry)
+		for _, apiMetric := range c.apiMetricMap {
+			apiID := apiMetric.APIID
+			c.generateAPIMetricEvent(apiMetric)
+			statusMetricMap := c.apiStatusMetricMap[apiID]
+			for _, apiStatusMetric := range statusMetricMap {
+				c.generateAPIStatusMetricEvent(apiStatusMetric)
+			}
+		}
+	}
+}
+
+func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
+	if transactionCount != 0 {
+		usageEventID, _ := uuid.NewV4()
+		usageEvent := V4Event{
+			ID:        usageEventID.String(),
+			Timestamp: c.startTime.UnixNano() / 1e6,
+			Event:     "usage." + agent.GetCentralConfig().GetEnvironmentName() + ".transactions",
+			App:       orgGUID,
+			Version:   "4",
+			Distribution: V4EventDistribution{
+				Environment: agent.GetCentralConfig().GetEnvironmentName(),
+				Version:     "1",
+			},
+			Data: map[string]interface{}{
+				"value":         transactionCount,
+				"observedStart": c.startTime.UnixNano() / 1e6,
+				"observedEnd":   c.endTime.UnixNano() / 1e6,
+			},
+		}
+		c.eventChannel <- usageEvent
+	}
+}
+
+func (c *collector) generateAPIMetricEvent(apiMetric *APIMetric) {
+	apiMetric.ObservedStart = c.startTime.UnixNano() / 1e6
+	apiMetric.ObservedEnd = c.endTime.UnixNano() / 1e6
+	apiMetricEventID, _ := uuid.NewV4()
+	apiMetricEvent := V4Event{
+		ID:        apiMetricEventID.String(),
+		Timestamp: c.startTime.UnixNano() / 1e6,
+		Event:     "api.transaction.metric",
+		App:       c.orgGUID,
+		Version:   "4",
+		Distribution: V4EventDistribution{
+			Environment: agent.GetCentralConfig().GetEnvironmentName(),
+			Version:     "1",
+		},
+		Data: apiMetric,
+	}
+	c.eventChannel <- apiMetricEvent
+}
+
+func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *StatusMetric) {
+	apiStatusMetric.ObservedStart = c.startTime.UnixNano() / 1e6
+	apiStatusMetric.ObservedEnd = c.endTime.UnixNano() / 1e6
+	apiStatusMetricEventID, _ := uuid.NewV4()
+	apiStatusMetricEvent := V4Event{
+		ID:        apiStatusMetricEventID.String(),
+		Timestamp: c.startTime.UnixNano() / 1e6,
+		Event:     "api.transaction.status.metric",
+		App:       c.orgGUID,
+		Version:   "4",
+		Distribution: V4EventDistribution{
+			Environment: agent.GetCentralConfig().GetEnvironmentName(),
+			Version:     "1",
+		},
+		Data: apiStatusMetric,
+	}
+	c.eventChannel <- apiStatusMetricEvent
+}
+
+func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
+	if name == "transaction.count" {
+		counterMetric := metric.(metrics.Counter)
+		transactionCount := counterMetric.Count()
+		counterMetric.Clear()
+		c.generateUsageEvent(transactionCount, c.orgGUID)
+	}
+
+	c.processTransactionMetric(name, metric)
+}
+
+func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
+	elements := strings.Split(metricName, ".")
+	if len(elements) > 2 {
+		apiID := elements[2]
+		apiDetail, ok := c.apiMetricMap[apiID]
+		if ok {
+			if strings.HasPrefix(metricName, "transaction.api") {
+				apiMetric := (metric.(metrics.Histogram))
+				c.setEventMetricsFromHistogram(&apiDetail.Metrics, apiMetric)
+				apiMetric.Clear()
+			}
+			if strings.HasPrefix(metricName, "transaction.status") {
+				statusCode := elements[3]
+				apiStatusMap := c.apiStatusMetricMap[apiID]
+				statusCodeDetail, ok := apiStatusMap[statusCode]
+				if ok {
+					statusMetric := (metric.(metrics.Histogram))
+					c.setEventMetricsFromHistogram(&statusCodeDetail.Metrics, statusMetric)
+					statusMetric.Clear()
+				}
+			}
+		}
+	}
+}
+
+func (c *collector) setEventMetricsFromHistogram(eventmetric *Metrics, histogram metrics.Histogram) {
+	eventmetric.Count = histogram.Count()
+	eventmetric.MaxResponseTime = histogram.Max()
+	eventmetric.MinResponseTime = histogram.Min()
+	eventmetric.MeanResponseTime = histogram.Mean()
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {

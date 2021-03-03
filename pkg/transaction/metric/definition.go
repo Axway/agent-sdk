@@ -11,7 +11,7 @@ type Metrics struct {
 // StatusMetric - struct to hold metric specific for status code based transactions
 type StatusMetric struct {
 	StatusCode string `json:"statusCode"`
-	Metrics
+	APIMetric
 }
 
 // APIMetric - struct to hold metric specific for api based transactions
@@ -21,7 +21,6 @@ type APIMetric struct {
 	ObservedStart int64  `json:"observedStart,omitempty"`
 	ObservedEnd   int64  `json:"observedEnd,omitempty"`
 	Metrics
-	StatusMetrics []*StatusMetric `json:"statusCodes,omitempty"`
 }
 
 // V4EventDistribution - represents V7 distribution

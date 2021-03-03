@@ -25,12 +25,12 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "DOSA_1111"
-	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
-	authCfg.PublicKey = "../transaction/testdata/public_key"
+	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
+	authCfg.PublicKey = "../../transaction/testdata/public_key"
 	return cfg
 }
 
-var accessToken = `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNjE0NjA0NzE0LCJleHAiOjE2NDYxNDA3MTQsImF1ZCI6InRlc3RhdWQiLCJzdWIiOiIxMjM0NTYiLCJvcmdfZ3VpZCI6IjEyMzQtMTIzNC0xMjM0LTEyMzQifQ.5Uqt0oFhMgmI-sLQKPGkHwknqzlTxv-qs9I_LmZ18LQ`
+var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNjE0NjA0NzE0LCJleHAiOjE2NDYxNDA3MTQsImF1ZCI6InRlc3RhdWQiLCJzdWIiOiIxMjM0NTYiLCJvcmdfZ3VpZCI6IjEyMzQtMTIzNC0xMjM0LTEyMzQifQ.5Uqt0oFhMgmI-sLQKPGkHwknqzlTxv-qs9I_LmZ18LQ"
 
 func TestMetricCollector(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
@@ -61,6 +61,7 @@ func TestMetricCollector(t *testing.T) {
 	}
 	NewMetricPublisher(eventChannel)
 
+	metricCollector.orgGUID = metricCollector.getOrgGUID()
 	metricCollector.AddMetric("111", "111", "200", 10, "", "")
 	metricCollector.AddMetric("111", "111", "200", 20, "", "")
 	metricCollector.AddMetric("111", "111", "200", 30, "", "")
@@ -70,11 +71,10 @@ func TestMetricCollector(t *testing.T) {
 	metricCollector.AddMetric("222", "222", "200", 5, "", "")
 	metricCollector.AddMetric("222", "222", "200", 5, "", "")
 
-	metricCollector.generateEvents(metricCollector.startTime, time.Now())
+	metricCollector.endTime = time.Now()
+	metricCollector.generateEvents()
+	metricCollector.startTime = time.Now()
 	time.Sleep(30 * time.Second)
-
-	metricCollector.apiMetricMap = make(map[string]*APIMetric)
-	metricCollector.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
 
 	metricCollector.AddMetric("111", "111", "200", 5, "", "")
 	metricCollector.AddMetric("111", "111", "200", 15, "", "")
@@ -85,7 +85,7 @@ func TestMetricCollector(t *testing.T) {
 	metricCollector.AddMetric("222", "222", "200", 5, "", "")
 	metricCollector.AddMetric("222", "222", "200", 50, "", "")
 	metricCollector.AddMetric("222", "222", "400", 15, "", "")
-
-	metricCollector.generateEvents(time.Now(), time.Now())
+	metricCollector.endTime = time.Now()
+	metricCollector.generateEvents()
 	time.Sleep(30 * time.Second)
 }
