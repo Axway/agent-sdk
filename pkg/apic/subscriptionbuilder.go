@@ -2,8 +2,6 @@ package apic
 
 import (
 	"fmt"
-
-	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 //SubscriptionBuilder -
@@ -37,24 +35,9 @@ func (s *subscriptionBuilder) Process() error {
 
 // UpdateEnumProperty - updates the catalog item with the new value that should be in the enum
 func (s *subscriptionBuilder) UpdateEnumProperty(key, newValue, dataType string) SubscriptionBuilder {
-	catalogItemID := s.subscription.GetCatalogItemID()
-
-	// First need to get the subscriptionDefProperties for the catalog item
-	ss, err := s.subscription.GetServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
-	if ss == nil || err != nil {
-		s.err = agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
-		return s
-	}
-
-	// update the appName in the enum
-	prop := ss.GetProperty(appNameKey)
-	newOptions := append(prop.Enum, newValue)
-	ss.AddProperty(key, dataType, "", "", true, newOptions)
-
-	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
-	err = s.subscription.GetServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
+	err := s.subscription.UpdateEnumProperty(key, newValue, dataType)
 	if err != nil {
-		s.err = agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+		s.err = err
 	}
 
 	return s
