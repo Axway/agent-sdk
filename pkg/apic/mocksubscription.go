@@ -15,7 +15,6 @@ func (s *mockSubscription) GetRemoteAPIStage() string                  { return 
 func (s *mockSubscription) GetCatalogItemID() string                   { return s.catalogID }
 func (s *mockSubscription) GetCreatedUserID() string                   { return "" }
 func (s *mockSubscription) GetState() SubscriptionState                { return SubscriptionApproved }
-func (s *mockSubscription) GetServiceClient() *ServiceClient           { return s.serviceClient }
 func (s *mockSubscription) GetPropertyValue(propertyKey string) string { return "" }
 func (s *mockSubscription) UpdateState(newState SubscriptionState, description string) error {
 	return nil
