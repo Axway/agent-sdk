@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
-	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 )
@@ -303,11 +301,12 @@ func contains(endpts []v1alpha1.ApiServiceInstanceSpecEndpoint, endpt v1alpha1.A
 	}
 	return false
 }
+
 func (c *ServiceClient) getOas2Endpoints(swagger []byte) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
 	endPoints := []v1alpha1.ApiServiceInstanceSpecEndpoint{}
-	swaggerObj := &openapi2.Swagger{}
+	swaggerObj := &oas2Swagger{}
 	// lowercase the byte array to ensure keys we care about are parsed
-	err := yaml.Unmarshal(bytes.ToLower(swagger), swaggerObj)
+	err := yaml.Unmarshal(swagger, swaggerObj)
 	if err != nil {
 		err := json.Unmarshal(swagger, swaggerObj)
 		if err != nil {
