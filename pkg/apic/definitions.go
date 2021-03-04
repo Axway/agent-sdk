@@ -1,10 +1,14 @@
 package apic
 
 import (
+	"strings"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/getkin/kin-openapi/openapi2"
+	"gopkg.in/yaml.v2"
 )
 
 // Various consts for use
@@ -96,7 +100,7 @@ type ServiceBody struct {
 	Status            string
 	ServiceAttributes map[string]string
 	serviceContext    serviceContext
-	Endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint
+	Endpoints         []v1alpha1.ApiServiceInstanceSpecEndpoint
 }
 
 // ServiceClient -
@@ -141,4 +145,41 @@ type PlatformTeam struct {
 	ID      string `json:"guid"`
 	Name    string `json:"name"`
 	Default bool   `json:"default"`
+}
+
+type oas2Swagger struct {
+	openapi2.Swagger
+}
+
+func (o *oas2Swagger) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// first unmarshall it into a map[string]interface
+	var keyInterface map[string]interface{}
+	err := unmarshal(&keyInterface)
+	if err != nil {
+		return err
+	}
+
+	// now loop the keys and lowercase them all
+	for key, val := range keyInterface {
+		if strings.ToLower(key) == key {
+			continue
+		}
+		// store the val in the lowercase key
+		keyInterface[strings.ToLower(key)] = val
+		// delete the non-lowercase val
+		delete(keyInterface, key)
+	}
+
+	// convert keyInterface back to byte array
+	newBytes, err := yaml.Marshal(keyInterface)
+	if err != nil {
+		return err
+	}
+
+	// unmarshal new byte array
+	var newVal openapi2.Swagger
+	yaml.Unmarshal(newBytes, &newVal)
+
+	o.Swagger = newVal
+	return nil
 }
