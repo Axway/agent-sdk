@@ -44,7 +44,9 @@ type Subscription interface {
 	GetPropertyValue(propertyKey string) string
 	UpdateState(newState SubscriptionState, description string) error
 	UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error
+	UpdateEnumProperty(key, value, dataType string) error
 	UpdateProperties(appName string) error
+	UpdatePropertyValues(values map[string]interface{}) error
 }
 
 // CentralSubscription -
@@ -181,6 +183,7 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 	return s.UpdateStateWithProperties(newState, description, map[string]interface{}{})
 }
 
+// getServiceClient - returns the apic client
 func (s *CentralSubscription) getServiceClient() *ServiceClient {
 	return s.apicClient
 }
@@ -239,8 +242,8 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 	return centralSubscriptions, nil
 }
 
-// UpdateProperties -
-func (s *CentralSubscription) UpdateProperties(appName string) error {
+// UpdateEnumProperty -
+func (s *CentralSubscription) UpdateEnumProperty(key, newValue, dataType string) error {
 	catalogItemID := s.GetCatalogItemID()
 
 	// First need to get the subscriptionDefProperties for the catalog item
@@ -251,13 +254,23 @@ func (s *CentralSubscription) UpdateProperties(appName string) error {
 
 	// update the appName in the enum
 	prop := ss.GetProperty(appNameKey)
-	apps := append(prop.Enum, appName)
-	ss.AddProperty(appNameKey, subscriptionAppNameType, "", "", true, apps)
+	newOptions := append(prop.Enum, newValue)
+	ss.AddProperty(key, dataType, "", "", true, newOptions)
 
 	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
 	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
 	if err != nil {
 		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	return nil
+}
+
+// UpdateProperties -
+func (s *CentralSubscription) UpdateProperties(appName string) error {
+	err := s.UpdateEnumProperty(appNameKey, appName, subscriptionAppNameType)
+	if err != nil {
+		return err
 	}
 
 	// Now we can update the appname in the subscription itself
@@ -278,6 +291,38 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
 	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		logResponseErrors(response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
+}
+
+// UpdatePropertyValues - Updates the property values of the subscription
+func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
+	body, err := json.Marshal(values)
 	if err != nil {
 		return err
 	}

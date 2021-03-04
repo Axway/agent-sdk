@@ -1,0 +1,22 @@
+{
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "required": [
+        "appName"
+    ],
+    "properties": {
+        "appName": {
+            "enum": [
+                "Create an application",
+                "DaleApp"
+            ],
+            "type": "string",
+            "description": ""
+        },
+        "appID": {
+            "type": "string",
+            "description": ""
+        }
+    },
+    "description": "Subscription specification for authentication"
+}
