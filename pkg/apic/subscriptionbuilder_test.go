@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewSubscriptionBuilder(t *testing.T) {
-	mockSubscription := &mockSubscription{}
+	mockSubscription := &MockSubscription{}
 	builder := NewSubscriptionBuilder(mockSubscription)
 	err := builder.Process()
 	assert.Nil(t, err)
@@ -20,7 +20,7 @@ func TestNewSubscriptionBuilder(t *testing.T) {
 }
 
 func TestSubscriptionBuilderFuncs(t *testing.T) {
-	subscription := &mockSubscription{}
+	subscription := &MockSubscription{}
 	builder := NewSubscriptionBuilder(subscription).
 		SetStringPropertyValue("key1", "value1").
 		SetStringPropertyValue("key1", "value2")
@@ -28,8 +28,8 @@ func TestSubscriptionBuilderFuncs(t *testing.T) {
 	err := builder.Process()
 	assert.NotNil(t, err)
 
-	subscription = &mockSubscription{
-		updateErr: fmt.Errorf("error"),
+	subscription = &MockSubscription{
+		UpdatePropertyValErr: fmt.Errorf("error"),
 	}
 	builder = NewSubscriptionBuilder(subscription).
 		SetStringPropertyValue("key1", "value1").
@@ -38,8 +38,8 @@ func TestSubscriptionBuilderFuncs(t *testing.T) {
 	err = builder.Process()
 	assert.NotNil(t, err)
 
-	subscription = &mockSubscription{
-		catalogID: "1234",
+	subscription = &MockSubscription{
+		CatalogID: "1234",
 	}
 	builder = NewSubscriptionBuilder(subscription).
 		UpdateEnumProperty("appName", "value1", "string").
@@ -53,8 +53,8 @@ func TestSubscriptionBuilderFuncs(t *testing.T) {
 	assert.Equal(t, "value2", builder.(*subscriptionBuilder).propertyValues["appID"])
 	assert.Nil(t, err)
 
-	subscription = &mockSubscription{
-		catalogID: "1234",
+	subscription = &MockSubscription{
+		CatalogID: "1234",
 	}
 
 	err = NewSubscriptionBuilder(subscription).
