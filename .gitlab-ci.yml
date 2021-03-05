@@ -33,7 +33,7 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
-      - "/gitlabci/.testgitlab-ci-common.yml"
+      # - "/gitlabci/.testgitlab-ci-common.yml"
       - "/gitlabci/testgitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
@@ -84,7 +84,6 @@ update-csr:
 .trigger-downstream-agent:
   stage: update-dep
   when: manual
-  # extends: .configure-artifactory
   script:
     - apk update && apk add curl ca-certificates
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
