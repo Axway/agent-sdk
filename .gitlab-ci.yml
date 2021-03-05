@@ -5,8 +5,6 @@ variables:
   PACKAGE_NAME: apic-agents-sdk
   GIT_REPO_PATH: src/github.com/Axway   # overridden from variables.yml
   GIT_REPO_NAME: agent-sdk
-  BINTRAY_NAMESPACE: agent
-  DOCKER_DRIVER: overlay2
   DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"  # overridden from variables.yml
 
   # for agent trigger jobs
@@ -33,8 +31,6 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
-      # - "/gitlabci/.testgitlab-ci-common.yml"
-      # - "/gitlabci/testgitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
