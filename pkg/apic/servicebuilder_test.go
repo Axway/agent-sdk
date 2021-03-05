@@ -56,7 +56,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, UnpublishedStatus, sb.Status)
 	assert.Equal(t, PublishedStatus, sb.State)
 
-	assert.Equal(t, []byte{}, sb.Swagger)
+	assert.Equal(t, []byte{}, sb.SpecDefinition)
 	assert.Equal(t, []byte("documentation"), sb.Documentation)
 
 	assert.Equal(t, "image/jpeg", sb.ImageContentType)

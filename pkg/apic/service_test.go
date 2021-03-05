@@ -53,7 +53,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 
-	endPoints, err := c.getEndpointsBasedOnSwagger(oas2Bytes, Oas2)
+	endPoints, err := c.getEndpointsBasedOnSpecDefinition(oas2Bytes, Oas2)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -65,7 +65,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	// Test oas2 yaml object
 	oas2Yaml, _ := os.Open("./testdata/petstore-openapi2.yaml") // OAS2
 	oas2YamlBytes, _ := ioutil.ReadAll(oas2Yaml)
-	endPoints, err = c.getEndpointsBasedOnSwagger(oas2YamlBytes, Oas2)
+	endPoints, err = c.getEndpointsBasedOnSpecDefinition(oas2YamlBytes, Oas2)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -78,7 +78,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json, _ := os.Open("./testdata/petstore-openapi3.json") // OAS3
 	oas3Bytes, _ := ioutil.ReadAll(oas3Json)
 
-	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes, Oas3)
+	endPoints, err = c.getEndpointsBasedOnSpecDefinition(oas3Bytes, Oas3)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
@@ -96,7 +96,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	oas3Json2, _ := os.Open("./testdata/petstore-openapi3-template-urls.json") // OAS3
 	oas3Bytes2, _ := ioutil.ReadAll(oas3Json2)
 
-	endPoints, err = c.getEndpointsBasedOnSwagger(oas3Bytes2, Oas3)
+	endPoints, err = c.getEndpointsBasedOnSpecDefinition(oas3Bytes2, Oas3)
 
 	type verification struct {
 		Host     string
@@ -168,7 +168,7 @@ func TestGetEndpointsBasedOnSwagger(t *testing.T) {
 	wsdlFile, _ := os.Open("./testdata/weather.xml") // wsdl
 	wsdlBytes, _ := ioutil.ReadAll(wsdlFile)
 
-	endPoints, err = c.getEndpointsBasedOnSwagger(wsdlBytes, Wsdl)
+	endPoints, err = c.getEndpointsBasedOnSpecDefinition(wsdlBytes, Wsdl)
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpointsBasedOnSwagger with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")

@@ -101,9 +101,17 @@ func (c *ServiceClient) processEndPoints(serviceBody *ServiceBody) ([]v1alpha1.A
 	// To set your own endpoints call SetServiceEndpoint on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(serviceBody.Endpoints) > 0 {
-		endPoints = serviceBody.Endpoints
+		for _, endpointDef := range serviceBody.Endpoints {
+			ep := v1alpha1.ApiServiceInstanceSpecEndpoint{
+				Host:     endpointDef.Host,
+				Port:     endpointDef.Port,
+				Protocol: endpointDef.Protocol,
+				Routing:  v1alpha1.ApiServiceInstanceSpecRouting{BasePath: endpointDef.BasePath},
+			}
+			endPoints = append(endPoints, ep)
+		}
 	} else {
-		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
+		endPoints, err = c.getEndpointsBasedOnSpecDefinition(serviceBody.SpecDefinition, c.getRevisionDefinitionType(*serviceBody))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create endpoints for '%s': %s", serviceBody.APIName, err)
 		}
@@ -251,7 +259,7 @@ func (c *ServiceClient) getAPIServiceInstanceByName(instanceName string) (*v1alp
 	return apiInstance, nil
 }
 
-func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefinitionType string) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
+func (c *ServiceClient) getEndpointsBasedOnSpecDefinition(swagger []byte, revisionDefinitionType string) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
 	switch revisionDefinitionType {
 	case Wsdl:
 		return c.getWsdlEndpoints(swagger)
@@ -259,6 +267,12 @@ func (c *ServiceClient) getEndpointsBasedOnSwagger(swagger []byte, revisionDefin
 		return c.getOas2Endpoints(swagger)
 	case Oas3:
 		return c.getOas3Endpoints(swagger)
+	case Protobuf:
+		return []v1alpha1.ApiServiceInstanceSpecEndpoint{}, nil
+	case AsyncAPI:
+		return []v1alpha1.ApiServiceInstanceSpecEndpoint{}, nil // TODO - Parse AsyncAPI server property
+	case Unstructured:
+		return []v1alpha1.ApiServiceInstanceSpecEndpoint{}, nil
 	}
 
 	return nil, fmt.Errorf("Unable to get endpoints from swagger; invalid definition type: %v", revisionDefinitionType)

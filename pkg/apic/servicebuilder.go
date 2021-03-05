@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -26,7 +25,8 @@ type ServiceBuilder interface {
 	SetState(state string) ServiceBuilder
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
-	SetServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
+	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
+	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -46,7 +46,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			State:             PublishedStatus,
 			Status:            PublishedStatus,
 			ServiceAttributes: make(map[string]string),
-			Endpoints:         make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0),
+			Endpoints:         make([]EndpointDefinition, 0),
 		},
 	}
 
@@ -92,7 +92,7 @@ func (b *serviceBodyBuilder) SetAuthPolicy(authPolicy string) ServiceBuilder {
 }
 
 func (b *serviceBodyBuilder) SetAPISpec(spec []byte) ServiceBuilder {
-	b.serviceBody.Swagger = spec
+	b.serviceBody.SpecDefinition = spec
 	return b
 }
 
@@ -146,12 +146,17 @@ func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]str
 	return b
 }
 
-func (b *serviceBodyBuilder) SetServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder {
-	ep := v1alpha1.ApiServiceInstanceSpecEndpoint{
+func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder {
+	b.serviceBody.Endpoints = endpoints
+	return b
+}
+
+func (b *serviceBodyBuilder) AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder {
+	ep := EndpointDefinition{
 		Host:     host,
 		Port:     port,
 		Protocol: protocol,
-		Routing:  v1alpha1.ApiServiceInstanceSpecRouting{BasePath: basePath},
+		BasePath: basePath,
 	}
 	b.serviceBody.Endpoints = append(b.serviceBody.Endpoints, ep)
 	return b
