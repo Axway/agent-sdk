@@ -1,4 +1,24 @@
+##
 image: docker:dind
+
+variables:
+  PACKAGE_NAME: apic-agents-sdk
+  GIT_REPO_PATH: src/github.com/Axway   # overridden from variables.yml
+  GIT_REPO_NAME: agent-sdk
+  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"  # overridden from variables.yml
+
+  # for agent trigger jobs
+  AWS_DISCOVERY_PROJECT_ID: 7397
+  V7_DISCOVERY_PROJECT_ID: 7540
+  AZURE_DISCOVERY_PROJECT_ID: 8585
+
+  # Fortify
+  FORTIFY_PROJECT: "10566"
+  FORTIFY_BUILD_ID: "apic_agents_sdk"
+
+  # Whitesource
+  WS_CONFIG_FILE: "whitesource.config"
+  WS_PROJECT_ID: "APIC_Agents_SDK"
 
 ############################################################
 # Section for external includes
@@ -6,9 +26,11 @@ image: docker:dind
 include:
   - project: "apigov/beano_cicd"
     ref: master
-    file: 
-      - "/gitlabci/.gitlab-ci-common.yml"
-      - "/gitlabci/.gitlab-ci-config-ssh.yml"
+    # the order of these include files is important
+    file:
+      - "/gitlabci/variables.yml"
+      - "/gitlabci/restrictions.yml"
+      - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
@@ -17,29 +39,6 @@ include:
       - "/.gitlab-ci-dependencycheck.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
-
-variables:
-  GO111MODULE: "on"
-  GOPRIVATE: "git.ecd.axway.org"
-  GOFLAGS: "-mod=vendor"
-
-  PROJECT: beano
-  PACKAGE_NAME: apic-agents-sdk
-  GIT_REPO_NAME: agent-sdk
-  GIT_GOLANG_REPO_PATH: src/github.com/Axway
-  BINTRAY_NAMESPACE: agent
-  DOCKER_DRIVER: overlay2
-  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"
-  AWS_DISCOVERY_PROJECT_ID: 7397
-  V7_DISCOVERY_PROJECT_ID: 7540
-  AZURE_DISCOVERY_PROJECT_ID: 8585
-  FORTIFY_PROJECT: "10566"
-  FORTIFY_BUILD_ID: "apic_agents_sdk"
-
-  WS_CONFIG_FILE: "whitesource.config"
-  WS_PROJECT_ID: "APIC_Agents_SDK"
-
-  CSR_SUPPRESSION_LIST: "../csr-suppressions/amplify-central/golang-agents-common.json"
 
 stages:
   - test
@@ -50,48 +49,9 @@ stages:
   - update-dep
 
 ############################################################
-# Section for restrictions
+# Section for restrictions. This is different than from
+# restrictions.yml because the branch is "main", not "master"
 ############################################################
-.except-feature: &except-feature
-  only:
-    - main
-    - dev
-    - tags
-  except:
-    - web
-    - triggers
-
-.only-feature: &only-feature
-  except:
-    - main
-    - dev
-    - web
-    - triggers
-
-.only-dev: &only-dev
-  only:
-    - dev
-  except:
-    - web
-    - triggers
-
-.only-protected: &only-protected
-  only:
-    - main
-    - dev
-  except:
-    - web
-    - triggers
-
-.all: &all
-  only:
-    - main
-    - dev
-    - /^APIGOV-.*$/
-  except:
-    - web
-    - triggers
-
 .only-main: &only-main
   only:
     - main
@@ -99,132 +59,14 @@ stages:
     - web
     - triggers
 
-.only-tags: &only-tags
-  only:
-    - tags
-
-.only-release: &only-release
-  only:
-    - web
-    - triggers
-
 ############################################################
-# Section for build command scripts
+# Section for CSR jobs
 ############################################################
-.get-latest-version: &get-latest-version |
-  if [ $(git --version | grep -Eo '2.*') ]; then
-    export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
-  else
-    export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
-  fi
-
-############################################################
-# Section for test and sonar
-############################################################
-test:
-  stage: test
-  image: ${SECURITY_IMAGE}
-  script:
-    - make test
-  <<: *only-feature
-
-.sonar-template: &sonar-template
-  image: ${SECURITY_IMAGE}
-
-sonar-preview:
-  stage: test
-  <<: *sonar-template
-  script:
-    - make sonar mode=preview
-  allow_failure: true
-  <<: *only-feature
-
-sonar:
-  stage: sonar
-  <<: *sonar-template
-  script:
-    - make sonar
-  allow_failure: true
-  <<: *only-protected
-
-############################################################
-# Section for lint builds stage
-############################################################
-.lint-template: &lint-template
-  image: ${ALPINE_BASE_IMAGE}
-  extends: .prepare-path
-  script:
-    - make lint
-
-lint-test:
-  stage: test
-  <<: *lint-template
-  <<: *only-feature
-
-lint-sonar:
-  stage: sonar
-  <<: *lint-template
-  <<: *only-protected
-
-############################################################
-# Section for error check tools
-############################################################
-error_check:
-  stage: test
-  image: ${SECURITY_IMAGE}
-  script:
-    - echo ${SECURITY_IMAGE}
-    - make error-check
-  <<: *only-feature
-
-dependencycheck:
-  retry: 0
-  except:
-    - schedules
-    - tags
-    - web
-    - triggers
-
-whitesource:
-  retry: 0
-  except:
-    - schedules
-    - tags
-    - web
-    - triggers
-
-fetch-fortify:
-  retry: 0
-  except:
-    refs:
-      - tags
-      - web
-      - triggers
-    variables:
-      - $CI_PIPELINE_SOURCE == "pipeline"
-
-dependencycheck:on-schedule:
-  retry: 0
-  before_script:
-    - git config --global http.sslVerify false
-    - git fetch && git checkout master
-    - *get-latest-version
-    - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
-
-whitesource:on-schedule:
-  retry: 0
-  before_script:
-    - git config --global http.sslVerify false
-    - git fetch && git checkout master
-    - *get-latest-version
-    - if [[ ${PACKAGE_VERSION} =~ "0.0.1-" ]]; then echo "Scanning 0.0.1 thru master branch"; else echo "Checking out v${PACKAGE_VERSION}" && git checkout v${PACKAGE_VERSION}; fi
-
 run-csr:
   dependencies:
     - fetch-fortify
     - dependencycheck
     - whitesource
-  <<: *only-feature
 
 update-csr:
   dependencies:
@@ -238,7 +80,6 @@ update-csr:
 .trigger-downstream-agent:
   stage: update-dep
   when: manual
-  extends: .config-artifactory
   script:
     - apk update && apk add curl ca-certificates
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
