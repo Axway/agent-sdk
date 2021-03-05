@@ -34,7 +34,7 @@ include:
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
       # - "/gitlabci/.testgitlab-ci-common.yml"
-      - "/gitlabci/testgitlab-ci-config-ssh.yml"
+      # - "/gitlabci/testgitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
