@@ -53,49 +53,15 @@ stages:
   - update-dep
 
 ############################################################
-# Section for restrictions
+# Section for restrictions. This is different than from
+# restrictions.yml because the branch is "main", not "master"
 ############################################################
-# .only-feature: &only-feature
-#   except:
-#     - main
-#     - dev
-#     - web
-#     - triggers
-
-# .only-protected: &only-protected
-#   only:
-#     - main
-#     - dev
-#   except:
-#     - web
-#     - triggers
-
 .only-main: &only-main
   only:
     - main
   except:
     - web
     - triggers
-
-############################################################
-# Section for build command scripts
-############################################################
-# .get-latest-version: &get-latest-version |
-#   if [ $(git --version | grep -Eo '2.*') ]; then
-#     export PACKAGE_VERSION=$(git tag -l --sort="version:refname" | grep -Eo '[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}' | tail -1)
-#   else
-#     export PACKAGE_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
-#   fi
-
-############################################################
-# Section for test and sonar
-############################################################
-# test:
-#   stage: test
-#   image: ${SECURITY_IMAGE}
-#   script:
-#     - make test
-#   <<: *only-feature
 
 ############################################################
 # Section for CSR jobs
@@ -105,7 +71,6 @@ run-csr:
     - fetch-fortify
     - dependencycheck
     - whitesource
-  # <<: *only-feature
 
 update-csr:
   dependencies:
@@ -119,7 +84,7 @@ update-csr:
 .trigger-downstream-agent:
   stage: update-dep
   when: manual
-  extends: .config-artifactory
+  # extends: .configure-artifactory
   script:
     - apk update && apk add curl ca-certificates
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
