@@ -32,6 +32,7 @@ include:
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
+      - "/gitlabci/jobs.yml"
       - "/gitlabci/.testgitlab-ci-common.yml"
       - "/gitlabci/testgitlab-ci-config-ssh.yml"
   - project: "scurity/gitlabci"
@@ -118,58 +119,58 @@ sonar:
 ############################################################
 # Section for lint builds stage
 ############################################################
-.lint-template: &lint-template
-  image: ${BASE_IMAGE}
-  extends: .prepare-path
-  script:
-    - make lint
+# .lint-template: &lint-template
+#   image: ${BASE_IMAGE}
+#   extends: .prepare-path
+#   script:
+#     - make lint
 
-lint-test:
-  stage: test
-  <<: *lint-template
-  <<: *only-feature
+# lint-test:
+#   stage: test
+#   <<: *lint-template
+#   <<: *only-feature
 
-lint-sonar:
-  stage: sonar
-  <<: *lint-template
-  <<: *only-protected
+# lint-sonar:
+#   stage: sonar
+#   <<: *lint-template
+#   <<: *only-protected
 
-############################################################
-# Section for error check tools
-############################################################
-error_check:
-  stage: test
-  image: ${SECURITY_IMAGE}
-  script:
-    - echo ${SECURITY_IMAGE}
-    - make error-check
-  <<: *only-feature
+# ############################################################
+# # Section for error check tools
+# ############################################################
+# error_check:
+#   stage: test
+#   image: ${SECURITY_IMAGE}
+#   script:
+#     - echo ${SECURITY_IMAGE}
+#     - make error-check
+#   <<: *only-feature
 
-dependencycheck:
-  retry: 0
-  except:
-    - schedules
-    - tags
-    - web
-    - triggers
+# dependencycheck:
+#   retry: 0
+#   except:
+#     - schedules
+#     - tags
+#     - web
+#     - triggers
 
-whitesource:
-  retry: 0
-  except:
-    - schedules
-    - tags
-    - web
-    - triggers
+# whitesource:
+#   retry: 0
+#   except:
+#     - schedules
+#     - tags
+#     - web
+#     - triggers
 
-fetch-fortify:
-  retry: 0
-  except:
-    refs:
-      - tags
-      - web
-      - triggers
-    variables:
-      - $CI_PIPELINE_SOURCE == "pipeline"
+# fetch-fortify:
+#   retry: 0
+#   except:
+#     refs:
+#       - tags
+#       - web
+#       - triggers
+#     variables:
+#       - $CI_PIPELINE_SOURCE == "pipeline"
 
 dependencycheck:on-schedule:
   retry: 0
