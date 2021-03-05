@@ -49,21 +49,7 @@ func (c *ServiceClient) updateInstanceResource(instance *v1alpha1.APIServiceInst
 
 //processInstance -
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
-	var err error
-
-	// To set your own endpoints call SetServiceEndpoint on the ServiceBodyBuilder.
-	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
-	if len(serviceBody.Endpoints) > 0 {
-		endPoints = serviceBody.Endpoints
-	} else {
-		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
-		if err != nil {
-			return fmt.Errorf("failed to create endpoints for '%s': %s", serviceBody.APIName, err)
-		}
-	}
-
-	err = c.setInstanceAction(serviceBody, endPoints)
+	endPoints, err := c.processEndPoints(serviceBody)
 	if err != nil {
 		return err
 	}
@@ -108,6 +94,29 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	return err
 }
 
+func (c *ServiceClient) processEndPoints(serviceBody *ServiceBody) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
+	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
+	var err error
+
+	// To set your own endpoints call SetServiceEndpoint on the ServiceBodyBuilder.
+	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
+	if len(serviceBody.Endpoints) > 0 {
+		endPoints = serviceBody.Endpoints
+	} else {
+		endPoints, err = c.getEndpointsBasedOnSwagger(serviceBody.Swagger, c.getRevisionDefinitionType(*serviceBody))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create endpoints for '%s': %s", serviceBody.APIName, err)
+		}
+	}
+
+	err = c.setInstanceAction(serviceBody, endPoints)
+	if err != nil {
+		return nil, err
+	}
+
+	return endPoints, nil
+}
+
 func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) error {
 	// If service is created in the chain, then set action to create instance
 	serviceBody.serviceContext.instanceAction = addAPI
@@ -124,23 +133,30 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 		}
 
 		if len(instances) > 0 {
-			splitName := strings.Split(instances[0].Name, ".")
-			if len(splitName) == 2 {
-				instanceCount, err := strconv.Atoi(splitName[1])
-				if err != nil {
-					return fmt.Errorf("failed to convert instance count from to an int: %s", err)
-				}
-				serviceBody.serviceContext.instanceCount = instanceCount
-			} else {
-				return fmt.Errorf("unable to determine the next instance version. previous instance: %s", instances[0].Name)
-			}
-			serviceBody.serviceContext.previousInstance = &instances[0]
-			// if the endpoints are same update the current instance otherwise create new instance
-			if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
-				serviceBody.serviceContext.instanceAction = updateAPI
-			}
+			err = c.updateServiceContext(instances, endpoints, serviceBody)
 		}
 	}
+
+	return nil
+}
+
+func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
+	splitName := strings.Split(instances[0].Name, ".")
+	if len(splitName) == 2 {
+		instanceCount, err := strconv.Atoi(splitName[1])
+		if err != nil {
+			return fmt.Errorf("failed to convert instance count from to an int: %s", err)
+		}
+		serviceBody.serviceContext.instanceCount = instanceCount
+	} else {
+		return fmt.Errorf("unable to determine the next instance version. previous instance: %s", instances[0].Name)
+	}
+	serviceBody.serviceContext.previousInstance = &instances[0]
+	// if the endpoints are same update the current instance otherwise create new instance
+	if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
+		serviceBody.serviceContext.instanceAction = updateAPI
+	}
+
 	return nil
 }
 
