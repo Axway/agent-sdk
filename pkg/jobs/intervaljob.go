@@ -36,10 +36,23 @@ func newIntervalJob(newJob Job, interval time.Duration, failJobChan chan string)
 	return &thisJob, nil
 }
 
+func (b *intervalJob) handleExecution() {
+	// Execute the job now and then start the interval period
+	b.executeCronJob()
+	if b.err != nil {
+		b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeInterval, b.id)
+		log.Error(b.err)
+		b.SetStatus(JobStatusStopped)
+	}
+}
+
 //start - calls the Execute function from the Job definition
 func (b *intervalJob) start() {
 	log.Debugf("Starting %v job %v", JobTypeInterval, b.id)
 	b.waitForReady()
+
+	// Execute the job now and then start the interval period
+	b.handleExecution()
 
 	ticker := time.NewTicker(b.interval)
 	defer ticker.Stop()
@@ -51,12 +64,7 @@ func (b *intervalJob) start() {
 			b.SetStatus(JobStatusStopped)
 			return
 		case <-ticker.C:
-			b.executeCronJob()
-			if b.err != nil {
-				b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeInterval, b.id)
-				log.Error(b.err)
-				b.SetStatus(JobStatusStopped)
-			}
+			b.handleExecution()
 			ticker.Stop()
 			ticker = time.NewTicker(b.interval)
 		}
