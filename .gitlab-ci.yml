@@ -17,7 +17,6 @@ variables:
   FORTIFY_BUILD_ID: "apic_agents_sdk"
 
   # Whitesource
-  WS_CONFIG_FILE: "whitesource.config"
   WS_PROJECT_ID: "APIC_Agents_SDK"
 
 ############################################################
