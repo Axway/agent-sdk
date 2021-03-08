@@ -319,7 +319,12 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 
 	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agentResourceURL, nil, nil)
 	if err != nil {
-		return nil, err
+		// if agentResourceType is already a standard generic agent resource
+		if agentResourceType == agentTypesMap[agent.cfg.AgentType] {
+			return nil, err
+		}
+		AgentResourceType = ""
+		return getAgentResource()
 	}
 	agent := apiV1.ResourceInstance{}
 	json.Unmarshal(response, &agent)
