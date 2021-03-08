@@ -12,7 +12,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/tidwall/gjson"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -176,16 +175,8 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 
 //getRevisionDefinitionType -
 func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
-	var revisionDefinitionType string
 	if serviceBody.ResourceType == "" {
-		// TODO - Autodiscovery of SpecDefinition
-		oasVer := gjson.GetBytes(serviceBody.SpecDefinition, "openapi")
-		revisionDefinitionType = Oas2
-		if oasVer.Exists() {
-			// OAS v3
-			revisionDefinitionType = Oas3
-		}
-		return revisionDefinitionType
+		return Unstructured
 	}
 	return serviceBody.ResourceType
 }
