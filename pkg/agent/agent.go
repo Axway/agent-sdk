@@ -323,6 +323,8 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 		if agentResourceType == agentTypesMap[agent.cfg.AgentType] {
 			return nil, err
 		}
+		// if the agentResourceType is not a standard generic resource, then reset the AgentResourceType
+		// and return a check to the method, resulting in making the resource generic inside of getAgentResourceType()
 		AgentResourceType = ""
 		return getAgentResource()
 	}
