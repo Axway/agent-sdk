@@ -313,25 +313,27 @@ tag.MatchRegEx("(some){1}")
 ### Processing Discovery
 The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to AMPLIFY Central the following properties are needed.
 
-| API Service property               | Description                                                                                                                   |
-|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| ID                                 | ID of the API.                                                                                                                |
-| Title                              | Name of the API that will be used as AMPLIFY Central Catalog name.                                                            |
-| Description:                       | A brief summary about the API.                                                                                                |
-| Version:                           | Version of the API.                                                                                                           |
-| URL:                               | Endpoint for the API service.                                                                                                 |
-| Auth policy:                       | Authentication/Authorization policies applied to API. For now, AMPLIFY Central supports passthrough, api key and oauth.       |
-| Specification:                     | The API service specification. The Agent SDK provides support for swagger 2, openapi 3 and WSDL.                              |
-| Documentation:                     | Documentation for the API.                                                                                                    |
-| Tags:                              | List of resource tags.                                                                                                        |
-| Image:                             | Image for the API service.                                                                                                    |
-| Image content type:                | Content type of the Image associated with API service.                                                                        |
-| Resource type                      | Specifies the API specification type ("swaggerv2", "oas2", "oas3" or "wsdl").                                                 |
-| State/Status                       | State representation of API in external API Gateway(unpublished/published).                                                   |
-| Attributes                         | List of string key-value pairs that will be set on the resources created by the agent.ss                                      |
+| API Service property               | Description                                                                                                                          |
+|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| ID                                 | ID of the API.                                                                                                                       |
+| Title                              | Name of the API that will be used as AMPLIFY Central Catalog name.                                                                   |
+| Description:                       | A brief summary about the API.                                                                                                       |
+| Version:                           | Version of the API.                                                                                                                  |
+| URL:                               | Endpoint for the API service.                                                                                                        |
+| Auth policy:                       | Authentication/Authorization policies applied to API. For now, AMPLIFY Central supports passthrough, api key and oauth.              |
+| Specification:                     | The API service specification. The Agent SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured.    |
+| Documentation:                     | Documentation for the API.                                                                                                           |
+| Tags:                              | List of resource tags.                                                                                                               |
+| Image:                             | Image for the API service.                                                                                                           |
+| Image content type:                | Content type of the Image associated with API service.                                                                               |
+| Resource type                      | Specifies the API specification type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").                |
+| State/Status                       | State representation of API in external API Gateway(unpublished/published).                                                          |
+| Attributes                         | List of string key-value pairs that will be set on the resources created by the agent.                                               |
+| Endpoints                          | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                           |
 
+To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to AMPLIFY Central. 
 
-To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to AMPLIFY Central.
+In case where the *SetResourceType* method is not explicitly invoked, the builder uses the spec content to discovers the type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").
 
 #### Sample of creating service body using the builder
 ```
@@ -393,6 +395,9 @@ func (a *AzureClient) getAzureAPIAuthPolicy(azAPI apim.APIContract) string {
 }
 
 ```
+
+
+
 
 ### Publishing changes to Central
 The Agent can use the service body definition built by earlier setup and call *PublishAPI* method in *agent* package to publish the discovered API to AMPLIFY Central. The method uses the service body to create following API server resources
