@@ -62,20 +62,23 @@ func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 		}
 		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
 		if len(serverVar.Enum) == 0 {
-			for _, template := range allURLs {
-				newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string)))
-			}
+			newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, serverVar.Default.(string))
 		} else {
 			for _, enumVal := range serverVar.Enum {
-				for _, template := range allURLs {
-					newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", serverKey), enumVal.(string)))
-				}
+				newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, enumVal.(string))
 			}
 		}
 		allURLs = newURLs
 	}
 
 	return defaultURL, allURLs, nil
+}
+
+func (p *oas3SpecProcessor) processURLSubstutions(allURLs, newURLs []string, varName, varValue string) []string {
+	for _, template := range allURLs {
+		newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", varName), varValue))
+	}
+	return newURLs
 }
 
 func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndpointDefinition, error) {
