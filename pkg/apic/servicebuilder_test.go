@@ -37,7 +37,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetState(PublishedStatus).
 		SetSubscriptionName("testsubscription").
 		SetAPISpec([]byte{}).
-		AddServiceEndpoint("https", "test.com", "443", "/test").
+		AddServiceEndpoint("https", "test.com", 443, "/test").
 		SetImage("image").
 		SetImageContentType("image/jpeg").
 		SetResourceType("foobar").
