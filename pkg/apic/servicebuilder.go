@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"fmt"
+
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -41,7 +43,6 @@ func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
 			AuthPolicy:        Passthrough,
-			ResourceType:      Oas3,
 			CreatedBy:         config.AgentTypeName,
 			State:             PublishedStatus,
 			Status:            PublishedStatus,
@@ -163,5 +164,24 @@ func (b *serviceBodyBuilder) AddServiceEndpoint(protocol, host string, port int3
 }
 
 func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
-	return b.serviceBody, b.err
+	if b.err != nil {
+		return b.serviceBody, b.err
+	}
+
+	specParser := newSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
+	err := specParser.parse()
+	if err != nil {
+		return b.serviceBody, fmt.Errorf("failed to parse service specification for '%s': %s", b.serviceBody.APIName, err)
+	}
+	specProcessor := specParser.getSpecProcessor()
+	b.serviceBody.ResourceType = specProcessor.getResourceType()
+
+	if len(b.serviceBody.Endpoints) == 0 {
+		endPoints, err := specProcessor.getEndpoints()
+		if err != nil {
+			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
+		}
+		b.serviceBody.Endpoints = endPoints
+	}
+	return b.serviceBody, nil
 }
