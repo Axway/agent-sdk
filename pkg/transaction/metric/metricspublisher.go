@@ -3,7 +3,6 @@ package metric
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -47,6 +46,7 @@ func (pj *publisher) publishEvent(event interface{}) {
 	fmt.Println(string(buffer))
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
+	headers["x-org-id"] = agent.GetCentralConfig().GetTenantID()
 	request := api.Request{
 		Method:  api.POST,
 		URL:     agent.GetCentralConfig().GetGateKeeperURL(),
@@ -65,7 +65,7 @@ func NewMetricPublisher(eventChannel chan interface{}) Publisher {
 		eventChannel: eventChannel,
 		apiClient:    api.NewClient(nil, ""),
 	}
-	_, err := jobs.RegisterIntervalJob(publisherJob, 30*time.Second)
+	_, err := jobs.RegisterSingleRunJob(publisherJob)
 	if err != nil {
 		panic(err)
 	}

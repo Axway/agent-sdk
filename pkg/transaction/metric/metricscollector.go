@@ -134,7 +134,10 @@ func (c *collector) getOrgGUID() string {
 
 func (c *collector) generateEvents() {
 	defer c.cleanup()
-
+	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
+		agent.GetCentralConfig().GetDataplaneType() == "" {
+		return
+	}
 	if len(c.apiMetricMap) != 0 {
 		c.registry.Each(c.processMetricFromRegistry)
 		for _, apiMetric := range c.apiMetricMap {
@@ -154,11 +157,11 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 		usageEvent := V4Event{
 			ID:        usageEventID.String(),
 			Timestamp: c.startTime.UnixNano() / 1e6,
-			Event:     "usage." + agent.GetCentralConfig().GetEnvironmentName() + ".transactions",
+			Event:     "usage." + agent.GetCentralConfig().GetDataplaneType() + ".Transactions",
 			App:       orgGUID,
 			Version:   "4",
 			Distribution: V4EventDistribution{
-				Environment: agent.GetCentralConfig().GetEnvironmentName(),
+				Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
 				Version:     "1",
 			},
 			Data: map[string]interface{}{
@@ -182,7 +185,7 @@ func (c *collector) generateAPIMetricEvent(apiMetric *APIMetric) {
 		App:       c.orgGUID,
 		Version:   "4",
 		Distribution: V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetEnvironmentName(),
+			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
 			Version:     "1",
 		},
 		Data: apiMetric,
@@ -201,7 +204,7 @@ func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *StatusMetric) 
 		App:       c.orgGUID,
 		Version:   "4",
 		Distribution: V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetEnvironmentName(),
+			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
 			Version:     "1",
 		},
 		Data: apiStatusMetric,

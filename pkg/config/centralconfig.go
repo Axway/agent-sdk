@@ -81,11 +81,13 @@ type CentralConfig interface {
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
 	GetAgentName() string
+	GetDataplaneType() string
 	GetTeamName() string
 	GetTeamID() string
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
+	GetPlatformEnvironmentID() string
 	GetGateKeeperURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
@@ -127,8 +129,10 @@ type CentralConfiguration struct {
 	APICDeployment            string        `config:"deployment"`
 	Environment               string        `config:"environment"`
 	AgentName                 string        `config:"agentName"`
+	DataplaneType             string        `config:"dataplaneType"`
 	URL                       string        `config:"url"`
 	PlatformURL               string        `config:"platformURL"`
+	PlatformEnvironmentID     string        `config:"platformEnvironmentID"`
 	GatekeeperURL             string        `config:"gatekeeperURL"`
 	APIServerVersion          string        `config:"apiServerVersion"`
 	TagsToPublish             string        `config:"additionalTags"`
@@ -154,7 +158,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		TLS:                       NewTLSConfig(),
 		PollInterval:              60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
-		GatekeeperURL:             "https://gatekeeper.platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
@@ -164,6 +167,11 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
 	return c.PlatformURL
+}
+
+// GetPlatformEnvironmentID - Returns the platform environment ID
+func (c *CentralConfiguration) GetPlatformEnvironmentID() string {
+	return c.PlatformEnvironmentID
 }
 
 // GetGateKeeperURL - Returns the central base URL
@@ -219,6 +227,11 @@ func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
+}
+
+// GetDataplaneType - Returns the agent name
+func (c *CentralConfiguration) GetDataplaneType() string {
+	return c.DataplaneType
 }
 
 // GetAgentName - Returns the agent name
@@ -390,6 +403,7 @@ const (
 	pathTenantID               = "central.organizationID"
 	pathURL                    = "central.url"
 	pathPlatformURL            = "central.platformURL"
+	pathPlatformEnvironmentID  = "central.platformEnvironmentID"
 	pathGateKeeperURL          = "central.gatekeeperURL"
 	pathAuthPrivateKey         = "central.auth.privateKey"
 	pathAuthPublicKey          = "central.auth.publicKey"
@@ -405,6 +419,7 @@ const (
 	pathSSLMaxVersion          = "central.ssl.maxVersion"
 	pathEnvironment            = "central.environment"
 	pathAgentName              = "central.agentName"
+	pathDataplaneType          = "central.dataplaneType"
 	pathDeployment             = "central.deployment"
 	pathMode                   = "central.mode"
 	pathTeam                   = "central.team"
@@ -479,6 +494,15 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
+	// if c.GetGateKeeperURL() == "" {
+	// 	exception.Throw(ErrBadConfig.FormatError(pathGateKeeperURL))
+	// }
+	// if c.GetDataplaneType() == "" {
+	// 	exception.Throw(ErrBadConfig.FormatError(pathDataplaneType))
+	// }
+	// if c.GetPlatformEnvironmentID() == "" {
+	// 	exception.Throw(ErrBadConfig.FormatError(pathPlatformEnvironmentID))
+	// }
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -487,7 +511,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of AMPLIFY Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
-	props.AddStringProperty(pathGateKeeperURL, "https://api.appcelerator.com/p/v2/partner-track", "URL of the GateKeeper")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for AMPLIFY Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -510,6 +533,9 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
+		props.AddStringProperty(pathGateKeeperURL, "https://gatekeeper.platform.axway.com/v4/event", "URL of the GateKeeper")
+		props.AddStringProperty(pathDataplaneType, "", "The type name of the associated dataplane")
+		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
@@ -550,11 +576,13 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
-	cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+		cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
+		cfg.DataplaneType = props.StringPropertyValue(pathDataplaneType)
+		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
