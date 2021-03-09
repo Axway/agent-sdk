@@ -35,7 +35,9 @@ error-check:
 	./build/scripts/error_check.sh ./pkg
 
 sonar: test-sonar
-	./sonar.sh $(mode)
+	@echo "mode: $(mode)"
+	@echo "sonarhost: $(sonarHost)"
+	./sonar.sh $(mode) $(sonarHost)
 
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
