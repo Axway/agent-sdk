@@ -12,7 +12,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/tidwall/gjson"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -20,7 +19,7 @@ func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1
 		ApiService: serviceBody.serviceContext.serviceName,
 		Definition: v1alpha1.ApiServiceRevisionSpecDefinition{
 			Type:  c.getRevisionDefinitionType(*serviceBody),
-			Value: base64.StdEncoding.EncodeToString(serviceBody.Swagger),
+			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
 		},
 	}
 }
@@ -176,16 +175,8 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 
 //getRevisionDefinitionType -
 func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
-	var revisionDefinitionType string
-	if serviceBody.ResourceType == Wsdl {
-		revisionDefinitionType = Wsdl
-	} else {
-		oasVer := gjson.GetBytes(serviceBody.Swagger, "openapi")
-		revisionDefinitionType = Oas2
-		if oasVer.Exists() {
-			// OAS v3
-			revisionDefinitionType = Oas3
-		}
+	if serviceBody.ResourceType == "" {
+		return Unstructured
 	}
-	return revisionDefinitionType
+	return serviceBody.ResourceType
 }

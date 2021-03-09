@@ -1,7 +1,8 @@
 package apic
 
 import (
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"fmt"
+
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -26,7 +27,8 @@ type ServiceBuilder interface {
 	SetState(state string) ServiceBuilder
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
-	SetServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
+	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
+	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -41,12 +43,11 @@ func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
 			AuthPolicy:        Passthrough,
-			ResourceType:      Oas3,
 			CreatedBy:         config.AgentTypeName,
 			State:             PublishedStatus,
 			Status:            PublishedStatus,
 			ServiceAttributes: make(map[string]string),
-			Endpoints:         make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0),
+			Endpoints:         make([]EndpointDefinition, 0),
 		},
 	}
 
@@ -92,7 +93,7 @@ func (b *serviceBodyBuilder) SetAuthPolicy(authPolicy string) ServiceBuilder {
 }
 
 func (b *serviceBodyBuilder) SetAPISpec(spec []byte) ServiceBuilder {
-	b.serviceBody.Swagger = spec
+	b.serviceBody.SpecDefinition = spec
 	return b
 }
 
@@ -146,17 +147,41 @@ func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]str
 	return b
 }
 
-func (b *serviceBodyBuilder) SetServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder {
-	ep := v1alpha1.ApiServiceInstanceSpecEndpoint{
+func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder {
+	b.serviceBody.Endpoints = endpoints
+	return b
+}
+
+func (b *serviceBodyBuilder) AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder {
+	ep := EndpointDefinition{
 		Host:     host,
 		Port:     port,
 		Protocol: protocol,
-		Routing:  v1alpha1.ApiServiceInstanceSpecRouting{BasePath: basePath},
+		BasePath: basePath,
 	}
 	b.serviceBody.Endpoints = append(b.serviceBody.Endpoints, ep)
 	return b
 }
 
 func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
-	return b.serviceBody, b.err
+	if b.err != nil {
+		return b.serviceBody, b.err
+	}
+
+	specParser := newSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
+	err := specParser.parse()
+	if err != nil {
+		return b.serviceBody, fmt.Errorf("failed to parse service specification for '%s': %s", b.serviceBody.APIName, err)
+	}
+	specProcessor := specParser.getSpecProcessor()
+	b.serviceBody.ResourceType = specProcessor.getResourceType()
+
+	if len(b.serviceBody.Endpoints) == 0 {
+		endPoints, err := specProcessor.getEndpoints()
+		if err != nil {
+			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
+		}
+		b.serviceBody.Endpoints = endPoints
+	}
+	return b.serviceBody, nil
 }

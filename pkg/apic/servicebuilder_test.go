@@ -13,14 +13,15 @@ func TestNewServiceBodyBuilder(t *testing.T) {
 
 	// test all the default values
 	assert.Equal(t, Passthrough, svcBody.AuthPolicy)
-	assert.Equal(t, Oas3, svcBody.ResourceType)
+	assert.Equal(t, Unstructured, svcBody.ResourceType)
 	assert.Equal(t, PublishedState, svcBody.State)
 	assert.Equal(t, PublishedStatus, svcBody.Status)
 }
 func TestServiceBodySetters(t *testing.T) {
 	tags := map[string]interface{}{"tag1": "t1", "tag2": "t2"}
 	attribs := map[string]string{"attrib1": "a1", "attrib2": "a2"}
-	sb, err := NewServiceBodyBuilder().
+	serviceBuilder := NewServiceBodyBuilder()
+	sb, err := serviceBuilder.
 		SetTitle("sbtitle").
 		SetAPIName("testAPI").
 		SetID("1234").
@@ -36,6 +37,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetState(PublishedStatus).
 		SetSubscriptionName("testsubscription").
 		SetAPISpec([]byte{}).
+		AddServiceEndpoint("https", "test.com", 443, "/test").
 		SetImage("image").
 		SetImageContentType("image/jpeg").
 		SetResourceType("foobar").
@@ -56,16 +58,37 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, UnpublishedStatus, sb.Status)
 	assert.Equal(t, PublishedStatus, sb.State)
 
-	assert.Equal(t, []byte{}, sb.Swagger)
+	assert.Equal(t, []byte{}, sb.SpecDefinition)
 	assert.Equal(t, []byte("documentation"), sb.Documentation)
 
 	assert.Equal(t, "image/jpeg", sb.ImageContentType)
 	assert.Equal(t, "image", sb.Image)
-	assert.Equal(t, "foobar", sb.ResourceType)
+	assert.Equal(t, Unstructured, sb.ResourceType)
 
 	assert.Equal(t, "MAJOR", sb.APIUpdateSeverity)
 	assert.Len(t, sb.Tags, 2)
 	assert.Equal(t, "t2", sb.Tags["tag2"])
 	assert.Len(t, sb.ServiceAttributes, 2)
 	assert.Equal(t, "a2", sb.ServiceAttributes["attrib2"])
+}
+
+func TestServiceBodyWithParseError(t *testing.T) {
+	serviceBuilder := NewServiceBodyBuilder()
+	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.NotNil(t, err)
+
+	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.NotNil(t, err)
+
+	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.NotNil(t, err)
+
+	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.NotNil(t, err)
+
+	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.NotNil(t, err)
+
+	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	assert.Nil(t, err)
 }

@@ -7,8 +7,10 @@ require (
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0
+	github.com/emicklei/proto v1.9.0
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/getkin/kin-openapi v0.9.0
+	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect

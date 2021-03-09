@@ -14,6 +14,9 @@ const (
 	SwaggerV2     = "swaggerv2"
 	Oas2          = "oas2"
 	Oas3          = "oas3"
+	Protobuf      = "protobuf"
+	AsyncAPI      = "asyncapi"
+	Unstructured  = "unstructured"
 	Specification = "specification"
 	Swagger       = "swagger"
 
@@ -72,6 +75,14 @@ type serviceContext struct {
 	consumerInstance string
 }
 
+// EndpointDefinition - holds the service endpoint definition
+type EndpointDefinition struct {
+	Host     string
+	Port     int32
+	Protocol string
+	BasePath string
+}
+
 //ServiceBody -
 type ServiceBody struct {
 	NameToPush        string `json:",omitempty"`
@@ -82,7 +93,7 @@ type ServiceBody struct {
 	Description       string `json:",omitempty"`
 	Version           string `json:",omitempty"`
 	AuthPolicy        string `json:",omitempty"`
-	Swagger           []byte `json:",omitempty"`
+	SpecDefinition    []byte `json:",omitempty"`
 	Documentation     []byte `json:",omitempty"`
 	Tags              map[string]interface{}
 	AgentMode         corecfg.AgentMode `json:",omitempty"`
@@ -96,7 +107,7 @@ type ServiceBody struct {
 	Status            string
 	ServiceAttributes map[string]string
 	serviceContext    serviceContext
-	Endpoints         []v1alpha1.ApiServiceInstanceSpecEndpoint
+	Endpoints         []EndpointDefinition
 }
 
 // ServiceClient -

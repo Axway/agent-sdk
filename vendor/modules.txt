@@ -50,6 +50,8 @@ github.com/elastic/go-windows
 github.com/emersion/go-sasl
 # github.com/emersion/go-smtp v0.13.0
 github.com/emersion/go-smtp
+# github.com/emicklei/proto v1.9.0
+github.com/emicklei/proto
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
