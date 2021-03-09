@@ -6,7 +6,7 @@ if [ "$1" = "preview" ]; then
 fi
 
 sonar-scanner -X \
-    -Dsonar.host.url=http://quality1.ecd.axway.int \
+    -Dsonar.host.url=${SONAR_HOST} \
     -Dsonar.language=go \
     -Dsonar.projectName=APIC_AGENTS_SDK \
     -Dsonar.projectVersion=1.0 \
