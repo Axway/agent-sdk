@@ -5,8 +5,6 @@ if [ "$1" = "preview" ]; then
     MODE=preview
 fi
 
-echo "mode: $1"
-echo "host: $2"
 sonar-scanner -X \
     -Dsonar.host.url=${SONAR_HOST} \
     -Dsonar.language=go \

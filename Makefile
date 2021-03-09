@@ -35,8 +35,6 @@ error-check:
 	./build/scripts/error_check.sh ./pkg
 
 sonar: test-sonar
-	@echo "mode: $(mode)"
-	@echo "sonarhost: $(sonarHost)"
 	./sonar.sh $(mode) $(sonarHost)
 
 lint: ## Lint the files
