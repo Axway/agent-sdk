@@ -22,8 +22,8 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 	cfg := &Config{
 		Central: &corecfg.CentralConfiguration{
 			AgentType:                 corecfg.TraceabilityAgent,
-			URL:                       "https://apicentral.axway.com",
-			PlatformURL:               "https://platform.axway.com",
+			URL:                       "https://xxx.axway.com",
+			PlatformURL:               "https://platform.xxx.com",
 			Mode:                      corecfg.PublishToEnvironmentAndCatalog,
 			TenantID:                  tenantID,
 			APICDeployment:            apicDeployment,

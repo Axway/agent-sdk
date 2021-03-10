@@ -344,10 +344,10 @@ Allows you to get your City's Weather, which is updated hourly. U.S. Only
 </wsdl:binding>
 <wsdl:service name="Weather">
 <wsdl:port name="WeatherSoap" binding="tns:WeatherSoap">
-<soap:address location="https://lbean006.lab.phx.axway.int:8065/WeatherWS/Weather.asmx"/>
+<soap:address location="https://beano.com:8065/WeatherWS/Weather.asmx"/>
 </wsdl:port>
 <wsdl:port name="WeatherSoap12" binding="tns:WeatherSoap12">
-<soap12:address location="https://lbean006.lab.phx.axway.int:8065/WeatherWS/Weather.asmx"/>
+<soap12:address location="https://beano.com:8065/WeatherWS/Weather.asmx"/>
 </wsdl:port>
 <wsdl:port name="WeatherHttpGet" binding="tns:WeatherHttpGet">
 <!--Note: HTTP addresses are not virtualized.-->

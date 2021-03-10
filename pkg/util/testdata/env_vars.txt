@@ -1,3 +1,3 @@
-CENTRAL_URL=https://dfeldick.dev.ampc.axwaytest.net
-CENTRAL_AUTH_URL=https://login-preprod.axway.com/auth
-CENTRAL_PLATFORMURL=https://platform.axwaytest.net
+CENTRAL_URL=https://bbunny.dev.test.net
+CENTRAL_AUTH_URL=https://test.com/auth
+CENTRAL_PLATFORMURL=https://test.net
