@@ -169,6 +169,13 @@ func (client *Client) Publish(batch publisher.Batch) error {
 			return nil
 		}
 	}
+
+	if !agent.GetCentralConfig().CanPublishTrafficEvents() {
+		log.Debug("Publishing the traffic event is turned off")
+		batch.ACK()
+		return nil
+	}
+
 	publishCount := len(batch.Events())
 	log.Infof("Publishing %d events", publishCount)
 	//update the local activity timestamp for the event to compare against

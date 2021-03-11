@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofrs/uuid"
 	metrics "github.com/rcrowley/go-metrics"
@@ -140,13 +141,17 @@ func (c *collector) generateEvents() {
 	}
 	if len(c.apiMetricMap) != 0 {
 		c.registry.Each(c.processMetricFromRegistry)
-		for _, apiMetric := range c.apiMetricMap {
-			apiID := apiMetric.APIID
-			c.generateAPIMetricEvent(apiMetric)
-			statusMetricMap := c.apiStatusMetricMap[apiID]
-			for _, apiStatusMetric := range statusMetricMap {
-				c.generateAPIStatusMetricEvent(apiStatusMetric)
+		if agent.GetCentralConfig().CanPublishMetricEvent() {
+			for _, apiMetric := range c.apiMetricMap {
+				apiID := apiMetric.APIID
+				c.generateAPIMetricEvent(apiMetric)
+				statusMetricMap := c.apiStatusMetricMap[apiID]
+				for _, apiStatusMetric := range statusMetricMap {
+					c.generateAPIStatusMetricEvent(apiStatusMetric)
+				}
 			}
+		} else {
+			log.Debug("Publishing the metric event is turned off")
 		}
 	}
 }
@@ -168,6 +173,7 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 				"value":         transactionCount,
 				"observedStart": c.startTime.UnixNano() / 1e6,
 				"observedEnd":   c.endTime.UnixNano() / 1e6,
+				"governance":    "Customer Managed",
 			},
 		}
 		c.eventChannel <- usageEvent
@@ -217,7 +223,11 @@ func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
 		counterMetric := metric.(metrics.Counter)
 		transactionCount := counterMetric.Count()
 		counterMetric.Clear()
-		c.generateUsageEvent(transactionCount, c.orgGUID)
+		if agent.GetCentralConfig().CanPublishUsageEvent() {
+			c.generateUsageEvent(transactionCount, c.orgGUID)
+		} else {
+			log.Debug("Publishing the usage event is turned off")
+		}
 	}
 
 	c.processTransactionMetric(name, metric)

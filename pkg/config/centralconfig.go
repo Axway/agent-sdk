@@ -116,6 +116,9 @@ type CentralConfig interface {
 	GetAppendDataPlaneToTitle() bool
 	SetDataPlaneName(name string)
 	GetDataPlaneName() string
+	CanPublishUsageEvent() bool
+	CanPublishMetricEvent() bool
+	CanPublishTrafficEvents() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -146,6 +149,9 @@ type CentralConfiguration struct {
 	teamID                    string
 	dataPlaneName             string
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
+	PublisUsageEvents         bool
+	PublishMetricEvents       bool
+	PublishTrafficEvents      bool
 }
 
 // NewCentralConfig - Creates the default central config
@@ -399,6 +405,21 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 	return c.UpdateFromAPIServer
 }
 
+// CanPublishUsageEvent - Returns flag to indicate agent can publish usage events
+func (c *CentralConfiguration) CanPublishUsageEvent() bool {
+	return c.PublisUsageEvents
+}
+
+// CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
+func (c *CentralConfiguration) CanPublishMetricEvent() bool {
+	return c.PublishMetricEvents
+}
+
+// CanPublishTrafficEvents - Returns flag to indicate agent can publish traffic events
+func (c *CentralConfiguration) CanPublishTrafficEvents() bool {
+	return c.PublishTrafficEvents
+}
+
 const (
 	pathTenantID               = "central.organizationID"
 	pathURL                    = "central.url"
@@ -429,6 +450,9 @@ const (
 	pathAdditionalTags         = "central.additionalTags"
 	pathAppendDataPlaneToTitle = "central.appendDataPlaneToTitle"
 	pathUpdateFromAPIServer    = "central.updateFromAPIServer"
+	pathPublishUsage           = "central.publishUsage"
+	pathPublishMetric          = "central.publishMetric"
+	pathPublishTraffic         = "central.publishTraffic"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -536,6 +560,9 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathGateKeeperURL, "https://gatekeeper.platform.axway.com/v4/event", "URL of the GateKeeper")
 		props.AddStringProperty(pathDataplaneType, "", "The type name of the associated dataplane")
 		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
+		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
+		props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
+		props.AddBoolProperty(pathPublishTraffic, true, "Indicates if the agent can publish traffic event to AMPLIFY platform. Default to true")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
@@ -583,6 +610,9 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
 		cfg.DataplaneType = props.StringPropertyValue(pathDataplaneType)
 		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
+		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
+		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
+		cfg.PublishTrafficEvents = props.BoolPropertyValue(pathPublishTraffic)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)

@@ -11,11 +11,8 @@ require (
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/getkin/kin-openapi v0.9.0
-<<<<<<< HEAD
-	github.com/google/go-cmp v0.5.0 // indirect
-=======
 	github.com/gofrs/uuid v3.2.0+incompatible
->>>>>>> 778f815... Changes to collect metric and generate usage and api metric events
+	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
