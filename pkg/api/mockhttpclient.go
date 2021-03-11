@@ -16,6 +16,8 @@ type MockHTTPClient struct {
 
 	RespCount int
 	Responses []MockResponse
+
+	Requests []Request // lists all requests the client has received
 }
 
 // MockResponse - use for mocking the MockHTTPClient responses
@@ -60,6 +62,7 @@ func (c *MockHTTPClient) SetResponses(responses []MockResponse) {
 
 // Send -
 func (c *MockHTTPClient) Send(request Request) (*Response, error) {
+	c.Requests = append(c.Requests, request)
 	if c.Responses != nil && len(c.Responses) > 0 {
 		return c.sendMultiple(request)
 	}

@@ -56,6 +56,10 @@ github.com/emicklei/proto
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038 => github.com/adriansr/fsnotify v0.0.0-20180417234312-c9bbe1f46f1d
 github.com/fsnotify/fsnotify
+# github.com/gabriel-vasile/mimetype v1.1.2
+github.com/gabriel-vasile/mimetype
+github.com/gabriel-vasile/mimetype/internal/json
+github.com/gabriel-vasile/mimetype/internal/matchers
 # github.com/getkin/kin-openapi v0.9.0
 github.com/getkin/kin-openapi/jsoninfo
 github.com/getkin/kin-openapi/openapi2

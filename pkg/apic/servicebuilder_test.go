@@ -17,6 +17,7 @@ func TestNewServiceBodyBuilder(t *testing.T) {
 	assert.Equal(t, PublishedState, svcBody.State)
 	assert.Equal(t, PublishedStatus, svcBody.Status)
 }
+
 func TestServiceBodySetters(t *testing.T) {
 	tags := map[string]interface{}{"tag1": "t1", "tag2": "t2"}
 	attribs := map[string]string{"attrib1": "a1", "attrib2": "a2"}
@@ -43,6 +44,10 @@ func TestServiceBodySetters(t *testing.T) {
 		SetResourceType("foobar").
 		SetTags(tags).
 		SetServiceAttribute(attribs).
+		SetUnstructuredContentType("application/zip").
+		SetUnstructuredFilename("test.zip").
+		SetUnstructuredLabel("Label").
+		SetUnstructuredType("Type").
 		Build()
 
 	assert.Nil(t, err)
@@ -70,6 +75,10 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "t2", sb.Tags["tag2"])
 	assert.Len(t, sb.ServiceAttributes, 2)
 	assert.Equal(t, "a2", sb.ServiceAttributes["attrib2"])
+	assert.Equal(t, "application/zip", sb.UnstructuredProps.ContentType)
+	assert.Equal(t, "test.zip", sb.UnstructuredProps.Filename)
+	assert.Equal(t, "Label", sb.UnstructuredProps.Label)
+	assert.Equal(t, "Type", sb.UnstructuredProps.AssetType)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {

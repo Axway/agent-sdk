@@ -30,6 +30,11 @@ type ServiceBuilder interface {
 	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 
+	SetUnstructuredType(assetType string) ServiceBuilder
+	SetUnstructuredContentType(contentType string) ServiceBuilder
+	SetUnstructuredLabel(label string) ServiceBuilder
+	SetUnstructuredFilename(filename string) ServiceBuilder
+
 	Build() (ServiceBody, error)
 }
 
@@ -48,6 +53,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			Status:            PublishedStatus,
 			ServiceAttributes: make(map[string]string),
 			Endpoints:         make([]EndpointDefinition, 0),
+			UnstructuredProps: &UnstructuredProperties{},
 		},
 	}
 
@@ -163,6 +169,26 @@ func (b *serviceBodyBuilder) AddServiceEndpoint(protocol, host string, port int3
 	return b
 }
 
+func (b *serviceBodyBuilder) SetUnstructuredType(assetType string) ServiceBuilder {
+	b.serviceBody.UnstructuredProps.AssetType = assetType
+	return b
+}
+
+func (b *serviceBodyBuilder) SetUnstructuredContentType(contentType string) ServiceBuilder {
+	b.serviceBody.UnstructuredProps.ContentType = contentType
+	return b
+}
+
+func (b *serviceBodyBuilder) SetUnstructuredLabel(label string) ServiceBuilder {
+	b.serviceBody.UnstructuredProps.Label = label
+	return b
+}
+
+func (b *serviceBodyBuilder) SetUnstructuredFilename(filename string) ServiceBuilder {
+	b.serviceBody.UnstructuredProps.Filename = filename
+	return b
+}
+
 func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	if b.err != nil {
 		return b.serviceBody, b.err
@@ -175,6 +201,8 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 	specProcessor := specParser.getSpecProcessor()
 	b.serviceBody.ResourceType = specProcessor.getResourceType()
+
+	// Check if the type is unstructured to gather more info
 
 	if len(b.serviceBody.Endpoints) == 0 {
 		endPoints, err := specProcessor.getEndpoints()
