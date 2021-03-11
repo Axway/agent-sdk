@@ -31,7 +31,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	enableSubscription := c.enableSubscription(serviceBody)
 
-	consInst := v1alpha1.ConsumerInstanceSpec{
+	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		ApiServiceInstance: serviceBody.serviceContext.currentInstance,
 		Description:        serviceBody.Description,
@@ -47,17 +47,16 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			AutoSubscribe:          autoSubscribe,
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
+		UnstructuredDataProperties: c.buildUnstructuredDataProperties(serviceBody),
 	}
-
-	if serviceBody.ResourceType == Unstructured {
-		consInst.UnstructuredDataProperties = c.buildUnstructuredDataProperties(serviceBody)
-	}
-
-	return consInst
 }
 
-//buildUnstructuredDataProperties - creates the unstrucuted data properties portion of the consumer instance
+//buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
 func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties {
+	if serviceBody.ResourceType != Unstructured {
+		return v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{}
+	}
+
 	const defType = "Asset"
 	unstructuredDataProperties := v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{
 		Type:        defType,
