@@ -8,25 +8,25 @@ The SDK provides a predefined configuration that can be setup based on yaml file
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
 
-| YAML property                   | Variable name                  | Description                                                                                                                                                              |
-|--------------------------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)         |
-| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)           |
-| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                 |
-| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)               |
-| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                        |
-| central.additionalTags         | CENTRAL_ADDITIONALTAGS         | Additional tag names to publish while publishing the API. Helpful to identify the API source. It is a comma separated list.                                         |
-| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                  |
-| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.              |
-| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                     |
-| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                      |
-| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                         |
-| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                |
-| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                         |
-| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/).   |
-| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.     |
-| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                      |
-| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                     |
+| YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
+|--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)                                                                                                                                                          |
+| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
+| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
+| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
+| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
+| central.additionalTags         | CENTRAL_ADDITIONALTAGS         | Additional tag names to publish while publishing the API. Helpful to identify the API source. It is a comma separated list.                                                                                                                                                                                               |
+| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.                                                                                                                                                               |
+| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
+| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
+| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
+| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
+| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
+| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
+| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
+| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
+| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
 
 The following is a sample of Central configuration in YAML
 ```
@@ -313,29 +313,43 @@ tag.MatchRegEx("(some){1}")
 ### Processing Discovery
 The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to AMPLIFY Central the following properties are needed.
 
-| API Service property               | Description                                                                                                                          |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| ID                                 | ID of the API.                                                                                                                       |
-| Title                              | Name of the API that will be used as AMPLIFY Central Catalog name.                                                                   |
-| Description:                       | A brief summary about the API.                                                                                                       |
-| Version:                           | Version of the API.                                                                                                                  |
-| URL:                               | Endpoint for the API service.                                                                                                        |
-| Auth policy:                       | Authentication/Authorization policies applied to API. For now, AMPLIFY Central supports passthrough, api key and oauth.              |
-| Specification:                     | The API service specification. The Agent SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured.    |
-| Documentation:                     | Documentation for the API.                                                                                                           |
-| Tags:                              | List of resource tags.                                                                                                               |
-| Image:                             | Image for the API service.                                                                                                           |
-| Image content type:                | Content type of the Image associated with API service.                                                                               |
-| Resource type                      | Specifies the API specification type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").                |
-| State/Status                       | State representation of API in external API Gateway(unpublished/published).                                                          |
-| Attributes                         | List of string key-value pairs that will be set on the resources created by the agent.                                               |
-| Endpoints                          | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                           |
+| API Service property | Description                                                                                                                       |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| ID                   | ID of the API.                                                                                                                    |
+| Title                | Name of the API that will be used as AMPLIFY Central Catalog name.                                                                |
+| Description:         | A brief summary about the API.                                                                                                    |
+| Version:             | Version of the API.                                                                                                               |
+| URL:                 | Endpoint for the API service.                                                                                                     |
+| Auth policy:         | Authentication/Authorization policies applied to API. For now, AMPLIFY Central supports passthrough, api key and oauth.           |
+| Specification:       | The API service specification. The Agent SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured. |
+| Documentation:       | Documentation for the API.                                                                                                        |
+| Tags:                | List of resource tags.                                                                                                            |
+| Image:               | Image for the API service.                                                                                                        |
+| Image content type:  | Content type of the Image associated with API service.                                                                            |
+| Resource type        | Specifies the API specification type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").             |
+| State/Status         | State representation of API in external API Gateway(unpublished/published).                                                       |
+| Attributes           | List of string key-value pairs that will be set on the resources created by the agent.                                            |
+| Endpoints            | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                        |
 
 To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to AMPLIFY Central. 
 
 In case where the *SetResourceType* method is not explicitly invoked, the builder uses the spec content to discovers the type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").
 
+#### Unstructured data additional properties
+
+Along with the above properties the following properties are on the ServiceBodyBuilder for unstructured data only.
+
+| API Service property    | Description                              | Default (not set)   |
+|-------------------------|------------------------------------------|---------------------|
+| UnstructuredAssetType   | Type of asset for the unstructured data. | Asset               |
+| UnstructuredContentType | Content type for this data.              | parse based on spec |
+| UnstructuredLabel       | Label to display int he catalog item.    | Asset               |
+| UnstructuredFilename:   | Filename of the file to download.        | APIName             |
+
+The builder will use these properties when set, or use the default if not.
+
 #### Sample of creating service body using the builder
+
 ```
 func (a *AzureClient) buildServiceBody(azAPI apim.APIContract, apiSpec []byte) (apic.ServiceBody, error) {
 	return apic.NewServiceBodyBuilder().
@@ -533,17 +547,17 @@ func createSubscriptionSchema() error {
 
 The AMPLIFY Central subscriptions follows the state transition to manage the subscription workflow. Below are the list of subscription states
 
-| Subscription State     | Description                                                                                                                   |
-|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| requested              | A transient state that indicates the user has submitted a subscription request and approval is required.                      |
-| approved               | Indicates that the subscription request was approved by the asset provider and the access to the asset is being provisioned.  |
-| rejected               | Indicates that the subscription request was rejected by the asset provider.                                                   |
-| active                 | Indicates the provisioning is complete and consumer can use the asset. i.e make an API call for API assets.                   |
-| failed_to_subscribe    | This state indicates there was an error during the provisioning.                                                              |
-| unsubscribe_initiated  | Indicates that the consumer has requested to unsubscribe from an asset.                                                       |
-| unsubscribed           | De-provisioning the subscription is completed.                                                                                |
-| failed_to_unsubscribe  | This state indicates the request to unsubscribe could not be fulfilled due to an internal error.                              |
-| change_requested       | Indicates that a change was submitted for a subscription. Change requests can be approved or rejected by asset providers.     |
+| Subscription State    | Description                                                                                                                  |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------|
+| requested             | A transient state that indicates the user has submitted a subscription request and approval is required.                     |
+| approved              | Indicates that the subscription request was approved by the asset provider and the access to the asset is being provisioned. |
+| rejected              | Indicates that the subscription request was rejected by the asset provider.                                                  |
+| active                | Indicates the provisioning is complete and consumer can use the asset. i.e make an API call for API assets.                  |
+| failed_to_subscribe   | This state indicates there was an error during the provisioning.                                                             |
+| unsubscribe_initiated | Indicates that the consumer has requested to unsubscribe from an asset.                                                      |
+| unsubscribed          | De-provisioning the subscription is completed.                                                                               |
+| failed_to_unsubscribe | This state indicates the request to unsubscribe could not be fulfilled due to an internal error.                             |
+| change_requested      | Indicates that a change was submitted for a subscription. Change requests can be approved or rejected by asset providers.    |
 
 
 To process the subscriptions, the SDK provides a mechanism to register processors corresponding to subscription state. Typically the agent will register the processor for *approved* and *unsubscribe_initiated* to receive event for processing the provision or de-provision the subscription. The agent SDK provides support for updating the subscription state to transition the subscription workflow to next state. For example, the processor for *approved* state can update the subscription state to *active* or *failed_to_subscribe* states.
