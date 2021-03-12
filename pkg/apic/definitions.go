@@ -108,6 +108,15 @@ type ServiceBody struct {
 	ServiceAttributes map[string]string
 	serviceContext    serviceContext
 	Endpoints         []EndpointDefinition
+	UnstructuredProps *UnstructuredProperties
+}
+
+//UnstructuredProperties -
+type UnstructuredProperties struct {
+	AssetType   string
+	ContentType string
+	Label       string
+	Filename    string
 }
 
 // ServiceClient -

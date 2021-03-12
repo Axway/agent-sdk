@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -8,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -380,4 +383,114 @@ func TestRegisterSubscriptionWebhook(t *testing.T) {
 
 	err = client.RegisterSubscriptionWebhook()
 	assert.Nil(t, err)
+}
+
+func TestUnstructuredConsumerInstanceData(t *testing.T) {
+	// test the consumer instance handling unstrucutred data
+	client, httpClient := GetTestServiceClient()
+	serviceBody.AuthPolicy = "pass-through"
+
+	// this should be a full go right path
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
+		{
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
+		},
+	})
+
+	// Test thrift object
+	const filename = "multiplication.thrift"
+	thriftFile, _ := os.Open("./testdata/" + filename) // OAS2
+	thriftBytes, _ := ioutil.ReadAll(thriftFile)
+	thriftFile.Close() // close now, no need to wait until the test is finished
+
+	assetType := "Apache Thrift"
+	contentType := "application/vnd.apache.thrift.compact"
+	cloneServiceBody := serviceBody
+	cloneServiceBody.ResourceType = Unstructured
+	cloneServiceBody.SpecDefinition = thriftBytes
+	cloneServiceBody.UnstructuredProps = &UnstructuredProperties{
+		AssetType:   assetType,
+		Filename:    filename,
+		ContentType: contentType,
+	}
+
+	apiSvc, err := client.PublishService(cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, apiSvc)
+
+	// Get last request as consumerinstance
+	var consInst v1alpha1.ConsumerInstance
+	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-1].Body))
+	json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-1].Body, &consInst)
+
+	// Only asset type set, label and asset type are equal
+	assert.Equal(t, assetType, consInst.Spec.UnstructuredDataProperties.Type)
+	assert.Equal(t, assetType, consInst.Spec.UnstructuredDataProperties.Label)
+	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
+	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
+
+	// this should be a full go right path
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusNotFound,
+		},
+		{
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
+		},
+	})
+
+	label := "Thrift"
+	cloneServiceBody = serviceBody
+	cloneServiceBody.ResourceType = Unstructured
+	cloneServiceBody.SpecDefinition = thriftBytes
+	cloneServiceBody.UnstructuredProps = &UnstructuredProperties{
+		Label:       label,
+		Filename:    filename,
+		ContentType: contentType,
+	}
+
+	apiSvc, err = client.PublishService(cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, apiSvc)
+
+	// Get last request as consumerinstance
+	consInst = v1alpha1.ConsumerInstance{}
+	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-1].Body))
+	json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-1].Body, &consInst)
+
+	// Only label type set, label and asset type are equal
+	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Type)
+	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Label)
+	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
+	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
+
 }
