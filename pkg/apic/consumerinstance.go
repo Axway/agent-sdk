@@ -79,11 +79,12 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 	}
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(revision *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
-	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
-	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	revision.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
+func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
+	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance.Title = serviceBody.NameToPush
+	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
+	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
 }
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance

@@ -36,6 +36,7 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(serviceBody *ServiceBody
 }
 
 func (c *ServiceClient) updateInstanceResource(instance *v1alpha1.APIServiceInstance, serviceBody *ServiceBody, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint) {
+	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = c.buildAPIResourceAttributes(serviceBody, instance.Attributes, false)
 	instance.Tags = c.mapToTagsArray(serviceBody.Tags)

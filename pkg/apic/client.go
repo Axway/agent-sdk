@@ -240,6 +240,7 @@ func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment *v1alpha1.Environ
 		return nil
 	}
 	apiEnvironment.Attributes[attribute] = "true"
+	apiEnvironment.ResourceMeta.Metadata.ResourceVersion = ""
 
 	buffer, err := json.Marshal(apiEnvironment)
 	if err != nil {
