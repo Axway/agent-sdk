@@ -16,6 +16,33 @@ type AgentFilter struct {
 	filterConditions []Condition
 }
 
+var defaultSupportedExpr = []CallType{GETVALUE, MATCHREGEX, CONTAINS, EXISTS, ANY}
+
+var supportedExpr = defaultSupportedExpr
+
+// SetSupportedCallExprType - Overrides the list of supported condition expression
+func SetSupportedCallExprType(callTypes []CallType) {
+	supportedExpr = defaultSupportedExpr
+	overriddentSupportedExpr := []CallType{}
+	for _, callType := range callTypes {
+		switch callType {
+		case GETVALUE:
+			fallthrough
+		case MATCHREGEX:
+			fallthrough
+		case CONTAINS:
+			fallthrough
+		case EXISTS:
+			fallthrough
+		case ANY:
+			overriddentSupportedExpr = append(overriddentSupportedExpr, callType)
+		}
+	}
+	if len(overriddentSupportedExpr) > 0 {
+		supportedExpr = overriddentSupportedExpr
+	}
+}
+
 // NewFilter - Creates a new instance of the filter
 func NewFilter(filterConfig string) (filter Filter, err error) {
 	conditionParser := NewConditionParser()

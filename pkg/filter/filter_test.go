@@ -33,6 +33,8 @@ var filterDataWithStringArrary = map[string][]string{
 }
 
 func TestSimpleFilter(t *testing.T) {
+	SetSupportedCallExprType(defaultSupportedExpr)
+
 	assertFilter(t, "tag.name == \"value 1\"", filterData, false)
 	assertFilter(t, "tag.name1 == \"value 1\"", filterData, true)
 	assertFilter(t, "tag.name1 == \"value 1,v 1,v-1\"", filterDataWithStringArrary, true)
@@ -68,6 +70,8 @@ func TestSimpleFilter(t *testing.T) {
 }
 
 func TestCompundFilter(t *testing.T) {
+	SetSupportedCallExprType(defaultSupportedExpr)
+
 	assertFilter(t, "tag.name1 == \"value 1\" || tag.name2 == \"value 2\"", filterData, true)
 	assertFilter(t, "tag.name1 == \"missing\" || tag.name2 == \"value 2\"", filterData, true)
 	assertFilter(t, "tag.name1 == \"missing\" || tag.name2 == \"missing\"", filterData, false)
@@ -108,6 +112,8 @@ func assertFilter(t *testing.T, filterConfig string, filterData interface{}, exp
 }
 
 func TestFilterParsingError(t *testing.T) {
+	SetSupportedCallExprType(defaultSupportedExpr)
+
 	// golang Syntax OK, but have filter syntax errors
 	assertFilterSyntaxErr(t, "a == b", "Unrecognized condition")
 	assertFilterSyntaxErr(t, "something.name1 == \"value 1\"", "Invalid selector type")
@@ -147,4 +153,18 @@ func assertFilterSyntaxErr(t *testing.T, filterConfig, expectedErr string) {
 	assert.Nil(t, agentFilter)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), expectedErr)
+}
+
+func TestOverrideSupportedExpr(t *testing.T) {
+	SetSupportedCallExprType([]CallType{EXISTS})
+
+	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\"", "unsupported condition")
+	assertFilterSyntaxErr(t, "tag.Any() == \"value 1\"", "unsupported condition")
+	assertFilterSyntaxErr(t, "tag.name1.Contains(\"val\")", "unsupported condition")
+	assertFilterSyntaxErr(t, "tag.name1.MatchRegEx(\"(val){1}\")", "unsupported condition")
+	assertFilter(t, "tag.name1.Exists()", filterData, true)
+	assertFilter(t, "tag.name1.Exists() || tag.nothing.Exists()", filterData, true)
+	assertFilter(t, "tag.name1.Exists() && tag.nothing.Exists()", filterData, false)
+
+	assertFilterSyntaxErr(t, "tag.name1.Exists() && tag.name1.MatchRegEx(\"(val){1}\")", "unsupported condition")
 }
