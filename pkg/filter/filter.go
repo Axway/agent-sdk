@@ -21,7 +21,7 @@ var defaultSupportedExpr = []CallType{GETVALUE, MATCHREGEX, CONTAINS, EXISTS, AN
 var supportedExpr = defaultSupportedExpr
 
 // SetSupportedCallExprType - Overrides the list of supported condition expression
-func SetSupportedCallExprType(callTypes []CallType) {
+func SetSupportedCallExprTypes(callTypes []CallType) {
 	supportedExpr = defaultSupportedExpr
 	overriddentSupportedExpr := []CallType{}
 	for _, callType := range callTypes {

@@ -33,7 +33,7 @@ var filterDataWithStringArrary = map[string][]string{
 }
 
 func TestSimpleFilter(t *testing.T) {
-	SetSupportedCallExprType(defaultSupportedExpr)
+	SetSupportedCallExprTypes(defaultSupportedExpr)
 
 	assertFilter(t, "tag.name == \"value 1\"", filterData, false)
 	assertFilter(t, "tag.name1 == \"value 1\"", filterData, true)
@@ -69,8 +69,8 @@ func TestSimpleFilter(t *testing.T) {
 	assertFilter(t, "tag.name1.MatchRegEx(\"(val){1}\") != true", filterDataWithStringArrary, false)
 }
 
-func TestCompundFilter(t *testing.T) {
-	SetSupportedCallExprType(defaultSupportedExpr)
+func TestCompoundFilter(t *testing.T) {
+	SetSupportedCallExprTypes(defaultSupportedExpr)
 
 	assertFilter(t, "tag.name1 == \"value 1\" || tag.name2 == \"value 2\"", filterData, true)
 	assertFilter(t, "tag.name1 == \"missing\" || tag.name2 == \"value 2\"", filterData, true)
@@ -112,7 +112,7 @@ func assertFilter(t *testing.T, filterConfig string, filterData interface{}, exp
 }
 
 func TestFilterParsingError(t *testing.T) {
-	SetSupportedCallExprType(defaultSupportedExpr)
+	SetSupportedCallExprTypes(defaultSupportedExpr)
 
 	// golang Syntax OK, but have filter syntax errors
 	assertFilterSyntaxErr(t, "a == b", "Unrecognized condition")
@@ -156,7 +156,7 @@ func assertFilterSyntaxErr(t *testing.T, filterConfig, expectedErr string) {
 }
 
 func TestOverrideSupportedExpr(t *testing.T) {
-	SetSupportedCallExprType([]CallType{EXISTS})
+	SetSupportedCallExprTypes([]CallType{EXISTS})
 
 	assertFilterSyntaxErr(t, "tag.name1 == \"value 1\"", "unsupported condition")
 	assertFilterSyntaxErr(t, "tag.Any() == \"value 1\"", "unsupported condition")
