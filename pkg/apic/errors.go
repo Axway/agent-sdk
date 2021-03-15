@@ -30,4 +30,8 @@ var (
 	ErrUpdateSubscriptionDefProperties    = errors.New(1156, "error updating subscription definition properties in AMPLIFY Central")
 	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
+
+	// Service body builer
+	ErrSetOas2EndPoints = errors.New(1160, "error getting endpoints for oas2 spec")
+	ErrSetOas3EndPoints = errors.New(1161, "error getting endpoints for oas3 spec")
 )
