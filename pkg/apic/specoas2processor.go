@@ -28,14 +28,30 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 			port = swaggerPort
 		}
 	}
-	for _, protocol := range p.spec.Schemes {
-		endPoint := EndpointDefinition{
-			Host:     host,
-			Port:     int32(port),
-			Protocol: protocol,
-			BasePath: p.spec.BasePath,
+	if len(p.spec.Schemes) > 0 {
+		for _, protocol := range p.spec.Schemes {
+			endPoint := EndpointDefinition{
+				Host:     host,
+				Port:     int32(port),
+				Protocol: protocol,
+				BasePath: p.spec.BasePath,
+			}
+			endPoints = append(endPoints, endPoint)
 		}
-		endPoints = append(endPoints, endPoint)
+	} else {
+		if host != "" {
+			endPoint := EndpointDefinition{
+				Host:     host,
+				Port:     int32(port),
+				Protocol: "https",
+				BasePath: p.spec.BasePath,
+			}
+			endPoints = append(endPoints, endPoint)
+		} else {
+			return nil, ErrSetSpecEndPoints
+		}
+		
 	}
+	
 	return endPoints, nil
 }

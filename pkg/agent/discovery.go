@@ -42,7 +42,6 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
-	var err error
 	if agent.apicClient != nil {
 		ret, err := agent.apicClient.PublishService(serviceBody)
 		if err == nil {
@@ -50,9 +49,11 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 			if e == nil {
 				addItemToAPICache(*apiSvc)
 			}
+		} else {
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // RegisterAPIValidator - Registers callback for validating the API on gateway
