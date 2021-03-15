@@ -51,7 +51,7 @@ func (p *oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 		return endPoints, nil
 	} 
 	
-	return nil, ErrSetOas3EndPoints
+	return nil, ErrSetOasEndPoints.FormatError("oas3")
 }
 
 func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {

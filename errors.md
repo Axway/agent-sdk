@@ -36,8 +36,7 @@
 | 1156 | error updating subscription definition properties in AMPLIFY Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties         |
 | 1157 | error getting catalog item API server info properties                                                       | pkg/apic/ErrGetCatalogItemServerInfoProperties      |
 | 1158 | subscription manager is not in a running state                                                              | pkg/apic/ErrSubscriptionManagerDown                 |
-| 1160 | error getting endpoints for oas2 spec                                                                       | pkg/apic/ErrSetOas2EndPoints                        |
-| 1161 | error getting endpoints for oas3 spec                                                                       | pkg/apic/ErrSetOas3EndPoints                        |
+| 1160 | error getting endpoints for %s spec                                                                         | pkg/apic/ErrSetOasEndPoints                         |
 |      | 1300-1399 - for subscription notification errors                                                            |                                                     |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification              |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications           |
