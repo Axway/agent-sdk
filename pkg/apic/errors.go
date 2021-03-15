@@ -32,5 +32,5 @@ var (
 	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
 
 	// Service body builer
-	ErrSetOasEndPoints = errors.Newf(1160, "error getting endpoints for %s spec")	
+	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")	
 )

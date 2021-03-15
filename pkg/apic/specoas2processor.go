@@ -48,7 +48,7 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 			}
 			endPoints = append(endPoints, endPoint)
 		} else {
-			return nil, ErrSetOasEndPoints.FormatError("oas2")
+			return nil, ErrSetSpecEndPoints
 		}
 		
 	}
