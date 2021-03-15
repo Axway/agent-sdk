@@ -45,6 +45,17 @@ func newCallExpr(callType CallType, filterType, name string, arguments []interfa
 			return nil, errors.New("Syntax Error, unrecognized argument(s)")
 		}
 	}
+	callTypeSupported := false
+	for _, supportedCallType := range supportedExpr {
+		if supportedCallType == callType {
+			callTypeSupported = true
+			break
+		}
+	}
+
+	if !callTypeSupported {
+		return nil, errors.New("Syntax Error, unsupported condition")
+	}
 
 	switch callType {
 	case GETVALUE:
@@ -58,6 +69,7 @@ func newCallExpr(callType CallType, filterType, name string, arguments []interfa
 	case MATCHREGEX:
 		callExpr, err = newMatchRegExExpr(filterType, name, arguments[0].(string))
 	}
+
 	return
 }
 
