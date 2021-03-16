@@ -6,6 +6,11 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
+const (
+	max_description_length = 350
+	str_ellipse            = "..."
+)
+
 // ServiceBuilder - Interface to build the service body
 type ServiceBuilder interface {
 	SetID(ID string) ServiceBuilder
@@ -85,6 +90,9 @@ func (b *serviceBodyBuilder) SetStage(stage string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetDescription(description string) ServiceBuilder {
 	b.serviceBody.Description = description
+	if len(description) > max_description_length {
+		b.serviceBody.Description = description[0:max_description_length-len(str_ellipse)] + str_ellipse
+	}
 	return b
 }
 
