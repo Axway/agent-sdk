@@ -4,8 +4,11 @@ import (
 	"sync"
 	"time"
 
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+var statusConfig corecfg.StatusConfig
 
 //Pool - represents a pool of jobs that are related in such a way that when one is not running none of them should be
 type Pool struct {
@@ -17,16 +20,23 @@ type Pool struct {
 	cronJobsMapLock sync.Mutex
 	failJobChan     chan string
 	stopJobsChan    chan bool
+	retryInterval   time.Duration
 }
 
 func newPool() *Pool {
+	interval := defaultRetryInterval
+	if GetStatusConfig() != nil {
+		interval = GetStatusConfig().GetHealthCheckInterval()
+	}
+
 	newPool := Pool{
-		jobs:         make(map[string]JobExecution),
-		cronJobs:     make(map[string]JobExecution),
-		poolStatus:   PoolStatusInitializing,
-		failedJob:    "",
-		failJobChan:  make(chan string),
-		stopJobsChan: make(chan bool),
+		jobs:          make(map[string]JobExecution),
+		cronJobs:      make(map[string]JobExecution),
+		poolStatus:    PoolStatusInitializing,
+		failedJob:     "",
+		failJobChan:   make(chan string),
+		stopJobsChan:  make(chan bool),
+		retryInterval: interval,
 	}
 
 	// start routine that catches all failures whenever written and acts on first
@@ -35,6 +45,16 @@ func newPool() *Pool {
 	go newPool.watchJobs()
 
 	return &newPool
+}
+
+// SetStatusConfig - Set the status config globally
+func SetStatusConfig(statusCfg corecfg.StatusConfig) {
+	statusConfig = statusCfg
+}
+
+// GetStatusConfig - Set the status config globally
+func GetStatusConfig() corecfg.StatusConfig {
+	return statusConfig
 }
 
 //recordJob - Adds a job to the jobs map
@@ -166,7 +186,7 @@ func (p *Pool) watchJobs() {
 			log.Debug("Pool not running, start all jobs")
 			// attempt to restart all jobs
 			p.startAll()
-			time.Sleep(time.Second)
+			time.Sleep(p.retryInterval)
 		}
 	}
 }
