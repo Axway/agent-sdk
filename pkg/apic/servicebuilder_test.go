@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const long_description = `This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
+const longDescription = `This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
 Swagger at [http://swagger.io](http://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
 You can now help us improve the API whether it's by making changes to the definition itself or to the code.
 That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
@@ -37,7 +37,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetID("1234").
 		SetStage("teststage").
 		SetURL("https://1234.execute-api.us-region.amazonaws.com/teststage").
-		SetDescription(long_description).
+		SetDescription(longDescription).
 		SetVersion("1.0.0").
 		SetAuthPolicy("Oauth").
 		SetAPISpec([]byte{}).
@@ -68,7 +68,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "https://1234.execute-api.us-region.amazonaws.com/teststage", sb.URL)
 	assert.Equal(t, 350, len(sb.Description))
 
-	description := long_description[0:max_description_length-len(str_ellipse)] + str_ellipse
+	description := longDescription[0:maxDescriptionLength-len(strEllipse)] + strEllipse
 	assert.Equal(t, description, sb.Description)
 	assert.Equal(t, "1.0.0", sb.Version)
 	assert.Equal(t, "Oauth", sb.AuthPolicy)

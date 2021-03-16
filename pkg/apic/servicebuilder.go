@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	max_description_length = 350
-	str_ellipse            = "..."
+	maxDescriptionLength = 350
+	strEllipse           = "..."
 )
 
 // ServiceBuilder - Interface to build the service body
@@ -90,8 +90,8 @@ func (b *serviceBodyBuilder) SetStage(stage string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetDescription(description string) ServiceBuilder {
 	b.serviceBody.Description = description
-	if len(description) > max_description_length {
-		b.serviceBody.Description = description[0:max_description_length-len(str_ellipse)] + str_ellipse
+	if len(description) > maxDescriptionLength {
+		b.serviceBody.Description = description[0:maxDescriptionLength-len(strEllipse)] + strEllipse
 	}
 	return b
 }
