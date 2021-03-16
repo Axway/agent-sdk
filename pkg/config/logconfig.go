@@ -1,8 +1,13 @@
 package config
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/elastic/beats/v7/libbeat/cfgfile"
+	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 // LogConfig - Interface for logging config
@@ -90,4 +95,55 @@ func ParseAndSetupLogConfig(props properties.Properties) (LogConfig, error) {
 	}
 
 	return cfg, cfg.setupLogger()
+}
+
+//LogConfigOverrides - override the filebeat config options
+func LogConfigOverrides() []cfgfile.ConditionalOverride {
+	overrides := make([]cfgfile.ConditionalOverride, 0)
+
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogFormat), 0)
+			if strings.ToLower(output) == "json" {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			"logging.json": true,
+		}),
+	})
+
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
+			if strings.ToLower(output) == "stdout" {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			"logging.to_stderr": true,
+		}),
+	})
+
+	toFileSettings := map[string]interface{}{
+		"logging.to_files":          true,
+		"logging.files.permissions": "0600",
+	}
+
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
+			if strings.ToLower(output) == "file" || strings.ToLower(output) == "both" {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(toFileSettings),
+	})
+	return overrides
 }

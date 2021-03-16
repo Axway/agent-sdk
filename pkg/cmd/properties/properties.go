@@ -44,11 +44,12 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
+var aliasKeyPrefix string
+
 type properties struct {
 	Properties
 	rootCmd             *cobra.Command
 	flattenedProperties map[string]string
-	aliasKeyPrefix      string
 }
 
 var expansionRegEx *regexp.Regexp
@@ -67,16 +68,20 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 	return cmdprops
 }
 
-func (p *properties) SetAliasKeyPrefix(aliasKeyPrefix string) {
-	p.aliasKeyPrefix = aliasKeyPrefix
+func SetAliasKeyPrefix(keyPrefix string) {
+	aliasKeyPrefix = keyPrefix
+}
+
+func GetAliasKeyPrefix() string {
+	return aliasKeyPrefix
 }
 
 func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 	if err := viper.BindPFlag(key, flg); err != nil {
 		panic(err)
 	}
-	if p.aliasKeyPrefix != "" {
-		if err := viper.BindPFlag(p.aliasKeyPrefix+"."+key, flg); err != nil {
+	if aliasKeyPrefix != "" {
+		if err := viper.BindPFlag(aliasKeyPrefix+"."+key, flg); err != nil {
 			panic(err)
 		}
 	}
@@ -200,8 +205,8 @@ func (p *properties) parseStringValueForKey(key string) string {
 }
 func (p *properties) parseStringValue(key string) string {
 	var s string
-	if p.aliasKeyPrefix != "" {
-		s = p.parseStringValueForKey(p.aliasKeyPrefix + "." + key)
+	if aliasKeyPrefix != "" {
+		s = p.parseStringValueForKey(aliasKeyPrefix + "." + key)
 	}
 	// If no alias or no value parsed for alias key
 	if s == "" {

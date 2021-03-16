@@ -1,47 +1,91 @@
 package log
 
 import (
+	"fmt"
+
+	"github.com/elastic/beats/v7/libbeat/logp"
 	"github.com/sirupsen/logrus"
 )
 
+const debugSelector = "apic-agents"
+
+var isLogP bool
+
+//SetIsLogP -
+func SetIsLogP() {
+	isLogP = true
+}
+
 // Error -
 func Error(args ...interface{}) {
-	log.Error(args...)
+	if isLogP {
+		logp.Err(fmt.Sprint(args...))
+	} else {
+		log.Error(args...)
+	}
 }
 
 // Errorf -
 func Errorf(format string, args ...interface{}) {
-	log.Errorf(format, args...)
+	if isLogP {
+		logp.Err(format, args)
+	} else {
+		log.Errorf(format, args...)
+	}
 }
 
 // Debug -
 func Debug(args ...interface{}) {
-	log.Debug(args...)
+	if isLogP {
+		logp.Debug(debugSelector, fmt.Sprint(args...))
+	} else {
+		log.Debug(args...)
+	}
 }
 
 // Debugf -
 func Debugf(format string, args ...interface{}) {
-	log.Debugf(format, args...)
+	if isLogP {
+		logp.Debug(debugSelector, format, args...)
+	} else {
+		log.Debugf(format, args...)
+	}
 }
 
 // Info -
 func Info(args ...interface{}) {
-	log.Info(args...)
+	if isLogP {
+		logp.Info(fmt.Sprint(args...))
+	} else {
+		log.Info(args...)
+	}
 }
 
 // Infof -
 func Infof(format string, args ...interface{}) {
-	log.Infof(format, args...)
+	if isLogP {
+		logp.Info(format, args...)
+	} else {
+		log.Infof(format, args...)
+	}
 }
 
 // Warn -
 func Warn(args ...interface{}) {
-	log.Warn(args...)
+	if isLogP {
+		logp.Warn(fmt.Sprint(args...))
+	} else {
+		log.Warn(args...)
+	}
 }
 
 // Warnf -
 func Warnf(format string, args ...interface{}) {
-	log.Warnf(format, args...)
+	if isLogP {
+		logp.Warn(format, args...)
+	} else {
+		log.Warnf(format, args...)
+	}
 }
 
 // SetLevel -
