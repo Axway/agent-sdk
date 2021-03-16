@@ -68,7 +68,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "https://1234.execute-api.us-region.amazonaws.com/teststage", sb.URL)
 	assert.Equal(t, 350, len(sb.Description))
 
-	description := longDescription[0:maxDescriptionLength-len(strEllipse)] + strEllipse
+	description := longDescription[0:maxDescriptionLength-len(strEllipsis)] + strEllipsis
 	assert.Equal(t, description, sb.Description)
 	assert.Equal(t, "1.0.0", sb.Version)
 	assert.Equal(t, "Oauth", sb.AuthPolicy)
