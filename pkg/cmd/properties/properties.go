@@ -68,10 +68,12 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 	return cmdprops
 }
 
+//SetAliasKeyPrefix -
 func SetAliasKeyPrefix(keyPrefix string) {
 	aliasKeyPrefix = keyPrefix
 }
 
+//GetAliasKeyPrefix -
 func GetAliasKeyPrefix() string {
 	return aliasKeyPrefix
 }
