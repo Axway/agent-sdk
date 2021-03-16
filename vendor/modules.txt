@@ -4,6 +4,7 @@ github.com/davecgh/go-spew/spew
 github.com/dgrijalva/jwt-go
 # github.com/elastic/beats/v7 v7.7.1
 github.com/elastic/beats/v7/libbeat/beat
+github.com/elastic/beats/v7/libbeat/cfgfile
 github.com/elastic/beats/v7/libbeat/cloudid
 github.com/elastic/beats/v7/libbeat/common
 github.com/elastic/beats/v7/libbeat/common/atomic
@@ -93,6 +94,8 @@ github.com/magiconair/properties
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.3
 github.com/mattn/go-isatty
+# github.com/mitchellh/hashstructure v0.0.0-20170116052023-ab25296c0f51
+github.com/mitchellh/hashstructure
 # github.com/mitchellh/mapstructure v1.3.2
 github.com/mitchellh/mapstructure
 # github.com/opentracing/opentracing-go v1.2.0
