@@ -113,6 +113,8 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	if agentType == config.TraceabilityAgent {
 		properties.SetAliasKeyPrefix(c.agentName)
 		log.SetIsLogP()
+	} else {
+		log.UnsetIsLogP()
 	}
 
 	c.addBaseProps()
@@ -213,6 +215,8 @@ func (c *agentRootCommand) initConfig() error {
 
 	if c.GetAgentType() == config.TraceabilityAgent {
 		log.SetIsLogP()
+	} else {
+		log.UnsetIsLogP()
 	}
 
 	// Init Central Config

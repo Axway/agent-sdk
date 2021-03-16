@@ -16,6 +16,11 @@ func SetIsLogP() {
 	isLogP = true
 }
 
+//UnsetIsLogP -
+func UnsetIsLogP() {
+	isLogP = false
+}
+
 // Error -
 func Error(args ...interface{}) {
 	if isLogP {
@@ -28,7 +33,7 @@ func Error(args ...interface{}) {
 // Errorf -
 func Errorf(format string, args ...interface{}) {
 	if isLogP {
-		logp.Err(format, args)
+		logp.Err(format, args...)
 	} else {
 		log.Errorf(format, args...)
 	}
