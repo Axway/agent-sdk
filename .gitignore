@@ -14,6 +14,10 @@ debug
 /private_key.pem
 /public_key*
 
+# Ignore zip files in root
+./apic_traceability_agent.zip
+./apic_discovery_agent.zip
+
 # ignores if running sonarscanner locally
 .scannerwork
 
