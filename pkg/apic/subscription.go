@@ -254,6 +254,13 @@ func (s *CentralSubscription) UpdateEnumProperty(key, newValue, dataType string)
 
 	// update the appName in the enum
 	prop := ss.GetProperty(appNameKey)
+
+	// first check that the property is unique
+	for _, ele := range prop.Enum {
+		if ele == newValue {
+			return nil
+		}
+	}
 	newOptions := append(prop.Enum, newValue)
 	ss.AddProperty(key, dataType, "", "", true, newOptions)
 

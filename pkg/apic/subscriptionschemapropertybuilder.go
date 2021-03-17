@@ -22,7 +22,7 @@ type schemaProperty struct {
 	name         string
 	description  string
 	apicRefField string
-	enums        []string
+	enums        map[string]bool
 	required     bool
 	readOnly     bool
 	dataType     string
@@ -31,7 +31,7 @@ type schemaProperty struct {
 // NewSubscriptionSchemaPropertyBuilder - Creates a new subscription schema property builder
 func NewSubscriptionSchemaPropertyBuilder() SubscriptionPropertyBuilder {
 	return &schemaProperty{
-		enums: make([]string, 0),
+		enums: make(map[string]bool),
 	}
 }
 
@@ -49,13 +49,17 @@ func (p *schemaProperty) SetDescription(description string) SubscriptionProperty
 
 // SetEnumValues - add a list of enum values to the property
 func (p *schemaProperty) SetEnumValues(values []string) SubscriptionPropertyBuilder {
-	p.enums = values
+	for _, value := range values {
+		p.enums[value] = true
+	}
 	return p
 }
 
 // AddEnumValue - add a new value to the enum list
 func (p *schemaProperty) AddEnumValue(value string) SubscriptionPropertyBuilder {
-	p.enums = append(p.enums, value)
+	if _, ok := p.enums[value]; !ok {
+		p.enums[value] = true
+	}
 	return p
 }
 
@@ -109,8 +113,13 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 		Required:    p.required,
 	}
 
+	// Convert map to string array
 	if len(p.enums) > 0 {
-		prop.Enum = p.enums
+		list := make([]string, 0)
+		for key := range p.enums {
+			list = append(list, key)
+		}
+		prop.Enum = list
 	}
 
 	return prop, nil
