@@ -116,7 +116,7 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 	// Convert map to string array
 	if len(p.enums) > 0 {
 		list := make([]string, 0)
-		for key, _ := range p.enums {
+		for key := range p.enums {
 			list = append(list, key)
 		}
 		prop.Enum = list
