@@ -85,7 +85,10 @@ var agent = agentData{}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
-	agent.apiMap = cache.New()
+	// Only create the api map cache if it does not already exist
+	if agent.apiMap == nil {
+		agent.apiMap = cache.New()
+	}
 
 	agent.cfg = centralCfg.(*config.CentralConfiguration)
 
