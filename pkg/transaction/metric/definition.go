@@ -1,16 +1,19 @@
 package metric
 
+// ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
 	Max int64   `json:"max"`
 	Min int64   `json:"min"`
 	Avg float64 `json:"avg"`
 }
 
+// ObservationDetails - Holds start and end timestamp for interval
 type ObservationDetails struct {
 	Start int64 `json:"start,omitempty"`
 	End   int64 `json:"end,omitempty"`
 }
 
+// APIDetails - Holds the api details
 type APIDetails struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
