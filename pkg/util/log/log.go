@@ -4,7 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Error -
+// Trace -
 func Trace(args ...interface{}) {
 	log.Trace(args...)
 }
