@@ -51,9 +51,11 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 		blacklistLock: &sync.RWMutex{},
 	}
 
-	_, err := jobs.RegisterIntervalJob(subscriptionMgr, apicClient.cfg.GetPollInterval())
-	if err != nil {
-		log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
+	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
+		_, err := jobs.RegisterIntervalJob(subscriptionMgr, apicClient.cfg.GetPollInterval())
+		if err != nil {
+			log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
+		}
 	}
 
 	return subscriptionMgr
