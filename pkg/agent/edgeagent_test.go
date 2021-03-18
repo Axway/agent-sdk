@@ -19,6 +19,7 @@ func resetResources() {
 	agent.dataplaneResource = nil
 	agent.isInitialized = false
 }
+
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
 	cfg.URL = url

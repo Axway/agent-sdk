@@ -223,6 +223,11 @@ func GetDataplaneResource() *apiV1.ResourceInstance {
 	return agent.dataplaneResource
 }
 
+// GetDataplaneType - Returns dataplane type name
+func GetDataplaneType() string {
+	return getDataplaneTypeFromAgentResource(agent.agentResource)
+}
+
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	updateAgentStatus(status, description)
@@ -347,22 +352,20 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 // GetDataplaneResource - returns the dataplane resource
 func getDataplaneResource(agentResource *apiV1.ResourceInstance) (*apiV1.ResourceInstance, error) {
 	dataplaneName := getDataplaneNameFromAgent(agentResource)
-	dataplaneResourceType := getDataplaneType()
-	dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+	var dataplane *apiV1.ResourceInstance
+	if dataplaneName != "" {
+		dataplaneResourceType := getDataplaneType()
+		dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
-	if err != nil {
-		return nil, err
+		dataplane = &apiV1.ResourceInstance{}
+
+		json.Unmarshal(response, dataplane)
 	}
-
-	dataplane := apiV1.ResourceInstance{}
-
-	json.Unmarshal(response, &dataplane)
-
-	// Set the data plane name
-	agent.cfg.SetDataPlaneName(dataplane.Title)
-
-	return &dataplane, nil
+	return dataplane, nil
 }
 
 // updateAgentStatus - Updates the agent status in agent resource
@@ -412,6 +415,27 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 		return err
 	}
 	return nil
+}
+
+func getDataplaneTypeFromAgentResource(res *apiV1.ResourceInstance) string {
+	switch getAgentResourceType() {
+	case v1alpha1.EdgeDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.EdgeTraceabilityAgentResource:
+		return edgeDataplaneType
+	case v1alpha1.AWSDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.AWSTraceabilityAgentResource:
+		return awsDataplaneType
+	case v1alpha1.DiscoveryAgentResource:
+		agentRes := discoveryAgent(res)
+		return agentRes.Spec.DataplaneType
+	case v1alpha1.TraceabilityAgentResource:
+		agentRes := traceabilityAgent(res)
+		return agentRes.Spec.DataplaneType
+	default:
+		return ""
+	}
 }
 
 func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
