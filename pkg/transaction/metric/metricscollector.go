@@ -136,7 +136,8 @@ func (c *collector) getOrgGUID() string {
 func (c *collector) generateEvents() {
 	defer c.cleanup()
 	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
-		agent.GetCentralConfig().GetDataplaneType() == "" {
+		agent.GetDataplaneType() == "" {
+		log.Warn("Unable to process usage and metric event generation.")
 		return
 	}
 	if len(c.apiMetricMap) != 0 {
@@ -162,7 +163,7 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 		usageEvent := V4Event{
 			ID:        usageEventID.String(),
 			Timestamp: c.startTime.UnixNano() / 1e6,
-			Event:     "usage." + agent.GetCentralConfig().GetDataplaneType() + ".Transactions",
+			Event:     "usage." + agent.GetDataplaneType() + ".Transactions",
 			App:       orgGUID,
 			Version:   "4",
 			Distribution: V4EventDistribution{

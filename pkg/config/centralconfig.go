@@ -521,9 +521,6 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	// if c.GetGateKeeperURL() == "" {
 	// 	exception.Throw(ErrBadConfig.FormatError(pathGateKeeperURL))
 	// }
-	// if c.GetDataplaneType() == "" {
-	// 	exception.Throw(ErrBadConfig.FormatError(pathDataplaneType))
-	// }
 	// if c.GetPlatformEnvironmentID() == "" {
 	// 	exception.Throw(ErrBadConfig.FormatError(pathPlatformEnvironmentID))
 	// }
