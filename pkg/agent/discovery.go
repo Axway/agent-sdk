@@ -5,11 +5,13 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
+var isTest bool
+
 // IsAPIPublished  - Returns true if the API Service is already published
 func IsAPIPublished(externalAPIID string) bool {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
-		if api == nil {
+		if api == nil && !isTest {
 			api, _ = updateCacheForExternalAPIID(externalAPIID)
 		}
 		return api != nil
@@ -21,7 +23,7 @@ func IsAPIPublished(externalAPIID string) bool {
 func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.GetBySecondaryKey(apiName)
-		if api == nil {
+		if api == nil && !isTest {
 			api, _ = updateCacheForExternalAPIName(apiName)
 		}
 		if api != nil {
@@ -37,7 +39,7 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
-		if api == nil {
+		if api == nil && !isTest {
 			api, _ = updateCacheForExternalAPIID(externalAPIID)
 		}
 		if api != nil {
