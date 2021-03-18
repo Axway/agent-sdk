@@ -32,6 +32,7 @@ const (
 
 // SubscriptionConfig - Interface to get subscription config
 type SubscriptionConfig interface {
+	PollingEnabled() bool
 	GetNotificationTypes() []NotificationType
 	GetWebhookURL() string
 	GetWebhookHeaders() map[string]string
@@ -80,13 +81,15 @@ type ApprovalConfig struct {
 type SubscriptionConfiguration struct {
 	SubscriptionConfig
 	IConfigValidator
-	Approval      *ApprovalConfig     `config:"approval"`
-	Notifications *NotificationConfig `config:"notifications"`
-	Types         []NotificationType
+	DisablePolling bool                `config:"disablePolling"`
+	Approval       *ApprovalConfig     `config:"approval"`
+	Notifications  *NotificationConfig `config:"notifications"`
+	Types          []NotificationType
 }
 
-// These constants are the paths that the settings is at in a config file
+// These constants are the paths that the settings are at in a config file
 const (
+	pathSubscriptionsDisablePolling                            = "central.subscriptions.disablePolling"
 	pathSubscriptionsApprovalMode                              = "central.subscriptions.approval.mode"
 	pathSubscriptionsApprovalWebhookURL                        = "central.subscriptions.approval.webhook.url"
 	pathSubscriptionsApprovalWebhookHeaders                    = "central.subscriptions.approval.webhook.headers"
@@ -122,8 +125,11 @@ type EmailTemplate struct {
 
 // AddSubscriptionConfigProperties -
 func AddSubscriptionConfigProperties(props properties.Properties) {
+	// subscriptions enabled
+	props.AddBoolProperty(pathSubscriptionsDisablePolling, false, "Set to true to disable polling for subscriptions on the agent")
+
 	// subscription approvals
-	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto")
+	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto)")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookURL, "", "The subscription webhook URL to use for approving subscriptions for AMPLIFY Central")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookHeaders, "", "The subscription webhook headers to pass to the subscription approval webhook")
 	props.AddStringProperty(pathSubscriptionsApprovalWebhookSecret, "", "The authentication secret to use for the subscription approval webhook")
@@ -163,6 +169,7 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	}
 
 	cfg := &SubscriptionConfiguration{
+		DisablePolling: props.BoolPropertyValue(pathSubscriptionsDisablePolling),
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 			SubscriptionApprovalWebhook: &WebhookConfiguration{
@@ -221,6 +228,11 @@ func NewSubscriptionConfig() SubscriptionConfig {
 			SMTP:    &smtp{},
 		},
 	}
+}
+
+// PollingEnabled - return true when the polling of subscriptsion should be ran on this agent
+func (s *SubscriptionConfiguration) PollingEnabled() bool {
+	return !s.DisablePolling
 }
 
 // SetNotificationType -
