@@ -96,9 +96,38 @@ func updateAPICache() {
 	}
 }
 
-var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
+func updateCacheForExternalAPIID(externalAPIID string) (interface{}, error) {
 	query := map[string]string{
 		"query": "attributes." + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
+	}
+
+	return updateCacheForExternalAPI(query)
+}
+
+func updateCacheForExternalAPIName(externalAPIName string) (interface{}, error) {
+	query := map[string]string{
+		"query": "attributes." + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
+	}
+
+	return updateCacheForExternalAPI(query)
+}
+
+func updateCacheForExternalAPI(query map[string]string) (interface{}, error) {
+	apiServerURL := agent.cfg.GetServicesURL()
+
+	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
+	if err != nil {
+		return nil, err
+	}
+	apiService := apiV1.ResourceInstance{}
+	json.Unmarshal(response, &apiService)
+	addItemToAPICache(apiService)
+	return apiService, nil
+}
+
+func validateConsumerInstances() {
+	if agent.apiValidator == nil {
+		return
 	}
 
 	return updateCacheForExternalAPI(query)
