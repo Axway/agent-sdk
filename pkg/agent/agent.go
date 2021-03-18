@@ -223,6 +223,11 @@ func GetDataplaneResource() *apiV1.ResourceInstance {
 	return agent.dataplaneResource
 }
 
+// GetDataplaneType - Returns dataplane type name
+func GetDataplaneType() string {
+	return getDataplaneTypeFromAgentResource(agent.agentResource)
+}
+
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	updateAgentStatus(status, description)
@@ -264,12 +269,17 @@ func refreshResources() (bool, error) {
 	}
 
 	isChanged := true
-	if agent.prevAgentResource != nil && agent.prevDataplaneResource != nil {
+	if agent.prevAgentResource != nil {
 		agentResHash, _ := util.ComputeHash(agent.agentResource)
-		dataplaneResHash, _ := util.ComputeHash(agent.dataplaneResource)
-
 		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
-		prevDataplaneResHash, _ := util.ComputeHash(agent.prevDataplaneResource)
+
+		var dataplaneResHash, prevDataplaneResHash uint64
+		if agent.dataplaneResource != nil {
+			dataplaneResHash, _ = util.ComputeHash(agent.dataplaneResource)
+		}
+		if agent.prevDataplaneResource != nil {
+			prevDataplaneResHash, _ = util.ComputeHash(agent.prevDataplaneResource)
+		}
 		if prevAgentResHash == agentResHash && prevDataplaneResHash == dataplaneResHash {
 			isChanged = false
 		}
@@ -277,6 +287,15 @@ func refreshResources() (bool, error) {
 
 	agent.prevAgentResource = agent.agentResource
 	agent.prevDataplaneResource = agent.dataplaneResource
+
+	if isChanged {
+		dataplaneTitle := agent.cfg.GetEnvironmentName()
+		if agent.dataplaneResource != nil {
+			dataplaneTitle = agent.dataplaneResource.Title
+		}
+		agent.cfg.SetDataPlaneName(dataplaneTitle)
+	}
+
 	return isChanged, nil
 }
 
@@ -339,22 +358,20 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 // GetDataplaneResource - returns the dataplane resource
 func getDataplaneResource(agentResource *apiV1.ResourceInstance) (*apiV1.ResourceInstance, error) {
 	dataplaneName := getDataplaneNameFromAgent(agentResource)
-	dataplaneResourceType := getDataplaneType()
-	dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+	var dataplane *apiV1.ResourceInstance
+	if dataplaneName != "" {
+		dataplaneResourceType := getDataplaneType()
+		dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
-	if err != nil {
-		return nil, err
+		dataplane = &apiV1.ResourceInstance{}
+
+		json.Unmarshal(response, dataplane)
 	}
-
-	dataplane := apiV1.ResourceInstance{}
-
-	json.Unmarshal(response, &dataplane)
-
-	// Set the data plane name
-	agent.cfg.SetDataPlaneName(dataplane.Title)
-
-	return &dataplane, nil
+	return dataplane, nil
 }
 
 // updateAgentStatus - Updates the agent status in agent resource
@@ -404,6 +421,27 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 		return err
 	}
 	return nil
+}
+
+func getDataplaneTypeFromAgentResource(res *apiV1.ResourceInstance) string {
+	switch getAgentResourceType() {
+	case v1alpha1.EdgeDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.EdgeTraceabilityAgentResource:
+		return edgeDataplaneType
+	case v1alpha1.AWSDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.AWSTraceabilityAgentResource:
+		return awsDataplaneType
+	case v1alpha1.DiscoveryAgentResource:
+		agentRes := discoveryAgent(res)
+		return agentRes.Spec.DataplaneType
+	case v1alpha1.TraceabilityAgentResource:
+		agentRes := traceabilityAgent(res)
+		return agentRes.Spec.DataplaneType
+	default:
+		return ""
+	}
 }
 
 func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
