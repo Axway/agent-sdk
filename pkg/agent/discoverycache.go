@@ -72,7 +72,7 @@ func updateAPICache() {
 	}
 }
 
-func updateCacheForExternalAPIID(externalAPIID string) (interface{}, error) {
+var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
 	query := map[string]string{
 		"query": "attributes." + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
 	}
@@ -80,7 +80,7 @@ func updateCacheForExternalAPIID(externalAPIID string) (interface{}, error) {
 	return updateCacheForExternalAPI(query)
 }
 
-func updateCacheForExternalAPIName(externalAPIName string) (interface{}, error) {
+var updateCacheForExternalAPIName = func(externalAPIName string) (interface{}, error) {
 	query := map[string]string{
 		"query": "attributes." + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
 	}
@@ -88,7 +88,7 @@ func updateCacheForExternalAPIName(externalAPIName string) (interface{}, error) 
 	return updateCacheForExternalAPI(query)
 }
 
-func updateCacheForExternalAPI(query map[string]string) (interface{}, error) {
+var updateCacheForExternalAPI = func(query map[string]string) (interface{}, error) {
 	apiServerURL := agent.cfg.GetServicesURL()
 
 	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
