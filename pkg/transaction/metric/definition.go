@@ -1,26 +1,28 @@
 package metric
 
-// Metrics - struct to hold metrics for transaction
-type Metrics struct {
-	Count            int64   `json:"count"`
-	MaxResponseTime  int64   `json:"maxResponseTime"`
-	MinResponseTime  int64   `json:"minResponseTime"`
-	MeanResponseTime float64 `json:"meanResponseTime"`
+type ResponseMetrics struct {
+	Max int64   `json:"max"`
+	Min int64   `json:"min"`
+	Avg float64 `json:"avg"`
 }
 
-// StatusMetric - struct to hold metric specific for status code based transactions
-type StatusMetric struct {
-	StatusCode string `json:"statusCode"`
-	APIMetric
+type ObservationDetails struct {
+	Start int64 `json:"start,omitempty"`
+	End   int64 `json:"end,omitempty"`
 }
 
-// APIMetric - struct to hold metric specific for api based transactions
+type APIDetails struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+// APIMetric - struct to hold metric specific for status code based API transactions
 type APIMetric struct {
-	APIName       string `json:"apiName"`
-	APIID         string `json:"apiID"`
-	ObservedStart int64  `json:"observedStart,omitempty"`
-	ObservedEnd   int64  `json:"observedEnd,omitempty"`
-	Metrics
+	API         APIDetails         `json:"api"`
+	StatusCode  string             `json:"statusCode"`
+	Count       int64              `json:"count"`
+	Response    ResponseMetrics    `json:"response"`
+	Observation ObservationDetails `json:"observation"`
 }
 
 // V4EventDistribution - represents V7 distribution

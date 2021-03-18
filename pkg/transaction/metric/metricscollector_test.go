@@ -26,6 +26,8 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.ClientID = "DOSA_1111"
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
+	cfg.PublisUsageEvents = true
+	cfg.PublishMetricEvents = true
 	return cfg
 }
 
@@ -40,31 +42,28 @@ func TestMetricCollector(t *testing.T) {
 		}
 		if strings.Contains(req.RequestURI, "/gatekeeper") {
 			gatekeeperEventCount++
-			// body, _ := ioutil.ReadAll(req.Body)
-			// fmt.Println("Gatekeeper Req : " + string(body))
 		}
 
 	}))
 
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "demo")
-	// cfg.GatekeeperURL = "https://engvncn8usbzk.x.pipedream.net/"
 	cfg.GatekeeperURL = s.URL + "/gatekeeper"
 	cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
 	cfg.DataplaneType = "Azure"
 	agent.Initialize(cfg)
 	eventChannel := make(chan interface{}, 1028)
 	metricCollector := &collector{
-		startTime:          time.Now(),
-		lock:               &sync.Mutex{},
-		registry:           metrics.NewRegistry(),
-		apiMetricMap:       make(map[string]*APIMetric),
-		apiStatusMetricMap: make(map[string]map[string]*StatusMetric),
-		eventChannel:       eventChannel,
+		startTime:    time.Now(),
+		lock:         &sync.Mutex{},
+		registry:     metrics.NewRegistry(),
+		metricMap:    make(map[string]map[string]*APIMetric),
+		eventChannel: eventChannel,
 	}
 	NewMetricPublisher(eventChannel)
 
 	metricCollector.orgGUID = metricCollector.getOrgGUID()
+
 	metricCollector.AddMetric("111", "111", "200", 10, "", "")
 	metricCollector.AddMetric("111", "111", "200", 20, "", "")
 	metricCollector.AddMetric("111", "111", "200", 30, "", "")
@@ -78,7 +77,7 @@ func TestMetricCollector(t *testing.T) {
 	metricCollector.generateEvents()
 	metricCollector.startTime = time.Now()
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, 6, gatekeeperEventCount)
+	assert.Equal(t, 4, gatekeeperEventCount)
 
 	gatekeeperEventCount = 0
 	metricCollector.AddMetric("111", "111", "200", 5, "", "")
@@ -93,5 +92,5 @@ func TestMetricCollector(t *testing.T) {
 	metricCollector.endTime = time.Now()
 	metricCollector.generateEvents()
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, 7, gatekeeperEventCount)
+	assert.Equal(t, 5, gatekeeperEventCount)
 }

@@ -21,25 +21,23 @@ type Collector interface {
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	startTime          time.Time
-	endTime            time.Time
-	orgGUID            string
-	eventChannel       chan interface{}
-	lock               *sync.Mutex
-	registry           metrics.Registry
-	apiMetricMap       map[string]*APIMetric
-	apiStatusMetricMap map[string]map[string]*StatusMetric
+	startTime    time.Time
+	endTime      time.Time
+	orgGUID      string
+	eventChannel chan interface{}
+	lock         *sync.Mutex
+	registry     metrics.Registry
+	metricMap    map[string]map[string]*APIMetric
 }
 
 // NewMetricCollector - Create metric collector
 func NewMetricCollector(eventChannel chan interface{}) Collector {
 	metricCollector := &collector{
-		startTime:          time.Now(),
-		lock:               &sync.Mutex{},
-		registry:           metrics.NewRegistry(),
-		apiMetricMap:       make(map[string]*APIMetric),
-		apiStatusMetricMap: make(map[string]map[string]*StatusMetric),
-		eventChannel:       eventChannel,
+		startTime:    time.Now(),
+		lock:         &sync.Mutex{},
+		registry:     metrics.NewRegistry(),
+		metricMap:    make(map[string]map[string]*APIMetric),
+		eventChannel: eventChannel,
 	}
 
 	// go metrics.Log(metricCollector.registry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
@@ -83,39 +81,31 @@ func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64,
 	defer c.lock.Unlock()
 
 	transactionCount := c.getOrRegisterCounter("transaction.count")
-
-	apiDuration := c.getOrRegisterHistogram("transaction.api." + apiID)
 	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
 
-	_, ok := c.apiMetricMap[apiID]
+	apiStatusMap, ok := c.metricMap[apiID]
 	if !ok {
-		c.apiMetricMap[apiID] = &APIMetric{APIName: apiName, APIID: apiID}
-	}
-
-	apiStatusMap, ok := c.apiStatusMetricMap[apiID]
-	if !ok {
-		apiStatusMap = make(map[string]*StatusMetric)
-		c.apiStatusMetricMap[apiID] = apiStatusMap
+		apiStatusMap = make(map[string]*APIMetric)
+		c.metricMap[apiID] = apiStatusMap
 	}
 
 	_, ok = apiStatusMap[statusCode]
 	if !ok {
-		apiStatusMap[statusCode] = &StatusMetric{
-			APIMetric: APIMetric{
-				APIName: apiName,
-				APIID:   apiID,
+		apiStatusMap[statusCode] = &APIMetric{
+			API: APIDetails{
+				Name: apiName,
+				ID:   apiID,
 			},
-			StatusCode: statusCode}
+			StatusCode: statusCode,
+		}
 	}
 
 	transactionCount.Inc(1)
-	apiDuration.Update(duration)
 	apiStatusDuration.Update(duration)
 }
 
 func (c *collector) cleanup() {
-	c.apiMetricMap = make(map[string]*APIMetric)
-	c.apiStatusMetricMap = make(map[string]map[string]*StatusMetric)
+	c.metricMap = make(map[string]map[string]*APIMetric)
 }
 
 func (c *collector) getOrgGUID() string {
@@ -140,14 +130,11 @@ func (c *collector) generateEvents() {
 		log.Warn("Unable to process usage and metric event generation.")
 		return
 	}
-	if len(c.apiMetricMap) != 0 {
+	if len(c.metricMap) != 0 {
 		c.registry.Each(c.processMetricFromRegistry)
 		if agent.GetCentralConfig().CanPublishMetricEvent() {
-			for _, apiMetric := range c.apiMetricMap {
-				apiID := apiMetric.APIID
-				c.generateAPIMetricEvent(apiMetric)
-				statusMetricMap := c.apiStatusMetricMap[apiID]
-				for _, apiStatusMetric := range statusMetricMap {
+			for _, apiStatusMetricMap := range c.metricMap {
+				for _, apiStatusMetric := range apiStatusMetricMap {
 					c.generateAPIStatusMetricEvent(apiStatusMetric)
 				}
 			}
@@ -181,28 +168,9 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 	}
 }
 
-func (c *collector) generateAPIMetricEvent(apiMetric *APIMetric) {
-	apiMetric.ObservedStart = c.startTime.UnixNano() / 1e6
-	apiMetric.ObservedEnd = c.endTime.UnixNano() / 1e6
-	apiMetricEventID, _ := uuid.NewV4()
-	apiMetricEvent := V4Event{
-		ID:        apiMetricEventID.String(),
-		Timestamp: c.startTime.UnixNano() / 1e6,
-		Event:     "api.transaction.metric",
-		App:       c.orgGUID,
-		Version:   "4",
-		Distribution: V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
-			Version:     "1",
-		},
-		Data: apiMetric,
-	}
-	c.eventChannel <- apiMetricEvent
-}
-
-func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *StatusMetric) {
-	apiStatusMetric.ObservedStart = c.startTime.UnixNano() / 1e6
-	apiStatusMetric.ObservedEnd = c.endTime.UnixNano() / 1e6
+func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
+	apiStatusMetric.Observation.Start = c.startTime.UnixNano() / 1e6
+	apiStatusMetric.Observation.End = c.endTime.UnixNano() / 1e6
 	apiStatusMetricEventID, _ := uuid.NewV4()
 	apiStatusMetricEvent := V4Event{
 		ID:        apiStatusMetricEventID.String(),
@@ -238,20 +206,14 @@ func (c *collector) processTransactionMetric(metricName string, metric interface
 	elements := strings.Split(metricName, ".")
 	if len(elements) > 2 {
 		apiID := elements[2]
-		apiDetail, ok := c.apiMetricMap[apiID]
+		apiStatusMap, ok := c.metricMap[apiID]
 		if ok {
-			if strings.HasPrefix(metricName, "transaction.api") {
-				apiMetric := (metric.(metrics.Histogram))
-				c.setEventMetricsFromHistogram(&apiDetail.Metrics, apiMetric)
-				apiMetric.Clear()
-			}
 			if strings.HasPrefix(metricName, "transaction.status") {
 				statusCode := elements[3]
-				apiStatusMap := c.apiStatusMetricMap[apiID]
 				statusCodeDetail, ok := apiStatusMap[statusCode]
 				if ok {
 					statusMetric := (metric.(metrics.Histogram))
-					c.setEventMetricsFromHistogram(&statusCodeDetail.Metrics, statusMetric)
+					c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
 					statusMetric.Clear()
 				}
 			}
@@ -259,11 +221,11 @@ func (c *collector) processTransactionMetric(metricName string, metric interface
 	}
 }
 
-func (c *collector) setEventMetricsFromHistogram(eventmetric *Metrics, histogram metrics.Histogram) {
-	eventmetric.Count = histogram.Count()
-	eventmetric.MaxResponseTime = histogram.Max()
-	eventmetric.MinResponseTime = histogram.Min()
-	eventmetric.MeanResponseTime = histogram.Mean()
+func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
+	apiStatusDetails.Count = histogram.Count()
+	apiStatusDetails.Response.Max = histogram.Max()
+	apiStatusDetails.Response.Min = histogram.Min()
+	apiStatusDetails.Response.Avg = histogram.Mean()
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
