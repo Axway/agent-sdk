@@ -9,6 +9,9 @@ import (
 func IsAPIPublished(externalAPIID string) bool {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
+		if api == nil {
+			api, _ = updateCacheForExternalAPIID(externalAPIID)
+		}
 		return api != nil
 	}
 	return false
@@ -18,6 +21,9 @@ func IsAPIPublished(externalAPIID string) bool {
 func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.GetBySecondaryKey(apiName)
+		if api == nil {
+			api, _ = updateCacheForExternalAPIName(apiName)
+		}
 		if api != nil {
 			apiSvc := api.(apiV1.ResourceInstance)
 			attrVal := apiSvc.ResourceMeta.Attributes[attrName]
@@ -31,6 +37,9 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
+		if api == nil {
+			api, _ = updateCacheForExternalAPIID(externalAPIID)
+		}
 		if api != nil {
 			apiSvc := api.(apiV1.ResourceInstance)
 			attrVal := apiSvc.ResourceMeta.Attributes[attrName]

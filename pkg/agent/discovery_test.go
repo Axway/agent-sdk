@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -60,6 +61,7 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 	return nil, nil
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+
 func TestDiscoveryCache(t *testing.T) {
 	emptyAPISvc := []v1.ResourceInstance{}
 	apiSvc1 := v1.ResourceInstance{
@@ -88,9 +90,12 @@ func TestDiscoveryCache(t *testing.T) {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
+		withKey := strings.Contains(fmt.Sprintf("%v", req.URL.Query()["query"]), "attributes."+apic.AttrExternalAPIID)
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") && !withKey {
 			buf, _ := json.Marshal(serverAPISvcResponse)
 			resp.Write(buf)
+		} else if withKey {
+			http.NotFound(resp, req)
 		}
 	}))
 	defer s.Close()
