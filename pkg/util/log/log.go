@@ -5,6 +5,16 @@ import (
 )
 
 // Error -
+func Trace(args ...interface{}) {
+	log.Trace(args...)
+}
+
+// Tracef -
+func Tracef(format string, args ...interface{}) {
+	log.Tracef(format, args...)
+}
+
+// Error -
 func Error(args ...interface{}) {
 	log.Error(args...)
 }

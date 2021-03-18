@@ -75,7 +75,7 @@ func (b *LoggerConfig) Level(level string) *LoggerConfig {
 	if b.err == nil {
 		lvl, err := logrus.ParseLevel(level)
 		if err != nil {
-			b.err = ErrInvalidLogConfig.FormatError("log.level", "debug, info, warn, error")
+			b.err = ErrInvalidLogConfig.FormatError("log.level", "trace, debug, info, warn, error")
 		}
 		b.cfg.Level = lvl
 	}
