@@ -248,7 +248,6 @@ func refreshResources() (bool, error) {
 	if agent.cfg.GetAgentName() == "" {
 		return false, nil
 	}
-
 	var err error
 	agent.agentResource, err = getAgentResource()
 	if err != nil {
@@ -259,21 +258,30 @@ func refreshResources() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	isChanged := true
-	if agent.prevAgentResource != nil && agent.prevDataplaneResource != nil {
+	if agent.prevAgentResource != nil {
 		agentResHash, _ := util.ComputeHash(agent.agentResource)
-		dataplaneResHash, _ := util.ComputeHash(agent.dataplaneResource)
-
 		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
-		prevDataplaneResHash, _ := util.ComputeHash(agent.prevDataplaneResource)
+		var dataplaneResHash, prevDataplaneResHash uint64
+		if agent.dataplaneResource != nil {
+			dataplaneResHash, _ = util.ComputeHash(agent.dataplaneResource)
+		}
+		if agent.prevDataplaneResource != nil {
+			prevDataplaneResHash, _ = util.ComputeHash(agent.prevDataplaneResource)
+		}
 		if prevAgentResHash == agentResHash && prevDataplaneResHash == dataplaneResHash {
 			isChanged = false
 		}
 	}
-
 	agent.prevAgentResource = agent.agentResource
 	agent.prevDataplaneResource = agent.dataplaneResource
+	if isChanged {
+		dataplaneTitle := agent.cfg.GetEnvironmentName()
+		if agent.dataplaneResource != nil {
+			dataplaneTitle = agent.dataplaneResource.Title
+		}
+		agent.cfg.SetDataPlaneName(dataplaneTitle)
+	}
 	return isChanged, nil
 }
 
@@ -518,4 +526,6 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	if logLevel != "" {
 		log.GlobalLoggerConfig.Level(logLevel).Apply()
 	}
+
+	cfg.TeamName = resCfgTeamName
 }
