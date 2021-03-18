@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"flag"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -31,9 +32,11 @@ func NewEventGenerator() EventGenerator {
 		shouldAddFields: !traceability.IsHTTPTransport(),
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
-	metricEventChannel := make(chan interface{})
-	eventGen.collector = metric.NewMetricCollector(metricEventChannel)
-	metric.NewMetricPublisher(metricEventChannel)
+	if flag.Lookup("test.v") == nil {
+		metricEventChannel := make(chan interface{})
+		eventGen.collector = metric.NewMetricCollector(metricEventChannel)
+		metric.NewMetricPublisher(metricEventChannel)
+	}
 	return eventGen
 }
 
@@ -56,8 +59,9 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 		if logEvent.TransactionSummary.Team != nil {
 			teamName = logEvent.TransactionSummary.Team.ID
 		}
-
-		e.collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
+		if e.collector != nil {
+			e.collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
+		}
 	}
 
 	eventData, err := e.createEventData(serializedLogEvent, eventFields)
