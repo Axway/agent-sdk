@@ -84,9 +84,6 @@ func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 			c.subscriptionMgr.OnConfigChange(c)
 		}
 	}
-
-	// complete the API server healthcheck to retrieve the environment and team ids
-	c.checkAPIServerHealth()
 }
 
 // SetTokenGetter - sets the token getter
