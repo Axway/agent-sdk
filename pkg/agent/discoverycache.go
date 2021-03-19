@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -49,24 +50,38 @@ func (j *discoveryCache) Execute() error {
 
 func updateAPICache() {
 	log.Trace("updating API cache")
+	const pageSize = 20
 	apiServerURL := agent.cfg.GetServicesURL()
-	query := map[string]string{
-		"query": "attributes." + apic.AttrExternalAPIID + "!=\"\"",
-	}
-
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
-	if err != nil {
-		return
-	}
-	apiServices := make([]apiV1.ResourceInstance, 0)
-	json.Unmarshal(response, &apiServices)
+	page := 1
 
 	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
-	log.Tracef("found the following API services: %+v", apiServices)
-	for _, apiService := range apiServices {
-		externalAPIID := addItemToAPICache(apiService)
-		existingAPIs[externalAPIID] = true
+
+	morePages := true
+	for morePages {
+		query := map[string]string{
+			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
+			"page":     strconv.Itoa(page),
+			"pageSize": strconv.Itoa(pageSize),
+		}
+
+		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
+		if err != nil {
+			return
+		}
+		apiServices := make([]apiV1.ResourceInstance, 0)
+		json.Unmarshal(response, &apiServices)
+
+		log.Tracef("found the following API services: %+v", apiServices)
+		for _, apiService := range apiServices {
+			externalAPIID := addItemToAPICache(apiService)
+			existingAPIs[externalAPIID] = true
+		}
+
+		if len(apiServices) < pageSize {
+			morePages = false
+		}
+		page++
 	}
 
 	// Remove items that are not published as Resources
