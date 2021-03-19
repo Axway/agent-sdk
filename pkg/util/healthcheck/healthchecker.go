@@ -94,7 +94,7 @@ func WaitForReady() error {
 	}
 }
 
-//RunChecks - loop through all
+// GetStatus - returns the current status for specified service
 func GetStatus(endpoint string) StatusLevel {
 	statusCheck, ok := globalHealthChecker.Checks[endpoint]
 	if !ok {
