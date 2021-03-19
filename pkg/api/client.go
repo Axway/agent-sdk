@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
-	"io/ioutil"
+	"context"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,6 +21,9 @@ const (
 	POST   string = http.MethodPost
 	PUT    string = http.MethodPut
 	DELETE string = http.MethodDelete
+
+	defaultTimeout     = time.Second * 15
+	responseBufferSize = 2048
 )
 
 // Request - the request object used when communicating to an API
@@ -45,6 +50,7 @@ type Client interface {
 type httpClient struct {
 	Client
 	httpClient *http.Client
+	timeout    time.Duration
 }
 
 // NewClient - creates a new HTTP client
@@ -63,7 +69,7 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 		}
 	}
 
-	httpCli.Timeout = time.Second * 10
+	httpCli.Timeout = defaultTimeout
 	return &httpClient{
 		httpClient: httpCli,
 	}
@@ -77,12 +83,12 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 	return params.Encode()
 }
 
-func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
+func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
 	requestURL := request.URL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
-	req, err := http.NewRequest(request.Method, requestURL, bytes.NewBuffer(request.Body))
+	req, err := http.NewRequestWithContext(ctx, request.Method, requestURL, bytes.NewBuffer(request.Body))
 	if err != nil {
 		return req, err
 	}
@@ -99,11 +105,29 @@ func (c *httpClient) prepareAPIRequest(request Request) (*http.Request, error) {
 	return req, err
 }
 
-func (c *httpClient) prepareAPIResponse(res *http.Response) (*Response, error) {
-	body, err := ioutil.ReadAll(res.Body)
+func (c *httpClient) prepareAPIResponse(res *http.Response, timer *time.Timer) (*Response, error) {
+	var err error
+	var responeBuffer bytes.Buffer
+	writer := bufio.NewWriter(&responeBuffer)
+	for {
+		// Reset the timeout timer for reading the response
+		timer.Reset(defaultTimeout)
+		_, err = io.CopyN(writer, res.Body, responseBufferSize)
+		if err == io.EOF || err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			break
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	response := Response{
 		Code:    res.StatusCode,
-		Body:    body,
+		Body:    responeBuffer.Bytes(),
 		Headers: res.Header,
 	}
 	return &response, err
@@ -111,10 +135,30 @@ func (c *httpClient) prepareAPIResponse(res *http.Response) (*Response, error) {
 
 // Send - send the http request and returns the API Response
 func (c *httpClient) Send(request Request) (*Response, error) {
-	req, err := c.prepareAPIRequest(request)
+	startTime := time.Now()
+	ctx := context.Background()
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	req, err := c.prepareAPIRequest(cancelCtx, request)
+	// Logging for the HTTP request
+	statusCode := 0
+	defer func() {
+		duration := time.Now().Sub(startTime)
+		if err != nil {
+			log.Tracef("%s [%dms] - ERR - %s - %s", req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
+		}
+		log.Tracef("%s [%dms] - %d - %s", req.Method, duration.Milliseconds(), statusCode, req.URL.String())
+	}()
+
 	if err != nil {
 		return nil, err
 	}
+
+	// Start the timer to manage the timeout
+	timer := time.AfterFunc(defaultTimeout, func() {
+		cancel()
+	})
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -122,5 +166,8 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	}
 	defer res.Body.Close()
 
-	return c.prepareAPIResponse(res)
+	statusCode = res.StatusCode
+	parseResponse, err := c.prepareAPIResponse(res, timer)
+
+	return parseResponse, err
 }
