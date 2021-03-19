@@ -131,6 +131,7 @@ type CentralConfiguration struct {
 	APIServerVersion          string        `config:"apiServerVersion"`
 	TagsToPublish             string        `config:"additionalTags"`
 	AppendDataPlaneToTitle    bool          `config:"appendDataPlaneToTitle"`
+	UpdateFromAPIServer       bool          `config:"updateFromAPIServer"`
 	Auth                      AuthConfig    `config:"auth"`
 	TLS                       TLSConfig     `config:"ssl"`
 	PollInterval              time.Duration `config:"pollInterval"`
@@ -153,6 +154,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
+		UpdateFromAPIServer:       false,
 	}
 }
 
@@ -371,6 +373,11 @@ func (c *CentralConfiguration) GetDataPlaneName() string {
 	return c.dataPlaneName
 }
 
+// GetUpdateFromAPIServer -
+func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
+	return c.UpdateFromAPIServer
+}
+
 const (
 	pathTenantID               = "central.organizationID"
 	pathURL                    = "central.url"
@@ -397,6 +404,7 @@ const (
 	pathAPIServerVersion       = "central.apiServerVersion"
 	pathAdditionalTags         = "central.additionalTags"
 	pathAppendDataPlaneToTitle = "central.appendDataPlaneToTitle"
+	pathUpdateFromAPIServer    = "central.updateFromAPIServer"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -488,6 +496,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
+	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
@@ -525,7 +534,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
-		ProxyURL: proxyURL,
+		ProxyURL:            proxyURL,
+		UpdateFromAPIServer: props.BoolPropertyValue(pathUpdateFromAPIServer),
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)
