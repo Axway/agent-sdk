@@ -56,35 +56,10 @@ func updateAPICache() {
 
 	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
-
-	morePages := true
-	page := 1
-	for morePages {
-		query := map[string]string{
-			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
-		}
-
-		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
-		if err != nil {
-			log.Debugf("Error while updating published API cache: %s", err.Error())
-			return
-		}
-
-		apiServices := make([]apiV1.ResourceInstance, 0)
-		json.Unmarshal(response, &apiServices)
-
-		for _, apiService := range apiServices {
-			externalAPIID := addItemToAPICache(apiService)
-			existingAPIs[externalAPIID] = true
-		}
-
-		if len(apiServices) < apiServerPageSize {
-			morePages = false
-		}
-		page++
+	log.Tracef("found the following API services: %+v", apiServices)
+	for _, apiService := range apiServices {
+		externalAPIID := addItemToAPICache(apiService)
+		existingAPIs[externalAPIID] = true
 	}
 
 	// Remove items that are not published as Resources
