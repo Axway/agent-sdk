@@ -104,15 +104,6 @@ func GetStatus(endpoint string) StatusLevel {
 }
 
 //RunChecks - loop through all
-func GetStatus(endpoint string) StatusLevel {
-	statusCheck, ok := globalHealthChecker.Checks[endpoint]
-	if !ok {
-		return FAIL
-	}
-	return statusCheck.Status.Result
-}
-
-//RunChecks - loop through all
 func RunChecks() StatusLevel {
 	globalHealthChecker.Status = OK
 	for _, check := range globalHealthChecker.Checks {
