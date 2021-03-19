@@ -20,17 +20,17 @@ type discoveryCache struct {
 
 //Ready -
 func (j *discoveryCache) Ready() bool {
-	err := j.Status()
-	if err != nil {
-		return false
+	status := hc.GetStatus("central")
+	if status == hc.OK {
+		return true
 	}
-	return true
+	return false
 }
 
 //Status -
 func (j *discoveryCache) Status() error {
-	status := agent.apicClient.Healthcheck("Cache")
-	if status.Result == hc.OK {
+	status := hc.GetStatus("central")
+	if status == hc.OK {
 		return nil
 	}
 	return fmt.Errorf("could not establish a connection to APIC to update the cache")

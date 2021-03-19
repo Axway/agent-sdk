@@ -11,7 +11,6 @@ import (
 	"time"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
@@ -33,10 +32,8 @@ func StartPeriodicHealthCheck() {
 	if GetStatusConfig() != nil {
 		interval = GetStatusConfig().GetHealthCheckInterval()
 	}
-	_, err := jobs.RegisterIntervalJob(&periodicHealthCheck{}, interval)
-	if err != nil {
-		log.Error(errors.Wrap(ErrStartingPeriodicHealthCheck, err.Error()))
-	}
+	periodicHealthCheckJob := &periodicHealthCheck{interval: interval}
+	go periodicHealthCheckJob.Execute()
 }
 
 // SetNameAndVersion - sets the name and version of the globalHealthChecker
@@ -95,6 +92,15 @@ func WaitForReady() error {
 			}
 		}
 	}
+}
+
+//RunChecks - loop through all
+func GetStatus(endpoint string) StatusLevel {
+	statusCheck, ok := globalHealthChecker.Checks[endpoint]
+	if !ok {
+		return FAIL
+	}
+	return statusCheck.Status.Result
 }
 
 //RunChecks - loop through all
