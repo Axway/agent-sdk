@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -37,13 +38,17 @@ func (j *discoveryCache) Status() error {
 
 //Execute -
 func (j *discoveryCache) Execute() error {
+	log.Trace("executing API cache update job")
 	updateAPICache()
-	validateConsumerInstances()
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		validateConsumerInstances()
+	}
 	fetchConfig()
 	return nil
 }
 
 func updateAPICache() {
+	log.Trace("updating API cache")
 	apiServerURL := agent.cfg.GetServicesURL()
 	query := map[string]string{
 		"query": "attributes." + apic.AttrExternalAPIID + "!=\"\"",
@@ -58,6 +63,7 @@ func updateAPICache() {
 
 	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
+	log.Tracef("found the following API services: %+v", apiServices)
 	for _, apiService := range apiServices {
 		externalAPIID := addItemToAPICache(apiService)
 		existingAPIs[externalAPIID] = true
@@ -144,6 +150,7 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 	if ok {
 		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
 		agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
 	}
 	return externalAPIID
 }

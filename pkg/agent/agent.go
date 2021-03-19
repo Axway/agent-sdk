@@ -152,11 +152,13 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 }
 
 func startAPIServiceCache() {
-	// Load the cache before the agents start discovering the APIs from remote gateway
-	updateAPICache()
-
 	// register the update cache job
-	jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
+	id, err := jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
+	if err != nil {
+		log.Errorf("could not start the API cache update job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered API cache update job: %s", id)
 }
 
 func isRunningInDockerContainer() bool {
