@@ -1,0 +1,25 @@
+central:
+  url: https://sbolosan.dev.ampc.axwaytest.net
+  platformURL: https://platform.axwaytest.net
+  #team: 6dff3d5c-8f7e-4f77-9061-e7219ee0b063
+  team: "Default Team"
+  organizationID: 732373823941016
+  environment: covid19
+  apiServerVersion: v1alpha1
+  mode: publishToEnvironmentAndCatalog
+  pollInterval: 20s
+  additionalTags: ignoreMe
+  auth:
+    url: https://login-preprod.axway.com/auth
+    realm: Broker
+    clientId: DOSA_e49386fb949a4d8ba2207a3acb7ab650
+    privateKey: /home/sbolosan/go/src/keys/private_key.pem
+    publicKey: /home/sbolosan/go/src/keys/public_key.pem    
+    keyPassword:
+    timeout: 20s
+
+gateway-section:
+ specPath: ./apis
+ config_key_1: value
+ config_key_2: value
+ config_key_3: value
