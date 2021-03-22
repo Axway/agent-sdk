@@ -67,6 +67,7 @@ func updateAPICache() {
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
 		if err != nil {
+			log.Debugf("Error while updating published API cache: %s", err.Error())
 			return
 		}
 		apiServices := make([]apiV1.ResourceInstance, 0)
@@ -126,37 +127,50 @@ func validateConsumerInstances() {
 	if agent.apiValidator == nil {
 		return
 	}
+	const pageSize = 20
+	page := 1
 
 	consumerInstancesURL := agent.cfg.GetConsumerInstancesURL()
-	query := map[string]string{
-		"query": "attributes." + apic.AttrExternalAPIID + "!=\"\"",
-	}
+	morePages := true
+	for morePages {
+		query := map[string]string{
+			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
+			"page":     strconv.Itoa(page),
+			"pageSize": strconv.Itoa(pageSize),
+		}
 
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
-	if err != nil {
-		return
-	}
-	consumerInstances := make([]apiV1.ResourceInstance, 0)
-	json.Unmarshal(response, &consumerInstances)
+		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
+		if err != nil {
+			log.Debugf("Error while validating published catalog items: %s", err.Error())
+			return
+		}
+		consumerInstances := make([]apiV1.ResourceInstance, 0)
+		json.Unmarshal(response, &consumerInstances)
 
-	// Validate the API on dataplane, if not valid mark the consumer instance as "DELETED"
-	for _, consumerInstanceResource := range consumerInstances {
-		consumerInstance := &v1alpha1.ConsumerInstance{}
-		consumerInstance.FromInstance(&consumerInstanceResource)
-		externalAPIID := consumerInstance.Attributes[apic.AttrExternalAPIID]
-		externalAPIStage := consumerInstance.Attributes[apic.AttrExternalAPIStage]
-		// Check if the consumer instance was published by agent, i.e. following attributes are set
-		// - externalAPIID should not be empty
-		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
-			err = agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
-			if err != nil {
-				log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
-			} else {
-				log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+		// Validate the API on dataplane, if not valid mark the consumer instance as "DELETED"
+		for _, consumerInstanceResource := range consumerInstances {
+			consumerInstance := &v1alpha1.ConsumerInstance{}
+			consumerInstance.FromInstance(&consumerInstanceResource)
+			externalAPIID := consumerInstance.Attributes[apic.AttrExternalAPIID]
+			externalAPIStage := consumerInstance.Attributes[apic.AttrExternalAPIStage]
+			// Check if the consumer instance was published by agent, i.e. following attributes are set
+			// - externalAPIID should not be empty
+			// - externalAPIStage could be empty for dataplanes that do not support it
+			if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+				log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
+				err = agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+				if err != nil {
+					log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+				} else {
+					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+				}
 			}
 		}
+
+		if len(consumerInstances) < pageSize {
+			morePages = false
+		}
+		page++
 	}
 }
 
