@@ -75,7 +75,6 @@ func updateAPICache() {
 		apiServices := make([]apiV1.ResourceInstance, 0)
 		json.Unmarshal(response, &apiServices)
 
-		log.Tracef("found the following API services: %+v", apiServices)
 		for _, apiService := range apiServices {
 			externalAPIID := addItemToAPICache(apiService)
 			existingAPIs[externalAPIID] = true
