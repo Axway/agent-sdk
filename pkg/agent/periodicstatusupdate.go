@@ -45,13 +45,12 @@ func (su *periodicStatusUpdate) Execute() error {
 		log.Error(errors.ErrStatusUpdate)
 		log.Debug("Status update failed")
 		return err
-	} else {
-		// if the last timestamp for an event has changed, update the status
-		if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
-			log.Debug("Activity change detected, updating status")
-			UpdateStatus(AgentRunning, "")
-			su.previousActivityTime = su.currentActivityTime
-		}
+	}
+	// if the last timestamp for an event has changed, update the status
+	if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
+		log.Debug("Activity change detected, updating status")
+		UpdateStatus(AgentRunning, "")
+		su.previousActivityTime = su.currentActivityTime
 	}
 	return nil
 }
