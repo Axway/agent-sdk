@@ -15,7 +15,11 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const apiServerPageSize = 20
+const (
+	apiServerPageSize = 20
+
+	healthcheckEndpoint = "central"
+)
 
 type discoveryCache struct {
 	jobs.Job
@@ -23,7 +27,7 @@ type discoveryCache struct {
 
 //Ready -
 func (j *discoveryCache) Ready() bool {
-	status := hc.GetStatus("central")
+	status := hc.GetStatus(healthcheckEndpoint)
 	if status == hc.OK {
 		return true
 	}
@@ -32,7 +36,7 @@ func (j *discoveryCache) Ready() bool {
 
 //Status -
 func (j *discoveryCache) Status() error {
-	status := hc.GetStatus("central")
+	status := hc.GetStatus(healthcheckEndpoint)
 	if status == hc.OK {
 		return nil
 	}
