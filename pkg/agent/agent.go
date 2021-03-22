@@ -455,7 +455,7 @@ func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 		agentRes := awsTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	default:
-		log.Warn("Agent type specified not linked to a dataplane type")
+		log.Trace("Agent type specified not linked to a dataplane type")
 		return ""
 	}
 }
