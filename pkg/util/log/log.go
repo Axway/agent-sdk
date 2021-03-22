@@ -7,7 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const debugSelector = "apic-agents"
+const (
+	debugSelector = "apic-agents"
+  traceSelector = "apic-agents-trace"
+)
 
 var isLogP bool
 
@@ -19,6 +22,23 @@ func SetIsLogP() {
 //UnsetIsLogP -
 func UnsetIsLogP() {
 	isLogP = false
+
+// Trace -
+func Trace(args ...interface{}) {
+	if isLogP {
+		logp.Debug(traceSelector, fmt.Sprint(args...))
+	} else {
+		log.Trace(args...)
+	}
+}
+
+// Tracef -
+func Tracef(format string, args ...interface{}) {
+	if isLogP {
+		logp.Debug(traceSelector, format, args...)
+	} else {
+		log.Tracef(format, args...)
+	}
 }
 
 // Error -

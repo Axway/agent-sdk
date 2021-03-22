@@ -1,5 +1,9 @@
 package jobs
 
+import "time"
+
+const defaultRetryInterval = 30 * time.Second
+
 //Job -  the job interface, users of this library need to implement these
 type Job interface {
 	Execute() error

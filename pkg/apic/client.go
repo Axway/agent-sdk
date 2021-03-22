@@ -84,9 +84,6 @@ func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 			c.subscriptionMgr.OnConfigChange(c)
 		}
 	}
-
-	// complete the API server healthcheck to retrieve the environment and team ids
-	c.checkAPIServerHealth()
 }
 
 // SetTokenGetter - sets the token getter
@@ -213,11 +210,6 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	if c.cfg.GetEnvironmentID() == "" {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
-
-		err = c.updateEnvironmentStatus(apiEnvironment)
-		if err != nil {
-			return err
-		}
 	}
 
 	if c.cfg.GetTeamID() == "" {
@@ -229,28 +221,6 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// Set the team Id
 		c.cfg.SetTeamID(team.ID)
 	}
-	return nil
-}
-
-func (c *ServiceClient) updateEnvironmentStatus(apiEnvironment *v1alpha1.Environment) error {
-	attribute := "x-axway-agent"
-	// check to see if x-axway-agent has already been set
-	if _, found := apiEnvironment.Attributes[attribute]; found {
-		log.Debugf("Environment attribute: %s is already set.", attribute)
-		return nil
-	}
-	apiEnvironment.Attributes[attribute] = "true"
-
-	buffer, err := json.Marshal(apiEnvironment)
-	if err != nil {
-		return nil
-	}
-	_, err = c.apiServiceDeployAPI(http.MethodPut, c.cfg.GetEnvironmentURL(), buffer)
-
-	if err != nil {
-		return err
-	}
-	log.Debugf("Updated environment attribute: %s to true.", attribute)
 	return nil
 }
 

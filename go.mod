@@ -9,6 +9,7 @@ require (
 	github.com/emersion/go-smtp v0.13.0
 	github.com/emicklei/proto v1.9.0
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
+	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/getkin/kin-openapi v0.9.0
 	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2

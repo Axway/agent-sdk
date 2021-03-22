@@ -41,6 +41,7 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, servic
 }
 
 func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, serviceBody *ServiceBody) {
+	apiSvc.ResourceMeta.Metadata.ResourceVersion = ""
 	apiSvc.Title = serviceBody.NameToPush
 	apiSvc.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, apiSvc.ResourceMeta.Attributes, true)
 	apiSvc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)

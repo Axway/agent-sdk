@@ -60,7 +60,7 @@ const (
 
 // AddLogConfigProperties - Adds the command properties needed for Log Config
 func AddLogConfigProperties(props properties.Properties, defaultFileName string) {
-	props.AddStringProperty(pathLogLevel, "info", "Log level (debug, info, warn, error)")
+	props.AddStringProperty(pathLogLevel, "info", "Log level (trace, debug, info, warn, error)")
 	props.AddStringProperty(pathLogFormat, "json", "Log format (json, line)")
 	props.AddStringProperty(pathLogOutput, "stdout", "Log output type (stdout, file, both)")
 	props.AddStringProperty(pathLogMaskedValues, "", "List of key words in the config to be masked (e.g. pwd, password, secret, key")

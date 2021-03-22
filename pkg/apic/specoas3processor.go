@@ -25,29 +25,33 @@ func (p *oas3SpecProcessor) getResourceType() string {
 
 func (p *oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
-	for _, server := range p.spec.Servers {
-		// Add the URL string to the array
-		allURLs := []string{
-			server.URL,
-		}
-
-		defaultURL := ""
-		var err error
-		if server.Variables != nil {
-			defaultURL, allURLs, err = p.handleURLSubstitutions(server, allURLs)
+	if len(p.spec.Servers) > 0 {
+		for _, server := range p.spec.Servers {
+			// Add the URL string to the array
+			allURLs := []string{
+				server.URL,
+			}
+	
+			defaultURL := ""
+			var err error
+			if server.Variables != nil {
+				defaultURL, allURLs, err = p.handleURLSubstitutions(server, allURLs)
+				if err != nil {
+					return nil, err
+				}
+			}
+	
+			parsedEndPoints, err := p.parseURLsIntoEndpoints(defaultURL, allURLs)
 			if err != nil {
 				return nil, err
 			}
+			endPoints = append(endPoints, parsedEndPoints...)
 		}
-
-		parsedEndPoints, err := p.parseURLsIntoEndpoints(defaultURL, allURLs)
-		if err != nil {
-			return nil, err
-		}
-		endPoints = append(endPoints, parsedEndPoints...)
-	}
-
-	return endPoints, nil
+	
+		return endPoints, nil
+	} 
+	
+	return nil, ErrSetSpecEndPoints
 }
 
 func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {

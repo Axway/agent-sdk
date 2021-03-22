@@ -1,6 +1,6 @@
-# AMPLIFY Central Agents Core Build Folder
+# Amplify Central Agents Core Build Folder
 
-In this folder you will find scripts and files necessary for the build and release of the AMPLIFY Central Agents Core
+In this folder you will find scripts and files necessary for the build and release of the Amplify Central Agents Core
 
 ## scripts folder
 

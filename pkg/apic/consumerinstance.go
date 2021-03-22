@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {
@@ -45,7 +47,47 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			AutoSubscribe:          autoSubscribe,
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
+		UnstructuredDataProperties: c.buildUnstructuredDataProperties(serviceBody),
 	}
+}
+
+//buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
+func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties {
+	if serviceBody.ResourceType != Unstructured {
+		return v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{}
+	}
+
+	const defType = "Asset"
+	unstructuredDataProperties := v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{
+		Type:        defType,
+		ContentType: mimetype.Detect(serviceBody.SpecDefinition).String(),
+		Label:       defType,
+		FileName:    serviceBody.APIName,
+		Data:        base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
+	}
+
+	if serviceBody.UnstructuredProps.AssetType != "" {
+		unstructuredDataProperties.Type = serviceBody.UnstructuredProps.AssetType
+		// Set the label to the same as the asset type
+		unstructuredDataProperties.Label = serviceBody.UnstructuredProps.AssetType
+	}
+
+	if serviceBody.UnstructuredProps.ContentType != "" {
+		unstructuredDataProperties.ContentType = serviceBody.UnstructuredProps.ContentType
+	}
+
+	if serviceBody.UnstructuredProps.Label != "" {
+		unstructuredDataProperties.Label = serviceBody.UnstructuredProps.Label
+		if serviceBody.UnstructuredProps.AssetType == "" {
+			unstructuredDataProperties.Type = serviceBody.UnstructuredProps.Label
+		}
+	}
+
+	if serviceBody.UnstructuredProps.Filename != "" {
+		unstructuredDataProperties.FileName = serviceBody.UnstructuredProps.Filename
+	}
+
+	return unstructuredDataProperties
 }
 
 func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
@@ -79,11 +121,12 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 	}
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(revision *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
-	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
-	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	revision.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
+func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
+	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance.Title = serviceBody.NameToPush
+	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
+	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
 }
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance

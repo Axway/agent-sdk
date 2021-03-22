@@ -1,12 +1,12 @@
-# AMPLIFY Central Agents SDK
+# Amplify Central Agents SDK
 
-The AMPLIFY Central Agent SDK provides APIs and utilities that developers can use to build Golang based applications to discover APIs hosted on remote API Gateway (for e.g. AWS, Azure, Axway API Manager etc.) and publish their representation in AMPLIFY Central as API server resources and Catalog items. The SDK can also be used to build applications that can monitor traffic events for discovered APIs and publish them to AMPLIFY Central API Observer.
+The Amplify Central Agent SDK provides APIs and utilities that developers can use to build Golang based applications to discover APIs hosted on remote API Gateway (for e.g. AWS, Azure, Axway API Manager etc.) and publish their representation in Amplify Central as API server resources and Catalog items. The SDK can also be used to build applications that can monitor traffic events for discovered APIs and publish them to Amplify Central API Observer.
 
-The Agent SDK helps in reducing complexity in implementing against the direct AMPLIFY Central REST API interface and hides low level plumbing to provide discovery and traceability related features.
+The Agent SDK helps in reducing complexity in implementing against the direct Amplify Central REST API interface and hides low level plumbing to provide discovery and traceability related features.
 
 ## Installation
 
-Make sure you have [Go installed](https://golang.org/doc/install) and then use the following command to install the AMPLIFY Central Agents SDK
+Make sure you have [Go installed](https://golang.org/doc/install) and then use the following command to install the Amplify Central Agents SDK
 
 go get github.com/Axway/agent-sdk/
 
@@ -16,10 +16,10 @@ go get github.com/Axway/agent-sdk/
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
 | agent        | This package holds the interface for agent initialization and managing discovered APIs                                                              |
 | api          | This package provides client interface for making REST API calls                                                                                    |
-| apic         | This package contains AMPLIFY Central service client                                                                                                |
+| apic         | This package contains Amplify Central service client                                                                                                |
 | cache        | This package can be used to create an in-memory cache of items                                                                                      |
 | cmd          | This package provides the implementation of the root command line processor                                                                         |
-| config       | This package provides the base configuration required by Agent SDK to communicate with AMPLIFY Central                                              |
+| config       | This package provides the base configuration required by Agent SDK to communicate with Amplify Central                                              |
 | filter       | This package provides the filter implementation to allow discovering APIs based on certain conditions                                               |
 | jobs         | This package provides a tooling to coordinate agent tasks [SDK Jobs](./pkg/jobs/README.md)                                                          |
 | notification | This package contains structs that can be used for creating notifications and subscribers to those notifications                                    |

@@ -9,6 +9,9 @@ import (
 func IsAPIPublished(externalAPIID string) bool {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
+		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
+			api, _ = updateCacheForExternalAPIID(externalAPIID)
+		}
 		return api != nil
 	}
 	return false
@@ -18,6 +21,9 @@ func IsAPIPublished(externalAPIID string) bool {
 func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.GetBySecondaryKey(apiName)
+		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
+			api, _ = updateCacheForExternalAPIName(apiName)
+		}
 		if api != nil {
 			apiSvc := api.(apiV1.ResourceInstance)
 			attrVal := apiSvc.ResourceMeta.Attributes[attrName]
@@ -31,6 +37,9 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	if agent.apiMap != nil {
 		api, _ := agent.apiMap.Get(externalAPIID)
+		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
+			api, _ = updateCacheForExternalAPIID(externalAPIID)
+		}
 		if api != nil {
 			apiSvc := api.(apiV1.ResourceInstance)
 			attrVal := apiSvc.ResourceMeta.Attributes[attrName]
@@ -42,7 +51,6 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
-	var err error
 	if agent.apicClient != nil {
 		ret, err := agent.apicClient.PublishService(serviceBody)
 		if err == nil {
@@ -50,9 +58,11 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 			if e == nil {
 				addItemToAPICache(*apiSvc)
 			}
+		} else {
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // RegisterAPIValidator - Registers callback for validating the API on gateway
