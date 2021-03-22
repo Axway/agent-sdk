@@ -118,6 +118,7 @@ func TestDiscoveryCache(t *testing.T) {
 	var apiSvc v1alpha1.APIService
 	apiSvc.FromInstance(&apiSvc2)
 	agent.apicClient = &mockSvcClient{apiSvc: &apiSvc}
+	StartPeriodicStatusUpdate()
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
 	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))
