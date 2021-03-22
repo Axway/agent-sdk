@@ -8,7 +8,8 @@
 | 1000 | Unsupported agent type                                                                                      | pkg/agent/ErrUnsupportedAgentType                   |
 | 1001 | initialization error checking for dependencies to respond, possibly network or settings                     | pkg/util/errors/ErrInitServicesNotReady             |
 | 1002 | timeout error checking for dependencies to respond, possibly network or settings                            | pkg/util/errors/ErrTimeoutServicesNotReady          |
-| 1003 | Periodic health checker failed.  Services are not ready                                                     | pkg/util/errorsErrHealthCheck                       |
+| 1003 | periodic checker failed.  Services are not ready                                                     | pkg/util/ErrPeriodicCheck
+| 1004 | error starting periodic status update                                                     | pkg/util/ErrStartingPeriodicStatusUpdate
 |      | 1100-1299 - for apic package errors                                                                         |                                                     |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                           |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery                        |

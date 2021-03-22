@@ -33,7 +33,7 @@ func (sm *periodicHealthCheck) Status() error {
 func (sm *periodicHealthCheck) Execute() error {
 	// Check that all healthchecks are OK
 	if RunChecks() != OK {
-		log.Error(errors.ErrHealthCheck)
+		log.Error(errors.ErrPeriodicCheck.FormatError("periodic health checker"))
 		sm.errCount++
 		log.Debugf("Healthcheck failed %v times", sm.errCount)
 	} else {

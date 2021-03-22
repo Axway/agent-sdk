@@ -119,9 +119,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
 		if flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
-			StartPeriodicStatusUpdate()
 		}
 
+		StartPeriodicStatusUpdate()
 		startAPIServiceCache()
 	}
 	agent.isInitialized = true

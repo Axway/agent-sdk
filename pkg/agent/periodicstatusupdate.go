@@ -9,7 +9,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const defaultCheckInterval time.Duration = 30000000000 // 30s
+const defaultCheckInterval time.Duration = time.Second * 30
 
 type periodicStatusUpdate struct {
 	jobs.Job
@@ -42,13 +42,13 @@ func (su *periodicStatusUpdate) Execute() error {
 	// error out if the agent name does not exist
 	err := runStatusUpdateCheck()
 	if err != nil {
-		log.Error(errors.ErrStatusUpdate)
-		log.Debug("Status update failed")
+		log.Error(errors.ErrPeriodicCheck.FormatError("periodic status updater"))
 		return err
 	}
 	// if the last timestamp for an event has changed, update the status
 	if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
-		log.Debug("Activity change detected, updating status")
+		//TODO: kf make log.Tracef level after 17999 commit
+		log.Debugf("Activity change detected at %s, from previous activity at %s, updating status", su.currentActivityTime, su.previousActivityTime)
 		UpdateStatus(AgentRunning, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
@@ -66,14 +66,14 @@ func StartPeriodicStatusUpdate() {
 	_, err := jobs.RegisterIntervalJob(statusUpdate, interval)
 
 	if err != nil {
-		log.Error(errors.Wrap(ErrStartingPeriodicStatusUpdate, err.Error()))
+		log.Error(errors.Wrap(errors.ErrStartingPeriodicStatusUpdate, err.Error()))
 	}
 }
 
 //runStatusUpdateCheck - returns an error if agent name is blank
 func runStatusUpdateCheck() error {
 	if agent.cfg.GetAgentName() == "" {
-		return ErrStartingPeriodicStatusUpdate
+		return errors.ErrStartingPeriodicStatusUpdate
 	}
 	return nil
 }
