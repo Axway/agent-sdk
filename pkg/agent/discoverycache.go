@@ -52,19 +52,19 @@ func (j *discoveryCache) Execute() error {
 
 func updateAPICache() {
 	log.Trace("updating API cache")
-	const pageSize = 20
 	apiServerURL := agent.cfg.GetServicesURL()
-	page := 1
 
 	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
 
 	morePages := true
+	page := 1
 	for morePages {
 		query := map[string]string{
 			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(pageSize),
+			"pageSize": strconv.Itoa(apiServerPageSize),
+			"fields":   "name,title,attributes",
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
@@ -72,6 +72,7 @@ func updateAPICache() {
 			log.Debugf("Error while updating published API cache: %s", err.Error())
 			return
 		}
+
 		apiServices := make([]apiV1.ResourceInstance, 0)
 		json.Unmarshal(response, &apiServices)
 
@@ -128,16 +129,16 @@ func validateConsumerInstances() {
 	if agent.apiValidator == nil {
 		return
 	}
-	const pageSize = 20
-	page := 1
 
 	consumerInstancesURL := agent.cfg.GetConsumerInstancesURL()
 	morePages := true
+	page := 1
 	for morePages {
 		query := map[string]string{
 			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(pageSize),
+			"pageSize": strconv.Itoa(apiServerPageSize),
+			"fields":   "name,title,attributes",
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
