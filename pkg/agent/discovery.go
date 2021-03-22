@@ -13,6 +13,7 @@ func IsAPIPublished(externalAPIID string) bool {
 			api, _ = updateCacheForExternalAPIID(externalAPIID)
 		}
 		return api != nil
+	}
 	return false
 }
 
