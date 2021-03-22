@@ -213,12 +213,6 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	if c.GetAgentType() == config.TraceabilityAgent {
-		log.SetIsLogP()
-	} else {
-		log.UnsetIsLogP()
-	}
-
 	// Init Central Config
 	c.centralCfg, err = config.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {

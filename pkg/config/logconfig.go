@@ -129,11 +129,6 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 		}),
 	})
 
-	toFileSettings := map[string]interface{}{
-		"logging.to_files":          true,
-		"logging.files.permissions": "0600",
-	}
-
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
@@ -143,7 +138,10 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 			}
 			return false
 		},
-		Config: common.MustNewConfigFrom(toFileSettings),
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			"logging.to_files":          true,
+			"logging.files.permissions": "0600",
+		}),
 	})
 	return overrides
 }

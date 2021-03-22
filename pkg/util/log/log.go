@@ -9,7 +9,7 @@ import (
 
 const (
 	debugSelector = "apic-agents"
-  traceSelector = "apic-agents-trace"
+	traceSelector = "apic-agents-trace"
 )
 
 var isLogP bool
@@ -22,6 +22,7 @@ func SetIsLogP() {
 //UnsetIsLogP -
 func UnsetIsLogP() {
 	isLogP = false
+}
 
 // Trace -
 func Trace(args ...interface{}) {
