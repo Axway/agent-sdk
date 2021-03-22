@@ -81,7 +81,7 @@ func updateAPICache() {
 			existingAPIs[externalAPIID] = true
 		}
 
-		if len(apiServices) < pageSize {
+		if len(apiServices) < apiServerPageSize {
 			morePages = false
 		}
 		page++
@@ -169,7 +169,7 @@ func validateConsumerInstances() {
 			}
 		}
 
-		if len(consumerInstances) < pageSize {
+		if len(consumerInstances) < apiServerPageSize {
 			morePages = false
 		}
 		page++
