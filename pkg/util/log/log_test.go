@@ -63,7 +63,7 @@ func TestLoggerConfig(t *testing.T) {
 	assert.NotNil(t, err, "Expected an error for an invalid max size value")
 	lc.err = nil
 
-	err = lc.MaxSize(100).Apply()
+	err = lc.MaxSize(1048576).Apply()
 	assert.Nil(t, err, "Did not expect an error")
 	lc.err = nil
 
