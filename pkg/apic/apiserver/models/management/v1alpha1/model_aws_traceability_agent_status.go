@@ -17,4 +17,6 @@ type AwsTraceabilityAgentStatus struct {
 	State string `json:"state,omitempty"`
 	// A way to communicate details about the current status by the agent
 	Message string `json:"message,omitempty"`
+	// The last updated event timestamp provided by the agent
+	LastActivityTime string `json:"lastActivityTime,omitempty"`
 }

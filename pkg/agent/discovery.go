@@ -57,6 +57,8 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 			apiSvc, e := ret.AsInstance()
 			if e == nil {
 				addItemToAPICache(*apiSvc)
+				//update the local activity timestamp for the event to compare against
+				UpdateLocalActivityTime()
 			}
 		} else {
 			return err
