@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -11,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -126,14 +128,51 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-func logResponseErrors(body []byte) {
+func readResponseErrors(statuscode int, body []byte) string {
+	// Return error string only for error status code
+	if statuscode < http.StatusBadRequest {
+		return ""
+	}
+
+	responseErr := &ResponseError{}
+	err := json.Unmarshal(body, &responseErr)
+	if err != nil || len(responseErr.Errors) == 0 {
+		errStr := getHTTPResponseErrorString(statuscode, body)
+		log.Tracef("HTTP response error: %v", string(errStr))
+		return errStr
+	}
+
+	// Get the first error from the API response errors
+	errStr := getAPIResponseErrorString(responseErr.Errors[0])
+	log.Tracef("HTTP response error: %s", errStr)
+	return errStr
+}
+
+func getHTTPResponseErrorString(statuscode int, body []byte) string {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
-
-	for k, v := range detail {
+	errorMsg := ""
+	for _, v := range detail {
 		buffer, _ := v.MarshalJSON()
-		log.Debugf("HTTP response %v: %v", k, string(buffer))
+		errorMsg = string(buffer)
 	}
+
+	errStr := "status - " + strconv.Itoa(statuscode)
+	if errorMsg != "" {
+		errStr += ", detail - " + errorMsg
+	}
+	return errStr
+}
+
+func getAPIResponseErrorString(apiError APIError) string {
+	errStr := "status - " + strconv.Itoa(apiError.Status)
+	if apiError.Title != "" {
+		errStr += ", title - " + apiError.Title
+	}
+	if apiError.Detail != "" {
+		errStr += ", detail - " + apiError.Detail
+	}
+	return errStr
 }
 
 func (c *ServiceClient) createHeader() (map[string]string, error) {
@@ -267,8 +306,8 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 	case http.StatusUnauthorized:
 		return nil, ErrAuthentication
 	default:
-		logResponseErrors(response.Body)
-		return nil, ErrRequestQuery
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 }
@@ -389,7 +428,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 	case http.StatusUnauthorized:
 		return nil, ErrAuthentication
 	default:
-		logResponseErrors(response.Body)
-		return nil, ErrRequestQuery
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 }

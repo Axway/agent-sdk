@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/tidwall/gjson"
 )
 
@@ -33,8 +34,8 @@ func (c *ServiceClient) getCatalogItemIDForConsumerInstance(instanceID string) (
 		return "", err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return "", utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	// the response is an array of IDs
@@ -72,8 +73,8 @@ func (c *ServiceClient) GetCatalogItemName(ID string) (string, error) {
 		return "", err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return "", utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	name := gjson.Get(string(response.Body), "name").String()
@@ -119,8 +120,8 @@ func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalo
 		return nil, err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	ss := NewSubscriptionSchema("")
@@ -155,8 +156,8 @@ func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(cat
 		return err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	return nil

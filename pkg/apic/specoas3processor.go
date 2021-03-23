@@ -2,11 +2,11 @@ package apic
 
 import (
 	"fmt"
-	"net"
 	"net/url"
 	"strconv"
 	"strings"
 
+	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -26,32 +26,43 @@ func (p *oas3SpecProcessor) getResourceType() string {
 func (p *oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	if len(p.spec.Servers) > 0 {
-		for _, server := range p.spec.Servers {
-			// Add the URL string to the array
-			allURLs := []string{
-				server.URL,
-			}
-	
-			defaultURL := ""
-			var err error
-			if server.Variables != nil {
-				defaultURL, allURLs, err = p.handleURLSubstitutions(server, allURLs)
-				if err != nil {
-					return nil, err
-				}
-			}
-	
-			parsedEndPoints, err := p.parseURLsIntoEndpoints(defaultURL, allURLs)
+		var err error
+		endPoints, err = p.parseEndpoints(p.spec.Servers)
+		if err != nil {
+			return nil, coreerrors.Wrap(ErrSetSpecEndPoints, err.Error())
+		}
+		return endPoints, nil
+	}
+	if len(endPoints) == 0 {
+		return nil, coreerrors.Wrap(ErrSetSpecEndPoints, "no server endpoints defined")
+	}
+	return endPoints, nil
+}
+
+func (p *oas3SpecProcessor) parseEndpoints(servers []*openapi3.Server) ([]EndpointDefinition, error) {
+	endPoints := []EndpointDefinition{}
+	for _, server := range servers {
+		// Add the URL string to the array
+		allURLs := []string{
+			server.URL,
+		}
+
+		defaultURL := ""
+		var err error
+		if server.Variables != nil {
+			defaultURL, allURLs, err = p.handleURLSubstitutions(server, allURLs)
 			if err != nil {
 				return nil, err
 			}
-			endPoints = append(endPoints, parsedEndPoints...)
 		}
-	
-		return endPoints, nil
-	} 
-	
-	return nil, ErrSetSpecEndPoints
+
+		parsedEndPoints, err := p.parseURLsIntoEndpoints(defaultURL, allURLs)
+		if err != nil {
+			return nil, err
+		}
+		endPoints = append(endPoints, parsedEndPoints...)
+	}
+	return endPoints, nil
 }
 
 func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
@@ -85,30 +96,36 @@ func (p *oas3SpecProcessor) processURLSubstutions(allURLs, newURLs []string, var
 	return newURLs
 }
 
+func (p *oas3SpecProcessor) parseURL(urlStr string) (*url.URL, error) {
+	urlObj, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+	if urlObj.Scheme == "" {
+		urlObj, err = p.parseURL("https://" + urlStr)
+	}
+	return urlObj, err
+}
+
 func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	for _, urlStr := range allURLs {
-		urlObj, err := url.Parse(urlStr)
+		if urlStr == "" {
+			return nil, fmt.Errorf("server definition cannot have empty url")
+		}
+		urlObj, err := p.parseURL(urlStr)
 		if err != nil {
-			err := fmt.Errorf("Could not parse url: %s", urlStr)
-			log.Errorf(err.Error())
 			return nil, err
 		}
-		// If a port is not given, use lookup the default
-		var port int
-		if urlObj.Port() == "" {
-			port, _ = net.LookupPort("tcp", urlObj.Scheme)
-		} else {
+		if urlObj.Hostname() == "" {
+			err = fmt.Errorf("could not parse url: %s", urlStr)
+			return nil, err
+		}
+		port := 0
+		if urlObj.Port() != "" {
 			port, _ = strconv.Atoi(urlObj.Port())
 		}
-
-		endPoint := EndpointDefinition{
-			Host:     urlObj.Hostname(),
-			Port:     int32(port),
-			Protocol: urlObj.Scheme,
-			BasePath: urlObj.Path,
-		}
-
+		endPoint := createEndpointDefinition(urlObj.Scheme, urlObj.Hostname(), port, urlObj.Path)
 		// If the URL is the default URL put it at the front of the array
 		if urlStr == defaultURL {
 			newEndPoints := []EndpointDefinition{endPoint}

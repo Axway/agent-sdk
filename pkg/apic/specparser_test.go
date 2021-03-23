@@ -213,7 +213,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+	assert.Equal(t, int32(80), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 	assert.Equal(t, "http", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 	assert.Equal(t, "/v1", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
 }

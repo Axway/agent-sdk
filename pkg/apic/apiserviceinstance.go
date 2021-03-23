@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -212,8 +212,8 @@ func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alph
 	}
 	if response.Code != http.StatusOK {
 		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-			return nil, errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 		return nil, nil
 	}
@@ -242,8 +242,8 @@ func (c *ServiceClient) getAPIServiceInstanceByName(instanceName string) (*v1alp
 	}
 	if response.Code != http.StatusOK {
 		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-			return nil, errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 		return nil, nil
 	}

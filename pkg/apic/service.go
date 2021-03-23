@@ -3,11 +3,9 @@ package apic
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -205,9 +203,9 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 		return "", nil
 	}
 
-	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
-		logResponseErrors(response.Body)
-		return "", errors.New(strconv.Itoa(response.Code))
+	if response.Code >= http.StatusBadRequest {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return "", utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	itemID := ""
@@ -253,8 +251,8 @@ func (c *ServiceClient) createSecret() error {
 		return err
 	}
 	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
-		logResponseErrors(response.Body)
-		return errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 	if response.Code == http.StatusConflict {
 		request = coreapi.Request{
@@ -269,8 +267,8 @@ func (c *ServiceClient) createSecret() error {
 			return err
 		}
 		if !(response.Code == http.StatusOK) {
-			logResponseErrors(response.Body)
-			return errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 	}
 
@@ -321,8 +319,8 @@ func (c *ServiceClient) createWebhook() error {
 		return err
 	}
 	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
-		logResponseErrors(response.Body)
-		return errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 	if response.Code == http.StatusConflict {
 		request = coreapi.Request{
@@ -337,8 +335,8 @@ func (c *ServiceClient) createWebhook() error {
 			return err
 		}
 		if !(response.Code == http.StatusOK) {
-			logResponseErrors(response.Body)
-			return errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 	}
 
@@ -365,8 +363,8 @@ func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID, subscript
 		return nil, err
 	}
 	if response.Code != http.StatusOK {
-		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	relationships := make([]unifiedcatalog.EntityRelationship, 0)

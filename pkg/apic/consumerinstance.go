@@ -12,6 +12,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -213,8 +214,8 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 	}
 	if response.Code != http.StatusOK {
 		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-			return nil, errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 		return nil, nil
 	}
@@ -248,8 +249,8 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.Co
 		return nil, err
 	}
 	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
@@ -286,8 +287,8 @@ func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (
 		return nil, err
 	}
 	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
-		return nil, errors.New(strconv.Itoa(response.Code))
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
