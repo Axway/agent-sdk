@@ -42,7 +42,7 @@ func (l *LogConfiguration) setupLogger() error {
 type LogFileConfiguration struct {
 	Name       string `config:"name"`
 	Path       string `config:"path"`
-	MaxSize    int    `config:"rotateeverymegabytes"`
+	MaxSize    int    `config:"rotateeverybytes"`
 	MaxAge     int    `config:"cleanbackups"`
 	MaxBackups int    `config:"keepfiles"`
 }
@@ -54,7 +54,7 @@ const (
 	pathLogMaskedValues   = "log.maskedValues"
 	pathLogFileName       = "log.file.name"
 	pathLogFilePath       = "log.file.path"
-	pathLogFileMaxSize    = "log.file.rotateeverymegabytes"
+	pathLogFileMaxSize    = "log.file.rotateeverybytes"
 	pathLogFileMaxAge     = "log.file.cleanbackups"
 	pathLogFileMaxBackups = "log.file.keepfiles"
 )
@@ -69,7 +69,7 @@ func AddLogConfigProperties(props properties.Properties, defaultFileName string)
 	// Log file options
 	props.AddStringProperty(pathLogFileName, defaultFileName, "Name of the log files")
 	props.AddStringProperty(pathLogFilePath, "logs", "Log file path if output type is file or both")
-	props.AddIntProperty(pathLogFileMaxSize, 100, "The maximum size of a log file, in megabytes  (default: 100)")
+	props.AddIntProperty(pathLogFileMaxSize, 100, "The maximum size of a log file, in bytes  (default: 10485760 - 10 MB)")
 	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backps")
 	props.AddIntProperty(pathLogFileMaxBackups, 7, "The maximum number of backups to keep of log files (default: 7)")
 }
