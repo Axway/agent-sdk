@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -288,7 +287,7 @@ func TestDeleteConsumerInstance(t *testing.T) {
 	httpClient.ResponseCode = http.StatusRequestTimeout
 	err := client.deleteConsumerInstance("12345")
 	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), strconv.Itoa(http.StatusRequestTimeout))
+	assert.Contains(t, "[Error Code 1120] - error making a request to AMPLIFY: status - 408", err.Error())
 
 	httpClient.ResponseCode = http.StatusNoContent
 	err = client.deleteConsumerInstance("12345")

@@ -172,7 +172,7 @@ func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionSta
 		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
 	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil
@@ -223,7 +223,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
 	if response.Code != http.StatusOK && response.Code != http.StatusNotFound {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return nil, ErrSubscriptionResp.FormatError(response.Code)
 	}
 
@@ -315,7 +315,7 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 	}
 
 	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil
@@ -347,7 +347,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 	}
 
 	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil

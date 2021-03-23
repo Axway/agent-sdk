@@ -142,7 +142,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
 	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
 	if response.Code == http.StatusConflict {
@@ -177,7 +177,7 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
 	if !(response.Code == http.StatusOK) {
-		logResponseErrors(response.Body)
+		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 	}
 

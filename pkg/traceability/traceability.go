@@ -6,11 +6,11 @@ import (
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
-	"github.com/elastic/beats/v7/libbeat/logp"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
@@ -28,8 +28,6 @@ const (
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
 )
-
-var debugf = logp.MakeDebug(traceabilityStr)
 
 // Client - struct
 type Client struct {
@@ -172,14 +170,14 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		}
 	}
 	publishCount := len(batch.Events())
-	logp.Info("Publishing %d events", publishCount)
+	log.Infof("Publishing %d events", publishCount)
 	//update the local activity timestamp for the event to compare against
 	agent.UpdateLocalActivityTime()
 	err := client.transportClient.Publish(batch)
 	if err != nil {
 		return err
 	}
-	logp.Info("Published %d events", publishCount-len(batch.Events()))
+	log.Infof("Published %d events", publishCount-len(batch.Events()))
 	return nil
 }
 

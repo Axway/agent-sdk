@@ -25,18 +25,11 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
-
-var log logrus.FieldLogger = logrus.WithField("package", "auth")
-
-// SetLog sets the logger for the package.
-func SetLog(newLog logrus.FieldLogger) {
-	log = newLog
-	return
-}
 
 func closeHelper(closer io.Closer) {
 	if err := closer.Close(); err != nil {

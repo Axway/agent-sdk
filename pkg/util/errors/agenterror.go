@@ -26,10 +26,14 @@ func Newf(errCode int, errMessage string) *AgentError {
 
 // Wrap -add additional data to a defined error
 func Wrap(agentError *AgentError, info string) *AgentError {
+	message := agentError.Message
+	if info != "" {
+		message += fmt.Sprintf(": %s", info)
+	}
 	return &AgentError{
 		formattedErr: agentError.formattedErr,
 		Code:         agentError.Code,
-		Message:      agentError.Message + fmt.Sprintf(": %s", info),
+		Message:      message,
 		formatArgs:   agentError.formatArgs,
 	}
 }

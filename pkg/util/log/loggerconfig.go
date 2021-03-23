@@ -127,10 +127,10 @@ func (b *LoggerConfig) Path(path string) *LoggerConfig {
 // MaxSize -
 func (b *LoggerConfig) MaxSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
-		if maxSize < 1 {
-			b.err = ErrInvalidLogConfig.FormatError("log.file.rotateeverymegabytes", "greater than 0")
+		if maxSize < 1048576 {
+			b.err = ErrInvalidLogConfig.FormatError("log.file.rotateeverybytes", "minimum of 1048576")
 		}
-		b.cfg.MaxSize = maxSize
+		b.cfg.MaxSize = int(float64(maxSize) / 1024 / 1024)
 	}
 	return b
 }

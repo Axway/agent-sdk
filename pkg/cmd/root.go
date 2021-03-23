@@ -111,7 +111,10 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 	c.props = properties.NewProperties(c.rootCmd)
 	if agentType == config.TraceabilityAgent {
-		c.props.SetAliasKeyPrefix(c.agentName)
+		properties.SetAliasKeyPrefix(c.agentName)
+		log.SetIsLogP()
+	} else {
+		log.UnsetIsLogP()
 	}
 
 	c.addBaseProps()
