@@ -111,6 +111,16 @@ type ServiceBody struct {
 	UnstructuredProps *UnstructuredProperties
 }
 
+type APIError struct {
+	Status int    `json:"status,omitempty"`
+	Title  string `json:"title,omitempty"`
+	Detail string `json:"detail,omitempty"`
+}
+
+type ResponseError struct {
+	Errors []APIError `json:"errors,omitempty"`
+}
+
 //UnstructuredProperties -
 type UnstructuredProperties struct {
 	AssetType   string

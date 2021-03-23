@@ -3,7 +3,6 @@ package apic
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -114,8 +114,8 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 	}
 	if response.Code != http.StatusOK {
 		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-			return nil, errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 		return nil, nil
 	}

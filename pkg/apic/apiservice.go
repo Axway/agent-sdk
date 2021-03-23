@@ -2,13 +2,12 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/google/uuid"
 )
 
@@ -117,8 +116,8 @@ func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (
 	}
 	if response.Code != http.StatusOK {
 		if response.Code != http.StatusNotFound {
-			logResponseErrors(response.Body)
-			return nil, errors.New(strconv.Itoa(response.Code))
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
 		return nil, nil
 	}
