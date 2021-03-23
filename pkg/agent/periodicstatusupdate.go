@@ -47,8 +47,7 @@ func (su *periodicStatusUpdate) Execute() error {
 	}
 	// if the last timestamp for an event has changed, update the status
 	if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
-		//TODO: kf make log.Tracef level after 17999 commit
-		log.Debugf("Activity change detected at %s, from previous activity at %s, updating status", su.currentActivityTime, su.previousActivityTime)
+		log.Tracef("Activity change detected at %s, from previous activity at %s, updating status", su.currentActivityTime, su.previousActivityTime)
 		UpdateStatus(AgentRunning, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
