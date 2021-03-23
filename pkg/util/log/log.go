@@ -27,7 +27,10 @@ func UnsetIsLogP() {
 // Trace -
 func Trace(args ...interface{}) {
 	if isLogP {
-		logp.Debug(traceSelector, fmt.Sprint(args...))
+		// forward trace logs to logp debug with the trace selector
+		if log.Level == logrus.TraceLevel {
+			logp.Debug(traceSelector, fmt.Sprint(args...))
+		}
 	} else {
 		log.Trace(args...)
 	}
@@ -36,7 +39,10 @@ func Trace(args ...interface{}) {
 // Tracef -
 func Tracef(format string, args ...interface{}) {
 	if isLogP {
-		logp.Debug(traceSelector, format, args...)
+		// forward trace logs to logp debug with the trace selector
+		if log.Level == logrus.TraceLevel {
+			logp.Debug(traceSelector, format, args...)
+		}
 	} else {
 		log.Tracef(format, args...)
 	}

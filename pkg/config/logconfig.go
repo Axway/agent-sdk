@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/cfgfile"
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/sirupsen/logrus"
 )
 
 // LogConfig - Interface for logging config
@@ -101,6 +102,79 @@ func ParseAndSetupLogConfig(props properties.Properties) (LogConfig, error) {
 func LogConfigOverrides() []cfgfile.ConditionalOverride {
 	overrides := make([]cfgfile.ConditionalOverride, 0)
 
+	const (
+		logLevelYAMLPath       = "logging.level"
+		logJSONYAMLPath        = "logging.json"
+		logSTDERRYAMLPath      = "logging.to_stderr"
+		logFileYAMLPath        = "logging.to_files"
+		logFilePermissionsPath = "logging.files.permissions"
+	)
+
+	// Set level to info
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
+			level, err := logrus.ParseLevel(output)
+			if err == nil && level == logrus.InfoLevel {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			logLevelYAMLPath: "info",
+		}),
+	})
+
+	// Set level to warn
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
+			level, err := logrus.ParseLevel(output)
+			if err == nil && level == logrus.WarnLevel {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			logLevelYAMLPath: "warn",
+		}),
+	})
+
+	// Set level to error
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
+			level, err := logrus.ParseLevel(output)
+			if err == nil && level == logrus.ErrorLevel {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			logLevelYAMLPath: "error",
+		}),
+	})
+
+	// Override the level to debug, if trace or debug
+	overrides = append(overrides, cfgfile.ConditionalOverride{
+		Check: func(cfg *common.Config) bool {
+			aliasKeyPrefix := properties.GetAliasKeyPrefix()
+			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
+			level, err := logrus.ParseLevel(output)
+			if err == nil && (level == logrus.TraceLevel || level == logrus.DebugLevel) {
+				return true
+			}
+			return false
+		},
+		Config: common.MustNewConfigFrom(map[string]interface{}{
+			logLevelYAMLPath: "debug",
+		}),
+	})
+
+	// Override the log output format
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
@@ -111,10 +185,11 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 			return false
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
-			"logging.json": true,
+			logJSONYAMLPath: true,
 		}),
 	})
 
+	// Override the log output stream
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
@@ -125,10 +200,11 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 			return false
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
-			"logging.to_stderr": true,
+			logSTDERRYAMLPath: true,
 		}),
 	})
 
+	// Override the log output to file
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
@@ -139,8 +215,8 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 			return false
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
-			"logging.to_files":          true,
-			"logging.files.permissions": "0600",
+			logFileYAMLPath:        true,
+			logFilePermissionsPath: "0600",
 		}),
 	})
 	return overrides
