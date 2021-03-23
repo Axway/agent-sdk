@@ -3,8 +3,7 @@ package traceability
 import (
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/logp"
-
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
@@ -87,7 +86,7 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 
 	// Force piplining to 0
 	if outputConfig.Pipelining > 0 {
-		logp.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
+		log.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
 		outputConfig.Pipelining = 0
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/outputs/outil"
@@ -160,18 +161,18 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 	}
 	status, _, err := client.request(events, client.headers, timeStamp)
 	if err != nil && err == ErrJSONEncodeFailed {
-		debugf("Failed to publish event: %s", err.Error())
+		log.Debugf("Failed to publish event: %s", err.Error())
 		return nil, nil
 	}
 	switch {
 	case status == 500 || status == 400: //server error or bad input, don't retry
-		debugf("Failed to publish event: received status code %d", status)
+		log.Debugf("Failed to publish event: received status code %d", status)
 		return nil, nil
 	case status >= 300:
 		// retry
 		return data, err
 	case status == 0:
-		debugf("Transport error :%s", err.Error())
+		log.Debugf("Transport error :%s", err.Error())
 	}
 
 	return nil, nil
