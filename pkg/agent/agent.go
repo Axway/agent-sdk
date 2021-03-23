@@ -124,6 +124,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 			hc.StartPeriodicHealthCheck()
 		}
 
+		StartPeriodicStatusUpdate()
 		startAPIServiceCache()
 	}
 	agent.isInitialized = true

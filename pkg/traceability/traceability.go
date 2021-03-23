@@ -171,9 +171,10 @@ func (client *Client) Publish(batch publisher.Batch) error {
 			return nil
 		}
 	}
-
 	publishCount := len(batch.Events())
 	logp.Info("Publishing %d events", publishCount)
+	//update the local activity timestamp for the event to compare against
+	agent.UpdateLocalActivityTime()
 	err := client.transportClient.Publish(batch)
 	if err != nil {
 		return err

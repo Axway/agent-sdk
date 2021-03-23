@@ -2,9 +2,18 @@ package agent
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 )
+
+// apiServerTimeFormat is the date-time format for API Server
+const apiServerTimeFormat = "2006-01-02T03:04:05.000-0700"
+
+// getTimestamp - Returns current timestamp formatted for API Server
+func getTimestamp() string {
+	return time.Now().Format(apiServerTimeFormat)
+}
 
 // ApplyResouceToConfig - applies the resources to agent configs
 // Uses reflection to get the IResourceConfigCallback interface on the config struct or

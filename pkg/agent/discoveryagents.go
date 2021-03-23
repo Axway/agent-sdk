@@ -38,6 +38,7 @@ func createDiscoveryAgentStatusResource(status, message string) *v1alpha1.Discov
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
+	agentRes.Status.LastActivityTime = getTimestamp()
 
 	return &agentRes
 }
