@@ -1,10 +1,18 @@
 package agent
 
 import (
+	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+func traceabilityAgent(res *apiV1.ResourceInstance) *v1alpha1.TraceabilityAgent {
+	agentRes := &v1alpha1.TraceabilityAgent{}
+	agentRes.FromInstance(res)
+
+	return agentRes
+}
 
 func createTraceabilityAgentResource(config v1alpha1.TraceabilityAgentSpecConfig, logging v1alpha1.DiscoveryAgentSpecLogging, gatewayType string) {
 	// The traceability agent resource needs to be created

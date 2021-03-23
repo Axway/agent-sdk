@@ -60,7 +60,25 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 	return nil, nil
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+
+var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
+var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName
+var oldUpdateCacheForExternalAPI = updateCacheForExternalAPI
+
+func fakeCacheUpdateCalls() {
+	updateCacheForExternalAPIID = func(string) (interface{}, error) { return nil, nil }
+	updateCacheForExternalAPIName = func(string) (interface{}, error) { return nil, nil }
+	updateCacheForExternalAPI = func(map[string]string) (interface{}, error) { return nil, nil }
+}
+
+func restoreCacheUpdateCalls() {
+	updateCacheForExternalAPIID = oldUpdateCacheForExternalAPIID
+	updateCacheForExternalAPIName = oldUpdateCacheForExternalAPIName
+	updateCacheForExternalAPI = oldUpdateCacheForExternalAPI
+}
+
 func TestDiscoveryCache(t *testing.T) {
+	fakeCacheUpdateCalls()
 	emptyAPISvc := []v1.ResourceInstance{}
 	apiSvc1 := v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
@@ -130,4 +148,6 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublished("1111"))
 	assert.False(t, IsAPIPublished("2222"))
+
+	restoreCacheUpdateCalls()
 }

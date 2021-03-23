@@ -85,7 +85,10 @@ var agent = agentData{}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
-	agent.apiMap = cache.New()
+	// Only create the api map cache if it does not already exist
+	if agent.apiMap == nil {
+		agent.apiMap = cache.New()
+	}
 
 	agent.cfg = centralCfg.(*config.CentralConfiguration)
 
@@ -150,11 +153,13 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 }
 
 func startAPIServiceCache() {
-	// Load the cache before the agents start discovering the APIs from remote gateway
-	updateAPICache()
-
 	// register the update cache job
-	jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
+	id, err := jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
+	if err != nil {
+		log.Errorf("could not start the API cache update job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered API cache update job: %s", id)
 }
 
 func isRunningInDockerContainer() bool {
@@ -219,6 +224,11 @@ func GetAgentResource() *apiV1.ResourceInstance {
 // GetDataplaneResource - Returns dataplane resource
 func GetDataplaneResource() *apiV1.ResourceInstance {
 	return agent.dataplaneResource
+}
+
+// GetDataplaneType - Returns dataplane type name
+func GetDataplaneType() string {
+	return getDataplaneTypeFromAgentResource(agent.agentResource)
 }
 
 // UpdateStatus - Updates the agent state
@@ -345,22 +355,20 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 // GetDataplaneResource - returns the dataplane resource
 func getDataplaneResource(agentResource *apiV1.ResourceInstance) (*apiV1.ResourceInstance, error) {
 	dataplaneName := getDataplaneNameFromAgent(agentResource)
-	dataplaneResourceType := getDataplaneType()
-	dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+	var dataplane *apiV1.ResourceInstance
+	if dataplaneName != "" {
+		dataplaneResourceType := getDataplaneType()
+		dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
+		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
-	if err != nil {
-		return nil, err
+		dataplane = &apiV1.ResourceInstance{}
+
+		json.Unmarshal(response, dataplane)
 	}
-
-	dataplane := apiV1.ResourceInstance{}
-
-	json.Unmarshal(response, &dataplane)
-
-	// Set the data plane name
-	agent.cfg.SetDataPlaneName(dataplane.Title)
-
-	return &dataplane, nil
+	return dataplane, nil
 }
 
 // updateAgentStatus - Updates the agent status in agent resource
@@ -412,6 +420,27 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 	return nil
 }
 
+func getDataplaneTypeFromAgentResource(res *apiV1.ResourceInstance) string {
+	switch getAgentResourceType() {
+	case v1alpha1.EdgeDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.EdgeTraceabilityAgentResource:
+		return edgeDataplaneType
+	case v1alpha1.AWSDiscoveryAgentResource:
+		fallthrough
+	case v1alpha1.AWSTraceabilityAgentResource:
+		return awsDataplaneType
+	case v1alpha1.DiscoveryAgentResource:
+		agentRes := discoveryAgent(res)
+		return agentRes.Spec.DataplaneType
+	case v1alpha1.TraceabilityAgentResource:
+		agentRes := traceabilityAgent(res)
+		return agentRes.Spec.DataplaneType
+	default:
+		return ""
+	}
+}
+
 func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 	switch getAgentResourceType() {
 	case v1alpha1.EdgeDiscoveryAgentResource:
@@ -427,7 +456,7 @@ func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
 		agentRes := awsTraceabilityAgent(res)
 		return agentRes.Spec.Dataplane
 	default:
-		log.Warn("Agent type specified not linked to a dataplane type")
+		log.Trace("Agent type specified not linked to a dataplane type")
 		return ""
 	}
 }
