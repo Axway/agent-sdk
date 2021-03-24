@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"strings"
+
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -42,5 +44,9 @@ func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.Tra
 }
 
 func mergeTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
-	// Nothing to merge
+	ta := discoveryAgent(GetAgentResource())
+	resCfgAdditionalTags := strings.Join(ta.Spec.Config.AdditionalTags, ",")
+	resCfgTeamName := ta.Spec.Config.OwningTeam
+	resCfgLogLevel := ta.Spec.Logging.Level
+	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
 }
