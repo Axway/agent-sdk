@@ -557,14 +557,9 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 		log.GlobalLoggerConfig.Level(logLevel).Apply()
 	}
 
-	// If config team is not blank, use cfg.TeamName
-	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
-	// If config team is blank and resource team name is blank, set to "" and let central handle setting team based on organization
-	if cfg.TeamName == "" {
-		if resCfgTeamName != "" {
-			cfg.TeamName = resCfgTeamName
-		} else {
-			cfg.TeamName = ""
-		}
+	// If resource team name is not blank, apply it
+	if resCfgTeamName != "" {
+		cfg.TeamName = resCfgTeamName
 	}
+
 }
