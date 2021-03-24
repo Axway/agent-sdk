@@ -35,10 +35,6 @@ const (
 	edgeDataplaneType = "Edge"
 )
 
-const (
-	defaultTeam = "Default Team"
-)
-
 // AgentResourceType - Holds the type for agent resource in Central
 var AgentResourceType string
 
@@ -563,12 +559,12 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 
 	// If config team is not blank, use cfg.TeamName
 	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
-	// If config team is blank and resource team name is blank, set to "Default Team"
+	// If config team is blank and resource team name is blank, set to "" and let central handle setting team based on organization
 	if cfg.TeamName == "" {
 		if resCfgTeamName != "" {
 			cfg.TeamName = resCfgTeamName
 		} else {
-			cfg.TeamName = defaultTeam
+			cfg.TeamName = ""
 		}
 	}
 }
