@@ -676,10 +676,9 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (
 					ModifyTimestamp: apiv1.Time(time.Now()),
 					ModifyUserID:    uo.impersonateUserID,
 				},
-				Scope:           prev.Metadata.Scope,
-				ResourceVersion: prev.Metadata.ResourceVersion,
-				References:      nil,
-				State:           "", // needed?
+				Scope:      prev.Metadata.Scope,
+				References: nil,
+				State:      "", // needed?
 			},
 			Attributes: ri.Attributes,
 			Tags:       ri.Tags,
