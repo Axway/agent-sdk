@@ -3,9 +3,9 @@ image: docker:dind
 
 variables:
   PACKAGE_NAME: apic-agents-sdk
-  GIT_REPO_PATH: src/github.com/Axway   # overridden from variables.yml
+  GIT_REPO_PATH: src/github.com/Axway # overridden from variables.yml
   GIT_REPO_NAME: agent-sdk
-  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml"  # overridden from variables.yml
+  DEPENDENCY_CHECK_FLAGS: "--scan=**/* --exclude=**/*.zip --suppression=dc-suppressions.xml" # overridden from variables.yml
 
   # for agent trigger jobs
   AWS_DISCOVERY_PROJECT_ID: 7397
@@ -81,7 +81,7 @@ update-csr:
   when: manual
   script:
     - apk update && apk add curl ca-certificates
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
+    - curl --request POST --form "token=${CI_JOB_TOKEN}"  --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" \--form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
   <<: *only-main
 
 trigger-aws-apigw-discovery-agent:
