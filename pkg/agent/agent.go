@@ -559,9 +559,8 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 
 	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
 	// If config team is blank and resource team name is blank, return and let central handle setting team based on organization
-	if cfg.TeamName == "" {
-		if resCfgTeamName != "" {
-			cfg.TeamName = resCfgTeamName
-		}
+	if cfg.TeamName == "" && resCfgTeamName != "" {
+		cfg.TeamName = resCfgTeamName
 	}
+
 }
