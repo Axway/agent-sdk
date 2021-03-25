@@ -82,5 +82,8 @@ func createAWSTraceabilityAgentStatusResource(status, message string) *v1alpha1.
 }
 
 func mergeAWSTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
-	// Nothing to merge
+	ta := awsTraceabilityAgent(GetAgentResource())
+	resCfgTeamName := ta.Spec.Config.OwningTeam
+	resCfgLogLevel := ta.Spec.Logging.Level
+	applyResConfigToCentralConfig(cfg, "", resCfgTeamName, resCfgLogLevel)
 }
