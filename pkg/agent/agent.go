@@ -228,9 +228,9 @@ func GetDataplaneResource() *apiV1.ResourceInstance {
 
 // GetDataplaneType - Returns dataplane type name
 func GetDataplaneType() string {
-	dataplaneTypeName := getDataplaneTypeFromAgentResource(agent.agentResource)
+	dataplaneTypeName := agent.cfg.GetDataplaneType()
 	if dataplaneTypeName == "" {
-		dataplaneTypeName = agent.cfg.GetDataplaneType()
+		dataplaneTypeName = getDataplaneTypeFromAgentResource(agent.agentResource)
 	}
 	return dataplaneTypeName
 }

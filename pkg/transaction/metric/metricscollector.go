@@ -66,13 +66,17 @@ func (c *collector) Execute() error {
 
 	c.endTime = time.Now()
 	c.orgGUID = c.getOrgGUID()
+	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	defer func() {
 		c.startTime = c.endTime
 	}()
 
 	c.generateEvents()
-
 	return nil
+}
+
+func convertTimeToMillis(tm time.Time) int64 {
+	return tm.UnixNano() / 1e6
 }
 
 // AddMetric - add metric for API transaction to collection
@@ -127,21 +131,27 @@ func (c *collector) generateEvents() {
 	defer c.cleanup()
 	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
 		agent.GetDataplaneType() == "" {
-		log.Warn("Unable to process usage and metric event generation.")
+		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
 		return
 	}
 	if len(c.metricMap) != 0 {
 		c.registry.Each(c.processMetricFromRegistry)
 		if agent.GetCentralConfig().CanPublishMetricEvent() {
+			counter := 0
 			for _, apiStatusMetricMap := range c.metricMap {
 				for _, apiStatusMetric := range apiStatusMetricMap {
 					c.generateAPIStatusMetricEvent(apiStatusMetric)
+					counter++
 				}
 			}
+			log.Debugf("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 		} else {
 			log.Debug("Publishing the metric event is turned off")
 		}
+	} else {
+		log.Debugf("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	}
+
 }
 
 func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
@@ -159,8 +169,8 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 			},
 			Data: map[string]interface{}{
 				"value":         transactionCount,
-				"observedStart": c.startTime.UnixNano() / 1e6,
-				"observedEnd":   c.endTime.UnixNano() / 1e6,
+				"observedStart": convertTimeToMillis(c.startTime),
+				"observedEnd":   convertTimeToMillis(c.endTime),
 				"governance":    "Customer Managed",
 			},
 		}
@@ -169,8 +179,8 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 }
 
 func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
-	apiStatusMetric.Observation.Start = c.startTime.UnixNano() / 1e6
-	apiStatusMetric.Observation.End = c.endTime.UnixNano() / 1e6
+	apiStatusMetric.Observation.Start = convertTimeToMillis(c.startTime)
+	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
 	apiStatusMetricEventID, _ := uuid.NewV4()
 	apiStatusMetricEvent := V4Event{
 		ID:        apiStatusMetricEventID.String(),
@@ -194,6 +204,7 @@ func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
 		counterMetric.Clear()
 		if agent.GetCentralConfig().CanPublishUsageEvent() {
 			c.generateUsageEvent(transactionCount, c.orgGUID)
+			log.Debugf("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 		} else {
 			log.Debug("Publishing the usage event is turned off")
 		}

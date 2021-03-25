@@ -7,6 +7,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // Publisher - interface for metric publisher
@@ -55,15 +56,16 @@ func (pj *publisher) publishEvent(event interface{}) {
 	}
 	_, err := pj.apiClient.Send(request)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error("Error in sending usage/metric event: ", err.Error())
 	}
 }
 
 // NewMetricPublisher - Creates publisher job
 func NewMetricPublisher(eventChannel chan interface{}) Publisher {
+	centralCfg := agent.GetCentralConfig()
 	publisherJob := &publisher{
 		eventChannel: eventChannel,
-		apiClient:    api.NewClient(nil, ""),
+		apiClient:    api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL()),
 	}
 	_, err := jobs.RegisterSingleRunJob(publisherJob)
 	if err != nil {
