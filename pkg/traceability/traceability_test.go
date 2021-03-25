@@ -47,6 +47,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
 	cfg.PublishTrafficEvents = true
+	cfg.EventAggregationInterval = 30 * time.Second
 	return cfg
 }
 

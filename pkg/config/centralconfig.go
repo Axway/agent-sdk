@@ -119,6 +119,7 @@ type CentralConfig interface {
 	CanPublishUsageEvent() bool
 	CanPublishMetricEvent() bool
 	CanPublishTrafficEvents() bool
+	GetEventAggregationInterval() time.Duration
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -152,6 +153,7 @@ type CentralConfiguration struct {
 	PublisUsageEvents         bool
 	PublishMetricEvents       bool
 	PublishTrafficEvents      bool
+	EventAggregationInterval  time.Duration `config:"eventAggregationInterval"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -167,6 +169,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
+		EventAggregationInterval:  1 * time.Minute,
 	}
 }
 
@@ -420,39 +423,45 @@ func (c *CentralConfiguration) CanPublishTrafficEvents() bool {
 	return c.PublishTrafficEvents
 }
 
+// GetEventAggregationInterval - Returns the interval duration to generate usage and metric events
+func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
+	return c.EventAggregationInterval
+}
+
 const (
-	pathTenantID               = "central.organizationID"
-	pathURL                    = "central.url"
-	pathPlatformURL            = "central.platformURL"
-	pathPlatformEnvironmentID  = "central.platformEnvironmentID"
-	pathGateKeeperURL          = "central.gatekeeperURL"
-	pathAuthPrivateKey         = "central.auth.privateKey"
-	pathAuthPublicKey          = "central.auth.publicKey"
-	pathAuthKeyPassword        = "central.auth.keyPassword"
-	pathAuthURL                = "central.auth.url"
-	pathAuthRealm              = "central.auth.realm"
-	pathAuthClientID           = "central.auth.clientId"
-	pathAuthTimeout            = "central.auth.timeout"
-	pathSSLNextProtos          = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify  = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites        = "central.ssl.cipherSuites"
-	pathSSLMinVersion          = "central.ssl.minVersion"
-	pathSSLMaxVersion          = "central.ssl.maxVersion"
-	pathEnvironment            = "central.environment"
-	pathAgentName              = "central.agentName"
-	pathDataplaneType          = "central.dataplaneType"
-	pathDeployment             = "central.deployment"
-	pathMode                   = "central.mode"
-	pathTeam                   = "central.team"
-	pathPollInterval           = "central.pollInterval"
-	pathProxyURL               = "central.proxyUrl"
-	pathAPIServerVersion       = "central.apiServerVersion"
-	pathAdditionalTags         = "central.additionalTags"
-	pathAppendDataPlaneToTitle = "central.appendDataPlaneToTitle"
-	pathUpdateFromAPIServer    = "central.updateFromAPIServer"
-	pathPublishUsage           = "central.publishUsage"
-	pathPublishMetric          = "central.publishMetric"
-	pathPublishTraffic         = "central.publishTraffic"
+	pathTenantID                 = "central.organizationID"
+	pathURL                      = "central.url"
+	pathPlatformURL              = "central.platformURL"
+	pathPlatformEnvironmentID    = "central.platformEnvironmentID"
+	pathGateKeeperURL            = "central.gatekeeperURL"
+	pathAuthPrivateKey           = "central.auth.privateKey"
+	pathAuthPublicKey            = "central.auth.publicKey"
+	pathAuthKeyPassword          = "central.auth.keyPassword"
+	pathAuthURL                  = "central.auth.url"
+	pathAuthRealm                = "central.auth.realm"
+	pathAuthClientID             = "central.auth.clientId"
+	pathAuthTimeout              = "central.auth.timeout"
+	pathSSLNextProtos            = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify    = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites          = "central.ssl.cipherSuites"
+	pathSSLMinVersion            = "central.ssl.minVersion"
+	pathSSLMaxVersion            = "central.ssl.maxVersion"
+	pathEnvironment              = "central.environment"
+	pathAgentName                = "central.agentName"
+	pathDataplaneType            = "central.dataplaneType"
+	pathDeployment               = "central.deployment"
+	pathMode                     = "central.mode"
+	pathTeam                     = "central.team"
+	pathPollInterval             = "central.pollInterval"
+	pathProxyURL                 = "central.proxyUrl"
+	pathAPIServerVersion         = "central.apiServerVersion"
+	pathAdditionalTags           = "central.additionalTags"
+	pathAppendDataPlaneToTitle   = "central.appendDataPlaneToTitle"
+	pathUpdateFromAPIServer      = "central.updateFromAPIServer"
+	pathPublishUsage             = "central.publishUsage"
+	pathPublishMetric            = "central.publishMetric"
+	pathPublishTraffic           = "central.publishTraffic"
+	pathEventAggregationInterval = "central.eventAggregationInterval"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -560,6 +569,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
 		props.AddBoolProperty(pathPublishTraffic, true, "Indicates if the agent can publish traffic event to AMPLIFY platform. Default to true")
+		props.AddDurationProperty(pathEventAggregationInterval, 1*time.Minute, "The time interval at which usage and metric event will be generated.")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
@@ -610,6 +620,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.PublishTrafficEvents = props.BoolPropertyValue(pathPublishTraffic)
+		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)

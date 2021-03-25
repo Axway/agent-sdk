@@ -41,7 +41,7 @@ func NewMetricCollector(eventChannel chan interface{}) Collector {
 	}
 
 	// go metrics.Log(metricCollector.registry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-	_, err := jobs.RegisterIntervalJob(metricCollector, 30*time.Second)
+	_, err := jobs.RegisterIntervalJob(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval())
 	if err != nil {
 		panic(err)
 	}
