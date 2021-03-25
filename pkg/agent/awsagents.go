@@ -82,9 +82,8 @@ func createAWSTraceabilityAgentStatusResource(status, message string) *v1alpha1.
 }
 
 func mergeAWSTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
-	ta := awsDiscoveryAgent(GetAgentResource())
-	resCfgAdditionalTags := strings.Join(ta.Spec.Config.AdditionalTags, ",")
+	ta := awsTraceabilityAgent(GetAgentResource())
 	resCfgTeamName := ta.Spec.Config.OwningTeam
 	resCfgLogLevel := ta.Spec.Logging.Level
-	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
+	applyResConfigToCentralConfig(cfg, "", resCfgTeamName, resCfgLogLevel)
 }
