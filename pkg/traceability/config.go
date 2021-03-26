@@ -83,12 +83,6 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 		outputConfig.Index = info.IndexPrefix
 	}
 
-	// Force piplining to 0
-	if outputConfig.Pipelining > 0 {
-		log.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
-		outputConfig.Pipelining = 0
-	}
-
 	return outputConfig, nil
 }
 
