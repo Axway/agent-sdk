@@ -99,8 +99,11 @@ func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (
 		return nil, err
 	}
 
-	query := map[string]string{
-		"query": "attributes." + AttrExternalAPIID + "==\"" + serviceBody.RestAPIID + "\"",
+	query := map[string]string{}
+	if serviceBody.PrimaryKey != "" {
+		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + serviceBody.PrimaryKey + "\""
+	} else {
+		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + serviceBody.RestAPIID + "\""
 	}
 
 	request := coreapi.Request{

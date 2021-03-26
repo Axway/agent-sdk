@@ -14,6 +14,7 @@ const (
 // ServiceBuilder - Interface to build the service body
 type ServiceBuilder interface {
 	SetID(ID string) ServiceBuilder
+	SetPrimaryKey(key string) ServiceBuilder
 	SetTitle(title string) ServiceBuilder
 	SetAPIName(apiName string) ServiceBuilder
 	SetURL(url string) ServiceBuilder
@@ -61,10 +62,15 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			UnstructuredProps: &UnstructuredProperties{},
 		},
 	}
-
 }
+
 func (b *serviceBodyBuilder) SetID(ID string) ServiceBuilder {
 	b.serviceBody.RestAPIID = ID
+	return b
+}
+
+func (b *serviceBodyBuilder) SetPrimaryKey(key string) ServiceBuilder {
+	b.serviceBody.PrimaryKey = key
 	return b
 }
 
