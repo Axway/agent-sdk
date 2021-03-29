@@ -19,6 +19,7 @@ const (
 	apiServerPageSize    = 20
 	healthcheckEndpoint  = "central"
 	attributesQueryParam = "attributes."
+	apiServerFields      = "name,title,attributes"
 )
 
 type discoveryCache struct {
@@ -68,7 +69,7 @@ func updateAPICache() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
@@ -106,7 +107,7 @@ func updateAPICache() {
 
 var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
 	query := map[string]string{
-		"query": "attributes." + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
+		"query": attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
 	}
 
 	return updateCacheForExternalAPI(query)
@@ -154,7 +155,7 @@ func validateConsumerInstances() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
