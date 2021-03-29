@@ -98,18 +98,22 @@ func ParseAndSetupLogConfig(props properties.Properties) (LogConfig, error) {
 	return cfg, cfg.setupLogger()
 }
 
+const (
+	logLevelYAMLPath       = "logging.level"
+	logJSONYAMLPath        = "logging.json"
+	logSTDERRYAMLPath      = "logging.to_stderr"
+	logFileYAMLPath        = "logging.to_files"
+	logFilePermissionsPath = "logging.files.permissions"
+)
+
 //LogConfigOverrides - override the filebeat config options
 func LogConfigOverrides() []cfgfile.ConditionalOverride {
 	overrides := make([]cfgfile.ConditionalOverride, 0)
+	overrides = setLogLevel(overrides)
+	return overrideLogLevel(overrides)
+}
 
-	const (
-		logLevelYAMLPath       = "logging.level"
-		logJSONYAMLPath        = "logging.json"
-		logSTDERRYAMLPath      = "logging.to_stderr"
-		logFileYAMLPath        = "logging.to_files"
-		logFilePermissionsPath = "logging.files.permissions"
-	)
-
+func setLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.ConditionalOverride {
 	// Set level to info
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
@@ -158,6 +162,10 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 		}),
 	})
 
+	return overrides
+}
+
+func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.ConditionalOverride {
 	// Override the level to debug, if trace or debug
 	overrides = append(overrides, cfgfile.ConditionalOverride{
 		Check: func(cfg *common.Config) bool {
@@ -219,5 +227,6 @@ func LogConfigOverrides() []cfgfile.ConditionalOverride {
 			logFilePermissionsPath: "0600",
 		}),
 	})
+
 	return overrides
 }
