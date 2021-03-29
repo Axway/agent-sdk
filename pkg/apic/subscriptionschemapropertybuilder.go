@@ -10,6 +10,7 @@ type SubscriptionPropertyBuilder interface {
 	AddEnumValue(value string) SubscriptionPropertyBuilder
 	SetRequired() SubscriptionPropertyBuilder
 	SetReadOnly() SubscriptionPropertyBuilder
+	SetHidden() SubscriptionPropertyBuilder
 	SetAPICRefField(field string) SubscriptionPropertyBuilder
 	IsString() SubscriptionPropertyBuilder
 	Build() (*SubscriptionSchemaPropertyDefinition, error)
@@ -25,6 +26,7 @@ type schemaProperty struct {
 	enums        map[string]bool
 	required     bool
 	readOnly     bool
+	hidden       bool
 	dataType     string
 }
 
@@ -69,9 +71,15 @@ func (p *schemaProperty) SetRequired() SubscriptionPropertyBuilder {
 	return p
 }
 
-// SetReadOnly - set the propert as a read only property
+// SetReadOnly - set the property as a read only property
 func (p *schemaProperty) SetReadOnly() SubscriptionPropertyBuilder {
 	p.readOnly = true
+	return p
+}
+
+// SetHidden - set the property as a hidden property
+func (p *schemaProperty) SetHidden() SubscriptionPropertyBuilder {
+	p.hidden = true
 	return p
 }
 
@@ -113,6 +121,9 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 		Required:    p.required,
 	}
 
+	if p.hidden {
+		prop.Format = "hidden"
+	}
 	// Convert map to string array
 	if len(p.enums) > 0 {
 		list := make([]string, 0)
