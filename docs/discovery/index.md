@@ -225,7 +225,7 @@ func init() {
 // Callback that agent will call to process the execution
 func run() error {
 	// Code for discovering API and publish
-	return nil
+	return nilSer
 }
 
 // Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
@@ -311,11 +311,13 @@ tag.MatchRegEx("(some){1}")
 ```
 
 ### Processing Discovery
+
 The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to AMPLIFY Central the following properties are needed.
 
 | API Service property | Description                                                                                                                       |
 |----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
 | ID                   | ID of the API.                                                                                                                    |
+| PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                       |
 | Title                | Name of the API that will be used as AMPLIFY Central Catalog name.                                                                |
 | Description:         | A brief summary about the API.                                                                                                    |
 | Version:             | Version of the API.                                                                                                               |
