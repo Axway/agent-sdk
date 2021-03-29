@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	apiServerPageSize = 20
-
-	healthcheckEndpoint = "central"
+	apiServerPageSize    = 20
+	healthcheckEndpoint  = "central"
+	attributesQueryParam = "attributes."
 )
 
 type discoveryCache struct {
@@ -65,7 +65,7 @@ func updateAPICache() {
 	page := 1
 	for morePages {
 		query := map[string]string{
-			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
+			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
 			"fields":   "name,title,attributes",
@@ -114,7 +114,7 @@ var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (in
 
 var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
 	query := map[string]string{
-		"query": "attributes." + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
+		"query": attributesQueryParam + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
 	}
 
 	return updateCacheForExternalAPI(query)
@@ -122,7 +122,7 @@ var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error
 
 var updateCacheForExternalAPIName = func(externalAPIName string) (interface{}, error) {
 	query := map[string]string{
-		"query": "attributes." + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
+		"query": attributesQueryParam + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
 	}
 
 	return updateCacheForExternalAPI(query)
@@ -151,7 +151,7 @@ func validateConsumerInstances() {
 	page := 1
 	for morePages {
 		query := map[string]string{
-			"query":    "attributes." + apic.AttrExternalAPIID + "!=\"\"",
+			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
 			"fields":   "name,title,attributes",

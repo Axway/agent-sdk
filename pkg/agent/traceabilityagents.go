@@ -42,5 +42,8 @@ func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.Tra
 }
 
 func mergeTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
-	// Nothing to merge
+	ta := traceabilityAgent(GetAgentResource())
+	resCfgTeamName := ta.Spec.Config.OwningTeam
+	resCfgLogLevel := ta.Spec.Logging.Level
+	applyResConfigToCentralConfig(cfg, "", resCfgTeamName, resCfgLogLevel)
 }
