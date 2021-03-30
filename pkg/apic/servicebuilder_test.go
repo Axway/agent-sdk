@@ -35,6 +35,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetTitle("sbtitle").
 		SetAPIName("testAPI").
 		SetID("1234").
+		SetPrimaryKey("PrimaryKey").
 		SetStage("teststage").
 		SetURL("https://1234.execute-api.us-region.amazonaws.com/teststage").
 		SetDescription(longDescription).
@@ -64,6 +65,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "sbtitle", sb.NameToPush)
 	assert.Equal(t, "testAPI", sb.APIName)
 	assert.Equal(t, "1234", sb.RestAPIID)
+	assert.Equal(t, "PrimaryKey", sb.PrimaryKey)
 	assert.Equal(t, "teststage", sb.Stage)
 	assert.Equal(t, "https://1234.execute-api.us-region.amazonaws.com/teststage", sb.URL)
 	assert.Equal(t, 350, len(sb.Description))

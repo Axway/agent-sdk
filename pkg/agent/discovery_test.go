@@ -79,14 +79,18 @@ func restoreCacheUpdateCalls() {
 
 func TestDiscoveryCache(t *testing.T) {
 	fakeCacheUpdateCalls()
+	attributeKey := "Attr1"
+	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
 	apiSvc1 := v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService1",
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID: "1111",
-				"Attr1":                "testValue",
+				apic.AttrExternalAPIID:         "1111",
+				apic.AttrExternalAPIPrimaryKey: "1234",
+				apic.AttrExternalAPIName:       "NAME",
+				attributeKey:                   attributeValue,
 			},
 		},
 	}
@@ -129,8 +133,10 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublished("1111"))
 	assert.False(t, IsAPIPublished("2222"))
-	assert.Equal(t, "1111", GetAttributeOnPublishedAPI("1111", apic.AttrExternalAPIID))
+	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
 	assert.Equal(t, "", GetAttributeOnPublishedAPI("2222", apic.AttrExternalAPIID))
+	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
+	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByName("NAME", attributeKey))
 
 	apicClient := agent.apicClient
 	var apiSvc v1alpha1.APIService
@@ -140,13 +146,14 @@ func TestDiscoveryCache(t *testing.T) {
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
 	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))
-	assert.True(t, IsAPIPublished("1111"))
+	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublished("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublished("1111"))
+	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
 	assert.False(t, IsAPIPublished("2222"))
 
 	restoreCacheUpdateCalls()

@@ -41,7 +41,7 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	// If schemes are specified create endpoint for each scheme
 	if len(p.spec.Schemes) > 0 {
 		for _, protocol := range p.spec.Schemes {
-			if validOA2Schemes[protocol] != true {
+			if !validOA2Schemes[protocol] {
 				return nil, coreerrors.Wrap(ErrSetSpecEndPoints, "invalid endpoint scheme defined in specification")
 			}
 			endPoint := createEndpointDefinition(protocol, host, port, p.spec.BasePath)

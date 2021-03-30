@@ -2,6 +2,7 @@ package apic
 
 import (
 	"sync"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -206,19 +207,23 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 
 // Start - Start processing subscriptions
 func (sm *subscriptionManager) Start() {
-	if !sm.isRunning {
-		sm.receiverQuitChannel = make(chan bool)
+	// Add an polling interval delay prior to starting, but do not make calling function wait
+	go func() {
+		time.Sleep(sm.apicClient.cfg.GetPollInterval())
+		if !sm.isRunning {
+			sm.receiverQuitChannel = make(chan bool)
 
-		sm.publishChannel = make(chan interface{})
-		sm.receiveChannel = make(chan interface{})
+			sm.publishChannel = make(chan interface{})
+			sm.receiveChannel = make(chan interface{})
 
-		sm.publisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.publishChannel)
-		notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
+			sm.publisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.publishChannel)
+			notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
 
-		go sm.publisher.Start()
-		go sm.processSubscriptions()
-		sm.isRunning = true
-	}
+			go sm.publisher.Start()
+			go sm.processSubscriptions()
+			sm.isRunning = true
+		}
+	}()
 }
 
 // Stop - Stop processing subscriptions

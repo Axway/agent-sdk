@@ -19,6 +19,7 @@ const (
 	apiServerPageSize    = 20
 	healthcheckEndpoint  = "central"
 	attributesQueryParam = "attributes."
+	apiServerFields      = "name,title,attributes"
 )
 
 type discoveryCache struct {
@@ -68,7 +69,7 @@ func updateAPICache() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
@@ -82,7 +83,11 @@ func updateAPICache() {
 
 		for _, apiService := range apiServices {
 			externalAPIID := addItemToAPICache(apiService)
-			existingAPIs[externalAPIID] = true
+			if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+				existingAPIs[externalAPIPrimaryKey] = true
+			} else {
+				existingAPIs[externalAPIID] = true
+			}
 		}
 
 		if len(apiServices) < apiServerPageSize {
@@ -98,6 +103,14 @@ func updateAPICache() {
 			agent.apiMap.Delete(key)
 		}
 	}
+}
+
+var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
+	query := map[string]string{
+		"query": attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
+	}
+
+	return updateCacheForExternalAPI(query)
 }
 
 var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
@@ -142,7 +155,7 @@ func validateConsumerInstances() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
@@ -153,25 +166,7 @@ func validateConsumerInstances() {
 		consumerInstances := make([]apiV1.ResourceInstance, 0)
 		json.Unmarshal(response, &consumerInstances)
 
-		// Validate the API on dataplane, if not valid mark the consumer instance as "DELETED"
-		for _, consumerInstanceResource := range consumerInstances {
-			consumerInstance := &v1alpha1.ConsumerInstance{}
-			consumerInstance.FromInstance(&consumerInstanceResource)
-			externalAPIID := consumerInstance.Attributes[apic.AttrExternalAPIID]
-			externalAPIStage := consumerInstance.Attributes[apic.AttrExternalAPIStage]
-			// Check if the consumer instance was published by agent, i.e. following attributes are set
-			// - externalAPIID should not be empty
-			// - externalAPIStage could be empty for dataplanes that do not support it
-			if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-				log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				err = agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
-				if err != nil {
-					log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
-				} else {
-					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				}
-			}
-		}
+		validateAPIOnDataplane(consumerInstances)
 
 		if len(consumerInstances) < apiServerPageSize {
 			morePages = false
@@ -180,11 +175,38 @@ func validateConsumerInstances() {
 	}
 }
 
+func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
+	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
+	for _, consumerInstanceResource := range consumerInstances {
+		consumerInstance := &v1alpha1.ConsumerInstance{}
+		consumerInstance.FromInstance(&consumerInstanceResource)
+		externalAPIID := consumerInstance.Attributes[apic.AttrExternalAPIID]
+		externalAPIStage := consumerInstance.Attributes[apic.AttrExternalAPIStage]
+		// Check if the consumer instance was published by agent, i.e. following attributes are set
+		// - externalAPIID should not be empty
+		// - externalAPIStage could be empty for dataplanes that do not support it
+		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+			log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
+			err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+			if err != nil {
+				log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+			} else {
+				log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+			}
+		}
+	}
+}
+
 func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 	externalAPIID, ok := apiService.Attributes[apic.AttrExternalAPIID]
 	if ok {
 		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
-		agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
+			agent.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
+		} else {
+			agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+		}
 		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
 	}
 	return externalAPIID
