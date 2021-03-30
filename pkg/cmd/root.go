@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd/agentsync"
@@ -63,6 +65,8 @@ type agentRootCommand struct {
 func init() {
 	config.AgentTypeName = BuildAgentName
 	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
+	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
+	rand.Seed(time.Now().UnixNano())
 }
 
 // NewRootCmd - Creates a new Agent Root Command
