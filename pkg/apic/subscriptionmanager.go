@@ -96,7 +96,9 @@ func (sm *subscriptionManager) Execute() error {
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 	if err == nil {
 		for _, subscription := range subscriptions {
-			if _, found := sm.blacklist[subscription.GetCatalogItemID()]; !found {
+			if _, found := sm.blacklist[subscription.GetID()]; !found {
+				// put the subscription on the blacklist while it is being processed. It is up
+				sm.AddBlacklistItem(subscription.GetID())
 				sm.publishChannel <- subscription
 			}
 		}
