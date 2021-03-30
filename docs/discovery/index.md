@@ -225,7 +225,7 @@ func init() {
 // Callback that agent will call to process the execution
 func run() error {
 	// Code for discovering API and publish
-	return nilSer
+	return nil
 }
 
 // Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
