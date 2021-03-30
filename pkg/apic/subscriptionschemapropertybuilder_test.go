@@ -55,6 +55,7 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 		SetRequired().
 		SetReadOnly().
 		SetAPICRefField("refField").
+		SetHidden().
 		IsString().
 		Build()
 
@@ -65,6 +66,7 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, "description", prop.Description)
 	assert.True(t, prop.Required)
 	assert.True(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "hidden")
 	assert.Equal(t, "refField", prop.APICRef)
 
 	// good path, set enums
@@ -81,6 +83,7 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, "", prop.Description)
 	assert.False(t, prop.Required)
 	assert.False(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "")
 	assert.Equal(t, "", prop.APICRef)
 
 	// good path, add enums
@@ -99,5 +102,6 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, "", prop.Description)
 	assert.False(t, prop.Required)
 	assert.False(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "")
 	assert.Equal(t, "", prop.APICRef)
 }
