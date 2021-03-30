@@ -30,6 +30,7 @@ const (
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
 	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
 	AttrExternalAPIID                = "externalAPIID"
+	AttrExternalAPIPrimaryKey        = "externalAPIPrimaryKey"
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"
 	AttrCreatedBy                    = "createdBy"
@@ -88,6 +89,7 @@ type ServiceBody struct {
 	NameToPush        string `json:",omitempty"`
 	APIName           string `json:",omitempty"`
 	RestAPIID         string `json:",omitempty"`
+	PrimaryKey        string `json:",omitempty"`
 	URL               string `json:",omitempty"`
 	Stage             string `json:",omitempty"`
 	Description       string `json:",omitempty"`

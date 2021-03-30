@@ -19,6 +19,7 @@ const (
 	apiServerPageSize    = 20
 	healthcheckEndpoint  = "central"
 	attributesQueryParam = "attributes."
+	apiServerFields      = "name,title,attributes"
 )
 
 type discoveryCache struct {
@@ -68,7 +69,7 @@ func updateAPICache() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
@@ -82,7 +83,11 @@ func updateAPICache() {
 
 		for _, apiService := range apiServices {
 			externalAPIID := addItemToAPICache(apiService)
-			existingAPIs[externalAPIID] = true
+			if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+				existingAPIs[externalAPIPrimaryKey] = true
+			} else {
+				existingAPIs[externalAPIID] = true
+			}
 		}
 
 		if len(apiServices) < apiServerPageSize {
@@ -98,6 +103,14 @@ func updateAPICache() {
 			agent.apiMap.Delete(key)
 		}
 	}
+}
+
+var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
+	query := map[string]string{
+		"query": attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
+	}
+
+	return updateCacheForExternalAPI(query)
 }
 
 var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
@@ -142,7 +155,7 @@ func validateConsumerInstances() {
 			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   "name,title,attributes",
+			"fields":   apiServerFields,
 		}
 
 		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
@@ -188,7 +201,12 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 	externalAPIID, ok := apiService.Attributes[apic.AttrExternalAPIID]
 	if ok {
 		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
-		agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
+			agent.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
+		} else {
+			agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+		}
 		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
 	}
 	return externalAPIID

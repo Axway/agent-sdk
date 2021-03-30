@@ -140,6 +140,9 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 	if !isAPIService && serviceBody.Stage != "" {
 		attributes[AttrExternalAPIStage] = serviceBody.Stage
 	}
+	if serviceBody.PrimaryKey != "" {
+		attributes[AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
+	}
 
 	attributes[AttrExternalAPIID] = externalAPIID
 	attributes[AttrExternalAPIName] = serviceBody.APIName

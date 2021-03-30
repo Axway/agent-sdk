@@ -67,5 +67,30 @@ func TestUpdateCacheForExternalAPIID(t *testing.T) {
 	assert.Contains(t, queryString, testID)
 }
 
-func TestUpdateCacheForExternalAPI(t *testing.T) {
+func TestUpdateCacheForExternalAPIPrimaryKey(t *testing.T) {
+	var queryString string
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.RequestURI, "/auth") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+		}
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
+			queryString = req.URL.RawQuery
+			resp.Write([]byte("response"))
+		}
+	}))
+	defer s.Close()
+
+	cfg := createCentralCfg(s.URL, "test")
+	resetResources()
+	err := Initialize(cfg)
+	assert.Nil(t, err)
+
+	testKey := "testprimarykey"
+	api, err := updateCacheForExternalAPIPrimaryKey(testKey)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, api)
+	assert.Contains(t, queryString, fmt.Sprintf("attributes.%s", apic.AttrExternalAPIPrimaryKey))
+	assert.Contains(t, queryString, testKey)
 }
