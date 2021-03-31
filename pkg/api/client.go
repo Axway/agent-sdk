@@ -78,11 +78,11 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 }
 
 func getTimeoutFromEnvironment() time.Duration {
-	cfgHttpClientTimeout := os.Getenv("HTTP_CLIENT_TIMEOUT")
-	if cfgHttpClientTimeout == "" {
+	cfgHTTPClientTimeout := os.Getenv("HTTP_CLIENT_TIMEOUT")
+	if cfgHTTPClientTimeout == "" {
 		return defaultTimeout
 	}
-	timeout, err := time.ParseDuration(cfgHttpClientTimeout)
+	timeout, err := time.ParseDuration(cfgHTTPClientTimeout)
 	if err != nil {
 		log.Tracef("Unable to parse the HTTP_CLIENT_TIMEOUT value, using the default http client timeout")
 		return defaultTimeout
