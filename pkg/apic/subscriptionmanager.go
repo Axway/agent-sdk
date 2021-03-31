@@ -110,9 +110,11 @@ func (sm *subscriptionManager) processSubscriptions() {
 				id := subscription.GetID()
 				if !sm.isItemOnBlacklist(id) {
 					sm.addBlacklistItem(id)
-					sm.preprocessSubscription(&subscription)
-					if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-						sm.invokeProcessor(subscription)
+					err := sm.preprocessSubscription(&subscription)
+					if err != nil {
+						if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+							sm.invokeProcessor(subscription)
+						}
 					}
 					sm.removeBlacklistItem(id)
 				}
@@ -123,24 +125,25 @@ func (sm *subscriptionManager) processSubscriptions() {
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
+func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
 
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID(), subscription.GetID())
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
-		return
+		return err
 	}
 	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
 		log.Debugf("Subscription '%s' skipped because associated catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
-		return
+		return err
 	}
 	if apiserverInfo.ConsumerInstance.Name == "" {
 		log.Debugf("Subscription '%s' skipped because associated catalog item is not created by agent", subscription.GetName())
-		return
+		return err
 	}
 	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+	return nil
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
