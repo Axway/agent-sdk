@@ -111,7 +111,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 				if !sm.isItemOnLocklist(id) {
 					sm.addLocklistItem(id)
 					err := sm.preprocessSubscription(&subscription)
-					if err != nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
 						sm.invokeProcessor(subscription)
 					}
 					sm.removeLocklistItem(id)
