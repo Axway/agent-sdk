@@ -295,13 +295,14 @@ func TestSubscriptionUpdate(t *testing.T) {
 func TestBlacklist(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	mgr := client.GetSubscriptionManager().(*subscriptionManager)
-	mgr.AddBlacklistItem("123")
+	mgr.addBlacklistItem("123")
 	assert.Equal(t, 1, len(mgr.blacklist))
-	mgr.AddBlacklistItem("456")
+	mgr.addBlacklistItem("456")
 	assert.Equal(t, 2, len(mgr.blacklist))
-
-	mgr.RemoveBlacklistItem("123")
+	assert.True(t, mgr.isItemOnBlacklist("123"))
+	mgr.removeBlacklistItem("123")
 	assert.Equal(t, 1, len(mgr.blacklist))
-	mgr.RemoveBlacklistItem("456")
+	assert.False(t, mgr.isItemOnBlacklist("123"))
+	mgr.removeBlacklistItem("456")
 	assert.Equal(t, 0, len(mgr.blacklist))
 }

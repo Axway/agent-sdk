@@ -20,8 +20,6 @@ type SubscriptionManager interface {
 	Stop()
 	getPublisher() notification.Notifier
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
-	AddBlacklistItem(id string)
-	RemoveBlacklistItem(id string)
 	OnConfigChange(apicClient *ServiceClient)
 }
 
@@ -97,9 +95,7 @@ func (sm *subscriptionManager) Execute() error {
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 	if err == nil {
 		for _, subscription := range subscriptions {
-			if _, found := sm.blacklist[subscription.GetID()]; !found {
-				sm.publishChannel <- subscription
-			}
+			sm.publishChannel <- subscription
 		}
 	}
 	return nil
@@ -111,9 +107,14 @@ func (sm *subscriptionManager) processSubscriptions() {
 		case msg, ok := <-sm.receiveChannel:
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
-				sm.preprocessSubscription(&subscription)
-				if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-					sm.invokeProcessor(subscription)
+				id := subscription.GetID()
+				if !sm.isItemOnBlacklist(id) {
+					sm.addBlacklistItem(id)
+					sm.preprocessSubscription(&subscription)
+					if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+						sm.invokeProcessor(subscription)
+					}
+					sm.removeBlacklistItem(id)
 				}
 			}
 		case <-sm.receiverQuitChannel:
@@ -207,6 +208,9 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 
 // Start - Start processing subscriptions
 func (sm *subscriptionManager) Start() {
+	// clean out the map each time start is called
+	sm.blacklist = make(map[string]string)
+
 	// Add an polling interval delay prior to starting, but do not make calling function wait
 	go func() {
 		time.Sleep(sm.apicClient.cfg.GetPollInterval())
@@ -243,14 +247,19 @@ func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]Subscri
 	return sm.processorMap
 }
 
-func (sm *subscriptionManager) AddBlacklistItem(id string) {
+func (sm *subscriptionManager) addBlacklistItem(id string) {
 	sm.blacklistLock.RLock()
 	defer sm.blacklistLock.RUnlock()
 	sm.blacklist[id] = "" // don't care about the value
 }
 
-func (sm *subscriptionManager) RemoveBlacklistItem(id string) {
+func (sm *subscriptionManager) removeBlacklistItem(id string) {
 	sm.blacklistLock.RLock()
 	defer sm.blacklistLock.RUnlock()
 	delete(sm.blacklist, id)
+}
+
+func (sm *subscriptionManager) isItemOnBlacklist(id string) bool {
+	_, found := sm.blacklist[id]
+	return found
 }
