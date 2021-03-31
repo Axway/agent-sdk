@@ -35,8 +35,8 @@ type subscriptionManager struct {
 	validator           SubscriptionValidator
 	statesToQuery       []string
 	apicClient          *ServiceClient
-	blacklist           map[string]string // subscription items to skip
-	blacklistLock       *sync.RWMutex     // Use lock when making changes/reading the blacklist map
+	locklist            map[string]string // subscription items to skip because they are locked
+	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
 }
 
 // newSubscriptionManager - Creates a new subscription manager
@@ -46,8 +46,8 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 		apicClient:    apicClient,
 		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
 		statesToQuery: make([]string, 0),
-		blacklist:     make(map[string]string),
-		blacklistLock: &sync.RWMutex{},
+		locklist:      make(map[string]string),
+		locklistLock:  &sync.RWMutex{},
 	}
 
 	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
@@ -108,15 +108,13 @@ func (sm *subscriptionManager) processSubscriptions() {
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
 				id := subscription.GetID()
-				if !sm.isItemOnBlacklist(id) {
-					sm.addBlacklistItem(id)
+				if !sm.isItemOnLocklist(id) {
+					sm.addLocklistItem(id)
 					err := sm.preprocessSubscription(&subscription)
-					if err != nil {
-						if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-							sm.invokeProcessor(subscription)
-						}
+					if err != nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+						sm.invokeProcessor(subscription)
 					}
-					sm.removeBlacklistItem(id)
+					sm.removeLocklistItem(id)
 				}
 			}
 		case <-sm.receiverQuitChannel:
@@ -212,7 +210,7 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 // Start - Start processing subscriptions
 func (sm *subscriptionManager) Start() {
 	// clean out the map each time start is called
-	sm.blacklist = make(map[string]string)
+	sm.locklist = make(map[string]string)
 
 	// Add an polling interval delay prior to starting, but do not make calling function wait
 	go func() {
@@ -250,19 +248,19 @@ func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]Subscri
 	return sm.processorMap
 }
 
-func (sm *subscriptionManager) addBlacklistItem(id string) {
-	sm.blacklistLock.RLock()
-	defer sm.blacklistLock.RUnlock()
-	sm.blacklist[id] = "" // don't care about the value
+func (sm *subscriptionManager) addLocklistItem(id string) {
+	sm.locklistLock.RLock()
+	defer sm.locklistLock.RUnlock()
+	sm.locklist[id] = "" // don't care about the value
 }
 
-func (sm *subscriptionManager) removeBlacklistItem(id string) {
-	sm.blacklistLock.RLock()
-	defer sm.blacklistLock.RUnlock()
-	delete(sm.blacklist, id)
+func (sm *subscriptionManager) removeLocklistItem(id string) {
+	sm.locklistLock.RLock()
+	defer sm.locklistLock.RUnlock()
+	delete(sm.locklist, id)
 }
 
-func (sm *subscriptionManager) isItemOnBlacklist(id string) bool {
-	_, found := sm.blacklist[id]
+func (sm *subscriptionManager) isItemOnLocklist(id string) bool {
+	_, found := sm.locklist[id]
 	return found
 }
