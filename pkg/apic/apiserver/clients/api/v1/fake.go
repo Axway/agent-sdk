@@ -666,7 +666,7 @@ func (fk *fakeScoped) update(ri *apiv1.ResourceInstance, opts ...UpdateOption) (
 	updated := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             prev.Name,
-			Title:            prev.Title,
+			Title:            ri.Title,
 			GroupVersionKind: prev.GroupVersionKind,
 			Metadata: apiv1.Metadata{
 				ID: prev.Metadata.ID,
