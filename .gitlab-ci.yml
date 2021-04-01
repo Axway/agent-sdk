@@ -81,7 +81,7 @@ update-csr:
   when: manual
   script:
     - apk update && apk add curl ca-certificates
-    - curl --request POST --form "token=${CI_JOB_TOKEN}"  --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" \--form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
   <<: *only-main
 
 trigger-aws-apigw-discovery-agent:
