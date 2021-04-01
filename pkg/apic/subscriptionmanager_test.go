@@ -292,16 +292,17 @@ func TestSubscriptionUpdate(t *testing.T) {
 	assert.Equal(t, SubscriptionUnsubscribeInitiated, (subscriptionMap["22222"]).GetState())
 }
 
-func TestBlacklist(t *testing.T) {
+func TestLocklist(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	mgr := client.GetSubscriptionManager().(*subscriptionManager)
-	mgr.AddBlacklistItem("123")
-	assert.Equal(t, 1, len(mgr.blacklist))
-	mgr.AddBlacklistItem("456")
-	assert.Equal(t, 2, len(mgr.blacklist))
-
-	mgr.RemoveBlacklistItem("123")
-	assert.Equal(t, 1, len(mgr.blacklist))
-	mgr.RemoveBlacklistItem("456")
-	assert.Equal(t, 0, len(mgr.blacklist))
+	mgr.addLocklistItem("123")
+	assert.Equal(t, 1, len(mgr.locklist))
+	mgr.addLocklistItem("456")
+	assert.Equal(t, 2, len(mgr.locklist))
+	assert.True(t, mgr.isItemOnLocklist("123"))
+	mgr.removeLocklistItem("123")
+	assert.Equal(t, 1, len(mgr.locklist))
+	assert.False(t, mgr.isItemOnLocklist("123"))
+	mgr.removeLocklistItem("456")
+	assert.Equal(t, 0, len(mgr.locklist))
 }

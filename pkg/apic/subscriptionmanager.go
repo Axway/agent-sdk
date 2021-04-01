@@ -20,8 +20,6 @@ type SubscriptionManager interface {
 	Stop()
 	getPublisher() notification.Notifier
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
-	AddBlacklistItem(id string)
-	RemoveBlacklistItem(id string)
 	OnConfigChange(apicClient *ServiceClient)
 }
 
@@ -37,8 +35,8 @@ type subscriptionManager struct {
 	validator           SubscriptionValidator
 	statesToQuery       []string
 	apicClient          *ServiceClient
-	blacklist           map[string]string // subscription items to skip
-	blacklistLock       *sync.RWMutex     // Use lock when making changes/reading the blacklist map
+	locklist            map[string]string // subscription items to skip because they are locked
+	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
 }
 
 // newSubscriptionManager - Creates a new subscription manager
@@ -48,8 +46,8 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 		apicClient:    apicClient,
 		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
 		statesToQuery: make([]string, 0),
-		blacklist:     make(map[string]string),
-		blacklistLock: &sync.RWMutex{},
+		locklist:      make(map[string]string),
+		locklistLock:  &sync.RWMutex{},
 	}
 
 	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
@@ -97,9 +95,7 @@ func (sm *subscriptionManager) Execute() error {
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 	if err == nil {
 		for _, subscription := range subscriptions {
-			if _, found := sm.blacklist[subscription.GetID()]; !found {
-				sm.publishChannel <- subscription
-			}
+			sm.publishChannel <- subscription
 		}
 	}
 	return nil
@@ -111,9 +107,14 @@ func (sm *subscriptionManager) processSubscriptions() {
 		case msg, ok := <-sm.receiveChannel:
 			if ok {
 				subscription, _ := msg.(CentralSubscription)
-				sm.preprocessSubscription(&subscription)
-				if subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-					sm.invokeProcessor(subscription)
+				id := subscription.GetID()
+				if !sm.isItemOnLocklist(id) {
+					sm.addLocklistItem(id)
+					err := sm.preprocessSubscription(&subscription)
+					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+						sm.invokeProcessor(subscription)
+					}
+					sm.removeLocklistItem(id)
 				}
 			}
 		case <-sm.receiverQuitChannel:
@@ -122,24 +123,25 @@ func (sm *subscriptionManager) processSubscriptions() {
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) {
+func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
 
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID(), subscription.GetID())
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
-		return
+		return err
 	}
 	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
 		log.Debugf("Subscription '%s' skipped because associated catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
-		return
+		return err
 	}
 	if apiserverInfo.ConsumerInstance.Name == "" {
 		log.Debugf("Subscription '%s' skipped because associated catalog item is not created by agent", subscription.GetName())
-		return
+		return err
 	}
 	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+	return nil
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
@@ -207,6 +209,9 @@ func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription)
 
 // Start - Start processing subscriptions
 func (sm *subscriptionManager) Start() {
+	// clean out the map each time start is called
+	sm.locklist = make(map[string]string)
+
 	// Add an polling interval delay prior to starting, but do not make calling function wait
 	go func() {
 		time.Sleep(sm.apicClient.cfg.GetPollInterval())
@@ -243,14 +248,19 @@ func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]Subscri
 	return sm.processorMap
 }
 
-func (sm *subscriptionManager) AddBlacklistItem(id string) {
-	sm.blacklistLock.RLock()
-	defer sm.blacklistLock.RUnlock()
-	sm.blacklist[id] = "" // don't care about the value
+func (sm *subscriptionManager) addLocklistItem(id string) {
+	sm.locklistLock.RLock()
+	defer sm.locklistLock.RUnlock()
+	sm.locklist[id] = "" // don't care about the value
 }
 
-func (sm *subscriptionManager) RemoveBlacklistItem(id string) {
-	sm.blacklistLock.RLock()
-	defer sm.blacklistLock.RUnlock()
-	delete(sm.blacklist, id)
+func (sm *subscriptionManager) removeLocklistItem(id string) {
+	sm.locklistLock.RLock()
+	defer sm.locklistLock.RUnlock()
+	delete(sm.locklist, id)
+}
+
+func (sm *subscriptionManager) isItemOnLocklist(id string) bool {
+	_, found := sm.locklist[id]
+	return found
 }
