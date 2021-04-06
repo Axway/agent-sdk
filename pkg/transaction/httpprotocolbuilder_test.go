@@ -3,10 +3,12 @@ package transaction
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/stretchr/testify/assert"
 )
 
 func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqLen, resLen int) (TransportProtocol, error) {
+	redaction.SetupGlobalRedaction(redaction.Config{})
 	return NewHTTPProtocolBuilder().
 		SetURI(uri).
 		SetVersion("1.1").
