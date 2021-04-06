@@ -9,10 +9,6 @@ import (
 // Global Agent redactions
 var agentRedactions Redactions
 
-func init() {
-	agentRedactions = &redactionRegex{}
-}
-
 //SetupGlobalRedaction - set up redactionRegex based on the redactionConfig
 func SetupGlobalRedaction(cfg Config) error {
 	var err error
@@ -69,31 +65,49 @@ func setupSanitizeRegex(sanitizeFilters []sanitize) ([]sanitizeRegex, error) {
 
 // URIRedaction - takes a uri and returns the redacted version of that URI
 func URIRedaction(fullURI string) (string, error) {
+	if agentRedactions == nil {
+		return "", ErrGlobalRedactionCfg
+	}
 	return agentRedactions.URIRedaction(fullURI)
 }
 
 // PathRedaction - returns a string that has only allowed path elements
-func PathRedaction(path string) string {
-	return agentRedactions.PathRedaction(path)
+func PathRedaction(path string) (string, error) {
+	if agentRedactions == nil {
+		return "", ErrGlobalRedactionCfg
+	}
+	return agentRedactions.PathRedaction(path), nil
 }
 
 // QueryArgsRedaction - accepts a string for arguments and returns the same string with redacted
 func QueryArgsRedaction(args map[string][]string) (map[string][]string, error) {
+	if agentRedactions == nil {
+		return map[string][]string{}, ErrGlobalRedactionCfg
+	}
 	return agentRedactions.QueryArgsRedaction(args)
 }
 
 // QueryArgsRedactionString - accepts a string for arguments and returns the same string with redacted
 func QueryArgsRedactionString(args string) (string, error) {
+	if agentRedactions == nil {
+		return "", ErrGlobalRedactionCfg
+	}
 	return agentRedactions.QueryArgsRedactionString(args)
 }
 
 // RequestHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
 func RequestHeadersRedaction(headers map[string]string) (map[string]string, error) {
+	if agentRedactions == nil {
+		return map[string]string{}, ErrGlobalRedactionCfg
+	}
 	return agentRedactions.RequestHeadersRedaction(headers)
 }
 
 // ResponseHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
 func ResponseHeadersRedaction(headers map[string]string) (map[string]string, error) {
+	if agentRedactions == nil {
+		return map[string]string{}, ErrGlobalRedactionCfg
+	}
 	return agentRedactions.ResponseHeadersRedaction(headers)
 }
 

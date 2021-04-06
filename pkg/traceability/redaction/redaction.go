@@ -25,10 +25,15 @@ type Redactions interface {
 
 // Config - the configuration of all redactions
 type Config struct {
-	Path            []show `config:"path.show" yaml:"path.show"`
+	Path            path   `config:"path" yaml:"path"`
 	Args            filter `config:"queryArgument" yaml:"queryArgument"`
 	RequestHeaders  filter `config:"requestHeader" yaml:"requestHeader"`
 	ResponseHeaders filter `config:"responseHeader" yaml:"responseHeader"`
+}
+
+// path - the keyMatches to show, all else are redacted
+type path struct {
+	Allowed []show `config:"show" yaml:"show"`
 }
 
 // filter - the configuration of a filter for each redaction config
@@ -74,7 +79,9 @@ type sanitizeRegex struct {
 //DefaultConfig - returns a default reaction config where all things are redacted
 func DefaultConfig() Config {
 	return Config{
-		Path: []show{},
+		Path: path{
+			Allowed: []show{},
+		},
 		Args: filter{
 			Allowed:  []show{},
 			Sanitize: []sanitize{},
@@ -96,7 +103,7 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 	var err error
 
 	// Setup the path filters
-	redactionSetup.pathFilters, err = setupShowRegex(cfg.Path)
+	redactionSetup.pathFilters, err = setupShowRegex(cfg.Path.Allowed)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +149,14 @@ func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
 	}
 	switch parsedURL.Scheme {
 	case http, https, "":
-		parsedURL.Path = PathRedaction(parsedURL.Path)
+		parsedURL.Path, err = PathRedaction(parsedURL.Path)
+		if err != nil {
+			return "", err
+		}
 		parsedURL.RawQuery, err = r.QueryArgsRedactionString(parsedURL.RawQuery)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return url.QueryUnescape(parsedURL.String())
@@ -151,7 +164,7 @@ func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
 
 // PathRedaction - returns a string that has only allowed path elements
 func (r *redactionRegex) PathRedaction(path string) string {
-	pathSegments := strings.Split(strings.Split(path, "?")[0], "/")
+	pathSegments := strings.Split(path, "/")
 
 	for i, segment := range pathSegments {
 		if segment == "" {

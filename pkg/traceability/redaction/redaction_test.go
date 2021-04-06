@@ -65,9 +65,11 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "PathRegex",
 			config: Config{
-				Path: []show{
-					{
-						KeyMatch: "*test",
+				Path: path{
+					Allowed: []show{
+						{
+							KeyMatch: "*test",
+						},
 					},
 				},
 			},
@@ -203,7 +205,7 @@ func TestURIRedaction(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			defConfig := DefaultConfig()
-			defConfig.Path = test.pathConfig // update to the test config
+			defConfig.Path.Allowed = test.pathConfig // update to the test config
 
 			err := SetupGlobalRedaction(defConfig)
 			assert.Nil(t, err)
