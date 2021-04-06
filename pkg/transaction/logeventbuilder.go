@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 )
 
 const defaultAPICDeployment = "prod"
@@ -180,7 +181,7 @@ func (b *transactionEventBuilder) SetTrcbltPartitionID(trcbltPartitionID string)
 }
 
 func (b *transactionEventBuilder) SetTargetPath(targetPath string) EventBuilder {
-	b.logEvent.TargetPath = targetPath
+	b.logEvent.TargetPath = redaction.PathRedaction(targetPath)
 	return b
 }
 
@@ -391,7 +392,7 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	b.logEvent.TransactionSummary.EntryPoint = &EntryPoint{
 		Type:   entryPointType,
 		Method: method,
-		Path:   path,
+		Path:   redaction.PathRedaction(path),
 		Host:   host,
 	}
 	return b

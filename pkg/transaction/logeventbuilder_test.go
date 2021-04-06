@@ -91,7 +91,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "Unsupported protocol type", err.Error())
 
-	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "reqHeader", "resHeader", 200, 10, 10)
+	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10)
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
@@ -214,7 +214,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.NotNil(t, logEvent.TransactionSummary.EntryPoint)
 	assert.Equal(t, "http", logEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
-	assert.Equal(t, "/test", logEvent.TransactionSummary.EntryPoint.Path)
+	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
 
 	logEvent, err = NewTransactionSummaryBuilder().
@@ -285,6 +285,6 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.NotNil(t, logEvent.TransactionSummary.EntryPoint)
 	assert.Equal(t, "http", logEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
-	assert.Equal(t, "/test", logEvent.TransactionSummary.EntryPoint.Path)
+	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
 }
