@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 )
 
 const defaultAPICDeployment = "prod"
@@ -145,81 +146,129 @@ func NewTransactionSummaryBuilder() SummaryBuilder {
 }
 
 func (b *transactionEventBuilder) SetTimestamp(timestamp int64) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.Stamp = timestamp
 	return b
 }
 
 func (b *transactionEventBuilder) SetTransactionID(transactionID string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionID = transactionID
 	return b
 }
 
 func (b *transactionEventBuilder) SetAPICDeployment(apicDeployment string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.APICDeployment = apicDeployment
 	return b
 }
 
 func (b *transactionEventBuilder) SetEnvironmentName(environmentName string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.EnvironmentName = environmentName
 	return b
 }
 
 func (b *transactionEventBuilder) SetEnvironmentID(environmentID string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.EnvironmentID = environmentID
 	return b
 }
 
 func (b *transactionEventBuilder) SetTenantID(tenantID string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TenantID = tenantID
 	return b
 }
 
 func (b *transactionEventBuilder) SetTrcbltPartitionID(trcbltPartitionID string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TrcbltPartitionID = trcbltPartitionID
 	return b
 }
 
 func (b *transactionEventBuilder) SetTargetPath(targetPath string) EventBuilder {
-	b.logEvent.TargetPath = targetPath
+	if b.err != nil {
+		return b
+	}
+	b.logEvent.TargetPath, b.err = redaction.PathRedaction(targetPath)
 	return b
 }
 
 func (b *transactionEventBuilder) SetResourcePath(resourcePath string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.ResourcePath = resourcePath
 	return b
 }
 
 func (b *transactionEventBuilder) SetID(id string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.ID = id
 	return b
 }
 
 func (b *transactionEventBuilder) SetParentID(parentID string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.ParentID = parentID
 	return b
 }
 
 func (b *transactionEventBuilder) SetSource(source string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.Source = source
 	return b
 }
 
 func (b *transactionEventBuilder) SetDestination(destination string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.Destination = destination
 	return b
 }
 
 func (b *transactionEventBuilder) SetDuration(duration int) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.Duration = duration
 	return b
 }
 
 func (b *transactionEventBuilder) SetDirection(direction string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionEvent.Direction = direction
 	return b
 }
 
 func (b *transactionEventBuilder) SetStatus(status TxEventStatus) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	err := status.IsValid()
 	if err != nil {
 		b.err = err
@@ -230,6 +279,9 @@ func (b *transactionEventBuilder) SetStatus(status TxEventStatus) EventBuilder {
 }
 
 func (b *transactionEventBuilder) SetProtocolDetail(protocolDetail interface{}) EventBuilder {
+	if b.err != nil {
+		return b
+	}
 	_, ok := protocolDetail.(*Protocol)
 	if !ok {
 		_, ok = protocolDetail.(*JMSProtocol)
@@ -287,51 +339,81 @@ func (b *transactionEventBuilder) validateLogEvent() error {
 }
 
 func (b *transactionSummaryBuilder) SetTimestamp(timestamp int64) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.Stamp = timestamp
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetTransactionID(transactionID string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionID = transactionID
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetAPICDeployment(apicDeployment string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.APICDeployment = apicDeployment
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetEnvironmentName(environmentName string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.EnvironmentName = environmentName
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetEnvironmentID(environmentID string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.EnvironmentID = environmentID
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetTenantID(tenantID string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TenantID = tenantID
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetTrcbltPartitionID(trcbltPartitionID string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TrcbltPartitionID = trcbltPartitionID
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetTargetPath(targetPath string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TargetPath = targetPath
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetResourcePath(resourcePath string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.ResourcePath = resourcePath
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	err := status.IsValid()
 	if err != nil {
 		b.err = err
@@ -343,11 +425,17 @@ func (b *transactionSummaryBuilder) SetStatus(status TxSummaryStatus, statusDeta
 }
 
 func (b *transactionSummaryBuilder) SetDuration(duration int) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionSummary.Duration = duration
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetApplication(appID, appName string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionSummary.Application = &Application{
 		ID:   appID,
 		Name: appName,
@@ -356,11 +444,17 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 }
 
 func (b *transactionSummaryBuilder) SetProduct(product string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionSummary.Product = product
 	return b
 }
 
 func (b *transactionSummaryBuilder) SetTeam(teamID string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionSummary.Team = &Team{
 		ID: teamID,
 	}
@@ -368,6 +462,9 @@ func (b *transactionSummaryBuilder) SetTeam(teamID string) SummaryBuilder {
 }
 
 func (b *transactionSummaryBuilder) SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	if proxyID == "" {
 		proxyID = "unknown"
 	}
@@ -380,6 +477,9 @@ func (b *transactionSummaryBuilder) SetProxy(proxyID, proxyName string, proxyRev
 }
 
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
 	b.logEvent.TransactionSummary.Runtime = &Runtime{
 		ID:   runtimeID,
 		Name: runtimeName,
@@ -388,10 +488,18 @@ func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) Su
 }
 
 func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
+	redactedPath, err := redaction.PathRedaction(path)
+	if err != nil {
+		b.err = err
+		return b
+	}
 	b.logEvent.TransactionSummary.EntryPoint = &EntryPoint{
 		Type:   entryPointType,
 		Method: method,
-		Path:   path,
+		Path:   redactedPath,
 		Host:   host,
 	}
 	return b

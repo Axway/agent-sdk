@@ -2,16 +2,17 @@ package transaction
 
 import (
 	"testing"
-	"time"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/stretchr/testify/assert"
 )
 
 func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqLen, resLen int) (TransportProtocol, error) {
+	redaction.SetupGlobalRedaction(redaction.Config{})
 	return NewHTTPProtocolBuilder().
 		SetURI(uri).
 		SetVersion("1.1").
-		SetArgs("args").
+		SetArgs(`{"param1": ["date"], "param2": ["day, time"]}`).
 		SetMethod(method).
 		SetStatus(status, "statusTxt").
 		SetUserAgent("userAgent").
@@ -22,14 +23,16 @@ func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqL
 		SetAuthSubjectID("authsubject").
 		SetSSLProperties("TLS1.1", "sslServer", "sslSubject").
 		SetHeaders(reqHeaders, resHeaders).
-		SetIndexedHeaders("indexedRequestHeaders", "indexedResponseHeaders").
+		SetIndexedHeaders(`{"indexedrequest": "value", "x-amplify-indexed": "random", "x-amplify-indexedagain": "else"}`,
+			`{"indexedresponse": "value", "x-indexedresponse": "random", "x-indexed": "test"}`).
 		SetPayload("requestPayload", "responsePayload").
 		SetWAFStatus(1).
 		Build()
 }
 
 func TestHTTPProtocolBuilder(t *testing.T) {
-	httpProtocol, err := createHTTPProtocol("/testuri", "GET", "reqHeader", "resHeader", 200, 10, 10)
+	httpProtocol, err := createHTTPProtocol("/testuri", "GET", `{"request": "value", "x-amplify-something": "random", "x-amplify-somethingelse": "else"}`,
+		`{"response": "value", "x-response": "random", "x-value": "test"}`, 200, 10, 10)
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
 
@@ -72,29 +75,4 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
-}
-
-func createJMSProtocol(msgID, correlationID, jmsType, url, destination, replyTo, status string, mode, priority, exp, timestamp int) (TransportProtocol, error) {
-	return NewJMSProtocolBuilder().
-		SetMessageID(msgID).
-		SetCorrelationID(correlationID).
-		SetAuthSubjectID("authSubject").
-		SetDestination(destination).
-		SetProviderURL(url).
-		SetDeliveryMode(mode).
-		SetPriority(priority).
-		SetReplyTo(replyTo).
-		SetRedelivered(0).
-		SetTimestamp(timestamp).
-		SetExpiration(exp).
-		SetJMSType(jmsType).
-		SetStatus(status).
-		SetStatusText("OK").
-		Build()
-}
-func TestJMSProtocolBuilder(t *testing.T) {
-	timeStamp := int(time.Now().Unix())
-	jmsProtocol, err := createJMSProtocol("m1", "c1", "jms", "jms://test", "dest", "source", "Success", 1, 1, 2, timeStamp)
-	assert.Nil(t, err)
-	assert.NotNil(t, jmsProtocol)
 }

@@ -209,6 +209,7 @@ func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.Conditi
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
 			logSTDERRYAMLPath: true,
+			logFileYAMLPath:   false,
 		}),
 	})
 
@@ -224,6 +225,7 @@ func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.Conditi
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
 			logFileYAMLPath:        true,
+			logSTDERRYAMLPath:      false,
 			logFilePermissionsPath: "0600",
 		}),
 	})

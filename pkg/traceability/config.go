@@ -3,6 +3,7 @@ package traceability
 import (
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -27,6 +28,7 @@ type Config struct {
 	EscapeHTML       bool              `config:"escape_html"`
 	Protocol         string            `config:"protocol"`
 	Hosts            []string          `config:"hosts"`
+	Redaction        redaction.Config  `config:"redaction" yaml:"redaction"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -65,6 +67,7 @@ func DefaultConfig() *Config {
 		},
 		EscapeHTML: false,
 		Protocol:   "tcp",
+		Redaction:  redaction.DefaultConfig(),
 	}
 }
 
@@ -83,6 +86,9 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	if outputConfig.Index == "" {
 		outputConfig.Index = info.IndexPrefix
 	}
+
+	// Setup the redaction regular expressions
+	redaction.SetupGlobalRedaction(outputConfig.Redaction)
 
 	// Force piplining to 0
 	if outputConfig.Pipelining > 0 {
