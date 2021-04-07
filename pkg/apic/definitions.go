@@ -51,9 +51,10 @@ const (
 
 // consts for status
 const (
-	DeprecatedStatus  = "DEPRECATED"
-	PublishedStatus   = "PUBLISHED"
-	UnpublishedStatus = "UNPUBLISHED"
+	DeprecatedStatus          = "DEPRECATED"
+	PublishedStatus           = "PUBLISHED"
+	UnpublishedStatus         = "UNPUBLISHED"
+	UnidentifiedInboundPolicy = "UNIDENTIFIED INBOUND POLICY"
 )
 
 // consts for update serverity

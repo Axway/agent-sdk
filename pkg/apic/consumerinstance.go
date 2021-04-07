@@ -133,9 +133,11 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 //processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
 
+	// Allow catalog asset to be created.  However, set to pass-through so subscriptions aren't enabled
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {
-		log.Warnf("'%s' has an inbound policy of (%s) and is not supported. Catalog asset will not be created. ", serviceBody.APIName, serviceBody.AuthPolicy)
-		return nil
+		log.Warnf("'%s' has an inbound policy of (%s) and is not supported. Catalog asset will be created with a pass-through inbound policy. ", serviceBody.APIName, serviceBody.AuthPolicy)
+		serviceBody.AuthPolicy = Passthrough
+		serviceBody.Status = UnidentifiedInboundPolicy
 	}
 
 	var doc = ""
