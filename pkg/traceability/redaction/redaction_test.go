@@ -23,7 +23,7 @@ var responseHeaders = map[string]string{
 
 var queryParams = map[string][]string{
 	"param1": {"date"},
-	"param2": {"day,time"},
+	"param2": {"day", "time"},
 }
 
 func TestDefaultRedaction(t *testing.T) {
@@ -263,7 +263,7 @@ func TestQueryParamsRedaction(t *testing.T) {
 			input: queryParams,
 			output: map[string][]string{
 				"param1": {"date"},
-				"param2": {"day,time"},
+				"param2": {"day", "time"},
 			},
 		},
 		{
@@ -278,7 +278,7 @@ func TestQueryParamsRedaction(t *testing.T) {
 			input: queryParams,
 			output: map[string][]string{
 				"param1": {"date"},
-				"param2": {"day,time"},
+				"param2": {"day", "time"},
 			},
 		},
 		{
@@ -302,7 +302,7 @@ func TestQueryParamsRedaction(t *testing.T) {
 			input: queryParams,
 			output: map[string][]string{
 				"param1": {"date"},
-				"param2": {"day,{*}"},
+				"param2": {"day", "{*}"},
 			},
 		},
 		{
