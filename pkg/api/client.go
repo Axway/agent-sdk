@@ -147,8 +147,9 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		duration := time.Now().Sub(startTime)
 		if err != nil {
 			log.Tracef("%s [%dms] - ERR - %s - %s", req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
+		} else {
+			log.Tracef("%s [%dms] - %d - %s", req.Method, duration.Milliseconds(), statusCode, req.URL.String())
 		}
-		log.Tracef("%s [%dms] - %d - %s", req.Method, duration.Milliseconds(), statusCode, req.URL.String())
 	}()
 
 	if err != nil {
