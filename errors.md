@@ -60,7 +60,8 @@
 | 1504 | failed to encode the json content                                                                           | pkg/traceability/ErrJSONEncodeFailed                |
 | 1505 | invalid traceability config                                                                                 | pkg/traceability/ErrInvalidConfig                   |
 | 1510 | global redaction have not been initialized                                                                  | pkg/traceability/redaction/ErrGlobalRedactionCfg    |
-| 1510 | error hit while applying redaction                                                                          | pkg/transaction/ErrInRedactions                     |
+| 1511 | error while compiling regular expression                                                                    | pkg/traceability/redaction/ErrInvalidRegex          |
+| 1550 | error hit while applying redaction                                                                          | pkg/transaction/ErrInRedactions                     |
 |      | 1600-1610 - errors in jobs library                                                                          |                                                     |
 | 1600 | error registering job                                                                                       | pkg/jobs/ErrRegisteringJob                          |
 | 1601 | error executing job                                                                                         | pkg/jobs/ErrExecutingJob                            |

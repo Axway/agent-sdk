@@ -216,7 +216,7 @@ func (r *redactionRegex) QueryArgsRedactionString(args string) (string, error) {
 
 	err := json.Unmarshal([]byte(args), &queryArgs)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	redactedArgs, err := r.QueryArgsRedaction(queryArgs)

@@ -24,7 +24,8 @@ func setupShowRegex(showFilters []show) ([]showRegex, error) {
 		}
 		kc, err := regexp.Compile(filter.KeyMatch)
 		if err != nil {
-			log.Debug("Regex Error! Cannot Compile RequestHeader Remove Regex Keymatch", err)
+			err = ErrInvalidRegex.FormatError("keyMatch", filter.KeyMatch, err)
+			log.Error(err)
 			return []showRegex{}, err
 		}
 
@@ -43,14 +44,15 @@ func setupSanitizeRegex(sanitizeFilters []sanitize) ([]sanitizeRegex, error) {
 		}
 		kc, err := regexp.Compile(filter.KeyMatch)
 		if err != nil {
-
-			log.Debug("Regex Error! Cannot Compile RequestHeader Remove Regex Keymatch", err)
+			err = ErrInvalidRegex.FormatError("keyMatch", filter.KeyMatch, err)
+			log.Error(err)
 			return []sanitizeRegex{}, err
 		}
 
 		vc, err := regexp.Compile(filter.ValueMatch)
 		if err != nil {
-			log.Debug("Regex Error! Cannot Compile ArgsFilter Sanitize Regex Valuematch", err)
+			err = ErrInvalidRegex.FormatError("valueMatch", filter.ValueMatch, err)
+			log.Error(err)
 			return []sanitizeRegex{}, err
 
 		}
