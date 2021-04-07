@@ -797,28 +797,28 @@ The regular expression syntax that may be applied can be found [here](https://go
 ```yaml
 output.traceability:
 ...
-redaction:
-  path:
-    show:
-      keyMatch: "^path" # allow paths values that start with the word path
-  queryArgument:
-    show:
-      keyMatch: "^id$" # allow query arguments that equal id exactly
-    sanitize:
-      keyMatch: "^id$" # find the query arguments that equal id exactly
-      valueMatch: "^.*{0,5}" # sanitize the first five characters, no matter what they are
-  requestHeader:
-    show:
-      keyMatch: "header" # allow request headers that have the word header within them
-    sanitize:
-      keyMatch: "header" # find request headers that have the word header within them
-      valueMatch: ".*" # sanitize the entire header value
-  responseHeader:
-    show:
-      keyMatch: ".*" # allow all response headers
-    sanitize:
-      keyMatch: "^response" # find any response headers that start with the word response
-      valueMatch: "password" # sanitize the word password any time it occurs in the header value 
+  redaction:
+    path:
+      show:
+        keyMatch: "^path" # allow paths values that start with the word path
+    queryArgument:
+      show:
+        keyMatch: "^id$" # allow query arguments that equal id exactly
+      sanitize:
+        keyMatch: "^id$" # find the query arguments that equal id exactly
+        valueMatch: "^.*{0,5}" # sanitize the first five characters, no matter what they are
+    requestHeader:
+      show:
+        keyMatch: "header" # allow request headers that have the word header within them
+      sanitize:
+        keyMatch: "header" # find request headers that have the word header within them
+        valueMatch: ".*" # sanitize the entire header value
+    responseHeader:
+      show:
+        keyMatch: ".*" # allow all response headers
+      sanitize:
+        keyMatch: "^response" # find any response headers that start with the word response
+        valueMatch: "password" # sanitize the word password any time it occurs in the header value 
 ```
 
 #### Using environment variables for redaction
