@@ -844,6 +844,7 @@ output.traceability:
 
 When setting up the environment variables the following is the syntax that must be used.  These settings are the same as in the YAML [example](#setting-up-redaction-in-yaml)
 
+```ini
 TRACEABILITY_REDACTION_PATH_SHOW=[{keyMatch:"^path"}]
 TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW=[{keyMatch:"^id$"}]
 TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE=[{keyMatch:"^id$",valueMatch:"^.*{0,5}"}]
@@ -851,6 +852,7 @@ TRACEABILITY_REDACTION_REQUESTHEADER_SHOW=[{keyMatch:"header"}]
 TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE=[{keyMatch:"header",valueMatch:".*"}]
 TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW=[{keyMatch:".*"}]
 TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE=[{keyMatch:"^response",valueMatch:"password"}]
+```
 
 ### Building the Agent
 
