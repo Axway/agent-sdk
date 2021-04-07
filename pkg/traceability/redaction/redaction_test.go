@@ -2,6 +2,8 @@ package redaction
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +23,7 @@ var responseHeaders = map[string]string{
 
 var queryParams = map[string][]string{
 	"param1": {"date"},
-	"param2": {"day, time"},
+	"param2": {"day,time"},
 }
 
 func TestDefaultRedaction(t *testing.T) {
@@ -36,10 +38,16 @@ func TestDefaultRedaction(t *testing.T) {
 	assert.Equal(t, "https://apicentral.axway.com/{*}/{*}/{*}/{*}", redactedPath)
 
 	// Query args redaction
-	queryParamsBytes, _ := json.Marshal(queryParams)
-	redactedQueryParamsString, err := QueryArgsRedactionString(string(queryParamsBytes))
+	queryArgString := ""
+	for key, val := range queryParams {
+		if queryArgString != "" {
+			queryArgString += "&"
+		}
+		queryArgString += fmt.Sprintf("%s=%s", key, strings.Join(val, ","))
+	}
+	redactedQueryParamsString, err := QueryArgsRedactionString(queryArgString)
 	assert.Nil(t, err)
-	assert.NotEmpty(t, redactedQueryParamsString)
+	assert.Empty(t, redactedQueryParamsString)
 	var redactedQueryParams map[string][]string
 	json.Unmarshal([]byte(redactedQueryParamsString), &redactedQueryParams)
 	assert.Len(t, redactedQueryParams, 0)
