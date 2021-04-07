@@ -212,6 +212,10 @@ func (r *redactionRegex) QueryArgsRedaction(args map[string][]string) (map[strin
 
 // QueryArgsRedactionString - accepts a string for arguments and returns the same string with redacted
 func (r *redactionRegex) QueryArgsRedactionString(args string) (string, error) {
+	if args == "" {
+		return "", nil // skip if there are no query args
+	}
+
 	var queryArgs map[string][]string
 
 	err := json.Unmarshal([]byte(args), &queryArgs)
