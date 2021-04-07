@@ -1,7 +1,7 @@
 package redaction
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -216,24 +216,22 @@ func (r *redactionRegex) QueryArgsRedactionString(args string) (string, error) {
 		return "", nil // skip if there are no query args
 	}
 
-	var queryArgs map[string][]string
-
-	err := json.Unmarshal([]byte(args), &queryArgs)
-	if err != nil {
-		return "", err
-	}
+	queryArgs, _ := url.ParseQuery(args)
 
 	redactedArgs, err := r.QueryArgsRedaction(queryArgs)
 	if err != nil {
 		return "", err
 	}
 
-	queryArgsBytes, err := json.Marshal(redactedArgs)
-	if err != nil {
-		return "", err
+	queryArgString := ""
+	for key, val := range redactedArgs {
+		if queryArgString != "" {
+			queryArgString += "&"
+		}
+		queryArgString += fmt.Sprintf("%s=%s", key, strings.Join(val, ","))
 	}
 
-	return string(queryArgsBytes), nil
+	return queryArgString, nil
 }
 
 // RequestHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
