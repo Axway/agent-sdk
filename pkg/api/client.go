@@ -22,7 +22,7 @@ const (
 	PUT    string = http.MethodPut
 	DELETE string = http.MethodDelete
 
-	defaultTimeout     = time.Second * 15
+	defaultTimeout     = time.Second * 30
 	responseBufferSize = 2048
 )
 
