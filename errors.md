@@ -8,8 +8,8 @@
 | 1000 | Unsupported agent type                                                                                      | pkg/agent/ErrUnsupportedAgentType                   |
 | 1001 | initialization error checking for dependencies to respond, possibly network or settings                     | pkg/util/errors/ErrInitServicesNotReady             |
 | 1002 | timeout error checking for dependencies to respond, possibly network or settings                            | pkg/util/errors/ErrTimeoutServicesNotReady          |
-| 1003 | periodic health checker or status updater failed.  Services are not ready                                                     | pkg/util/ErrPeriodicCheck
-| 1004 | error starting periodic status update                                                     | pkg/util/ErrStartingPeriodicStatusUpdate
+| 1003 | periodic health checker or status updater failed.  Services are not ready                                   | pkg/util/ErrPeriodicCheck                           |
+| 1004 | error starting periodic status update                                                                       | pkg/util/ErrStartingPeriodicStatusUpdate            |
 |      | 1100-1299 - for apic package errors                                                                         |                                                     |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                           |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery                        |
@@ -59,6 +59,8 @@
 | 1503 | http transport is not connected                                                                             | pkg/traceability/ErrHTTPNotConnected                |
 | 1504 | failed to encode the json content                                                                           | pkg/traceability/ErrJSONEncodeFailed                |
 | 1505 | invalid traceability config                                                                                 | pkg/traceability/ErrInvalidConfig                   |
+| 1510 | global redaction have not been initialized                                                                  | pkg/traceability/redaction/ErrGlobalRedactionCfg    |
+| 1510 | error hit while applying redaction                                                                          | pkg/transaction/ErrInRedactions                     |
 |      | 1600-1610 - errors in jobs library                                                                          |                                                     |
 | 1600 | error registering job                                                                                       | pkg/jobs/ErrRegisteringJob                          |
 | 1601 | error executing job                                                                                         | pkg/jobs/ErrExecutingJob                            |

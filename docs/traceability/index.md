@@ -19,24 +19,24 @@ The SDK provides a predefined configuration that can be setup based on yaml file
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML propery                   | Variable name                  | Description                                                                                                                                                              |
-|--------------------------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)           |
-| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                 |
-| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)               |
-| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                        |
-| central.deployment             | CENTRAL_DEPLOYMENT             | Specifies the AMPLIFY Central deployment. This could be "prod" or "prod-eu" based on the AMPLIFY Central region.                                                         |
-| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                  |
-| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.              |
-| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                     |
-| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                      |
-| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                         |
-| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                |
-| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                         |
-| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/).   |
-| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.     |
-| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                      |
-| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                     |
+| YAML propery                   | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
+|--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
+| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
+| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
+| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
+| central.deployment             | CENTRAL_DEPLOYMENT             | Specifies the AMPLIFY Central deployment. This could be "prod" or "prod-eu" based on the AMPLIFY Central region.                                                                                                                                                                                                          |
+| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.                                                                                                                                                               |
+| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
+| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
+| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
+| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
+| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
+| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
+| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
+| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
+| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
 
 The following is a sample of Central configuration in YAML
 ```
@@ -168,17 +168,19 @@ func (c *GatewayConfig) ValidateCfg() (err error) {
 ```
 
 ### AMPLIFY Ingestion output configuration
-The SDK provides a predefined configuration for setting up the output transport the agent is going to use for publishing the events. 
+
+The SDK provides a predefined configuration for setting up the output transport the agent is going to use for publishing the events.
 
 Below is the list of traceability output transport configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML propery                           | Variable name                  | Description                                                                                                                                                              |
-|----------------------------------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| output.traceability.enabled            |                                | Flag for enabling traceability output                                                                                                                                    |
-| output.traceability.hosts              | TRACEABILITY_HOST              | The host name of the ingestion service (default: `ingestion-lumberjack.datasearch.axway.com:453`)                                                                                 |
-| output.traceability.protocol           | TRACEABILITY_PROTOCOL          | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default: `tcp`)               |
-| output.traceability.compression_level  | TRACEABILITY_COMPRESSIONLEVEL  | Specifies the gzip compression level (default: `3`)                                                                                                       |
-| output.traceability.proxy_url          | TRACEABILITY_PROXYURL          | The URL for the HTTP or SOCK5 proxy for AMPLIFY ingestion service for e.g. `<http://username:password@hostname:port>`. If empty, no proxy is defined.              |
+| YAML propery                          | Variable name                 | Description                                                                                                                                           |
+|---------------------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| output.traceability.enabled           |                               | Flag for enabling traceability output                                                                                                                 |
+| output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default: `ingestion-lumberjack.datasearch.axway.com:453`)                                                     |
+| output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default: `tcp`)                                                 |
+| output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default: `3`)                                                                                                   |
+| output.traceability.proxy_url         | TRACEABILITY_PROXYURL         | The URL for the HTTP or SOCK5 proxy for AMPLIFY ingestion service for e.g. `<http://username:password@hostname:port>`. If empty, no proxy is defined. |
+| output.traceability.redaction         |                               | Refer to [Traceability redaction](#traceability-redaction)                                                                                            |
 
 #### Sample Agent YAML configuration 
 
@@ -243,6 +245,7 @@ func init() {
 	settings := instance.Settings{
 		Name:          name,
 		HasDashboards: true,
+		ConfigOverrides: corecfg.LogConfigOverrides(),
 	}
 
 	// Initialize the beat command
@@ -434,70 +437,70 @@ This means that there will be a transaction summary log entry for API transactio
 #### Common Log Entry attributes
 The attributes below are to be included in both type of events.
 
-| Attribute Name    | Description                                                                                                                                   |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| version           | Event version (should be set to "1.0")                                                                                                        |
-| timestamp         | Unix timestamp of the event                                                                                                                   |
-| transactionId     | Unique business transaction id. Used for correlate the events for same transaction                                                            |
-| environmentName   | Name of the AMPLIFY Central environment                                                                                                       |
-| environmentId     | ID of the AMPLIFY Central environment                                                                                                         |
-| apicDeployment    | Name of APIC deployment environment (prod, prod-eu)                                                                                           |
-| tenantId          | AMPLIFY platform organization identifier                                                                                                      |
-| trcbltPartitionId | AMPLIFY platform organization identifier. Used by AMPLIFY Ingestion service to send events to appropriate tenant                              |
-| type              | Identifies the type of log event (transactionSummary or transactionEvent)                                                                     |
+| Attribute Name    | Description                                                                                                      |
+|-------------------|------------------------------------------------------------------------------------------------------------------|
+| version           | Event version (should be set to "1.0")                                                                           |
+| timestamp         | Unix timestamp of the event                                                                                      |
+| transactionId     | Unique business transaction id. Used for correlate the events for same transaction                               |
+| environmentName   | Name of the AMPLIFY Central environment                                                                          |
+| environmentId     | ID of the AMPLIFY Central environment                                                                            |
+| apicDeployment    | Name of APIC deployment environment (prod, prod-eu)                                                              |
+| tenantId          | AMPLIFY platform organization identifier                                                                         |
+| trcbltPartitionId | AMPLIFY platform organization identifier. Used by AMPLIFY Ingestion service to send events to appropriate tenant |
+| type              | Identifies the type of log event (transactionSummary or transactionEvent)                                        |
 
 
 #### Transaction Summary attributes
 
-| Attribute Name    | Description                                                                                                                                   |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| status            | Identifies the transaction flow status (Success, Failure, Exception or Unknown )                                                              |
-| statusDetail      | Protocol specific response status                                                                                                             |
-| duration          | Duration in milliseconds                                                                                                                      |
-| proxy.id          | ID of the API on remote gateway. This should be prefixed with "remoteApiId_". For e.g. "remoteApiId_0000000001                                |
-| proxy.name        | Name of the API on remote gateway                                                                                                             |
-| proxy.revision    | Revision of the API on remote gateway                                                                                                         |
-| team.id           | AMPLIFY Team ID                                                                                                                               |
-| team.name         | AMPLIFY Team Name                                                                                                                             |
-| entryPoint.type   | Protocol type used in transaction flow (http)                                                                                                 |
-| entryPoint.method | HTTP Method                                                                                                                                   |
-| entryPoint.path   | HTTP Path                                                                                                                                     |
-| entryPoint.host   | HTTP Host request header                                                                                                                      |
+| Attribute Name    | Description                                                                                                    |
+|-------------------|----------------------------------------------------------------------------------------------------------------|
+| status            | Identifies the transaction flow status (Success, Failure, Exception or Unknown )                               |
+| statusDetail      | Protocol specific response status                                                                              |
+| duration          | Duration in milliseconds                                                                                       |
+| proxy.id          | ID of the API on remote gateway. This should be prefixed with "remoteApiId_". For e.g. "remoteApiId_0000000001 |
+| proxy.name        | Name of the API on remote gateway                                                                              |
+| proxy.revision    | Revision of the API on remote gateway                                                                          |
+| team.id           | AMPLIFY Team ID                                                                                                |
+| team.name         | AMPLIFY Team Name                                                                                              |
+| entryPoint.type   | Protocol type used in transaction flow (http)                                                                  |
+| entryPoint.method | HTTP Method                                                                                                    |
+| entryPoint.path   | HTTP Path                                                                                                      |
+| entryPoint.host   | HTTP Host request header                                                                                       |
 
 #### Transaction Event attributes
 
-| Attribute Name | Description                                                                                                                                   |
-|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| id             | Id of the transaction                                                                                                                         |
-| parentId       | Id of parent transaction                                                                                                                      |
-| source         | Name of source service                                                                                                                        |
-| destination    | Name of destination service                                                                                                                   |
-| duration       | Duration in milliseconds                                                                                                                      |
-| direction      | Direction of the transaction(Inbound, Outbound). Inbound to API Gateway or outbound from API Gateway                                          |
-| status         | The status of the transaction leg                                                                                                             |
-| protocol       | Protocol(http or jms) specific details                                                                                                        |
+| Attribute Name | Description                                                                                          |
+|----------------|------------------------------------------------------------------------------------------------------|
+| id             | Id of the transaction                                                                                |
+| parentId       | Id of parent transaction                                                                             |
+| source         | Name of source service                                                                               |
+| destination    | Name of destination service                                                                          |
+| duration       | Duration in milliseconds                                                                             |
+| direction      | Direction of the transaction(Inbound, Outbound). Inbound to API Gateway or outbound from API Gateway |
+| status         | The status of the transaction leg                                                                    |
+| protocol       | Protocol(http or jms) specific details                                                               |
 
 ##### HTTP Protocol specific attributes
 
-| Attribute Name  | Description                                                                                                                                   |
-|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| type            | Identifies the HTTP protocol ("http")                                                                                                         |
-| uri             | HTTP URI                                                                                                                                      |
-| method          | HTTP Method                                                                                                                                   |
-| status          | HTTP Status Code                                                                                                                              |
-| statusText      | String representation of HTTP Status Code                                                                                                     |
-| userAgent       | User Agent used in the transaction                                                                                                            |
-| host            | HTTP Host request header                                                                                                                      |
-| version         | HTTP Version                                                                                                                                  |
-| bytesReceived   | Total bytes received                                                                                                                          |
-| bytesSent       | Total bytes sent                                                                                                                              |
-| remoteName      | Remote host name                                                                                                                              |
-| remoteAddr      | Remote host address                                                                                                                           |
-| remotePort      | Remote port                                                                                                                                   |
-| localAddr       | Local address                                                                                                                                 |
-| localPort       | Local port                                                                                                                                    |
-| requestHeaders  | Request headers in serialized json format                                                                                                     |
-| responseHeaders | Response headers in serialized json format                                                                                                    |
+| Attribute Name  | Description                                |
+|-----------------|--------------------------------------------|
+| type            | Identifies the HTTP protocol ("http")      |
+| uri             | HTTP URI                                   |
+| method          | HTTP Method                                |
+| status          | HTTP Status Code                           |
+| statusText      | String representation of HTTP Status Code  |
+| userAgent       | User Agent used in the transaction         |
+| host            | HTTP Host request header                   |
+| version         | HTTP Version                               |
+| bytesReceived   | Total bytes received                       |
+| bytesSent       | Total bytes sent                           |
+| remoteName      | Remote host name                           |
+| remoteAddr      | Remote host address                        |
+| remotePort      | Remote port                                |
+| localAddr       | Local address                              |
+| localPort       | Local port                                 |
+| requestHeaders  | Request headers in serialized json format  |
+| responseHeaders | Response headers in serialized json format |
 
 The Agent SDK provides the structures with above definition to setup the log entries for both type of events
 ```
@@ -570,11 +573,13 @@ type EventBuilder interface {
 	Build() (*LogEvent, error)
 }
 
-// HTTPProtocolBuilder - Interface to build the HTTP protocol details for transaction event
+// HTTPProtocolBuilder - Interface to build the HTTP protocol details for transaction log event
 type HTTPProtocolBuilder interface {
 	SetURI(uri string) HTTPProtocolBuilder
 	SetVersion(version string) HTTPProtocolBuilder
 	SetArgs(args string) HTTPProtocolBuilder
+	SetArgsMap(args map[string][]string) HTTPProtocolBuilder
+	AddArg(key string, value []string) HTTPProtocolBuilder
 	SetMethod(method string) HTTPProtocolBuilder
 	SetStatus(status int, statusText string) HTTPProtocolBuilder
 	SetUserAgent(userAgent string) HTTPProtocolBuilder
@@ -585,7 +590,15 @@ type HTTPProtocolBuilder interface {
 	SetSSLProperties(sslProtocol, sslServerName, sslSubject string) HTTPProtocolBuilder
 	SetAuthSubjectID(authSubjectID string) HTTPProtocolBuilder
 	SetHeaders(requestHeaders, responseHeaders string) HTTPProtocolBuilder
+	SetRequestHeaders(requestHeaders map[string]string) HTTPProtocolBuilder
+	SetResponseHeaders(responseHeaders map[string]string) HTTPProtocolBuilder
+	AddRequestHeader(headerKey string, headerValue string) HTTPProtocolBuilder
+	AddResponseHeader(headerKey string, headerValue string) HTTPProtocolBuilder
 	SetIndexedHeaders(indexedRequestHeaders, indexedResponseHeaders string) HTTPProtocolBuilder
+	SetIndexedRequestHeaders(indexedRequestHeaders map[string]string) HTTPProtocolBuilder
+	SetIndexedResponseHeaders(indexedResponseHeaders map[string]string) HTTPProtocolBuilder
+	AddIndexedRequestHeader(headerKey string, headerValue string) HTTPProtocolBuilder
+	AddIndexedResponseHeader(headerKey string, headerValue string) HTTPProtocolBuilder
 	SetPayload(requestPayload, responsePayload string) HTTPProtocolBuilder
 	SetWAFStatus(wasStatus int) HTTPProtocolBuilder
 
@@ -751,7 +764,96 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 
 ```
 
+### Traceability redaction
+
+The agent SDK has the ability to handle redaction and sanitization of URL path, Query Arguments, Request and Response headers.  When building the transaction summary and protocol events the SDK will apply these rules before sending to Amplify Central.
+
+By default all of the fields URL path, Query Arguments, Request and Response headers will be redacted and sanitized.  The settings below are to enable what to allow through.
+
+Below is the list of the redaction configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.redaction
+
+| YAML property           | Variable name                                  | Description                                                                 |
+|-------------------------|------------------------------------------------|-----------------------------------------------------------------------------|
+| path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                              |
+| queryArgument.show      | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                          |
+| queryArgument.sanitize  | TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify |
+| requestHeader.show      | TRACEABILITY_REDACTION_REQUESTHEADER_SHOW      | Determines what query arguments to send to Amplify                          |
+| requestHeader.sanitize  | TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify |
+| responseHeader.show     | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                          |
+| responseHeader.sanitize | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE | Determines what query argument values to sanitize before sending to Amplify |
+
+#### Setting up redaction and sanitization
+
+All of the SHOW properties above accept a keyMatch attribute that is a regular expressions to determine what path value, argument, or header may be sent to Amplify.
+
+All of the SANITIZE properties above accept both a keyMatch and valueMatch attribute.  The keyMatch attribute is applied to the argument name or header key. Once it finds a match the valueMatch regular expression is applied to the value to remove any string of characters that match.
+
+In order for the Sanitization to take place the argument name or header key must first have passed a show keyMatch.
+
+The regular expression syntax that may be applied can be found [here](https://golang.org/pkg/regexp/syntax/)
+
+#### Setting up redaction in YAML
+
+```yaml
+output.traceability:
+...
+  redaction:
+	  path:
+		  show:
+			  keyMatch: "^path" # allow paths values that start with the word path
+		queryArgument:
+		  show:
+			  keyMatch: "^id$" # allow query arguments that equal id exactly
+			sanitize:
+			  keyMatch: "^id$" # find the query arguments that equal id exactly
+				valueMatch: "^.*{0,5}" # sanitize the first five characters, no matter what they are
+		requestHeader:
+		  show:
+			  keyMatch: "header" # allow request headers that have the word header within them
+			sanitize:
+			  keyMatch: "header" # find request headers that have the word header within them
+				valueMatch: ".*" # sanitize the entire header value
+		responseHeader:
+		  show:
+			  keyMatch: ".*" # allow all response headers
+			sanitize:
+			  keyMatch: "^response" # find any response headers that start with the word response
+				valueMatch: "password" # sanitize the word password any time it occurs in the header value 
+```
+
+#### Using environment variables for redaction
+
+The default YAML in the example has the following setup for the redaction section. As long as this is not changed the environment variables below can set up the redaction.
+
+```yaml
+output.traceability:
+...
+  redaction:
+    path:
+      show: ${TRACEABILITY_REDACTION_PATH_SHOW:[]}
+    queryArgument:
+      show: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE:[]}
+    requestHeader:
+      show: ${TRACEABILITY_REDACTION_REQUESTHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE:[]}
+    responseHeader:
+      show: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW:[]}
+      sanitize: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE:[]}
+```
+
+When setting up the environment variables the following is the syntax that must be used.  These settings are the same as in the YAML [example](#setting-up-redaction-in-yaml)
+
+TRACEABILITY_REDACTION_PATH_SHOW=[{keyMatch:"^path"}]
+TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW=[{keyMatch:"^id$"}]
+TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE=[{keyMatch:"^id$",valueMatch:"^.*{0,5}"}]
+TRACEABILITY_REDACTION_REQUESTHEADER_SHOW=[{keyMatch:"header"}]
+TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE=[{keyMatch:"header",valueMatch:".*"}]
+TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW=[{keyMatch:".*"}]
+TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE=[{keyMatch:"^response",valueMatch:"password"}]
+
 ### Building the Agent
+
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
 
 The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file. 
