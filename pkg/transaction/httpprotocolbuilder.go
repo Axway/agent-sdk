@@ -84,7 +84,7 @@ func (b *httpProtocolBuilder) SetVersion(version string) HTTPProtocolBuilder {
 }
 
 func (b *httpProtocolBuilder) SetArgs(args string) HTTPProtocolBuilder {
-	if b.err != nil {
+	if b.err != nil || args == "" {
 		return b
 	}
 	var argMap map[string][]string
@@ -199,19 +199,23 @@ func (b *httpProtocolBuilder) SetHeaders(requestHeadersString, responseHeadersSt
 		return b
 	}
 
-	var requestHeaders map[string]string
-	b.err = json.Unmarshal([]byte(requestHeadersString), &requestHeaders)
-	if b.err != nil {
-		return b
+	if requestHeadersString != "" {
+		var requestHeaders map[string]string
+		b.err = json.Unmarshal([]byte(requestHeadersString), &requestHeaders)
+		if b.err != nil {
+			return b
+		}
+		b.requestHeaders = requestHeaders
 	}
-	b.requestHeaders = requestHeaders
 
-	var responseHeaders map[string]string
-	b.err = json.Unmarshal([]byte(responseHeadersString), &responseHeaders)
-	if b.err != nil {
-		return b
+	if requestHeadersString != "" {
+		var responseHeaders map[string]string
+		b.err = json.Unmarshal([]byte(responseHeadersString), &responseHeaders)
+		if b.err != nil {
+			return b
+		}
+		b.responseHeaders = responseHeaders
 	}
-	b.responseHeaders = responseHeaders
 	return b
 }
 
