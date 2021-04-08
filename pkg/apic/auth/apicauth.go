@@ -355,6 +355,8 @@ func (th *tokenHolder) getCachedToken() string {
 	if th.tokens != nil {
 		select {
 		case <-th.expiry.C:
+			// cleanup the token on expiry
+			th.tokens = nil
 			return ""
 		default:
 			return th.tokens.AccessToken
@@ -379,6 +381,7 @@ func (ptp *platformTokenGetter) Close() error {
 
 // fetchNewToken fetches a new token from the platform and updates the token cache.
 func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
+	log.Debug("Get cached token is empty.  Try and fetch a new token")
 	privateKey, err := ptp.getPrivateKey()
 	if err != nil {
 		return "", err
