@@ -16,7 +16,6 @@ import (
 
 func resetResources() {
 	agent.agentResource = nil
-	agent.dataplaneResource = nil
 	agent.isInitialized = false
 }
 
@@ -26,6 +25,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg.TenantID = "123456"
 	cfg.Environment = env
 	cfg.UpdateFromAPIServer = true
+	cfg.APICDeployment = "apic"
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
@@ -35,16 +35,16 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
-func createEdgeDiscoveryAgentRes(id, name, dataplane, filter string) *v1.ResourceInstance {
-	res := &v1alpha1.EdgeDiscoveryAgent{
+func createDiscoveryAgentRes(id, name, dataplane, filter string) *v1.ResourceInstance {
+	res := &v1alpha1.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.EdgeDiscoveryAgentSpec{
-			Dataplane: dataplane,
+		Spec: v1alpha1.DiscoveryAgentSpec{
+			DataplaneType: dataplane,
 			Config: v1alpha1.DiscoveryAgentSpecConfig{
 				Filter: filter,
 			},
@@ -54,41 +54,18 @@ func createEdgeDiscoveryAgentRes(id, name, dataplane, filter string) *v1.Resourc
 	return instance
 }
 
-func createEdgeTraceabilityAgentRes(id, name, dataplane string, processHeaders bool) *v1.ResourceInstance {
-	res := &v1alpha1.EdgeTraceabilityAgent{
+func createTraceabilityAgentRes(id, name, dataplane string, processHeaders bool) *v1.ResourceInstance {
+	res := &v1alpha1.TraceabilityAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.EdgeTraceabilityAgentSpec{
-			Dataplane: dataplane,
+		Spec: v1alpha1.TraceabilityAgentSpec{
+			DataplaneType: dataplane,
 			Config: v1alpha1.TraceabilityAgentSpecConfig{
 				ProcessHeaders: processHeaders,
-			},
-		},
-	}
-	instance, _ := res.AsInstance()
-	return instance
-}
-
-func createEdgeDataplaneRes(id, name, host string, apiManagerPort, apigwPort int) *v1.ResourceInstance {
-	res := &v1alpha1.EdgeDataplane{
-		ResourceMeta: v1.ResourceMeta{
-			Name: name,
-			Metadata: v1.Metadata{
-				ID: id,
-			},
-		},
-		Spec: v1alpha1.EdgeDataplaneSpec{
-			ApiManager: v1alpha1.EdgeDataplaneSpecApiManager{
-				Host: host,
-				Port: int32(apiManagerPort),
-			},
-			ApiGatewayManager: v1alpha1.EdgeDataplaneSpecApiGatewayManager{
-				Host: host,
-				Port: int32(apigwPort),
 			},
 		},
 	}
@@ -101,13 +78,17 @@ type TestConfig struct {
 	childCfg        config.IResourceConfigCallback
 }
 
-func (a *TestConfig) ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error {
+func (a *TestConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
 	a.resourceChanged = true
 	return nil
 }
 
-func TestEdgeAgentInitialize(t *testing.T) {
-	var edgeDataplaneRes, edgeDiscoveryAgentRes, edgeTraceabilitAgentRes *v1.ResourceInstance
+func TestAgentInitialize(t *testing.T) {
+	const (
+		daName = "discovery"
+		taName = "traceability"
+	)
+	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
@@ -115,18 +96,13 @@ func TestEdgeAgentInitialize(t *testing.T) {
 			resp.Write([]byte(token))
 		}
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "v7/edgedataplanes/v7-dataplane") {
-				buf, _ := json.Marshal(edgeDataplaneRes)
+			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
+				buf, _ := json.Marshal(discoveryAgentRes)
 				fmt.Println("Res:" + string(buf))
 				resp.Write(buf)
 			}
-			if strings.Contains(req.RequestURI, "/v7/edgediscoveryagents/v7-discovery") {
-				buf, _ := json.Marshal(edgeDiscoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/edgetraceabilityagents/v7-traceability") {
-				buf, _ := json.Marshal(edgeTraceabilitAgentRes)
+			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
+				buf, _ := json.Marshal(traceabilityAgentRes)
 				fmt.Println("Res:" + string(buf))
 				resp.Write(buf)
 			}
@@ -141,35 +117,30 @@ func TestEdgeAgentInitialize(t *testing.T) {
 	err := Initialize(cfg)
 	assert.Nil(t, err)
 	da := GetAgentResource()
-	dp := GetDataplaneResource()
 	assert.Nil(t, da)
-	assert.Nil(t, dp)
 
-	edgeDataplaneRes = createEdgeDataplaneRes("111", "v7-dataplane", "localhost", 8075, 8090)
-	edgeDiscoveryAgentRes = createEdgeDiscoveryAgentRes("111", "v7-disconery", "v7-dataplane", "")
-	edgeTraceabilitAgentRes = createEdgeTraceabilityAgentRes("111", "v7-traceability", "v7-dataplane", false)
+	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
-	AgentResourceType = v1alpha1.EdgeDiscoveryAgentResource
-	cfg.AgentName = "v7-discovery"
+	cfg.AgentType = config.DiscoveryAgent
+	AgentResourceType = v1alpha1.DiscoveryAgentResource
+	cfg.AgentName = daName
 	resetResources()
 	err = Initialize(cfg)
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
-	dp = GetDataplaneResource()
-	assertResource(t, dp, edgeDataplaneRes)
-	assertResource(t, da, edgeDiscoveryAgentRes)
+	assertResource(t, da, discoveryAgentRes)
 
-	AgentResourceType = v1alpha1.EdgeTraceabilityAgentResource
-	cfg.AgentName = "v7-traceability"
+	cfg.AgentType = config.TraceabilityAgent
+	AgentResourceType = v1alpha1.TraceabilityAgentResource
+	cfg.AgentName = taName
 	agent.isInitialized = false
 	err = Initialize(cfg)
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
-	dp = GetDataplaneResource()
-	assertResource(t, dp, edgeDataplaneRes)
-	assertResource(t, da, edgeTraceabilitAgentRes)
+	assertResource(t, da, traceabilityAgentRes)
 
 	agentCfg := &TestConfig{
 		resourceChanged: false,
@@ -180,7 +151,7 @@ func TestEdgeAgentInitialize(t *testing.T) {
 	assert.True(t, agentCfg.resourceChanged)
 
 	// Test for resource change
-	edgeDataplaneRes = createEdgeDataplaneRes("111", "v7-dataplane", "localhost", 9075, 8090)
+	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", true)
 	resetResources()
 
 	agentResChangeHandlerCall := 0
@@ -190,14 +161,16 @@ func TestEdgeAgentInitialize(t *testing.T) {
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
-	dp = GetDataplaneResource()
-	assertResource(t, dp, edgeDataplaneRes)
-	assertResource(t, da, edgeTraceabilitAgentRes)
+	assertResource(t, da, traceabilityAgentRes)
 	assert.Equal(t, 1, agentResChangeHandlerCall)
 }
 
 func TestAgentConfigOverride(t *testing.T) {
-	var edgeDataplaneRes, edgeDiscoveryAgentRes, edgeTraceabilitAgentRes *v1.ResourceInstance
+	const (
+		daName = "discovery"
+		taName = "traceability"
+	)
+	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
@@ -205,18 +178,13 @@ func TestAgentConfigOverride(t *testing.T) {
 			resp.Write([]byte(token))
 		}
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "v7/edgedataplanes/v7-dataplane") {
-				buf, _ := json.Marshal(edgeDataplaneRes)
+			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
+				buf, _ := json.Marshal(discoveryAgentRes)
 				fmt.Println("Res:" + string(buf))
 				resp.Write(buf)
 			}
-			if strings.Contains(req.RequestURI, "/v7/edgediscoveryagents/v7-discovery") {
-				buf, _ := json.Marshal(edgeDiscoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/edgetraceabilityagents/v7-traceability") {
-				buf, _ := json.Marshal(edgeTraceabilitAgentRes)
+			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
+				buf, _ := json.Marshal(traceabilityAgentRes)
 				fmt.Println("Res:" + string(buf))
 				resp.Write(buf)
 			}
@@ -227,20 +195,17 @@ func TestAgentConfigOverride(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "v7")
 
-	edgeDataplaneRes = createEdgeDataplaneRes("111", "v7-dataplane", "localhost", 8075, 8090)
-	edgeDiscoveryAgentRes = createEdgeDiscoveryAgentRes("111", "v7-disconery", "v7-dataplane", "")
-	edgeTraceabilitAgentRes = createEdgeTraceabilityAgentRes("111", "v7-traceability", "v7-dataplane", false)
+	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
-	AgentResourceType = v1alpha1.EdgeDiscoveryAgentResource
-	cfg.AgentName = "v7-discovery"
+	AgentResourceType = v1alpha1.DiscoveryAgentResource
+	cfg.AgentName = "discovery"
 	resetResources()
 	err := Initialize(cfg)
 	assert.Nil(t, err)
 
 	da := GetAgentResource()
-	dp := GetDataplaneResource()
-	assertResource(t, dp, edgeDataplaneRes)
-	assertResource(t, da, edgeDiscoveryAgentRes)
+	assertResource(t, da, discoveryAgentRes)
 
 }
 

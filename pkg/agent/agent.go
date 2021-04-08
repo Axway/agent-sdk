@@ -30,11 +30,6 @@ const (
 	AgentFailed  = "failed"
 )
 
-const (
-	awsDataplaneType  = "AWS"
-	edgeDataplaneType = "Edge"
-)
-
 // AgentResourceType - Holds the type for agent resource in Central
 var AgentResourceType string
 
@@ -44,14 +39,6 @@ type APIValidator func(apiID, stageName string) bool
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
-// dataplaneResourceTypeMap - Agent Resource map
-var dataplaneResourceTypeMap = map[string]string{
-	v1alpha1.EdgeDiscoveryAgentResource:    v1alpha1.EdgeDataplaneResource,
-	v1alpha1.EdgeTraceabilityAgentResource: v1alpha1.EdgeDataplaneResource,
-	v1alpha1.AWSDiscoveryAgentResource:     v1alpha1.AWSDataplaneResource,
-	v1alpha1.AWSTraceabilityAgentResource:  v1alpha1.AWSDataplaneResource,
-}
-
 // agentTypesMap - Agent Types map
 var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    "discoveryagents",
@@ -59,10 +46,8 @@ var agentTypesMap = map[config.AgentType]string{
 }
 
 type agentData struct {
-	agentResource         *apiV1.ResourceInstance
-	dataplaneResource     *apiV1.ResourceInstance
-	prevAgentResource     *apiV1.ResourceInstance
-	prevDataplaneResource *apiV1.ResourceInstance
+	agentResource     *apiV1.ResourceInstance
+	prevAgentResource *apiV1.ResourceInstance
 
 	apicClient     apic.Client
 	cfg            *config.CentralConfiguration
@@ -221,16 +206,6 @@ func GetAgentResource() *apiV1.ResourceInstance {
 	return agent.agentResource
 }
 
-// GetDataplaneResource - Returns dataplane resource
-func GetDataplaneResource() *apiV1.ResourceInstance {
-	return agent.dataplaneResource
-}
-
-// GetDataplaneType - Returns dataplane type name
-func GetDataplaneType() string {
-	return getDataplaneTypeFromAgentResource(agent.agentResource)
-}
-
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	updateAgentStatus(status, description)
@@ -264,33 +239,20 @@ func refreshResources() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// Get Dataplane Resources
-	agent.dataplaneResource, err = getDataplaneResource(agent.agentResource)
-	if err != nil {
-		return false, err
-	}
+
 	isChanged := true
 	if agent.prevAgentResource != nil {
 		agentResHash, _ := util.ComputeHash(agent.agentResource)
 		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
-		var dataplaneResHash, prevDataplaneResHash uint64
-		if agent.dataplaneResource != nil {
-			dataplaneResHash, _ = util.ComputeHash(agent.dataplaneResource)
-		}
-		if agent.prevDataplaneResource != nil {
-			prevDataplaneResHash, _ = util.ComputeHash(agent.prevDataplaneResource)
-		}
-		if prevAgentResHash == agentResHash && prevDataplaneResHash == dataplaneResHash {
+
+		if prevAgentResHash == agentResHash {
 			isChanged = false
 		}
 	}
 	agent.prevAgentResource = agent.agentResource
-	agent.prevDataplaneResource = agent.dataplaneResource
+
 	if isChanged {
 		dataplaneTitle := agent.cfg.GetEnvironmentName()
-		if agent.dataplaneResource != nil {
-			dataplaneTitle = agent.dataplaneResource.Title
-		}
 		agent.cfg.SetDataPlaneName(dataplaneTitle)
 	}
 	return isChanged, nil
@@ -319,16 +281,7 @@ func cleanUp() {
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
 	// Set resource for Agent Type
-	if AgentResourceType == "" {
-		AgentResourceType = agentTypesMap[agent.cfg.AgentType]
-	}
-	return AgentResourceType
-}
-
-// GetDataplaneType - Returns the Dataplane Resource path element
-func getDataplaneType() string {
-	res, _ := dataplaneResourceTypeMap[AgentResourceType]
-	return res
+	return agentTypesMap[agent.cfg.AgentType]
 }
 
 // GetAgentResource - returns the agent resource
@@ -338,37 +291,12 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 
 	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agentResourceURL, nil, nil)
 	if err != nil {
-		// if agentResourceType is already a standard generic agent resource
-		if agentResourceType == agentTypesMap[agent.cfg.AgentType] {
-			return nil, err
-		}
-		// if the agentResourceType is not a standard generic resource, then reset the AgentResourceType
-		// and return a check to the method, resulting in making the resource generic inside of getAgentResourceType()
-		AgentResourceType = ""
-		return getAgentResource()
+		return nil, err
 	}
+
 	agent := apiV1.ResourceInstance{}
 	json.Unmarshal(response, &agent)
 	return &agent, nil
-}
-
-// GetDataplaneResource - returns the dataplane resource
-func getDataplaneResource(agentResource *apiV1.ResourceInstance) (*apiV1.ResourceInstance, error) {
-	dataplaneName := getDataplaneNameFromAgent(agentResource)
-	var dataplane *apiV1.ResourceInstance
-	if dataplaneName != "" {
-		dataplaneResourceType := getDataplaneType()
-		dataplaneResourceURL := agent.cfg.GetEnvironmentURL() + "/" + dataplaneResourceType + "/" + dataplaneName
-		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, dataplaneResourceURL, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		dataplane = &apiV1.ResourceInstance{}
-
-		json.Unmarshal(response, dataplane)
-	}
-	return dataplane, nil
 }
 
 // updateAgentStatus - Updates the agent status in agent resource
@@ -382,21 +310,6 @@ func updateAgentStatus(status, message string) error {
 		agentResourceType := getAgentResourceType()
 		resource := createAgentStatusSubResource(agentResourceType, status, message)
 
-		// Check if there is an agent status resource to update
-		var statusResource interface{}
-		if agentResourceType == v1alpha1.AWSDiscoveryAgentResource || agentResourceType == v1alpha1.EdgeDiscoveryAgentResource {
-			statusResource = createAgentStatusSubResource(v1alpha1.DiscoveryAgentResource, status, message)
-		} else if agentResourceType == v1alpha1.AWSTraceabilityAgentResource || agentResourceType == v1alpha1.EdgeTraceabilityAgentResource {
-			statusResource = createAgentStatusSubResource(v1alpha1.TraceabilityAgentResource, status, message)
-		}
-
-		if statusResource != nil {
-			err := updateAgentStatusAPI(statusResource, agentResourceType)
-			if err != nil {
-				log.Warn("Could not update the agent status reference")
-				return err
-			}
-		}
 		err := updateAgentStatusAPI(resource, agentResourceType)
 		if err != nil {
 			log.Warn("Could not update the agent status reference")
@@ -420,57 +333,8 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 	return nil
 }
 
-func getDataplaneTypeFromAgentResource(res *apiV1.ResourceInstance) string {
-	switch getAgentResourceType() {
-	case v1alpha1.EdgeDiscoveryAgentResource:
-		fallthrough
-	case v1alpha1.EdgeTraceabilityAgentResource:
-		return edgeDataplaneType
-	case v1alpha1.AWSDiscoveryAgentResource:
-		fallthrough
-	case v1alpha1.AWSTraceabilityAgentResource:
-		return awsDataplaneType
-	case v1alpha1.DiscoveryAgentResource:
-		agentRes := discoveryAgent(res)
-		return agentRes.Spec.DataplaneType
-	case v1alpha1.TraceabilityAgentResource:
-		agentRes := traceabilityAgent(res)
-		return agentRes.Spec.DataplaneType
-	default:
-		return ""
-	}
-}
-
-func getDataplaneNameFromAgent(res *apiV1.ResourceInstance) string {
-	switch getAgentResourceType() {
-	case v1alpha1.EdgeDiscoveryAgentResource:
-		agentRes := edgeDiscoveryAgent(res)
-		return agentRes.Spec.Dataplane
-	case v1alpha1.EdgeTraceabilityAgentResource:
-		agentRes := edgeTraceabilityAgent(res)
-		return agentRes.Spec.Dataplane
-	case v1alpha1.AWSDiscoveryAgentResource:
-		agentRes := awsDiscoveryAgent(res)
-		return agentRes.Spec.Dataplane
-	case v1alpha1.AWSTraceabilityAgentResource:
-		agentRes := awsTraceabilityAgent(res)
-		return agentRes.Spec.Dataplane
-	default:
-		log.Trace("Agent type specified not linked to a dataplane type")
-		return ""
-	}
-}
-
 func createAgentStatusSubResource(agentResourceType, status, message string) interface{} {
 	switch agentResourceType {
-	case v1alpha1.EdgeDiscoveryAgentResource:
-		return createEdgeDiscoveryAgentStatusResource(status, message)
-	case v1alpha1.EdgeTraceabilityAgentResource:
-		return createEdgeTraceabilityAgentStatusResource(status, message)
-	case v1alpha1.AWSDiscoveryAgentResource:
-		return createAWSDiscoveryAgentStatusResource(status, message)
-	case v1alpha1.AWSTraceabilityAgentResource:
-		return createAWSTraceabilityAgentStatusResource(status, message)
 	case v1alpha1.DiscoveryAgentResource:
 		return createDiscoveryAgentStatusResource(status, message)
 	case v1alpha1.TraceabilityAgentResource:
@@ -480,45 +344,6 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 	}
 }
 
-func createAgentResource(agentRes interface{}) error {
-	agentResourceType := v1alpha1.DiscoveryAgentResource
-	if getAgentResourceType() == v1alpha1.AWSTraceabilityAgentResource || getAgentResourceType() == v1alpha1.EdgeTraceabilityAgentResource {
-		agentResourceType = v1alpha1.TraceabilityAgentResource
-	}
-	// Create the agent resource
-	buffer, err := json.Marshal(agentRes)
-	if err != nil {
-		return nil
-	}
-	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType
-	_, err = agent.apicClient.ExecuteAPI(coreapi.POST, resURL, nil, buffer)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func updateAgentResource(agentRes interface{}) error {
-	// IMP - To be removed once the model is in production
-	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
-		return nil
-	}
-
-	agentResourceType := getAgentResourceType()
-
-	// Create the agent resource
-	buffer, err := json.Marshal(agentRes)
-	if err != nil {
-		return nil
-	}
-	resURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName()
-	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, resURL, nil, buffer)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func mergeResourceWithConfig() {
 	// IMP - To be removed once the model is in production
 	if agent.cfg.GetAgentName() == "" {
@@ -526,14 +351,6 @@ func mergeResourceWithConfig() {
 	}
 
 	switch getAgentResourceType() {
-	case v1alpha1.EdgeDiscoveryAgentResource:
-		mergeEdgeDiscoveryAgentWithConfig(agent.cfg)
-	case v1alpha1.EdgeTraceabilityAgentResource:
-		mergeEdgeTraceabilityAgentWithConfig(agent.cfg)
-	case v1alpha1.AWSDiscoveryAgentResource:
-		mergeAWSDiscoveryAgentWithConfig(agent.cfg)
-	case v1alpha1.AWSTraceabilityAgentResource:
-		mergeAWSTraceabilityAgentWithConfig(agent.cfg)
 	case v1alpha1.DiscoveryAgentResource:
 		mergeDiscoveryAgentWithConfig(agent.cfg)
 	case v1alpha1.TraceabilityAgentResource:
@@ -561,5 +378,4 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	if cfg.TeamName == "" && resCfgTeamName != "" {
 		cfg.TeamName = resCfgTeamName
 	}
-
 }
