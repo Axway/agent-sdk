@@ -92,16 +92,26 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	return apiService, err
 }
 
-// getAPIServiceByName - Returns the API service for specified name
+// getAPIServiceByExternalAPIID - Returns the API service based on external api identification
 func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+	if serviceBody.PrimaryKey != "" {
+		apiService, err := c.getAPIServiceByAttribute(serviceBody, serviceBody.PrimaryKey)
+		if apiService != nil || err != nil {
+			return apiService, err
+		}
+	}
+	return c.getAPIServiceByAttribute(serviceBody, "")
+}
+
+// getAPIServiceByAttribute - Returns the API service based on attribute
+func (c *ServiceClient) getAPIServiceByAttribute(serviceBody *ServiceBody, primaryKey string) (*v1alpha1.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
-
 	query := map[string]string{}
-	if serviceBody.PrimaryKey != "" {
-		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + serviceBody.PrimaryKey + "\""
+	if primaryKey != "" {
+		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + primaryKey + "\""
 	} else {
 		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + serviceBody.RestAPIID + "\""
 	}
