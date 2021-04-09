@@ -161,6 +161,9 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		cancel()
 	})
 
+	// Prevent reuse of the tcp connection to the same host
+	req.Close = true
+
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
