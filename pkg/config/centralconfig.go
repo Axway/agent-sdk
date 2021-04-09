@@ -64,7 +64,7 @@ type IConfigValidator interface {
 // IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource
 // for agent and dataplane
 type IResourceConfigCallback interface {
-	ApplyResources(dataplaneResource *v1.ResourceInstance, agentResource *v1.ResourceInstance) error
+	ApplyResources(agentResource *v1.ResourceInstance) error
 }
 
 // CentralConfig - Interface to get central Config

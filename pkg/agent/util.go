@@ -20,14 +20,13 @@ func getTimestamp() string {
 // struct variable.
 // Makes call to ApplyResources method with dataplane and agent resources from API server
 func ApplyResouceToConfig(cfg interface{}) error {
-	dp := GetDataplaneResource()
 	agentRes := GetAgentResource()
-	if dp == nil || agentRes == nil {
+	if agentRes == nil {
 		return nil
 	}
 
 	if objInterface, ok := cfg.(config.IResourceConfigCallback); ok {
-		err := objInterface.ApplyResources(dp, agentRes)
+		err := objInterface.ApplyResources(agentRes)
 		if err != nil {
 			return err
 		}
