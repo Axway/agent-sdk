@@ -96,16 +96,11 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
 		apiService, err := c.getAPIServiceByAttribute(serviceBody, serviceBody.PrimaryKey)
-		if err != nil {
-			return nil, err
+		if apiService != nil || err != nil {
+			return apiService, err
 		}
-		if apiService == nil {
-			return c.getAPIServiceByAttribute(serviceBody, "")
-		}
-		return apiService, err
-	} else {
-		return c.getAPIServiceByAttribute(serviceBody, "")
 	}
+	return c.getAPIServiceByAttribute(serviceBody, "")
 }
 
 // getAPIServiceByName - Returns the API service for specified name
