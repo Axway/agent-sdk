@@ -64,6 +64,8 @@ func makeTraceabilityAgent(
 	var transportGroup outputs.Group
 	if config.Protocol == "https" || config.Protocol == "http" {
 		transportGroup, err = makeHTTPClient(beat, observer, config, hosts)
+	} else if config.Protocol == "chimera" {
+		transportGroup, err = makeChimeraClient(beat, observer, config, hosts)
 	} else {
 		transportGroup, err = makeLogstashClient(indexManager, beat, observer, cfg)
 	}
@@ -122,6 +124,43 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, h
 		client, err = NewHTTPClient(HTTPClientSettings{
 			BeatInfo:         beat,
 			URL:              hostURL,
+			Proxy:            proxyURL,
+			TLS:              tls,
+			Timeout:          config.Timeout,
+			CompressionLevel: config.CompressionLevel,
+			Observer:         observer,
+		})
+
+		if err != nil {
+			return outputs.Fail(err)
+		}
+		client = outputs.WithBackoff(client, config.Backoff.Init, config.Backoff.Max)
+		clients[i] = client
+	}
+	return outputs.SuccessNet(config.LoadBalance, config.BulkMaxSize, config.MaxRetries, clients)
+}
+
+func makeChimeraClient(beat beat.Info, observer outputs.Observer, config *Config, hosts []string) (outputs.Group, error) {
+	tls, err := tlscommon.LoadTLSConfig(config.TLS)
+	if err != nil {
+		agent.UpdateStatus(agent.AgentFailed, err.Error())
+		return outputs.Fail(err)
+	}
+	clients := make([]outputs.NetworkClient, len(hosts))
+	for i, host := range hosts {
+		// hostURL, err := common.MakeURL("https", "/v2/message", host, 443)
+		// if err != nil {
+		// 	return outputs.Fail(err)
+		// }
+		proxyURL, err := url.Parse(config.Proxy.URL)
+		if err != nil {
+			return outputs.Fail(err)
+		}
+		var client outputs.NetworkClient
+		client, err = NewChimeraClient(ChimeraClientSettings{
+			BeatInfo:         beat,
+			Host:             host,
+			AuthToken:        config.AuthToken,
 			Proxy:            proxyURL,
 			TLS:              tls,
 			Timeout:          config.Timeout,

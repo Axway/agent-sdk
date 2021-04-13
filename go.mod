@@ -3,6 +3,7 @@ module github.com/Axway/agent-sdk
 go 1.13
 
 require (
+	github.com/appcelerator/chimera-client-go v0.0.0-20201007180737-9ea92a759c18
 	github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
@@ -43,6 +44,7 @@ require (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.2.0+incompatible
 	github.com/Shopify/sarama => github.com/elastic/sarama v0.0.0-20191122160421-355d120d0970
+	github.com/appcelerator/chimera-client-go => github.com/vivekschauhan/chimera-client-go v0.0.0-20210413093522-ebabd26c23a4
 	github.com/docker/docker => github.com/docker/engine v0.0.0-20191113042239-ea84732a7725
 	github.com/docker/go-plugins-helpers => github.com/elastic/go-plugins-helpers v0.0.0-20200207104224-bdf17607b79f
 	github.com/dop251/goja => github.com/andrewkroh/goja v0.0.0-20190128172624-dd2ac4456e20

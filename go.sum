@@ -531,6 +531,8 @@ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An
 github.com/spf13/viper v1.4.0/go.mod h1:PTJ7Z/lr49W6bUbkmS1V3by4uWynFiR9p7+dSq/yZzE=
 github.com/spf13/viper v1.7.1 h1:pM5oEahlgWv/WnHXpgbKz7iLIxRf65tye2Ci+XFK5sk=
 github.com/spf13/viper v1.7.1/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
+github.com/streadway/amqp v1.0.0 h1:kuuDrUJFZL1QYL9hUNuCxNObNzB0bV/ZG5jV3RWAQgo=
+github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.2-0.20180702103455-b8b73a35e983/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -562,6 +564,8 @@ github.com/urso/magetools v0.0.0-20190919040553-290c89e0c230/go.mod h1:DFxTNgS/E
 github.com/urso/magetools v0.0.0-20200106130147-61080ed7b22b/go.mod h1:DFxTNgS/ExCGmmjVjSOgS2WjtfjKXgCyDzAFgbtovSA=
 github.com/urso/qcgen v0.0.0-20180131103024-0b059e7db4f4/go.mod h1:RspW+E2Yb7Fs7HclB2tiDaiu6Rp41BiIG4Wo1YaoXGc=
 github.com/vbatts/tar-split v0.11.1/go.mod h1:LEuURwDEiWjRjwu46yU3KVGuUdVv/dcnpcEPSzR8z6g=
+github.com/vivekschauhan/chimera-client-go v0.0.0-20210413093522-ebabd26c23a4 h1:dITRcMw5bY+drV1S2qXlOJ1e81KEFObKjq2khsqdSNQ=
+github.com/vivekschauhan/chimera-client-go v0.0.0-20210413093522-ebabd26c23a4/go.mod h1:qmlXVtbajbqVHn1paCH5PBtZjMj9mOdTFj6jA+tW/3c=
 github.com/vmware/govmomi v0.0.0-20170802214208-2cad15190b41/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
 github.com/xanzy/go-gitlab v0.22.3/go.mod h1:t4Bmvnxj7k37S4Y17lfLx+nLqkf/oQwT2HagfWKv5Og=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=

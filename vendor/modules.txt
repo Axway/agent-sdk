@@ -1,3 +1,5 @@
+# github.com/appcelerator/chimera-client-go v0.0.0-20201007180737-9ea92a759c18 => github.com/vivekschauhan/chimera-client-go v0.0.0-20210413093522-ebabd26c23a4
+github.com/appcelerator/chimera-client-go/chimera
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
@@ -134,6 +136,8 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.7.1
 github.com/spf13/viper
+# github.com/streadway/amqp v1.0.0
+github.com/streadway/amqp
 # github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.2.0

@@ -192,11 +192,10 @@ func TestCreateLogstashClient(t *testing.T) {
 		"someotherhost",
 	}
 	group, err = createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "multiple host for traceability output not supported")
+	assert.Nil(t, err)
 	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
+	assert.NotNil(t, group.Clients)
+	assert.True(t, logstashClientCreateCalled)
 
 	testConfig.Pipelining = 5
 	testConfig.Hosts = []string{
