@@ -202,6 +202,7 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 	if ok {
 		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
 		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := agent.apiMap.Get(externalAPIID); err != nil {
 				agent.apiMap.Delete(externalAPIID)
 			}
