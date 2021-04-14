@@ -148,10 +148,6 @@ func makeChimeraClient(beat beat.Info, observer outputs.Observer, config *Config
 	}
 	clients := make([]outputs.NetworkClient, len(hosts))
 	for i, host := range hosts {
-		// hostURL, err := common.MakeURL("https", "/v2/message", host, 443)
-		// if err != nil {
-		// 	return outputs.Fail(err)
-		// }
 		proxyURL, err := url.Parse(config.Proxy.URL)
 		if err != nil {
 			return outputs.Fail(err)

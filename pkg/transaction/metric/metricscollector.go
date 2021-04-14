@@ -40,7 +40,6 @@ func NewMetricCollector(eventChannel chan interface{}) Collector {
 		eventChannel: eventChannel,
 	}
 
-	// go metrics.Log(metricCollector.registry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	_, err := jobs.RegisterIntervalJob(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval())
 	if err != nil {
 		panic(err)
@@ -144,12 +143,12 @@ func (c *collector) generateEvents() {
 					counter++
 				}
 			}
-			log.Debugf("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+			log.Infof("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 		} else {
-			log.Debug("Publishing the metric event is turned off")
+			log.Info("Publishing the metric event is turned off")
 		}
 	} else {
-		log.Debugf("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	}
 
 }
@@ -204,9 +203,9 @@ func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
 		counterMetric.Clear()
 		if agent.GetCentralConfig().CanPublishUsageEvent() {
 			c.generateUsageEvent(transactionCount, c.orgGUID)
-			log.Debugf("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+			log.Infof("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 		} else {
-			log.Debug("Publishing the usage event is turned off")
+			log.Info("Publishing the usage event is turned off")
 		}
 	}
 

@@ -2,7 +2,6 @@ package metric
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -44,7 +43,6 @@ func (pj *publisher) Execute() error {
 
 func (pj *publisher) publishEvent(event interface{}) {
 	buffer, _ := json.Marshal(event)
-	fmt.Println(string(buffer))
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
 	headers["x-org-id"] = agent.GetCentralConfig().GetTenantID()
