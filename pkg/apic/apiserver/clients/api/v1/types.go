@@ -41,11 +41,13 @@ type basicAuth struct {
 	pass       string
 	tenantID   string
 	user       string
+	userAgent  string
 }
 
 type jwtAuth struct {
 	tenantID    string
 	tokenGetter auth.PlatformTokenGetter
+	userAgent   string
 }
 
 type requestDoer interface {
@@ -88,6 +90,7 @@ type ClientBase struct {
 	auth         authenticator
 	impersonator impersonator
 	log          Logger
+	userAgent    string
 }
 
 // Client for a resource with the given version, group & scope

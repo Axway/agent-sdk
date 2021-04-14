@@ -27,6 +27,7 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 	req.SetBasicAuth(ba.user, ba.pass)
 	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
 	req.Header.Set("X-Axway-Instance-Id", ba.instanceID)
+	req.Header.Set("User-Agent", ba.userAgent)
 	return nil
 }
 
@@ -44,11 +45,18 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
 	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
+	req.Header.Set("User-Agent", j.userAgent)
 	return nil
 }
 
 type modifier interface {
 	Modify()
+}
+
+func UserAgent(ua string) Options {
+	return func(c *ClientBase) {
+		c.userAgent = ua
+	}
 }
 
 // BasicAuth auth with user/pass
@@ -59,6 +67,7 @@ func BasicAuth(user, password, tenantID, instanceID string) Options {
 			pass:       password,
 			tenantID:   tenantID,
 			instanceID: instanceID,
+			userAgent:  c.userAgent,
 		}
 
 		c.auth = ba
@@ -74,6 +83,7 @@ func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, tim
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,
+			userAgent:   c.userAgent,
 		}
 	}
 }
@@ -99,6 +109,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 		url:          baseURL,
 		auth:         noopAuth{},
 		impersonator: noImpersonator{},
+		userAgent:    "",
 	}
 
 	for _, o := range options {

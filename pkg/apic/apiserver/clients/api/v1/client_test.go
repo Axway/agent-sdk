@@ -74,8 +74,6 @@ const mockJSONApiSvc = `{
 	"spec": {}
 }`
 
-const mockTokenResponse = `{"access_token":"eyJhbGc","expires_in":1800}`
-
 var mockEnv = &apiv1.ResourceInstance{}
 var mockEnvUpdated = &apiv1.ResourceInstance{}
 var mockAPISvc = &apiv1.ResourceInstance{}
@@ -103,6 +101,7 @@ func TestMain(m *testing.M) {
 
 	newClient, err := NewClient(
 		"http://localhost:8080/apis",
+		UserAgent("fake-agent"),
 		BasicAuth(
 			"admin",
 			"servicesecret",
@@ -123,6 +122,7 @@ func TestUnscoped(t *testing.T) {
 	// Create env
 	gock.New("http://localhost:8080/apis").
 		Post("/management/v1alpha1/environments").
+		MatchHeader("User-Agent", "fake-agent").
 		Reply(201).
 		JSON(mockEnv)
 
@@ -339,32 +339,35 @@ func Test_listAll(t *testing.T) {
 }
 
 func TestJWTAuth(t *testing.T) {
+	uaHeader := "fake-agent"
 	tenantId := "1234"
-	auth := JWTAuth(
-		tenantId,
-		privKey,
-		pubKey,
-		"",
-		"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
-		"http://localhost:8080/auth/realms/Broker",
-		"DOSA_1234",
-		10*time.Second)
 
-	base := &ClientBase{}
-	auth(base)
+	c := NewClient("http://localhost:8080",
+		UserAgent(uaHeader),
+		JWTAuth(
+			tenantId,
+			privKey,
+			pubKey,
+			"",
+			"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
+			"http://localhost:8080/auth/realms/Broker",
+			"DOSA_1234",
+			10*time.Second,
+		),
+	)
 
-	_, ok := base.auth.(*jwtAuth)
+	assert.Equal(t, uaHeader, c.userAgent)
+
+	jAuthStruct, ok := c.auth.(*jwtAuth)
+
 	assert.True(t, ok)
-
-	jwt := &jwtAuth{
-		tenantID:    tenantId,
-		tokenGetter: apic.MockTokenGetter,
-	}
+	assert.Equal(t, uaHeader, jAuthStruct.userAgent)
+	jAuthStruct.tokenGetter = apic.MockTokenGetter
 
 	req := &http.Request{
 		Header: make(http.Header),
 	}
-	err := jwt.Authenticate(req)
+	err := jAuthStruct.Authenticate(req)
 	assert.Nil(t, err)
 
 	tenant := req.Header.Get("X-Axway-Tenant-Id")
@@ -372,6 +375,9 @@ func TestJWTAuth(t *testing.T) {
 
 	instance := req.Header.Get("X-Axway-Instance-Id")
 	assert.Equal(t, "", instance)
+
+	ua := req.Header.Get("User-Agent")
+	assert.Equal(t, uaHeader, ua)
 }
 
 func TestListError(t *testing.T) {
