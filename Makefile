@@ -2,6 +2,8 @@
 
 WORKSPACE ?= $$(pwd)
 
+GO_TEST_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
+
 GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
 	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models)
 
@@ -24,8 +26,8 @@ resolve-dependencies:
 dep: resolve-dependencies
 
 test:
-	@go vet ${GO_PKG_LIST}
-	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST}
+	@go vet ${GO_TEST_LIST}
+	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
 
 test-sonar:
 	@echo "GO_PKG_LIST: ${GO_PKG_LIST}"

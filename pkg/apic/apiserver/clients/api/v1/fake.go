@@ -730,11 +730,9 @@ type delegatingEventHandler struct {
 // Handle -
 func (dh *delegatingEventHandler) Handle(e *apiv1.Event) {
 	if dh != nil && dh.wrapped != nil {
-		go func() {
-			if dh != nil && dh.wrapped != nil {
-				dh.wrapped.Handle(e)
-			}
-		}()
+		if dh != nil && dh.wrapped != nil {
+			dh.wrapped.Handle(e)
+		}
 	}
 }
 

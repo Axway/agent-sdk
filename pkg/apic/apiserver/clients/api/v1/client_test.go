@@ -3,17 +3,17 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Axway/agent-sdk/pkg/apic"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/h2non/gock.v1"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
 	"time"
-
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/h2non/gock.v1"
 )
 
 const privKey = "testdata/privatekey"
@@ -339,41 +339,39 @@ func Test_listAll(t *testing.T) {
 }
 
 func TestJWTAuth(t *testing.T) {
-	defer gock.Off()
-	tenantID := "426937327920148"
-	gock.New("http://localhost:8080/apis").
-		Post("/management/v1alpha1/environments").
-		MatchHeader("Authorization", "Bearer eyJhbGc").
-		MatchHeader("X-Axway-Tenant-Id", tenantID).
-		Reply(201).
-		JSON(mockEnv)
+	tenantId := "1234"
+	auth := JWTAuth(
+		tenantId,
+		privKey,
+		pubKey,
+		"",
+		"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
+		"http://localhost:8080/auth/realms/Broker",
+		"DOSA_1234",
+		10*time.Second)
 
-	gock.New("https://login-preprod.axway.com").
-		Post("/auth/realms/Broker/protocol/openid-connect/token").
-		Reply(200).
-		JSON(mockTokenResponse)
+	base := &ClientBase{}
+	auth(base)
 
-	client, err := NewClient(
-		"http://localhost:8080/apis",
-		JWTAuth(
-			tenantID,
-			privKey,
-			pubKey,
-			"",
-			"https://login-preprod.axway.com/auth/realms/Broker/protocol/openid-connect/token",
-			"https://login-preprod.axway.com/auth/realms/Broker",
-			"DOSA_1234",
-			10*time.Second),
-	).ForKind(management.EnvironmentGVK())
+	_, ok := base.auth.(*jwtAuth)
+	assert.True(t, ok)
 
-	if err != nil {
-		t.Fatalf("Error creating client with JWT Auth: %s", err)
+	jwt := &jwtAuth{
+		tenantID:    tenantId,
+		tokenGetter: apic.MockTokenGetter,
 	}
-	_, err = createEnv(client)
 
-	if err != nil {
-		t.Fatalf("Error creating env with JWT Auth: %s", err)
+	req := &http.Request{
+		Header: make(http.Header),
 	}
+	err := jwt.Authenticate(req)
+	assert.Nil(t, err)
+
+	tenant := req.Header.Get("X-Axway-Tenant-Id")
+	assert.Equal(t, tenantId, tenant)
+
+	instance := req.Header.Get("X-Axway-Instance-Id")
+	assert.Equal(t, "", instance)
 }
 
 func TestListError(t *testing.T) {
@@ -484,7 +482,7 @@ func TestHTTPClient(t *testing.T) {
 }
 
 func TestUpdateMerge(t *testing.T) {
-	old := &management.APIService{
+	oldAPISvc := &management.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{},
 			Name:             "name",
@@ -498,18 +496,22 @@ func TestUpdateMerge(t *testing.T) {
 		},
 	}
 
-	new := &management.APIService{
+	newAPISvc := &management.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{},
-			Name:             "name",
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Group: "management",
+					Kind:  "APIService",
+				},
+				APIVersion: "v1alpha1",
+			},
+			Name: "name",
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: "myenv",
 				},
-				References: []apiv1.Reference{},
 			},
-			Attributes: map[string]string{},
-			Tags:       []string{"new"},
+			Tags: []string{"new"},
 		},
 	}
 
@@ -544,75 +546,80 @@ func TestUpdateMerge(t *testing.T) {
 		mf               MergeFunc
 		expectedErr      error
 		expectedResource interface{}
-	}{{
-		name:        "it's a create",
-		getResponse: old,
-		newResource: new,
-		getStatus:   404,
-		otherStatus: 201,
-		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
-			return new, nil
+	}{
+		{
+			name:        "it's a create",
+			getResponse: oldAPISvc,
+			newResource: newAPISvc,
+			getStatus:   404,
+			otherStatus: 201,
+			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+				return new, nil
+			},
+			expectedErr:      nil,
+			expectedResource: newAPISvc,
 		},
-		expectedErr:      nil,
-		expectedResource: new,
-	}, {
-		name:        "overwriting update",
-		getResponse: old,
-		newResource: new,
-		getStatus:   200,
-		otherStatus: 200,
-		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
-			return new, nil
+		{
+			name:        "overwriting update",
+			getResponse: oldAPISvc,
+			newResource: newAPISvc,
+			getStatus:   200,
+			otherStatus: 200,
+			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+				return new, nil
+			},
+			expectedErr:      nil,
+			expectedResource: newAPISvc,
 		},
-		expectedErr:      nil,
-		expectedResource: new,
-	}, {
-		name:        "merging tags update",
-		getResponse: old,
-		newResource: new,
-		getStatus:   200,
-		otherStatus: 200,
-		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
-			f, err := fetched.AsInstance()
-			if err != nil {
-				return nil, err
-			}
+		{
+			name:        "merging tags update",
+			getResponse: oldAPISvc,
+			newResource: newAPISvc,
+			getStatus:   200,
+			otherStatus: 200,
+			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+				f, err := fetched.AsInstance()
+				if err != nil {
+					return nil, err
+				}
 
-			f.SetTags(append(f.GetTags(), new.GetTags()...))
+				f.SetTags(append(f.GetTags(), new.GetTags()...))
 
-			return f, nil
+				return f, nil
+			},
+			expectedErr:      nil,
+			expectedResource: mergedTags,
 		},
-		expectedErr:      nil,
-		expectedResource: mergedTags,
-	}, {
-		name:        "merge error",
-		getResponse: old,
-		newResource: new,
-		getStatus:   200,
-		otherStatus: 200,
-		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
-			return nil, mergeError
+		{
+			name:        "merge error",
+			getResponse: oldAPISvc,
+			newResource: newAPISvc,
+			getStatus:   200,
+			otherStatus: 200,
+			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+				return nil, mergeError
+			},
+			expectedErr:      mergeError,
+			expectedResource: nil,
 		},
-		expectedErr:      mergeError,
-		expectedResource: nil,
-	}, {
-		name:        "get error",
-		getResponse: apiv1.ErrorResponse{Errors: getError.Errors},
-		newResource: new,
-		getStatus:   500,
-		otherStatus: 200,
-		mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
-			return nil, mergeError
-		},
-		expectedErr:      getError,
-		expectedResource: nil,
-	}}
+		{
+			name:        "get error",
+			getResponse: apiv1.ErrorResponse{Errors: getError.Errors},
+			newResource: newAPISvc,
+			getStatus:   500,
+			otherStatus: 200,
+			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+				return nil, mergeError
+			},
+			expectedErr:      getError,
+			expectedResource: nil,
+		}}
 
 	c, err := NewClient("http://localhost:8080/apis").ForKind(management.APIServiceGVK())
+
 	if err != nil {
 		t.Fatalf("Failed due: %s ", err)
 	}
-
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
