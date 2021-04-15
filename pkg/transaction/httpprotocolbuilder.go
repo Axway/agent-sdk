@@ -407,28 +407,28 @@ func (b *httpProtocolBuilder) indexedHeadersRedaction() {
 }
 
 func headersRedaction(requestHeaders, responseHeaders map[string]string) (string, string, error) {
-	var reqHeadersBytes []byte
-	var resHeadersBytes []byte
+	reqHeadersBytes := []byte("{}")
+	resHeadersBytes := []byte("{}")
 
 	if len(requestHeaders) > 0 {
 		redactedHeaders, err := redaction.RequestHeadersRedaction(requestHeaders)
 		if err != nil {
-			return "", "", ErrInRedactions.FormatError("RequestHeaders", err)
+			return "{}", "{}", ErrInRedactions.FormatError("RequestHeaders", err)
 		}
 		reqHeadersBytes, err = json.Marshal(redactedHeaders)
 		if err != nil {
-			return "", "", ErrInRedactions.FormatError("RequestHeaders", err)
+			return "{}", "{}", ErrInRedactions.FormatError("RequestHeaders", err)
 		}
 	}
 
 	if len(responseHeaders) > 0 {
 		redactedHeaders, err := redaction.ResponseHeadersRedaction(responseHeaders)
 		if err != nil {
-			return "", "", ErrInRedactions.FormatError("ResponseHeaders", err)
+			return "{}", "{}", ErrInRedactions.FormatError("ResponseHeaders", err)
 		}
 		resHeadersBytes, err = json.Marshal(redactedHeaders)
 		if err != nil {
-			return "", "", ErrInRedactions.FormatError("ResponseHeaders", err)
+			return "{}", "{}", ErrInRedactions.FormatError("ResponseHeaders", err)
 		}
 	}
 
