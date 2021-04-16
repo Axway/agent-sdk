@@ -345,7 +345,6 @@ func Test_listAll(t *testing.T) {
 
 func TestJWTAuth(t *testing.T) {
 	tenantId := "1234"
-
 	c := NewClient("http://localhost:8080",
 		JWTAuth(
 			tenantId,
@@ -365,7 +364,6 @@ func TestJWTAuth(t *testing.T) {
 	jAuthStruct, ok := c.auth.(*jwtAuth)
 
 	assert.True(t, ok)
-	assert.Equal(t, uaHeader, c.userAgent)
 	jAuthStruct.tokenGetter = apic.MockTokenGetter
 
 	req := &http.Request{
@@ -373,6 +371,9 @@ func TestJWTAuth(t *testing.T) {
 	}
 	err := c.intercept(req)
 	assert.Nil(t, err)
+
+	userAgent := req.Header.Get("User-Agent")
+	assert.Equal(t, uaHeader, userAgent)
 
 	authorization := req.Header.Get("Authorization")
 	assert.NotEmpty(t, authorization)
@@ -382,7 +383,6 @@ func TestJWTAuth(t *testing.T) {
 
 	instance := req.Header.Get("X-Axway-Instance-Id")
 	assert.Equal(t, "", instance)
-
 }
 
 func TestResponseErrors(t *testing.T) {
@@ -539,6 +539,8 @@ func TestHTTPClient(t *testing.T) {
 		),
 		HTTPClient(newClient),
 	)
+
+	assert.Empty(t, client.userAgent)
 
 	if newClient != client.client {
 		t.Fatalf("Error: expected client.client to be %v but received %v", newClient, client.client)
