@@ -380,17 +380,70 @@ func TestJWTAuth(t *testing.T) {
 	assert.Equal(t, uaHeader, ua)
 }
 
-func TestListError(t *testing.T) {
-	defer gock.Off()
-	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
-		Reply(500).
-		JSON(mockEnv)
+func TestResponseErrors(t *testing.T) {
+	tests := []struct {
+		status int
+		err    error
+	}{
+		{status: 400, err: BadRequestError{}},
+		{status: 401, err: UnauthorizedError{}},
+		{status: 403, err: ForbiddenError{}},
+		{status: 404, err: NotFoundError{}},
+		{status: 409, err: ConflictError{}},
+		{status: 500, err: InternalServerError{}},
+		{status: 600, err: UnexpectedError{}},
+	}
 
-	_, err := client.List()
+	for i := range tests {
+		tc := tests[i]
+		t.Run(fmt.Sprintf("%d error", tc.status), func(t *testing.T) {
+			defer gock.Off()
+			gock.New("http://localhost:8080/apis").
+				Get("/management/v1alpha1/environments").
+				Reply(tc.status).
+				JSON(mockEnv)
 
-	if err == nil {
-		t.Fatalf("Expected list to fail: %s", err)
+			_, err := client.List()
+
+			switch tc.status {
+			case 400:
+				errType, ok := err.(BadRequestError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, BadRequestError{}, errType)
+			case 401:
+				errType, ok := err.(UnauthorizedError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, UnauthorizedError{}, errType)
+			case 403:
+				errType, ok := err.(ForbiddenError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, ForbiddenError{}, errType)
+			case 404:
+				errType, ok := err.(NotFoundError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, NotFoundError{}, errType)
+			case 409:
+				errType, ok := err.(ConflictError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, ConflictError{}, errType)
+			case 500:
+				errType, ok := err.(InternalServerError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, InternalServerError{}, errType)
+			default:
+				errType, ok := err.(UnexpectedError)
+				assert.True(t, ok)
+				assert.NotEmpty(t, errType.Error())
+				assert.IsType(t, UnexpectedError{}, errType)
+			}
+
+		})
 	}
 }
 
@@ -620,8 +673,8 @@ func TestUpdateMerge(t *testing.T) {
 			expectedErr:      getError,
 			expectedResource: nil,
 		}}
-
-	c, err := NewClient("http://localhost:8080/apis").ForKind(management.APIServiceGVK())
+	logger := WithLogger(noOpLogger{})
+	c, err := NewClient("http://localhost:8080/apis", logger).ForKind(management.APIServiceGVK())
 
 	if err != nil {
 		t.Fatalf("Failed due: %s ", err)

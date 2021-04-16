@@ -33,7 +33,6 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 
 func (ba *basicAuth) impersonate(req *http.Request, toImpersonate string) error {
 	req.Header.Set("X-Axway-User-Id", toImpersonate)
-
 	return nil
 }
 
@@ -94,7 +93,9 @@ type Logger interface {
 
 type noOpLogger struct{}
 
-func (noOpLogger) Log(kv ...string) error { return nil }
+func (noOpLogger) Log(_ ...interface{}) error {
+	return nil
+}
 
 func WithLogger(log Logger) Options {
 	return func(cb *ClientBase) {
