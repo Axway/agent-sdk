@@ -341,7 +341,7 @@ func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
 	// Complete the redactions
 	b.queryArgsRedaction()
 	b.headersRedaction()
-	b.indexedHeadersRedaction()
+	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
 
 	if b.err != nil {
 		return nil, b.err
