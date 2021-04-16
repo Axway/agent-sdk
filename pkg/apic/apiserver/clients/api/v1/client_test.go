@@ -102,12 +102,12 @@ func TestMain(m *testing.M) {
 
 	newClient, err := NewClient(
 		"http://localhost:8080/apis",
+		UserAgent(uaHeader),
 		BasicAuth(
 			"admin",
 			"servicesecret",
 			"admin",
 			"123",
-			uaHeader,
 		),
 	).ForKind(management.EnvironmentGVK())
 	client = newClient.(*Client)
@@ -355,22 +355,27 @@ func TestJWTAuth(t *testing.T) {
 			"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
 			"http://localhost:8080/auth/realms/Broker",
 			"DOSA_1234",
-			uaHeader,
 			10*time.Second,
 		),
+		UserAgent(uaHeader),
 	)
+
+	assert.Equal(t, uaHeader, c.userAgent)
 
 	jAuthStruct, ok := c.auth.(*jwtAuth)
 
 	assert.True(t, ok)
-	assert.Equal(t, uaHeader, jAuthStruct.userAgent)
+	assert.Equal(t, uaHeader, c.userAgent)
 	jAuthStruct.tokenGetter = apic.MockTokenGetter
 
 	req := &http.Request{
 		Header: make(http.Header),
 	}
-	err := jAuthStruct.Authenticate(req)
+	err := c.intercept(req)
 	assert.Nil(t, err)
+
+	authorization := req.Header.Get("Authorization")
+	assert.NotEmpty(t, authorization)
 
 	tenant := req.Header.Get("X-Axway-Tenant-Id")
 	assert.Equal(t, tenantId, tenant)
@@ -378,8 +383,6 @@ func TestJWTAuth(t *testing.T) {
 	instance := req.Header.Get("X-Axway-Instance-Id")
 	assert.Equal(t, "", instance)
 
-	ua := req.Header.Get("User-Agent")
-	assert.Equal(t, uaHeader, ua)
 }
 
 func TestResponseErrors(t *testing.T) {
@@ -533,7 +536,6 @@ func TestHTTPClient(t *testing.T) {
 			"servicesecret",
 			"admin",
 			"123",
-			uaHeader,
 		),
 		HTTPClient(newClient),
 	)

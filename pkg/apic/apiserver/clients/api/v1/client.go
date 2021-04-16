@@ -27,7 +27,6 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 	req.SetBasicAuth(ba.user, ba.pass)
 	req.Header.Set("X-Axway-Tenant-Id", ba.tenantID)
 	req.Header.Set("X-Axway-Instance-Id", ba.instanceID)
-	req.Header.Set("User-Agent", ba.userAgent)
 	return nil
 }
 
@@ -44,7 +43,6 @@ func (j *jwtAuth) Authenticate(req *http.Request) error {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t))
 	req.Header.Set("X-Axway-Tenant-Id", j.tenantID)
-	req.Header.Set("User-Agent", j.userAgent)
 	return nil
 }
 
@@ -53,14 +51,13 @@ type modifier interface {
 }
 
 // BasicAuth auth with user/pass
-func BasicAuth(user, password, tenantID, instanceID, userAgent string) Options {
+func BasicAuth(user, password, tenantID, instanceID string) Options {
 	return func(c *ClientBase) {
 		ba := &basicAuth{
 			user:       user,
 			pass:       password,
 			tenantID:   tenantID,
 			instanceID: instanceID,
-			userAgent:  userAgent,
 		}
 
 		c.auth = ba
@@ -69,13 +66,12 @@ func BasicAuth(user, password, tenantID, instanceID, userAgent string) Options {
 }
 
 // JWTAuth auth with token
-func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID, userAgent string, timeout time.Duration) Options {
+func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
 	return func(c *ClientBase) {
 		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,
-			userAgent:   userAgent,
 		}
 	}
 }
@@ -96,6 +92,12 @@ func WithLogger(log Logger) Options {
 	}
 }
 
+func UserAgent(ua string) Options {
+	return func(cb *ClientBase) {
+		cb.userAgent = ua
+	}
+}
+
 // NewClient creates a new HTTP client
 func NewClient(baseURL string, options ...Options) *ClientBase {
 	c := &ClientBase{
@@ -103,6 +105,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 		url:          baseURL,
 		auth:         noopAuth{},
 		impersonator: noImpersonator{},
+		userAgent:    "",
 	}
 
 	for _, o := range options {
@@ -110,6 +113,13 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 	}
 
 	return c
+}
+
+func (cb *ClientBase) intercept(req *http.Request) error {
+	if cb.userAgent != "" {
+		req.Header.Add("User-Agent", cb.userAgent)
+	}
+	return cb.auth.Authenticate(req)
 }
 
 func (cb *ClientBase) forKindInternal(gvk apiv1.GroupVersionKind) (*Client, error) {
@@ -247,7 +257,7 @@ func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +334,7 @@ func (c *Client) GetCtx2(ctx context.Context, toGet *apiv1.ResourceInstance) (*a
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +392,7 @@ func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstan
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +427,7 @@ func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) erro
 		return err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return err
 	}
@@ -469,7 +479,7 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 	if err != nil {
 		return nil, err
 	}
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +585,7 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}

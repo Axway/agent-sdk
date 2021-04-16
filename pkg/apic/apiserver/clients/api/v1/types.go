@@ -41,13 +41,11 @@ type basicAuth struct {
 	pass       string
 	tenantID   string
 	user       string
-	userAgent  string
 }
 
 type jwtAuth struct {
 	tenantID    string
 	tokenGetter auth.PlatformTokenGetter
-	userAgent   string
 }
 
 type requestDoer interface {
