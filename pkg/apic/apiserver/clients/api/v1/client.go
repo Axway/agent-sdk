@@ -52,37 +52,30 @@ type modifier interface {
 	Modify()
 }
 
-func UserAgent(ua string) Options {
-	return func(c *ClientBase) {
-		c.userAgent = ua
-	}
-}
-
 // BasicAuth auth with user/pass
-func BasicAuth(user, password, tenantID, instanceID string) Options {
+func BasicAuth(user, password, tenantID, instanceID, userAgent string) Options {
 	return func(c *ClientBase) {
 		ba := &basicAuth{
 			user:       user,
 			pass:       password,
 			tenantID:   tenantID,
 			instanceID: instanceID,
-			userAgent:  c.userAgent,
+			userAgent:  userAgent,
 		}
 
 		c.auth = ba
-
 		c.impersonator = ba
 	}
 }
 
 // JWTAuth auth with token
-func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
+func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID, userAgent string, timeout time.Duration) Options {
 	return func(c *ClientBase) {
 		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,
-			userAgent:   c.userAgent,
+			userAgent:   userAgent,
 		}
 	}
 }
@@ -110,7 +103,6 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 		url:          baseURL,
 		auth:         noopAuth{},
 		impersonator: noImpersonator{},
-		userAgent:    "",
 	}
 
 	for _, o := range options {

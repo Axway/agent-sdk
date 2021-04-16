@@ -18,6 +18,7 @@ import (
 
 const privKey = "testdata/privatekey"
 const pubKey = "testdata/publickey"
+const uaHeader = "fake-agent"
 
 const mockJSONEnv = `{
   "group": "management",
@@ -101,12 +102,12 @@ func TestMain(m *testing.M) {
 
 	newClient, err := NewClient(
 		"http://localhost:8080/apis",
-		UserAgent("fake-agent"),
 		BasicAuth(
 			"admin",
 			"servicesecret",
 			"admin",
 			"123",
+			uaHeader,
 		),
 	).ForKind(management.EnvironmentGVK())
 	client = newClient.(*Client)
@@ -230,6 +231,9 @@ func TestScoped(t *testing.T) {
 	}()
 
 	svcClient, err := client.ForKind(management.APIServiceGVK())
+	if err != nil {
+		t.Fatalf("Failed: %s", err)
+	}
 	svcClient = svcClient.WithScope(env.Name).(*Client)
 
 	svc, err := svcClient.Create(&apiv1.ResourceInstance{
@@ -273,6 +277,7 @@ func TestListWithQuery(t *testing.T) {
 	// List envs
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
+		MatchHeader("User-Agent", uaHeader).
 		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
 		JSON([]*apiv1.ResourceInstance{mockEnv, mockEnv})
 
@@ -339,11 +344,9 @@ func Test_listAll(t *testing.T) {
 }
 
 func TestJWTAuth(t *testing.T) {
-	uaHeader := "fake-agent"
 	tenantId := "1234"
 
 	c := NewClient("http://localhost:8080",
-		UserAgent(uaHeader),
 		JWTAuth(
 			tenantId,
 			privKey,
@@ -352,11 +355,10 @@ func TestJWTAuth(t *testing.T) {
 			"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
 			"http://localhost:8080/auth/realms/Broker",
 			"DOSA_1234",
+			uaHeader,
 			10*time.Second,
 		),
 	)
-
-	assert.Equal(t, uaHeader, c.userAgent)
 
 	jAuthStruct, ok := c.auth.(*jwtAuth)
 
@@ -531,6 +533,7 @@ func TestHTTPClient(t *testing.T) {
 			"servicesecret",
 			"admin",
 			"123",
+			uaHeader,
 		),
 		HTTPClient(newClient),
 	)
