@@ -103,8 +103,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 		SetDirection("Inbound").
 		SetStatus(TxEventStatusPass).
 		SetProtocolDetail(httpProtocol).
-		SetTargetPath("targetPath").
-		SetResourcePath("resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		Build()
 
 	assert.Nil(t, err)
@@ -170,8 +170,8 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err := NewTransactionSummaryBuilder().
 		SetTransactionID("11111").
-		SetTargetPath("targetPath").
-		SetResourcePath("resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).

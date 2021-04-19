@@ -37,6 +37,12 @@ func TestDefaultRedaction(t *testing.T) {
 	assert.NotNil(t, redactedPath)
 	assert.Equal(t, "https://apicentral.axway.com/{*}/{*}/{*}/{*}", redactedPath)
 
+	// Only send path to URI redaction
+	redactedPath, err = URIRedaction("/test/the/path/redaction")
+	assert.Nil(t, err)
+	assert.NotNil(t, redactedPath)
+	assert.Equal(t, "/{*}/{*}/{*}/{*}", redactedPath)
+
 	// Query args redaction
 	queryArgString := ""
 	for key, val := range queryParams {

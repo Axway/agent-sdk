@@ -19,6 +19,7 @@ dep-check:
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
+	@go mod vendor
 	@go mod tidy
 	@go mod vendor
 	@echo "Package dependencies completed"

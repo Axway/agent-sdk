@@ -1,6 +1,6 @@
 module github.com/Axway/agent-sdk
 
-go 1.13
+go 1.16
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
@@ -29,7 +29,6 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	go.lsp.dev/uri v0.3.0 // indirect
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
