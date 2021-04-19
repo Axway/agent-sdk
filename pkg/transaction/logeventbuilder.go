@@ -205,7 +205,7 @@ func (b *transactionEventBuilder) SetTargetPath(targetPath string) EventBuilder 
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TargetPath, b.err = redaction.PathRedaction(targetPath)
+	b.logEvent.TargetPath, b.err = redaction.URIRedaction(targetPath)
 	return b
 }
 
@@ -213,7 +213,7 @@ func (b *transactionEventBuilder) SetResourcePath(resourcePath string) EventBuil
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.ResourcePath = resourcePath
+	b.logEvent.ResourcePath, b.err = redaction.URIRedaction(resourcePath)
 	return b
 }
 
@@ -398,7 +398,7 @@ func (b *transactionSummaryBuilder) SetTargetPath(targetPath string) SummaryBuil
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TargetPath = targetPath
+	b.logEvent.TargetPath, b.err = redaction.URIRedaction(targetPath)
 	return b
 }
 
@@ -406,7 +406,7 @@ func (b *transactionSummaryBuilder) SetResourcePath(resourcePath string) Summary
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.ResourcePath = resourcePath
+	b.logEvent.ResourcePath, b.err = redaction.URIRedaction(resourcePath)
 	return b
 }
 
@@ -491,7 +491,7 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	if b.err != nil {
 		return b
 	}
-	redactedPath, err := redaction.PathRedaction(path)
+	redactedPath, err := redaction.URIRedaction(path)
 	if err != nil {
 		b.err = err
 		return b
