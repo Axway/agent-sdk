@@ -13,23 +13,21 @@ type SubscriptionPropertyBuilder interface {
 	SetHidden() SubscriptionPropertyBuilder
 	SetAPICRefField(field string) SubscriptionPropertyBuilder
 	IsString() SubscriptionPropertyBuilder
-	SetSortEnumValues() SubscriptionPropertyBuilder
 	Build() (*SubscriptionSchemaPropertyDefinition, error)
 }
 
 // schemaProperty - holds all the info needed to create a subscrition schema property
 type schemaProperty struct {
 	SubscriptionPropertyBuilder
-	err            error
-	name           string
-	description    string
-	apicRefField   string
-	enums          []string
-	required       bool
-	readOnly       bool
-	hidden         bool
-	dataType       string
-	sortEnumValues bool
+	err          error
+	name         string
+	description  string
+	apicRefField string
+	enums        []string
+	required     bool
+	readOnly     bool
+	hidden       bool
+	dataType     string
 }
 
 // NewSubscriptionSchemaPropertyBuilder - Creates a new subscription schema property builder
