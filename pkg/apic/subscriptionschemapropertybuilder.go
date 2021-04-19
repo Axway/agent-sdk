@@ -13,27 +13,29 @@ type SubscriptionPropertyBuilder interface {
 	SetHidden() SubscriptionPropertyBuilder
 	SetAPICRefField(field string) SubscriptionPropertyBuilder
 	IsString() SubscriptionPropertyBuilder
+	SetSortEnumValues() SubscriptionPropertyBuilder
 	Build() (*SubscriptionSchemaPropertyDefinition, error)
 }
 
 // schemaProperty - holds all the info needed to create a subscrition schema property
 type schemaProperty struct {
 	SubscriptionPropertyBuilder
-	err          error
-	name         string
-	description  string
-	apicRefField string
-	enums        map[string]bool
-	required     bool
-	readOnly     bool
-	hidden       bool
-	dataType     string
+	err            error
+	name           string
+	description    string
+	apicRefField   string
+	enums          []string
+	required       bool
+	readOnly       bool
+	hidden         bool
+	dataType       string
+	sortEnumValues bool
 }
 
 // NewSubscriptionSchemaPropertyBuilder - Creates a new subscription schema property builder
 func NewSubscriptionSchemaPropertyBuilder() SubscriptionPropertyBuilder {
 	return &schemaProperty{
-		enums: make(map[string]bool),
+		enums: make([]string, 0),
 	}
 }
 
@@ -51,16 +53,33 @@ func (p *schemaProperty) SetDescription(description string) SubscriptionProperty
 
 // SetEnumValues - add a list of enum values to the property
 func (p *schemaProperty) SetEnumValues(values []string) SubscriptionPropertyBuilder {
+	dict := make(map[string]bool, 0)
+
+	// use a temp map to filter out any duplicate values from the input
 	for _, value := range values {
-		p.enums[value] = true
+		if _, ok := dict[value]; !ok {
+			dict[value] = true
+			p.enums = append(p.enums, value)
+		}
 	}
+
 	return p
+}
+
+func (p *schemaProperty) enumContains(str string) bool {
+	for _, v := range p.enums {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
 
 // AddEnumValue - add a new value to the enum list
 func (p *schemaProperty) AddEnumValue(value string) SubscriptionPropertyBuilder {
-	if _, ok := p.enums[value]; !ok {
-		p.enums[value] = true
+	if !p.enumContains(value) {
+		p.enums = append(p.enums, value)
 	}
 	return p
 }
@@ -119,18 +138,11 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 		APICRef:     p.apicRefField,
 		ReadOnly:    p.readOnly,
 		Required:    p.required,
+		Enum:        p.enums,
 	}
 
 	if p.hidden {
 		prop.Format = "hidden"
-	}
-	// Convert map to string array
-	if len(p.enums) > 0 {
-		list := make([]string, 0)
-		for key := range p.enums {
-			list = append(list, key)
-		}
-		prop.Enum = list
 	}
 
 	return prop, nil
