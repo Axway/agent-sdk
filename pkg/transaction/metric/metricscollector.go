@@ -155,26 +155,55 @@ func (c *collector) generateEvents() {
 
 func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 	if transactionCount != 0 {
-		usageEventID, _ := uuid.NewV4()
-		usageEvent := V4Event{
-			ID:        usageEventID.String(),
-			Timestamp: c.startTime.UnixNano() / 1e6,
-			Event:     "usage." + agent.GetDataplaneType() + ".Transactions",
-			App:       orgGUID,
-			Version:   "4",
-			Distribution: V4EventDistribution{
-				Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
-				Version:     "1",
-			},
-			Data: map[string]interface{}{
-				"value":         transactionCount,
-				"observedStart": convertTimeToMillis(c.startTime),
-				"observedEnd":   convertTimeToMillis(c.endTime),
-				"governance":    "Customer Managed",
-			},
+		if agent.GetCentralConfig().GetLighthouseURL() != "" {
+			c.generateLighthouseUsageEvent(transactionCount, orgGUID)
+		} else {
+			c.generateV4UsageEvent(transactionCount, orgGUID)
 		}
-		c.eventChannel <- usageEvent
 	}
+}
+
+func (c *collector) generateV4UsageEvent(transactionCount int64, orgGUID string) {
+	usageEventID, _ := uuid.NewV4()
+	usageEvent := V4Event{
+		ID:        usageEventID.String(),
+		Timestamp: c.startTime.UnixNano() / 1e6,
+		Event:     "usage." + agent.GetDataplaneType() + ".Transactions",
+		App:       orgGUID,
+		Version:   "4",
+		Distribution: V4EventDistribution{
+			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
+			Version:     "1",
+		},
+		Data: map[string]interface{}{
+			"value":         transactionCount,
+			"observedStart": convertTimeToMillis(c.startTime),
+			"observedEnd":   convertTimeToMillis(c.endTime),
+			"governance":    "Customer Managed",
+		},
+	}
+	c.eventChannel <- usageEvent
+}
+
+func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID string) {
+	lightHouseUsageEvent := LighthouseUsageEvent{
+		OrgGUID:     orgGUID,
+		EnvID:       agent.GetCentralConfig().GetPlatformEnvironmentID(),
+		Timestamp:   ISO8601Time(c.endTime),
+		SchemaId:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
+		Granularity: int(c.endTime.Sub(c.startTime)),
+		Report: map[string]LighthouseUsageReport{
+			c.endTime.Format("2006-01-02T15:04:05.000Z"): {
+				Product: agent.GetDataplaneType(),
+				Usage: map[string]int64{
+					agent.GetDataplaneType() + ".Transactions": transactionCount,
+				},
+				Meta: make(map[string]interface{}),
+			},
+		},
+		Meta: make(map[string]interface{}),
+	}
+	c.eventChannel <- lightHouseUsageEvent
 }
 
 func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {

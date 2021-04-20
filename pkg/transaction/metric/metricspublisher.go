@@ -1,12 +1,18 @@
 package metric
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/textproto"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/google/uuid"
 )
 
 // Publisher - interface for metric publisher
@@ -42,6 +48,71 @@ func (pj *publisher) Execute() error {
 }
 
 func (pj *publisher) publishEvent(event interface{}) {
+	lighthouseUsageEvent, ok := event.(LighthouseUsageEvent)
+	if ok {
+		pj.publishToLighthouse(lighthouseUsageEvent)
+	} else {
+		pj.publishToGatekeeper(event)
+	}
+}
+
+func (pj *publisher) publishToLighthouse(event LighthouseUsageEvent) {
+	token, err := agent.GetCentralAuthToken()
+	if err != nil {
+		log.Error("Error in sending usage/metric event: ", err.Error())
+		return
+	}
+
+	b, contentType, err := createMultipartFormData(event)
+
+	headers := map[string]string{
+		"Content-Type":  contentType,
+		"Authorization": "Bearer " + token,
+	}
+
+	request := api.Request{
+		Method:  api.POST,
+		URL:     agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/usage/automatic",
+		Headers: headers,
+		Body:    b.Bytes(),
+	}
+	log.Infof("Payload for Usage event : %s\n", string(b.Bytes()))
+	response, err := pj.apiClient.Send(request)
+	if err != nil {
+		log.Error("Error in sending usage/metric event: ", err.Error())
+	}
+	if response.Code >= 400 {
+		resBody := string(response.Body)
+		log.Error("Failed to publish usage event: ", resBody)
+	}
+}
+
+func createMultipartFormData(event LighthouseUsageEvent) (b bytes.Buffer, contentType string, err error) {
+	buffer, _ := json.Marshal(event)
+	w := multipart.NewWriter(&b)
+	defer w.Close()
+	w.WriteField("organizationId", event.OrgGUID)
+
+	var fw io.Writer
+	if fw, err = CreateFilePart(w, uuid.New().String()+".json"); err != nil {
+		return
+	}
+	if _, err = io.Copy(fw, bytes.NewReader(buffer)); err != nil {
+		return
+	}
+	contentType = w.FormDataContentType()
+
+	return
+}
+
+func CreateFilePart(w *multipart.Writer, filename string) (io.Writer, error) {
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, filename))
+	h.Set("Content-Type", "application/json")
+	return w.CreatePart(h)
+}
+
+func (pj *publisher) publishToGatekeeper(event interface{}) {
 	buffer, _ := json.Marshal(event)
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"

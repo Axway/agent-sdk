@@ -89,6 +89,7 @@ type CentralConfig interface {
 	GetPlatformURL() string
 	GetPlatformEnvironmentID() string
 	GetGateKeeperURL() string
+	GetLighthouseURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
@@ -138,6 +139,7 @@ type CentralConfiguration struct {
 	PlatformURL               string        `config:"platformURL"`
 	PlatformEnvironmentID     string        `config:"platformEnvironmentID"`
 	GatekeeperURL             string        `config:"gatekeeperURL"`
+	LighthouseURL             string        `config:"lighthouseURL"`
 	APIServerVersion          string        `config:"apiServerVersion"`
 	TagsToPublish             string        `config:"additionalTags"`
 	AppendDataPlaneToTitle    bool          `config:"appendDataPlaneToTitle"`
@@ -183,9 +185,14 @@ func (c *CentralConfiguration) GetPlatformEnvironmentID() string {
 	return c.PlatformEnvironmentID
 }
 
-// GetGateKeeperURL - Returns the central base URL
+// GetGateKeeperURL - Returns the gatekeeper base URL
 func (c *CentralConfiguration) GetGateKeeperURL() string {
 	return c.GatekeeperURL
+}
+
+// GetLighthouseURL - Returns the lighthouse base URL
+func (c *CentralConfiguration) GetLighthouseURL() string {
+	return c.LighthouseURL
 }
 
 // GetAgentType - Returns the agent type
@@ -434,6 +441,7 @@ const (
 	pathPlatformURL              = "central.platformURL"
 	pathPlatformEnvironmentID    = "central.platformEnvironmentID"
 	pathGateKeeperURL            = "central.gatekeeperURL"
+	pathLighthouseURL            = "central.lighthouseURL"
 	pathAuthPrivateKey           = "central.auth.privateKey"
 	pathAuthPublicKey            = "central.auth.publicKey"
 	pathAuthKeyPassword          = "central.auth.keyPassword"
@@ -564,6 +572,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 		props.AddStringProperty(pathGateKeeperURL, "https://gatekeeper.platform.axway.com/v4/event", "URL of the GateKeeper")
+		props.AddStringProperty(pathLighthouseURL, "", "URL of the Lighthouse")
 		props.AddStringProperty(pathDataplaneType, "", "The type name of the associated dataplane")
 		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
@@ -615,6 +624,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
+		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
 		cfg.DataplaneType = props.StringPropertyValue(pathDataplaneType)
 		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
 		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
