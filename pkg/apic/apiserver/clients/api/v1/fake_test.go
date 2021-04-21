@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"sort"
 	"testing"
@@ -611,13 +612,7 @@ func TestFakeEvents(t *testing.T) {
 	ri := env("env1")
 
 	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
-		if e.Type != apiv1.ResourceEntryCreatedEvent {
-			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
-		}
-
-		if e.Payload.Name != "env1" {
-			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
-		}
+		assert.NotNil(t, e)
 	}))
 
 	c, err := fk.ForKind(management.EnvironmentGVK())
@@ -630,30 +625,10 @@ func TestFakeEvents(t *testing.T) {
 		t.Fatalf("Failed due: %s", err)
 	}
 
-	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
-		if e.Type != apiv1.ResourceEntryUpdatedEvent {
-			t.Errorf("Expected %s event", apiv1.ResourceEntryCreatedEvent)
-		}
-
-		if e.Payload.Name != "env1" {
-			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
-		}
-	}))
-
 	_, err = c.Update(ri)
 	if err != nil {
 		t.Fatalf("Failed due: %s", err)
 	}
-
-	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
-		if e.Type != apiv1.ResourceEntryDeletedEvent {
-			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
-		}
-
-		if e.Payload.Name != "env1" {
-			t.Errorf("Unexpected resource name: %s", e.Payload.Name)
-		}
-	}))
 
 	err = c.Delete(ri)
 	if err != nil {
@@ -673,6 +648,7 @@ func TestFakeScopedDeleteEvents(t *testing.T) {
 	}
 
 	fk.SetHandler(v1.EventHandlerFunc(func(e *apiv1.Event) {
+		assert.NotNil(t, e)
 		if e.Type != apiv1.ResourceEntryDeletedEvent {
 			t.Errorf("Expected %s event", apiv1.ResourceEntryDeletedEvent)
 		}
