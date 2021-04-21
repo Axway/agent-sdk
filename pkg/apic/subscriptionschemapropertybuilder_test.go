@@ -73,7 +73,7 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	prop, err = NewSubscriptionSchemaPropertyBuilder().
 		SetName("name").
 		IsString().
-		SetEnumValues([]string{"a", "b", "c"}).
+		SetEnumValues([]string{"a", "b", "c", "c"}).
 		Build()
 
 	assert.Nil(t, err)
@@ -92,6 +92,7 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 		IsString().
 		AddEnumValue("a").
 		AddEnumValue("b").
+		AddEnumValue("c").
 		AddEnumValue("c").
 		Build()
 
