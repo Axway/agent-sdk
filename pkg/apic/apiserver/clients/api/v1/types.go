@@ -88,6 +88,7 @@ type ClientBase struct {
 	auth         authenticator
 	impersonator impersonator
 	log          Logger
+	userAgent    string
 }
 
 // Client for a resource with the given version, group & scope

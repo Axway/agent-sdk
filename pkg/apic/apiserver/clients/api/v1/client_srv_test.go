@@ -22,6 +22,7 @@ import (
 func TestQueries(t *testing.T) {
 	cb := NewClient(
 		"http://localhost:8080/apis",
+		UserAgent("fake-agent"),
 		BasicAuth(
 			"admin",
 			"servicesecret",

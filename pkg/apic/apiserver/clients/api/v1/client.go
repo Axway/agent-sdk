@@ -32,7 +32,6 @@ func (ba *basicAuth) Authenticate(req *http.Request) error {
 
 func (ba *basicAuth) impersonate(req *http.Request, toImpersonate string) error {
 	req.Header.Set("X-Axway-User-Id", toImpersonate)
-
 	return nil
 }
 
@@ -62,7 +61,6 @@ func BasicAuth(user, password, tenantID, instanceID string) Options {
 		}
 
 		c.auth = ba
-
 		c.impersonator = ba
 	}
 }
@@ -84,11 +82,19 @@ type Logger interface {
 
 type noOpLogger struct{}
 
-func (noOpLogger) Log(kv ...string) error { return nil }
+func (noOpLogger) Log(_ ...interface{}) error {
+	return nil
+}
 
 func WithLogger(log Logger) Options {
 	return func(cb *ClientBase) {
 		cb.client = loggingDoerWrapper{log, cb.client}
+	}
+}
+
+func UserAgent(ua string) Options {
+	return func(cb *ClientBase) {
+		cb.userAgent = ua
 	}
 }
 
@@ -99,6 +105,7 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 		url:          baseURL,
 		auth:         noopAuth{},
 		impersonator: noImpersonator{},
+		userAgent:    "",
 	}
 
 	for _, o := range options {
@@ -106,6 +113,13 @@ func NewClient(baseURL string, options ...Options) *ClientBase {
 	}
 
 	return c
+}
+
+func (cb *ClientBase) intercept(req *http.Request) error {
+	if cb.userAgent != "" {
+		req.Header.Add("User-Agent", cb.userAgent)
+	}
+	return cb.auth.Authenticate(req)
 }
 
 func (cb *ClientBase) forKindInternal(gvk apiv1.GroupVersionKind) (*Client, error) {
@@ -243,7 +257,7 @@ func (c *Client) ListCtx(ctx context.Context, options ...ListOptions) ([]*apiv1.
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +334,7 @@ func (c *Client) GetCtx2(ctx context.Context, toGet *apiv1.ResourceInstance) (*a
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +392,7 @@ func (c *Client) GetCtx(ctx context.Context, name string) (*apiv1.ResourceInstan
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +427,7 @@ func (c *Client) DeleteCtx(ctx context.Context, ri *apiv1.ResourceInstance) erro
 		return err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return err
 	}
@@ -465,7 +479,7 @@ func (c *Client) CreateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 	if err != nil {
 		return nil, err
 	}
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
@@ -571,7 +585,7 @@ func (c *Client) UpdateCtx(ctx context.Context, ri *apiv1.ResourceInstance, opts
 		return nil, err
 	}
 
-	err = c.auth.Authenticate(req)
+	err = c.intercept(req)
 	if err != nil {
 		return nil, err
 	}
