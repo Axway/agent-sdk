@@ -64,13 +64,13 @@ stages:
 run-csr:
   dependencies:
     - fetch-fortify
-    - dependencycheck
+#    - dependencycheck
     - whitesource
 
 update-csr:
   dependencies:
     - fetch-fortify
-    - dependencycheck:on-schedule
+#    - dependencycheck:on-schedule
     - whitesource:on-schedule
 
 ############################################################
