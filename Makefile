@@ -34,7 +34,6 @@ test-sonar:
 	@echo "GO_PKG_LIST: ${GO_PKG_LIST}"
 	@echo "WORKSPACE: ${WORKSPACE}"
 	@go vet ${GO_PKG_LIST}
-	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
 error-check:
