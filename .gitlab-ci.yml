@@ -66,7 +66,6 @@ run-csr:
     - fetch-fortify
     - dependencycheck
     - whitesource
-  allow_failure: true
 
 update-csr:
   dependencies:
