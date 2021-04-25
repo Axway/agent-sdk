@@ -36,12 +36,12 @@ func commonSetup(t *testing.T) (Client, *api.MockHTTPClient, SubscriptionSchema)
 func TestRegisterSubscriptionSchema(t *testing.T) {
 	svcClient, mockHTTPClient, apiKeySchema := commonSetup(t)
 	mockHTTPClient.ResponseCode = http.StatusOK
-	err := svcClient.RegisterSubscriptionSchema(apiKeySchema)
+	err := svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.NotNil(t, err)
 
 	// this return code should be good
 	mockHTTPClient.ResponseCode = http.StatusCreated
-	err = svcClient.RegisterSubscriptionSchema(apiKeySchema)
+	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.Nil(t, err)
 
 	serviceClient := svcClient.(*ServiceClient)
