@@ -120,7 +120,7 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
-func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
 	c.RegisteredSubscriptionSchema = subscriptionSchema
 
 	//Add API Server resource - SubscriptionDefinition
@@ -146,7 +146,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
-	if response.Code == http.StatusConflict {
+	if response.Code == http.StatusConflict && update {
 		// Call update if a conflict was returned
 		return c.UpdateSubscriptionSchema(subscriptionSchema)
 	}

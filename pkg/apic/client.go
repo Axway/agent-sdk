@@ -40,7 +40,7 @@ type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
-	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
