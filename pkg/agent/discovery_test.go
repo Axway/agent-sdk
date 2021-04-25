@@ -25,7 +25,7 @@ func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.
 	return m.apiSvc, nil
 }
 func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
-func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
+func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
 func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
