@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/service/daemon"
-
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
@@ -56,36 +54,36 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 	// complete the appropriate action for the service
 	switch strings.ToLower(command) {
 	case "install":
-		log.Debug("installing the agent service")
-		log.Infof("service will look for config file at %s", a.Path)
-		log.Infof("name of service to be installed: %s", a.service.GetServiceName())
+		fmt.Println("installing the agent service")
+		fmt.Printf("service will look for config file at %s\n", a.Path)
+		fmt.Printf("name of service to be installed: %s\n", a.service.GetServiceName())
 
 		a.service.SetEnvFile(a.EnvFile)
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
 		_, err = a.service.Install(a.PathArg, a.Path)
 	case "remove":
-		log.Debug("removing the agent service")
+		fmt.Println("removing the agent service")
 		_, err = a.service.Remove()
 	case "start":
-		log.Debug("starting the agent service")
+		fmt.Println("starting the agent service")
 		_, err = a.service.Start()
 	case "stop":
-		log.Debug("stopping the agent service")
+		fmt.Println("stopping the agent service")
 		_, err = a.service.Stop()
 	case "status":
-		log.Debug("getting the agent service status")
+		fmt.Println("getting the agent service status")
 		status, err = a.service.Status()
 	case "enable":
-		log.Debug("setting the agent to start on reboot")
+		fmt.Println("setting the agent to start on reboot")
 		_, err = a.service.Enable()
 	case "logs":
 		var logs string
-		log.Debug("getting the service logs")
+		fmt.Println("getting the service logs")
 		logs, err = a.service.Logs()
-		log.Info(logs)
+		fmt.Println(logs)
 	case "name":
-		log.Debug("getting the service name")
+		fmt.Println("getting the service name")
 		serviceName = a.service.GetServiceName()
 	default:
 		err = fmt.Errorf("unknown value of '%s' given", command)
@@ -93,14 +91,14 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 
 	// error hit
 	if err != nil {
-		log.Errorf("service %s command failed: %s", strings.ToLower(command), err.Error())
+		fmt.Printf("service %s command failed: %s\n", strings.ToLower(command), err.Error())
 	} else {
-		log.Debugf("service %s command succeeded", strings.ToLower(command))
+		fmt.Printf("service %s command succeeded\n", strings.ToLower(command))
 		if status != "" {
-			log.Info(status)
+			fmt.Println(status)
 		}
 		if serviceName != "" {
-			log.Info(serviceName)
+			fmt.Println(serviceName)
 		}
 	}
 	return err

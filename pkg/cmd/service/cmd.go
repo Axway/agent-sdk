@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,10 +48,10 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 			}
 
 			if len(args) != 1 {
-				log.Errorf("must provide only 1 arg to service (%s)", strings.Join(validArgs, ", "))
+				fmt.Printf("must provide only 1 arg to service (%s)\n", strings.Join(validArgs, ", "))
 			}
 			if _, ok := argDescriptions[args[0]]; !ok {
-				log.Errorf("invalid command to service (%s)", strings.Join(validArgs, ", "))
+				fmt.Printf("invalid command to service (%s)\n", strings.Join(validArgs, ", "))
 			}
 			globalAgentService.PathArg = fmt.Sprintf("--%s", pathArg)
 			globalAgentService.Path = cmd.Flag(pathArg).Value.String()
@@ -63,7 +62,7 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 				var err error
 				globalAgentService.Path, err = os.Getwd()
 				if err != nil {
-					log.Errorf("error determining current working directory: %s", err.Error())
+					fmt.Printf("error determining current working directory: %s\n", err.Error())
 					return err
 				}
 			}
