@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -122,8 +121,6 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
-	fmt.Println("************registering subscription schema")
-	fmt.Println(subscriptionSchema)
 	c.RegisteredSubscriptionSchema = subscriptionSchema
 
 	//Add API Server resource - SubscriptionDefinition
@@ -160,8 +157,6 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 // UpdateSubscriptionSchema - Updates a subscription schema in Publish to environment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
-	fmt.Println("************updateing subscription schema")
-	fmt.Println(subscriptionSchema)
 	c.RegisteredSubscriptionSchema = subscriptionSchema
 
 	// Add API Server resource - SubscriptionDefinition
