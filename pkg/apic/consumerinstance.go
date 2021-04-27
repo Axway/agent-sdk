@@ -234,6 +234,10 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	}
 
 	// Update the subscription definition
+	if consumerInstance.Spec.Subscription.SubscriptionDefinition == subscriptionDefinitionName {
+		return nil // no updates to be made
+	}
+
 	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
 	consumerInstance.Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
 
