@@ -60,9 +60,6 @@ func makeTraceabilityAgent(
 		agent.UpdateStatus(agent.AgentFailed, err.Error())
 		return outputs.Fail(err)
 	}
-	if len(hosts) > 1 {
-		return outputs.Fail(ErrInvalidConfig.FormatError("multiple host for traceability output not supported"))
-	}
 
 	var transportGroup outputs.Group
 	if config.Protocol == "https" || config.Protocol == "http" {
@@ -76,14 +73,17 @@ func makeTraceabilityAgent(
 	}
 
 	traceabilityGroup := outputs.Group{
-		Clients: []outputs.Client{
-			&Client{
-				transportClient: transportGroup.Clients[0], // Only one client allowed for host
-			},
-		},
 		BatchSize: transportGroup.BatchSize,
 		Retry:     transportGroup.Retry,
 	}
+	clients := make([]outputs.Client, 0)
+	for _, client := range transportGroup.Clients {
+		outputClient := &Client{
+			transportClient: client,
+		}
+		clients = append(clients, outputClient)
+	}
+	traceabilityGroup.Clients = clients
 	return traceabilityGroup, nil
 }
 
@@ -169,6 +169,13 @@ func (client *Client) Publish(batch publisher.Batch) error {
 			return nil
 		}
 	}
+
+	if !agent.GetCentralConfig().CanPublishTrafficEvents() {
+		log.Debug("Publishing the traffic event is turned off")
+		batch.ACK()
+		return nil
+	}
+
 	publishCount := len(batch.Events())
 	log.Infof("Publishing %d events", publishCount)
 	//update the local activity timestamp for the event to compare against

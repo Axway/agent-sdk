@@ -29,6 +29,7 @@ type Config struct {
 	Protocol         string            `config:"protocol"`
 	Hosts            []string          `config:"hosts"`
 	Redaction        redaction.Config  `config:"redaction" yaml:"redaction"`
+	AuthToken        string            `config:"authToken"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -104,7 +105,7 @@ func IsHTTPTransport() bool {
 	if outputConfig == nil {
 		return false
 	}
-	return (outputConfig.Protocol == "https" || outputConfig.Protocol == "http")
+	return (outputConfig.Protocol == "https" || outputConfig.Protocol == "http" || outputConfig.Protocol == "chimera")
 }
 
 // GetMaxRetries - Returns the max retries configured for transport
