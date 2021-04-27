@@ -36,6 +36,9 @@ func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (
 	return "", nil
 }
 func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
+func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
+	return nil
+}
 func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
