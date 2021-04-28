@@ -226,6 +226,70 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 	return consumerInstance, nil
 }
 
+//UpdateConsumerInstanceSubscriptionDefinition -
+func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
+	consumerInstance, err := c.getConsumerInstanceByExternalAPIID(externalAPIID)
+	if err != nil {
+		return err
+	}
+
+	// Update the subscription definition
+	if consumerInstance.Spec.Subscription.SubscriptionDefinition == subscriptionDefinitionName {
+		return nil // no updates to be made
+	}
+
+	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance.Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
+
+	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstance.Name
+	buffer, err := json.Marshal(consumerInstance)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.apiServiceDeployAPI(http.MethodPut, consumerInstanceURL, buffer)
+
+	return err
+}
+
+// getConsumerInstanceByExternalAPIID
+func (c *ServiceClient) getConsumerInstanceByExternalAPIID(externalAPIID string) (*v1alpha1.ConsumerInstance, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Get consumer instance by external api id: %s", externalAPIID)
+
+	params := map[string]string{
+		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==%s", externalAPIID),
+	}
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         c.cfg.GetConsumerInstancesURL(),
+		Headers:     headers,
+		QueryParams: params,
+	}
+
+	response, err := c.apiClient.Send(request)
+
+	if err != nil {
+		return nil, err
+	}
+	if !(response.Code == http.StatusOK) {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
+	json.Unmarshal(response.Body, &consumerInstances)
+	if len(consumerInstances) == 0 {
+		return nil, errors.New("Unable to find consumerInstance using external api id: " + externalAPIID)
+	}
+
+	return consumerInstances[0], nil
+}
+
 // getConsumerInstanceByID
 func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.ConsumerInstance, error) {
 	headers, err := c.createHeader()
