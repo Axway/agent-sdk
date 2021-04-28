@@ -60,17 +60,17 @@ type LighthouseUsageEvent struct {
 	EnvID       string                           `json:"envId"`
 	Timestamp   ISO8601Time                      `json:"timestamp"`
 	Granularity int                              `json:"granularity"`
-	SchemaId    string                           `json:"schemaId"`
+	SchemaID    string                           `json:"schemaId"`
 	Report      map[string]LighthouseUsageReport `json:"report"`
 	Meta        map[string]interface{}           `json:"meta"`
 }
 
+// ISO8601 - time format
 const (
-	// ISO-8601 time format
 	ISO8601 = "2006-01-02T15:04:05.000Z"
 )
 
-// Time - time
+// ISO8601Time - time
 type ISO8601Time time.Time
 
 // UnmarshalJSON - unmarshal json for time

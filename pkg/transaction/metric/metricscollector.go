@@ -190,7 +190,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetPlatformEnvironmentID(),
 		Timestamp:   ISO8601Time(c.endTime),
-		SchemaId:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
+		SchemaID:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
 		Granularity: int(c.endTime.Sub(c.startTime)),
 		Report: map[string]LighthouseUsageReport{
 			c.endTime.Format("2006-01-02T15:04:05.000Z"): {

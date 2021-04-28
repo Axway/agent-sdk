@@ -105,6 +105,7 @@ func createMultipartFormData(event LighthouseUsageEvent) (b bytes.Buffer, conten
 	return
 }
 
+//CreateFilePart - adds the file part to the request
 func CreateFilePart(w *multipart.Writer, filename string) (io.Writer, error) {
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, filename))
