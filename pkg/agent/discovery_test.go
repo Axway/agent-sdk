@@ -25,7 +25,7 @@ func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.
 	return m.apiSvc, nil
 }
 func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
-func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
+func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
 func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
@@ -36,6 +36,9 @@ func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (
 	return "", nil
 }
 func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
+func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
+	return nil
+}
 func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
