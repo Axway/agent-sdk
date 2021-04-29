@@ -188,9 +188,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 			}
 		}
 		return err
-	} else {
-		serviceBody.serviceContext.consumerInstance = consumerInstanceName
 	}
+
+	serviceBody.serviceContext.consumerInstance = consumerInstanceName
 
 	return err
 }

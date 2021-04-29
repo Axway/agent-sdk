@@ -88,9 +88,9 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 			}
 		}
 		return err
-	} else {
-		serviceBody.serviceContext.currentRevision = revisionName
 	}
+
+	serviceBody.serviceContext.currentRevision = revisionName
 
 	return nil
 }

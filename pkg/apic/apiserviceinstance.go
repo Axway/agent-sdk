@@ -84,9 +84,9 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			}
 		}
 		return err
-	} else {
-		serviceBody.serviceContext.currentInstance = instanceName
 	}
+
+	serviceBody.serviceContext.currentInstance = instanceName
 
 	return err
 }
