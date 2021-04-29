@@ -184,13 +184,14 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
-				err = rollbackErr
+				return errors.New(err.Error() + rollbackErr.Error())
 			}
-			return err
 		}
-	} else {
-		serviceBody.serviceContext.consumerInstance = consumerInstanceName
+		return err
 	}
+
+	serviceBody.serviceContext.consumerInstance = consumerInstanceName
+
 	return err
 }
 
