@@ -253,7 +253,7 @@ func (s *CentralSubscription) UpdateEnumProperty(key, newValue, dataType string)
 	}
 
 	// update the appName in the enum
-	prop := ss.GetProperty(appNameKey)
+	prop := ss.GetProperty(key)
 
 	// first check that the property is unique
 	for _, ele := range prop.Enum {
@@ -262,7 +262,10 @@ func (s *CentralSubscription) UpdateEnumProperty(key, newValue, dataType string)
 		}
 	}
 	newOptions := append(prop.Enum, newValue)
-	ss.AddProperty(key, dataType, "", "", true, newOptions)
+
+	ss.AddProperty(key, dataType, prop.Description, "", true, newOptions)
+	// note: there will be a small time window where the enum items might be out-of-order. The agent will eventually
+	// pick up the changes and update the schema, which will reorder them.
 
 	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
 	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
