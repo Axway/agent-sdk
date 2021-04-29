@@ -4,13 +4,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/config"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +34,7 @@ var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0
 
 func TestMetricCollector(t *testing.T) {
 	gatekeeperEventCount := 0
+	lighthouseEventCount := 0
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"" + accessToken + "\",\"expires_in\": 12235677}"
@@ -43,54 +43,92 @@ func TestMetricCollector(t *testing.T) {
 		if strings.Contains(req.RequestURI, "/gatekeeper") {
 			gatekeeperEventCount++
 		}
-
+		if strings.Contains(req.RequestURI, "/lighthouse") {
+			lighthouseEventCount++
+		}
 	}))
 
 	defer s.Close()
-	cfg := createCentralCfg(s.URL, "demo")
-	cfg.GatekeeperURL = s.URL + "/gatekeeper"
-	cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
-	cfg.DataplaneType = "Azure"
-	agent.Initialize(cfg)
-	eventChannel := make(chan interface{}, 1028)
-	metricCollector := &collector{
-		startTime:    time.Now(),
-		lock:         &sync.Mutex{},
-		registry:     metrics.NewRegistry(),
-		metricMap:    make(map[string]map[string]*APIMetric),
-		eventChannel: eventChannel,
+
+	testCases := []struct {
+		name              string
+		lighthouse        bool
+		expectedGKEvents1 int
+		expectedLHEvents1 int
+		expectedGKEvents2 int
+		expectedLHEvents2 int
+	}{
+		{
+			name:              "WithoutLighthouse",
+			lighthouse:        false,
+			expectedGKEvents1: 4,
+			expectedLHEvents1: 0,
+			expectedGKEvents2: 5,
+			expectedLHEvents2: 0,
+		},
+		{
+			name:              "WithLighthouse",
+			lighthouse:        true,
+			expectedGKEvents1: 3,
+			expectedLHEvents1: 1,
+			expectedGKEvents2: 4,
+			expectedLHEvents2: 1,
+		},
 	}
-	NewMetricPublisher(eventChannel)
 
-	metricCollector.orgGUID = metricCollector.getOrgGUID()
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			gatekeeperEventCount = 0
+			lighthouseEventCount = 0
 
-	metricCollector.AddMetric("111", "111", "200", 10, "", "")
-	metricCollector.AddMetric("111", "111", "200", 20, "", "")
-	metricCollector.AddMetric("111", "111", "200", 30, "", "")
-	metricCollector.AddMetric("111", "111", "401", 10, "", "")
-	metricCollector.AddMetric("111", "111", "401", 20, "", "")
+			cfg := createCentralCfg(s.URL, "demo")
+			cfg.GatekeeperURL = s.URL + "/gatekeeper"
+			if test.lighthouse {
+				cfg.LighthouseURL = s.URL + "/lighthouse"
+			}
+			cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+			cfg.DataplaneType = "Azure"
+			agent.Initialize(cfg)
+			eventChannel := make(chan interface{}, 1028)
+			myCollector := NewMetricCollector(eventChannel)
+			metricCollector := myCollector.(*collector)
+			jobs.GetJob(metricCollector.jobID)
+			NewMetricPublisher(eventChannel)
 
-	metricCollector.AddMetric("222", "222", "200", 5, "", "")
-	metricCollector.AddMetric("222", "222", "200", 5, "", "")
+			metricCollector.orgGUID = metricCollector.getOrgGUID()
 
-	metricCollector.endTime = time.Now()
-	metricCollector.generateEvents()
-	metricCollector.startTime = time.Now()
-	time.Sleep(1 * time.Second)
-	assert.Equal(t, 4, gatekeeperEventCount)
+			metricCollector.AddMetric("111", "111", "200", 10, "", "")
+			metricCollector.AddMetric("111", "111", "200", 20, "", "")
+			metricCollector.AddMetric("111", "111", "200", 30, "", "")
+			metricCollector.AddMetric("111", "111", "401", 10, "", "")
+			metricCollector.AddMetric("111", "111", "401", 20, "", "")
 
-	gatekeeperEventCount = 0
-	metricCollector.AddMetric("111", "111", "200", 5, "", "")
-	metricCollector.AddMetric("111", "111", "200", 15, "", "")
-	metricCollector.AddMetric("111", "111", "401", 15, "", "")
-	metricCollector.AddMetric("111", "111", "401", 5, "", "")
-	metricCollector.AddMetric("111", "111", "401", 120, "", "")
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
 
-	metricCollector.AddMetric("222", "222", "200", 5, "", "")
-	metricCollector.AddMetric("222", "222", "200", 50, "", "")
-	metricCollector.AddMetric("222", "222", "400", 15, "", "")
-	metricCollector.endTime = time.Now()
-	metricCollector.generateEvents()
-	time.Sleep(1 * time.Second)
-	assert.Equal(t, 5, gatekeeperEventCount)
+			metricCollector.endTime = time.Now()
+			metricCollector.generateEvents()
+			metricCollector.startTime = time.Now()
+			time.Sleep(1 * time.Second)
+			assert.Equal(t, test.expectedGKEvents1, gatekeeperEventCount)
+			assert.Equal(t, test.expectedLHEvents1, lighthouseEventCount)
+
+			gatekeeperEventCount = 0
+			lighthouseEventCount = 0
+			metricCollector.AddMetric("111", "111", "200", 5, "", "")
+			metricCollector.AddMetric("111", "111", "200", 15, "", "")
+			metricCollector.AddMetric("111", "111", "401", 15, "", "")
+			metricCollector.AddMetric("111", "111", "401", 5, "", "")
+			metricCollector.AddMetric("111", "111", "401", 120, "", "")
+
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
+			metricCollector.AddMetric("222", "222", "200", 50, "", "")
+			metricCollector.AddMetric("222", "222", "400", 15, "", "")
+			metricCollector.endTime = time.Now()
+			metricCollector.generateEvents()
+			time.Sleep(1 * time.Second)
+			assert.Equal(t, test.expectedGKEvents2, gatekeeperEventCount)
+			assert.Equal(t, test.expectedLHEvents2, lighthouseEventCount)
+		})
+	}
 }

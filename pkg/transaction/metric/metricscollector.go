@@ -28,6 +28,7 @@ type collector struct {
 	lock         *sync.Mutex
 	registry     metrics.Registry
 	metricMap    map[string]map[string]*APIMetric
+	jobID        string
 }
 
 // NewMetricCollector - Create metric collector
@@ -40,7 +41,8 @@ func NewMetricCollector(eventChannel chan interface{}) Collector {
 		eventChannel: eventChannel,
 	}
 
-	_, err := jobs.RegisterIntervalJob(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval())
+	var err error
+	metricCollector.jobID, err = jobs.RegisterIntervalJob(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval())
 	if err != nil {
 		panic(err)
 	}
