@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -79,10 +80,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
-				err = rollbackErr
+				return errors.New(err.Error() + rollbackErr.Error())
 			}
-			return err
 		}
+		return err
 	} else {
 		serviceBody.serviceContext.currentInstance = instanceName
 	}
