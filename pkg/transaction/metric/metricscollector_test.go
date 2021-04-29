@@ -59,19 +59,11 @@ func TestMetricCollector(t *testing.T) {
 		expectedLHEvents2 int
 	}{
 		{
-			name:              "WithoutLighthouse",
-			lighthouse:        false,
-			expectedGKEvents1: 4,
-			expectedLHEvents1: 0,
-			expectedGKEvents2: 5,
-			expectedLHEvents2: 0,
-		},
-		{
 			name:              "WithLighthouse",
 			lighthouse:        true,
-			expectedGKEvents1: 3,
+			expectedGKEvents1: 0,
 			expectedLHEvents1: 1,
-			expectedGKEvents2: 4,
+			expectedGKEvents2: 0,
 			expectedLHEvents2: 1,
 		},
 	}

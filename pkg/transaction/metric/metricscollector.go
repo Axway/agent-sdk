@@ -157,11 +157,12 @@ func (c *collector) generateEvents() {
 
 func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 	if transactionCount != 0 {
-		if agent.GetCentralConfig().GetLighthouseURL() != "" {
-			c.generateLighthouseUsageEvent(transactionCount, orgGUID)
-		} else {
-			c.generateV4UsageEvent(transactionCount, orgGUID)
-		}
+		c.generateLighthouseUsageEvent(transactionCount, orgGUID) // send only to lighthouse
+		// if agent.GetCentralConfig().GetLighthouseURL() != "" {
+		// 	c.generateLighthouseUsageEvent(transactionCount, orgGUID)
+		// } else {
+		// 	c.generateV4UsageEvent(transactionCount, orgGUID)
+		// }
 	}
 }
 
@@ -224,7 +225,9 @@ func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
 		},
 		Data: apiStatusMetric,
 	}
-	c.eventChannel <- apiStatusMetricEvent
+	// disabling sending metrics for now
+	// c.eventChannel <- apiStatusMetricEvent
+	_ = apiStatusMetricEvent
 }
 
 func (c *collector) processMetricFromRegistry(name string, metric interface{}) {

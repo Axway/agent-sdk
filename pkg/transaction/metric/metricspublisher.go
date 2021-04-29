@@ -52,7 +52,8 @@ func (pj *publisher) publishEvent(event interface{}) {
 	if ok {
 		pj.publishToLighthouse(lighthouseUsageEvent)
 	} else {
-		pj.publishToGatekeeper(event)
+		log.Error("event was not a lighthouse event")
+		// pj.publishToGatekeeper(event)
 	}
 }
 
@@ -124,6 +125,7 @@ func (pj *publisher) publishToGatekeeper(event interface{}) {
 		Headers: headers,
 		Body:    buffer,
 	}
+	log.Infof("Payload for gatekeeper usage event : %s\n", string(buffer))
 	_, err := pj.apiClient.Send(request)
 	if err != nil {
 		log.Error("Error in sending usage/metric event: ", err.Error())
