@@ -189,15 +189,23 @@ func (c *itemCache) delete(key string) error {
 
 	// Remove all secondary keys
 	for secKey := range c.Items[key].SecondaryKeys {
-		c.deleteSecondaryKey(secKey)
+		c.removeSecondaryKey(secKey)
 	}
 
 	delete(c.Items, key)
 	return nil
 }
 
-//deleteSecondaryKey - removes a secondary key reference in the cache
+//deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
 func (c *itemCache) deleteSecondaryKey(secondaryKey string) error {
+	c.itemsLock.RLock()
+	defer c.itemsLock.RUnlock()
+
+	return c.removeSecondaryKey(secondaryKey)
+}
+
+//removeSecondaryKey - removes a secondary key reference in the cache
+func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	c.secKeysLock.Lock()
 	defer c.secKeysLock.Unlock()
 
