@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"errors"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -491,7 +492,13 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	if b.err != nil {
 		return b
 	}
-	redactedPath, err := redaction.URIRedaction(path)
+	// just in case uri is really a full url, we want to only want the URI portion
+	parsedURI, err := url.ParseRequestURI(path)
+	if err != nil {
+		return b
+	}
+
+	redactedPath, err := redaction.URIRedaction(parsedURI.Path)
 	if err != nil {
 		b.err = err
 		return b
