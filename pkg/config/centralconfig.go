@@ -109,6 +109,7 @@ type CentralConfig interface {
 	GetTagsToPublish() string
 	GetProxyURL() string
 	GetPollInterval() time.Duration
+	GetReportActivityFrequency() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendDataPlaneToTitle() bool
 	SetDataPlaneName(name string)
@@ -135,6 +136,7 @@ type CentralConfiguration struct {
 	Auth                      AuthConfig    `config:"auth"`
 	TLS                       TLSConfig     `config:"ssl"`
 	PollInterval              time.Duration `config:"pollInterval"`
+	ReportActivityFrequency   time.Duration `config:"reportActivityFrequency"`
 	ProxyURL                  string        `config:"proxyUrl"`
 	environmentID             string
 	teamID                    string
@@ -155,6 +157,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
+		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
 
@@ -358,6 +361,11 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 	return c.PollInterval
 }
 
+// GetReportActivityFrequency - Returns the interval between running periodic status updater
+func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
+	return c.ReportActivityFrequency
+}
+
 // GetAppendDataPlaneToTitle - Returns the value of append data plane type to title attribute
 func (c *CentralConfiguration) GetAppendDataPlaneToTitle() bool {
 	return c.AppendDataPlaneToTitle
@@ -379,32 +387,33 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 }
 
 const (
-	pathTenantID               = "central.organizationID"
-	pathURL                    = "central.url"
-	pathPlatformURL            = "central.platformURL"
-	pathAuthPrivateKey         = "central.auth.privateKey"
-	pathAuthPublicKey          = "central.auth.publicKey"
-	pathAuthKeyPassword        = "central.auth.keyPassword"
-	pathAuthURL                = "central.auth.url"
-	pathAuthRealm              = "central.auth.realm"
-	pathAuthClientID           = "central.auth.clientId"
-	pathAuthTimeout            = "central.auth.timeout"
-	pathSSLNextProtos          = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify  = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites        = "central.ssl.cipherSuites"
-	pathSSLMinVersion          = "central.ssl.minVersion"
-	pathSSLMaxVersion          = "central.ssl.maxVersion"
-	pathEnvironment            = "central.environment"
-	pathAgentName              = "central.agentName"
-	pathDeployment             = "central.deployment"
-	pathMode                   = "central.mode"
-	pathTeam                   = "central.team"
-	pathPollInterval           = "central.pollInterval"
-	pathProxyURL               = "central.proxyUrl"
-	pathAPIServerVersion       = "central.apiServerVersion"
-	pathAdditionalTags         = "central.additionalTags"
-	pathAppendDataPlaneToTitle = "central.appendDataPlaneToTitle"
-	pathUpdateFromAPIServer    = "central.updateFromAPIServer"
+	pathTenantID                = "central.organizationID"
+	pathURL                     = "central.url"
+	pathPlatformURL             = "central.platformURL"
+	pathAuthPrivateKey          = "central.auth.privateKey"
+	pathAuthPublicKey           = "central.auth.publicKey"
+	pathAuthKeyPassword         = "central.auth.keyPassword"
+	pathAuthURL                 = "central.auth.url"
+	pathAuthRealm               = "central.auth.realm"
+	pathAuthClientID            = "central.auth.clientId"
+	pathAuthTimeout             = "central.auth.timeout"
+	pathSSLNextProtos           = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify   = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites         = "central.ssl.cipherSuites"
+	pathSSLMinVersion           = "central.ssl.minVersion"
+	pathSSLMaxVersion           = "central.ssl.maxVersion"
+	pathEnvironment             = "central.environment"
+	pathAgentName               = "central.agentName"
+	pathDeployment              = "central.deployment"
+	pathMode                    = "central.mode"
+	pathTeam                    = "central.team"
+	pathPollInterval            = "central.pollInterval"
+	pathReportActivityFrequency = "central.reportActivityFrequency"
+	pathProxyURL                = "central.proxyUrl"
+	pathAPIServerVersion        = "central.apiServerVersion"
+	pathAdditionalTags          = "central.additionalTags"
+	pathAppendDataPlaneToTitle  = "central.appendDataPlaneToTitle"
+	pathUpdateFromAPIServer     = "central.updateFromAPIServer"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -447,6 +456,9 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetPollInterval() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathPollInterval))
 	}
+	if c.GetReportActivityFrequency() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
+	}
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
@@ -469,6 +481,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	}
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
+	}
+	if c.GetReportActivityFrequency() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
 }
 
@@ -495,6 +510,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater.")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -512,12 +528,13 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
-		AgentType:    agentType,
-		TenantID:     props.StringPropertyValue(pathTenantID),
-		PollInterval: props.DurationPropertyValue(pathPollInterval),
-		Environment:  props.StringPropertyValue(pathEnvironment),
-		TeamName:     props.StringPropertyValue(pathTeam),
-		AgentName:    props.StringPropertyValue(pathAgentName),
+		AgentType:               agentType,
+		TenantID:                props.StringPropertyValue(pathTenantID),
+		PollInterval:            props.DurationPropertyValue(pathPollInterval),
+		ReportActivityFrequency: props.DurationPropertyValue(pathReportActivityFrequency),
+		Environment:             props.StringPropertyValue(pathEnvironment),
+		TeamName:                props.StringPropertyValue(pathTeam),
+		AgentName:               props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),

@@ -56,6 +56,16 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, "aaa/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
 	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
 
+	centralConfig.ReportActivityFrequency = 0
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
+
+	centralConfig.PollInterval = 0
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.pollInterval, please set and/or check its value", err.Error())
+
 	cleanupFiles(tmpFile.Name())
 }
 
@@ -103,6 +113,11 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 
 	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
 	assert.Nil(t, err)
+
+	centralConfig.ReportActivityFrequency = 0
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
 
 	cleanupFiles(tmpFile.Name())
 }
