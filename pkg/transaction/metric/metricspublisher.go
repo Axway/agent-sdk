@@ -114,24 +114,6 @@ func CreateFilePart(w *multipart.Writer, filename string) (io.Writer, error) {
 	return w.CreatePart(h)
 }
 
-func (pj *publisher) publishToGatekeeper(event interface{}) {
-	buffer, _ := json.Marshal(event)
-	headers := make(map[string]string)
-	headers["Content-Type"] = "application/json"
-	headers["x-org-id"] = agent.GetCentralConfig().GetTenantID()
-	request := api.Request{
-		Method:  api.POST,
-		URL:     agent.GetCentralConfig().GetGateKeeperURL(),
-		Headers: headers,
-		Body:    buffer,
-	}
-	log.Infof("Payload for gatekeeper usage event : %s\n", string(buffer))
-	_, err := pj.apiClient.Send(request)
-	if err != nil {
-		log.Error("Error in sending usage/metric event: ", err.Error())
-	}
-}
-
 // NewMetricPublisher - Creates publisher job
 func NewMetricPublisher(eventChannel chan interface{}) Publisher {
 	centralCfg := agent.GetCentralConfig()

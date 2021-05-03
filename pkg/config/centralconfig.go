@@ -81,14 +81,12 @@ type CentralConfig interface {
 	SetEnvironmentID(environmentID string)
 	GetEnvironmentName() string
 	GetAgentName() string
-	GetDataplaneType() string
 	GetTeamName() string
 	GetTeamID() string
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
 	GetPlatformEnvironmentID() string
-	GetGateKeeperURL() string
 	GetLighthouseURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
@@ -118,7 +116,7 @@ type CentralConfig interface {
 	SetDataPlaneName(name string)
 	GetDataPlaneName() string
 	CanPublishUsageEvent() bool
-	CanPublishMetricEvent() bool
+	// CanPublishMetricEvent() bool
 	CanPublishTrafficEvents() bool
 	GetEventAggregationInterval() time.Duration
 }
@@ -128,34 +126,32 @@ type CentralConfiguration struct {
 	CentralConfig
 	IConfigValidator
 	AgentType                 AgentType
-	Mode                      AgentMode     `config:"mode"`
-	TenantID                  string        `config:"organizationID"`
-	TeamName                  string        `config:"team"`
-	APICDeployment            string        `config:"deployment"`
-	Environment               string        `config:"environment"`
-	AgentName                 string        `config:"agentName"`
-	DataplaneType             string        `config:"dataplaneType"`
-	URL                       string        `config:"url"`
-	PlatformURL               string        `config:"platformURL"`
-	PlatformEnvironmentID     string        `config:"platformEnvironmentID"`
-	GatekeeperURL             string        `config:"gatekeeperURL"`
-	LighthouseURL             string        `config:"lighthouseURL"`
-	APIServerVersion          string        `config:"apiServerVersion"`
-	TagsToPublish             string        `config:"additionalTags"`
-	AppendDataPlaneToTitle    bool          `config:"appendDataPlaneToTitle"`
-	UpdateFromAPIServer       bool          `config:"updateFromAPIServer"`
-	Auth                      AuthConfig    `config:"auth"`
-	TLS                       TLSConfig     `config:"ssl"`
-	PollInterval              time.Duration `config:"pollInterval"`
-	ProxyURL                  string        `config:"proxyUrl"`
-	environmentID             string
-	teamID                    string
-	dataPlaneName             string
+	Mode                      AgentMode          `config:"mode"`
+	TenantID                  string             `config:"organizationID"`
+	TeamName                  string             `config:"team"`
+	APICDeployment            string             `config:"deployment"`
+	Environment               string             `config:"environment"`
+	AgentName                 string             `config:"agentName"`
+	URL                       string             `config:"url"`
+	PlatformURL               string             `config:"platformURL"`
+	PlatformEnvironmentID     string             `config:"platformEnvironmentID"`
+	LighthouseURL             string             `config:"lighthouseURL"`
+	APIServerVersion          string             `config:"apiServerVersion"`
+	TagsToPublish             string             `config:"additionalTags"`
+	AppendDataPlaneToTitle    bool               `config:"appendDataPlaneToTitle"`
+	UpdateFromAPIServer       bool               `config:"updateFromAPIServer"`
+	Auth                      AuthConfig         `config:"auth"`
+	TLS                       TLSConfig          `config:"ssl"`
+	PollInterval              time.Duration      `config:"pollInterval"`
+	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
-	PublisUsageEvents         bool
-	PublishMetricEvents       bool
-	PublishTrafficEvents      bool
-	EventAggregationInterval  time.Duration `config:"eventAggregationInterval"`
+	PublisUsageEvents         bool               `config:"publishUsage"`
+	PublishTrafficEvents      bool               `config:"publishTraffic"`
+	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
+	// PublishMetricEvents       bool  `config:"publishMetric"`
+	environmentID string
+	teamID        string
+	dataPlaneName string
 }
 
 // NewCentralConfig - Creates the default central config
@@ -183,11 +179,6 @@ func (c *CentralConfiguration) GetPlatformURL() string {
 // GetPlatformEnvironmentID - Returns the platform environment ID
 func (c *CentralConfiguration) GetPlatformEnvironmentID() string {
 	return c.PlatformEnvironmentID
-}
-
-// GetGateKeeperURL - Returns the gatekeeper base URL
-func (c *CentralConfiguration) GetGateKeeperURL() string {
-	return c.GatekeeperURL
 }
 
 // GetLighthouseURL - Returns the lighthouse base URL
@@ -243,11 +234,6 @@ func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 // GetEnvironmentName - Returns the environment name
 func (c *CentralConfiguration) GetEnvironmentName() string {
 	return c.Environment
-}
-
-// GetDataplaneType - Returns the agent name
-func (c *CentralConfiguration) GetDataplaneType() string {
-	return c.DataplaneType
 }
 
 // GetAgentName - Returns the agent name
@@ -421,9 +407,9 @@ func (c *CentralConfiguration) CanPublishUsageEvent() bool {
 }
 
 // CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
-func (c *CentralConfiguration) CanPublishMetricEvent() bool {
-	return c.PublishMetricEvents
-}
+// func (c *CentralConfiguration) CanPublishMetricEvent() bool {
+// 	return c.PublishMetricEvents
+// }
 
 // CanPublishTrafficEvents - Returns flag to indicate agent can publish traffic events
 func (c *CentralConfiguration) CanPublishTrafficEvents() bool {
@@ -440,7 +426,6 @@ const (
 	pathURL                      = "central.url"
 	pathPlatformURL              = "central.platformURL"
 	pathPlatformEnvironmentID    = "central.platformEnvironmentID"
-	pathGateKeeperURL            = "central.gatekeeperURL"
 	pathLighthouseURL            = "central.lighthouseURL"
 	pathAuthPrivateKey           = "central.auth.privateKey"
 	pathAuthPublicKey            = "central.auth.publicKey"
@@ -456,7 +441,6 @@ const (
 	pathSSLMaxVersion            = "central.ssl.maxVersion"
 	pathEnvironment              = "central.environment"
 	pathAgentName                = "central.agentName"
-	pathDataplaneType            = "central.dataplaneType"
 	pathDeployment               = "central.deployment"
 	pathMode                     = "central.mode"
 	pathTeam                     = "central.team"
@@ -571,12 +555,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
-		props.AddStringProperty(pathGateKeeperURL, "https://gatekeeper.platform.axway.com/v4/event", "URL of the GateKeeper")
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse-staging.admin.staging.appctest.com", "URL of the Lighthouse")
-		props.AddStringProperty(pathDataplaneType, "", "The type name of the associated dataplane")
 		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
-		props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
+		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
 		props.AddBoolProperty(pathPublishTraffic, true, "Indicates if the agent can publish traffic event to AMPLIFY platform. Default to true")
 		props.AddDurationProperty(pathEventAggregationInterval, 1*time.Minute, "The time interval at which usage and metric event will be generated.")
 	} else {
@@ -623,12 +605,10 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
-		cfg.GatekeeperURL = props.StringPropertyValue(pathGateKeeperURL)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
-		cfg.DataplaneType = props.StringPropertyValue(pathDataplaneType)
 		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
 		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
-		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
+		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.PublishTrafficEvents = props.BoolPropertyValue(pathPublishTraffic)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {

@@ -228,12 +228,6 @@ func fetchConfig() error {
 	return nil
 }
 
-// GetDataplaneType - Returns dataplane type name
-func GetDataplaneType() string {
-	dataplaneTypeName := agent.cfg.GetDataplaneType()
-	return dataplaneTypeName
-}
-
 // refreshResources - Gets the agent and dataplane resources from API server
 func refreshResources() (bool, error) {
 	// IMP - To be removed once the model is in production

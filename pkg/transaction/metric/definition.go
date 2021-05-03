@@ -31,21 +31,21 @@ type APIMetric struct {
 }
 
 // V4EventDistribution - represents V7 distribution
-type V4EventDistribution struct {
-	Environment string `json:"environment"`
-	Version     string `json:"version"`
-}
+// type V4EventDistribution struct {
+// 	Environment string `json:"environment"`
+// 	Version     string `json:"version"`
+// }
 
 // V4Event - represents V7 event
-type V4Event struct {
-	ID           string              `json:"id"`
-	Timestamp    int64               `json:"timestamp"`
-	Event        string              `json:"event"`
-	App          string              `json:"app"` // ORG GUID
-	Version      string              `json:"version"`
-	Distribution V4EventDistribution `json:"distribution"`
-	Data         interface{}         `json:"data"`
-}
+// type V4Event struct {
+// 	ID           string              `json:"id"`
+// 	Timestamp    int64               `json:"timestamp"`
+// 	Event        string              `json:"event"`
+// 	App          string              `json:"app"` // ORG GUID
+// 	Version      string              `json:"version"`
+// 	Distribution V4EventDistribution `json:"distribution"`
+// 	Data         interface{}         `json:"data"`
+// }
 
 // LighthouseUsageReport -Lighthouse Usage report
 type LighthouseUsageReport struct {

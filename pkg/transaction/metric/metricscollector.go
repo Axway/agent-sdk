@@ -1,15 +1,14 @@
 package metric
 
 import (
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gofrs/uuid"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -131,24 +130,24 @@ func (c *collector) getOrgGUID() string {
 func (c *collector) generateEvents() {
 	defer c.cleanup()
 	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
-		agent.GetDataplaneType() == "" {
+		cmd.GetBuildDataPlaneType() == "" {
 		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
 		return
 	}
 	if len(c.metricMap) != 0 {
-		c.registry.Each(c.processMetricFromRegistry)
-		if agent.GetCentralConfig().CanPublishMetricEvent() {
-			counter := 0
-			for _, apiStatusMetricMap := range c.metricMap {
-				for _, apiStatusMetric := range apiStatusMetricMap {
-					c.generateAPIStatusMetricEvent(apiStatusMetric)
-					counter++
-				}
-			}
-			log.Infof("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
-		} else {
-			log.Info("Publishing the metric event is turned off")
-		}
+		c.registry.Each(c.processUsageFromRegistry)
+		// if agent.GetCentralConfig().CanPublishMetricEvent() {
+		// 	counter := 0
+		// 	for _, apiStatusMetricMap := range c.metricMap {
+		// 		for _, apiStatusMetric := range apiStatusMetricMap {
+		// 			c.generateAPIStatusMetricEvent(apiStatusMetric)
+		// 			counter++
+		// 		}
+		// 	}
+		// 	log.Infof("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+		// } else {
+		// 	log.Info("Publishing the metric event is turned off")
+		// }
 	} else {
 		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	}
@@ -157,35 +156,8 @@ func (c *collector) generateEvents() {
 
 func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 	if transactionCount != 0 {
-		c.generateLighthouseUsageEvent(transactionCount, orgGUID) // send only to lighthouse
-		// if agent.GetCentralConfig().GetLighthouseURL() != "" {
-		// 	c.generateLighthouseUsageEvent(transactionCount, orgGUID)
-		// } else {
-		// 	c.generateV4UsageEvent(transactionCount, orgGUID)
-		// }
+		c.generateLighthouseUsageEvent(transactionCount, orgGUID)
 	}
-}
-
-func (c *collector) generateV4UsageEvent(transactionCount int64, orgGUID string) {
-	usageEventID, _ := uuid.NewV4()
-	usageEvent := V4Event{
-		ID:        usageEventID.String(),
-		Timestamp: c.startTime.UnixNano() / 1e6,
-		Event:     "usage." + agent.GetDataplaneType() + ".Transactions",
-		App:       orgGUID,
-		Version:   "4",
-		Distribution: V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
-			Version:     "1",
-		},
-		Data: map[string]interface{}{
-			"value":         transactionCount,
-			"observedStart": convertTimeToMillis(c.startTime),
-			"observedEnd":   convertTimeToMillis(c.endTime),
-			"governance":    "Customer Managed",
-		},
-	}
-	c.eventChannel <- usageEvent
 }
 
 func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID string) {
@@ -197,9 +169,9 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 		Granularity: int(c.endTime.Sub(c.startTime)),
 		Report: map[string]LighthouseUsageReport{
 			c.endTime.Format("2006-01-02T15:04:05.000Z"): {
-				Product: agent.GetDataplaneType(),
+				Product: cmd.GetBuildDataPlaneType(),
 				Usage: map[string]int64{
-					agent.GetDataplaneType() + ".Transactions": transactionCount,
+					cmd.GetBuildDataPlaneType() + ".Transactions": transactionCount,
 				},
 				Meta: make(map[string]interface{}),
 			},
@@ -209,28 +181,28 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 	c.eventChannel <- lightHouseUsageEvent
 }
 
-func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
-	apiStatusMetric.Observation.Start = convertTimeToMillis(c.startTime)
-	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
-	apiStatusMetricEventID, _ := uuid.NewV4()
-	apiStatusMetricEvent := V4Event{
-		ID:        apiStatusMetricEventID.String(),
-		Timestamp: c.startTime.UnixNano() / 1e6,
-		Event:     "api.transaction.status.metric",
-		App:       c.orgGUID,
-		Version:   "4",
-		Distribution: V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
-			Version:     "1",
-		},
-		Data: apiStatusMetric,
-	}
-	// disabling sending metrics for now
-	// c.eventChannel <- apiStatusMetricEvent
-	_ = apiStatusMetricEvent
-}
+// func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
+// 	apiStatusMetric.Observation.Start = convertTimeToMillis(c.startTime)
+// 	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
+// 	apiStatusMetricEventID, _ := uuid.NewV4()
+// 	apiStatusMetricEvent := V4Event{
+// 		ID:        apiStatusMetricEventID.String(),
+// 		Timestamp: c.startTime.UnixNano() / 1e6,
+// 		Event:     "api.transaction.status.metric",
+// 		App:       c.orgGUID,
+// 		Version:   "4",
+// 		Distribution: V4EventDistribution{
+// 			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
+// 			Version:     "1",
+// 		},
+// 		Data: apiStatusMetric,
+// 	}
+// disabling sending metrics for now
+// c.eventChannel <- apiStatusMetricEvent
+// 	_ = apiStatusMetricEvent
+// }
 
-func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
+func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	if name == "transaction.count" {
 		counterMetric := metric.(metrics.Counter)
 		transactionCount := counterMetric.Count()
@@ -243,34 +215,34 @@ func (c *collector) processMetricFromRegistry(name string, metric interface{}) {
 		}
 	}
 
-	c.processTransactionMetric(name, metric)
+	// c.processTransactionMetric(name, metric)
 }
 
-func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
-	elements := strings.Split(metricName, ".")
-	if len(elements) > 2 {
-		apiID := elements[2]
-		apiStatusMap, ok := c.metricMap[apiID]
-		if ok {
-			if strings.HasPrefix(metricName, "transaction.status") {
-				statusCode := elements[3]
-				statusCodeDetail, ok := apiStatusMap[statusCode]
-				if ok {
-					statusMetric := (metric.(metrics.Histogram))
-					c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
-					statusMetric.Clear()
-				}
-			}
-		}
-	}
-}
+// func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
+// 	elements := strings.Split(metricName, ".")
+// 	if len(elements) > 2 {
+// 		apiID := elements[2]
+// 		apiStatusMap, ok := c.metricMap[apiID]
+// 		if ok {
+// 			if strings.HasPrefix(metricName, "transaction.status") {
+// 				statusCode := elements[3]
+// 				statusCodeDetail, ok := apiStatusMap[statusCode]
+// 				if ok {
+// 					statusMetric := (metric.(metrics.Histogram))
+// 					c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
+// 					statusMetric.Clear()
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
-func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
-	apiStatusDetails.Count = histogram.Count()
-	apiStatusDetails.Response.Max = histogram.Max()
-	apiStatusDetails.Response.Min = histogram.Min()
-	apiStatusDetails.Response.Avg = histogram.Mean()
-}
+// func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
+// 	apiStatusDetails.Count = histogram.Count()
+// 	apiStatusDetails.Response.Max = histogram.Max()
+// 	apiStatusDetails.Response.Min = histogram.Min()
+// 	apiStatusDetails.Response.Avg = histogram.Mean()
+// }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
 	counter := c.registry.Get(name)
