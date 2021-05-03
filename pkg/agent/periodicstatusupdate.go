@@ -5,11 +5,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
-
-const defaultCheckInterval time.Duration = time.Second * 30
 
 type periodicStatusUpdate struct {
 	jobs.Job
@@ -56,11 +53,7 @@ func (su *periodicStatusUpdate) Execute() error {
 
 //StartPeriodicStatusUpdate - starts a job that runs the periodic status updates
 func StartPeriodicStatusUpdate() {
-	interval := defaultCheckInterval
-
-	if hc.GetStatusConfig() != nil {
-		interval = hc.GetStatusConfig().GetHealthCheckInterval()
-	}
+	interval := agent.cfg.GetReportActivityFrequency()
 	statusUpdate = &periodicStatusUpdate{}
 	_, err := jobs.RegisterIntervalJob(statusUpdate, interval)
 
