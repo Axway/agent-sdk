@@ -143,7 +143,12 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 
 // URIRedaction - takes a uri and returns the redacted version of that URI
 func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
-	parsedURL, err := url.ParseRequestURI(fullURI)
+	// just in case uri is really a full url, we want to only want the URI portion
+	parsedURI, err := url.ParseRequestURI(fullURI)
+	if err != nil {
+		return "", err
+	}
+	parsedURL, err := url.ParseRequestURI(parsedURI.RequestURI())
 	if err != nil {
 		return "", err
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 )
@@ -73,13 +72,7 @@ func (b *httpProtocolBuilder) SetURI(uri string) HTTPProtocolBuilder {
 		return b
 	}
 
-	// just in case uri is really a full url, we want to only want the URI portion
-	parsedURI, err := url.ParseRequestURI(uri)
-	if err != nil {
-		return b
-	}
-
-	b.httpProtocol.URI, b.err = redaction.URIRedaction(parsedURI.Path)
+	b.httpProtocol.URI, b.err = redaction.URIRedaction(uri)
 	return b
 }
 
