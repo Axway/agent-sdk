@@ -35,7 +35,7 @@ func TestDefaultRedaction(t *testing.T) {
 	redactedPath, err := URIRedaction("https://apicentral.axway.com/test/the/path/redaction")
 	assert.Nil(t, err)
 	assert.NotNil(t, redactedPath)
-	assert.Equal(t, "https://apicentral.axway.com/{*}/{*}/{*}/{*}", redactedPath)
+	assert.Equal(t, "/{*}/{*}/{*}/{*}", redactedPath)
 
 	// Only send path to URI redaction
 	redactedPath, err = URIRedaction("/test/the/path/redaction")
@@ -189,7 +189,7 @@ func TestURIRedaction(t *testing.T) {
 				},
 			},
 			input:  "https://apicentral.axway.com/test/the/path/redaction",
-			output: "https://apicentral.axway.com/test/{*}/{*}/{*}",
+			output: "/test/{*}/{*}/{*}",
 		},
 		{
 			name: "TwoWords",
@@ -202,7 +202,7 @@ func TestURIRedaction(t *testing.T) {
 				},
 			},
 			input:  "https://apicentral.axway.com/test/the/path/redaction",
-			output: "https://apicentral.axway.com/test/{*}/{*}/redaction",
+			output: "/test/{*}/{*}/redaction",
 		},
 		{
 			name: "Regex",
@@ -212,7 +212,7 @@ func TestURIRedaction(t *testing.T) {
 				},
 			},
 			input:  "https://apicentral.axway.com/test/the/path/redaction",
-			output: "https://apicentral.axway.com/{*}/the/path/{*}",
+			output: "/{*}/the/path/{*}",
 		},
 	}
 
