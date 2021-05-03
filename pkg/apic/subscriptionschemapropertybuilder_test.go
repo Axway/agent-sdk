@@ -105,4 +105,31 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.False(t, prop.ReadOnly)
 	assert.Equal(t, prop.Format, "")
 	assert.Equal(t, "", prop.APICRef)
+	assert.False(t, prop.SortEnums)
+	assert.Equal(t, "", prop.FirstEnumItem)
+
+	// good path, sort enums & add first item
+	prop, err = NewSubscriptionSchemaPropertyBuilder().
+		SetName("name").
+		IsString().
+		AddEnumValue("c").
+		AddEnumValue("a").
+		AddEnumValue("b").
+		SetSortEnumValues().
+		SetFirstEnumValue("xxx").
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, prop)
+	assert.Len(t, prop.Enum, 4)
+	assert.Equal(t, "name", prop.Name)
+	assert.Equal(t, "", prop.Description)
+	assert.False(t, prop.Required)
+	assert.False(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "")
+	assert.Equal(t, "", prop.APICRef)
+	assert.True(t, prop.SortEnums)
+	assert.Equal(t, "xxx", prop.FirstEnumItem)
+	assert.Equal(t, "xxx", prop.Enum[0])
+	assert.Equal(t, "a", prop.Enum[1])
 }

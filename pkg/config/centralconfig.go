@@ -111,6 +111,7 @@ type CentralConfig interface {
 	GetTagsToPublish() string
 	GetProxyURL() string
 	GetPollInterval() time.Duration
+	GetReportActivityFrequency() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendDataPlaneToTitle() bool
 	SetDataPlaneName(name string)
@@ -143,6 +144,7 @@ type CentralConfiguration struct {
 	Auth                      AuthConfig         `config:"auth"`
 	TLS                       TLSConfig          `config:"ssl"`
 	PollInterval              time.Duration      `config:"pollInterval"`
+	ReportActivityFrequency   time.Duration      `config:"reportActivityFrequency"`
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublisUsageEvents         bool               `config:"publishUsage"`
@@ -168,6 +170,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
 		EventAggregationInterval:  1 * time.Minute,
+		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
 
@@ -381,6 +384,11 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 	return c.PollInterval
 }
 
+// GetReportActivityFrequency - Returns the interval between running periodic status updater
+func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
+	return c.ReportActivityFrequency
+}
+
 // GetAppendDataPlaneToTitle - Returns the value of append data plane type to title attribute
 func (c *CentralConfiguration) GetAppendDataPlaneToTitle() bool {
 	return c.AppendDataPlaneToTitle
@@ -445,6 +453,7 @@ const (
 	pathMode                     = "central.mode"
 	pathTeam                     = "central.team"
 	pathPollInterval             = "central.pollInterval"
+	pathReportActivityFrequency  = "central.reportActivityFrequency"
 	pathProxyURL                 = "central.proxyUrl"
 	pathAPIServerVersion         = "central.apiServerVersion"
 	pathAdditionalTags           = "central.additionalTags"
@@ -496,6 +505,9 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetPollInterval() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathPollInterval))
 	}
+	if c.GetReportActivityFrequency() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
+	}
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
@@ -525,6 +537,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	// if c.GetPlatformEnvironmentID() == "" {
 	// 	exception.Throw(ErrBadConfig.FormatError(pathPlatformEnvironmentID))
 	// }
+	if c.GetReportActivityFrequency() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
+	}
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -550,6 +565,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
+	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater.")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -573,12 +589,13 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
-		AgentType:    agentType,
-		TenantID:     props.StringPropertyValue(pathTenantID),
-		PollInterval: props.DurationPropertyValue(pathPollInterval),
-		Environment:  props.StringPropertyValue(pathEnvironment),
-		TeamName:     props.StringPropertyValue(pathTeam),
-		AgentName:    props.StringPropertyValue(pathAgentName),
+		AgentType:               agentType,
+		TenantID:                props.StringPropertyValue(pathTenantID),
+		PollInterval:            props.DurationPropertyValue(pathPollInterval),
+		ReportActivityFrequency: props.DurationPropertyValue(pathReportActivityFrequency),
+		Environment:             props.StringPropertyValue(pathEnvironment),
+		TeamName:                props.StringPropertyValue(pathTeam),
+		AgentName:               props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),

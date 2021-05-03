@@ -1,12 +1,17 @@
 package apic
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // SubscriptionPropertyBuilder - used to build a subscription schmea property
 type SubscriptionPropertyBuilder interface {
 	SetName(name string) SubscriptionPropertyBuilder
 	SetDescription(description string) SubscriptionPropertyBuilder
 	SetEnumValues(values []string) SubscriptionPropertyBuilder
+	SetSortEnumValues() SubscriptionPropertyBuilder
+	SetFirstEnumValue(value string) SubscriptionPropertyBuilder
 	AddEnumValue(value string) SubscriptionPropertyBuilder
 	SetRequired() SubscriptionPropertyBuilder
 	SetReadOnly() SubscriptionPropertyBuilder
@@ -19,15 +24,17 @@ type SubscriptionPropertyBuilder interface {
 // schemaProperty - holds all the info needed to create a subscrition schema property
 type schemaProperty struct {
 	SubscriptionPropertyBuilder
-	err          error
-	name         string
-	description  string
-	apicRefField string
-	enums        []string
-	required     bool
-	readOnly     bool
-	hidden       bool
-	dataType     string
+	err            error
+	name           string
+	description    string
+	apicRefField   string
+	enums          []string
+	required       bool
+	readOnly       bool
+	hidden         bool
+	dataType       string
+	sortEnums      bool
+	firstEnumValue string
 }
 
 // NewSubscriptionSchemaPropertyBuilder - Creates a new subscription schema property builder
@@ -61,6 +68,19 @@ func (p *schemaProperty) SetEnumValues(values []string) SubscriptionPropertyBuil
 		}
 	}
 
+	return p
+}
+
+// SetSortEnumValues - indicates to sort the enums
+func (p *schemaProperty) SetSortEnumValues() SubscriptionPropertyBuilder {
+	p.sortEnums = true
+	return p
+}
+
+// SetFirstEnumValue - Sets a first item for enums. Only needed for sorted enums if you want a specific
+// item first in the list
+func (p *schemaProperty) SetFirstEnumValue(value string) SubscriptionPropertyBuilder {
+	p.firstEnumValue = value
 	return p
 }
 
@@ -129,14 +149,26 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 		return nil, fmt.Errorf("Subscription schema property named %v must have a data type", p.name)
 	}
 
+	// sort if specified to do so
+	if p.sortEnums {
+		sort.Strings(p.enums)
+	}
+
+	// append item to start if specified
+	if p.firstEnumValue != "" {
+		p.enums = append([]string{p.firstEnumValue}, p.enums...)
+	}
+
 	prop := &SubscriptionSchemaPropertyDefinition{
-		Name:        p.name,
-		Type:        p.dataType,
-		Description: p.description,
-		APICRef:     p.apicRefField,
-		ReadOnly:    p.readOnly,
-		Required:    p.required,
-		Enum:        p.enums,
+		Name:          p.name,
+		Type:          p.dataType,
+		Description:   p.description,
+		APICRef:       p.apicRefField,
+		ReadOnly:      p.readOnly,
+		Required:      p.required,
+		Enum:          p.enums,
+		SortEnums:     p.sortEnums,
+		FirstEnumItem: p.firstEnumValue,
 	}
 
 	if p.hidden {

@@ -24,14 +24,16 @@ type SubscriptionSchema interface {
 
 // SubscriptionSchemaPropertyDefinition -
 type SubscriptionSchemaPropertyDefinition struct {
-	Type        string   `json:"type"`
-	Description string   `json:"description"`
-	Enum        []string `json:"enum,omitempty"`
-	ReadOnly    bool     `json:"readOnly,omitempty"`
-	Format      string   `json:"format,omitempty"`
-	APICRef     string   `json:"x-axway-ref-apic,omitempty"`
-	Name        string   `json:"-"`
-	Required    bool     `json:"-"`
+	Type          string   `json:"type"`
+	Description   string   `json:"description"`
+	Enum          []string `json:"enum,omitempty"`
+	ReadOnly      bool     `json:"readOnly,omitempty"`
+	Format        string   `json:"format,omitempty"`
+	APICRef       string   `json:"x-axway-ref-apic,omitempty"`
+	Name          string   `json:"-"`
+	Required      bool     `json:"-"`
+	SortEnums     bool     `json:"-"`
+	FirstEnumItem string   `json:"-"`
 }
 
 type subscriptionSchema struct {
