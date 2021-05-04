@@ -571,7 +571,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
-		props.AddStringProperty(pathLighthouseURL, "https://lighthouse-staging.admin.staging.appctest.com", "URL of the Lighthouse")
+		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
 		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
