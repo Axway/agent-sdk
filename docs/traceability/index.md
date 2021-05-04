@@ -1,42 +1,49 @@
 # Building Traceability Agent
 
-The AMPLIFY Central Traceability Agents can be used for monitoring the traffic for APIs that were discovered by AMPLIFY Central Discovery Agent and publishing the traffic event to AMPLIFY Central API Observer. The Agent SDK helps in building custom elastic beat as AMPLIFY Central traceability agent by providing the necessary config, supported transports and interfaces to manage the communication with AMPLIFY Central.
+The Amplify Central Traceability Agents can be used for monitoring the traffic for APIs that were discovered by Amplify Central Discovery Agent and publishing the traffic event to Amplify Central API Observer. The Agent SDK helps in building custom elastic beat as Amplify Central traceability agent by providing the necessary config, supported transports and interfaces to manage the communication with Amplify Central.
 
 The traceability agents are custom elastic beats which generally has two main components
 - a component that collects data 
 - a component that publishes the data to specified output
 
-The Agents SDK provides implementation for component to publish the data to AMPLIFY ingestion service either using lumberjack or HTTP protocol. The agent developers can implement the component to collect the data or use existing beat implementations (e.g. filebeat) to collect the data. 
+The Agents SDK provides implementation for component to publish the data to Amplify ingestion service either using lumberjack or HTTP protocol. The agent developers can implement the component to collect the data or use existing beat implementations (e.g. filebeat) to collect the data. 
 
-To ingest the traffic related events for the AMPLIFY Central Observer, the event is required to be in a specific structure. The Agent SDK provides definition for the log event (transaction.LogEvent) that can be used to setup the event data required by AMPLIFY Central Observer service. The log event can be either of summary or transaction type. Refer to section [](#log_event_format) for the details. The agent developer can choose to implement the mapping from the collected data to log event required by AMPLIFY Central Observer service either while the data is collected by the custom beat logic or by setup output event processor to perform the mapping. The output event processor are invoked when the publisher is processing the event to be published over specified transport.
+To ingest the traffic related events for the Amplify Central Observer, the event is required to be in a specific structure. The Agent SDK provides definition for the log event (transaction.LogEvent) that can be used to setup the event data required by Amplify Central Observer service. The log event can be either of summary or transaction type. Refer to section [](#log_event_format) for the details. The agent developer can choose to implement the mapping from the collected data to log event required by Amplify Central Observer service either while the data is collected by the custom beat logic or by setup output event processor to perform the mapping. The output event processor are invoked when the publisher is processing the event to be published over specified transport.
 
-The AMPLIFY ingestion service authenticates the publish request using the token issued by AxwayID. For the lumberjack protocol the token is required as a field in event getting published. With HTTP, the ingestion service authenticates the request using bearer token in "Authorization" header.
+The Amplify ingestion service authenticates the publish request using the token issued by AxwayID. For the lumberjack protocol the token is required as a field in event getting published. With HTTP, the ingestion service authenticates the request using bearer token in "Authorization" header.
 
-The Agent SDK provides a component for generating beat event from the mapped log event. This component take care of setting up the beat event with fields required by AMPLIFY Central Observer service.
+The Agent SDK provides a component for generating beat event from the mapped log event. This component take care of setting up the beat event with fields required by Amplify Central Observer service.
 
 ### Central Configuration
-The SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line option. This configuration is used for setting up parameter that will be used for communicating with AMPLIFY Central. 
+The SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line option. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. 
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML propery                   | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
-|--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
-| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
-| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
-| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
-| central.deployment             | CENTRAL_DEPLOYMENT             | Specifies the AMPLIFY Central deployment. This could be "prod" or "prod-eu" based on the AMPLIFY Central region.                                                                                                                                                                                                          |
-| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
-| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.                                                                                                                                                               |
-| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
-| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
-| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
-| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
-| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
-| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
-| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
-| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
-| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
+| YAML propery                     | Variable name                    | Description                                                                                                                                                                                                                                                                                                               |
+|----------------------------------|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| central.url                      | CENTRAL_URL                      | The URL to the Amplify Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
+| central.organizationID           | CENTRAL_ORGANIZATIONID           | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
+| central.team                     | CENTRAL_TEAM                     | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
+| central.environment              | CENTRAL_ENVIRONMENT              | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
+| central.deployment               | CENTRAL_DEPLOYMENT               | Specifies the Amplify Central deployment. This could be "prod" or "prod-eu" based on the Amplify Central region.                                                                                                                                                                                                          |
+| central.agentName                | CENTRAL_AGENTNAME                | The agent name of this agent on Amplify Central                                                                                                                                                                                                                                                                           |
+| central.platformEnvironmentId    | CENTRAL_PLATFORMENVIRONMENTID    | The ID of the environment on Amplify to report usage to                                                                                                                                                                                                                                                                   |
+| central.lighthouseURL            | CENTRAL_LIGHTHOUSEURL            | The Lighthouse URL the agent publishes usage reports                                                                                                                                                                                                                                                                      |
+| central.publishUsage             | CENTRAL_PUBLISHUSAGE             | Enables/disables the sending of usage events to Amplify                                                                                                                                                                                                                                                                   |
+| central.publishTraffic           | CENTRAL_PUBLISHTRAFFIC           | Enables/disabled the sending of traffic events to Amplify Central                                                                                                                                                                                                                                                         |
+| central.eventAggregationInterval | CENTRAL_EVENTAGGREGATIONINTERVAL | The frequency in which the agent reports API usage to Amplify                                                                                                                                                                                                                                                             |
+| central.reportActivityFrequency  | CENTRAL_REPORTACTIVITYFREQUENCY  | The frequency in which the agent published activity to Amplify Central                                                                                                                                                                                                                                                    |
+| central.auth.url                 | CENTRAL_AUTH_URL                 | The Amplify login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID            | CENTRAL_AUTH_CLIENTID            | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                               |
+| central.auth.privateKey          | CENTRAL_AUTH_PRIVATEKEY          | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
+| central.auth.publicKey           | CENTRAL_AUTH_PUBLICKEY           | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
+| central.auth.keyPassword         | CENTRAL_AUTH_KEYPASSWORD         | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
+| central.auth.timeout             | CENTRAL_AUTH_TIMEOUT             | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
+| central.ssl.insecureSkipVerify   | CENTRAL_SSL_INSECURESKIPVERIFY   | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
+| central.ssl.cipherSuites         | CENTRAL_SSL_CIPHERSUITES         | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
+| central.ssl.minVersion           | CENTRAL_SSL_MINVERSION           | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
+| central.ssl.maxVersion           | CENTRAL_SSL_MAXVERSION           | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
+| central.proxyURL                 | CENTRAL_PROXYURL                 | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
 
 The following is a sample of Central configuration in YAML
 ```
@@ -167,7 +174,7 @@ func (c *GatewayConfig) ValidateCfg() (err error) {
 
 ```
 
-### AMPLIFY Ingestion output configuration
+### Amplify Ingestion output configuration
 
 The SDK provides a predefined configuration for setting up the output transport the agent is going to use for publishing the events.
 
@@ -179,7 +186,13 @@ Below is the list of traceability output transport configuration properties in Y
 | output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default: `ingestion-lumberjack.datasearch.axway.com:453`)                                                     |
 | output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default: `tcp`)                                                 |
 | output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default: `3`)                                                                                                   |
-| output.traceability.proxy_url         | TRACEABILITY_PROXYURL         | The URL for the HTTP or SOCK5 proxy for AMPLIFY ingestion service for e.g. `<http://username:password@hostname:port>`. If empty, no proxy is defined. |
+| output.traceability.bulk_max_size     | TRACEABILITY_BULKMAXSIZE      | The max number of evnets in a single request to Condor (default: `100`)                                                                               |
+| output.traceability.timeout           | TRACEABILITY_TIMEOUT          | Number of seconds to wait for responses from Condo (default: `300s`)                                                                                  |
+| output.traceability.pipelining        | TRACEABILITY_PIPELINING       | Number of asynchronous batches to send, must be 0                                                                                                     |
+| output.traceability.worker            | TRACEABILITY_WORKER           | Number of workers communicating with Condor (default: `2`)                                                                                            |
+| output.traceability.slow_start        | TRACEABILITY_SLOWSTART        | When set to true the number of events sent to Condor is ramped up to bulk_max_size (default: `true`)                                                  |
+| output.traceability.ssl.enable        | TRACEABILITY_ENABLE_SSL       | Enables SSL connections to Condor (default: `true`)                                                                                                   |
+| output.traceability.proxy_url         | TRACEABILITY_PROXYURL         | The URL for the HTTP or SOCK5 proxy for Amplify ingestion service for e.g. `<http://username:password@hostname:port>`. If empty, no proxy is defined. |
 | output.traceability.redaction         |                               | Refer to [Traceability redaction](#traceability-redaction)                                                                                            |
 
 #### Sample Agent YAML configuration 
@@ -203,7 +216,7 @@ apic_traceability_agent:
     ...
     ...
 
-# AMPLIFY Ingestion service
+# Amplify Ingestion service
 output.traceability:
   enabled: true
   hosts:
@@ -360,7 +373,7 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 
 ### Transaction Event processing and Event Generation
 
-The goal of the traceability agents is to publish API traffic events to AMPLIFY ingestion service to allow computing statistics and monitor the transactions. To achieve this there are two kinds of log events that can be published thru traceability agents.
+The goal of the traceability agents is to publish API traffic events to Amplify ingestion service to allow computing statistics and monitor the transactions. To achieve this there are two kinds of log events that can be published thru traceability agents.
 - Transaction Summary : Summarizes the interaction between the client application and discovered API. The transaction summary log entry is used for computing the API Usage statistics and display the list of transactions on API Traffic page.
 - Transaction Event: Represents the interaction between services involved in the API transaction and provides details on the protocol being used in the interaction. 
 
@@ -442,11 +455,11 @@ The attributes below are to be included in both type of events.
 | version           | Event version (should be set to "1.0")                                                                           |
 | timestamp         | Unix timestamp of the event                                                                                      |
 | transactionId     | Unique business transaction id. Used for correlate the events for same transaction                               |
-| environmentName   | Name of the AMPLIFY Central environment                                                                          |
-| environmentId     | ID of the AMPLIFY Central environment                                                                            |
+| environmentName   | Name of the Amplify Central environment                                                                          |
+| environmentId     | ID of the Amplify Central environment                                                                            |
 | apicDeployment    | Name of APIC deployment environment (prod, prod-eu)                                                              |
-| tenantId          | AMPLIFY platform organization identifier                                                                         |
-| trcbltPartitionId | AMPLIFY platform organization identifier. Used by AMPLIFY Ingestion service to send events to appropriate tenant |
+| tenantId          | Amplify platform organization identifier                                                                         |
+| trcbltPartitionId | Amplify platform organization identifier. Used by Amplify Ingestion service to send events to appropriate tenant |
 | type              | Identifies the type of log event (transactionSummary or transactionEvent)                                        |
 
 
@@ -460,8 +473,8 @@ The attributes below are to be included in both type of events.
 | proxy.id          | ID of the API on remote gateway. This should be prefixed with "remoteApiId_". For e.g. "remoteApiId_0000000001 |
 | proxy.name        | Name of the API on remote gateway                                                                              |
 | proxy.revision    | Revision of the API on remote gateway                                                                          |
-| team.id           | AMPLIFY Team ID                                                                                                |
-| team.name         | AMPLIFY Team Name                                                                                              |
+| team.id           | Amplify Team ID                                                                                                |
+| team.name         | Amplify Team Name                                                                                              |
 | entryPoint.type   | Protocol type used in transaction flow (http)                                                                  |
 | entryPoint.method | HTTP Method                                                                                                    |
 | entryPoint.path   | HTTP Path                                                                                                      |
@@ -693,7 +706,7 @@ func (bt *customLogBeater) Run(b *beat.Beat) error {
 			// Use event generator to create beat.Events for logEvents 
 			eventsToPublish := make([]beat.Event, 0)
 			for _, logEvent := range logEvents {
-				// Generates the beat.Event with attributes by AMPLIFY ingestion service
+				// Generates the beat.Event with attributes by Amplify ingestion service
 				event, _ := eventGenerator.CreateEvent(logEvent, time.Now(), nil, nil, nil)
 				events = append(events, event)
 			}
@@ -751,7 +764,7 @@ func (p *EventProcessor) Process(events []publisher.Event) []publisher.Event {
 
 		// Use event generator to create beat.Events for logEvents 
 		for _, logEvent := range logEvents {
-			// Generates the beat.Event with attributes by AMPLIFY ingestion service
+			// Generates the beat.Event with attributes by Amplify ingestion service
 			beatEvent, _ := eventGenerator.CreateEvent(logEvent, time.Now(), nil, nil, nil)
 			publisherEvent := publisher.Event{
 				Content: beatEvent,
@@ -889,12 +902,12 @@ go build -tags static_all \
 ```
 
 #### Pre-requisites for executing the agent
-* An Axway AMPLIFY Central subscription in the AMPLIFY™ platform. See [Get started with AMPLIFY Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
-* An AMPLIFY Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
-* An AMPLIFY Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
+* An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
+* An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-Amplify-central-ui).
+* An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
 
 ### Executing Traceability Agent
-The Agent built using AMPLIFY Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
+The Agent built using Amplify Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
 
 1. The configuration YAML file in the current working directory.
 2. Environment variable defined for configuration override on the shell executing the agent
@@ -941,28 +954,28 @@ Flags:
   -E, --E setting=value                      Configuration overwrite
   -N, --N                                    Disable actual publishing for testing
   -c, --c string                             Configuration file, relative to path.config (default "apic_traceability_agent.yml")
-      --centralAgentName string              The name of the asociated agent resource in AMPLIFY Central
+      --centralAgentName string              The name of the asociated agent resource in Amplify Central
       --centralApiServerVersion string       Version of the API Server (default "v1alpha1")
       --centralAuthClientId string           Client ID for the service account
       --centralAuthKeyPassword string        Password for the private key, if needed
-      --centralAuthPrivateKey string         Path to the private key for AMPLIFY Central Authentication (default "/etc/private_key.pem")
-      --centralAuthPublicKey string          Path to the public key for AMPLIFY Central Authentication (default "/etc/public_key")
-      --centralAuthRealm string              AMPLIFY Central authentication Realm (default "Broker")
+      --centralAuthPrivateKey string         Path to the private key for Amplify Central Authentication (default "/etc/private_key.pem")
+      --centralAuthPublicKey string          Path to the public key for Amplify Central Authentication (default "/etc/public_key")
+      --centralAuthRealm string              Amplify Central authentication Realm (default "Broker")
       --centralAuthTimeout duration          Timeout waiting for AxwayID response (default 10s)
-      --centralAuthUrl string                AMPLIFY Central authentication URL (default "https://login.axway.com/auth")
-      --centralDeployment string             AMPLIFY Central (default "prod")
-      --centralEnvironment string            The Environment that the APIs will be associated with in AMPLIFY Central
+      --centralAuthUrl string                Amplify Central authentication URL (default "https://login.axway.com/auth")
+      --centralDeployment string             Amplify Central (default "prod")
+      --centralEnvironment string            The Environment that the APIs will be associated with in Amplify Central
       --centralOrganizationID string         Tenant ID for the owner of the environment
       --centralPlatformURL string            URL of the platform (default "https://platform.axway.com")
       --centralPollInterval duration         The time interval at which the central will be polled for subscription processing. (default 1m0s)
-      --centralProxyUrl string               The Proxy URL to use for communication to AMPLIFY Central
+      --centralProxyUrl string               The Proxy URL to use for communication to Amplify Central
       --centralSslCipherSuites strings       List of supported cipher suites, comma separated (default [ECDHE-ECDSA-AES-256-GCM-SHA384,ECDHE-RSA-AES-256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,ECDHE-ECDSA-AES-128-GCM-SHA256,ECDHE-RSA-AES-128-GCM-SHA256,ECDHE-ECDSA-AES-128-CBC-SHA256,ECDHE-RSA-AES-128-CBC-SHA256])
       --centralSslInsecureSkipVerify         Controls whether a client verifies the server's certificate chain and host name
       --centralSslMaxVersion string          Maximum acceptable SSL/TLS protocol version (default "0")
       --centralSslMinVersion string          Minimum acceptable SSL/TLS protocol version (default "TLS1.2")
       --centralSslNextProtos strings         List of supported application level protocols, comma separated
       --centralTeam string                   Team name for creating catalog
-      --centralUrl string                    URL of AMPLIFY Central (default "https://apicentral.axway.com")
+      --centralUrl string                    URL of Amplify Central (default "https://apicentral.axway.com")
       --cpuprofile string                    Write cpu profile to file
   -d, --d string                             Enable certain debug selectors
   -e, --e                                    Log to stderr and disable syslog/file output
