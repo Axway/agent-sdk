@@ -576,7 +576,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
 		props.AddBoolProperty(pathPublishTraffic, true, "Indicates if the agent can publish traffic event to AMPLIFY platform. Default to true")
-		props.AddDurationProperty(pathEventAggregationInterval, 1*time.Minute, "The time interval at which usage and metric event will be generated.")
+		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated.")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
