@@ -180,8 +180,8 @@ func (c *itemCache) setSecondaryKey(key string, secondaryKey string) error {
 
 // delete an item from the cache
 func (c *itemCache) delete(key string) error {
-	c.itemsLock.RLock()
-	defer c.itemsLock.RUnlock()
+	c.itemsLock.Lock()
+	defer c.itemsLock.Unlock()
 	// Check that the key given is in the cache
 	if _, ok := c.Items[key]; !ok {
 		return fmt.Errorf("Cache item with key %s does not exist", key)
