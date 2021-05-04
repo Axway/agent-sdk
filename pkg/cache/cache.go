@@ -198,8 +198,8 @@ func (c *itemCache) delete(key string) error {
 
 //deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
 func (c *itemCache) deleteSecondaryKey(secondaryKey string) error {
-	c.itemsLock.RLock()
-	defer c.itemsLock.RUnlock()
+	c.itemsLock.Lock()
+	defer c.itemsLock.Unlock()
 
 	return c.removeSecondaryKey(secondaryKey)
 }
