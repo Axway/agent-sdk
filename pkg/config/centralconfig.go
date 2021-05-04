@@ -169,7 +169,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
 		UpdateFromAPIServer:       false,
-		EventAggregationInterval:  1 * time.Minute,
+		EventAggregationInterval:  5 * time.Minute,
 		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
