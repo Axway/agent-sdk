@@ -187,11 +187,20 @@ func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
 			log.Infof("API deleted from dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
-			err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
-			if err != nil {
-				log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+			if !agent.deleteServiceChecker() {
+				err := agent.apicClient.DeleteService(externalAPIID)
+				if err != nil {
+					log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+				} else {
+					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+				}
 			} else {
-				log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+				err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+				if err != nil {
+					log.Errorf("Unable to delete catalog item %s from AMPLIFY Central, %s", consumerInstance.Title, err.Error())
+				} else {
+					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+				}
 			}
 		}
 	}

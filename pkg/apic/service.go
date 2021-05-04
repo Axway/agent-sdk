@@ -50,6 +50,11 @@ func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APISe
 	return apiSvc, nil
 }
 
+// DeleteService -
+func (c *ServiceClient) DeleteService(svcName string) error {
+	return c.deleteService(svcName)
+}
+
 // RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
 // per environment
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {

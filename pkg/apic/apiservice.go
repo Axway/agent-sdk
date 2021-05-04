@@ -92,19 +92,32 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	return apiService, err
 }
 
+// deleteService
+func (c *ServiceClient) deleteService(externalID string) error {
+	svc, err := c.getAPIServiceByAttribute(externalID, "")
+	if err != nil {
+		return err
+	}
+	_, err = c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+svc.Name, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // getAPIServiceByExternalAPIID - Returns the API service based on external api identification
 func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
-		apiService, err := c.getAPIServiceByAttribute(serviceBody, serviceBody.PrimaryKey)
+		apiService, err := c.getAPIServiceByAttribute(serviceBody.RestAPIID, serviceBody.PrimaryKey)
 		if apiService != nil || err != nil {
 			return apiService, err
 		}
 	}
-	return c.getAPIServiceByAttribute(serviceBody, "")
+	return c.getAPIServiceByAttribute(serviceBody.RestAPIID, "")
 }
 
 // getAPIServiceByAttribute - Returns the API service based on attribute
-func (c *ServiceClient) getAPIServiceByAttribute(serviceBody *ServiceBody, primaryKey string) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) getAPIServiceByAttribute(externalAPIID, primaryKey string) (*v1alpha1.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -113,7 +126,7 @@ func (c *ServiceClient) getAPIServiceByAttribute(serviceBody *ServiceBody, prima
 	if primaryKey != "" {
 		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + primaryKey + "\""
 	} else {
-		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + serviceBody.RestAPIID + "\""
+		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + externalAPIID + "\""
 	}
 
 	request := coreapi.Request{

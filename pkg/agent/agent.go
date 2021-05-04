@@ -36,6 +36,9 @@ var AgentResourceType string
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
+// DeleteServiceChecker - Callback for checking if the service should be deleted
+type DeleteServiceChecker func() bool
+
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
@@ -61,6 +64,7 @@ type agentData struct {
 
 	apiMap                     cache.Cache
 	apiValidator               APIValidator
+	deleteServiceChecker       DeleteServiceChecker
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	isInitialized              bool
