@@ -46,6 +46,8 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.ClientID = "DOSA_1111"
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
+	cfg.PublishTrafficEvents = true
+	cfg.EventAggregationInterval = 30 * time.Second
 	return cfg
 }
 
@@ -190,11 +192,10 @@ func TestCreateLogstashClient(t *testing.T) {
 		"someotherhost",
 	}
 	group, err = createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "multiple host for traceability output not supported")
+	assert.Nil(t, err)
 	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
+	assert.NotNil(t, group.Clients)
+	assert.True(t, logstashClientCreateCalled)
 
 	testConfig.Pipelining = 5
 	testConfig.Hosts = []string{

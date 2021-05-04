@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -68,11 +69,25 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 			},
 		}
 	}
-
-	httpCli.Timeout = defaultTimeout
+	timeout := getTimeoutFromEnvironment()
+	httpCli.Timeout = timeout
 	return &httpClient{
+		timeout:    timeout,
 		httpClient: httpCli,
 	}
+}
+
+func getTimeoutFromEnvironment() time.Duration {
+	cfgHTTPClientTimeout := os.Getenv("HTTP_CLIENT_TIMEOUT")
+	if cfgHTTPClientTimeout == "" {
+		return defaultTimeout
+	}
+	timeout, err := time.ParseDuration(cfgHTTPClientTimeout)
+	if err != nil {
+		log.Tracef("Unable to parse the HTTP_CLIENT_TIMEOUT value, using the default http client timeout")
+		return defaultTimeout
+	}
+	return timeout
 }
 
 func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) string {
@@ -111,7 +126,7 @@ func (c *httpClient) prepareAPIResponse(res *http.Response, timer *time.Timer) (
 	writer := bufio.NewWriter(&responeBuffer)
 	for {
 		// Reset the timeout timer for reading the response
-		timer.Reset(defaultTimeout)
+		timer.Reset(c.timeout)
 		_, err = io.CopyN(writer, res.Body, responseBufferSize)
 		if err == io.EOF || err != nil {
 			if err == io.EOF {
@@ -157,7 +172,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	}
 
 	// Start the timer to manage the timeout
-	timer := time.AfterFunc(defaultTimeout, func() {
+	timer := time.AfterFunc(c.timeout, func() {
 		cancel()
 	})
 

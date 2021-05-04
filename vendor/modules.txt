@@ -135,6 +135,9 @@ github.com/pmezard/go-difflib/difflib
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
+## explicit
+github.com/rcrowley/go-metrics
 # github.com/sirupsen/logrus v1.6.0
 ## explicit
 github.com/sirupsen/logrus

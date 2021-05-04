@@ -20,6 +20,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
 	github.com/spf13/cobra v1.0.0
