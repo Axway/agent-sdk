@@ -77,7 +77,7 @@ func (pj *publisher) publishToLighthouse(event LighthouseUsageEvent) {
 		Headers: headers,
 		Body:    b.Bytes(),
 	}
-	log.Infof("Payload for Usage event : %s\n", string(b.Bytes()))
+	log.Debugf("Payload for Usage event : %s\n", string(b.Bytes()))
 	response, err := pj.apiClient.Send(request)
 	if err != nil {
 		log.Error("Error in sending usage/metric event: ", err.Error())
