@@ -8,7 +8,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
 	"github.com/emicklei/proto"
-	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 )
 
@@ -122,30 +121,11 @@ func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 }
 
 func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
-	swaggerObj := &oas2Swagger{}
-	// lowercase the byte array to ensure keys we care about are parsed
-	err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
-	if err != nil {
-		err := json.Unmarshal(s.resourceSpec, swaggerObj)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if swaggerObj.Info.Title == "" {
-		return nil, errors.New("Invalid openapi 2.0 specification")
-	}
-	return NewOas2Processor(swaggerObj), nil
+	return NewOas2Processor(s.resourceSpec)
 }
 
 func (s *SpecResourceParser) parseOAS3Spec() (SpecProcessor, error) {
-	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(s.resourceSpec)
-	if err != nil {
-		return nil, err
-	}
-	if oas3Obj.OpenAPI == "" {
-		return nil, errors.New("Invalid openapi 3 specification")
-	}
-	return NewOas3Processor(oas3Obj), nil
+	return NewOas3Processor(s.resourceSpec)
 }
 
 func (s *SpecResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {

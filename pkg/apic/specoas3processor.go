@@ -16,8 +16,15 @@ type Oas3SpecProcessor struct {
 	spec *openapi3.Swagger
 }
 
-func NewOas3Processor(oas3Obj *openapi3.Swagger) *Oas3SpecProcessor {
-	return &Oas3SpecProcessor{spec: oas3Obj}
+func NewOas3Processor(spec []byte) (*Oas3SpecProcessor, error) {
+	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(spec)
+	if err != nil {
+		return nil, err
+	}
+	if oas3Obj.OpenAPI == "" {
+		return nil, fmt.Errorf("Invalid openapi 3 specification")
+	}
+	return &Oas3SpecProcessor{spec: oas3Obj}, nil
 }
 
 func (p *Oas3SpecProcessor) getResourceType() string {

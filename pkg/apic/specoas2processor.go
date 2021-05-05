@@ -2,12 +2,14 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"net/url"
 	"strconv"
 	"strings"
 
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"gopkg.in/yaml.v2"
 )
 
 var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "wss": true}
@@ -16,8 +18,20 @@ type Oas2SpecProcessor struct {
 	spec *oas2Swagger
 }
 
-func NewOas2Processor(oas2Spec *oas2Swagger) *Oas2SpecProcessor {
-	return &Oas2SpecProcessor{spec: oas2Spec}
+func NewOas2Processor(spec []byte) (*Oas2SpecProcessor, error) {
+	swaggerObj := &oas2Swagger{}
+	// lowercase the byte array to ensure keys we care about are parsed
+	err := yaml.Unmarshal(spec, swaggerObj)
+	if err != nil {
+		err := json.Unmarshal(spec, swaggerObj)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if swaggerObj.Info.Title == "" {
+		return nil, errors.New("Invalid openapi 2.0 specification")
+	}
+	return &Oas2SpecProcessor{spec: swaggerObj}, nil
 }
 
 func (p *Oas2SpecProcessor) getResourceType() string {
