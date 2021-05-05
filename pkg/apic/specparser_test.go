@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createSpecParser(specFile, specType string) (specResourceParser, error) {
+func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
 	specFileDescriptor, _ := os.Open(specFile)
 	specData, _ := ioutil.ReadAll(specFileDescriptor)
-	specParser := newSpecResourceParser(specData, specType)
-	err := specParser.parse()
+	specParser := NewSpecResourceParser(specData, specType)
+	err := specParser.Parse()
 	return specParser, err
 }
 
@@ -23,7 +23,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas3SpecProcessor)
+	_, ok := specProcessor.(*Oas3SpecProcessor)
 	assert.True(t, ok)
 
 	// YAML OAS2 specification
@@ -32,7 +32,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*oas2SpecProcessor)
+	_, ok = specProcessor.(*Oas2SpecProcessor)
 	assert.True(t, ok)
 
 	// JSON OAS2 specification
@@ -41,7 +41,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*oas2SpecProcessor)
+	_, ok = specProcessor.(*Oas2SpecProcessor)
 	assert.True(t, ok)
 
 	// WSDL specification
@@ -92,7 +92,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas3SpecProcessor)
+	_, ok := specProcessor.(*Oas3SpecProcessor)
 	assert.True(t, ok)
 
 	endPoints, err := specProcessor.getEndpoints()
@@ -192,7 +192,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas2SpecProcessor)
+	_, ok := specProcessor.(*Oas2SpecProcessor)
 	assert.True(t, ok)
 
 	endPoints, err := specProcessor.getEndpoints()

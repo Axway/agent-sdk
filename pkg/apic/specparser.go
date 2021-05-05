@@ -12,22 +12,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type specProcessor interface {
+type SpecProcessor interface {
 	getEndpoints() ([]EndpointDefinition, error)
 	getResourceType() string
 }
 
-type specResourceParser struct {
+type SpecResourceParser struct {
 	resourceSpecType string
 	resourceSpec     []byte
-	specProcessor    specProcessor
+	SpecProcessor    SpecProcessor
 }
 
-func newSpecResourceParser(resourceSpec []byte, resourceSpecType string) specResourceParser {
-	return specResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
+func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
+	return SpecResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
 }
 
-func (s *specResourceParser) parse() error {
+func (s *SpecResourceParser) Parse() error {
 	if s.resourceSpecType == "" {
 		s.discoverSpecTypeAndCreateProcessor()
 	} else {
@@ -37,44 +37,44 @@ func (s *specResourceParser) parse() error {
 		}
 	}
 
-	if s.specProcessor == nil {
-		s.specProcessor = newUnstructuredSpecProcessor(s.resourceSpec)
+	if s.SpecProcessor == nil {
+		s.SpecProcessor = newUnstructuredSpecProcessor(s.resourceSpec)
 	}
 	return nil
 }
 
-func (s *specResourceParser) discoverSpecTypeAndCreateProcessor() {
-	s.specProcessor, _ = s.discoverYAMLAndJSONSpec()
-	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseWSDLSpec()
+func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() {
+	s.SpecProcessor, _ = s.discoverYAMLAndJSONSpec()
+	if s.SpecProcessor == nil {
+		s.SpecProcessor, _ = s.parseWSDLSpec()
 	}
-	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseProtobufSpec()
+	if s.SpecProcessor == nil {
+		s.SpecProcessor, _ = s.parseProtobufSpec()
 	}
 }
 
-func (s *specResourceParser) createProcessorWithResourceType() error {
+func (s *SpecResourceParser) createProcessorWithResourceType() error {
 	var err error
 	switch s.resourceSpecType {
 	case Wsdl:
-		s.specProcessor, err = s.parseWSDLSpec()
+		s.SpecProcessor, err = s.parseWSDLSpec()
 	case Oas2:
-		s.specProcessor, err = s.parseOAS2Spec()
+		s.SpecProcessor, err = s.parseOAS2Spec()
 	case Oas3:
-		s.specProcessor, err = s.parseOAS3Spec()
+		s.SpecProcessor, err = s.parseOAS3Spec()
 	case Protobuf:
-		s.specProcessor, err = s.parseProtobufSpec()
+		s.SpecProcessor, err = s.parseProtobufSpec()
 	case AsyncAPI:
-		s.specProcessor, err = s.parseAsyncAPISpec()
+		s.SpecProcessor, err = s.parseAsyncAPISpec()
 	}
 	return err
 }
 
-func (s *specResourceParser) getSpecProcessor() specProcessor {
-	return s.specProcessor
+func (s *SpecResourceParser) getSpecProcessor() SpecProcessor {
+	return s.SpecProcessor
 }
 
-func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
+func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
 	err := yaml.Unmarshal(s.resourceSpec, &specDef)
@@ -113,7 +113,7 @@ func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
 	return nil, errors.New("Unknown yaml or json based specification")
 }
 
-func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 	def, err := wsdl.Unmarshal(s.resourceSpec)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
 	return newWsdlProcessor(def), nil
 }
 
-func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
+func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
 	swaggerObj := &oas2Swagger{}
 	// lowercase the byte array to ensure keys we care about are parsed
 	err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
@@ -134,10 +134,10 @@ func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 	if swaggerObj.Info.Title == "" {
 		return nil, errors.New("Invalid openapi 2.0 specification")
 	}
-	return newOas2Processor(swaggerObj), nil
+	return NewOas2Processor(swaggerObj), nil
 }
 
-func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
+func (s *SpecResourceParser) parseOAS3Spec() (SpecProcessor, error) {
 	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(s.resourceSpec)
 	if err != nil {
 		return nil, err
@@ -145,10 +145,10 @@ func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
 	if oas3Obj.OpenAPI == "" {
 		return nil, errors.New("Invalid openapi 3 specification")
 	}
-	return newOas3Processor(oas3Obj), nil
+	return NewOas3Processor(oas3Obj), nil
 }
 
-func (s *specResourceParser) parseAsyncAPISpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
 	err := yaml.Unmarshal(s.resourceSpec, &specDef)
@@ -165,7 +165,7 @@ func (s *specResourceParser) parseAsyncAPISpec() (specProcessor, error) {
 	return nil, errors.New("Invalid asyncapi specification")
 }
 
-func (s *specResourceParser) parseProtobufSpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 	reader := bytes.NewReader(s.resourceSpec)
 	parser := proto.NewParser(reader)
 	definition, err := parser.Parse()

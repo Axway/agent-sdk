@@ -1,7 +1,9 @@
 package apic
 
 import (
+	"encoding/json"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -10,19 +12,19 @@ import (
 
 var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "wss": true}
 
-type oas2SpecProcessor struct {
+type Oas2SpecProcessor struct {
 	spec *oas2Swagger
 }
 
-func newOas2Processor(oas2Spec *oas2Swagger) *oas2SpecProcessor {
-	return &oas2SpecProcessor{spec: oas2Spec}
+func NewOas2Processor(oas2Spec *oas2Swagger) *Oas2SpecProcessor {
+	return &Oas2SpecProcessor{spec: oas2Spec}
 }
 
-func (p *oas2SpecProcessor) getResourceType() string {
+func (p *Oas2SpecProcessor) getResourceType() string {
 	return Oas2
 }
 
-func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
+func (p *Oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	swaggerHostElements := strings.Split(p.spec.Host, ":")
 	host := swaggerHostElements[0]
@@ -55,6 +57,31 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 		endPoints = append(endPoints, endPoint)
 	}
 	return endPoints, nil
+}
+
+func (p *Oas2SpecProcessor) SetHostDetails(endpointURL string) error {
+	endpoint, err := url.Parse(endpointURL)
+	if err != nil {
+		return err
+	}
+
+	basePath := ""
+	if endpoint.Path == "" {
+		basePath = endpoint.Path
+	} else {
+		basePath = "/"
+	}
+
+	host := endpoint.Host
+	schemes := []string{endpoint.Scheme}
+	p.spec.Host = host
+	p.spec.BasePath = basePath
+	p.spec.Schemes = schemes
+	return nil
+}
+
+func (p *Oas2SpecProcessor) Marshal() ([]byte, error) {
+	return json.Marshal(p.spec)
 }
 
 func createEndpointDefinition(scheme, host string, port int, basePath string) EndpointDefinition {

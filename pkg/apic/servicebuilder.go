@@ -208,8 +208,8 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		return b.serviceBody, b.err
 	}
 
-	specParser := newSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
-	err := specParser.parse()
+	specParser := NewSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
+	err := specParser.Parse()
 	if err != nil {
 		return b.serviceBody, fmt.Errorf("failed to parse service specification for '%s': %s", b.serviceBody.APIName, err)
 	}
