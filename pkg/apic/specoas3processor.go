@@ -167,16 +167,20 @@ func ParseOAS3(spec []byte) (*openapi3.Swagger, error) {
 		return nil, err
 	}
 	if !strings.Contains(oas3Obj.OpenAPI, "3.") {
-		return nil, fmt.Errorf("Invalid openapi 3 specification. 'openapi' must be version '3.0' or above.")
+		return nil, fmt.Errorf(oasParseError("3", ("'openapi' key is invalid.")))
 	}
 	if oas3Obj.Paths == nil {
-		return nil, fmt.Errorf("Invalid openapi 3 specification. 'paths' key not found.")
+		return nil, fmt.Errorf(oasParseError("3", "'paths' key not found."))
 	}
 	if oas3Obj.Info == nil {
-		return nil, fmt.Errorf("Invalid openapi 3 specification. 'info' key not found.")
+		return nil, fmt.Errorf(oasParseError("3", "'info' key not found."))
 	}
 	if oas3Obj.Info.Title == "" {
-		return nil, fmt.Errorf("Invalid openapi 3 specification. 'info.title' key not found.")
+		return nil, fmt.Errorf(oasParseError("3", "'info.title' key not found."))
 	}
 	return oas3Obj, nil
+}
+
+func oasParseError(version string, msg string) string {
+	return fmt.Sprintf("invalid openapi %s specification. %s", version, msg)
 }

@@ -60,13 +60,13 @@ func ParseOAS2(spec []byte) (*Oas2Swagger, error) {
 		}
 	}
 	if !strings.Contains(swaggerObj.Swagger.Swagger, "2.") {
-		return nil, errors.New("Invalid openapi 2.0 specification. 'swagger' must be version '2.0'.")
+		return nil, errors.New(oasParseError("2.0", "'swagger' must be version '2.0'."))
 	}
 	if swaggerObj.Info.Title == "" {
-		return nil, errors.New("Invalid openapi 2.0 specification. Title not found.")
+		return nil, errors.New(oasParseError("2.0", "'info.title' key not found."))
 	}
 	if swaggerObj.Paths == nil {
-		return nil, errors.New("Invalid openapi 2.0 specification. 'paths' key not found.")
+		return nil, errors.New(oasParseError("2.0", "'paths' key not found."))
 	}
 	return swaggerObj, nil
 }
