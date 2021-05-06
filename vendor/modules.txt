@@ -68,13 +68,17 @@ github.com/fsnotify/fsnotify
 github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/matchers
-# github.com/getkin/kin-openapi v0.9.0
+# github.com/getkin/kin-openapi v0.59.0
 ## explicit
 github.com/getkin/kin-openapi/jsoninfo
 github.com/getkin/kin-openapi/openapi2
 github.com/getkin/kin-openapi/openapi3
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
+# github.com/go-openapi/jsonpointer v0.19.5
+github.com/go-openapi/jsonpointer
+# github.com/go-openapi/swag v0.19.5
+github.com/go-openapi/swag
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
 # github.com/google/go-cmp v0.5.0
@@ -109,6 +113,10 @@ github.com/konsorten/go-windows-terminal-sequences
 ## explicit
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
+# github.com/mailru/easyjson v0.7.1
+github.com/mailru/easyjson/buffer
+github.com/mailru/easyjson/jlexer
+github.com/mailru/easyjson/jwriter
 # github.com/mattn/go-colorable v0.0.9
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.3

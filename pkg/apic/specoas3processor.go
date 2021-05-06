@@ -78,17 +78,17 @@ func (p *Oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 	// Handle substitutions
 	for serverKey, serverVar := range server.Variables {
 		newURLs := []string{}
-		if serverVar.Default == nil {
+		if serverVar.Default == "" {
 			err := fmt.Errorf("Server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
 			log.Errorf(err.Error())
 			return "", nil, err
 		}
-		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
+		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default)
 		if len(serverVar.Enum) == 0 {
-			newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, serverVar.Default.(string))
+			newURLs = p.processURLSubstitutions(allURLs, newURLs, serverKey, serverVar.Default)
 		} else {
 			for _, enumVal := range serverVar.Enum {
-				newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, enumVal.(string))
+				newURLs = p.processURLSubstitutions(allURLs, newURLs, serverKey, enumVal)
 			}
 		}
 		allURLs = newURLs
@@ -97,7 +97,7 @@ func (p *Oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 	return defaultURL, allURLs, nil
 }
 
-func (p *Oas3SpecProcessor) processURLSubstutions(allURLs, newURLs []string, varName, varValue string) []string {
+func (p *Oas3SpecProcessor) processURLSubstitutions(allURLs, newURLs []string, varName, varValue string) []string {
 	for _, template := range allURLs {
 		newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", varName), varValue))
 	}
@@ -149,14 +149,16 @@ func (p *Oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 	return endPoints, nil
 }
 
-func (p *Oas3SpecProcessor) SetServers(hosts []string) openapi3.Servers {
+func (p *Oas3SpecProcessor) SetServers(hosts []string) {
 	var oas3Servers []*openapi3.Server
 	for _, s := range hosts {
 		oas3Servers = append(oas3Servers, &openapi3.Server{
 			URL: s,
 		})
 	}
-	return oas3Servers
+	if len(oas3Servers) > 0 {
+		p.spec.Servers = oas3Servers
+	}
 }
 
 func (p *Oas3SpecProcessor) Marshal() ([]byte, error) {

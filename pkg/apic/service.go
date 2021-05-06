@@ -109,7 +109,12 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	if serviceBody.Stage != "" {
 		if c.cfg.GetAppendDataPlaneToTitle() {
-			serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage
+			addDescription := fmt.Sprintf("StageName: %s", serviceBody.Stage)
+			if len(serviceBody.Description) > 0 {
+				serviceBody.Description = fmt.Sprintf("%s, %s", serviceBody.Description, addDescription)
+			} else {
+				serviceBody.Description = addDescription
+			}
 		}
 		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
 	} else if c.cfg.GetAppendDataPlaneToTitle() && c.cfg.GetDataPlaneName() != "" {

@@ -3,16 +3,22 @@ package openapi3
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/getkin/kin-openapi/jsoninfo"
+	"github.com/go-openapi/jsonpointer"
 )
 
 // Responses is specified by OpenAPI/Swagger 3.0 standard.
 type Responses map[string]*ResponseRef
 
+var _ jsonpointer.JSONPointable = (*Responses)(nil)
+
 func NewResponses() Responses {
-	return make(Responses, 8)
+	r := make(Responses)
+	r["default"] = &ResponseRef{Value: NewResponse().WithDescription("")}
+	return r
 }
 
 func (responses Responses) Default() *ResponseRef {
@@ -24,6 +30,9 @@ func (responses Responses) Get(status int) *ResponseRef {
 }
 
 func (responses Responses) Validate(c context.Context) error {
+	if len(responses) == 0 {
+		return errors.New("the responses object MUST contain at least one response code")
+	}
 	for _, v := range responses {
 		if err := v.Validate(c); err != nil {
 			return err
@@ -32,13 +41,25 @@ func (responses Responses) Validate(c context.Context) error {
 	return nil
 }
 
+func (responses Responses) JSONLookup(token string) (interface{}, error) {
+	ref, ok := responses[token]
+	if ok == false {
+		return nil, fmt.Errorf("invalid token reference: %q", token)
+	}
+
+	if ref != nil && ref.Ref != "" {
+		return &Ref{Ref: ref.Ref}, nil
+	}
+	return ref.Value, nil
+}
+
 // Response is specified by OpenAPI/Swagger 3.0 standard.
 type Response struct {
 	ExtensionProps
-	Description *string               `json:"description,omitempty" yaml:"description,omitempty"`
-	Headers     map[string]*HeaderRef `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Content     Content               `json:"content,omitempty" yaml:"content,omitempty"`
-	Links       map[string]*LinkRef   `json:"links,omitempty" yaml:"links,omitempty"`
+	Description *string `json:"description,omitempty" yaml:"description,omitempty"`
+	Headers     Headers `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Content     Content `json:"content,omitempty" yaml:"content,omitempty"`
+	Links       Links   `json:"links,omitempty" yaml:"links,omitempty"`
 }
 
 func NewResponse() *Response {
@@ -75,7 +96,7 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 
 func (response *Response) Validate(c context.Context) error {
 	if response.Description == nil {
-		return errors.New("A short description of the response is required")
+		return errors.New("a short description of the response is required")
 	}
 
 	if content := response.Content; content != nil {
