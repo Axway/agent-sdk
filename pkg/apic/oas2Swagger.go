@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Oas2Swagger Wrapper type for the openapi2.Swagger struct
 type Oas2Swagger struct {
 	openapi2.Swagger
 }
