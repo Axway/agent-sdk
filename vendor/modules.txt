@@ -68,7 +68,7 @@ github.com/fsnotify/fsnotify
 github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/matchers
-# github.com/getkin/kin-openapi v0.59.0
+# github.com/getkin/kin-openapi v0.61.0
 ## explicit
 github.com/getkin/kin-openapi/jsoninfo
 github.com/getkin/kin-openapi/openapi2

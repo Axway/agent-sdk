@@ -10,9 +10,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Oas2Swagger Wrapper type for the openapi2.Swagger struct
+// Oas2Swagger Wrapper type for the openapi2.T struct
 type Oas2Swagger struct {
-	openapi2.Swagger
+	openapi2.T
 }
 
 // UnmarshalYAML - custom unmarshaler for oas2 swagger to ensure keys, at the top level, are lowercased
@@ -42,10 +42,10 @@ func (o *Oas2Swagger) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// unmarshal new byte array
-	var newVal openapi2.Swagger
+	var newVal openapi2.T
 	yaml.Unmarshal(newBytes, &newVal)
 
-	o.Swagger = newVal
+	o.T = newVal
 	return nil
 }
 
@@ -60,7 +60,7 @@ func ParseOAS2(spec []byte) (*Oas2Swagger, error) {
 			return nil, err
 		}
 	}
-	if !strings.Contains(swaggerObj.Swagger.Swagger, "2.") {
+	if !strings.Contains(swaggerObj.T.Swagger, "2.") {
 		return nil, errors.New(oasParseError("2.0", "'swagger' must be version '2.0'."))
 	}
 	if swaggerObj.Info.Title == "" {

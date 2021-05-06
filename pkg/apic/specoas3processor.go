@@ -13,7 +13,7 @@ import (
 
 // oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
 type oas3SpecProcessor struct {
-	spec *openapi3.Swagger
+	spec *openapi3.T
 }
 
 // newOas3Processor parses a spec into an Openapi3 object, and then creates an oas3SpecProcessor.
@@ -148,7 +148,7 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 }
 
 // SetServers replaces the servers array on the Openapi3 object.
-func SetServers(hosts []string, spec *openapi3.Swagger) {
+func SetServers(hosts []string, spec *openapi3.T) {
 	var oas3Servers []*openapi3.Server
 	for _, s := range hosts {
 		oas3Servers = append(oas3Servers, &openapi3.Server{
@@ -161,8 +161,8 @@ func SetServers(hosts []string, spec *openapi3.Swagger) {
 }
 
 // ParseOAS3 converts a JSON or YAML spec into an OpenAPI3 object
-func ParseOAS3(spec []byte) (*openapi3.Swagger, error) {
-	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(spec)
+func ParseOAS3(spec []byte) (*openapi3.T, error) {
+	oas3Obj, err := openapi3.NewLoader().LoadFromData(spec)
 	if err != nil {
 		return nil, err
 	}
