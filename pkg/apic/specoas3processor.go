@@ -12,10 +12,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+// Oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
 type Oas3SpecProcessor struct {
 	spec *openapi3.Swagger
 }
 
+// NewOas3Processor parses a spec into an Openapi3 object, and then creates an Oas3SpecProcessor.
 func NewOas3Processor(spec []byte) (*Oas3SpecProcessor, error) {
 	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(spec)
 	if err != nil {
@@ -149,6 +151,7 @@ func (p *Oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 	return endPoints, nil
 }
 
+// SetServers replaces the servers array on the Openapi3 object.
 func (p *Oas3SpecProcessor) SetServers(hosts []string) {
 	var oas3Servers []*openapi3.Server
 	for _, s := range hosts {
@@ -161,6 +164,7 @@ func (p *Oas3SpecProcessor) SetServers(hosts []string) {
 	}
 }
 
+// Marshal Converts the Openapi3 struct back into bytes. Call this after modifying the content of the spec.
 func (p *Oas3SpecProcessor) Marshal() ([]byte, error) {
 	return json.Marshal(p.spec)
 }
