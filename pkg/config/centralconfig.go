@@ -112,6 +112,7 @@ type CentralConfig interface {
 	GetProxyURL() string
 	GetPollInterval() time.Duration
 	GetReportActivityFrequency() time.Duration
+	GetClientTimeout() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendDataPlaneToTitle() bool
 	SetDataPlaneName(name string)
@@ -145,6 +146,7 @@ type CentralConfiguration struct {
 	TLS                       TLSConfig          `config:"ssl"`
 	PollInterval              time.Duration      `config:"pollInterval"`
 	ReportActivityFrequency   time.Duration      `config:"reportActivityFrequency"`
+	ClientTimeout             time.Duration      `config:"clientTimeout"`
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublisUsageEvents         bool               `config:"publishUsage"`
@@ -165,6 +167,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		Auth:                      newAuthConfig(),
 		TLS:                       NewTLSConfig(),
 		PollInterval:              60 * time.Second,
+		ClientTimeout:             30 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendDataPlaneToTitle:    true,
@@ -389,6 +392,11 @@ func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
 	return c.ReportActivityFrequency
 }
 
+// GetClientTimeout - Returns the interval for http client timeouts
+func (c *CentralConfiguration) GetClientTimeout() time.Duration {
+	return c.ClientTimeout
+}
+
 // GetAppendDataPlaneToTitle - Returns the value of append data plane type to title attribute
 func (c *CentralConfiguration) GetAppendDataPlaneToTitle() bool {
 	return c.AppendDataPlaneToTitle
@@ -454,6 +462,7 @@ const (
 	pathTeam                     = "central.team"
 	pathPollInterval             = "central.pollInterval"
 	pathReportActivityFrequency  = "central.reportActivityFrequency"
+	pathClientTimeout            = "central.clientTimeout"
 	pathProxyURL                 = "central.proxyUrl"
 	pathAPIServerVersion         = "central.apiServerVersion"
 	pathAdditionalTags           = "central.additionalTags"
@@ -508,6 +517,9 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
+	if c.GetClientTimeout() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
+	}
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
@@ -540,6 +552,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
+	if c.GetClientTimeout() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
+	}
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -566,6 +581,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater.")
+	props.AddDurationProperty(pathClientTimeout, 30*time.Second, "The time interval at which the http client times out.")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -593,6 +609,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TenantID:                props.StringPropertyValue(pathTenantID),
 		PollInterval:            props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency: props.DurationPropertyValue(pathReportActivityFrequency),
+		ClientTimeout:           props.DurationPropertyValue(pathClientTimeout),
 		Environment:             props.StringPropertyValue(pathEnvironment),
 		TeamName:                props.StringPropertyValue(pathTeam),
 		AgentName:               props.StringPropertyValue(pathAgentName),
