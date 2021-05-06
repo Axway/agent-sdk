@@ -121,11 +121,11 @@ func (s *specResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 }
 
 func (s *specResourceParser) parseOAS2Spec() (SpecProcessor, error) {
-	return NewOas2Processor(s.resourceSpec)
+	return newOas2Processor(s.resourceSpec)
 }
 
 func (s *specResourceParser) parseOAS3Spec() (SpecProcessor, error) {
-	return NewOas3Processor(s.resourceSpec)
+	return newOas3Processor(s.resourceSpec)
 }
 
 func (s *specResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {

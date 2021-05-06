@@ -23,7 +23,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*Oas3SpecProcessor)
+	_, ok := specProcessor.(*oas3SpecProcessor)
 	assert.True(t, ok)
 
 	// YAML OAS2 specification
@@ -32,7 +32,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*Oas2SpecProcessor)
+	_, ok = specProcessor.(*oas2SpecProcessor)
 	assert.True(t, ok)
 
 	// JSON OAS2 specification
@@ -41,7 +41,7 @@ func TestSpecDiscovery(t *testing.T) {
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*Oas2SpecProcessor)
+	_, ok = specProcessor.(*oas2SpecProcessor)
 	assert.True(t, ok)
 
 	// WSDL specification
@@ -92,7 +92,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*Oas3SpecProcessor)
+	_, ok := specProcessor.(*oas3SpecProcessor)
 	assert.True(t, ok)
 
 	endPoints, err := specProcessor.getEndpoints()
@@ -192,7 +192,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok := specProcessor.(*Oas2SpecProcessor)
+	_, ok := specProcessor.(*oas2SpecProcessor)
 	assert.True(t, ok)
 
 	endPoints, err := specProcessor.getEndpoints()

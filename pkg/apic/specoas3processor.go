@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -12,28 +11,25 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
-type Oas3SpecProcessor struct {
+// oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
+type oas3SpecProcessor struct {
 	spec *openapi3.Swagger
 }
 
-// NewOas3Processor parses a spec into an Openapi3 object, and then creates an Oas3SpecProcessor.
-func NewOas3Processor(spec []byte) (*Oas3SpecProcessor, error) {
-	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(spec)
+// newOas3Processor parses a spec into an Openapi3 object, and then creates an oas3SpecProcessor.
+func newOas3Processor(spec []byte) (*oas3SpecProcessor, error) {
+	oas3Obj, err := ParseOAS3(spec)
 	if err != nil {
 		return nil, err
 	}
-	if oas3Obj.OpenAPI == "" {
-		return nil, fmt.Errorf("Invalid openapi 3 specification")
-	}
-	return &Oas3SpecProcessor{spec: oas3Obj}, nil
+	return &oas3SpecProcessor{spec: oas3Obj}, nil
 }
 
-func (p *Oas3SpecProcessor) getResourceType() string {
+func (p *oas3SpecProcessor) getResourceType() string {
 	return Oas3
 }
 
-func (p *Oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
+func (p *oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	if len(p.spec.Servers) > 0 {
 		var err error
@@ -49,7 +45,7 @@ func (p *Oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	return endPoints, nil
 }
 
-func (p *Oas3SpecProcessor) parseEndpoints(servers []*openapi3.Server) ([]EndpointDefinition, error) {
+func (p *oas3SpecProcessor) parseEndpoints(servers []*openapi3.Server) ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	for _, server := range servers {
 		// Add the URL string to the array
@@ -75,7 +71,7 @@ func (p *Oas3SpecProcessor) parseEndpoints(servers []*openapi3.Server) ([]Endpoi
 	return endPoints, nil
 }
 
-func (p *Oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
+func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allURLs []string) (string, []string, error) {
 	defaultURL := server.URL
 	// Handle substitutions
 	for serverKey, serverVar := range server.Variables {
@@ -99,14 +95,14 @@ func (p *Oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 	return defaultURL, allURLs, nil
 }
 
-func (p *Oas3SpecProcessor) processURLSubstitutions(allURLs, newURLs []string, varName, varValue string) []string {
+func (p *oas3SpecProcessor) processURLSubstitutions(allURLs, newURLs []string, varName, varValue string) []string {
 	for _, template := range allURLs {
 		newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", varName), varValue))
 	}
 	return newURLs
 }
 
-func (p *Oas3SpecProcessor) parseURL(urlStr string) (*url.URL, error) {
+func (p *oas3SpecProcessor) parseURL(urlStr string) (*url.URL, error) {
 	urlObj, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -117,7 +113,7 @@ func (p *Oas3SpecProcessor) parseURL(urlStr string) (*url.URL, error) {
 	return urlObj, err
 }
 
-func (p *Oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndpointDefinition, error) {
+func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []string) ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	for _, urlStr := range allURLs {
 		if urlStr == "" {
@@ -152,7 +148,7 @@ func (p *Oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 }
 
 // SetServers replaces the servers array on the Openapi3 object.
-func (p *Oas3SpecProcessor) SetServers(hosts []string) {
+func SetServers(hosts []string, spec *openapi3.Swagger) {
 	var oas3Servers []*openapi3.Server
 	for _, s := range hosts {
 		oas3Servers = append(oas3Servers, &openapi3.Server{
@@ -160,11 +156,27 @@ func (p *Oas3SpecProcessor) SetServers(hosts []string) {
 		})
 	}
 	if len(oas3Servers) > 0 {
-		p.spec.Servers = oas3Servers
+		spec.Servers = oas3Servers
 	}
 }
 
-// Marshal Converts the Openapi3 struct back into bytes. Call this after modifying the content of the spec.
-func (p *Oas3SpecProcessor) Marshal() ([]byte, error) {
-	return json.Marshal(p.spec)
+// ParseOAS3 converts a JSON or YAML spec into an OpenAPI3 object
+func ParseOAS3(spec []byte) (*openapi3.Swagger, error) {
+	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(spec)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.Contains(oas3Obj.OpenAPI, "3.") {
+		return nil, fmt.Errorf("Invalid openapi 3 specification. 'openapi' must be version '3.0' or above.")
+	}
+	if oas3Obj.Paths == nil {
+		return nil, fmt.Errorf("Invalid openapi 3 specification. 'paths' key not found.")
+	}
+	if oas3Obj.Info == nil {
+		return nil, fmt.Errorf("Invalid openapi 3 specification. 'info' key not found.")
+	}
+	if oas3Obj.Info.Title == "" {
+		return nil, fmt.Errorf("Invalid openapi 3 specification. 'info.title' key not found.")
+	}
+	return oas3Obj, nil
 }
