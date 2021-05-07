@@ -11,7 +11,11 @@ import (
 const apiServerTimeFormat = "2006-01-02T15:04:05.000-0700"
 
 // getTimestamp - Returns current timestamp formatted for API Server
+// if the local status exists, return the local timestamp, otherwise return Now()
 func getTimestamp() string {
+	if statusUpdate != nil {
+		return getLocalActivityTime().Format(apiServerTimeFormat)
+	}
 	return time.Now().Format(apiServerTimeFormat)
 }
 
