@@ -42,7 +42,7 @@ func (su *periodicStatusUpdate) Execute() error {
 		log.Error(errors.ErrPeriodicCheck.FormatError("periodic status updater"))
 		return err
 	}
-	// if the last timestamp for an event has changed, update the status
+	// if the last timestamp for an event has changed, update the resource
 	if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
 		log.Tracef("Activity change detected at %s, from previous activity at %s, updating status", su.currentActivityTime, su.previousActivityTime)
 		UpdateStatus(AgentRunning, "")
@@ -51,7 +51,7 @@ func (su *periodicStatusUpdate) Execute() error {
 	return nil
 }
 
-//StartPeriodicStatusUpdate - starts a job that runs the periodic status updates
+// StartPeriodicStatusUpdate - starts a job that runs the periodic status updates
 func StartPeriodicStatusUpdate() {
 	interval := agent.cfg.GetReportActivityFrequency()
 	statusUpdate = &periodicStatusUpdate{}
@@ -62,7 +62,7 @@ func StartPeriodicStatusUpdate() {
 	}
 }
 
-//runStatusUpdateCheck - returns an error if agent name is blank
+// runStatusUpdateCheck - returns an error if agent name is blank
 func runStatusUpdateCheck() error {
 	if agent.cfg.GetAgentName() == "" {
 		return errors.ErrStartingPeriodicStatusUpdate
@@ -70,7 +70,11 @@ func runStatusUpdateCheck() error {
 	return nil
 }
 
-//UpdateLocalActivityTime - updates the local activity timestamp for the event to compare against
+// UpdateLocalActivityTime - updates the local activity timestamp for the event to compare against
 func UpdateLocalActivityTime() {
 	statusUpdate.currentActivityTime = time.Now()
+}
+
+func getLocalActivityTime() time.Time {
+	return statusUpdate.currentActivityTime
 }
