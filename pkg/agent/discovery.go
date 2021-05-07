@@ -128,7 +128,7 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 }
 
-// RegisterDeleteServiceChecker - Registers callback for checking if the service should be deleted
-func RegisterDeleteServiceChecker(checker DeleteServiceChecker) {
-	agent.deleteServiceChecker = checker
+// RegisterDeleteServiceValidator - Registers callback for validating if the service should be deleted
+func RegisterDeleteServiceValidator(validator DeleteServiceValidator) {
+	agent.deleteServiceValidator = validator
 }

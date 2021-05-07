@@ -93,8 +93,8 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 }
 
 // deleteService
-func (c *ServiceClient) deleteService(externalID string) error {
-	svc, err := c.getAPIServiceByAttribute(externalID, "")
+func (c *ServiceClient) deleteServiceByAPIID(externalAPIID string) error {
+	svc, err := c.getAPIServiceByAttribute(externalAPIID, "")
 	if err != nil {
 		return err
 	}
