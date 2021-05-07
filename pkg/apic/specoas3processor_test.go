@@ -19,15 +19,6 @@ var petstore3Json = `{
 	]
 }`
 
-var petstore3Yaml = `---
-openapi: 3.0.1
-info:
-  title: petstore3
-paths: {}
-servers:
-- url: https://google.com
-`
-
 func TestParseOAS3(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -38,11 +29,6 @@ func TestParseOAS3(t *testing.T) {
 			name:     "Should parse the OAS3 spec as json",
 			hasError: false,
 			spec:     petstore3Json,
-		},
-		{
-			name:     "Should parse the OAS3 spec as yaml",
-			hasError: false,
-			spec:     petstore3Yaml,
 		},
 		{
 			name:     "Should fail to parse the spec when the 'openapi' key is incorrect",

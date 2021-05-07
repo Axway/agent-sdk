@@ -16,13 +16,8 @@ type oas3SpecProcessor struct {
 	spec *openapi3.T
 }
 
-// newOas3Processor parses a spec into an Openapi3 object, and then creates an oas3SpecProcessor.
-func newOas3Processor(spec []byte) (*oas3SpecProcessor, error) {
-	oas3Obj, err := ParseOAS3(spec)
-	if err != nil {
-		return nil, err
-	}
-	return &oas3SpecProcessor{spec: oas3Obj}, nil
+func newOas3Processor(oas3Obj *openapi3.T) *oas3SpecProcessor {
+	return &oas3SpecProcessor{spec: oas3Obj}
 }
 
 func (p *oas3SpecProcessor) getResourceType() string {

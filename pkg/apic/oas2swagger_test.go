@@ -19,17 +19,6 @@ var spec = `{
 	"paths": {}
 }`
 
-var specYaml = `---
-basePath: "/v2"
-host: host.com
-schemes:
-- http
-swagger: '2.0'
-info:
-  title: petstore2
-paths: {}
-`
-
 func TestParseOAS2(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -40,11 +29,6 @@ func TestParseOAS2(t *testing.T) {
 			name:     "Should parse the OAS2 spec as json",
 			hasError: false,
 			spec:     spec,
-		},
-		{
-			name:     "Should parse the OAS2 spec as yaml",
-			hasError: false,
-			spec:     specYaml,
 		},
 		{
 			name:     "Should fail to parse the spec when the 'swagger' key is incorrect",
@@ -76,12 +60,14 @@ func TestParseOAS2(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		_, err := ParseOAS2([]byte(tc.spec))
-		if tc.hasError == false {
-			assert.Nil(t, err)
-		} else {
-			assert.NotNil(t, err)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ParseOAS2([]byte(tc.spec))
+			if tc.hasError == false {
+				assert.Nil(t, err)
+			} else {
+				assert.NotNil(t, err)
+			}
+		})
 	}
 }
 

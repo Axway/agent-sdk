@@ -12,16 +12,11 @@ var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "
 
 // oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
 type oas2SpecProcessor struct {
-	spec *Oas2Swagger
+	spec *oas2Swagger
 }
 
-// newOas2Processor parses a spec into an Openapi2 object, and then creates an oas2SpecProcessor.
-func newOas2Processor(spec []byte) (*oas2SpecProcessor, error) {
-	swaggerObj, err := ParseOAS2(spec)
-	if err != nil {
-		return nil, err
-	}
-	return &oas2SpecProcessor{spec: swaggerObj}, nil
+func newOas2Processor(oas2Spec *oas2Swagger) *oas2SpecProcessor {
+	return &oas2SpecProcessor{spec: oas2Spec}
 }
 
 func (p *oas2SpecProcessor) getResourceType() string {
