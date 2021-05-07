@@ -298,6 +298,17 @@ func TestDeleteConsumerInstance(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
+	// client, httpClient := GetTestServiceClient()
+}
+
+func TestDeleteServiceByAPIID(t *testing.T) {
+	client, httpClient := GetTestServiceClient()
+	httpClient.ResponseCode = http.StatusOK
+	err := client.deleteServiceByAPIID("12345")
+	assert.Nil(t, err)
+}
+
 func TestGetConsumerInstanceByID(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
@@ -491,5 +502,4 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Label)
 	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
 	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
-
 }
