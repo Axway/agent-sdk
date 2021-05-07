@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -97,6 +98,9 @@ func (c *ServiceClient) deleteServiceByAPIID(externalAPIID string) error {
 	svc, err := c.getAPIServiceByAttribute(externalAPIID, "")
 	if err != nil {
 		return err
+	}
+	if svc == nil {
+		return errors.New("no API Service found for externalAPIID " + externalAPIID)
 	}
 	_, err = c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+svc.Name, nil)
 	if err != nil {

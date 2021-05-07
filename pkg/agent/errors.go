@@ -5,4 +5,7 @@ import "github.com/Axway/agent-sdk/pkg/util/errors"
 // Errors hit when validating AMPLIFY Central connectivity
 var (
 	ErrUnsupportedAgentType = errors.New(1000, "unsupported agent type")
+
+	ErrDeletingService     = errors.Newf(1161, "error deleting API Service for catalog item %s from AMPLIFY Central")
+	ErrDeletingCatalogItem = errors.Newf(1162, "error deleting catalog item %s from AMPLIFY Central")
 )
