@@ -187,24 +187,7 @@ func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			if shouldDeleteService(externalAPIID, externalAPIStage) {
-				log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				// deleting the service will delete all associated resources, including the consumerInstance
-				err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
-				if err != nil {
-					log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(consumerInstance.Title))
-				} else {
-					log.Infof("Deleted API Service for catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				}
-			} else {
-				log.Infof("API no longer exists on the dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
-				if err != nil {
-					log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(consumerInstance.Title))
-				} else {
-					log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
-				}
-			}
+			deleteConsumerInstanceOrService(consumerInstance, externalAPIID, externalAPIStage)
 		}
 	}
 }
@@ -216,6 +199,27 @@ func shouldDeleteService(apiID, stage string) bool {
 	}
 	// let the agent decide if service should be deleted
 	return agent.deleteServiceValidator(apiID, stage)
+}
+
+func deleteConsumerInstanceOrService(consumerInstance *v1alpha1.ConsumerInstance, externalAPIID, externalAPIStage string) {
+	if shouldDeleteService(externalAPIID, externalAPIStage) {
+		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from AMPLIFY Central", consumerInstance.Title)
+		// deleting the service will delete all associated resources, including the consumerInstance
+		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
+		if err != nil {
+			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(consumerInstance.Title))
+		} else {
+			log.Infof("Deleted API Service for catalog item %s from AMPLIFY Central", consumerInstance.Title)
+		}
+	} else {
+		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s from AMPLIFY Central", consumerInstance.Title)
+		err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+		if err != nil {
+			log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(consumerInstance.Title))
+		} else {
+			log.Infof("Deleted catalog item %s from AMPLIFY Central", consumerInstance.Title)
+		}
+	}
 }
 
 func addItemToAPICache(apiService apiV1.ResourceInstance) string {
