@@ -1,9 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
-	"errors"
-	"net/url"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
@@ -43,50 +40,11 @@ func (o *oas2Swagger) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	// unmarshal new byte array
 	var newVal openapi2.T
-	yaml.Unmarshal(newBytes, &newVal)
-
-	o.T = newVal
-	return nil
-}
-
-// ParseOAS2 converts a JSON spec into an OpenAPI2 object
-func ParseOAS2(spec []byte) (*openapi2.T, error) {
-	swaggerObj := &openapi2.T{}
-	err := json.Unmarshal(spec, swaggerObj)
-	if err != nil {
-		return nil, err
-	}
-
-	if !strings.Contains(swaggerObj.Swagger, "2.") {
-		return nil, errors.New(oasParseError("2.0", "'swagger' must be version '2.0'."))
-	}
-	if swaggerObj.Info.Title == "" {
-		return nil, errors.New(oasParseError("2.0", "'info.title' key not found."))
-	}
-	if swaggerObj.Paths == nil {
-		return nil, errors.New(oasParseError("2.0", "'paths' key not found."))
-	}
-	return swaggerObj, nil
-}
-
-// SetHostDetails Updates the Host, BasePath, and Schemes fields on an oas2Swagger object
-func SetHostDetails(spec *openapi2.T, endpointURL string) error {
-	endpoint, err := url.Parse(endpointURL)
+	err = yaml.Unmarshal(newBytes, &newVal)
 	if err != nil {
 		return err
 	}
 
-	basePath := ""
-	if endpoint.Path == "" {
-		basePath = "/"
-	} else {
-		basePath = endpoint.Path
-	}
-
-	host := endpoint.Host
-	schemes := []string{endpoint.Scheme}
-	spec.Host = host
-	spec.BasePath = basePath
-	spec.Schemes = schemes
+	o.T = newVal
 	return nil
 }

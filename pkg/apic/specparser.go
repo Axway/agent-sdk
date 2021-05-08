@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/Axway/agent-sdk/pkg/util/oas"
 
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
 	"github.com/emicklei/proto"
@@ -140,12 +140,9 @@ func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 }
 
 func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
-	oas3Obj, err := openapi3.NewLoader().LoadFromData(s.resourceSpec)
+	oas3Obj, err := oas.ParseOAS3(s.resourceSpec)
 	if err != nil {
 		return nil, err
-	}
-	if oas3Obj.OpenAPI == "" {
-		return nil, errors.New("Invalid openapi 3 specification")
 	}
 	return newOas3Processor(oas3Obj), nil
 }
