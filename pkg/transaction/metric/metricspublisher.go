@@ -81,6 +81,7 @@ func (pj *publisher) publishToLighthouse(event LighthouseUsageEvent) {
 	response, err := pj.apiClient.Send(request)
 	if err != nil {
 		log.Error("Error in sending usage/metric event: ", err.Error())
+		return
 	}
 	if response.Code >= 400 {
 		resBody := string(response.Body)
