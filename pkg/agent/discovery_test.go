@@ -16,53 +16,53 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockSvcClient struct {
+type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
-func (m *MockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
-func (m *MockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
+func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
-func (m *MockSvcClient) RegisterSubscriptionWebhook() error { return nil }
-func (m *MockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
+func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
+func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
-func (m *MockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
+func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
 	return nil
 }
-func (m *MockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
-func (m *MockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
+func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
+func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
-func (m *MockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
-func (m *MockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
+func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
+func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
 	return nil
 }
-func (m *MockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
+func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
-func (m *MockSvcClient) GetUserEmailAddress(ID string) (string, error) { return "", nil }
-func (m *MockSvcClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]apic.CentralSubscription, error) {
+func (m *mockSvcClient) GetUserEmailAddress(ID string) (string, error) { return "", nil }
+func (m *mockSvcClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]apic.CentralSubscription, error) {
 	return nil, nil
 }
-func (m *MockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
+func (m *mockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
 	return nil, nil
 }
-func (m *MockSvcClient) Healthcheck(name string) *hc.Status {
+func (m *mockSvcClient) Healthcheck(name string) *hc.Status {
 	return &hc.Status{Result: hc.OK}
 }
 
 // UpdateSubscriptionDefinitionPropertiesForCatalogItem -
-func (m *MockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema apic.SubscriptionSchema) error {
+func (m *mockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema apic.SubscriptionSchema) error {
 	return nil
 }
 
-func (m *MockSvcClient) GetCatalogItemName(ID string) (string, error) { return "", nil }
-func (m *MockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "", nil }
+func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
-func (m *MockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
 var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName
@@ -144,7 +144,7 @@ func TestDiscoveryCache(t *testing.T) {
 	apicClient := agent.apicClient
 	var apiSvc v1alpha1.APIService
 	apiSvc.FromInstance(&apiSvc2)
-	agent.apicClient = &MockSvcClient{apiSvc: &apiSvc}
+	agent.apicClient = &mockSvcClient{apiSvc: &apiSvc}
 	StartPeriodicStatusUpdate()
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
