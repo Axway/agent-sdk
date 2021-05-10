@@ -52,7 +52,7 @@ func ParseOAS3(spec []byte) (*openapi3.T, error) {
 	return oas3Obj, nil
 }
 
-// SetOAS2HostDetails Updates the Host, BasePath, and Schemes fields on an oas2Swagger object
+// SetOAS2HostDetails Updates the Host, BasePath, and Schemes fields on an OpenAPI2 object.
 func SetOAS2HostDetails(spec *openapi2.T, endpointURL string) error {
 	endpoint, err := url.Parse(endpointURL)
 	if err != nil {
@@ -74,7 +74,7 @@ func SetOAS2HostDetails(spec *openapi2.T, endpointURL string) error {
 	return nil
 }
 
-// SetOAS3Servers replaces the servers array on the Openapi3 object.
+// SetOAS3Servers replaces the servers array on the OpenAPI3 object.
 func SetOAS3Servers(hosts []string, spec *openapi3.T) {
 	var oas3Servers []*openapi3.Server
 	for _, s := range hosts {
