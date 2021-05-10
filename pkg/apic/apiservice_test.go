@@ -339,7 +339,7 @@ func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
 	assert.Nil(t, instances)
 
 	// not found
-	httpClient.SetResponse("./testdata/consumerinstanceemptylist.json", http.StatusOK)
+	httpClient.SetResponse("./testdata/emptylist.json", http.StatusOK)
 	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
 	assert.NotNil(t, err)
 	assert.Nil(t, instances)
@@ -360,7 +360,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 	// empty list - not ok
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice-emptylist.json", // for call to get the service
+			FileName: "./testdata/emptylist.json", // for call to get the service
 			RespCode: http.StatusOK,
 		},
 	})
