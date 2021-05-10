@@ -13,16 +13,16 @@
 |      | 1100-1299 - for apic package errors                                                                         |                                                     |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                           |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery                        |
-| 1102 | could not find specified team in AMPLIFY Central, check CENTRAL_TEAM                                        | pkg/apic/ErrTeamNotFound                            |
-| 1110 | connection to AMPLIFY Central failed, possibly network                                                      | pkg/apic/ErrNetwork                                 |
-| 1120 | request to AMPLIFY Central failed, could be bad value for CENTRAL_ENVIRONMENT                               | pkg/apic/ErrRequestQuery                            |
+| 1102 | could not find specified team in Amplify Central, check CENTRAL_TEAM                                        | pkg/apic/ErrTeamNotFound                            |
+| 1110 | connection to Amplify Central failed, possibly network                                                      | pkg/apic/ErrNetwork                                 |
+| 1120 | request to Amplify Central failed, could be bad value for CENTRAL_ENVIRONMENT                               | pkg/apic/ErrRequestQuery                            |
 | 1130 | request to get authentication token failed, possibly network or CENTAL_AUTH config                          | pkg/apic/ErrAuthenticationCall                      |
-| 1131 | token retrieved but was invalid on request to AMPLIFY Central, likely CENTRAL_AUTH config                   | pkg/apic/ErrAuthentication                          |
+| 1131 | token retrieved but was invalid on request to Amplify Central, likely CENTRAL_AUTH config                   | pkg/apic/ErrAuthentication                          |
 | 1140 | couldn't find a subscriber email address based on the ID in the subscription event                          | pkg/apic/ErrNoAddressFound                          |
-| 1141 | couldn't contact AMPLIFY Central for subscription, possible network error                                   | pkg/apic/ErrSubscriptionQuery                       |
-| 1142 | couldn't get subscription data from AMPLIFY Central, check network and CENTRAL_AUTH                         | pkg/apic/ErrSubscriptionResp                        |
+| 1141 | couldn't contact Amplify Central for subscription, possible network error                                   | pkg/apic/ErrSubscriptionQuery                       |
+| 1142 | couldn't get subscription data from Amplify Central, check network and CENTRAL_AUTH                         | pkg/apic/ErrSubscriptionResp                        |
 | 1143 | couldn't create or update subscription schema data, possible Network error                                  | pkg/apic/ErrSubscriptionSchemaCreate                |
-| 1144 | unexpected response when managing subscription schema on AMPLIFY Central, check network and CENTRAL_AUTH    | pkg/apic/ErrSubscriptionSchemaResp                  |
+| 1144 | unexpected response when managing subscription schema on Amplify Central, check network and CENTRAL_AUTH    | pkg/apic/ErrSubscriptionSchemaResp                  |
 | 1145 | unable to create webhook                                                                                    | pkg/apic/ErrCreateWebhook                           |
 | 1146 | unable to create secret                                                                                     | pkg/apic/ErrCreateSecret                            |
 | 1147 | error parsing filter in configuration. Syntax error                                                         | pkg/filter/ErrFilterConfiguration                   |
@@ -33,13 +33,13 @@
 | 1152 | error parsing filter in configuration. Invalid selector expression                                          | pkg/filter/ErrFilterSelectorExpr                    |
 | 1153 | error parsing filter in configuration. Invalid operator                                                     | pkg/filter/ErrFilterOperator                        |
 | 1154 | error parsing filter in configuration. Unrecognized condition                                               | pkg/filter/ErrFilterCondition                       |
-| 1155 | error getting subscription definition properties in AMPLIFY Central                                         | pkg/apic/ErrGetSubscriptionDefProperties            |
-| 1156 | error updating subscription definition properties in AMPLIFY Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties         |
+| 1155 | error getting subscription definition properties in Amplify Central                                         | pkg/apic/ErrGetSubscriptionDefProperties            |
+| 1156 | error updating subscription definition properties in Amplify Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties         |
 | 1157 | error getting catalog item API server info properties                                                       | pkg/apic/ErrGetCatalogItemServerInfoProperties      |
 | 1158 | subscription manager is not in a running state                                                              | pkg/apic/ErrSubscriptionManagerDown                 |
 | 1160 | error getting endpoints for the API specification                                                           | pkg/apic/ErrSetSpecEndPoints                        |
-| 1161 | error deleting API Service for catalog item in AMPLIFY Central                                              | pkg/agent/ErrDeletingService                         |
-| 1162 | error deleting catalog item in AMPLIFY Central                                                              | pkg/agent/ErrDeletingCatalogItem                     |
+| 1161 | error deleting API Service for catalog item in Amplify Central                                              | pkg/agent/ErrDeletingService                         |
+| 1162 | error deleting catalog item in Amplify Central                                                              | pkg/agent/ErrDeletingCatalogItem                     |
 |      | 1300-1399 - for subscription notification errors                                                            |                                                     |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification              |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications           |
