@@ -4,7 +4,7 @@ import "time"
 
 const defaultCheckInterval = 30 * time.Second
 
-// HealthChecker - info about the service
+// healthChecker - info about the service
 type healthChecker struct {
 	Name       string                  `json:"name"`
 	Version    string                  `json:"version,omitempty"`
@@ -28,7 +28,7 @@ type statusCheck struct {
 	checker  CheckStatus
 }
 
-// StatusLevel - the level of the status of the healtheck
+// StatusLevel - the level of the status of the healthcheck
 type StatusLevel string
 
 const (
@@ -41,4 +41,5 @@ const (
 // CheckStatus - the format expected for the method to get the Healthcheck status
 type CheckStatus func(name string) *Status
 
+// RegisterHealth type for registering a healthcheck function
 type RegisterHealth func(name, endpoint string, check CheckStatus) (string, error)
