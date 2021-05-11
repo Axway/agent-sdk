@@ -50,6 +50,11 @@ func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APISe
 	return apiSvc, nil
 }
 
+// DeleteServiceByAPIID -
+func (c *ServiceClient) DeleteServiceByAPIID(externalAPIID string) error {
+	return c.deleteServiceByAPIID(externalAPIID)
+}
+
 // RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
 // per environment
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
@@ -87,6 +92,11 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID((consumerInstanceID))
+}
+
+// GetConsumerInstancesByExternalAPIID -
+func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+	return c.getConsumerInstancesByExternalAPIID(externalAPIID)
 }
 
 // GetSubscriptionsForCatalogItem -

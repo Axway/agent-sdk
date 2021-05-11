@@ -1,9 +1,9 @@
 # Building Discovery Agent
 
-The AMPLIFY Central Discovery Agents can be used for discovering APIs managed by external API Gateway and publish API Server resources to AMPLIFY Central. The Agent SDK helps in building discovery agent by providing the necessary config, command line parser and interfaces to manage the communication with AMPLIFY Central. 
+The Amplify Central Discovery Agents can be used for discovering APIs managed by external API Gateway and publish API Server resources to Amplify Central. The Agent SDK helps in building discovery agent by providing the necessary config, command line parser and interfaces to manage the communication with Amplify Central. 
 
 ### Central Configuration
-The SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with AMPLIFY Central. In addition, it is also used to setup subscription processing, see [Processing subscription](#processing-subscription)
+The SDK provides a predefined configuration that can be set up based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. In addition, it is also used to set up subscription processing, see [Processing subscription](#processing-subscription)
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
@@ -11,13 +11,13 @@ Below is the list of Central configuration properties in YAML and their correspo
 | YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
 |--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)                                                                                                                                                          |
-| central.url                    | CENTRAL_URL                    | The URL to the AMPLIFY Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
-| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from AMPLIFY Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
-| central.team                   | CENTRAL_TEAM                   | The name of the team in AMPLIFY Central that all APIs will be linked to. Locate this at AMPLIFY Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
-| central.environment            | CENTRAL_ENVIRONMENT            | Name of the AMPLIFY Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
+| central.url                    | CENTRAL_URL                    | The URL to the Amplify Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
+| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
+| central.team                   | CENTRAL_TEAM                   | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
+| central.environment            | CENTRAL_ENVIRONMENT            | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
 | central.additionalTags         | CENTRAL_ADDITIONALTAGS         | Additional tag names to publish while publishing the API. Helpful to identify the API source. It is a comma separated list.                                                                                                                                                                                               |
-| central.auth.url               | CENTRAL_AUTH_URL               | The AMPLIFY login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
-| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in AMPLIFY Central. Locate this at AMPLIFY Central > Access > Service Accounts > client Id.                                                                                                                                                               |
+| central.auth.url               | CENTRAL_AUTH_URL               | The Amplify login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                               |
 | central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
 | central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
 | central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
@@ -120,7 +120,7 @@ type TLSConfig interface {
 
 ### Agent Configuration
 
-The agent can define a struct that holds the configuration it needs specifically to communicate with the external API Gateway. The agent config struct properties can be bound to command line processor to setup config, see [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
+The agent can define a struct that holds the configuration it needs specifically to communicate with the external API Gateway. The agent config struct properties can be bound to command line processor to set up config, see [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
 
 
 #### Sample Agent configuration definition
@@ -191,7 +191,7 @@ azure:
 
 ### Setting up command line parser and binding agent config
 
-Agent SDK internally uses [Cobra](https://github.com/spf13/cobra) for providing command line processing and [Viper](https://github.com/spf13/viper) to bind the configuration with command line processing and YAML based config file. The Agent SDK exposes an  interface for predefined configured root command for Agent that setup Central Configuration. The Agent root command allows to hook in the main routine for agent execution and a callback method that get called on initialization to setup agent specific config. The Agent SDK root command also allows the agent to setup command line flags and properties that are agent specific and bind these flag/properties to agent config.
+Agent SDK internally uses [Cobra](https://github.com/spf13/cobra) for providing command line processing and [Viper](https://github.com/spf13/viper) to bind the configuration with command line processing and YAML based config file. The Agent SDK exposes an  interface for predefined configured root command for Agent that set up Central Configuration. The Agent root command allows to hook in the main routine for agent execution and a callback method that get called on initialization to set up agent specific config. The Agent SDK root command also allows the agent to set up command line flags and properties that are agent specific and bind these flag/properties to agent config.
 
 #### Sample of agent command initialization and agent config setup
 
@@ -233,7 +233,7 @@ func run() error {
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
 	rootProps := RootCmd.GetProperties()
-	// Parse the config from bound properties and setup agent config
+	// Parse the config from bound properties and set up agent config
 	azConfig = &config.AzureConfig{
 		TenantID:          rootProps.StringPropertyValue("azure.tenantID"),
 		ClientID:          rootProps.StringPropertyValue("azure.clientID"),
@@ -253,7 +253,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 ```
 
 ### Filtering
-The Agent SDK provides github.com/Axway/agent-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to AMPLIFY Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
+The Agent SDK provides github.com/Axway/agent-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to Amplify Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
 The conditional expression must have "tag" as the prefix/selector in the symbol name. For e.g.
 
 ```
@@ -312,17 +312,17 @@ tag.MatchRegEx("(some){1}")
 
 ### Processing Discovery
 
-The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to AMPLIFY Central the following properties are needed.
+The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to Amplify Central the following properties are needed.
 
 | API Service property | Description                                                                                                                       |
 |----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
 | ID                   | ID of the API.                                                                                                                    |
 | PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                       |
-| Title                | Name of the API that will be used as AMPLIFY Central Catalog name.                                                                |
+| Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                |
 | Description:         | A brief summary about the API.                                                                                                    |
 | Version:             | Version of the API.                                                                                                               |
 | URL:                 | Endpoint for the API service.                                                                                                     |
-| Auth policy:         | Authentication/Authorization policies applied to API. For now, AMPLIFY Central supports passthrough, api key and oauth.           |
+| Auth policy:         | Authentication/Authorization policies applied to API. For now, Amplify Central supports passthrough, api key and oauth.           |
 | Specification:       | The API service specification. The Agent SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured. |
 | Documentation:       | Documentation for the API.                                                                                                        |
 | Tags:                | List of resource tags.                                                                                                            |
@@ -333,7 +333,7 @@ The agent can discover APIs in external API Gateway based on the capability it p
 | Attributes           | List of string key-value pairs that will be set on the resources created by the agent.                                            |
 | Endpoints            | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                        |
 
-To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to AMPLIFY Central. 
+To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to Amplify Central. 
 
 In case where the *SetResourceType* method is not explicitly invoked, the builder uses the spec content to discovers the type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").
 
@@ -416,26 +416,26 @@ func (a *AzureClient) getAzureAPIAuthPolicy(azAPI apim.APIContract) string {
 
 
 ### Publishing changes to Central
-The Agent can use the service body definition built by earlier setup and call *PublishAPI* method in *agent* package to publish the discovered API to AMPLIFY Central. The method uses the service body to create following API server resources
+The Agent can use the service body definition built by earlier set up and call the *PublishAPI* method in the *agent* package to publish the discovered API to Amplify Central. The method uses the service body to create following API server resources
 - APIService: Resource representing an Amplify Central API Service.
 - APIServiceRevision: Resource representing an Amplify Central API Service Revision
 - APIServiceInstance: Resource representing the deployed instance of the revision
-- ConsumerInstance: Represents the resources holding information about publishing assets to AMPLIFY Unified Catalog
+- ConsumerInstance: Represents the resources holding information about publishing assets to Amplify Unified Catalog
 
-When the *PublishAPI* is called for the first time for the discovered API, each of the above mentioned resources gets created with generated names. On subsequent calls to the method for the same discovered API, the *APIService* and *ConsumerInstance* resources are updated, while a new resource for *APIServiceRevision* is created to represent the updated revision of the API. For update, the *APIServiceInstance* resources is updated unless the endpoint in the service definitions are changed which triggers a creation of a new *APIServiceInstance* resource.
+When *PublishAPI* is called for the first time for the discovered API, each of the above mentioned resources gets created with generated names. On subsequent calls to the method for the same discovered API, the *APIService* and *ConsumerInstance* resources are updated, while a new resource for *APIServiceRevision* is created to represent the updated revision of the API. For update, the *APIServiceInstance* resources is updated unless the endpoint in the service definitions are changed which triggers a creation of a new *APIServiceInstance* resource.
 
 The *PublishAPI* method while creating/updating the API server resources set the following attributes.
 - externalAPIID: Holds the ID of API discovered from remote API Gateway
 - externalAPIName: Holds the name of the API discovered from remote API Gateway
 - createdBy: Holds the name of the Agent creating the resource
 
-#### Sample of publishing API to AMPLIFY Central
+#### Sample of publishing API to Amplify Central
 ```
 	serviceBody, err := buildServiceBody(azAPI, exportResponse.Body)
 	...
 	err = agent.PublishAPI(serviceBody)
 	if err != nil {
-		log.Fatalf("Error in publishing API to AMPLIFY Central: %s", err)
+		log.Fatalf("Error in publishing API to Amplify Central: %s", err)
 	}
 ```
 
@@ -532,11 +532,11 @@ spec:
 ```
 
 ### Processing Subscription
-AMPLIFY Central Subscriptions allows the consumers to subscribe with AMPLIFY Unified Catalog item to gain access for the published asset. With agents built using Agents SDK, the published API server results in publishing catalog item under AMPLIFY Unified Catalog, the agents can configure subscription metadata that is required from consumers at the time of subscription to provision the access in target API gateway.
+Amplify Central Subscriptions allows the consumers to subscribe with Amplify Unified Catalog item to gain access for the published asset. With agents built using Agents SDK, the published API server results in publishing catalog item under Amplify Unified Catalog, the agents can configure subscription metadata that is required from consumers at the time of subscription to provision the access in target API gateway.
 
-The Agent SDK provides mechanism to setup subscription schema based on configuration parameters setup by discovery agent for the target API gateway. The agent on start up can sets up the subscription schema which is basically registering API server resource of type SubscriptionDefinition. When the agent discovers the API and publishing the API to AMPLIFY Central, the agent implementation can choose the type of subscription schema to associate with the published API. This could be based on authentication type of API getting published, where the agents can associate registered subscription schema based on authentication type or choose to have a common subscription schema that holds the configuration for provisioning the subscription on target API gateway.
+The Agent SDK provides a mechanism to set up subscription schema based on configuration parameters set up by discovery agent for the target API gateway. The agent on start up can sets up the subscription schema which is basically registering API server resource of type SubscriptionDefinition. When the agent discovers the API and publishing the API to Amplify Central, the agent implementation can choose the type of subscription schema to associate with the published API. This could be based on authentication type of API getting published, where the agents can associate registered subscription schema based on authentication type or choose to have a common subscription schema that holds the configuration for provisioning the subscription on target API gateway.
 
-The agent implementation can use *apic.Client* interface to create subscription schema definition by making a call to *NewSubscriptionSchema()* method. The method return an interface ot type *apic.SubscriptionSchema* that can be used for setting up the subscription schema properties. Once the subscription schema definition is setup the agent can call *apic.Client.RegisterSubscriptionSchema()* method to register the subscription schema with AMPLIFY Central. The subscription schema definition can then later be used while publishing the API to associate the subscription schema with the published API server resource.
+The agent implementation can use *apic.Client* interface to create subscription schema definition by making a call to *NewSubscriptionSchema()* method. The method return an interface ot type *apic.SubscriptionSchema* that can be used for setting up the subscription schema properties. Once the subscription schema definition is set up the agent can call *apic.Client.RegisterSubscriptionSchema()* method to register the subscription schema with Amplify Central. The subscription schema definition can then later be used while publishing the API to associate the subscription schema with the published API server resource.
 
 Below is an example of subscription schema registration. This could be called after the agent initialization.
 ```
@@ -547,7 +547,7 @@ func createSubscriptionSchema() error {
 }
 ```
 
-The AMPLIFY Central subscriptions follows the state transition to manage the subscription workflow. Below are the list of subscription states
+The Amplify Central subscriptions follows the state transition to manage the subscription workflow. Below are the list of subscription states
 
 | Subscription State    | Description                                                                                                                  |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------|
@@ -564,7 +564,7 @@ The AMPLIFY Central subscriptions follows the state transition to manage the sub
 
 To process the subscriptions, the SDK provides a mechanism to register processors corresponding to subscription state. Typically the agent will register the processor for *approved* and *unsubscribe_initiated* to receive event for processing the provision or de-provision the subscription. The agent SDK provides support for updating the subscription state to transition the subscription workflow to next state. For example, the processor for *approved* state can update the subscription state to *active* or *failed_to_subscribe* states.
 
-The agent provides *apic.SubscriptionManager* interface that can be used for registering the callback function for validating the subscription and processing for specified state. The subscription manager manages calling the registered processor whenever there is a transition change in subscriptions on AMPLIFY Central for the catalog items that were associated to discovered APIs. The subscription manager calls the registered validator before calling the registered callback for state processing. This allows the agent to perform any pre-validation before the callbacks are invoked. The processors are invoked onces the validator succeeds and the processor implementation can update the subscription state. When calling registered callbacks, the manager passes subscription object (*apic.Subscription* interface) as argument which provides methods to access the properties that are provided by the consumer for provisioning the subscription. 
+The agent provides *apic.SubscriptionManager* interface that can be used for registering the callback function for validating the subscription and processing for specified state. The subscription manager manages calling the registered processor whenever there is a transition change in subscriptions on Amplify Central for the catalog items that were associated to discovered APIs. The subscription manager calls the registered validator before calling the registered callback for state processing. This allows the agent to perform any pre-validation before the callbacks are invoked. The processors are invoked onces the validator succeeds and the processor implementation can update the subscription state. When calling registered callbacks, the manager passes subscription object (*apic.Subscription* interface) as argument which provides methods to access the properties that are provided by the consumer for provisioning the subscription. 
 
 Below is the example of registering the subscription callbacks and sample processor/validator implementation
 ```
@@ -608,6 +608,42 @@ func (a *AzureClient) ProcessSubscribe(subscription apic.Subscription) {
 
 ```
 
+### Validating ConsumerInstance
+Amplify Central *ConsumerInstance* resources hold information about the assets published to Amplify Unified Catalog. In order to keep these assets in sync with the associated discovered API, a background job runs to validate each *ConsumerInstance*. If the resource is no longer valid, it is an indication that the API has likely been removed and the resource can be cleaned up.
+
+It is the responsibility of the individual agent to determine the validity of the *ConsumerInstance*. The Agent SDK provides a mechanism for the discovery agent to register an API validator for this purpose. The agent implementation can call *RegisterAPIValidator* method in the *agent* package and provide a callback method. The SDK will periodically call this method in the agent, thereby allowing the agent to determine the validity of the API and keep the resources in sync. Note that if an agent does not register an API validator, the consumer instance will never be validated and will always be considered synced with API. The ConsumerInstance resource will never be removed.
+
+Below is the example of registering the API validator callback and sample validator implementation
+```
+func run() error {
+	agent.RegisterAPIValidator(azAgent.validateAPI)
+}
+
+func (a *Agent) validateAPI(apiID, stageName string) bool {
+	// Add validation here if the API should be marked as invalid
+	return true
+}
+```
+
+Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The SDK will not remove the resource. Returning false will indicate to the SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
+
+In addition to registering to valid the *ConsumerInstance* resources, the agent can register to decide if the *APIService* should be removed along with the *ConsumerInstance*. The Agent SDK provides a mechanism for the discovery agent to register an Delete Service validator for this purpose. The agent implementation can call *RegisterDeleteServiceValidator* method in the *agent* package and provide a callback method. After determining that the *ConsumerInstance* is no longer valid, the SDK will call this method in the agent, thereby allowing the agent to determine whether or not to delete the APIService for the API. Note that if an agent does not register a Delete Service validator, the *APIService* be validated and will always be removed along with *ConsumerInstance* resource.
+
+Below is the example of registering the Delete Service validator callback and sample validator implementation
+```
+func run() error {
+	agent.RegisterDeleteServiceValidator(azAgent.validateService)
+}
+
+func (a *Agent) validateService(apiID, stageName string) bool {
+	// Add validation here if the service should be marked as deletable
+	return true
+}
+```
+
+Returning true from the validator will indicate that the *APIService* should be removed. The SDK will remove the resource. Returning false will indicate to the SDK that the *APIService* resource not should be removed.
+
+
 ### Building the Agent
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
 
@@ -620,7 +656,7 @@ go mod verify
 ```
 
 To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system. 
-The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to setup agent name, version, commit SHA and build time.
+The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to set up agent name, version, commit SHA and build time.
 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
 - github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
@@ -642,12 +678,12 @@ go build -tags static_all \
 ```
 
 #### Pre-requisites for executing the agent
-* An Axway AMPLIFY Central subscription in the AMPLIFY™ platform. See [Get started with AMPLIFY Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
-* An AMPLIFY Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
-* An AMPLIFY Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
+* An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
+* An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
+* An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
 
 ### Executing Discovery Agent
-The Agent built using AMPLIFY Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
+The Agent built using Amplify Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
 
 1. The configuration YAML file in the current working directory.
 2. Environment variable defined for configuration override on the shell executing the agent
@@ -687,30 +723,30 @@ Flags:
       --azureResourceGroupName string                                          Azure resource group name
       --azureSubscriptionID string                                             Azure subscription ID
       --azureTenantID string                                                   Azure tenant ID
-      --centralAdditionalTags string                                           Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central
+      --centralAdditionalTags string                                           Additional Tags to Add to discovered APIs when publishing to Amplify Central
       --centralApiServerVersion string                                         Version of the API Server (default "v1alpha1")
       --centralAuthClientId string                                             Client ID for the service account
       --centralAuthKeyPassword string                                          Password for the private key, if needed
-      --centralAuthPrivateKey string                                           Path to the private key for AMPLIFY Central Authentication (default "/etc/private_key.pem")
-      --centralAuthPublicKey string                                            Path to the public key for AMPLIFY Central Authentication (default "/etc/public_key")
-      --centralAuthRealm string                                                AMPLIFY Central authentication Realm (default "Broker")
+      --centralAuthPrivateKey string                                           Path to the private key for Amplify Central Authentication (default "/etc/private_key.pem")
+      --centralAuthPublicKey string                                            Path to the public key for Amplify Central Authentication (default "/etc/public_key")
+      --centralAuthRealm string                                                Amplify Central authentication Realm (default "Broker")
       --centralAuthTimeout duration                                            Timeout waiting for AxwayID response (default 10s)
-      --centralAuthUrl string                                                  AMPLIFY Central authentication URL (default "https://login.axway.com/auth")
-      --centralEnvironment string                                              The Environment that the APIs will be associated with in AMPLIFY Central
+      --centralAuthUrl string                                                  Amplify Central authentication URL (default "https://login.axway.com/auth")
+      --centralEnvironment string                                              The Environment that the APIs will be associated with in Amplify Central
       --centralMode string                                                     Agent Mode (default "publishToEnvironmentAndCatalog")
       --centralOrganizationID string                                           Tenant ID for the owner of the environment
       --centralPlatformURL string                                              URL of the platform (default "https://platform.axway.com")
       --centralPollInterval duration                                           The time interval at which the central will be polled for subscription processing. (default 1m0s)
-      --centralProxyUrl string                                                 The Proxy URL to use for communication to AMPLIFY Central
+      --centralProxyUrl string                                                 The Proxy URL to use for communication to Amplify Central
       --centralSslCipherSuites strings                                         List of supported cipher suites, comma separated (default [ECDHE-ECDSA-AES-256-GCM-SHA384,ECDHE-RSA-AES-256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,ECDHE-ECDSA-AES-128-GCM-SHA256,ECDHE-RSA-AES-128-GCM-SHA256,ECDHE-ECDSA-AES-128-CBC-SHA256,ECDHE-RSA-AES-128-CBC-SHA256])
       --centralSslInsecureSkipVerify                                           Controls whether a client verifies the server's certificate chain and host name
       --centralSslMaxVersion string                                            Maximum acceptable SSL/TLS protocol version (default "0")
       --centralSslMinVersion string                                            Minimum acceptable SSL/TLS protocol version (default "TLS1.2")
       --centralSslNextProtos strings                                           List of supported application level protocols, comma separated
-      --centralSubscriptionsApprovalMode string                                The mode to use for approving subscriptions for AMPLIFY Central (manual, webhook, auto (default "manual")
+      --centralSubscriptionsApprovalMode string                                The mode to use for approving subscriptions for Amplify Central (manual, webhook, auto (default "manual")
       --centralSubscriptionsApprovalWebhookAuthSecret string                   The authentication secret to use for the subscription approval webhook
       --centralSubscriptionsApprovalWebhookHeaders string                      The subscription webhook headers to pass to the subscription approval webhook
-      --centralSubscriptionsApprovalWebhookUrl string                          The subscription webhook URL to use for approving subscriptions for AMPLIFY Central
+      --centralSubscriptionsApprovalWebhookUrl string                          The subscription webhook URL to use for approving subscriptions for Amplify Central
       --centralSubscriptionsNotificationsSmtpAuthType string                   The authentication type based on the email server
       --centralSubscriptionsNotificationsSmtpFromAddress string                Email address which will represent the sender
       --centralSubscriptionsNotificationsSmtpHost string                       SMTP server where the email notifications will originate from
@@ -729,7 +765,7 @@ Flags:
       --centralSubscriptionsNotificationsSmtpUnsubscribeSubject string         Subject of the email notification for action unsubscribe (default "Removal Notification")
       --centralSubscriptionsNotificationsSmtpUsername string                   Login user for the SMTP server
       --centralTeam string                                                     Team name for creating catalog
-      --centralUrl string                                                      URL of AMPLIFY Central (default "https://apicentral.axway.com")
+      --centralUrl string                                                      URL of Amplify Central (default "https://apicentral.axway.com")
       --envFile string                                                         Path of the file with environment variables to override configuration
   -h, --help                                                                   help for azure_discovery_agent
       --logFileCleanbackups int                                                The maximum number of days, 24 hour periods, to keep the log file backps
