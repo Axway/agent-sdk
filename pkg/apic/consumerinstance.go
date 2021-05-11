@@ -229,20 +229,20 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 
 //UpdateConsumerInstanceSubscriptionDefinition -
 func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
-	consumerInstance, err := c.getConsumerInstanceByExternalAPIID(externalAPIID)
+	consumerInstance, err := c.getConsumerInstancesByExternalAPIID(externalAPIID)
 	if err != nil {
 		return err
 	}
 
 	// Update the subscription definition
-	if consumerInstance.Spec.Subscription.SubscriptionDefinition == subscriptionDefinitionName {
+	if consumerInstance[0].Spec.Subscription.SubscriptionDefinition == subscriptionDefinitionName {
 		return nil // no updates to be made
 	}
 
-	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
-	consumerInstance.Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
+	consumerInstance[0].ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance[0].Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
 
-	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstance.Name
+	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstance[0].Name
 	buffer, err := json.Marshal(consumerInstance)
 	if err != nil {
 		return err
@@ -253,8 +253,8 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	return err
 }
 
-// getConsumerInstanceByExternalAPIID
-func (c *ServiceClient) getConsumerInstanceByExternalAPIID(externalAPIID string) (*v1alpha1.ConsumerInstance, error) {
+// getConsumerInstancesByExternalAPIID
+func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -283,12 +283,15 @@ func (c *ServiceClient) getConsumerInstanceByExternalAPIID(externalAPIID string)
 	}
 
 	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
-	json.Unmarshal(response.Body, &consumerInstances)
+	err = json.Unmarshal(response.Body, &consumerInstances)
+	if err != nil {
+		return nil, err
+	}
 	if len(consumerInstances) == 0 {
 		return nil, errors.New("Unable to find consumerInstance using external api id: " + externalAPIID)
 	}
 
-	return consumerInstances[0], nil
+	return consumerInstances, nil
 }
 
 // getConsumerInstanceByID

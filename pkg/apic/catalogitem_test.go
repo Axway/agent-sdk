@@ -14,19 +14,19 @@ func TestGetCatalogItemIDForConsumerInstance(t *testing.T) {
 	wd, _ := os.Getwd()
 	httpClientMock.SetResponse(wd+"/testdata/catalogid-for-consumerinstance-good.json", http.StatusOK)
 	testID := "e4f19a3173caf7290173e45f3a270f8b"
-	itemID, err := client.getCatalogItemIDForConsumerInstance(testID)
+	itemID, err := client.GetCatalogItemIDForConsumerInstance(testID)
 	assert.Nil(t, err)
 	assert.Equal(t, testID, itemID)
 
 	// no items found
 	httpClientMock.SetResponse(wd+"/testdata/catalogid-for-consumerinstance-empty.json", http.StatusOK)
-	itemID, err = client.getCatalogItemIDForConsumerInstance("0000")
+	itemID, err = client.GetCatalogItemIDForConsumerInstance("0000")
 	assert.NotNil(t, err)
 
 	// bad response
 	httpClientMock.SetResponse("", http.StatusBadRequest)
 	testID = "e4f19a3173caf7290173e45f3a270f8b"
-	itemID, err = client.getCatalogItemIDForConsumerInstance(testID)
+	itemID, err = client.GetCatalogItemIDForConsumerInstance(testID)
 	assert.NotNil(t, err)
 	assert.Equal(t, "", itemID)
 }

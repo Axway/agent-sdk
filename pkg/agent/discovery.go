@@ -127,3 +127,8 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 }
+
+// RegisterDeleteServiceValidator - Registers callback for validating if the service should be deleted
+func RegisterDeleteServiceValidator(validator DeleteServiceValidator) {
+	agent.deleteServiceValidator = validator
+}

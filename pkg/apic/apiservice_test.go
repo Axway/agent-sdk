@@ -174,6 +174,37 @@ func TestCreateService(t *testing.T) {
 	assert.Nil(t, apiSvc)
 }
 
+func TestGetAPIServiceByExternalAPIID(t *testing.T) {
+	cloneServiceBody := serviceBody
+	cloneServiceBody.PrimaryKey = "1234"
+	client, httpClient := GetTestServiceClient()
+
+	// bad
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice.json", // this for call to get the service
+			RespCode: http.StatusBadRequest,
+		},
+	})
+	svc, err := client.getAPIServiceByExternalAPIID(&cloneServiceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, svc)
+
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice.json", // this for call to get the service
+			RespCode: http.StatusNotFound,
+		},
+		{
+			FileName: "./testdata/apiservice-list.json", // this for call to get the services
+			RespCode: http.StatusOK,
+		},
+	})
+	svc, err = client.getAPIServiceByExternalAPIID(&cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, svc)
+}
+
 func TestUpdateService(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
@@ -285,16 +316,68 @@ func TestUpdateService(t *testing.T) {
 func TestDeleteConsumerInstance(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 	httpClient.ResponseCode = http.StatusRequestTimeout
-	err := client.deleteConsumerInstance("12345")
+	err := client.DeleteConsumerInstance("12345")
 	assert.NotNil(t, err)
 	assert.Contains(t, "[Error Code 1120] - error making a request to AMPLIFY: status - 408", err.Error())
 
 	httpClient.ResponseCode = http.StatusNoContent
-	err = client.deleteConsumerInstance("12345")
+	err = client.DeleteConsumerInstance("12345")
 	assert.Nil(t, err)
 
 	httpClient.ResponseCode = http.StatusOK
-	err = client.deleteConsumerInstance("12345")
+	err = client.DeleteConsumerInstance("12345")
+	assert.Nil(t, err)
+}
+
+func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
+	client, httpClient := GetTestServiceClient()
+
+	// bad
+	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusBadRequest)
+	instances, err := client.GetConsumerInstancesByExternalAPIID("12345")
+	assert.NotNil(t, err)
+	assert.Nil(t, instances)
+
+	// not found
+	httpClient.SetResponse("./testdata/emptylist.json", http.StatusOK)
+	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
+	assert.NotNil(t, err)
+	assert.Nil(t, instances)
+
+	// good
+	httpClient.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
+	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(instances))
+}
+
+func TestDeleteServiceByAPIID(t *testing.T) {
+	client, httpClient := GetTestServiceClient()
+	httpClient.ResponseCode = http.StatusRequestTimeout
+	err := client.DeleteServiceByAPIID("12345")
+	assert.NotNil(t, err)
+
+	// empty list - not ok
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/emptylist.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
+	})
+	err = client.DeleteServiceByAPIID("12345")
+	assert.NotNil(t, err)
+
+	// list - ok
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
+		{
+			RespCode: http.StatusNoContent, // delete OK
+		},
+	})
+	err = client.DeleteServiceByAPIID("12345")
 	assert.Nil(t, err)
 }
 
@@ -491,5 +574,4 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Label)
 	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
 	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
-
 }
