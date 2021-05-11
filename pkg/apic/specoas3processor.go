@@ -11,11 +11,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+// oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
 type oas3SpecProcessor struct {
-	spec *openapi3.Swagger
+	spec *openapi3.T
 }
 
-func newOas3Processor(oas3Obj *openapi3.Swagger) *oas3SpecProcessor {
+func newOas3Processor(oas3Obj *openapi3.T) *oas3SpecProcessor {
 	return &oas3SpecProcessor{spec: oas3Obj}
 }
 
@@ -70,17 +71,17 @@ func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 	// Handle substitutions
 	for serverKey, serverVar := range server.Variables {
 		newURLs := []string{}
-		if serverVar.Default == nil {
+		if serverVar.Default == "" {
 			err := fmt.Errorf("Server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
 			log.Errorf(err.Error())
 			return "", nil, err
 		}
-		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default.(string))
+		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default)
 		if len(serverVar.Enum) == 0 {
-			newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, serverVar.Default.(string))
+			newURLs = p.processURLSubstitutions(allURLs, newURLs, serverKey, serverVar.Default)
 		} else {
 			for _, enumVal := range serverVar.Enum {
-				newURLs = p.processURLSubstutions(allURLs, newURLs, serverKey, enumVal.(string))
+				newURLs = p.processURLSubstitutions(allURLs, newURLs, serverKey, enumVal)
 			}
 		}
 		allURLs = newURLs
@@ -89,7 +90,7 @@ func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 	return defaultURL, allURLs, nil
 }
 
-func (p *oas3SpecProcessor) processURLSubstutions(allURLs, newURLs []string, varName, varValue string) []string {
+func (p *oas3SpecProcessor) processURLSubstitutions(allURLs, newURLs []string, varName, varValue string) []string {
 	for _, template := range allURLs {
 		newURLs = append(newURLs, strings.ReplaceAll(template, fmt.Sprintf("{%s}", varName), varValue))
 	}
