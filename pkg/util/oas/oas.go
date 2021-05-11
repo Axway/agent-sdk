@@ -11,7 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// ParseOAS2 converts a JSON spec into an OpenAPI2 object
+// ParseOAS2 converts a JSON spec into an OpenAPI2 object.
 func ParseOAS2(spec []byte) (*openapi2.T, error) {
 	swaggerObj := &openapi2.T{}
 	err := json.Unmarshal(spec, swaggerObj)
@@ -31,7 +31,7 @@ func ParseOAS2(spec []byte) (*openapi2.T, error) {
 	return swaggerObj, nil
 }
 
-// ParseOAS3 converts a JSON or YAML spec into an OpenAPI3 object
+// ParseOAS3 converts a JSON or YAML spec into an OpenAPI3 object.
 func ParseOAS3(spec []byte) (*openapi3.T, error) {
 	oas3Obj, err := openapi3.NewLoader().LoadFromData(spec)
 	if err != nil {

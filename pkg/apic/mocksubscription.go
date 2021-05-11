@@ -88,8 +88,9 @@ func (s *MockSubscription) UpdatePropertyValues(values map[string]interface{}) e
 }
 
 // UpdateStateWithProperties - mocked for testing
-func (s *MockSubscription) UpdateStateWithProperties(_ SubscriptionState, _ string, _ map[string]interface{}) error {
+func (s *MockSubscription) UpdateStateWithProperties(newState SubscriptionState, _ string, _ map[string]interface{}) error {
 	if s.UpdateStateWithPropertiesErr == nil {
+		s.State = newState
 		return nil
 	}
 	return s.UpdateStateWithPropertiesErr
