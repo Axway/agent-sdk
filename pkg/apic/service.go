@@ -50,6 +50,11 @@ func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APISe
 	return apiSvc, nil
 }
 
+// DeleteServiceByAPIID -
+func (c *ServiceClient) DeleteServiceByAPIID(externalAPIID string) error {
+	return c.deleteServiceByAPIID(externalAPIID)
+}
+
 // RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
 // per environment
 func (c *ServiceClient) RegisterSubscriptionWebhook() error {
@@ -89,6 +94,11 @@ func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1a
 	return c.getConsumerInstanceByID((consumerInstanceID))
 }
 
+// GetConsumerInstancesByExternalAPIID -
+func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+	return c.getConsumerInstancesByExternalAPIID(externalAPIID)
+}
+
 // GetSubscriptionsForCatalogItem -
 func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
 	return c.getSubscriptionsForCatalogItem(states, instanceID)
@@ -109,7 +119,12 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	if serviceBody.Stage != "" {
 		if c.cfg.GetAppendDataPlaneToTitle() {
-			serviceBody.Description = serviceBody.Description + ", StageName: " + serviceBody.Stage
+			addDescription := fmt.Sprintf("StageName: %s", serviceBody.Stage)
+			if len(serviceBody.Description) > 0 {
+				serviceBody.Description = fmt.Sprintf("%s, %s", serviceBody.Description, addDescription)
+			} else {
+				serviceBody.Description = addDescription
+			}
 		}
 		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
 	} else if c.cfg.GetAppendDataPlaneToTitle() && c.cfg.GetDataPlaneName() != "" {

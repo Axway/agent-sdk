@@ -6,9 +6,10 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util/oas"
+
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
 	"github.com/emicklei/proto"
-	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 )
 
@@ -124,6 +125,7 @@ func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
 func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 	swaggerObj := &oas2Swagger{}
 	// lowercase the byte array to ensure keys we care about are parsed
+
 	err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
 	if err != nil {
 		err := json.Unmarshal(s.resourceSpec, swaggerObj)
@@ -138,12 +140,9 @@ func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 }
 
 func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
-	oas3Obj, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(s.resourceSpec)
+	oas3Obj, err := oas.ParseOAS3(s.resourceSpec)
 	if err != nil {
 		return nil, err
-	}
-	if oas3Obj.OpenAPI == "" {
-		return nil, errors.New("Invalid openapi 3 specification")
 	}
 	return newOas3Processor(oas3Obj), nil
 }

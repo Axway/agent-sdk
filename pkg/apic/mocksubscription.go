@@ -2,26 +2,27 @@ package apic
 
 import "fmt"
 
-//MockSubscription - use for ease of testing agents
+// MockSubscription - use for ease of testing agents
 type MockSubscription struct {
 	Subscription
-	ID                   string
-	Description          string
-	Name                 string
-	ApicID               string
-	RemoteAPIID          string
-	RemoteAPIStage       string
-	CatalogID            string
-	UserID               string
-	State                SubscriptionState
-	PropertyVals         map[string]string
-	ReceivedValues       map[string]interface{}
-	ReceivedAppName      string
-	ReceivedUpdatedEnum  string
-	UpdateStateErr       error
-	UpdateEnumErr        error
-	UpdatePropertiesErr  error
-	UpdatePropertyValErr error
+	ID                           string
+	Description                  string
+	Name                         string
+	ApicID                       string
+	RemoteAPIID                  string
+	RemoteAPIStage               string
+	CatalogID                    string
+	UserID                       string
+	State                        SubscriptionState
+	PropertyVals                 map[string]string
+	ReceivedValues               map[string]interface{}
+	ReceivedAppName              string
+	ReceivedUpdatedEnum          string
+	UpdateStateErr               error
+	UpdateEnumErr                error
+	UpdatePropertiesErr          error
+	UpdatePropertyValErr         error
+	UpdateStateWithPropertiesErr error
 }
 
 //GetID - mocked for testing
@@ -84,4 +85,14 @@ func (s *MockSubscription) UpdatePropertyValues(values map[string]interface{}) e
 		s.ReceivedValues = values
 	}
 	return s.UpdatePropertyValErr
+}
+
+// UpdateStateWithProperties - mocked for testing
+func (s *MockSubscription) UpdateStateWithProperties(newState SubscriptionState, _ string, props map[string]interface{}) error {
+	if s.UpdateStateWithPropertiesErr == nil {
+		s.State = newState
+		s.ReceivedValues = props
+		return nil
+	}
+	return s.UpdateStateWithPropertiesErr
 }

@@ -10,6 +10,7 @@ import (
 
 var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "wss": true}
 
+// oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
 type oas2SpecProcessor struct {
 	spec *oas2Swagger
 }

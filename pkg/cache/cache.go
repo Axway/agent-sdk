@@ -140,11 +140,15 @@ func (c *itemCache) set(key string, data interface{}) error {
 		return err
 	}
 
+	secKeys := make(map[string]bool)
+	if _, ok := c.Items[key]; ok {
+		secKeys = c.Items[key].SecondaryKeys
+	}
 	c.Items[key] = &Item{
 		Object:        data,
 		UpdateTime:    time.Now().Unix(),
 		Hash:          hash,
-		SecondaryKeys: make(map[string]bool),
+		SecondaryKeys: secKeys,
 	}
 	return nil
 }
