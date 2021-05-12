@@ -165,6 +165,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		updatedEvents := outputEventProcessor.Process(events)
 		if len(updatedEvents) > 0 {
 			updateEvent(batch, updatedEvents)
+			events = batch.Events() // update the events, for changes from outputEventProcessor
 		} else {
 			batch.ACK()
 			return nil
