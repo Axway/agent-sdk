@@ -41,5 +41,5 @@ const (
 // CheckStatus - the format expected for the method to get the Healthcheck status
 type CheckStatus func(name string) *Status
 
-// RegisterHealth type for registering a healthcheck function
+// RegisterHealth is for registering a healthcheck function
 type RegisterHealth func(name, endpoint string, check CheckStatus) (string, error)
