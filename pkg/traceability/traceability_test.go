@@ -13,6 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/outputs"
@@ -78,7 +79,7 @@ func createEvent(msgValue string) []publisher.Event {
 		{
 			Content: beat.Event{
 				Timestamp: time.Now(),
-				Meta:      nil,
+				Meta:      common.MapStr{sampling.SampleKey: true},
 				Private:   nil,
 				Fields:    fieldsData,
 			},
