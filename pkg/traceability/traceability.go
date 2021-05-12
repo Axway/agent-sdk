@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -169,6 +170,9 @@ func (client *Client) Publish(batch publisher.Batch) error {
 			return nil
 		}
 	}
+
+	sampledEvents := sampling.FilterEvents(events)
+	updateEvent(batch, sampledEvents)
 
 	if !agent.GetCentralConfig().CanPublishTrafficEvents() {
 		log.Debug("Publishing the traffic event is turned off")
