@@ -18,7 +18,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 	s.currentCount++
 
-	// resent te count once we hit 100 messages
+	// reset the count once we hit 100 messages
 	if s.currentCount == 100 {
 		s.currentCount = 0
 	}
