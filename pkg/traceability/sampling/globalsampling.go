@@ -21,7 +21,7 @@ func DefaultConfig() Sampling {
 	}
 }
 
-// SetupSampling - set up redactionRegex based on the redactionConfig
+// SetupSampling - set up the global sampling for use by traceability
 func SetupSampling(cfg Sampling) error {
 	// Validate the config to make sure it is not out of bounds
 	if cfg.Percentage < 0 || cfg.Percentage > 100 {

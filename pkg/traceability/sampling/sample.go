@@ -11,9 +11,8 @@ type sample struct {
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	// Only sampling on percentage, not currently looking at the details
-	samplePercent := s.config.Percentage
 	shouldSample := false
-	if s.currentCount < samplePercent {
+	if s.currentCount < s.config.Percentage {
 		shouldSample = true
 	}
 	s.currentCount++
