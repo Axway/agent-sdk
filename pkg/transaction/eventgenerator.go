@@ -46,7 +46,14 @@ func NewEventGenerator() EventGenerator {
 
 // CreateEvent - Creates a new event to be sent to Condor
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
-	log.Warnf("%s is deprecated, please start using %s", "CreateEvent", "CreateTransactionEvents")
+	log.Warnf("%s is deprecated, to enable sampling please start using %s", "CreateEvent", "CreateTransactionEvents")
+
+	// if CreateEvent is being used, sampling will not work, so all events need to be sent
+	if metaData == nil {
+		metaData = common.MapStr{}
+	}
+	metaData.Put(sampling.SampleKey, true)
+
 	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
 }
 
