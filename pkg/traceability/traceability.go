@@ -172,8 +172,12 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		}
 	}
 
-	sampledEvents := sampling.FilterEvents(events)
-	updateEvent(batch, sampledEvents)
+	sampledEvents, err := sampling.FilterEvents(events)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		updateEvent(batch, sampledEvents)
+	}
 
 	if !agent.GetCentralConfig().CanPublishTrafficEvents() {
 		log.Debug("Publishing the traffic event is turned off")
@@ -185,7 +189,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	log.Infof("Publishing %d events", publishCount)
 	//update the local activity timestamp for the event to compare against
 	agent.UpdateLocalActivityTime()
-	err := client.transportClient.Publish(batch)
+	err = client.transportClient.Publish(batch)
 	if err != nil {
 		return err
 	}

@@ -100,7 +100,11 @@ func (e *Generator) CreateTransactionEvents(summaryEvent LogEvent, detailEvents 
 	events := make([]beat.Event, 0)
 
 	// Add this to sample or not
-	if sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent)) {
+	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
+	if err != nil {
+		return events, err
+	}
+	if shouldSample {
 		if metaData == nil {
 			metaData = common.MapStr{}
 		}

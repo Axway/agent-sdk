@@ -131,11 +131,14 @@ func TestShouldSample(t *testing.T) {
 				testDetails := TransactionDetails{
 					Status: "Success", // this does not matter at the moment
 				}
-				if ShouldSampleTransaction(testDetails) {
+				sample, err := ShouldSampleTransaction(testDetails)
+				if sample {
 					sampled++
 				}
+				assert.Nil(t, err)
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, test.expectedSampled, sampled)
 		})
 	}
@@ -245,8 +248,9 @@ func TestFilterEvents(t *testing.T) {
 			assert.Nil(t, err)
 
 			eventsInTest := createEvents(test.testEvents, test.config.Percentage)
-			filterEvents := FilterEvents(eventsInTest)
+			filterEvents, err := FilterEvents(eventsInTest)
 
+			assert.Nil(t, err)
 			assert.Len(t, filterEvents, test.eventsExpected)
 		})
 	}
