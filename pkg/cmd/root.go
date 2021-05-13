@@ -135,7 +135,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
-	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Path of the YAML configuration file for the agent")
+	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
