@@ -785,15 +785,15 @@ By default all of the fields URL path, Query Arguments, Request and Response hea
 
 Below is the list of the redaction configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.redaction
 
-| YAML property           | Variable name                                  | Description                                                                 |
-|-------------------------|------------------------------------------------|-----------------------------------------------------------------------------|
-| path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                              |
-| queryArgument.show      | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                          |
-| queryArgument.sanitize  | TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify |
-| requestHeader.show      | TRACEABILITY_REDACTION_REQUESTHEADER_SHOW      | Determines what query arguments to send to Amplify                          |
-| requestHeader.sanitize  | TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify |
-| responseHeader.show     | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                          |
-| responseHeader.sanitize | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE | Determines what query argument values to sanitize before sending to Amplify |
+| YAML property           | Variable name                                  | Description                                                                  |
+|-------------------------|------------------------------------------------|------------------------------------------------------------------------------|
+| path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                               |
+| queryArgument.show      | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                           |
+| queryArgument.sanitize  | TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify  |
+| requestHeader.show      | TRACEABILITY_REDACTION_REQUESTHEADER_SHOW      | Determines what request headers to send to Amplify                           |
+| requestHeader.sanitize  | TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE  | Determines what request header values to sanitize before sending to Amplify  |
+| responseHeader.show     | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what response headers to send to Amplify                          |
+| responseHeader.sanitize | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE | Determines what response header values to sanitize before sending to Amplify |
 
 #### Setting up redaction and sanitization
 
@@ -866,6 +866,18 @@ TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE=[{keyMatch:"header",valueMatch:".*
 TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW=[{keyMatch:".*"}]
 TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE=[{keyMatch:"^response",valueMatch:"password"}]
 ```
+
+### Traceability sampling
+
+The agent SDK has the ability to handle sampling of transactions that are processed.  This sampling controls what transaction events are sent to Amplify.
+
+By default all transaction data is sent to Amplify.
+
+Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
+
+| YAML property | Variable name                    | Description                                                       |
+|---------------|----------------------------------|-------------------------------------------------------------------|
+| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify |
 
 ### Building the Agent
 

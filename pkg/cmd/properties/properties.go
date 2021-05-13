@@ -94,6 +94,7 @@ func (p *properties) AddStringProperty(name string, defaultVal string, descripti
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().String(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
 	}
 }
 
@@ -120,6 +121,7 @@ func (p *properties) AddStringSliceProperty(name string, defaultVal []string, de
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().StringSlice(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
 	}
 }
 
@@ -128,6 +130,7 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
 	}
 }
 
@@ -136,6 +139,7 @@ func (p *properties) AddIntProperty(name string, defaultVal int, description str
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Int(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
 	}
 }
 
@@ -144,6 +148,7 @@ func (p *properties) AddBoolProperty(name string, defaultVal bool, description s
 		flagName := p.nameToFlagName(name)
 		p.rootCmd.Flags().Bool(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -164,10 +165,18 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		updatedEvents := outputEventProcessor.Process(events)
 		if len(updatedEvents) > 0 {
 			updateEvent(batch, updatedEvents)
+			events = batch.Events() // update the events, for changes from outputEventProcessor
 		} else {
 			batch.ACK()
 			return nil
 		}
+	}
+
+	sampledEvents, err := sampling.FilterEvents(events)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		updateEvent(batch, sampledEvents)
 	}
 
 	if !agent.GetCentralConfig().CanPublishTrafficEvents() {
@@ -180,7 +189,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	log.Infof("Publishing %d events", publishCount)
 	//update the local activity timestamp for the event to compare against
 	agent.UpdateLocalActivityTime()
-	err := client.transportClient.Publish(batch)
+	err = client.transportClient.Publish(batch)
 	if err != nil {
 		return err
 	}
