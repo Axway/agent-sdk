@@ -79,6 +79,14 @@ func Initialize(centralCfg config.CentralConfig) error {
 		agent.apiMap = cache.New()
 	}
 
+	// Check only on startup of binary agents
+	if !agent.isInitialized && flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
+		err := hc.CheckIsRunning()
+		if err != nil {
+			return err
+		}
+	}
+
 	agent.cfg = centralCfg.(*config.CentralConfiguration)
 
 	// validate the central config

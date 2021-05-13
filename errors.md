@@ -71,6 +71,7 @@
 |      | 1611-1612 - errors in healthcheck library                                                                   |                                                     |
 | 1611 | error starting periodic health check                                                                        | pkg/util/healthcheck/ErrStartingPeriodicHealthCheck |
 | 1612 | maximum number of consecutive healthcheck errors hit                                                        | pkg/util/healthcheck/ErrMaxconsecutiveErrors        |
+| 1613 | terminating agent, another instance of agent already running                                                | pkg/util/healthcheck/ErrAlreadyRunning              |
 |      | 1900-1910 - errors managing agent service                                                                   |                                                     |
 | 1900 | unsupported system for service installation                                                                 | pkg/cmd/service/daemon/ErrUnsupportedSystem         |
 | 1901 | systemd is required for service installation                                                                | pkg/cmd/service/daemon/ErrNeedSystemd               |
