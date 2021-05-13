@@ -178,6 +178,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 		},
 		Meta: make(map[string]interface{}),
 	}
+	log.Infof("Creating usage event with %d transactions", transactionCount)
 	c.eventChannel <- lightHouseUsageEvent
 }
 
