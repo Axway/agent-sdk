@@ -1014,3 +1014,15 @@ Flags:
       --version                              version for apic_traceability_agent
 
 ```
+
+### Traceability sampling
+
+The agent SDK has the ability to handle sampling of transactions that are processed.  This sampling controls what transaction events are sent to Amplify.
+
+By default all transaction data is sent to Amplify.
+
+Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
+
+| YAML property | Variable name                    | Description                                                       |
+|---------------|----------------------------------|-------------------------------------------------------------------|
+| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify |
