@@ -41,5 +41,8 @@ const (
 // CheckStatus - the format expected for the method to get the Healthcheck status
 type CheckStatus func(name string) *Status
 
+// GetStatusLevel format for the function to get the StatusLevel of an endpoint
+type GetStatusLevel func(endpoint string) StatusLevel
+
 // RegisterHealth is for registering a healthcheck function
 type RegisterHealth func(name, endpoint string, check CheckStatus) (string, error)
