@@ -21,7 +21,7 @@ import (
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error)
-	CreateTransactionEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
+	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 }
 
 // Generator - Create the events to be published to Condor
@@ -44,7 +44,7 @@ func NewEventGenerator() EventGenerator {
 	return eventGen
 }
 
-// CreateEvent - Creates a new event to be sent to Condor
+// CreateEvent - Creates a new event to be sent to Amplify Observability
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	log.Warnf("%s is deprecated, to enable sampling please start using %s", "CreateEvent", "CreateTransactionEvents")
 
@@ -57,7 +57,7 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
 }
 
-// CreateEvent - Creates a new event to be sent to Condor
+// CreateEvent - Creates a new event to be sent to Amplify Observability
 func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	event := beat.Event{}
 	serializedLogEvent, err := json.Marshal(logEvent)
@@ -95,8 +95,8 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	}, nil
 }
 
-// CreateTransactionEvents - Creates new events to be sent to Condor
-func (e *Generator) CreateTransactionEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+// CreateEvents - Creates new events to be sent to Amplify Observability
+func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
 
 	// Add this to sample or not
