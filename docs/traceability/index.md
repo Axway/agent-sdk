@@ -3,10 +3,11 @@
 The Amplify Central Traceability Agents can be used for monitoring the traffic for APIs that were discovered by Amplify Central Discovery Agent and publishing the traffic event to Amplify Central API Observer. The Agent SDK helps in building custom elastic beat as Amplify Central traceability agent by providing the necessary config, supported transports and interfaces to manage the communication with Amplify Central.
 
 The traceability agents are custom elastic beats which generally has two main components
-- a component that collects data 
+
+- a component that collects data
 - a component that publishes the data to specified output
 
-The Agents SDK provides implementation for component to publish the data to Amplify ingestion service either using lumberjack or HTTP protocol. The agent developers can implement the component to collect the data or use existing beat implementations (e.g. filebeat) to collect the data. 
+The Agents SDK provides implementation for component to publish the data to Amplify ingestion service either using lumberjack or HTTP protocol. The agent developers can implement the component to collect the data or use existing beat implementations (e.g. filebeat) to collect the data.
 
 To ingest the traffic related events for the Amplify Central Observer, the event is required to be in a specific structure. The Agent SDK provides definition for the log event (transaction.LogEvent) that can be used to setup the event data required by Amplify Central Observer service. The log event can be either of summary or transaction type. Refer to section [](#log_event_format) for the details. The agent developer can choose to implement the mapping from the collected data to log event required by Amplify Central Observer service either while the data is collected by the custom beat logic or by setup output event processor to perform the mapping. The output event processor are invoked when the publisher is processing the event to be published over specified transport.
 
@@ -15,37 +16,40 @@ The Amplify ingestion service authenticates the publish request using the token 
 The Agent SDK provides a component for generating beat event from the mapped log event. This component take care of setting up the beat event with fields required by Amplify Central Observer service.
 
 ### Central Configuration
-The SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line option. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. 
+
+The SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line option. This configuration is used for setting up parameter that will be used for communicating with Amplify Central.
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML propery                     | Variable name                    | Description                                                                                                                                                                                                                                                                                                               |
-|----------------------------------|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| central.url                      | CENTRAL_URL                      | The URL to the Amplify Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
-| central.organizationID           | CENTRAL_ORGANIZATIONID           | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
-| central.team                     | CENTRAL_TEAM                     | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
-| central.environment              | CENTRAL_ENVIRONMENT              | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
-| central.deployment               | CENTRAL_DEPLOYMENT               | Specifies the Amplify Central deployment. This could be "prod" or "prod-eu" based on the Amplify Central region.                                                                                                                                                                                                          |
-| central.agentName                | CENTRAL_AGENTNAME                | The agent name of this agent on Amplify Central                                                                                                                                                                                                                                                                           |
-| central.platformEnvironmentId    | CENTRAL_PLATFORMENVIRONMENTID    | The ID of the environment on Amplify to report usage to                                                                                                                                                                                                                                                                   |
-| central.lighthouseURL            | CENTRAL_LIGHTHOUSEURL            | The Lighthouse URL the agent publishes usage reports                                                                                                                                                                                                                                                                      |
-| central.publishUsage             | CENTRAL_PUBLISHUSAGE             | Enables/disables the sending of usage events to Amplify                                                                                                                                                                                                                                                                   |
-| central.publishTraffic           | CENTRAL_PUBLISHTRAFFIC           | Enables/disabled the sending of traffic events to Amplify Central                                                                                                                                                                                                                                                         |
-| central.eventAggregationInterval | CENTRAL_EVENTAGGREGATIONINTERVAL | The frequency in which the agent reports API usage to Amplify                                                                                                                                                                                                                                                             |
-| central.reportActivityFrequency  | CENTRAL_REPORTACTIVITYFREQUENCY  | The frequency in which the agent published activity to Amplify Central                                                                                                                                                                                                                                                    |
-| central.auth.url                 | CENTRAL_AUTH_URL                 | The Amplify login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
-| central.auth.clientID            | CENTRAL_AUTH_CLIENTID            | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                               |
-| central.auth.privateKey          | CENTRAL_AUTH_PRIVATEKEY          | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
-| central.auth.publicKey           | CENTRAL_AUTH_PUBLICKEY           | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
-| central.auth.keyPassword         | CENTRAL_AUTH_KEYPASSWORD         | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
-| central.auth.timeout             | CENTRAL_AUTH_TIMEOUT             | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
-| central.ssl.insecureSkipVerify   | CENTRAL_SSL_INSECURESKIPVERIFY   | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
-| central.ssl.cipherSuites         | CENTRAL_SSL_CIPHERSUITES         | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
-| central.ssl.minVersion           | CENTRAL_SSL_MINVERSION           | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
-| central.ssl.maxVersion           | CENTRAL_SSL_MAXVERSION           | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
-| central.proxyURL                 | CENTRAL_PROXYURL                 | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
+
+| YAML propery                     | Variable name                    | Description                                                                                                                                                                                                                                                                                                              |
+|----------------------------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| central.url                      | CENTRAL_URL                      | The URL to the Amplify Central instance being used for Agents (default value: US =`<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                             |
+| central.organizationID           | CENTRAL_ORGANIZATIONID           | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                 |
+| central.team                     | CENTRAL_TEAM                     | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to`Default Team`)                                                                                                                                                                |
+| central.environment              | CENTRAL_ENVIRONMENT              | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                        |
+| central.deployment               | CENTRAL_DEPLOYMENT               | Specifies the Amplify Central deployment. This could be "prod" or "prod-eu" based on the Amplify Central region.                                                                                                                                                                                                         |
+| central.agentName                | CENTRAL_AGENTNAME                | The agent name of this agent on Amplify Central                                                                                                                                                                                                                                                                          |
+| central.platformEnvironmentId    | CENTRAL_PLATFORMENVIRONMENTID    | The ID of the environment on Amplify to report usage to                                                                                                                                                                                                                                                                  |
+| central.lighthouseURL            | CENTRAL_LIGHTHOUSEURL            | The Lighthouse URL the agent publishes usage reports                                                                                                                                                                                                                                                                     |
+| central.publishUsage             | CENTRAL_PUBLISHUSAGE             | Enables/disables the sending of usage events to Amplify                                                                                                                                                                                                                                                                  |
+| central.publishTraffic           | CENTRAL_PUBLISHTRAFFIC           | Enables/disabled the sending of traffic events to Amplify Central                                                                                                                                                                                                                                                        |
+| central.eventAggregationInterval | CENTRAL_EVENTAGGREGATIONINTERVAL | The frequency in which the agent reports API usage to Amplify                                                                                                                                                                                                                                                            |
+| central.reportActivityFrequency  | CENTRAL_REPORTACTIVITYFREQUENCY  | The frequency in which the agent published activity to Amplify Central                                                                                                                                                                                                                                                   |
+| central.auth.url                 | CENTRAL_AUTH_URL                 | The Amplify login URL:`<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID            | CENTRAL_AUTH_CLIENTID            | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                              |
+| central.auth.privateKey          | CENTRAL_AUTH_PRIVATEKEY          | The private key associated with the Service Account.                                                                                                                                                                                                                                                                     |
+| central.auth.publicKey           | CENTRAL_AUTH_PUBLICKEY           | The public key associated with the Service Account.                                                                                                                                                                                                                                                                      |
+| central.auth.keyPassword         | CENTRAL_AUTH_KEYPASSWORD         | The password for the private key, if applicable.                                                                                                                                                                                                                                                                         |
+| central.auth.timeout             | CENTRAL_AUTH_TIMEOUT             | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                |
+| central.ssl.insecureSkipVerify   | CENTRAL_SSL_INSECURESKIPVERIFY   | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                      |
+| central.ssl.cipherSuites         | CENTRAL_SSL_CIPHERSUITES         | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See[Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
+| central.ssl.minVersion           | CENTRAL_SSL_MINVERSION           | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                     |
+| central.ssl.maxVersion           | CENTRAL_SSL_MAXVERSION           | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                   |
+| central.proxyURL                 | CENTRAL_PROXYURL                 | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
 
 The following is a sample of Central configuration in YAML
+
 ```
 central:
     url: https://apicentral.axway.com
@@ -61,6 +65,7 @@ central:
 ```
 
 #### Configuration interfaces
+
 Agent SDK expose the following interfaces to retrieve the configuration items.
 
 ```
@@ -106,7 +111,7 @@ type CentralConfig interface {
 	GetTagsToPublish() string
 
 	GetProxyURL() string
-	GetPollInterval() time.Duration	
+	GetPollInterval() time.Duration
 }
 ```
 
@@ -137,10 +142,11 @@ type TLSConfig interface {
 ```
 
 ### Agent Specific Configuration
+
 The agent can define a struct that holds the configuration it needs specifically to communicate with the external API Gateway. The agent config struct properties can be bound to command line processor to setup config, see [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
 
-
 #### Sample Agent specific configuration definition
+
 ```
 type GatewayConfig struct {
 	TrafficLogFilePath       string `config:"trafficLogFilePath"`
@@ -150,6 +156,7 @@ type GatewayConfig struct {
 ```
 
 To validate the config, following interface provided by config package in SDK can be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
+
 ```
 // IConfigValidator - Interface to be implemented for config validation by agent
 type IConfigValidator interface {
@@ -180,22 +187,23 @@ The SDK provides a predefined configuration for setting up the output transport 
 
 Below is the list of traceability output transport configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML propery                          | Variable name                 | Description                                                                                                                                           |
-|---------------------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| output.traceability.enabled           |                               | Flag for enabling traceability output                                                                                                                 |
-| output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default: `ingestion-lumberjack.datasearch.axway.com:453`)                                                     |
-| output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default: `tcp`)                                                 |
-| output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default: `3`)                                                                                                   |
-| output.traceability.bulk_max_size     | TRACEABILITY_BULKMAXSIZE      | The max number of evnets in a single request to Condor (default: `100`)                                                                               |
-| output.traceability.timeout           | TRACEABILITY_TIMEOUT          | Number of seconds to wait for responses from Condo (default: `300s`)                                                                                  |
-| output.traceability.pipelining        | TRACEABILITY_PIPELINING       | Number of asynchronous batches to send, must be 0                                                                                                     |
-| output.traceability.worker            | TRACEABILITY_WORKER           | Number of workers communicating with Condor (default: `2`)                                                                                            |
-| output.traceability.slow_start        | TRACEABILITY_SLOWSTART        | When set to true the number of events sent to Condor is ramped up to bulk_max_size (default: `true`)                                                  |
-| output.traceability.ssl.enable        | TRACEABILITY_ENABLE_SSL       | Enables SSL connections to Condor (default: `true`)                                                                                                   |
-| output.traceability.proxy_url         | TRACEABILITY_PROXYURL         | The URL for the HTTP or SOCK5 proxy for Amplify ingestion service for e.g. `<http://username:password@hostname:port>`. If empty, no proxy is defined. |
-| output.traceability.redaction         |                               | Refer to [Traceability redaction](#traceability-redaction)                                                                                            |
 
-#### Sample Agent YAML configuration 
+| YAML propery                          | Variable name                 | Description                                                                                                                                          |
+|---------------------------------------|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| output.traceability.enabled           |                               | Flag for enabling traceability output                                                                                                                |
+| output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default:`ingestion-lumberjack.datasearch.axway.com:453`)                                                     |
+| output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default:`tcp`)                                                 |
+| output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default:`3`)                                                                                                   |
+| output.traceability.bulk_max_size     | TRACEABILITY_BULKMAXSIZE      | The max number of evnets in a single request to Condor (default:`100`)                                                                               |
+| output.traceability.timeout           | TRACEABILITY_TIMEOUT          | Number of seconds to wait for responses from Condo (default:`300s`)                                                                                  |
+| output.traceability.pipelining        | TRACEABILITY_PIPELINING       | Number of asynchronous batches to send, must be 0                                                                                                    |
+| output.traceability.worker            | TRACEABILITY_WORKER           | Number of workers communicating with Condor (default:`2`)                                                                                            |
+| output.traceability.slow_start        | TRACEABILITY_SLOWSTART        | When set to true the number of events sent to Condor is ramped up to bulk_max_size (default:`true`)                                                  |
+| output.traceability.ssl.enable        | TRACEABILITY_ENABLE_SSL       | Enables SSL connections to Condor (default:`true`)                                                                                                   |
+| output.traceability.proxy_url         | TRACEABILITY_PROXYURL         | The URL for the HTTP or SOCK5 proxy for Amplify ingestion service for e.g.`<http://username:password@hostname:port>`. If empty, no proxy is defined. |
+| output.traceability.redaction         |                               | Refer to[Traceability redaction](#traceability-redaction)                                                                                            |
+
+#### Sample Agent YAML configuration
 
 ```
 apic_traceability_agent:
@@ -308,6 +316,7 @@ func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 ```
 
 ### Initializing Agent/Custom elastic beat
+
 The traceability agent are custom beat which needs to implement the Beater interface defined in libbeat
 
 ```
@@ -374,12 +383,14 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 ### Transaction Event processing and Event Generation
 
 The goal of the traceability agents is to publish API traffic events to Amplify ingestion service to allow computing statistics and monitor the transactions. To achieve this there are two kinds of log events that can be published thru traceability agents.
+
 - Transaction Summary : Summarizes the interaction between the client application and discovered API. The transaction summary log entry is used for computing the API Usage statistics and display the list of transactions on API Traffic page.
-- Transaction Event: Represents the interaction between services involved in the API transaction and provides details on the protocol being used in the interaction. 
+- Transaction Event: Represents the interaction between services involved in the API transaction and provides details on the protocol being used in the interaction.
 
 This means that there will be a transaction summary log entry for API transaction flow from client but there could be multiple transaction events log entries involved in a transaction flow, first (leg 0) identifying the inbound interaction from client app to API endpoint exposed by the API Gateway and second(leg 1) identifying outbound interaction from API Gateway to backend API.
 
 #### Sample Transaction Summary
+
 ```
 {
     "version": "1.0",
@@ -411,6 +422,7 @@ This means that there will be a transaction summary log entry for API transactio
 ```
 
 #### Sample Transaction Event
+
 ```
 {
     "version": "1.0",
@@ -448,7 +460,9 @@ This means that there will be a transaction summary log entry for API transactio
 ```
 
 #### Common Log Entry attributes
+
 The attributes below are to be included in both type of events.
+
 
 | Attribute Name    | Description                                                                                                      |
 |-------------------|------------------------------------------------------------------------------------------------------------------|
@@ -462,8 +476,8 @@ The attributes below are to be included in both type of events.
 | trcbltPartitionId | Amplify platform organization identifier. Used by Amplify Ingestion service to send events to appropriate tenant |
 | type              | Identifies the type of log event (transactionSummary or transactionEvent)                                        |
 
-
 #### Transaction Summary attributes
+
 
 | Attribute Name    | Description                                                                                                    |
 |-------------------|----------------------------------------------------------------------------------------------------------------|
@@ -482,6 +496,7 @@ The attributes below are to be included in both type of events.
 
 #### Transaction Event attributes
 
+
 | Attribute Name | Description                                                                                          |
 |----------------|------------------------------------------------------------------------------------------------------|
 | id             | Id of the transaction                                                                                |
@@ -494,6 +509,7 @@ The attributes below are to be included in both type of events.
 | protocol       | Protocol(http or jms) specific details                                                               |
 
 ##### HTTP Protocol specific attributes
+
 
 | Attribute Name  | Description                                |
 |-----------------|--------------------------------------------|
@@ -516,6 +532,7 @@ The attributes below are to be included in both type of events.
 | responseHeaders | Response headers in serialized json format |
 
 The Agent SDK provides the structures with above definition to setup the log entries for both type of events
+
 ```
 type LogEvent struct {
 	Version            string   `json:"version"`
@@ -640,6 +657,7 @@ type JMSProtocolBuilder interface {
 ```
 
 The sample code below demonstrates building up the transaction summary log event
+
 ```
  	txSummary, err := transaction.NewTransactionSummaryBuilder().
 		SetTimestamp(eventTime).
@@ -652,6 +670,7 @@ The sample code below demonstrates building up the transaction summary log event
 ```
 
 Below is an example code for building transaction event with HTTP protocol details
+
 ```
 	httpProtocolDetails, err := transaction.NewHTTPProtocolBuilder().
 		SetURI(txDetails.URI).
@@ -785,15 +804,17 @@ By default all of the fields URL path, Query Arguments, Request and Response hea
 
 Below is the list of the redaction configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.redaction
 
-| YAML property           | Variable name                                  | Description                                                                  |
-|-------------------------|------------------------------------------------|------------------------------------------------------------------------------|
-| path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                               |
-| queryArgument.show      | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                           |
-| queryArgument.sanitize  | TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify  |
-| requestHeader.show      | TRACEABILITY_REDACTION_REQUESTHEADER_SHOW      | Determines what request headers to send to Amplify                           |
-| requestHeader.sanitize  | TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE  | Determines what request header values to sanitize before sending to Amplify  |
-| responseHeader.show     | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what response headers to send to Amplify                          |
-| responseHeader.sanitize | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE | Determines what response header values to sanitize before sending to Amplify |
+
+| YAML property           | Variable name                                  | Description                                                                                 |
+|-------------------------|------------------------------------------------|---------------------------------------------------------------------------------------------|
+| path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                                              |
+| queryArgument.show      | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what query arguments to send to Amplify                                          |
+| queryArgument.sanitize  | TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE  | Determines what query argument values to sanitize before sending to Amplify                 |
+| requestHeader.show      | TRACEABILITY_REDACTION_REQUESTHEADER_SHOW      | Determines what request headers to send to Amplify                                          |
+| requestHeader.sanitize  | TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE  | Determines what request header values to sanitize before sending to Amplify                 |
+| responseHeader.show     | TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW      | Determines what response headers to send to Amplify                                         |
+| responseHeader.sanitize | TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE | Determines what response header values to sanitize before sending to Amplify                |
+| maskingCharacters       | TRACEABILITY_REDACTION_MASKING_CHARACTERS      | Determines what characters are displayed as the sanitized response header values on Amplify |
 
 #### Setting up redaction and sanitization
 
@@ -832,6 +853,7 @@ output.traceability:
       sanitize:
         keyMatch: "^response" # find any response headers that start with the word response
         valueMatch: "password" # sanitize the word password any time it occurs in the header value 
+    maskingCharacters: "{*}" # sanitize using these characters to mask values 
 ```
 
 #### Using environment variables for redaction
@@ -853,6 +875,7 @@ output.traceability:
     responseHeader:
       show: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW:[]}
       sanitize: ${TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE:[]}
+  maskingCharacters: ${TRACEABILITY_REDACTION_MASKING_CHARACTERS:"\u007B*\u007D"} # unicode for {*}
 ```
 
 When setting up the environment variables the following is the syntax that must be used.  These settings are the same as in the YAML [example](#setting-up-redaction-in-yaml)
@@ -875,6 +898,7 @@ By default all transaction data is sent to Amplify.
 
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
+
 | YAML property | Variable name                    | Description                                                       |
 |---------------|----------------------------------|-------------------------------------------------------------------|
 | percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify |
@@ -883,15 +907,16 @@ Below is the list of the sampling configuration properties in a YAML and their c
 
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
 
-The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file. 
+The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file.
 
 Run the following commands to resolve the dependencies
+
 ```
 go mod tidy
 go mod verify
 ```
 
-To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system. 
+To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system.
 The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to setup agent name, version, commit SHA and build time.
 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
@@ -914,11 +939,13 @@ go build -tags static_all \
 ```
 
 #### Pre-requisites for executing the agent
+
 * An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
 * An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-Amplify-central-ui).
 * An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
 
 ### Executing Traceability Agent
+
 The Agent built using Amplify Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
 
 1. The configuration YAML file in the current working directory.
@@ -927,23 +954,27 @@ The Agent built using Amplify Central Agents SDK can be executed by running the 
 4. Command line flags
 
 Below is the sample for executing the agent when the config YAML file only is used.
+
 ```
 cd <path-to-agent-install-directory>
 ./apic_traceability_agent
 ```
 
 Typically, the configuration YAML can be placed in the same directory as the agent executable, but alternatively the YAML file could be placed in another directory and then *pathConfig* command line flags can be used to specify the directory path containing the YAML file.
+
 ```
 <path-to-agent-install-directory>/apic_traceability_agent --pathConfig <directory-path-for-agent-yaml-config-file>
 ```
 
-The following is an example of command to execute the agent with a file holding environment variables 
+The following is an example of command to execute the agent with a file holding environment variables
+
 ```
 cd <path-to-agent-install-directory>
 ./apic_traceability_agent --envFile <path-of-env-file>/config.env
 ```
 
 The agent configuration can also be passed as command line flags. Below is an example of agent usage that details the command line flags and configuration properties
+
 ```
 cd <path-to-agent-install-directory>
 ./apic_traceability_agent --help
