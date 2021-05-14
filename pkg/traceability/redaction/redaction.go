@@ -163,7 +163,7 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 
 // validateMaskingChars - validates the supplied masking character string against the accepted characters
 func validateMaskingChars(mask string) (bool, error) {
-	// available characters are alphanumeric, between 1-5 characters, and can contain '-' (hyphen), '*' (star), '#' (sharp), '^' (caret), '~' (tilde), '.' (dot), '{' (open curly braket), '}' (closing curly bracket)
+	// available characters are alphanumeric, between 1-5 characters, and can contain '-' (hyphen), '*' (star), '#' (sharp), '^' (caret), '~' (tilde), '.' (dot), '{' (open curly bracket), '}' (closing curly bracket)
 	regEx := "^([a-zA-Z0-9-*#^~.{}]){1,5}$"
 	isMatch, err := regexp.MatchString(regEx, mask)
 
