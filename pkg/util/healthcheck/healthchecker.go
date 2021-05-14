@@ -149,6 +149,7 @@ func HandleRequests() {
 	}
 }
 
+// CheckIsRunning - Checks if another instance is already running by looking at the healthcheck
 func CheckIsRunning() error {
 	if statusConfig.GetPort() > 0 {
 		apiClient := api.NewClient(nil, "")
