@@ -11,6 +11,7 @@ import (
 
 var argDescriptions = map[string]string{
 	"install": "install the service, add --user and --group flags if necessary",
+	"update":  "update the service, add --user and --group flags if necessary",
 	"remove":  "remove the installed service",
 	"start":   "start the installed service",
 	"stop":    "stop the installed service",
@@ -48,10 +49,12 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 			}
 
 			if len(args) != 1 {
-				fmt.Printf("must provide only 1 arg to service (%s)\n", strings.Join(validArgs, ", "))
+				fmt.Printf("must provide exactly 1 arg to service command (%s)\n", strings.Join(validArgs, ", "))
+				return nil
 			}
 			if _, ok := argDescriptions[args[0]]; !ok {
 				fmt.Printf("invalid command to service (%s)\n", strings.Join(validArgs, ", "))
+				return nil
 			}
 			globalAgentService.PathArg = fmt.Sprintf("--%s", pathArg)
 			globalAgentService.Path = cmd.Flag(pathArg).Value.String()

@@ -62,6 +62,13 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
 		_, err = a.service.Install(a.PathArg, a.Path)
+	case "update":
+		fmt.Println("updating the agent service")
+
+		a.service.SetEnvFile(a.EnvFile)
+		a.service.SetUser(a.User)
+		a.service.SetGroup(a.Group)
+		_, err = a.service.Update(a.PathArg, a.Path)
 	case "remove":
 		fmt.Println("removing the agent service")
 		_, err = a.service.Remove()

@@ -63,34 +63,32 @@ func (s *systemDRecord) serviceName() string {
 }
 
 // Install the service
-func (s *systemDRecord) Install(args ...string) (string, error) {
-	installAction := "Install " + s.description + ":"
-
+func (s *systemDRecord) install(args ...string) (string, error) {
 	if ok, err := checkPrivileges(); !ok {
-		return installAction + failed, err
+		return failed, err
 	}
 
 	srvPath := s.servicePath()
 
 	if s.isInstalled() {
-		return installAction + failed, ErrAlreadyInstalled.FormatError(s.serviceName())
+		return failed, ErrAlreadyInstalled.FormatError(s.serviceName())
 	}
 
 	file, err := fs.Create(srvPath)
 	if err != nil {
-		return installAction + failed, err
+		return failed, err
 	}
 
 	execPatch, err := executablePath(s.name)
 	if err != nil {
 		file.Close()
-		return installAction + failed, err
+		return failed, err
 	}
 
 	templ, err := template.New("systemDConfig").Parse(systemDConfig)
 	if err != nil {
 		file.Close()
-		return installAction + failed, err
+		return failed, err
 	}
 
 	if s.envFile != "" {
@@ -112,43 +110,71 @@ func (s *systemDRecord) Install(args ...string) (string, error) {
 		},
 	); err != nil {
 		file.Close()
-		return installAction + failed, err
+		return failed, err
 	}
 
 	if _, err := execCmd(systemctl, "daemon-reload"); err != nil {
 		file.Close()
-		return installAction + failed, err
+		return failed, err
 	}
 
 	file.Close()
-	return installAction + success, nil
+	return success, nil
+}
+
+// Install the service
+func (s *systemDRecord) Install(args ...string) (string, error) {
+	installAction := "Install " + s.description + ":"
+
+	msg, err := s.install(args...)
+	return installAction + msg, err
+}
+
+// Update the service
+func (s *systemDRecord) Update(args ...string) (string, error) {
+	updateAction := "Updating " + s.description + ":"
+
+	msg, err := s.remove()
+	if err != nil {
+		return updateAction + msg, err
+	}
+
+	msg, err = s.install(args...)
+	return updateAction + msg, err
+}
+
+// Remove the service
+func (s *systemDRecord) remove() (string, error) {
+	if ok, err := checkPrivileges(); !ok {
+		return failed, err
+	}
+
+	if !s.isInstalled() {
+		return failed, ErrNotInstalled.FormatError(s.serviceName())
+	}
+
+	if _, ok := s.checkRunning(); ok {
+		return failed, ErrCurrentlyRunning.FormatError(s.serviceName())
+	}
+
+	if _, err := execCmd(systemctl, "disable", s.serviceName()); err != nil {
+		return failed, err
+	}
+
+	if err := fs.Remove(s.servicePath()); err != nil {
+		return failed, err
+	}
+
+	return success, nil
+
 }
 
 // Remove the service
 func (s *systemDRecord) Remove() (string, error) {
 	removeAction := "Removing " + s.description + ":"
 
-	if ok, err := checkPrivileges(); !ok {
-		return removeAction + failed, err
-	}
-
-	if !s.isInstalled() {
-		return removeAction + failed, ErrNotInstalled.FormatError(s.serviceName())
-	}
-
-	if _, ok := s.checkRunning(); ok {
-		return removeAction + failed, ErrCurrentlyRunning.FormatError(s.serviceName())
-	}
-
-	if _, err := execCmd(systemctl, "disable", s.serviceName()); err != nil {
-		return removeAction + failed, err
-	}
-
-	if err := fs.Remove(s.servicePath()); err != nil {
-		return removeAction + failed, err
-	}
-
-	return removeAction + success, nil
+	msg, err := s.remove()
+	return removeAction + msg, err
 }
 
 // Start the service
@@ -305,6 +331,7 @@ ExecStart={{.Path}} {{.Args}}
 User={{.User}}
 Group={{.Group}}
 Restart=on-failure
+RestartSec=60s
 
 [Install]
 WantedBy=multi-user.target
