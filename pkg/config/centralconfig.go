@@ -540,6 +540,10 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
+	eventAggSeconds := c.GetEventAggregationInterval().Milliseconds()
+	if eventAggSeconds < 60000 {
+		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
+	}
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
