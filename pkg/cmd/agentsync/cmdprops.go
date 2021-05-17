@@ -17,7 +17,7 @@ func IsSyncMode() bool {
 
 // SetSyncMode - checks for the syncFlag, if present sets IsSyncMode to true
 func SetSyncMode(props properties.Properties) {
-	if val := props.BoolPropertyValue(syncFlag); val {
+	if val := props.BoolFlagValue(syncFlag); val {
 		syncMode = val
 	}
 }
@@ -37,7 +37,7 @@ func CheckSyncFlag() int {
 	return -1
 }
 
-// AddSyncConfigProperties - Adds the command properties needed for Sync Process Config
+// AddSyncConfigProperties - Adds the flag needed for Sync Process Config
 func AddSyncConfigProperties(props properties.Properties) {
-	props.AddBoolProperty(syncFlag, false, "Run the sync process for the discovery agent")
+	props.AddBoolFlag(syncFlag, "Run the sync process for the discovery agent")
 }

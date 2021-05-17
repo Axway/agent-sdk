@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
@@ -29,6 +31,7 @@ type Config struct {
 	Protocol         string            `config:"protocol"`
 	Hosts            []string          `config:"hosts"`
 	Redaction        redaction.Config  `config:"redaction" yaml:"redaction"`
+	Sampling         sampling.Sampling `config:"sampling" yaml:"sampling"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -68,6 +71,7 @@ func DefaultConfig() *Config {
 		EscapeHTML: false,
 		Protocol:   "tcp",
 		Redaction:  redaction.DefaultConfig(),
+		Sampling:   sampling.DefaultConfig(),
 	}
 }
 
@@ -89,6 +93,9 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 
 	// Setup the redaction regular expressions
 	redaction.SetupGlobalRedaction(outputConfig.Redaction)
+
+	// Setup the redaction regular expressions
+	sampling.SetupSampling(outputConfig.Sampling)
 
 	// Force piplining to 0
 	if outputConfig.Pipelining > 0 {

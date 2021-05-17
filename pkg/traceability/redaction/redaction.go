@@ -5,13 +5,17 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
-	sanitizeValue = "{*}"
-	http          = "http"
-	https         = "https"
+	defaultSanitizeValue = "{*}"
+	http                 = "http"
+	https                = "https"
 )
+
+var sanitizeValue string
 
 //Redactions - the public methods available for redaction config
 type Redactions interface {
@@ -25,10 +29,11 @@ type Redactions interface {
 
 // Config - the configuration of all redactions
 type Config struct {
-	Path            path   `config:"path" yaml:"path"`
-	Args            filter `config:"queryArgument" yaml:"queryArgument"`
-	RequestHeaders  filter `config:"requestHeader" yaml:"requestHeader"`
-	ResponseHeaders filter `config:"responseHeader" yaml:"responseHeader"`
+	Path              path   `config:"path" yaml:"path"`
+	Args              filter `config:"queryArgument" yaml:"queryArgument"`
+	RequestHeaders    filter `config:"requestHeader" yaml:"requestHeader"`
+	ResponseHeaders   filter `config:"responseHeader" yaml:"responseHeader"`
+	MaskingCharacters string `config:"maskingCharacters" yaml:"maskingCharacters"`
 }
 
 // path - the keyMatches to show, all else are redacted
@@ -94,6 +99,7 @@ func DefaultConfig() Config {
 			Allowed:  []show{},
 			Sanitize: []sanitize{},
 		},
+		MaskingCharacters: "{*}",
 	}
 }
 
@@ -138,7 +144,30 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 		return nil, err
 	}
 
+	isValidMask, err := validateMaskingChars(cfg.MaskingCharacters)
+	if err != nil {
+		err = ErrInvalidRegex.FormatError("validate masking characters", cfg.MaskingCharacters, err)
+		log.Error(err)
+		return nil, err
+	}
+
+	if isValidMask {
+		sanitizeValue = cfg.MaskingCharacters
+	} else {
+		log.Error("error validating masking characters: ", string(cfg.MaskingCharacters), ", using default mask: ", defaultSanitizeValue)
+		sanitizeValue = defaultSanitizeValue
+	}
+
 	return &redactionSetup, err
+}
+
+// validateMaskingChars - validates the supplied masking character string against the accepted characters
+func validateMaskingChars(mask string) (bool, error) {
+	// available characters are alphanumeric, between 1-5 characters, and can contain '-' (hyphen), '*' (star), '#' (sharp), '^' (caret), '~' (tilde), '.' (dot), '{' (open curly bracket), '}' (closing curly bracket)
+	regEx := "^([a-zA-Z0-9-*#^~.{}]){1,5}$"
+	isMatch, err := regexp.MatchString(regEx, mask)
+
+	return isMatch, err
 }
 
 // URIRedaction - takes a uri and returns the redacted version of that URI
