@@ -7,9 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -145,6 +147,22 @@ func HandleRequests() {
 		server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
 		go server.ListenAndServe()
 	}
+}
+
+// CheckIsRunning - Checks if another instance is already running by looking at the healthcheck
+func CheckIsRunning() error {
+	if statusConfig.GetPort() > 0 {
+		apiClient := api.NewClient(nil, "")
+		req := api.Request{
+			Method: "GET",
+			URL:    "http://0.0.0.0:" + strconv.Itoa(statusConfig.GetPort()) + "/status",
+		}
+		res, err := apiClient.Send(req)
+		if err == nil && res.Code == 200 {
+			return ErrAlreadyRunning
+		}
+	}
+	return nil
 }
 
 //GetHealthcheckOutput - query the http endpoint and return the body

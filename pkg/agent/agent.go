@@ -79,10 +79,15 @@ func Initialize(centralCfg config.CentralConfig) error {
 		agent.apiMap = cache.New()
 	}
 
+	err := checkRunningAgent()
+	if err != nil {
+		return err
+	}
+
 	agent.cfg = centralCfg.(*config.CentralConfiguration)
 
 	// validate the central config
-	err := config.ValidateConfig(centralCfg)
+	err = config.ValidateConfig(centralCfg)
 	if err != nil {
 		return err
 	}
@@ -109,7 +114,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 		setupSignalProcessor()
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
-		if flag.Lookup("test.v") == nil && !isRunningInDockerContainer() {
+		if isNotTest() && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
 		}
 
@@ -117,6 +122,18 @@ func Initialize(centralCfg config.CentralConfig) error {
 		startAPIServiceCache()
 	}
 	agent.isInitialized = true
+	return nil
+}
+
+func isNotTest() bool {
+	return flag.Lookup("test.v") == nil
+}
+
+func checkRunningAgent() error {
+	// Check only on startup of binary agents
+	if !agent.isInitialized && isNotTest() && !isRunningInDockerContainer() {
+		return hc.CheckIsRunning()
+	}
 	return nil
 }
 
@@ -173,7 +190,7 @@ func isRunningInDockerContainer() bool {
 func initializeTokenRequester(centralCfg config.CentralConfig) error {
 	var err error
 	agent.tokenRequester = auth.NewPlatformTokenGetterWithCentralConfig(centralCfg)
-	if flag.Lookup("test.v") == nil {
+	if isNotTest() {
 		_, err = agent.tokenRequester.GetToken()
 	}
 	return err

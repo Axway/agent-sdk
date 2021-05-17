@@ -33,7 +33,9 @@ type collector struct {
 // NewMetricCollector - Create metric collector
 func NewMetricCollector(eventChannel chan interface{}) Collector {
 	metricCollector := &collector{
-		startTime:    time.Now(),
+		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
+		// if any usage event are to be generated on startup
+		startTime:    time.Now().Add(-1 * time.Minute),
 		lock:         &sync.Mutex{},
 		registry:     metrics.NewRegistry(),
 		metricMap:    make(map[string]map[string]*APIMetric),
