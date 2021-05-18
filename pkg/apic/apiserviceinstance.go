@@ -144,15 +144,12 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 
 func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
 	splitName := strings.Split(instances[0].Name, ".")
-	if len(splitName) == 2 {
-		instanceCount, err := strconv.Atoi(splitName[1])
-		if err != nil {
-			return fmt.Errorf("failed to convert instance count from to an int: %s", err)
-		}
-		serviceBody.serviceContext.instanceCount = instanceCount
-	} else {
-		return fmt.Errorf("unable to determine the next instance version. previous instance: %s", instances[0].Name)
+	countStr := splitName[len(splitName)-1]
+	instanceCount, err := strconv.Atoi(countStr)
+	if err != nil {
+		return fmt.Errorf("failed to convert instance count to an int: %s", err)
 	}
+	serviceBody.serviceContext.instanceCount = instanceCount
 	serviceBody.serviceContext.previousInstance = &instances[0]
 	// if the endpoints are same update the current instance otherwise create new instance
 	if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
