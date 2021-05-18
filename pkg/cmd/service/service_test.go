@@ -10,6 +10,7 @@ import (
 
 type mockDaemon struct {
 	installCalled     bool
+	updateCalled      bool
 	removeCalled      bool
 	startCalled       bool
 	stopCalled        bool
@@ -28,6 +29,11 @@ func (m *mockDaemon) SetGroup(string) error    { return nil }
 
 func (m *mockDaemon) Install(args ...string) (string, error) {
 	m.installCalled = true
+	return "", nil
+}
+
+func (m *mockDaemon) Update(args ...string) (string, error) {
+	m.updateCalled = true
 	return "", nil
 }
 
@@ -91,6 +97,7 @@ func TestGenServiceCmd(t *testing.T) {
 	assert.Contains(t, cmd.Short, "Manage the OS service")
 	assert.Contains(t, cmd.Long, "Manage the OS service")
 	assert.Contains(t, cmd.Long, argDescriptions["install"], "The install description was not included in the long description")
+	assert.Contains(t, cmd.Long, argDescriptions["update"], "The update description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["remove"], "The remove description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["start"], "The start description was not included in the long description")
 	assert.Contains(t, cmd.Long, argDescriptions["stop"], "The stop description was not included in the long description")
@@ -126,6 +133,12 @@ func TestHandleService(t *testing.T) {
 	err = a.HandleServiceFlag("install")
 	assert.Nil(t, err, "Unexpected error returned")
 	assert.True(t, a.service.(*mockDaemon).installCalled)
+
+	// Update
+	a = newMockAgentService()
+	err = a.HandleServiceFlag("update")
+	assert.Nil(t, err, "Unexpected error returned")
+	assert.True(t, a.service.(*mockDaemon).updateCalled)
 
 	// Remove
 	a = newMockAgentService()

@@ -11,7 +11,8 @@
     "zap": false,
     "yarn": false,
     "gosec": false,
-    "whitesource": true
+    "whitesource": true,
+    "appspider": false
   },
   "suppressions": [
     {
