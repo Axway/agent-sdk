@@ -149,7 +149,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
-	consumerInstanceName := serviceBody.serviceContext.serviceName
+	consumerInstanceName := serviceBody.serviceContext.currentRevision
 	if serviceBody.Stage != "" {
 		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
 	}
@@ -159,20 +159,21 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 
 	var consumerInstance *v1alpha1.ConsumerInstance
 	var err error
-	if serviceBody.serviceContext.serviceAction == updateAPI {
-		consumerInstance, err = c.getConsumerInstanceByName(consumerInstanceName)
-		if err != nil {
-			return err
-		}
-	}
+	// if serviceBody.serviceContext.serviceAction == updateAPI {
+	// 	consumerInstance, err = c.getConsumerInstanceByName(consumerInstanceName)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	if consumerInstance != nil {
-		httpMethod = http.MethodPut
-		consumerInstanceURL += "/" + consumerInstanceName
-		c.updateConsumerInstanceResource(consumerInstance, serviceBody, doc)
-	} else {
-		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
-	}
+	// if consumerInstance != nil {
+	// 	httpMethod = http.MethodPut
+	// 	consumerInstanceURL += "/" + consumerInstanceName
+	// 	c.updateConsumerInstanceResource(consumerInstance, serviceBody, doc)
+	// } else {
+	// 	consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
+	// }
+	consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 
 	buffer, err := json.Marshal(consumerInstance)
 	if err != nil {
