@@ -18,6 +18,9 @@ type Daemon interface {
 	// Install the service into the system
 	Install(args ...string) (string, error)
 
+	// Update the service definition on the system
+	Update(args ...string) (string, error)
+
 	// Remove the service and all corresponding files from the system
 	Remove() (string, error)
 

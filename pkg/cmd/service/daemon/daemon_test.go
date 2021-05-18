@@ -12,8 +12,9 @@ import (
 const tempfile = "/tmp/tempfile"
 
 type mockOSFS struct {
-	statError    bool
-	removeCalled bool
+	statErrorOrder []bool
+	statCalls      int
+	removeCalled   bool
 }
 
 func (m *mockOSFS) Open(name string) (*os.File, error)   { return nil, nil }
@@ -29,9 +30,14 @@ func (m *mockOSFS) Remove(name string) error {
 }
 
 func (m *mockOSFS) Stat(name string) (os.FileInfo, error) {
-	if m.statError {
+	if len(m.statErrorOrder) <= m.statCalls {
+		return nil, nil
+	}
+	if m.statErrorOrder[m.statCalls] {
+		m.statCalls++
 		return nil, fmt.Errorf("error in stat")
 	}
+	m.statCalls++
 	return nil, nil
 }
 
@@ -70,7 +76,7 @@ func TestNewDaemon(t *testing.T) {
 	assert.IsType(t, &systemDRecord{}, daemon, "The returned type was incorrect")
 
 	mOSFS = mockOSFS{
-		statError: true,
+		statErrorOrder: []bool{true},
 	}
 	fs = &mOSFS
 
@@ -97,7 +103,7 @@ func TestInstall(t *testing.T) {
 	assert.NotNil(t, err, "expected an error since we were not root")
 
 	mOSFS = mockOSFS{
-		statError: true,
+		statErrorOrder: []bool{true},
 	}
 	fs = &mOSFS
 	execCmd = fakeExecCommand
@@ -111,6 +117,43 @@ func TestInstall(t *testing.T) {
 	assert.Nil(t, err, "no error expected")
 	assert.Len(t, fakeOutput.cmds, 2)
 	assert.Equal(t, "systemctl daemon-reload", fakeOutput.cmds[1])
+}
+
+func TestUpdate(t *testing.T) {
+	execCmd = fakeExecCommand
+	fakeOutput = fakeCommand{
+		calls:   0,
+		outputs: []string{"1000"},
+	}
+	mOSFS := mockOSFS{}
+	fs = &mOSFS
+
+	daemon, err := newDaemon("daemon", "desc", []string{"network"})
+	assert.Nil(t, err, "Error was not nil")
+	assert.NotNil(t, daemon, "The daemon object was not returned")
+
+	output, err := daemon.Update()
+	assert.NotNil(t, output, "Expected an output to be returned")
+	assert.NotNil(t, err, "expected an error since we were not root")
+
+	mOSFS = mockOSFS{
+		statErrorOrder: []bool{false, true},
+	}
+	fs = &mOSFS
+	execCmd = fakeExecCommand
+	fakeOutput = fakeCommand{
+		calls:   0,
+		outputs: []string{"0", "", "", "0", ""},
+	}
+
+	output, err = daemon.Update()
+	assert.NotNil(t, output, "Expected an output to be returned")
+	assert.Nil(t, err, "no error expected")
+	assert.Len(t, fakeOutput.cmds, 5)
+	assert.Equal(t, "systemctl status daemon.service", fakeOutput.cmds[1])
+	assert.Equal(t, "systemctl disable daemon.service", fakeOutput.cmds[2])
+	assert.True(t, mOSFS.removeCalled, "Exppected a call to remove the service definition file")
+	assert.Equal(t, "systemctl daemon-reload", fakeOutput.cmds[4])
 }
 
 func TestRemove(t *testing.T) {
