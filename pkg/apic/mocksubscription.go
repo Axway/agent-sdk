@@ -16,6 +16,7 @@ type MockSubscription struct {
 	State                        SubscriptionState
 	PropertyVals                 map[string]string
 	ReceivedValues               map[string]interface{}
+	RemoteAPIAttributes          map[string]string
 	ReceivedAppName              string
 	ReceivedUpdatedEnum          string
 	UpdateStateErr               error
@@ -36,6 +37,9 @@ func (s *MockSubscription) GetApicID() string { return s.ApicID }
 
 //GetRemoteAPIID - mocked for testing
 func (s *MockSubscription) GetRemoteAPIID() string { return s.RemoteAPIID }
+
+// GetRemoteAPIAttributes - mocked for testing
+func (s *MockSubscription) GetRemoteAPIAttributes() map[string]string { return s.RemoteAPIAttributes }
 
 //GetRemoteAPIStage - mocked for testing
 func (s *MockSubscription) GetRemoteAPIStage() string { return s.RemoteAPIStage }
