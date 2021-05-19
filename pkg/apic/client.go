@@ -49,7 +49,9 @@ type Client interface {
 	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
 	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
+	GetPlatformUserInfo(ID string) (*PlatformUserInfo, error)
 	GetUserEmailAddress(ID string) (string, error)
+	GetUserName(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
 	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
 	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
@@ -315,11 +317,11 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 
 }
 
-// GetUserEmailAddress - request the user email
-func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
+// GetPlatformUserInfo - request the platform user info
+func (c *ServiceClient) GetPlatformUserInfo(id string) (*PlatformUserInfo, error) {
 	headers, err := c.createHeader()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
@@ -328,14 +330,24 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
 	if reqErr != nil {
 		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
-			return "", ErrNoAddressFound.FormatError(id)
+			return nil, ErrNoAddressFound.FormatError(id)
 		}
-		return "", reqErr
+		return nil, reqErr
 	}
 
-	// Get the email
 	var platformUserInfo PlatformUserInfo
 	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &platformUserInfo, nil
+}
+
+// GetUserEmailAddress - request the user email
+func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
+
+	platformUserInfo, err := c.GetPlatformUserInfo(id)
 	if err != nil {
 		return "", err
 	}
@@ -344,6 +356,21 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	log.Debugf("Platform user email %s", email)
 
 	return email, nil
+}
+
+// GetUserName - request the user name
+func (c *ServiceClient) GetUserName(id string) (string, error) {
+
+	platformUserInfo, err := c.GetPlatformUserInfo(id)
+	if err != nil {
+		return "", err
+	}
+
+	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
+
+	log.Debugf("Platform user %s", userName)
+
+	return userName, nil
 }
 
 // getCentralTeam - returns the team based on team name
