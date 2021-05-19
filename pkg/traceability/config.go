@@ -19,7 +19,7 @@ type Config struct {
 	LoadBalance      bool              `config:"loadbalance"`
 	BulkMaxSize      int               `config:"bulk_max_size"`
 	SlowStart        bool              `config:"slow_start"`
-	Timeout          time.Duration     `config:"timeout"`
+	Timeout          time.Duration     `config:"client_timeout"    validate:"min=1"`
 	TTL              time.Duration     `config:"ttl"               validate:"min=0"`
 	Pipelining       int               `config:"pipelining"        validate:"min=0"`
 	CompressionLevel int               `config:"compression_level" validate:"min=0, max=9"`

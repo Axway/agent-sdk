@@ -56,6 +56,12 @@ type httpClient struct {
 
 // NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
+	timeout := getTimeoutFromEnvironment()
+	return NewClientWithTimeout(cfg, proxyURL, timeout)
+}
+
+// NewClientWithTimeout - creates a new HTTP client, with a timeout
+func NewClientWithTimeout(cfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
 	httpCli := http.DefaultClient
 	if cfg != nil {
 		url, err := url.Parse(proxyURL)
@@ -69,7 +75,6 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 			},
 		}
 	}
-	timeout := getTimeoutFromEnvironment()
 	httpCli.Timeout = timeout
 	return &httpClient{
 		timeout:    timeout,

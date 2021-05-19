@@ -143,7 +143,7 @@ func HandleRequests() {
 		server.Close()
 	}
 
-	if statusConfig.GetPort() > 0 {
+	if statusConfig != nil && statusConfig.GetPort() > 0 {
 		server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
 		go server.ListenAndServe()
 	}
@@ -151,7 +151,7 @@ func HandleRequests() {
 
 // CheckIsRunning - Checks if another instance is already running by looking at the healthcheck
 func CheckIsRunning() error {
-	if statusConfig.GetPort() > 0 {
+	if statusConfig != nil && statusConfig.GetPort() > 0 {
 		apiClient := api.NewClient(nil, "")
 		req := api.Request{
 			Method: "GET",
