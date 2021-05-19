@@ -61,7 +61,7 @@ func DefaultConfig() *Config {
 		BulkMaxSize:      512,
 		SlowStart:        false,
 		CompressionLevel: 3,
-		Timeout:          30 * time.Second,
+		Timeout:          60 * time.Second,
 		MaxRetries:       3,
 		TTL:              0 * time.Second,
 		Backoff: Backoff{
