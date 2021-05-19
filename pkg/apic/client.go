@@ -73,7 +73,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 // OnConfigChange - config change handler
 func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
-	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL())
+	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
 	// set the default webhook if one has been configured
