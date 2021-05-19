@@ -150,9 +150,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	}
 
 	consumerInstanceName := serviceBody.serviceContext.currentRevision
-	if serviceBody.Stage != "" {
-		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
-	}
+	// if serviceBody.Stage != "" {
+	// 	consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", consumerInstanceName, serviceBody.Stage))
+	// }
 
 	httpMethod := http.MethodPost
 	consumerInstanceURL := c.cfg.GetConsumerInstancesURL()
