@@ -46,6 +46,8 @@ func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1a
 func (m *mockSvcClient) GetConsumerInstancesByExternalAPIID(consumerInstanceID string) ([]*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
+
+func (m *mockSvcClient) GetUserName(ID string) (string, error)         { return "", nil }
 func (m *mockSvcClient) GetUserEmailAddress(ID string) (string, error) { return "", nil }
 func (m *mockSvcClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]apic.CentralSubscription, error) {
 	return nil, nil

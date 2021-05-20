@@ -126,6 +126,38 @@ func TestGetUserEmailAddress(t *testing.T) {
 	assert.Equal(t, "", addr)
 }
 
+func TestGetUserName(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "Environment"
+	cfg.PlatformURL = "http://foo.bar:4080"
+
+	// Test DiscoveryAgent, PublishToEnvironment
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/userinfo.json",
+			RespCode: http.StatusOK,
+		},
+	})
+
+	userName, err := svcClient.GetUserName("b0433b7f-ac38-4d29-8a64-cf645c99b99f")
+	assert.Nil(t, err)
+	assert.Equal(t, "Dale Feldick", userName)
+
+	// test a failure
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{FileName: "./testdata/userinfoerror.json",
+			RespCode:  http.StatusNotFound,
+			ErrString: "Resource Not Found",
+		},
+	})
+
+	userName, err = svcClient.GetUserName("b0433b7f-ac38-4d29-8a64-cf645c99b99g")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", userName)
+}
+
 func TestHealthCheck(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	requester := svcClient.tokenRequester
