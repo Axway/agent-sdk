@@ -58,6 +58,7 @@ type Client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	OnConfigChange(cfg corecfg.CentralConfig)
 	Healthcheck(name string) *hc.Status
+	GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error)
 }
 
 // New -

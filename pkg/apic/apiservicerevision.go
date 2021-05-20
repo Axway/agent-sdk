@@ -95,6 +95,11 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	return nil
 }
 
+// GetAPIRevisions - Returns the list of API revisions for the specified filter
+func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+	return c.getAPIRevisions(queryParams, stage)
+}
+
 // getAPIRevisions - Returns the list of API revisions for the specified filter
 func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
 	headers, err := c.createHeader()
