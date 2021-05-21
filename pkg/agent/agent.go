@@ -48,6 +48,7 @@ var agentTypesMap = map[config.AgentType]string{
 	config.TraceabilityAgent: "traceabilityagents",
 }
 
+// CentralClient client for requests to central
 var CentralClient apic.Client
 
 type agentData struct {
