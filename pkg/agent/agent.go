@@ -276,10 +276,6 @@ func refreshResources() (bool, error) {
 	}
 	agent.prevAgentResource = agent.agentResource
 
-	if isChanged {
-		dataplaneTitle := agent.cfg.GetEnvironmentName()
-		agent.cfg.SetDataPlaneName(dataplaneTitle)
-	}
 	return isChanged, nil
 }
 
