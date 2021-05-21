@@ -149,9 +149,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
-	consumerInstanceName := serviceBody.serviceContext.currentRevision
+	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
-		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", consumerInstanceName, serviceBody.Stage))
+		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
 	}
 
 	httpMethod := http.MethodPost
@@ -173,7 +173,6 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	} else {
 		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 	}
-	consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 
 	buffer, err := json.Marshal(consumerInstance)
 	if err != nil {
