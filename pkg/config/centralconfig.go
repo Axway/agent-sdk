@@ -86,7 +86,6 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
-	GetPlatformEnvironmentID() string
 	GetLighthouseURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
@@ -133,7 +132,6 @@ type CentralConfiguration struct {
 	AgentName                 string             `config:"agentName"`
 	URL                       string             `config:"url"`
 	PlatformURL               string             `config:"platformURL"`
-	PlatformEnvironmentID     string             `config:"platformEnvironmentID"`
 	LighthouseURL             string             `config:"lighthouseURL"`
 	APIServerVersion          string             `config:"apiServerVersion"`
 	TagsToPublish             string             `config:"additionalTags"`
@@ -175,11 +173,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
 	return c.PlatformURL
-}
-
-// GetPlatformEnvironmentID - Returns the platform environment ID
-func (c *CentralConfiguration) GetPlatformEnvironmentID() string {
-	return c.PlatformEnvironmentID
 }
 
 // GetLighthouseURL - Returns the lighthouse base URL
@@ -421,7 +414,6 @@ const (
 	pathTenantID                 = "central.organizationID"
 	pathURL                      = "central.url"
 	pathPlatformURL              = "central.platformURL"
-	pathPlatformEnvironmentID    = "central.platformEnvironmentID"
 	pathLighthouseURL            = "central.lighthouseURL"
 	pathAuthPrivateKey           = "central.auth.privateKey"
 	pathAuthPublicKey            = "central.auth.publicKey"
@@ -532,12 +524,6 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
-	// if c.GetGateKeeperURL() == "" {
-	// 	exception.Throw(ErrBadConfig.FormatError(pathGateKeeperURL))
-	// }
-	// if c.GetPlatformEnvironmentID() == "" {
-	// 	exception.Throw(ErrBadConfig.FormatError(pathPlatformEnvironmentID))
-	// }
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
@@ -584,7 +570,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
-		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
 		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated")
@@ -635,7 +620,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
-		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
 		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)

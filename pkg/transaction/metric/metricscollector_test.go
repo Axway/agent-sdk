@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/stretchr/testify/assert"
 )
@@ -155,7 +157,46 @@ func TestMetricCollector(t *testing.T) {
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
 			}
-			s.resetConfig()
+			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+			cmd.BuildDataPlaneType = "Azure"
+			agent.Initialize(cfg)
+			eventChannel := make(chan interface{}, 1028)
+			myCollector := NewMetricCollector(eventChannel)
+			metricCollector := myCollector.(*collector)
+			jobs.GetJob(metricCollector.jobID)
+			NewMetricPublisher(eventChannel)
+
+			metricCollector.orgGUID = metricCollector.getOrgGUID()
+
+			metricCollector.AddMetric("111", "111", "200", 10, "", "")
+			metricCollector.AddMetric("111", "111", "200", 20, "", "")
+			metricCollector.AddMetric("111", "111", "200", 30, "", "")
+			metricCollector.AddMetric("111", "111", "401", 10, "", "")
+			metricCollector.AddMetric("111", "111", "401", 20, "", "")
+
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
+
+			metricCollector.endTime = time.Now()
+			metricCollector.generateEvents()
+			metricCollector.startTime = time.Now()
+			time.Sleep(1 * time.Second)
+			assert.Equal(t, test.expectedLHEvents1, lighthouseEventCount)
+
+			lighthouseEventCount = 0
+			metricCollector.AddMetric("111", "111", "200", 5, "", "")
+			metricCollector.AddMetric("111", "111", "200", 15, "", "")
+			metricCollector.AddMetric("111", "111", "401", 15, "", "")
+			metricCollector.AddMetric("111", "111", "401", 5, "", "")
+			metricCollector.AddMetric("111", "111", "401", 120, "", "")
+
+			metricCollector.AddMetric("222", "222", "200", 5, "", "")
+			metricCollector.AddMetric("222", "222", "200", 50, "", "")
+			metricCollector.AddMetric("222", "222", "400", 15, "", "")
+			metricCollector.endTime = time.Now()
+			metricCollector.generateEvents()
+			time.Sleep(1 * time.Second)
+			assert.Equal(t, test.expectedLHEvents2, lighthouseEventCount)
 		})
 	}
 }
@@ -168,7 +209,7 @@ func TestMetricCollectorCache(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.LighthouseURL = s.server.URL + "/lighthouse"
-	cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
