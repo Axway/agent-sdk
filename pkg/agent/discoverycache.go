@@ -25,7 +25,6 @@ const (
 
 type discoveryCache struct {
 	jobs.Job
-	updateCacheFunc UpdateAPICacheFunc
 }
 
 //Ready -
@@ -49,12 +48,7 @@ func (j *discoveryCache) Status() error {
 //Execute -
 func (j *discoveryCache) Execute() error {
 	log.Trace("executing API cache update job")
-	if j.updateCacheFunc == nil {
-		updateAPICache()
-	} else {
-		// custom update func provided by the agent
-		j.updateCacheFunc(CentralClient)
-	}
+	updateAPICache()
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		validateConsumerInstances()
 	}
