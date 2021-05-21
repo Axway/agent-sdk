@@ -135,3 +135,8 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 func RegisterDeleteServiceValidator(validator DeleteServiceValidator) {
 	agent.deleteServiceValidator = validator
 }
+
+// RegisterUpdateCacheFunc - Provide to override the default behavior of caching api services.
+func RegisterUpdateCacheFunc(updater UpdateAPICacheFunc) {
+	agent.updateAPICacheFunc = updater
+}

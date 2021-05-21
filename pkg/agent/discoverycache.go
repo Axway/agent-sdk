@@ -25,6 +25,7 @@ const (
 
 type discoveryCache struct {
 	jobs.Job
+	updateCacheFunc UpdateAPICacheFunc
 }
 
 //Ready -
@@ -48,7 +49,12 @@ func (j *discoveryCache) Status() error {
 //Execute -
 func (j *discoveryCache) Execute() error {
 	log.Trace("executing API cache update job")
-	updateAPICache()
+	if j.updateCacheFunc == nil {
+		updateAPICache()
+	} else {
+		// custom update func provided by the agent
+		j.updateCacheFunc(CentralClient)
+	}
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		validateConsumerInstances()
 	}
@@ -186,23 +192,23 @@ func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage, consumerInstance.Attributes) {
 			deleteConsumerInstanceOrService(consumerInstance, externalAPIID, externalAPIStage)
 		}
 	}
 }
 
-func shouldDeleteService(apiID, stage string) bool {
+func shouldDeleteService(apiID, stage string, attributes map[string]string) bool {
 	// no agent-specific validator means to delete the service
 	if agent.deleteServiceValidator == nil {
 		return true
 	}
 	// let the agent decide if service should be deleted
-	return agent.deleteServiceValidator(apiID, stage)
+	return agent.deleteServiceValidator(apiID, stage, attributes)
 }
 
 func deleteConsumerInstanceOrService(consumerInstance *v1alpha1.ConsumerInstance, externalAPIID, externalAPIStage string) {
-	if shouldDeleteService(externalAPIID, externalAPIStage) {
+	if shouldDeleteService(externalAPIID, externalAPIStage, consumerInstance.Attributes) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from Amplify Central", consumerInstance.Title)
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
