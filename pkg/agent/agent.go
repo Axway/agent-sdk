@@ -48,9 +48,6 @@ var agentTypesMap = map[config.AgentType]string{
 	config.TraceabilityAgent: "traceabilityagents",
 }
 
-// CentralClient client for requests to central
-var CentralClient apic.Client
-
 type agentData struct {
 	agentResource     *apiV1.ResourceInstance
 	prevAgentResource *apiV1.ResourceInstance
@@ -102,11 +99,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Init apic client
 	if agent.apicClient == nil {
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		CentralClient = agent.apicClient
 	} else {
 		agent.apicClient.SetTokenGetter(agent.tokenRequester)
 		agent.apicClient.OnConfigChange(centralCfg)
-		CentralClient = agent.apicClient
 	}
 
 	if !agent.isInitialized {
