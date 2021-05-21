@@ -127,9 +127,19 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 // createSamplingTransactionDetails -
 func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) sampling.TransactionDetails {
+	var status string
+	var apiID string
+
+	if summaryEvent.TransactionSummary != nil {
+		status = summaryEvent.TransactionSummary.Status
+		if summaryEvent.TransactionSummary.Proxy != nil {
+			apiID = summaryEvent.TransactionSummary.Proxy.ID
+		}
+	}
+
 	return sampling.TransactionDetails{
-		Status: summaryEvent.TransactionSummary.Status,
-		APIID:  summaryEvent.TransactionSummary.Application.ID,
+		Status: status,
+		APIID:  apiID,
 	}
 }
 
