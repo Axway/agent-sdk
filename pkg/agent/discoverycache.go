@@ -186,7 +186,7 @@ func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage, consumerInstance.Attributes) {
+		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
 			deleteConsumerInstanceOrService(consumerInstance, externalAPIID, externalAPIStage)
 		}
 	}
@@ -198,7 +198,7 @@ func shouldDeleteService(apiID, stage string, attributes map[string]string) bool
 		return true
 	}
 	// let the agent decide if service should be deleted
-	return agent.deleteServiceValidator(apiID, stage, attributes)
+	return agent.deleteServiceValidator(apiID, stage)
 }
 
 func deleteConsumerInstanceOrService(consumerInstance *v1alpha1.ConsumerInstance, externalAPIID, externalAPIStage string) {
