@@ -20,6 +20,10 @@ type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
+func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
 func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil

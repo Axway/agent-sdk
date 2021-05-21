@@ -182,6 +182,7 @@ func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscrip
 		subscription.ApicID = apiServerResource.Metadata.ID
 		subscription.RemoteAPIID = apiServerResource.Attributes[AttrExternalAPIID]
 		subscription.RemoteAPIStage = apiServerResource.Attributes[AttrExternalAPIStage]
+		subscription.RemoteAPIAttributes = apiServerResource.Attributes
 		if subscription.RemoteAPIStage != "" {
 			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
 				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
