@@ -192,7 +192,7 @@ func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
 	}
 }
 
-func shouldDeleteService(apiID, stage string, attributes map[string]string) bool {
+func shouldDeleteService(apiID, stage string) bool {
 	// no agent-specific validator means to delete the service
 	if agent.deleteServiceValidator == nil {
 		return true
@@ -202,7 +202,7 @@ func shouldDeleteService(apiID, stage string, attributes map[string]string) bool
 }
 
 func deleteConsumerInstanceOrService(consumerInstance *v1alpha1.ConsumerInstance, externalAPIID, externalAPIStage string) {
-	if shouldDeleteService(externalAPIID, externalAPIStage, consumerInstance.Attributes) {
+	if shouldDeleteService(externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from Amplify Central", consumerInstance.Title)
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
