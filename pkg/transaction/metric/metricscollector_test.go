@@ -73,7 +73,7 @@ func TestMetricCollector(t *testing.T) {
 			if test.lighthouse {
 				cfg.LighthouseURL = s.URL + "/lighthouse"
 			}
-			cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 			cmd.BuildDataPlaneType = "Azure"
 			agent.Initialize(cfg)
 			eventChannel := make(chan interface{}, 1028)

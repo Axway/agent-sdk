@@ -131,7 +131,7 @@ func (c *collector) getOrgGUID() string {
 
 func (c *collector) generateEvents() {
 	defer c.cleanup()
-	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
+	if agent.GetCentralConfig().GetEnvironmentID() == "" ||
 		cmd.GetBuildDataPlaneType() == "" {
 		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
 		return
@@ -165,7 +165,7 @@ func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
 func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID string) {
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
-		EnvID:       agent.GetCentralConfig().GetPlatformEnvironmentID(),
+		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.endTime),
 		SchemaID:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
 		Granularity: int(c.endTime.Sub(c.startTime).Milliseconds()),
@@ -195,7 +195,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 // 		App:       c.orgGUID,
 // 		Version:   "4",
 // 		Distribution: V4EventDistribution{
-// 			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
+// 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
 // 			Version:     "1",
 // 		},
 // 		Data: apiStatusMetric,
