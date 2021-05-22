@@ -90,10 +90,8 @@ var globalMetricCollector Collector
 
 // GetMetricCollector - Create metric collector
 func GetMetricCollector() Collector {
-	if globalMetricCollector == nil {
-		if flag.Lookup("test.v") == nil {
-			globalMetricCollector = createMetricCollector()
-		}
+	if globalMetricCollector == nil && flag.Lookup("test.v") == nil {
+		globalMetricCollector = createMetricCollector()
 	}
 	return globalMetricCollector
 }
