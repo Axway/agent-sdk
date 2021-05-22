@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"flag"
 	"sync"
 	"time"
 
@@ -20,26 +21,93 @@ type Collector interface {
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	startTime    time.Time
-	endTime      time.Time
-	orgGUID      string
-	eventChannel chan interface{}
-	lock         *sync.Mutex
-	registry     metrics.Registry
-	metricMap    map[string]map[string]*APIMetric
-	jobID        string
+	startTime        time.Time
+	endTime          time.Time
+	orgGUID          string
+	eventChannel     chan interface{}
+	lock             *sync.Mutex
+	registry         metrics.Registry
+	metricMap        map[string]map[string]*APIMetric
+	publishItemQueue []publishQueueItem
+	jobID            string
+	publisher        publisher
 }
 
-// NewMetricCollector - Create metric collector
-func NewMetricCollector(eventChannel chan interface{}) Collector {
+type publishQueueItem interface {
+	GetEvent() interface{}
+	GetMetric() interface{}
+}
+
+type usageEventPublishItem interface {
+	publishQueueItem
+}
+
+type usageEventQueueItem struct {
+	usageEventPublishItem
+	event  LighthouseUsageEvent
+	metric metrics.Counter
+}
+
+func (qi *usageEventQueueItem) GetEvent() interface{} {
+	return qi.event
+}
+
+func (qi *usageEventQueueItem) GetMetric() interface{} {
+	return qi.metric
+}
+
+// type metricEventPublishItem interface {
+// 	publishQueueItem
+// 	GetAPIID() string
+// 	GetStatusCode() string
+// }
+
+// type metricEventQueueItem struct {
+// 	metricEventPublishItem
+// 	// event     V4Event
+// 	metric    metrics.Histogram
+// 	apiMetric *APIMetric
+// }
+
+// func (qi *metricEventQueueItem) GetEvent() interface{} {
+// 	// return qi.
+// 	return nil
+// }
+
+// func (qi *metricEventQueueItem) GetMetric() interface{} {
+// 	return qi.metric
+// }
+
+// func (qi *metricEventQueueItem) GetAPIID() string {
+// 	return qi.apiMetric.API.ID
+// }
+
+// func (qi *metricEventQueueItem) GetStatusCode() string {
+// 	return qi.apiMetric.StatusCode
+// }
+
+var globalMetricCollector Collector
+
+// GetMetricCollector - Create metric collector
+func GetMetricCollector() Collector {
+	if globalMetricCollector == nil {
+		if flag.Lookup("test.v") == nil {
+			globalMetricCollector = createMetricCollector()
+		}
+	}
+	return globalMetricCollector
+}
+
+func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		startTime:    time.Now().Add(-1 * time.Minute),
-		lock:         &sync.Mutex{},
-		registry:     metrics.NewRegistry(),
-		metricMap:    make(map[string]map[string]*APIMetric),
-		eventChannel: eventChannel,
+		startTime:        time.Now().Add(-1 * time.Minute),
+		lock:             &sync.Mutex{},
+		registry:         metrics.NewRegistry(),
+		metricMap:        make(map[string]map[string]*APIMetric),
+		publishItemQueue: make([]publishQueueItem, 0),
+		publisher:        newMetricPublisher(),
 	}
 
 	var err error
@@ -70,10 +138,11 @@ func (c *collector) Execute() error {
 	c.orgGUID = c.getOrgGUID()
 	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	defer func() {
-		c.startTime = c.endTime
+		c.cleanup()
 	}()
 
 	c.generateEvents()
+	c.publishEvents()
 	return nil
 }
 
@@ -87,31 +156,35 @@ func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64,
 	defer c.lock.Unlock()
 
 	transactionCount := c.getOrRegisterCounter("transaction.count")
-	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
-
-	apiStatusMap, ok := c.metricMap[apiID]
-	if !ok {
-		apiStatusMap = make(map[string]*APIMetric)
-		c.metricMap[apiID] = apiStatusMap
-	}
-
-	_, ok = apiStatusMap[statusCode]
-	if !ok {
-		apiStatusMap[statusCode] = &APIMetric{
-			API: APIDetails{
-				Name: apiName,
-				ID:   apiID,
-			},
-			StatusCode: statusCode,
-		}
-	}
-
 	transactionCount.Inc(1)
-	apiStatusDuration.Update(duration)
+
+	// apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
+
+	// apiStatusMap, ok := c.metricMap[apiID]
+	// if !ok {
+	// 	apiStatusMap = make(map[string]*APIMetric)
+	// 	c.metricMap[apiID] = apiStatusMap
+	// }
+
+	// _, ok = apiStatusMap[statusCode]
+	// if !ok {
+	// 	// First api metric for api+statuscode,
+	// 	// setup the start time to be used for reporting metric event
+	// 	apiStatusMap[statusCode] = &APIMetric{
+	// 		API: APIDetails{
+	// 			Name: apiName,
+	// 			ID:   apiID,
+	// 		},
+	// 		StatusCode: statusCode,
+	// 		StartTime:  time.Now(),
+	// 	}
+	// }
+
+	// apiStatusDuration.Update(duration)
 }
 
 func (c *collector) cleanup() {
-	c.metricMap = make(map[string]map[string]*APIMetric)
+	c.publishItemQueue = make([]publishQueueItem, 0)
 }
 
 func (c *collector) getOrgGUID() string {
@@ -130,39 +203,38 @@ func (c *collector) getOrgGUID() string {
 }
 
 func (c *collector) generateEvents() {
-	defer c.cleanup()
 	if agent.GetCentralConfig().GetPlatformEnvironmentID() == "" ||
 		cmd.GetBuildDataPlaneType() == "" {
 		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
 		return
 	}
-	if len(c.metricMap) != 0 {
-		c.registry.Each(c.processUsageFromRegistry)
-		// if agent.GetCentralConfig().CanPublishMetricEvent() {
-		// 	counter := 0
-		// 	for _, apiStatusMetricMap := range c.metricMap {
-		// 		for _, apiStatusMetric := range apiStatusMetricMap {
-		// 			c.generateAPIStatusMetricEvent(apiStatusMetric)
-		// 			counter++
-		// 		}
-		// 	}
-		// 	log.Infof("Generated %d metric events [start timestamp: %d, end timestamp: %d]", counter, convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
-		// } else {
-		// 	log.Info("Publishing the metric event is turned off")
-		// }
-	} else {
+
+	c.registry.Each(c.processUsageFromRegistry)
+	if len(c.publishItemQueue) == 0 {
 		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 	}
-
 }
 
-func (c *collector) generateUsageEvent(transactionCount int64, orgGUID string) {
-	if transactionCount != 0 {
-		c.generateLighthouseUsageEvent(transactionCount, orgGUID)
+func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
+	if name == "transaction.count" {
+		counterMetric := metric.(metrics.Counter)
+		if agent.GetCentralConfig().CanPublishUsageEvent() {
+			c.generateUsageEvent(counterMetric, c.orgGUID)
+		} else {
+			log.Info("Publishing the usage event is turned off")
+		}
+	}
+
+	// c.processTransactionMetric(name, metric)
+}
+
+func (c *collector) generateUsageEvent(transactionCounter metrics.Counter, orgGUID string) {
+	if transactionCounter.Count() != 0 {
+		c.generateLighthouseUsageEvent(transactionCounter, orgGUID)
 	}
 }
 
-func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID string) {
+func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counter, orgGUID string) {
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetPlatformEnvironmentID(),
@@ -173,52 +245,20 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount int64, orgGUID
 			c.endTime.Format("2006-01-02T15:04:05.000Z"): {
 				Product: cmd.GetBuildDataPlaneType(),
 				Usage: map[string]int64{
-					cmd.GetBuildDataPlaneType() + ".Transactions": transactionCount,
+					cmd.GetBuildDataPlaneType() + ".Transactions": transactionCount.Count(),
 				},
 				Meta: make(map[string]interface{}),
 			},
 		},
 		Meta: make(map[string]interface{}),
 	}
-	log.Infof("Creating usage event with %d transactions", transactionCount)
-	c.eventChannel <- lightHouseUsageEvent
-}
-
-// func (c *collector) generateAPIStatusMetricEvent(apiStatusMetric *APIMetric) {
-// 	apiStatusMetric.Observation.Start = convertTimeToMillis(c.startTime)
-// 	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
-// 	apiStatusMetricEventID, _ := uuid.NewV4()
-// 	apiStatusMetricEvent := V4Event{
-// 		ID:        apiStatusMetricEventID.String(),
-// 		Timestamp: c.startTime.UnixNano() / 1e6,
-// 		Event:     "api.transaction.status.metric",
-// 		App:       c.orgGUID,
-// 		Version:   "4",
-// 		Distribution: V4EventDistribution{
-// 			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
-// 			Version:     "1",
-// 		},
-// 		Data: apiStatusMetric,
-// 	}
-// disabling sending metrics for now
-// c.eventChannel <- apiStatusMetricEvent
-// 	_ = apiStatusMetricEvent
-// }
-
-func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
-	if name == "transaction.count" {
-		counterMetric := metric.(metrics.Counter)
-		transactionCount := counterMetric.Count()
-		counterMetric.Clear()
-		if agent.GetCentralConfig().CanPublishUsageEvent() {
-			c.generateUsageEvent(transactionCount, c.orgGUID)
-			log.Infof("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
-		} else {
-			log.Info("Publishing the usage event is turned off")
-		}
+	log.Infof("Creating usage event with %d transactions", transactionCount.Count())
+	queueItem := &usageEventQueueItem{
+		event:  lightHouseUsageEvent,
+		metric: transactionCount,
 	}
-
-	// c.processTransactionMetric(name, metric)
+	c.publishItemQueue = append(c.publishItemQueue, queueItem)
+	log.Infof("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 }
 
 // func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
@@ -233,7 +273,7 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 // 				if ok {
 // 					statusMetric := (metric.(metrics.Histogram))
 // 					c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
-// 					statusMetric.Clear()
+// 					c.generateAPIStatusMetricEvent(statusMetric, statusCodeDetail)
 // 				}
 // 			}
 // 		}
@@ -245,6 +285,30 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 // 	apiStatusDetails.Response.Max = histogram.Max()
 // 	apiStatusDetails.Response.Min = histogram.Min()
 // 	apiStatusDetails.Response.Avg = histogram.Mean()
+// }
+
+// func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, apiStatusMetric *APIMetric) {
+// 	apiStatusMetric.Observation.Start = convertTimeToMillis(apiStatusMetric.StartTime)
+// 	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
+// 	apiStatusMetricEventID, _ := uuid.NewV4()
+// 	apiStatusMetricEvent := V4Event{
+// 		ID:        apiStatusMetricEventID.String(),
+// 		Timestamp: apiStatusMetric.StartTime.UnixNano() / 1e6,
+// 		Event:     "api.transaction.status.metric",
+// 		App:       c.orgGUID,
+// 		Version:   "4",
+// 		Distribution: V4EventDistribution{
+// 			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
+// 			Version:     "1",
+// 		},
+// 		Data: apiStatusMetric,
+// 	}
+// 	queueItem := &metricEventQueueItem{
+// 		event:     apiStatusMetricEvent,
+// 		metric:    histogram,
+// 		apiMetric: apiStatusMetric,
+// 	}
+// 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 // }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
@@ -265,3 +329,55 @@ func (c *collector) getOrRegisterHistogram(name string) metrics.Histogram {
 	}
 	return histogram.(metrics.Histogram)
 }
+
+func (c *collector) publishEvents() {
+	for _, eventQueueItem := range c.publishItemQueue {
+		err := c.publisher.publishEvent(eventQueueItem.GetEvent())
+		if err != nil {
+			log.Error("Failed to publish event : ", err.Error())
+		} else {
+			c.cleanupCounters(eventQueueItem)
+		}
+	}
+}
+
+func (c *collector) cleanupCounters(eventQueueItem publishQueueItem) {
+	usageEventItem, ok := eventQueueItem.(usageEventPublishItem)
+	if ok {
+		c.cleanupUsageCounter(usageEventItem)
+		return
+	}
+
+	// metricEventItem, ok := eventQueueItem.(metricEventPublishItem)
+	// if ok {
+	// 	c.cleanupMetricCounter(metricEventItem)
+	// }
+}
+
+func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
+	itemMetric := usageEventItem.GetMetric()
+	counter, ok := itemMetric.(metrics.Counter)
+	if ok {
+		// Clean up the usage counter and reset the start time to current endTime
+		counter.Clear()
+		c.startTime = c.endTime
+	}
+}
+
+// func (c *collector) cleanupMetricCounter(metricEventItem metricEventPublishItem) {
+// 	itemMetric := metricEventItem.GetMetric()
+// 	histogram, ok := itemMetric.(metrics.Histogram)
+// 	if ok {
+// 		// Clean up entry in api status metric map and histogram counter
+// 		apiStatusMap, ok := c.metricMap[metricEventItem.GetAPIID()]
+// 		if ok {
+// 			delete(apiStatusMap, metricEventItem.GetStatusCode())
+// 			if len(apiStatusMap) != 0 {
+// 				c.metricMap[metricEventItem.GetAPIID()] = apiStatusMap
+// 			} else {
+// 				delete(c.metricMap, metricEventItem.GetAPIID())
+// 			}
+// 			histogram.Clear()
+// 		}
+// 	}
+// }
