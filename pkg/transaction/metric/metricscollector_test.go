@@ -102,7 +102,7 @@ func TestMetricCollector(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.LighthouseURL = s.server.URL + "/lighthouse"
-	cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
