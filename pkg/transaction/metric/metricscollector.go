@@ -201,7 +201,6 @@ func (c *collector) getOrgGUID() string {
 }
 
 func (c *collector) generateEvents() {
-	defer c.cleanup()
 	if agent.GetCentralConfig().GetEnvironmentID() == "" ||
 		cmd.GetBuildDataPlaneType() == "" {
 		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
