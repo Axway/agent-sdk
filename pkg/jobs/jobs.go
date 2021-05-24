@@ -29,6 +29,11 @@ func RegisterRetryJob(newJob Job, retries int) (string, error) {
 	return globalPool.RegisterRetryJob(newJob, retries)
 }
 
+//UnregisterJob - Removes the specified job in the globalPool
+func UnregisterJob(jobID string) {
+	globalPool.UnregisterJob(jobID)
+}
+
 //JobLock - Locks the job, returns when the lock is granted
 func JobLock(id string) {
 	globalPool.JobLock(id)

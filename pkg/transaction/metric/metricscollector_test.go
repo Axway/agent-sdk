@@ -1,11 +1,12 @@
 package metric
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -35,84 +36,103 @@ var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0
 
 func TestMetricCollector(t *testing.T) {
 	lighthouseEventCount := 0
+	transactionCount := 0
+	failUsageEvent := false
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"" + accessToken + "\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		}
 		if strings.Contains(req.RequestURI, "/lighthouse") {
+			if failUsageEvent {
+				resp.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			lighthouseEventCount++
+			req.ParseMultipartForm(1 << 20)
+			for _, fileHeaders := range req.MultipartForm.File {
+				for _, fileHeader := range fileHeaders {
+					file, err := fileHeader.Open()
+					if err != nil {
+						return
+					}
+					body, _ := ioutil.ReadAll(file)
+					var usageEvent LighthouseUsageEvent
+					json.Unmarshal(body, &usageEvent)
+					for _, report := range usageEvent.Report {
+						for _, usage := range report.Usage {
+							transactionCount = transactionCount + int(usage)
+						}
+					}
+				}
+			}
 		}
 	}))
 
 	defer s.Close()
+	cfg := createCentralCfg(s.URL, "demo")
+	cfg.LighthouseURL = s.URL + "/lighthouse"
+	cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+	metricCollector.orgGUID = metricCollector.getOrgGUID()
+	jobs.GetJob(metricCollector.jobID)
+	jobs.UnregisterJob(metricCollector.jobID)
 
 	testCases := []struct {
-		name              string
-		lighthouse        bool
-		expectedGKEvents1 int
-		expectedLHEvents1 int
-		expectedGKEvents2 int
-		expectedLHEvents2 int
+		name                     string
+		loopCount                int
+		apiTransactionCount      []int
+		failUsageEventOnServer   []bool
+		expectedLHEvents         []int
+		expectedTransactionCount []int
 	}{
+		// Success case
 		{
-			name:              "WithLighthouse",
-			lighthouse:        true,
-			expectedGKEvents1: 0,
-			expectedLHEvents1: 1,
-			expectedGKEvents2: 0,
-			expectedLHEvents2: 1,
+			name:                     "WithLighthouse",
+			loopCount:                1,
+			apiTransactionCount:      []int{5},
+			failUsageEventOnServer:   []bool{false},
+			expectedLHEvents:         []int{1},
+			expectedTransactionCount: []int{5},
+		},
+		// Success case with no usage report
+		{
+			name:                     "WithLighthouseNoUsageReport",
+			loopCount:                1,
+			apiTransactionCount:      []int{0},
+			failUsageEventOnServer:   []bool{false},
+			expectedLHEvents:         []int{0},
+			expectedTransactionCount: []int{0},
+		},
+		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
+		{
+			name:                     "WithLighthouseWithFailure",
+			loopCount:                3,
+			apiTransactionCount:      []int{5, 10, 2},
+			failUsageEventOnServer:   []bool{false, true, false},
+			expectedLHEvents:         []int{1, 1, 2},
+			expectedTransactionCount: []int{5, 5, 17},
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			lighthouseEventCount = 0
-
-			cfg := createCentralCfg(s.URL, "demo")
-			if test.lighthouse {
-				cfg.LighthouseURL = s.URL + "/lighthouse"
+			for l := 0; l < test.loopCount; l++ {
+				for i := 0; i < test.apiTransactionCount[l]; i++ {
+					metricCollector.AddMetric("111", "111", "200", 10, "", "")
+				}
+				failUsageEvent = test.failUsageEventOnServer[l]
+				metricCollector.Execute()
+				assert.Equal(t, test.expectedLHEvents[l], lighthouseEventCount)
+				assert.Equal(t, test.expectedTransactionCount[l], transactionCount)
 			}
-			cfg.PlatformEnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
-			cmd.BuildDataPlaneType = "Azure"
-			agent.Initialize(cfg)
-			eventChannel := make(chan interface{}, 1028)
-			myCollector := NewMetricCollector(eventChannel)
-			metricCollector := myCollector.(*collector)
-			jobs.GetJob(metricCollector.jobID)
-			NewMetricPublisher(eventChannel)
-
-			metricCollector.orgGUID = metricCollector.getOrgGUID()
-
-			metricCollector.AddMetric("111", "111", "200", 10, "", "")
-			metricCollector.AddMetric("111", "111", "200", 20, "", "")
-			metricCollector.AddMetric("111", "111", "200", 30, "", "")
-			metricCollector.AddMetric("111", "111", "401", 10, "", "")
-			metricCollector.AddMetric("111", "111", "401", 20, "", "")
-
-			metricCollector.AddMetric("222", "222", "200", 5, "", "")
-			metricCollector.AddMetric("222", "222", "200", 5, "", "")
-
-			metricCollector.endTime = time.Now()
-			metricCollector.generateEvents()
-			metricCollector.startTime = time.Now()
-			time.Sleep(1 * time.Second)
-			assert.Equal(t, test.expectedLHEvents1, lighthouseEventCount)
-
 			lighthouseEventCount = 0
-			metricCollector.AddMetric("111", "111", "200", 5, "", "")
-			metricCollector.AddMetric("111", "111", "200", 15, "", "")
-			metricCollector.AddMetric("111", "111", "401", 15, "", "")
-			metricCollector.AddMetric("111", "111", "401", 5, "", "")
-			metricCollector.AddMetric("111", "111", "401", 120, "", "")
-
-			metricCollector.AddMetric("222", "222", "200", 5, "", "")
-			metricCollector.AddMetric("222", "222", "200", 50, "", "")
-			metricCollector.AddMetric("222", "222", "400", 15, "", "")
-			metricCollector.endTime = time.Now()
-			metricCollector.generateEvents()
-			time.Sleep(1 * time.Second)
-			assert.Equal(t, test.expectedLHEvents2, lighthouseEventCount)
+			transactionCount = 0
+			failUsageEvent = false
 		})
 	}
 }
