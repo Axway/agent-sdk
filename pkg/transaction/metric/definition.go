@@ -28,6 +28,7 @@ type APIMetric struct {
 	Count       int64              `json:"count"`
 	Response    ResponseMetrics    `json:"response"`
 	Observation ObservationDetails `json:"observation"`
+	StartTime   time.Time          `json:"-"`
 }
 
 // V4EventDistribution - represents V7 distribution

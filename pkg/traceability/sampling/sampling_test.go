@@ -184,6 +184,7 @@ func TestShouldSample(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			waitGroup := sync.WaitGroup{}
+			sampleCounterLock := sync.Mutex{}
 			err := SetupSampling(test.config)
 			assert.Nil(t, err)
 
@@ -201,7 +202,9 @@ func TestShouldSample(t *testing.T) {
 						}
 						sample, err := ShouldSampleTransaction(testDetails)
 						if sample {
+							sampleCounterLock.Lock()
 							sampled++
+							sampleCounterLock.Unlock()
 						}
 						assert.Nil(t, err)
 					}
