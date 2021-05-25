@@ -22,7 +22,7 @@ func (su *periodicStatusUpdate) Ready() bool {
 	if runStatusUpdateCheck() != nil {
 		return false
 	}
-	// Do not start until status will be running// get the status from the health check and jobs
+	// Do not start until status will be running
 	status := su.getCombinedStatus()
 	if status != AgentRunning {
 		return false
