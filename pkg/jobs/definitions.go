@@ -81,8 +81,9 @@ func (s PoolStatus) String() string {
 
 // Job type strings
 const (
-	JobTypeSingleRun = "single run"
-	JobTypeRetry     = "retry"
-	JobTypeInterval  = "interval"
-	JobTypeScheduled = "scheduled"
+	JobTypeSingleRun        = "single run"
+	JobTypeRetry            = "retry"
+	JobTypeInterval         = "interval"
+	JobTypeDetachedInterval = "detached interval"
+	JobTypeScheduled        = "scheduled"
 )

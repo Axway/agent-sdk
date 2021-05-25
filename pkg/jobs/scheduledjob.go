@@ -3,7 +3,6 @@ package jobs
 import (
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gorhill/cronexpr"
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -31,6 +30,7 @@ func newScheduledJob(newJob Job, schedule string, failJobChan chan string) (JobE
 		baseJob{
 			id:       newUUID(),
 			job:      newJob,
+			jobType:  JobTypeScheduled,
 			status:   JobStatusInitializing,
 			failChan: failJobChan,
 		},
@@ -52,7 +52,7 @@ func (b *scheduleJob) getNextExecution() time.Duration {
 
 //start - calls the Execute function from the Job definition
 func (b *scheduleJob) start() {
-	log.Debugf("Starting %v job %v", JobTypeScheduled, b.id)
+	b.startLog()
 	b.waitForReady()
 
 	ticker := time.NewTicker(b.getNextExecution())
@@ -67,7 +67,7 @@ func (b *scheduleJob) start() {
 		case <-ticker.C:
 			b.executeCronJob()
 			if b.err != nil {
-				b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeScheduled, b.id)
+				b.setExecutionError()
 				b.SetStatus(JobStatusStopped)
 			}
 			ticker.Stop()
@@ -78,6 +78,6 @@ func (b *scheduleJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
-	log.Debugf("Stopping %v job %v", JobTypeScheduled, b.id)
+	b.stopLog()
 	b.stopChan <- true
 }

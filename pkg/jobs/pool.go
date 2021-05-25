@@ -12,15 +12,17 @@ var statusConfig corecfg.StatusConfig
 
 //Pool - represents a pool of jobs that are related in such a way that when one is not running none of them should be
 type Pool struct {
-	jobs            map[string]JobExecution // All jobs that are in this pool
-	cronJobs        map[string]JobExecution // Jobs that run continuously, not just ran once
-	poolStatus      PoolStatus              // Holds the current status of the pool of jobs
-	failedJob       string                  // Holds the ID of the job that is the reason for a non-running status
-	jobsMapLock     sync.Mutex
-	cronJobsMapLock sync.Mutex
-	failJobChan     chan string
-	stopJobsChan    chan bool
-	retryInterval   time.Duration
+	jobs                    map[string]JobExecution // All jobs that are in this pool
+	cronJobs                map[string]JobExecution // Jobs that run continuously, not just ran once
+	detachedCronJobs        map[string]JobExecution // Jobs that run continuously, not just ran once, detached from all others
+	poolStatus              PoolStatus              // Holds the current status of the pool of jobs
+	failedJob               string                  // Holds the ID of the job that is the reason for a non-running status
+	jobsMapLock             sync.Mutex
+	cronJobsMapLock         sync.Mutex
+	detachedCronJobsMapLock sync.Mutex
+	failJobChan             chan string
+	stopJobsChan            chan bool
+	retryInterval           time.Duration
 }
 
 func newPool() *Pool {
@@ -30,13 +32,14 @@ func newPool() *Pool {
 	}
 
 	newPool := Pool{
-		jobs:          make(map[string]JobExecution),
-		cronJobs:      make(map[string]JobExecution),
-		poolStatus:    PoolStatusInitializing,
-		failedJob:     "",
-		failJobChan:   make(chan string),
-		stopJobsChan:  make(chan bool),
-		retryInterval: interval,
+		jobs:             make(map[string]JobExecution),
+		cronJobs:         make(map[string]JobExecution),
+		detachedCronJobs: make(map[string]JobExecution),
+		poolStatus:       PoolStatusInitializing,
+		failedJob:        "",
+		failJobChan:      make(chan string),
+		stopJobsChan:     make(chan bool),
+		retryInterval:    interval,
 	}
 
 	// start routine that catches all failures whenever written and acts on first
@@ -73,6 +76,14 @@ func (p *Pool) recordCronJob(job JobExecution) string {
 	return p.recordJob(job)
 }
 
+//recordDetachedCronJob - Adds a job to the detached cron jobs map
+func (p *Pool) recordDetachedCronJob(job JobExecution) string {
+	p.detachedCronJobsMapLock.Lock()
+	defer p.detachedCronJobsMapLock.Unlock()
+	p.detachedCronJobs[job.GetID()] = job
+	return p.recordJob(job)
+}
+
 //recordJob - Removes the specified job from jobs map
 func (p *Pool) removeJob(jobID string) {
 	p.jobsMapLock.Lock()
@@ -81,6 +92,20 @@ func (p *Pool) removeJob(jobID string) {
 	if ok {
 		job.stop()
 		delete(p.jobs, jobID)
+	}
+
+	// remove from cron jobs, if present
+	p.cronJobsMapLock.Lock()
+	defer p.cronJobsMapLock.Unlock()
+	if _, found := p.cronJobs[jobID]; found {
+		delete(p.cronJobs, jobID)
+	}
+
+	// remove from detached cron jobs, if present
+	p.detachedCronJobsMapLock.Lock()
+	defer p.detachedCronJobsMapLock.Unlock()
+	if _, found := p.detachedCronJobs[jobID]; found {
+		delete(p.detachedCronJobs, jobID)
 	}
 }
 
@@ -100,6 +125,15 @@ func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, 
 		return "", err
 	}
 	return p.recordCronJob(job), nil
+}
+
+//RegisterDetachedIntervalJob - Runs a job with a specific interval between each run, detached from other jobs
+func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
+	job, err := newDetachedIntervalJob(newJob, interval)
+	if err != nil {
+		return "", err
+	}
+	return p.recordDetachedCronJob(job), nil
 }
 
 //RegisterScheduledJob - Runs a job on a specific schedule
