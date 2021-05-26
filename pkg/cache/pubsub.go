@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/notification"
+	util "github.com/Axway/agent-sdk/pkg/util"
 )
 
 var topics map[string]*cachePubSub
@@ -74,19 +75,95 @@ func GetPubSub(topic string) (notification.PubSub, error) {
 	return cPubSub, nil
 }
 
-// Publish - send in data to publish, if it has changed update cache and notify subscribers
-func (c *cachePubSub) Publish(key, secondarykey string, data interface{}) error {
+func (c *cachePubSub) hasChanged(key string, data interface{}) (bool, error) {
 	changed, err := globalCache.HasItemChanged(key, data)
 	if !changed && err != nil {
-		return err
+		return false, err
 	}
-	if !changed {
-		return nil
+	return changed, nil
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) Publish(key, secondaryKey string, data interface{}) error {
+	changed, err := c.hasChanged(key, data)
+	if !changed || err != nil {
+		return err
 	}
 
 	// Data has changed
 	globalCache.Set(key, data)
+	globalCache.SetSecondaryKey(key, secondaryKey)
+	c.channel <- data
+	return nil
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) PublishToTopic(data interface{}) error {
+	changed, err := c.hasChanged(c.topic, data)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	globalCache.Set(c.topic, data)
+	c.channel <- data
+	return nil
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) PublishToTopicWithSecondaryKey(secondaryKey string, data interface{}) error {
+	changed, err := c.hasChanged(c.topic, data)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	globalCache.Set(c.topic, data)
+	globalCache.SetSecondaryKey(c.topic, secondaryKey)
+	c.channel <- data
+	return nil
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHash(key, secondarykey string, data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	changed, err := c.hasChanged(key, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	globalCache.Set(key, hash)
 	globalCache.SetSecondaryKey(key, secondarykey)
+	c.channel <- data
+	return nil
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHashToTopic(data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	changed, err := c.hasChanged(c.topic, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	globalCache.Set(c.topic, hash)
+	c.channel <- data
+	return nil
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHashToTopicWithSecondaryKey(secondarykey string, data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	changed, err := c.hasChanged(c.topic, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	globalCache.Set(c.topic, hash)
+	globalCache.SetSecondaryKey(c.topic, secondarykey)
 	c.channel <- data
 	return nil
 }
