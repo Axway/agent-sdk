@@ -9,7 +9,6 @@ import (
 )
 
 func TestPubSub(t *testing.T) {
-
 	// CreateTopic
 	topic1 := "topic1"
 	data1 := "topic1 data1"
@@ -72,7 +71,7 @@ func TestPubSub(t *testing.T) {
 			case data, ok := <-subChan:
 				if ok {
 					dataReceived = data.(string)
-					close(dataChan)
+					dataChan <- struct{}{}
 				} else {
 					return
 				}
@@ -90,6 +89,41 @@ func TestPubSub(t *testing.T) {
 	<-dataChan // Wait for the go function to have been executed
 	assert.Nil(t, err, "Unexpected error hit in Publish")
 	assert.Equal(t, data2a, dataReceived, "Data changed successfully")
+
+	// PublishToTopic
+	data2b := "topic2 data2b"
+	err = pubsub2.PublishToTopic(data2b)
+	<-dataChan // Wait for the go function to have been executed
+	assert.Nil(t, err, "Unexpected error hit in Publish")
+	assert.Equal(t, data2b, dataReceived, "Data changed successfully")
+
+	// PublishToTopicWithSecondaryKey
+	data2c := "topic2 data2c"
+	err = pubsub2.PublishToTopicWithSecondaryKey("", data2c)
+	<-dataChan // Wait for the go function to have been executed
+	assert.Nil(t, err, "Unexpected error hit in Publish")
+	assert.Equal(t, data2c, dataReceived, "Data changed successfully")
+
+	// PublishCacheHash
+	data2d := "topic2 data2d"
+	err = pubsub2.PublishCacheHash("topic2", "", data2d)
+	<-dataChan // Wait for the go function to have been executed
+	assert.Nil(t, err, "Unexpected error hit in Publish")
+	assert.Equal(t, data2d, dataReceived, "Data changed successfully")
+
+	// PublishCacheHashToTopic
+	data2e := "topic2 data2e"
+	err = pubsub2.PublishCacheHashToTopic(data2e)
+	<-dataChan // Wait for the go function to have been executed
+	assert.Nil(t, err, "Unexpected error hit in Publish")
+	assert.Equal(t, data2e, dataReceived, "Data changed successfully")
+
+	// PublishCacheHashToTopicWithSecondaryKey
+	data2f := "topic2 data2f"
+	err = pubsub2.PublishCacheHashToTopicWithSecondaryKey("", data2f)
+	<-dataChan // Wait for the go function to have been executed
+	assert.Nil(t, err, "Unexpected error hit in Publish")
+	assert.Equal(t, data2f, dataReceived, "Data changed successfully")
 
 	// Publish and SubscribeWithCallback
 	topic3 := "topic3"
