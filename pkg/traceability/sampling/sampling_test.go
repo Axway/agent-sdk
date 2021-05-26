@@ -1,6 +1,7 @@
 package sampling
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -67,77 +68,150 @@ func TestSamplingConfig(t *testing.T) {
 func TestShouldSample(t *testing.T) {
 	testCases := []struct {
 		name             string
+		apiTransactions  map[string]int
 		testTransactions int
 		expectedSampled  int
 		config           Sampling
 	}{
 		{
-			name:             "All Transactions",
-			testTransactions: 2000,
-			expectedSampled:  2000,
+			name: "All Transactions",
+			apiTransactions: map[string]int{
+				"id1": 1000,
+				"id2": 1000,
+			},
+			expectedSampled: 2000,
 			config: Sampling{
 				Percentage: 100,
+				PerAPI:     false,
 			},
 		},
 		{
-			name:             "50% of Transactions",
-			testTransactions: 2000,
-			expectedSampled:  1000,
+			name: "50% of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 50,
+				"id2": 50,
+				"id3": 50,
+				"id4": 50,
+			}, // Total = 200
+			expectedSampled: 100,
 			config: Sampling{
 				Percentage: 50,
+				PerAPI:     false,
 			},
 		},
 		{
-			name:             "25% of Transactions",
-			testTransactions: 2000,
-			expectedSampled:  500,
+			name: "25% of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 105,
+				"id2": 100,
+				"id3": 50,
+				"id4": 15,
+				"id5": 5,
+			}, // Total = 275
+			expectedSampled: 75,
 			config: Sampling{
 				Percentage: 25,
+				PerAPI:     false,
 			},
 		},
 		{
-			name:             "10% of Transactions",
-			testTransactions: 2000,
-			expectedSampled:  200,
+			name: "10% of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 1000,
+				"id2": 1000,
+			},
+			expectedSampled: 200,
 			config: Sampling{
 				Percentage: 10,
+				PerAPI:     false,
 			},
 		},
 		{
-			name:             "1% of Transactions",
-			testTransactions: 2000,
-			expectedSampled:  20,
+			name: "1% of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 1000,
+				"id2": 1000,
+			},
+			expectedSampled: 20,
 			config: Sampling{
 				Percentage: 1,
+				PerAPI:     false,
 			},
 		},
 		{
-			name:             "0% of Transactions",
-			testTransactions: 2000,
-			expectedSampled:  0,
+			name: "0% of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 1000,
+				"id2": 1000,
+			},
+			expectedSampled: 0,
 			config: Sampling{
 				Percentage: 0,
+				PerAPI:     false,
+			},
+		},
+		{
+			name: "50% per API of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 50, // expect 50
+				"id2": 50, // expect 50
+				"id3": 50, // expect 50
+				"id4": 50, // expect 50
+			},
+			expectedSampled: 200,
+			config: Sampling{
+				Percentage: 50,
+				PerAPI:     true,
+			},
+		},
+		{
+			name: "25% per API of Transactions",
+			apiTransactions: map[string]int{
+				"id1": 105, // expect 30
+				"id2": 100, // expect 25
+				"id3": 50,  // expect 25
+				"id4": 15,  // expect 15
+				"id5": 5,   // expect 5
+			},
+			expectedSampled: 100,
+			config: Sampling{
+				Percentage: 25,
+				PerAPI:     true,
 			},
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			waitGroup := sync.WaitGroup{}
+			sampleCounterLock := sync.Mutex{}
 			err := SetupSampling(test.config)
 			assert.Nil(t, err)
 
 			sampled := 0
-			for i := 0; i < test.testTransactions; i++ {
-				testDetails := TransactionDetails{
-					Status: "Success", // this does not matter at the moment
-				}
-				sample, err := ShouldSampleTransaction(testDetails)
-				if sample {
-					sampled++
-				}
-				assert.Nil(t, err)
+
+			for apiID, numCalls := range test.apiTransactions {
+				waitGroup.Add(1)
+
+				go func(wg *sync.WaitGroup, id string, calls int) {
+					defer wg.Done()
+					for i := 0; i < calls; i++ {
+						testDetails := TransactionDetails{
+							Status: "Success", // this does not matter at the moment
+							APIID:  id,
+						}
+						sample, err := ShouldSampleTransaction(testDetails)
+						if sample {
+							sampleCounterLock.Lock()
+							sampled++
+							sampleCounterLock.Unlock()
+						}
+						assert.Nil(t, err)
+					}
+				}(&waitGroup, apiID, numCalls)
 			}
 
+			waitGroup.Wait()
 			assert.Nil(t, err)
 			assert.Equal(t, test.expectedSampled, sampled)
 		})

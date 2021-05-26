@@ -61,8 +61,7 @@ type IConfigValidator interface {
 	ValidateCfg() error
 }
 
-// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource
-// for agent and dataplane
+// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource for agent
 type IResourceConfigCallback interface {
 	ApplyResources(agentResource *v1.ResourceInstance) error
 }
@@ -114,12 +113,9 @@ type CentralConfig interface {
 	GetReportActivityFrequency() time.Duration
 	GetClientTimeout() time.Duration
 	GetCatalogItemByIDURL(catalogItemID string) string
-	GetAppendDataPlaneToTitle() bool
-	SetDataPlaneName(name string)
-	GetDataPlaneName() string
+	GetAppendEnvironmentToTitle() bool
 	CanPublishUsageEvent() bool
 	// CanPublishMetricEvent() bool
-	CanPublishTrafficEvents() bool
 	GetEventAggregationInterval() time.Duration
 }
 
@@ -140,7 +136,7 @@ type CentralConfiguration struct {
 	LighthouseURL             string             `config:"lighthouseURL"`
 	APIServerVersion          string             `config:"apiServerVersion"`
 	TagsToPublish             string             `config:"additionalTags"`
-	AppendDataPlaneToTitle    bool               `config:"appendDataPlaneToTitle"`
+	AppendEnvironmentToTitle  bool               `config:"appendEnvironmentToTitle"`
 	UpdateFromAPIServer       bool               `config:"updateFromAPIServer"`
 	Auth                      AuthConfig         `config:"auth"`
 	TLS                       TLSConfig          `config:"ssl"`
@@ -150,12 +146,10 @@ type CentralConfiguration struct {
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublisUsageEvents         bool               `config:"publishUsage"`
-	PublishTrafficEvents      bool               `config:"publishTraffic"`
 	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
 	// PublishMetricEvents       bool  `config:"publishMetric"`
 	environmentID string
 	teamID        string
-	dataPlaneName string
 }
 
 // NewCentralConfig - Creates the default central config
@@ -170,7 +164,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ClientTimeout:             60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
-		AppendDataPlaneToTitle:    true,
+		AppendEnvironmentToTitle:  true,
 		UpdateFromAPIServer:       false,
 		EventAggregationInterval:  5 * time.Minute,
 		ReportActivityFrequency:   5 * time.Minute,
@@ -397,19 +391,9 @@ func (c *CentralConfiguration) GetClientTimeout() time.Duration {
 	return c.ClientTimeout
 }
 
-// GetAppendDataPlaneToTitle - Returns the value of append data plane type to title attribute
-func (c *CentralConfiguration) GetAppendDataPlaneToTitle() bool {
-	return c.AppendDataPlaneToTitle
-}
-
-// SetDataPlaneName - Sets the data plane name, will be appended to resources, if setting true
-func (c *CentralConfiguration) SetDataPlaneName(name string) {
-	c.dataPlaneName = name
-}
-
-// GetDataPlaneName - Returns the value fo the data plane name
-func (c *CentralConfiguration) GetDataPlaneName() string {
-	return c.dataPlaneName
+// GetAppendEnvironmentToTitle - Returns the value of append environment name to title attribute
+func (c *CentralConfiguration) GetAppendEnvironmentToTitle() bool {
+	return c.AppendEnvironmentToTitle
 }
 
 // GetUpdateFromAPIServer -
@@ -426,11 +410,6 @@ func (c *CentralConfiguration) CanPublishUsageEvent() bool {
 // func (c *CentralConfiguration) CanPublishMetricEvent() bool {
 // 	return c.PublishMetricEvents
 // }
-
-// CanPublishTrafficEvents - Returns flag to indicate agent can publish traffic events
-func (c *CentralConfiguration) CanPublishTrafficEvents() bool {
-	return c.PublishTrafficEvents
-}
 
 // GetEventAggregationInterval - Returns the interval duration to generate usage and metric events
 func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
@@ -466,11 +445,10 @@ const (
 	pathProxyURL                 = "central.proxyUrl"
 	pathAPIServerVersion         = "central.apiServerVersion"
 	pathAdditionalTags           = "central.additionalTags"
-	pathAppendDataPlaneToTitle   = "central.appendDataPlaneToTitle"
+	pathAppendEnvironmentToTitle = "central.appendEnvironmentToTitle"
 	pathUpdateFromAPIServer      = "central.updateFromAPIServer"
 	pathPublishUsage             = "central.publishUsage"
 	pathPublishMetric            = "central.publishMetric"
-	pathPublishTraffic           = "central.publishTraffic"
 	pathEventAggregationInterval = "central.eventAggregationInterval"
 )
 
@@ -583,9 +561,9 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in AMPLIFY Central")
 	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in AMPLIFY Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to AMPLIFY Central")
-	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing.")
-	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater.")
-	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response.")
+	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
+	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
+	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -595,12 +573,11 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
-		props.AddBoolProperty(pathPublishTraffic, true, "Indicates if the agent can publish traffic event to AMPLIFY platform. Default to true")
-		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated.")
+		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
-		props.AddBoolProperty(pathAppendDataPlaneToTitle, true, "When true API titles and descriptions will be appended with data plane name or, when no data plane exists, the gateway type")
+		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 	}
 }
@@ -647,13 +624,12 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
 		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
-		cfg.PublishTrafficEvents = props.BoolPropertyValue(pathPublishTraffic)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
-		cfg.AppendDataPlaneToTitle = props.BoolPropertyValue(pathAppendDataPlaneToTitle)
+		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
 
 		// set the notifications
 		subscriptionConfig := ParseSubscriptionConfig(props)

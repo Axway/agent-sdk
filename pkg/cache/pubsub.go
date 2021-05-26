@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/notification"
+	util "github.com/Axway/agent-sdk/pkg/util"
 )
 
 var topics map[string]*cachePubSub
@@ -74,21 +75,120 @@ func GetPubSub(topic string) (notification.PubSub, error) {
 	return cPubSub, nil
 }
 
-// Publish - send in data to publish, if it has changed update cache and notify subscribers
-func (c *cachePubSub) Publish(key, secondarykey string, data interface{}) error {
+func (c *cachePubSub) hasChanged(key string, data interface{}) (bool, error) {
 	changed, err := globalCache.HasItemChanged(key, data)
 	if !changed && err != nil {
-		return err
+		return false, err
 	}
-	if !changed {
-		return nil
+	return changed, nil
+}
+
+func (c *cachePubSub) updateCache(key, secondaryKey string, data interface{}) {
+	globalCache.Set(key, data)
+	if secondaryKey != "" {
+		globalCache.SetSecondaryKey(key, secondaryKey)
+	}
+}
+
+func (c *cachePubSub) setAndSend(key string, data interface{}) error {
+	return c.setAndSendWithSecondaryKey(key, "", data)
+}
+
+func (c *cachePubSub) setAndSendWithSecondaryKey(key, secondaryKey string, data interface{}) error {
+	c.updateCache(key, secondaryKey, data)
+	c.channel <- data
+	return nil
+}
+
+func (c *cachePubSub) setHashAndSend(key string, data interface{}, hash uint64) error {
+	return c.setHashAndSendWithSecondaryKey(key, "", data, hash)
+}
+
+func (c *cachePubSub) setHashAndSendWithSecondaryKey(key, secondaryKey string, data interface{}, hash uint64) error {
+	c.updateCache(key, secondaryKey, hash)
+	c.channel <- data
+	return nil
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) Publish(key, secondaryKey string, data interface{}) error {
+	changed, err := c.hasChanged(key, data)
+	if !changed || err != nil {
+		return err
 	}
 
 	// Data has changed
-	globalCache.Set(key, data)
-	globalCache.SetSecondaryKey(key, secondarykey)
-	c.channel <- data
-	return nil
+	return c.setAndSendWithSecondaryKey(key, secondaryKey, data)
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) PublishToTopic(data interface{}) error {
+	changed, err := c.hasChanged(c.topic, data)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	return c.setAndSend(c.topic, data)
+}
+
+// Publish - send in data to publish, if it has changed update cache and notify subscribers
+func (c *cachePubSub) PublishToTopicWithSecondaryKey(secondaryKey string, data interface{}) error {
+	changed, err := c.hasChanged(c.topic, data)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	return c.setAndSendWithSecondaryKey(c.topic, secondaryKey, data)
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHash(key, secondaryKey string, data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	if err != nil {
+		return err
+	}
+
+	changed, err := c.hasChanged(key, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	return c.setHashAndSendWithSecondaryKey(key, secondaryKey, data, hash)
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHashToTopic(data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	if err != nil {
+		return err
+	}
+
+	changed, err := c.hasChanged(c.topic, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	return c.setHashAndSend(c.topic, data, hash)
+}
+
+// PublishCacheHash - send in data to publish, if it has changed update cache, storing only the hash, notify subscribers
+func (c *cachePubSub) PublishCacheHashToTopicWithSecondaryKey(secondaryKey string, data interface{}) error {
+	hash, err := util.ComputeHash(data)
+	if err != nil {
+		return err
+	}
+
+	changed, err := c.hasChanged(c.topic, hash)
+	if !changed || err != nil {
+		return err
+	}
+
+	// Data has changed
+	return c.setHashAndSendWithSecondaryKey(c.topic, secondaryKey, data, hash)
 }
 
 // Unsubscribe - stop subscriber identified by id

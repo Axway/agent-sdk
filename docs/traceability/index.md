@@ -806,7 +806,6 @@ By default all of the fields URL path, Query Arguments, Request and Response hea
 
 Below is the list of the redaction configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.redaction
 
-
 | YAML property           | Variable name                                  | Description                                                                                 |
 |-------------------------|------------------------------------------------|---------------------------------------------------------------------------------------------|
 | path.show               | TRACEABILITY_REDACTION_PATH_SHOW               | Determines what path values to send to Amplify                                              |
@@ -901,9 +900,10 @@ By default all transaction data is sent to Amplify.
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
 
-| YAML property | Variable name                    | Description                                                       |
-|---------------|----------------------------------|-------------------------------------------------------------------|
-| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify |
+| YAML property | Variable name                    | Description                                                                                       |
+|---------------|----------------------------------|---------------------------------------------------------------------------------------------------|
+| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify                                 |
+| per_api       | TRACEABILITY_SAMPLING_PER_API    | Defines if the percentage above is applied to all events or separate based on API ID in the event |
 
 ### Building the Agent
 
@@ -996,66 +996,26 @@ Available Commands:
   version     Show current version info
 
 Flags:
-  -E, --E setting=value                      Configuration overwrite
-  -N, --N                                    Disable actual publishing for testing
-  -c, --c string                             Configuration file, relative to path.config (default "apic_traceability_agent.yml")
-      --centralAgentName string              The name of the asociated agent resource in Amplify Central
-      --centralApiServerVersion string       Version of the API Server (default "v1alpha1")
-      --centralAuthClientId string           Client ID for the service account
-      --centralAuthKeyPassword string        Password for the private key, if needed
-      --centralAuthPrivateKey string         Path to the private key for Amplify Central Authentication (default "/etc/private_key.pem")
-      --centralAuthPublicKey string          Path to the public key for Amplify Central Authentication (default "/etc/public_key")
-      --centralAuthRealm string              Amplify Central authentication Realm (default "Broker")
-      --centralAuthTimeout duration          Timeout waiting for AxwayID response (default 10s)
-      --centralAuthUrl string                Amplify Central authentication URL (default "https://login.axway.com/auth")
-      --centralDeployment string             Amplify Central (default "prod")
-      --centralEnvironment string            The Environment that the APIs will be associated with in Amplify Central
-      --centralOrganizationID string         Tenant ID for the owner of the environment
-      --centralPlatformURL string            URL of the platform (default "https://platform.axway.com")
-      --centralPollInterval duration         The time interval at which the central will be polled for subscription processing. (default 1m0s)
-      --centralProxyUrl string               The Proxy URL to use for communication to Amplify Central
-      --centralSslCipherSuites strings       List of supported cipher suites, comma separated (default [ECDHE-ECDSA-AES-256-GCM-SHA384,ECDHE-RSA-AES-256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,ECDHE-ECDSA-AES-128-GCM-SHA256,ECDHE-RSA-AES-128-GCM-SHA256,ECDHE-ECDSA-AES-128-CBC-SHA256,ECDHE-RSA-AES-128-CBC-SHA256])
-      --centralSslInsecureSkipVerify         Controls whether a client verifies the server's certificate chain and host name
-      --centralSslMaxVersion string          Maximum acceptable SSL/TLS protocol version (default "0")
-      --centralSslMinVersion string          Minimum acceptable SSL/TLS protocol version (default "TLS1.2")
-      --centralSslNextProtos strings         List of supported application level protocols, comma separated
-      --centralTeam string                   Team name for creating catalog
-      --centralUrl string                    URL of Amplify Central (default "https://apicentral.axway.com")
-      --cpuprofile string                    Write cpu profile to file
-  -d, --d string                             Enable certain debug selectors
-  -e, --e                                    Log to stderr and disable syslog/file output
-      --envFile string                       Path of the file with environment variables to override configuration
-      --environment environmentVar           set environment the Beat is run in (default default)
-      --gateway-sectionConfig_key_1 string   Sample Config Key 1
-      --gateway-sectionConfig_key_2 string   Sample Config Key 1
-      --gateway-sectionConfig_key_3 string   Sample Config Key 3
-      --gateway-sectionLogFile string        Sample log file with traffic event from gateway (default "./logs/traffic.log")
-      --gateway-sectionProcessOnInput        Flag to process received event on input or by output before publishing the event by transport (default true)
-  -h, --help                                 help for apic_traceability_agent
-      --httpprof string                      Start pprof http server
-      --logFileCleanbackups int              The maximum number of days, 24 hour periods, to keep the log file backps
-      --logFileKeepfiles int                 The maximum number of backups to keep of log files (default: 7) (default 7)
-      --logFileName string                   Name of the log files (default "apic_traceability_agent.log")
-      --logFilePath string                   Log file path if output type is file or both (default "logs")
-      --logFileRotateeverymegabytes int      The maximum size of a log file, in megabytes  (default: 100) (default 100)
-      --logFormat string                     Log format (json, line) (default "json")
-      --logLevel string                      Log level (debug, info, warn, error) (default "info")
-      --logMaskedValues string               List of key words in the config to be masked (e.g. pwd, password, secret, key
-      --logOutput string                     Log output type (stdout, file, both) (default "stdout")
-      --memprofile string                    Write memory profile to this file
-      --path.config string                   Configuration path
-      --path.data string                     Data path
-      --path.home string                     Home path
-      --path.logs string                     Logs path
-      --pathConfig string                    Configuration file path for the agent
-      --plugin pluginList                    Load additional plugins
-      --status                               Get the status of all the Health Checks
-      --statusHealthCheckInterval duration   Time between running periodic health checker. Can be between 30 seconds and 5 minutes (binary agents only) (default 30s)
-      --statusHealthCheckPeriod duration     Time in minutes allotted for services to be ready before exiting discovery agent (default 3m0s)
-      --statusPort int                       The port that will serve the status endpoints (default 8989)
-      --strict.perms                         Strict permission checking on config files (default true)
-      --synchronize                          Run the sync process for the discovery agent
-  -v, --v                                    Log at INFO level
-      --version                              version for apic_traceability_agent
+  -E, --E setting=value              Configuration overwrite
+  -N, --N                            Disable actual publishing for testing
+  -c, --c string                     Configuration file, relative to path.config (default "traceability_agent.yml")
+      --cpuprofile string            Write cpu profile to file
+  -d, --d string                     Enable certain debug selectors
+  -e, --e                            Log to stderr and disable syslog/file output
+      --envFile string               Path of the file with environment variables to override configuration
+      --environment environmentVar   set environment the Beat is run in (default default)
+  -h, --help                         help for traceability_agent
+      --httpprof string              Start pprof http server
+      --memprofile string            Write memory profile to this file
+      --path.config string           Configuration path
+      --path.data string             Data path
+      --path.home string             Home path
+      --path.logs string             Logs path
+      --pathConfig string            Path to the directory containing the YAML configuration file for the agent
+      --status                       Get the status of all the Health Checks
+      --strict.perms                 Strict permission checking on config files (default true)
+      --synchronize                  Run the sync process for the discovery agent
+  -v, --v                            Log at INFO level
+      --version                      version for traceability_agent
 
 ```

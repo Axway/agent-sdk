@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/json"
-	"flag"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -27,7 +26,6 @@ type EventGenerator interface {
 // Generator - Create the events to be published to Condor
 type Generator struct {
 	shouldAddFields bool
-	collector       metric.Collector
 }
 
 // NewEventGenerator - Create a new event generator
@@ -36,11 +34,6 @@ func NewEventGenerator() EventGenerator {
 		shouldAddFields: !traceability.IsHTTPTransport(),
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
-	if flag.Lookup("test.v") == nil {
-		metricEventChannel := make(chan interface{})
-		eventGen.collector = metric.NewMetricCollector(metricEventChannel)
-		metric.NewMetricPublisher(metricEventChannel)
-	}
 	return eventGen
 }
 
@@ -77,8 +70,9 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		if logEvent.TransactionSummary.Team != nil {
 			teamName = logEvent.TransactionSummary.Team.ID
 		}
-		if e.collector != nil {
-			e.collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
+		collector := metric.GetMetricCollector()
+		if collector != nil {
+			collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
 		}
 	}
 
@@ -127,8 +121,19 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 // createSamplingTransactionDetails -
 func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) sampling.TransactionDetails {
+	var status string
+	var apiID string
+
+	if summaryEvent.TransactionSummary != nil {
+		status = summaryEvent.TransactionSummary.Status
+		if summaryEvent.TransactionSummary.Proxy != nil {
+			apiID = summaryEvent.TransactionSummary.Proxy.ID
+		}
+	}
+
 	return sampling.TransactionDetails{
-		Status: summaryEvent.TransactionSummary.Status,
+		Status: status,
+		APIID:  apiID,
 	}
 }
 

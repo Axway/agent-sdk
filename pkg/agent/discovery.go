@@ -6,6 +6,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// PublishAPIFunc definition for the PublishAPI func
+type PublishAPIFunc func(serviceBody apic.ServiceBody) error
+
 // deprecationWarning
 func deprecationWarning(old string, new string) {
 	log.Warnf("%s is deprecated, please start using %s", old, new)

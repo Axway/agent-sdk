@@ -2,6 +2,7 @@ package sampling
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
@@ -11,25 +12,28 @@ var agentSamples *sample
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
-	Percentage int `config:"percentage"    validate:"min=0, max=100"`
+	Percentage int  `config:"percentage"    validate:"min=0, max=100"`
+	PerAPI     bool `config:"per_api"`
 }
 
 //DefaultConfig - returns a default sampling config where all transactions are sent
 func DefaultConfig() Sampling {
 	return Sampling{
-		Percentage: 100,
+		Percentage: countMax,
+		PerAPI:     true,
 	}
 }
 
 // SetupSampling - set up the global sampling for use by traceability
 func SetupSampling(cfg Sampling) error {
 	// Validate the config to make sure it is not out of bounds
-	if cfg.Percentage < 0 || cfg.Percentage > 100 {
+	if cfg.Percentage < 0 || cfg.Percentage > countMax {
 		return fmt.Errorf("sampling percentage must be between 0 and 100")
 	}
 	agentSamples = &sample{
-		config:       cfg,
-		currentCount: 0, // counter of events, only up to sample are returned
+		config:        cfg,
+		currentCounts: make(map[string]int),
+		counterLock:   sync.Mutex{},
 	}
 	return nil
 }

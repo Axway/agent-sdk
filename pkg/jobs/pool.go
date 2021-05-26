@@ -73,6 +73,17 @@ func (p *Pool) recordCronJob(job JobExecution) string {
 	return p.recordJob(job)
 }
 
+//recordJob - Removes the specified job from jobs map
+func (p *Pool) removeJob(jobID string) {
+	p.jobsMapLock.Lock()
+	defer p.jobsMapLock.Unlock()
+	job, ok := p.jobs[jobID]
+	if ok {
+		job.stop()
+		delete(p.jobs, jobID)
+	}
+}
+
 //RegisterSingleRunJob - Runs a single run job
 func (p *Pool) RegisterSingleRunJob(newJob Job) (string, error) {
 	job, err := newBaseJob(newJob, p.failJobChan)
@@ -107,6 +118,11 @@ func (p *Pool) RegisterRetryJob(newJob Job, retries int) (string, error) {
 		return "", err
 	}
 	return p.recordJob(job), nil
+}
+
+//UnregisterJob - Removes the specified job
+func (p *Pool) UnregisterJob(jobID string) {
+	p.removeJob(jobID)
 }
 
 //GetJob - Returns the Job based on the id
