@@ -34,6 +34,9 @@ func NewEventGenerator() EventGenerator {
 		shouldAddFields: !traceability.IsHTTPTransport(),
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
+
+	// Initialize the metric collector to load usage/metric data from previous agent execution
+	metric.GetMetricCollector()
 	return eventGen
 }
 
