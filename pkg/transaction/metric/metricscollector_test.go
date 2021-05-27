@@ -28,7 +28,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.ClientID = "DOSA_1111"
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
-	cfg.PublisUsageEvents = true
+	cfg.PublishUsageEvents = true
 	// cfg.PublishMetricEvents = true
 	return cfg
 }

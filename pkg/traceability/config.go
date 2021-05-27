@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
@@ -101,6 +102,13 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	if outputConfig.Pipelining > 0 {
 		log.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
 		outputConfig.Pipelining = 0
+	}
+
+	// if set, check for valid proxyURL
+	if outputConfig.Proxy.URL != "" {
+		if _, err := url.ParseRequestURI(outputConfig.Proxy.URL); err != nil {
+			return nil, ErrInvalidConfig.FormatError("traceability.proxyURL")
+		}
 	}
 
 	return outputConfig, nil
