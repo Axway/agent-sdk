@@ -22,7 +22,7 @@ func validateAuth(cfg AuthConfig) (err error) {
 	return
 }
 
-func TestAuhConfig(t *testing.T) {
+func TestAuthConfig(t *testing.T) {
 	cfg := newAuthConfig()
 	authCfg := cfg.(*AuthConfiguration)
 	err := validateAuth(cfg)
@@ -32,6 +32,13 @@ func TestAuhConfig(t *testing.T) {
 	assert.Equal(t, "", cfg.GetAudience())
 
 	authCfg.URL = "aaa"
+	err = validateAuth(cfg)
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
+	assert.Equal(t, "", cfg.GetTokenURL())
+	assert.Equal(t, "", cfg.GetAudience())
+
+	authCfg.URL = "http://foo.com:8080"
 	err = validateAuth(cfg)
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.auth.realm, please set and/or check its value", err.Error())
@@ -60,8 +67,8 @@ func TestAuhConfig(t *testing.T) {
 	err = validateAuth(cfg)
 	assert.Nil(t, err)
 
-	assert.Equal(t, "aaa/realms/rrr"+tokenEndpoint, cfg.GetTokenURL())
-	assert.Equal(t, "aaa/realms/rrr", cfg.GetAudience())
+	assert.Equal(t, authCfg.URL+"/realms/rrr"+tokenEndpoint, cfg.GetTokenURL())
+	assert.Equal(t, authCfg.URL+"/realms/rrr", cfg.GetAudience())
 	assert.Equal(t, "", cfg.GetKeyPassword())
 	authCfg.KeyPwd = "xxx"
 	assert.Equal(t, "xxx", cfg.GetKeyPassword())
