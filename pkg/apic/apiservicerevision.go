@@ -100,7 +100,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	return nil
 }
-//format AltRevision
+//formatAltRevision -
 func formatAltRevision(prefix string) string {
 	return fmt.Sprintf("%s-%d",prefix, time.Now().UnixNano()/1000000)
 }
