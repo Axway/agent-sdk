@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
+	"github.com/tidwall/gjson"
 )
 
 // sample - private struct that is used to keep track of the samples being taken
@@ -53,9 +54,12 @@ func (s *sample) FilterEvents(events []publisher.Event) []publisher.Event {
 
 	sampledEvents := make([]publisher.Event, 0)
 	for _, event := range events {
-		if _, sampled := event.Content.Meta[SampleKey]; sampled {
+		hasFailedStatus := gjson.Get(gjson.Get(event.Content.Fields.String(), "message").String(), "transactionSummary.status").String() == "Failure"
+		// report the sampledEvent, or if reportAllErrors is set to `true` and the trasaction summary's status is an error
+		if _, sampled := event.Content.Meta[SampleKey]; sampled || (s.config.ReportAllErrors && hasFailedStatus) {
 			sampledEvents = append(sampledEvents, event)
 		}
 	}
+
 	return sampledEvents
 }
