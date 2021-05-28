@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -145,7 +146,7 @@ type CentralConfiguration struct {
 	ClientTimeout             time.Duration      `config:"clientTimeout"`
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
-	PublisUsageEvents         bool               `config:"publishUsage"`
+	PublishUsageEvents        bool               `config:"publishUsage"`
 	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
 	// PublishMetricEvents       bool  `config:"publishMetric"`
 	environmentID string
@@ -403,7 +404,7 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 
 // CanPublishUsageEvent - Returns flag to indicate agent can publish usage events
 func (c *CentralConfiguration) CanPublishUsageEvent() bool {
-	return c.PublisUsageEvents
+	return c.PublishUsageEvents
 }
 
 // CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
@@ -472,19 +473,29 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathTenantID))
 	}
 
-	if c.GetURL() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathURL))
-	}
+	c.validateURL(c.GetURL(), pathURL, true)
 
-	if c.GetPlatformURL() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathPlatformURL))
-	}
+	c.validateURL(c.GetPlatformURL(), pathPlatformURL, true)
+
+	// proxyURL
+	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
 		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
+	}
+}
+
+func (c *CentralConfiguration) validateURL(urlString, configPath string, isURLRequired bool) {
+	if isURLRequired && urlString == "" {
+		exception.Throw(ErrBadConfig.FormatError(configPath))
+	}
+	if urlString != "" {
+		if _, err := url.ParseRequestURI(urlString); err != nil {
+			exception.Throw(ErrBadConfig.FormatError(configPath))
+		}
 	}
 }
 
@@ -537,6 +548,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if eventAggSeconds < 60000 {
 		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
 	}
+
+	// lighthouseurl
+	c.validateURL(c.GetLighthouseURL(), pathLighthouseURL, false)
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -622,7 +636,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
 		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
-		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
+		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {

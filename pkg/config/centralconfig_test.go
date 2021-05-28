@@ -42,6 +42,13 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.url, please set and/or check its value", err.Error())
+
+	centralConfig.URL = "http://localhost:8080"
+	centralConfig.Mode = PublishToEnvironmentAndCatalog
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
 
 	centralConfig.Environment = "eee"
@@ -54,8 +61,8 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 
 	centralConfig.APIServerVersion = "v1alpha1"
 
-	assert.Equal(t, "aaa/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
-	assert.Equal(t, "aaa/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
+	assert.Equal(t, centralConfig.URL+"/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
@@ -101,6 +108,12 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.url, please set and/or check its value", err.Error())
+
+	centralConfig.URL = "http://localhost.com"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.deployment, please set and/or check its value", err.Error())
 
 	centralConfig.APICDeployment = "aaa"
@@ -118,6 +131,11 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "[Error Code 1401] - error with config central.eventAggregationInterval, please set and/or check its value", err.Error())
 
 	centralConfig.EventAggregationInterval = 1 * time.Minute
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
+
+	authCfg.URL = "http://localhost.com:8080"
 	err = cfgValidator.ValidateCfg()
 	assert.Nil(t, err)
 
