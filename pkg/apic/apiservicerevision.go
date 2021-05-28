@@ -60,7 +60,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	var revisionName string
 	if serviceBody.AltRevisionPrefix == "" {
-		revisionPrefix  := c.getRevisionPrefix(serviceBody)
+		revisionPrefix := c.getRevisionPrefix(serviceBody)
 		revisionName = revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount+1)
 	} else {
 		revisionName = formatAltRevision(serviceBody.AltRevisionPrefix)
@@ -100,9 +100,10 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	return nil
 }
+
 //formatAltRevision -
 func formatAltRevision(prefix string) string {
-	return fmt.Sprintf("%s-%d",prefix, time.Now().UnixNano()/1000000)
+	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano()/1000000)
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter

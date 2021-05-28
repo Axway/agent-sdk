@@ -315,14 +315,14 @@ func TestUpdateService(t *testing.T) {
 func TestRevision(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	cloneServiceBody := serviceBody
-    //Alt Revision
+	//Alt Revision
 	cloneServiceBody.AltRevisionPrefix = "1.1.1"
 	client.processRevision(&cloneServiceBody)
-	assert.Contains(t,cloneServiceBody.serviceContext.currentRevision,"1.1.1" )
+	assert.Contains(t, cloneServiceBody.serviceContext.currentRevision, "1.1.1")
 	// Normal Revision
 	cloneServiceBody.AltRevisionPrefix = ""
 	client.processRevision(&cloneServiceBody)
-	assert.NotEqual(t, "", cloneServiceBody.serviceContext.currentRevision )
+	assert.NotEqual(t, "", cloneServiceBody.serviceContext.currentRevision)
 }
 func TestDeleteConsumerInstance(t *testing.T) {
 	client, httpClient := GetTestServiceClient()

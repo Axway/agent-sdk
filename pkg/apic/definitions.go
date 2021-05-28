@@ -104,7 +104,7 @@ type ServiceBody struct {
 	ImageContentType  string
 	CreatedBy         string
 	ResourceType      string
-	AltRevisionPrefix    string
+	AltRevisionPrefix string
 	SubscriptionName  string
 	APIUpdateSeverity string `json:",omitempty"`
 	State             string
