@@ -899,10 +899,11 @@ By default all transaction data is sent to Amplify.
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
 
-| YAML property | Variable name                    | Description                                                                                       |
-|---------------|----------------------------------|---------------------------------------------------------------------------------------------------|
-| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify                                 |
-| per_api       | TRACEABILITY_SAMPLING_PER_API    | Defines if the percentage above is applied to all events or separate based on API ID in the event |
+| YAML property   | Variable name                         | Description                                                                                       |
+|-----------------|---------------------------------------|---------------------------------------------------------------------------------------------------|
+| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-100) that are sent to Amplify                                 |
+| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event |
+| reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                       |
 
 ### Building the Agent
 
