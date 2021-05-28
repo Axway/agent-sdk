@@ -22,7 +22,7 @@ func DefaultConfig() Sampling {
 	return Sampling{
 		Percentage:      countMax,
 		PerAPI:          true,
-		ReportAllErrors: true,
+		ReportAllErrors: false,
 	}
 }
 

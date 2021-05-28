@@ -50,6 +50,17 @@ func TestSamplingConfig(t *testing.T) {
 				Percentage: 150,
 			},
 		},
+		{
+			name:        "Good Config, Report All Errors",
+			errExpected: false,
+			config: Sampling{
+				Percentage:      50,
+				ReportAllErrors: true,
+			},
+			expectedConfig: Sampling{
+				Percentage: 50,
+			},
+		},
 	}
 
 	for _, test := range testCases {
