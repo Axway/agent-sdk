@@ -58,6 +58,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetUnstructuredFilename("test.zip").
 		SetUnstructuredLabel("Label").
 		SetUnstructuredType("Type").
+		SetAltRevisionPrefix("1.1.1").
 		Build()
 
 	assert.Nil(t, err)
@@ -68,6 +69,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "PrimaryKey", sb.PrimaryKey)
 	assert.Equal(t, "teststage", sb.Stage)
 	assert.Equal(t, "https://1234.execute-api.us-region.amazonaws.com/teststage", sb.URL)
+	assert.Equal(t, "1.1.1", sb.AltRevisionPrefix)
 	assert.Equal(t, 350, len(sb.Description))
 
 	description := longDescription[0:maxDescriptionLength-len(strEllipsis)] + strEllipsis
