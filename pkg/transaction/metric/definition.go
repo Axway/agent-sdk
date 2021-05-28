@@ -77,7 +77,7 @@ type LighthouseUsageEvent struct {
 
 // ISO8601 - time format
 const (
-	ISO8601 = "2006-01-02T15:04:05.000Z"
+	ISO8601 = "2006-01-02T15:04:05Z07:00"
 )
 
 // ISO8601Time - time
