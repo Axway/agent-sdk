@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -99,11 +98,6 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.currentRevision = revisionName
 
 	return nil
-}
-
-//formatAltRevision -
-func formatAltRevision(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano()/1000000)
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
