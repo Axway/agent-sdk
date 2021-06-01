@@ -63,7 +63,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		revisionPrefix := c.getRevisionPrefix(serviceBody)
 		revisionName = revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount+1)
 	} else {
-		revisionName = formatAltRevision(serviceBody.AltRevisionPrefix)
+		revisionName = serviceBody.AltRevisionPrefix
 	}
 	revision := serviceBody.serviceContext.previousRevision
 
