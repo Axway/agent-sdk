@@ -22,7 +22,7 @@ const (
 
 // SecretResolver - Interface to resolve secret reference
 type SecretResolver interface {
-	properties.SecretPropertyResover
+	properties.SecretPropertyResolver
 	ResetResolver()
 }
 

@@ -21,8 +21,8 @@ import (
 // ErrInvalidSecretReference - Error for parsing properties with secret reference
 var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s, please check the value for %s config")
 
-// SecretPropertyResover - interface for resolving property values with secret references
-type SecretPropertyResover interface {
+// SecretPropertyResolver - interface for resolving property values with secret references
+type SecretPropertyResolver interface {
 	ResolveSecret(secretRef string) (string, error)
 }
 
@@ -58,7 +58,7 @@ var aliasKeyPrefix string
 type properties struct {
 	Properties
 	rootCmd             *cobra.Command
-	secretResolver      SecretPropertyResover
+	secretResolver      SecretPropertyResolver
 	flattenedProperties map[string]string
 }
 
@@ -79,7 +79,7 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 }
 
 // NewPropertiesWithSecretResolver - Creates a new Properties struct with secret resolver for string property/flag
-func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver SecretPropertyResover) Properties {
+func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver SecretPropertyResolver) Properties {
 	cmdprops := &properties{
 		rootCmd:             rootCmd,
 		flattenedProperties: make(map[string]string),
