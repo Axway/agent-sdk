@@ -42,12 +42,6 @@ func SetupSampling(cfg Sampling) error {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func ShouldSampleTransaction(details TransactionDetails) (bool, error) {
-	hasFailedStatus := details.Status == "Failure"
-	// sample the transaction if reportAllErrors is set to `true` and the trasaction summary's status is an error
-	if hasFailedStatus && agentSamples.config.ReportAllErrors {
-		return true, nil
-	}
-
 	if agentSamples == nil {
 		return false, ErrGlobalSamplingCfg
 	}
