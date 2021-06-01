@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +16,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -193,6 +198,7 @@ type agentConfig struct {
 	dProp                 time.Duration
 	iProp                 int
 	sProp                 string
+	sPropExt              string
 	ssProp                []string
 	agentValidationCalled bool
 }
@@ -542,4 +548,139 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 
 	// Remove the test keys file
 	os.Remove("./" + tmpFile.Name())
+}
+
+func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
+	secret := v1alpha1.Secret{
+		ResourceMeta: v1.ResourceMeta{Name: "agentSecret"},
+		Spec: v1alpha1.SecretSpec{
+			Data: map[string]string{
+				"secretKey":               "secretValue",
+				"cachedSecretKey":         "cachedSecretValue",
+				"keyElement1.keyElement2": "secretValue2",
+			},
+		},
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.RequestURI, "/auth") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+		}
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/secrets/agentSecret") {
+			buf, _ := json.Marshal(secret)
+			resp.Write(buf)
+		}
+	}))
+	defer s.Close()
+
+	var rootCmd AgentRootCmd
+	var cfg *configWithNoValidation
+	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+		cfg = &configWithNoValidation{
+			configValidationCalled: false,
+			CentralCfg:             centralConfig,
+			AgentCfg: &agentConfig{
+				agentValidationCalled: false,
+				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
+				sPropExt:              rootCmd.GetProperties().StringPropertyValue("agent.stringExt"),
+			},
+		}
+		return cfg, nil
+	}
+	var cmdHandlerInvoked bool
+	cmdHandler := func() error {
+		cmdHandlerInvoked = true
+		return nil
+	}
+
+	tmpFile, _ := ioutil.TempFile("./", "key*")
+	defer os.Remove("./" + tmpFile.Name())
+
+	os.Setenv("CENTRAL_AUTH_URL", s.URL+"/auth")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_ENVIRONMENT", "test")
+
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+
+	// Case 1 : No secret resolution - use the value in config
+	os.Setenv("AGENT_STRING", "testValue")
+	os.Setenv("AGENT_STRINGEXT", "anotherTestValue")
+	err := rootCmd.Execute()
+	assert.Nil(t, err, "An unexpected error returned")
+	agentCfg := cfg.AgentCfg.(*agentConfig)
+	assert.Equal(t, true, agentCfg.agentValidationCalled)
+	assert.Equal(t, "testValue", agentCfg.sProp)
+	assert.Equal(t, "anotherTestValue", agentCfg.sPropExt)
+	assert.Equal(t, true, cmdHandlerInvoked)
+
+	// Case 2 : Invalid secret resolution - secret ref with invalid secret name,
+	// config value will be set to empty string
+	cfg = nil
+	agentCfg.agentValidationCalled = false
+	cmdHandlerInvoked = false
+	os.Setenv("AGENT_STRING", "@Secret.invalidSecret.secretKey")
+	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
+	err = rootCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "agentConfig: String prop not set", err.Error())
+	agentCfg = cfg.AgentCfg.(*agentConfig)
+	assert.Equal(t, true, agentCfg.agentValidationCalled)
+	assert.Equal(t, "", agentCfg.sProp)
+	assert.Equal(t, "", agentCfg.sPropExt)
+	assert.Equal(t, false, cmdHandlerInvoked)
+
+	// Case 3 : Invalid secret resolution - secret ref with invalid key in secret
+	// config value will be set to empty string
+	cfg = nil
+	agentCfg.agentValidationCalled = false
+	cmdHandlerInvoked = false
+
+	os.Setenv("AGENT_STRING", "@Secret.agentSecret.invalidKey")
+	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
+	err = rootCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "agentConfig: String prop not set", err.Error())
+	agentCfg = cfg.AgentCfg.(*agentConfig)
+	assert.Equal(t, true, agentCfg.agentValidationCalled)
+	assert.Equal(t, "", agentCfg.sProp)
+	assert.Equal(t, "", agentCfg.sPropExt)
+	assert.Equal(t, false, cmdHandlerInvoked)
+
+	// Case 4 : Successful secret resolution - use value in secret key
+	// config value will be set to specified key in secret
+	cfg = nil
+	agentCfg.agentValidationCalled = false
+	cmdHandlerInvoked = false
+
+	os.Setenv("AGENT_STRING", "@Secret.agentSecret.secretKey")
+	os.Setenv("AGENT_STRINGEXT", "@Secret.agentSecret.cachedSecretKey")
+	err = rootCmd.Execute()
+	assert.Nil(t, err)
+	agentCfg = cfg.AgentCfg.(*agentConfig)
+	assert.Equal(t, true, agentCfg.agentValidationCalled)
+	assert.Equal(t, "secretValue", agentCfg.sProp)
+	assert.Equal(t, "cachedSecretValue", agentCfg.sPropExt)
+	assert.Equal(t, true, cmdHandlerInvoked)
+
+	// Case 5 : Successful secret resolution with key separate with dots(.) - use value in secret key
+	// config value will be set to specified key in secret
+	cfg = nil
+	agentCfg.agentValidationCalled = false
+	cmdHandlerInvoked = false
+
+	os.Setenv("AGENT_STRING", "@Secret.agentSecret.keyElement1.keyElement2")
+	err = rootCmd.Execute()
+	assert.Nil(t, err)
+	agentCfg = cfg.AgentCfg.(*agentConfig)
+	assert.Equal(t, true, agentCfg.agentValidationCalled)
+	assert.Equal(t, "secretValue2", agentCfg.sProp)
+	assert.Equal(t, true, cmdHandlerInvoked)
 }
