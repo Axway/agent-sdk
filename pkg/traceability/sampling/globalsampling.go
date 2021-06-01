@@ -12,15 +12,17 @@ var agentSamples *sample
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
-	Percentage int  `config:"percentage"    validate:"min=0, max=100"`
-	PerAPI     bool `config:"per_api"`
+	Percentage      int  `config:"percentage"    validate:"min=0, max=100"`
+	PerAPI          bool `config:"per_api"`
+	ReportAllErrors bool `config:"reportAllErrors" yaml:"reportAllErrors"`
 }
 
 //DefaultConfig - returns a default sampling config where all transactions are sent
 func DefaultConfig() Sampling {
 	return Sampling{
-		Percentage: countMax,
-		PerAPI:     true,
+		Percentage:      countMax,
+		PerAPI:          true,
+		ReportAllErrors: false,
 	}
 }
 
