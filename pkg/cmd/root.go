@@ -11,6 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd/agentsync"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -60,6 +61,7 @@ type agentRootCommand struct {
 	statusCfg         config.StatusConfig
 	centralCfg        config.CentralConfig
 	agentCfg          interface{}
+	secretResolver    resolver.SecretResolver
 }
 
 func init() {
@@ -76,6 +78,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
+		secretResolver:    resolver.NewSecretResolver(),
 	}
 
 	c.rootCmd = &cobra.Command{
@@ -85,7 +88,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		RunE:    c.run,
 		PreRunE: c.initialize,
 	}
-	c.props = properties.NewProperties(c.rootCmd)
+	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
 	c.addBaseProps()
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
@@ -105,6 +108,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
+		secretResolver:    resolver.NewSecretResolver(),
 	}
 	c.rootCmd = rootCmd
 	c.rootCmd.Use = c.agentName
@@ -113,12 +117,9 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.rootCmd.RunE = c.run
 	c.rootCmd.PreRunE = c.initialize
 
-	c.props = properties.NewProperties(c.rootCmd)
+	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
 	if agentType == config.TraceabilityAgent {
 		properties.SetAliasKeyPrefix(c.agentName)
-		log.SetIsLogP()
-	} else {
-		log.UnsetIsLogP()
 	}
 
 	c.addBaseProps()
@@ -206,6 +207,9 @@ func (c *agentRootCommand) onConfigChange() {
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
+	// Clean the secret map on config change
+	c.secretResolver.ResetResolver()
+
 	_, err := config.ParseAndSetupLogConfig(c.GetProperties())
 	if err != nil {
 		return err
@@ -272,6 +276,13 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 
 		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
 		if c.commandHandler != nil {
+			// Setup logp to use beats logger.
+			// Setting up late here as log entries for agent/command initialization are not logged
+			// as the beats logger is initialized only when the beat instance is created.
+			if c.agentType == config.TraceabilityAgent {
+				properties.SetAliasKeyPrefix(c.agentName)
+				log.SetIsLogP()
+			}
 			err = c.commandHandler()
 			if err != nil {
 				log.Error(err.Error())
