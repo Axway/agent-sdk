@@ -78,7 +78,7 @@ type SummaryBuilder interface {
 	SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder
 	SetDuration(duration int) SummaryBuilder
 	SetApplication(appID, appName string) SummaryBuilder
-	SetProduct(product string) SummaryBuilder
+	SetProduct(id, version string) SummaryBuilder
 	SetTeam(teamID string) SummaryBuilder
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
@@ -443,11 +443,14 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetProduct(product string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetProduct(id, version string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TransactionSummary.Product = product
+	b.logEvent.TransactionSummary.Product = &Product{
+		ID:      id,
+		Version: version,
+	}
 	return b
 }
 
@@ -544,5 +547,8 @@ func (b *transactionSummaryBuilder) validateLogEvent() error {
 		return errors.New("Transaction entry point details are not set in transaction summary event")
 	}
 
+	if b.logEvent.TransactionSummary.Product != nil && b.logEvent.TransactionSummary.Product.ID == "" {
+		return errors.New("Product ID property not set in transaction summary event")
+	}
 	return nil
 }
