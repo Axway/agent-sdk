@@ -312,7 +312,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counte
 // 		App:       c.orgGUID,
 // 		Version:   "4",
 // 		Distribution: V4EventDistribution{
-// 			Environment: agent.GetCentralConfig().GetPlatformEnvironmentID(),
+// 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
 // 			Version:     "1",
 // 		},
 // 		Data: apiStatusMetric,
