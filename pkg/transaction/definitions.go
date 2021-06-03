@@ -66,7 +66,7 @@ type Summary struct {
 	StatusDetail string       `json:"statusDetail,omitempty"`
 	Duration     int          `json:"duration"`
 	Application  *Application `json:"application,omitempty"`
-	Product      string       `json:"product,omitempty"`
+	Product      *Product     `json:"product,omitempty"`
 	Team         *Team        `json:"team,omitempty"`
 
 	Proxy      *Proxy      `json:"proxy,omitempty"`
@@ -78,6 +78,11 @@ type Summary struct {
 type Application struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
+}
+
+type Product struct {
+	ID      string `json:"id,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event
