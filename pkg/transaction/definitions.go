@@ -80,6 +80,7 @@ type Application struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Product - Represents the prodcut used in the transaction summary event
 type Product struct {
 	ID      string `json:"id,omitempty"`
 	Version string `json:"version,omitempty"`
