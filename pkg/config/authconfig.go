@@ -2,6 +2,7 @@ package config
 
 import (
 	"io/ioutil"
+	"net/url"
 	"os"
 	"time"
 
@@ -45,6 +46,8 @@ func newAuthConfig() AuthConfig {
 
 func (a *AuthConfiguration) validate() {
 	if a.URL == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
+	} else if _, err := url.ParseRequestURI(a.URL); err != nil {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
 	}
 

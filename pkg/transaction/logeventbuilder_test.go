@@ -250,7 +250,7 @@ func TestSummaryBuilder(t *testing.T) {
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).
-		SetProduct("product").
+		SetProduct("2222", "1.0").
 		SetRunTime("1111", "runtime1").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		Build()
@@ -276,7 +276,9 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 0, logEvent.TransactionSummary.Proxy.Revision)
 
-	assert.Equal(t, "product", logEvent.TransactionSummary.Product)
+	assert.NotNil(t, logEvent.TransactionSummary.Product)
+	assert.Equal(t, "2222", logEvent.TransactionSummary.Product.ID)
+	assert.Equal(t, "1.0", logEvent.TransactionSummary.Product.Version)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Runtime)
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Runtime.ID)

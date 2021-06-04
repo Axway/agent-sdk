@@ -13,6 +13,7 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
 	"github.com/elastic/beats/v7/libbeat/outputs"
+	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
@@ -42,6 +43,11 @@ func init() {
 // SetOutputEventProcessor -
 func SetOutputEventProcessor(eventProcessor OutputEventProcessor) {
 	outputEventProcessor = eventProcessor
+}
+
+// GetDataDirPath - Returns the path of the data directory
+func GetDataDirPath() string {
+	return paths.Paths.Data
 }
 
 func makeTraceabilityAgent(

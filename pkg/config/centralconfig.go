@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -85,7 +86,6 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
-	GetPlatformEnvironmentID() string
 	GetLighthouseURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
@@ -132,7 +132,6 @@ type CentralConfiguration struct {
 	AgentName                 string             `config:"agentName"`
 	URL                       string             `config:"url"`
 	PlatformURL               string             `config:"platformURL"`
-	PlatformEnvironmentID     string             `config:"platformEnvironmentID"`
 	LighthouseURL             string             `config:"lighthouseURL"`
 	APIServerVersion          string             `config:"apiServerVersion"`
 	TagsToPublish             string             `config:"additionalTags"`
@@ -145,7 +144,7 @@ type CentralConfiguration struct {
 	ClientTimeout             time.Duration      `config:"clientTimeout"`
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
-	PublisUsageEvents         bool               `config:"publishUsage"`
+	PublishUsageEvents        bool               `config:"publishUsage"`
 	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
 	// PublishMetricEvents       bool  `config:"publishMetric"`
 	environmentID string
@@ -174,11 +173,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
 	return c.PlatformURL
-}
-
-// GetPlatformEnvironmentID - Returns the platform environment ID
-func (c *CentralConfiguration) GetPlatformEnvironmentID() string {
-	return c.PlatformEnvironmentID
 }
 
 // GetLighthouseURL - Returns the lighthouse base URL
@@ -403,7 +397,7 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 
 // CanPublishUsageEvent - Returns flag to indicate agent can publish usage events
 func (c *CentralConfiguration) CanPublishUsageEvent() bool {
-	return c.PublisUsageEvents
+	return c.PublishUsageEvents
 }
 
 // CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
@@ -420,7 +414,6 @@ const (
 	pathTenantID                 = "central.organizationID"
 	pathURL                      = "central.url"
 	pathPlatformURL              = "central.platformURL"
-	pathPlatformEnvironmentID    = "central.platformEnvironmentID"
 	pathLighthouseURL            = "central.lighthouseURL"
 	pathAuthPrivateKey           = "central.auth.privateKey"
 	pathAuthPublicKey            = "central.auth.publicKey"
@@ -472,19 +465,29 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathTenantID))
 	}
 
-	if c.GetURL() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathURL))
-	}
+	c.validateURL(c.GetURL(), pathURL, true)
 
-	if c.GetPlatformURL() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathPlatformURL))
-	}
+	c.validateURL(c.GetPlatformURL(), pathPlatformURL, true)
+
+	// proxyURL
+	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
 
 	if c.GetAgentType() == TraceabilityAgent {
 		c.validateTraceabilityAgentConfig()
 	} else {
 		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
+	}
+}
+
+func (c *CentralConfiguration) validateURL(urlString, configPath string, isURLRequired bool) {
+	if isURLRequired && urlString == "" {
+		exception.Throw(ErrBadConfig.FormatError(configPath))
+	}
+	if urlString != "" {
+		if _, err := url.ParseRequestURI(urlString); err != nil {
+			exception.Throw(ErrBadConfig.FormatError(configPath))
+		}
 	}
 }
 
@@ -521,12 +524,6 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
-	// if c.GetGateKeeperURL() == "" {
-	// 	exception.Throw(ErrBadConfig.FormatError(pathGateKeeperURL))
-	// }
-	// if c.GetPlatformEnvironmentID() == "" {
-	// 	exception.Throw(ErrBadConfig.FormatError(pathPlatformEnvironmentID))
-	// }
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
@@ -537,6 +534,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if eventAggSeconds < 60000 {
 		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
 	}
+
+	// lighthouseurl
+	c.validateURL(c.GetLighthouseURL(), pathLighthouseURL, false)
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -570,7 +570,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "AMPLIFY Central")
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
-		props.AddStringProperty(pathPlatformEnvironmentID, "", "Platform Environment ID")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
 		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated")
@@ -621,8 +620,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
-		cfg.PlatformEnvironmentID = props.StringPropertyValue(pathPlatformEnvironmentID)
-		cfg.PublisUsageEvents = props.BoolPropertyValue(pathPublishUsage)
+		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {

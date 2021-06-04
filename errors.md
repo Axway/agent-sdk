@@ -54,10 +54,8 @@
 | 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 seconds and 5 minutes                 | pkg/config/ErrStatusHealthCheckInterval             |
 | 1405 | a key file could not be read                                                                                | pkg/config/ErrReadingKeyFile                        |
 | 1410 | invalid configuration settings for the logging setup                                                        | pkg/config/ErrInvalidLogConfig                      |
+| 1411 | invalid secret reference                                                                                    | pkg/cmd/properties/ErrInvalidSecretReference        |
 |      | 1500-1599 - errors related to traceability output transport                                                 |                                                     |
-| 1500 | could not set proxy                                                                                         | pkg/traceability/ErrSettingProxy                    |
-| 1501 | failed to publish events                                                                                    | pkg/traceability/ErrFailedPublishing                |
-| 1502 | error closing connectino with Condor                                                                        | pkg/traceability/ErrClosingCondorConnection         |
 | 1503 | http transport is not connected                                                                             | pkg/traceability/ErrHTTPNotConnected                |
 | 1504 | failed to encode the json content                                                                           | pkg/traceability/ErrJSONEncodeFailed                |
 | 1505 | invalid traceability config                                                                                 | pkg/traceability/ErrInvalidConfig                   |

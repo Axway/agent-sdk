@@ -30,7 +30,6 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.environment              | CENTRAL_ENVIRONMENT              | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                        |
 | central.deployment               | CENTRAL_DEPLOYMENT               | Specifies the Amplify Central deployment. This could be "prod" or "prod-eu" based on the Amplify Central region.                                                                                                                                                                                                         |
 | central.agentName                | CENTRAL_AGENTNAME                | The agent name of this agent on Amplify Central                                                                                                                                                                                                                                                                          |
-| central.platformEnvironmentId    | CENTRAL_PLATFORMENVIRONMENTID    | The ID of the environment on Amplify to report usage to                                                                                                                                                                                                                                                                  |
 | central.lighthouseURL            | CENTRAL_LIGHTHOUSEURL            | The Lighthouse URL the agent publishes usage reports                                                                                                                                                                                                                                                                     |
 | central.publishUsage             | CENTRAL_PUBLISHUSAGE             | Enables/disables the sending of usage events to Amplify                                                                                                                                                                                                                                                                  |
 | central.publishTraffic           | CENTRAL_PUBLISHTRAFFIC           | Enables/disabled the sending of traffic events to Amplify Central                                                                                                                                                                                                                                                        |
@@ -196,7 +195,6 @@ Below is the list of traceability output transport configuration properties in Y
 | output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default:`tcp`)                                                 |
 | output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default:`3`)                                                                                                   |
 | output.traceability.bulk_max_size     | TRACEABILITY_BULKMAXSIZE      | The max number of evnets in a single request to Condor (default:`100`)                                                                               |
-| output.traceability.timeout           | TRACEABILITY_TIMEOUT          | Number of seconds to wait for responses from Condor (default:`300s`)                                                                                 |
 | output.traceability.client_timeout    | TRACEABILITY_CLIENTTIMEOUT    | Number of seconds to wait for responses from Condor (default:`60s`)                                                                                  |
 | output.traceability.pipelining        | TRACEABILITY_PIPELINING       | Number of asynchronous batches to send, must be 0                                                                                                    |
 | output.traceability.worker            | TRACEABILITY_WORKER           | Number of workers communicating with Condor (default:`1`)                                                                                            |
@@ -900,10 +898,11 @@ By default all transaction data is sent to Amplify.
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
 
-| YAML property | Variable name                    | Description                                                                                       |
-|---------------|----------------------------------|---------------------------------------------------------------------------------------------------|
-| percentage    | TRACEABILITY_SAMPLING_PERCENTAGE | Defines the percentage of events (0-100) that are sent to Amplify                                 |
-| per_api       | TRACEABILITY_SAMPLING_PER_API    | Defines if the percentage above is applied to all events or separate based on API ID in the event |
+| YAML property   | Variable name                         | Description                                                                                       |
+|-----------------|---------------------------------------|---------------------------------------------------------------------------------------------------|
+| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-100) that are sent to Amplify                                 |
+| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event |
+| reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                       |
 
 ### Building the Agent
 

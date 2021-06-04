@@ -31,13 +31,22 @@ type APIMetric struct {
 	StartTime   time.Time          `json:"-"`
 }
 
-// V4EventDistribution - represents V7 distribution
+// cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
+type cachedMetric struct {
+	API        APIDetails `json:"api"`
+	StatusCode string     `json:"statusCode"`
+	Count      int64      `json:"count"`
+	Values     []int64    `json:"values"`
+	StartTime  time.Time  `json:"startTime"`
+}
+
+// // V4EventDistribution - represents V7 distribution
 // type V4EventDistribution struct {
 // 	Environment string `json:"environment"`
 // 	Version     string `json:"version"`
 // }
 
-// V4Event - represents V7 event
+// // V4Event - represents V7 event
 // type V4Event struct {
 // 	ID           string              `json:"id"`
 // 	Timestamp    int64               `json:"timestamp"`
@@ -68,7 +77,7 @@ type LighthouseUsageEvent struct {
 
 // ISO8601 - time format
 const (
-	ISO8601 = "2006-01-02T15:04:05.000Z"
+	ISO8601 = "2006-01-02T15:04:05Z07:00"
 )
 
 // ISO8601Time - time

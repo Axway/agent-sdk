@@ -312,7 +312,18 @@ func TestUpdateService(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 }
-
+func TestRevision(t *testing.T) {
+	client, _ := GetTestServiceClient()
+	cloneServiceBody := serviceBody
+	//Alt Revision
+	cloneServiceBody.AltRevisionPrefix = "1.1.1"
+	client.processRevision(&cloneServiceBody)
+	assert.Contains(t, cloneServiceBody.serviceContext.currentRevision, "1.1.1")
+	// Normal Revision
+	cloneServiceBody.AltRevisionPrefix = ""
+	client.processRevision(&cloneServiceBody)
+	assert.NotEqual(t, "", cloneServiceBody.serviceContext.currentRevision)
+}
 func TestDeleteConsumerInstance(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 	httpClient.ResponseCode = http.StatusRequestTimeout

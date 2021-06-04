@@ -11,11 +11,20 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
+
+// ErrInvalidSecretReference - Error for parsing properties with secret reference
+var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s, please check the value for %s config")
+
+// SecretPropertyResolver - interface for resolving property values with secret references
+type SecretPropertyResolver interface {
+	ResolveSecret(secretRef string) (string, error)
+}
 
 // Properties - Root Command Properties interface for all configs to use for adding and parsing values
 type Properties interface {
@@ -49,6 +58,7 @@ var aliasKeyPrefix string
 type properties struct {
 	Properties
 	rootCmd             *cobra.Command
+	secretResolver      SecretPropertyResolver
 	flattenedProperties map[string]string
 }
 
@@ -63,6 +73,17 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 	cmdprops := &properties{
 		rootCmd:             rootCmd,
 		flattenedProperties: make(map[string]string),
+	}
+
+	return cmdprops
+}
+
+// NewPropertiesWithSecretResolver - Creates a new Properties struct with secret resolver for string property/flag
+func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver SecretPropertyResolver) Properties {
+	cmdprops := &properties{
+		rootCmd:             rootCmd,
+		flattenedProperties: make(map[string]string),
+		secretResolver:      secretResolver,
 	}
 
 	return cmdprops
@@ -222,9 +243,25 @@ func (p *properties) parseStringValue(key string) string {
 	return s
 }
 
+func (p *properties) resolveSecretReference(cfgName, cfgValue string) string {
+	if p.secretResolver != nil {
+		secretValue, err := p.secretResolver.ResolveSecret(cfgValue)
+		if err != nil {
+			// only log the error and return empty string,
+			// validation on config triggers the agent to return error to root command
+			log.Error(ErrInvalidSecretReference.FormatError(err.Error(), cfgName))
+			cfgValue = ""
+		}
+		if secretValue != "" {
+			cfgValue = secretValue
+		}
+	}
+	return cfgValue
+}
+
 func (p *properties) StringPropertyValue(name string) string {
 	s := p.parseStringValue(name)
-
+	s = p.resolveSecretReference(name, s)
 	p.addPropertyToFlatMap(name, s)
 	return s
 }
@@ -235,6 +272,7 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 		return false, ""
 	}
 	fv := flag.Value.String()
+	fv = p.resolveSecretReference(name, fv)
 	p.addPropertyToFlatMap(name, fv)
 	return true, fv
 }

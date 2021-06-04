@@ -15,6 +15,11 @@ type sample struct {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	hasFailedStatus := details.Status == "Failure"
+	// sample the transaction if reportAllErrors is set to `true` and the trasaction summary's status is an error
+	if hasFailedStatus && s.config.ReportAllErrors {
+		return true
+	}
 	if s.config.PerAPI && details.APIID != "" {
 		return s.shouldSampleWithCounter(details.APIID)
 	}
@@ -57,5 +62,6 @@ func (s *sample) FilterEvents(events []publisher.Event) []publisher.Event {
 			sampledEvents = append(sampledEvents, event)
 		}
 	}
+
 	return sampledEvents
 }

@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
@@ -19,7 +20,7 @@ type Config struct {
 	LoadBalance      bool              `config:"loadbalance"`
 	BulkMaxSize      int               `config:"bulk_max_size"`
 	SlowStart        bool              `config:"slow_start"`
-	Timeout          time.Duration     `config:"client_timeout"    validate:"min=1"`
+	Timeout          time.Duration     `config:"client_timeout"    validate:"min=0"`
 	TTL              time.Duration     `config:"ttl"               validate:"min=0"`
 	Pipelining       int               `config:"pipelining"        validate:"min=0"`
 	CompressionLevel int               `config:"compression_level" validate:"min=0, max=9"`
@@ -101,6 +102,13 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	if outputConfig.Pipelining > 0 {
 		log.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
 		outputConfig.Pipelining = 0
+	}
+
+	// if set, check for valid proxyURL
+	if outputConfig.Proxy.URL != "" {
+		if _, err := url.ParseRequestURI(outputConfig.Proxy.URL); err != nil {
+			return nil, ErrInvalidConfig.FormatError("traceability.proxyURL")
+		}
 	}
 
 	return outputConfig, nil
