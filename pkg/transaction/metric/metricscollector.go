@@ -131,6 +131,9 @@ func (c *collector) Status() error {
 
 // Ready - indicates that the collector job is ready to process
 func (c *collector) Ready() bool {
+	if agent.GetCentralConfig().GetEnvironmentID() == "" {
+		return false
+	}
 	return true
 }
 
