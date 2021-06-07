@@ -25,6 +25,13 @@ const (
 	deleteAPI            = iota
 )
 
+const (
+	apiServerPageSize    = 20
+	healthcheckEndpoint  = "central"
+	attributesQueryParam = "attributes."
+	apiServerFields      = "name,title,attributes"
+)
+
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error) {
 	apiSvc, err := c.processService(&serviceBody)

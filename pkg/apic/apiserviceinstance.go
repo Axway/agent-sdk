@@ -191,32 +191,71 @@ func (c *ServiceClient) compareEndpoint(endPointSrc, endPointTarget v1alpha1.Api
 }
 
 // getAPIServiceInstanceForRevision - Returns the API service instance based on the
+// func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
+// 	headers, err := c.createHeader()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	request := coreapi.Request{
+// 		Method:      coreapi.GET,
+// 		URL:         c.cfg.GetInstancesURL(),
+// 		Headers:     headers,
+// 		QueryParams: queryParams,
+// 	}
+
+// 	response, err := c.apiClient.Send(request)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if response.Code != http.StatusOK {
+// 		if response.Code != http.StatusNotFound {
+// 			responseErr := readResponseErrors(response.Code, response.Body)
+// 			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+// 		}
+// 		return nil, nil
+// 	}
+// 	apiInstances := make([]v1alpha1.APIServiceInstance, 0)
+// 	json.Unmarshal(response.Body, &apiInstances)
+
+// 	return apiInstances, nil
+// }
+
+// getAPIInstances
 func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
+	apiInstancesURL := c.cfg.GetInstancesURL()
+	morePages := true
+	page := 1
 
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetInstancesURL(),
-		Headers:     headers,
-		QueryParams: queryParams,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-		return nil, nil
-	}
 	apiInstances := make([]v1alpha1.APIServiceInstance, 0)
-	json.Unmarshal(response.Body, &apiInstances)
+
+	for morePages {
+		query := map[string]string{
+			"query":    attributesQueryParam + AttrExternalAPIID + "!=\"\"",
+			"page":     strconv.Itoa(page),
+			"pageSize": strconv.Itoa(apiServerPageSize),
+			"fields":   apiServerFields,
+		}
+
+		// Add query params for getting instances for the existing revision and use the latest one as last reference
+		for key, value := range queryParams {
+			query[value] = key
+		}
+
+		response, err := c.ExecuteAPI(coreapi.GET, apiInstancesURL, query, nil)
+
+		if err != nil {
+			log.Debugf("Error while retrieving apiserviceinstances: %s", err.Error())
+			return nil, err
+		}
+
+		json.Unmarshal(response, &apiInstances)
+
+		if len(apiInstances) < apiServerPageSize {
+			morePages = false
+		}
+		page++
+	}
 
 	return apiInstances, nil
 }
