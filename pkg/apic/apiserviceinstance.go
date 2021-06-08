@@ -125,11 +125,11 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 	// If service is updated, identify the action based on the existing instance
 	if serviceBody.serviceContext.serviceAction == updateAPI && serviceBody.serviceContext.previousRevision != nil {
 		// Get instances for the existing revision and use the latest one as last reference
-		instanceFilter := map[string]string{
-			"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
-			"sort":  "metadata.audit.createTimestamp,DESC",
-		}
-		instances, err := c.getAPIInstances(instanceFilter)
+		// instanceFilter := map[string]string{
+		// 	"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
+		// 	"sort":  "metadata.audit.createTimestamp,DESC",
+		// }
+		instances, err := c.getAPIInstances()
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func (c *ServiceClient) compareEndpoint(endPointSrc, endPointTarget v1alpha1.Api
 // }
 
 // getAPIInstances
-func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) getAPIInstances() ([]v1alpha1.APIServiceInstance, error) {
 	apiInstancesURL := c.cfg.GetInstancesURL()
 	morePages := true
 	page := 1
@@ -237,11 +237,6 @@ func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alph
 			"fields":   apiServerFields,
 		}
 
-		// Add query params for getting instances for the existing revision and use the latest one as last reference
-		for key, value := range queryParams {
-			query[value] = key
-		}
-
 		response, err := c.ExecuteAPI(coreapi.GET, apiInstancesURL, query, nil)
 
 		if err != nil {
@@ -249,9 +244,11 @@ func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alph
 			return nil, err
 		}
 
-		json.Unmarshal(response, &apiInstances)
+		apiInstancesPage := make([]v1alpha1.APIServiceInstance, 0)
+		json.Unmarshal(response, &apiInstancesPage)
+		apiInstances = append(apiInstances, apiInstancesPage...)
 
-		if len(apiInstances) < apiServerPageSize {
+		if len(apiInstancesPage) < apiServerPageSize {
 			morePages = false
 		}
 		page++

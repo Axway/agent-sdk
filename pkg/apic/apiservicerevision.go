@@ -12,7 +12,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -107,6 +107,55 @@ func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage str
 
 // getAPIRevisions - Returns the list of API revisions for the specified filter
 func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+	apiRevisionsURL := c.cfg.GetRevisionsURL()
+	morePages := true
+	page := 1
+
+	apiRevisions := make([]v1alpha1.APIServiceRevision, 0)
+	filteredApiRevisions := make([]v1alpha1.APIServiceRevision, 0)
+
+	for morePages {
+		query := map[string]string{
+			"query":    attributesQueryParam + AttrExternalAPIID + "!=\"\"",
+			"page":     strconv.Itoa(page),
+			"pageSize": strconv.Itoa(apiServerPageSize),
+			"fields":   apiServerFields,
+		}
+
+		response, err := c.ExecuteAPI(coreapi.GET, apiRevisionsURL, query, nil)
+
+		if err != nil {
+			log.Debugf("Error while retrieving apirevisions: %s", err.Error())
+			return nil, err
+		}
+
+		apiRevisionsPage := make([]v1alpha1.APIServiceRevision, 0)
+		json.Unmarshal(response, &apiRevisionsPage)
+		apiRevisions = append(apiRevisions, apiRevisionsPage...)
+
+		if len(apiRevisionsPage) < apiServerPageSize {
+			morePages = false
+		}
+		page++
+	}
+
+	//create array and filter by stage name. Check the stage name as this does not apply for v7
+	if stage != "" {
+		for _, apiServer := range apiRevisions {
+			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
+				filteredApiRevisions = append(filteredApiRevisions, apiServer)
+			}
+		}
+	} else {
+		filteredApiRevisions = apiRevisions
+	}
+
+	return filteredApiRevisions, nil
+}
+
+/*
+// getAPIRevisions - Returns the list of API revisions for the specified filter
+func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -148,7 +197,7 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 
 	return apiServerRevisions, nil
 
-}
+} */
 
 func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
 	if serviceBody.Stage != "" {
