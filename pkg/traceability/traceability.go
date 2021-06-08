@@ -1,12 +1,18 @@
 package traceability
 
 import (
+	"fmt"
+	"net"
+	"net/http"
 	"net/url"
 	"reflect"
+	"time"
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -29,11 +35,20 @@ const (
 	defaultStartMaxWindowSize int = 10
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
+	hcTypeTCP                     = "tcp"
+	hcTypeHTTP                    = "http"
 )
 
 // Client - struct
 type Client struct {
 	transportClient outputs.Client
+}
+
+type traceabilityAgentHealthChecker struct {
+	protocol string
+	host     string
+	proxyURL string
+	timeout  time.Duration
 }
 
 func init() {
@@ -72,7 +87,7 @@ func makeTraceabilityAgent(
 	if config.Protocol == "https" || config.Protocol == "http" {
 		transportGroup, err = makeHTTPClient(beat, observer, config, hosts)
 	} else {
-		transportGroup, err = makeLogstashClient(indexManager, beat, observer, cfg)
+		transportGroup, err = makeLogstashClient(indexManager, beat, observer, cfg, config)
 	}
 
 	if err != nil {
@@ -98,17 +113,20 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	beat beat.Info,
 	observer outputs.Observer,
 	cfg *common.Config,
+	config *Config,
 ) (outputs.Group, error) {
 	factory := outputs.FindFactory("logstash")
 	if factory == nil {
 		return outputs.Group{}, nil
 	}
+
+	registerHealthCheckers(hcTypeTCP, config)
+
 	group, err := factory(indexManager, beat, observer, cfg)
 	return group, err
 }
 
 func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, hosts []string) (outputs.Group, error) {
-
 	tls, err := tlscommon.LoadTLSConfig(config.TLS)
 	if err != nil {
 		agent.UpdateStatus(agent.AgentFailed, err.Error())
@@ -142,6 +160,8 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, h
 		client = outputs.WithBackoff(client, config.Backoff.Init, config.Backoff.Max)
 		clients[i] = client
 	}
+
+	registerHealthCheckers(hcTypeHTTP, config)
 	return outputs.SuccessNet(config.LoadBalance, config.BulkMaxSize, config.MaxRetries, clients)
 }
 
@@ -210,4 +230,76 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 	ptrToEvents := unsafe.Pointer(member.UnsafeAddr())
 	realPtrToEvents := (*[]publisher.Event)(ptrToEvents)
 	*realPtrToEvents = events
+}
+
+func registerHealthCheckers(hcType string, config *Config) {
+	// register a unique healthchecker for each potential host
+	for i, host := range config.Hosts {
+		ta := &traceabilityAgentHealthChecker{
+			protocol: config.Protocol,
+			host:     config.Hosts[i],
+			proxyURL: config.Proxy.URL,
+			timeout:  config.Timeout,
+		}
+
+		var checkStatus hc.CheckStatus
+		// set the correct checker based on the type
+		if hcType == hcTypeTCP {
+			checkStatus = ta.tcpHealthcheck
+		} else {
+			checkStatus = ta.httpHealthcheck
+		}
+		hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
+	}
+}
+
+func (ta *traceabilityAgentHealthChecker) tcpHealthcheck(host string) *hc.Status {
+	// Create the default status
+	status := &hc.Status{
+		Result: hc.OK,
+	}
+
+	hostURL := ta.host
+	if ta.proxyURL != "" {
+		hostURL = ta.proxyURL
+	}
+	_, err := net.DialTimeout(ta.protocol, hostURL, ta.timeout)
+	if err != nil {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+		}
+	}
+
+	return status
+}
+
+func (ta *traceabilityAgentHealthChecker) httpHealthcheck(host string) *hc.Status {
+	// Create the default status
+	status := &hc.Status{
+		Result: hc.OK,
+	}
+
+	request := api.Request{
+		Method: http.MethodConnect,
+		URL:    ta.protocol + "://" + ta.host,
+	}
+
+	client := api.NewClient(nil, ta.proxyURL)
+	response, err := client.Send(request)
+	if err != nil {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+		}
+		return status
+	}
+	if response.Code == http.StatusRequestTimeout {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. HTTP response: %v", host, response.Code),
+		}
+	}
+
+	return status
 }
