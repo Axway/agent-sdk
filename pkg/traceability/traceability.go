@@ -69,25 +69,25 @@ func makeTraceabilityAgent(
 	indexManager outputs.IndexManager,
 	beat beat.Info,
 	observer outputs.Observer,
-	cfg *common.Config,
+	libbeatCfg *common.Config,
 ) (outputs.Group, error) {
-	config, err := readConfig(cfg, beat)
+	traceCfg, err := readConfig(libbeatCfg, beat)
 	if err != nil {
 		agent.UpdateStatus(agent.AgentFailed, err.Error())
 		return outputs.Fail(err)
 	}
 
-	hosts, err := outputs.ReadHostList(cfg)
+	hosts, err := outputs.ReadHostList(libbeatCfg)
 	if err != nil {
 		agent.UpdateStatus(agent.AgentFailed, err.Error())
 		return outputs.Fail(err)
 	}
 
 	var transportGroup outputs.Group
-	if config.Protocol == "https" || config.Protocol == "http" {
-		transportGroup, err = makeHTTPClient(beat, observer, config, hosts)
+	if traceCfg.Protocol == "https" || traceCfg.Protocol == "http" {
+		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
 	} else {
-		transportGroup, err = makeLogstashClient(indexManager, beat, observer, cfg, config)
+		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg, traceCfg)
 	}
 
 	if err != nil {
@@ -112,22 +112,21 @@ func makeTraceabilityAgent(
 func makeLogstashClient(indexManager outputs.IndexManager,
 	beat beat.Info,
 	observer outputs.Observer,
-	cfg *common.Config,
-	config *Config,
+	libbeatCfg *common.Config,
+	traceCfg *Config,
 ) (outputs.Group, error) {
 	factory := outputs.FindFactory("logstash")
 	if factory == nil {
 		return outputs.Group{}, nil
 	}
 
-	registerHealthCheckers(hcTypeTCP, config)
-
-	group, err := factory(indexManager, beat, observer, cfg)
+	registerHealthCheckers(hcTypeTCP, traceCfg)
+	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
 }
 
-func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, hosts []string) (outputs.Group, error) {
-	tls, err := tlscommon.LoadTLSConfig(config.TLS)
+func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string) (outputs.Group, error) {
+	tls, err := tlscommon.LoadTLSConfig(traceCfg.TLS)
 	if err != nil {
 		agent.UpdateStatus(agent.AgentFailed, err.Error())
 		return outputs.Fail(err)
@@ -135,11 +134,11 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, h
 
 	clients := make([]outputs.NetworkClient, len(hosts))
 	for i, host := range hosts {
-		hostURL, err := common.MakeURL(config.Protocol, "/", host, 443)
+		hostURL, err := common.MakeURL(traceCfg.Protocol, "/", host, 443)
 		if err != nil {
 			return outputs.Fail(err)
 		}
-		proxyURL, err := url.Parse(config.Proxy.URL)
+		proxyURL, err := url.Parse(traceCfg.Proxy.URL)
 		if err != nil {
 			return outputs.Fail(err)
 		}
@@ -149,20 +148,20 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, config *Config, h
 			URL:              hostURL,
 			Proxy:            proxyURL,
 			TLS:              tls,
-			Timeout:          config.Timeout,
-			CompressionLevel: config.CompressionLevel,
+			Timeout:          traceCfg.Timeout,
+			CompressionLevel: traceCfg.CompressionLevel,
 			Observer:         observer,
 		})
 
 		if err != nil {
 			return outputs.Fail(err)
 		}
-		client = outputs.WithBackoff(client, config.Backoff.Init, config.Backoff.Max)
+		client = outputs.WithBackoff(client, traceCfg.Backoff.Init, traceCfg.Backoff.Max)
 		clients[i] = client
 	}
 
-	registerHealthCheckers(hcTypeHTTP, config)
-	return outputs.SuccessNet(config.LoadBalance, config.BulkMaxSize, config.MaxRetries, clients)
+	registerHealthCheckers(hcTypeHTTP, traceCfg)
+	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 
 // Connect establishes a connection to the clients sink.
