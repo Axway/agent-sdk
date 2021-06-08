@@ -112,7 +112,7 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 	page := 1
 
 	apiRevisions := make([]v1alpha1.APIServiceRevision, 0)
-	filteredApiRevisions := make([]v1alpha1.APIServiceRevision, 0)
+	filteredAPIRevisions := make([]v1alpha1.APIServiceRevision, 0)
 
 	for morePages {
 		query := map[string]string{
@@ -143,14 +143,14 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 	if stage != "" {
 		for _, apiServer := range apiRevisions {
 			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
-				filteredApiRevisions = append(filteredApiRevisions, apiServer)
+				filteredAPIRevisions = append(filteredAPIRevisions, apiServer)
 			}
 		}
 	} else {
-		filteredApiRevisions = apiRevisions
+		filteredAPIRevisions = apiRevisions
 	}
 
-	return filteredApiRevisions, nil
+	return filteredAPIRevisions, nil
 }
 
 /*
