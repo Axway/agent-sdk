@@ -36,8 +36,6 @@ const (
 	defaultStartMaxWindowSize int = 10
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
-	hcTypeTCP                     = "tcp"
-	hcTypeHTTP                    = "http"
 )
 
 // Client - struct
@@ -122,7 +120,7 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 		return outputs.Group{}, nil
 	}
 
-	registerHealthCheckers(hcTypeTCP, traceCfg)
+	registerHealthCheckers(traceCfg)
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
 }
@@ -162,7 +160,7 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 		clients[i] = client
 	}
 
-	registerHealthCheckers(hcTypeHTTP, traceCfg)
+	registerHealthCheckers(traceCfg)
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 
@@ -233,7 +231,7 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 	*realPtrToEvents = events
 }
 
-func registerHealthCheckers(hcType string, config *Config) {
+func registerHealthCheckers(config *Config) {
 	// register a unique healthchecker for each potential host
 	for i := range config.Hosts {
 		ta := &traceabilityAgentHealthChecker{
