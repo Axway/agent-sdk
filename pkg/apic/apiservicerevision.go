@@ -116,11 +116,17 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 
 	for morePages {
 		query := map[string]string{
-			"query":    attributesQueryParam + AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
 			"fields":   apiServerFields,
 		}
+
+		// Add query params for getting revisions for the service and use the latest one as last reference
+		for key, value := range queryParams {
+			query[key] = value
+		}
+
+		log.Debugf("Query - %s", query)
 
 		response, err := c.ExecuteAPI(coreapi.GET, apiRevisionsURL, query, nil)
 
@@ -131,6 +137,7 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 
 		apiRevisionsPage := make([]v1alpha1.APIServiceRevision, 0)
 		json.Unmarshal(response, &apiRevisionsPage)
+
 		apiRevisions = append(apiRevisions, apiRevisionsPage...)
 
 		if len(apiRevisionsPage) < apiServerPageSize {

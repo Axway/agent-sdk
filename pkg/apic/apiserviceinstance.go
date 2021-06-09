@@ -125,11 +125,11 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 	// If service is updated, identify the action based on the existing instance
 	if serviceBody.serviceContext.serviceAction == updateAPI && serviceBody.serviceContext.previousRevision != nil {
 		// Get instances for the existing revision and use the latest one as last reference
-		// instanceFilter := map[string]string{
-		// 	"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
-		// 	"sort":  "metadata.audit.createTimestamp,DESC",
-		// }
-		instances, err := c.getAPIInstances()
+		instanceFilter := map[string]string{
+			"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
+			"sort":  "metadata.audit.createTimestamp,DESC",
+		}
+		instances, err := c.getAPIInstances(instanceFilter)
 		if err != nil {
 			return err
 		}
@@ -190,39 +190,8 @@ func (c *ServiceClient) compareEndpoint(endPointSrc, endPointTarget v1alpha1.Api
 		endPointSrc.Routing.BasePath == endPointTarget.Routing.BasePath
 }
 
-// getAPIServiceInstanceForRevision - Returns the API service instance based on the
-// func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
-// 	headers, err := c.createHeader()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	request := coreapi.Request{
-// 		Method:      coreapi.GET,
-// 		URL:         c.cfg.GetInstancesURL(),
-// 		Headers:     headers,
-// 		QueryParams: queryParams,
-// 	}
-
-// 	response, err := c.apiClient.Send(request)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if response.Code != http.StatusOK {
-// 		if response.Code != http.StatusNotFound {
-// 			responseErr := readResponseErrors(response.Code, response.Body)
-// 			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-// 		}
-// 		return nil, nil
-// 	}
-// 	apiInstances := make([]v1alpha1.APIServiceInstance, 0)
-// 	json.Unmarshal(response.Body, &apiInstances)
-
-// 	return apiInstances, nil
-// }
-
 // getAPIInstances
-func (c *ServiceClient) getAPIInstances() ([]v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
 	apiInstancesURL := c.cfg.GetInstancesURL()
 	morePages := true
 	page := 1
@@ -231,11 +200,17 @@ func (c *ServiceClient) getAPIInstances() ([]v1alpha1.APIServiceInstance, error)
 
 	for morePages {
 		query := map[string]string{
-			"query":    attributesQueryParam + AttrExternalAPIID + "!=\"\"",
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
 			"fields":   apiServerFields,
 		}
+
+		// Add query params for getting revisions for the service and use the latest one as last reference
+		for key, value := range queryParams {
+			query[key] = value
+		}
+
+		log.Debugf("Query - %s", query)
 
 		response, err := c.ExecuteAPI(coreapi.GET, apiInstancesURL, query, nil)
 
@@ -246,6 +221,8 @@ func (c *ServiceClient) getAPIInstances() ([]v1alpha1.APIServiceInstance, error)
 
 		apiInstancesPage := make([]v1alpha1.APIServiceInstance, 0)
 		json.Unmarshal(response, &apiInstancesPage)
+
+		// add to final apiInstances
 		apiInstances = append(apiInstances, apiInstancesPage...)
 
 		if len(apiInstancesPage) < apiServerPageSize {
