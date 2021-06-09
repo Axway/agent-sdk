@@ -11,6 +11,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -49,6 +50,7 @@ type traceabilityAgentHealthChecker struct {
 	host     string
 	proxyURL string
 	timeout  time.Duration
+	// checkStatus hc.CheckStatus
 }
 
 func init() {
@@ -233,7 +235,7 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 
 func registerHealthCheckers(hcType string, config *Config) {
 	// register a unique healthchecker for each potential host
-	for i, host := range config.Hosts {
+	for i := range config.Hosts {
 		ta := &traceabilityAgentHealthChecker{
 			protocol: config.Protocol,
 			host:     config.Hosts[i],
@@ -241,15 +243,18 @@ func registerHealthCheckers(hcType string, config *Config) {
 			timeout:  config.Timeout,
 		}
 
-		var checkStatus hc.CheckStatus
-		// set the correct checker based on the type
-		if hcType == hcTypeTCP {
-			checkStatus = ta.tcpHealthcheck
-		} else {
-			checkStatus = ta.httpHealthcheck
+		hcJob := &condorHealthCheckJob{
+			agentHealthChecker: ta,
 		}
-		hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
+		jobs.RegisterIntervalJob(hcJob, config.Timeout)
 	}
+}
+
+func (ta *traceabilityAgentHealthChecker) healthcheck(name string) *hc.Status {
+	if ta.protocol == "tcp" {
+		return ta.tcpHealthcheck(name)
+	}
+	return ta.httpHealthcheck(name)
 }
 
 func (ta *traceabilityAgentHealthChecker) tcpHealthcheck(host string) *hc.Status {

@@ -77,6 +77,7 @@ func (b *baseJob) updateStatus() JobStatus {
 	jobStatus := b.job.Status()   // get the current status
 	if jobStatus != nil {         // on error set the status to failed
 		b.failChan <- b.id
+		log.Errorf("job with ID %s failed: %s", b.id, jobStatus.Error())
 		newStatus = JobStatusFailed
 	}
 	b.statusLock.Lock()
