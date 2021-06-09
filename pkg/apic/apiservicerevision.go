@@ -118,15 +118,12 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 		query := map[string]string{
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   apiServerFields,
 		}
 
 		// Add query params for getting revisions for the service and use the latest one as last reference
 		for key, value := range queryParams {
 			query[key] = value
 		}
-
-		log.Debugf("Query - %s", query)
 
 		response, err := c.ExecuteAPI(coreapi.GET, apiRevisionsURL, query, nil)
 
