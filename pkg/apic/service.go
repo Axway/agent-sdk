@@ -26,10 +26,7 @@ const (
 )
 
 const (
-	apiServerPageSize    = 20
-	healthcheckEndpoint  = "central"
-	attributesQueryParam = "attributes."
-	apiServerFields      = "name,title,attributes"
+	apiServerPageSize = 20
 )
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
