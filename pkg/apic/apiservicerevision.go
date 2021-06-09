@@ -157,52 +157,6 @@ func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage str
 	return filteredAPIRevisions, nil
 }
 
-/*
-// getAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetRevisionsURL(),
-		Headers:     headers,
-		QueryParams: queryParams,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-		return nil, nil
-	}
-	revisions := make([]v1alpha1.APIServiceRevision, 0)
-	json.Unmarshal(response.Body, &revisions)
-
-	apiServerRevisions := make([]v1alpha1.APIServiceRevision, 0)
-
-	//create array and filter by stage name. Check the stage name as this does not apply for v7
-	if stage != "" {
-		for _, apiServer := range revisions {
-			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
-				apiServerRevisions = append(apiServerRevisions, apiServer)
-			}
-		}
-	} else {
-		apiServerRevisions = revisions
-	}
-
-	return apiServerRevisions, nil
-
-} */
-
 func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
 	if serviceBody.Stage != "" {
 		return sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
