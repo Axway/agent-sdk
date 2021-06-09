@@ -1,19 +1,14 @@
 package traceability
 
 import (
-	"fmt"
-	"net"
-	"net/http"
 	"net/url"
 	"reflect"
 	"time"
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -48,7 +43,6 @@ type traceabilityAgentHealthChecker struct {
 	host     string
 	proxyURL string
 	timeout  time.Duration
-	// checkStatus hc.CheckStatus
 }
 
 func init() {
@@ -120,7 +114,10 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 		return outputs.Group{}, nil
 	}
 
-	registerHealthCheckers(traceCfg)
+	err := registerHealthCheckers(traceCfg)
+	if err != nil {
+		return outputs.Group{}, err
+	}
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
 }
@@ -231,7 +228,7 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 	*realPtrToEvents = events
 }
 
-func registerHealthCheckers(config *Config) {
+func registerHealthCheckers(config *Config) error {
 	// register a unique healthchecker for each potential host
 	for i := range config.Hosts {
 		ta := &traceabilityAgentHealthChecker{
@@ -244,64 +241,68 @@ func registerHealthCheckers(config *Config) {
 		hcJob := &condorHealthCheckJob{
 			agentHealthChecker: ta,
 		}
-		jobs.RegisterIntervalJob(hcJob, config.Timeout)
-	}
-}
-
-func (ta *traceabilityAgentHealthChecker) healthcheck(name string) *hc.Status {
-	if ta.protocol == "tcp" {
-		return ta.tcpHealthcheck(name)
-	}
-	return ta.httpHealthcheck(name)
-}
-
-func (ta *traceabilityAgentHealthChecker) tcpHealthcheck(host string) *hc.Status {
-	// Create the default status
-	status := &hc.Status{
-		Result: hc.OK,
-	}
-
-	hostURL := ta.host
-	if ta.proxyURL != "" {
-		hostURL = ta.proxyURL
-	}
-	_, err := net.DialTimeout(ta.protocol, hostURL, ta.timeout)
-	if err != nil {
-		status = &hc.Status{
-			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+		_, err := jobs.RegisterIntervalJob(hcJob, config.Timeout)
+		if err != nil {
+			return err
 		}
 	}
-
-	return status
+	return nil
 }
 
-func (ta *traceabilityAgentHealthChecker) httpHealthcheck(host string) *hc.Status {
-	// Create the default status
-	status := &hc.Status{
-		Result: hc.OK,
-	}
+// func (ta *traceabilityAgentHealthChecker) healthcheck(name string) *hc.Status {
+// 	if ta.protocol == "tcp" {
+// 		return ta.tcpHealthcheck(name)
+// 	}
+// 	return ta.httpHealthcheck(name)
+// }
 
-	request := api.Request{
-		Method: http.MethodConnect,
-		URL:    ta.protocol + "://" + ta.host,
-	}
+// func (ta *traceabilityAgentHealthChecker) tcpHealthcheck(host string) *hc.Status {
+// 	// Create the default status
+// 	status := &hc.Status{
+// 		Result: hc.OK,
+// 	}
 
-	client := api.NewClient(nil, ta.proxyURL)
-	response, err := client.Send(request)
-	if err != nil {
-		status = &hc.Status{
-			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
-		}
-		return status
-	}
-	if response.Code == http.StatusRequestTimeout {
-		status = &hc.Status{
-			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s Failed. HTTP response: %v", host, response.Code),
-		}
-	}
+// 	hostURL := ta.host
+// 	if ta.proxyURL != "" {
+// 		hostURL = ta.proxyURL
+// 	}
+// 	_, err := net.DialTimeout(ta.protocol, hostURL, ta.timeout)
+// 	if err != nil {
+// 		status = &hc.Status{
+// 			Result:  hc.FAIL,
+// 			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+// 		}
+// 	}
 
-	return status
-}
+// 	return status
+// }
+
+// func (ta *traceabilityAgentHealthChecker) httpHealthcheck(host string) *hc.Status {
+// 	// Create the default status
+// 	status := &hc.Status{
+// 		Result: hc.OK,
+// 	}
+
+// 	request := api.Request{
+// 		Method: http.MethodConnect,
+// 		URL:    ta.protocol + "://" + ta.host,
+// 	}
+
+// 	client := api.NewClient(nil, ta.proxyURL)
+// 	response, err := client.Send(request)
+// 	if err != nil {
+// 		status = &hc.Status{
+// 			Result:  hc.FAIL,
+// 			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+// 		}
+// 		return status
+// 	}
+// 	if response.Code == http.StatusRequestTimeout {
+// 		status = &hc.Status{
+// 			Result:  hc.FAIL,
+// 			Details: fmt.Sprintf("%s Failed. HTTP response: %v", host, response.Code),
+// 		}
+// 	}
+
+// 	return status
+// }

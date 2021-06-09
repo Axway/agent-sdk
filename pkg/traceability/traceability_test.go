@@ -8,14 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/outputs"
@@ -414,32 +412,4 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.Nil(t, publishedMessages)
 
 	SetOutputEventProcessor(nil)
-}
-
-func TestLogstashHealthcheck(t *testing.T) {
-
-	// group, err := createTransport(nil)
-	ta := &traceabilityAgentHealthChecker{
-		protocol: "tcp",
-		host:     "somehost.com:543",
-		proxyURL: "",
-		timeout:  time.Second * 1,
-	}
-
-	status := ta.tcpHealthcheck("myhost.com")
-	assert.Equal(t, hc.FAIL, status.Result)
-}
-
-func TestHTTPHealthcheck(t *testing.T) {
-
-	// group, err := createTransport(nil)
-	ta := &traceabilityAgentHealthChecker{
-		protocol: "https",
-		host:     "somehost.com:543",
-		proxyURL: "",
-	}
-
-	os.Setenv("HTTP_CLIENT_TIMEOUT", "1s")
-	status := ta.httpHealthcheck("myhost.com")
-	assert.Equal(t, hc.FAIL, status.Result)
 }
