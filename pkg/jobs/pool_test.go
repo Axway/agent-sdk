@@ -33,6 +33,13 @@ func TestPoolCoordination(t *testing.T) {
 	}
 	testPool.RegisterIntervalJob(iJob, 10*time.Millisecond)
 
+	diJob := &intervalJobImpl{
+		name:    "DetachedIntervalJob",
+		runTime: time.Millisecond,
+		ready:   true,
+	}
+	testPool.RegisterDetachedIntervalJob(diJob, 10*time.Millisecond)
+
 	time.Sleep(time.Second) // give enough time for scheduled job to run at least once
 
 	// continue to get pool status to check that it was in a stopped state during test
@@ -47,6 +54,8 @@ func TestPoolCoordination(t *testing.T) {
 			iJob.executions = 0
 			assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once before failure")
 			failJob.executions = 0
+			assert.GreaterOrEqual(t, diJob.executions, 1, "The detached interval job did not run at least once before other jobs were stopped")
+			diJob.executions = 0
 		}
 		if wasStopped && testPool.GetStatus() == PoolStatusRunning.String() {
 			stoppedThenStarted = true
@@ -58,6 +67,7 @@ func TestPoolCoordination(t *testing.T) {
 	assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once after failure")
 	assert.GreaterOrEqual(t, iJob.executions, 1, "The interval job did not run at least once after failure")
 	assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once after failure")
+	assert.GreaterOrEqual(t, diJob.executions, 1, "The detached interval did not run at least once after failure")
 	assert.True(t, wasStopped, "The pool status never showed as stopped")
 	assert.True(t, stoppedThenStarted, "The pool status never restarted after it was stopped")
 	assert.True(t, failJob.wasFailed, "The fail job never reported as failed")

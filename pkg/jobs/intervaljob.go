@@ -3,7 +3,6 @@ package jobs
 import (
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -17,12 +16,13 @@ type intervalJob struct {
 	intervalJobProps
 }
 
-//newBaseJob - creates a single run job and sets up the structure for different job types
+//newIntervalJob - creates an interval run job
 func newIntervalJob(newJob Job, interval time.Duration, failJobChan chan string) (JobExecution, error) {
 	thisJob := intervalJob{
 		baseJob{
 			id:       newUUID(),
 			job:      newJob,
+			jobType:  JobTypeInterval,
 			status:   JobStatusInitializing,
 			failChan: failJobChan,
 		},
@@ -40,7 +40,7 @@ func (b *intervalJob) handleExecution() {
 	// Execute the job now and then start the interval period
 	b.executeCronJob()
 	if b.err != nil {
-		b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(JobTypeInterval, b.id)
+		b.setExecutionError()
 		log.Error(b.err)
 		b.SetStatus(JobStatusStopped)
 	}
@@ -48,7 +48,7 @@ func (b *intervalJob) handleExecution() {
 
 //start - calls the Execute function from the Job definition
 func (b *intervalJob) start() {
-	log.Debugf("Starting %v job %v", JobTypeInterval, b.id)
+	b.startLog()
 	b.waitForReady()
 
 	// Execute the job now and then start the interval period
@@ -73,6 +73,6 @@ func (b *intervalJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
-	log.Debugf("Stopping %v job %v", JobTypeInterval, b.id)
+	b.stopLog()
 	b.stopChan <- true
 }

@@ -107,12 +107,18 @@ func GetStatus(endpoint string) StatusLevel {
 
 //RunChecks - loop through all
 func RunChecks() StatusLevel {
-	globalHealthChecker.Status = OK
+	passed := true
 	for _, check := range globalHealthChecker.Checks {
 		executeCheck(check)
 		if check.Status.Result == FAIL {
 			globalHealthChecker.Status = FAIL
+			passed = false
 		}
+	}
+
+	// Only return to OK when all health checks pass
+	if passed {
+		globalHealthChecker.Status = OK
 	}
 	return globalHealthChecker.Status
 }
@@ -163,6 +169,11 @@ func CheckIsRunning() error {
 		}
 	}
 	return nil
+}
+
+// GetGlobalStatus - return the status of the global health checker
+func GetGlobalStatus() string {
+	return string(globalHealthChecker.Status)
 }
 
 //GetHealthcheckOutput - query the http endpoint and return the body

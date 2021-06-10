@@ -25,9 +25,10 @@ import (
 
 // AgentStatus - status for Agent resource
 const (
-	AgentRunning = "running"
-	AgentStopped = "stopped"
-	AgentFailed  = "failed"
+	AgentRunning   = "running"
+	AgentStopped   = "stopped"
+	AgentFailed    = "failed"
+	AgentUnhealthy = "unhealthy"
 )
 
 // AgentResourceType - Holds the type for agent resource in Central
