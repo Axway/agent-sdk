@@ -5,29 +5,33 @@ import (
 	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/definitions/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func (c *ServiceClient) fubar() error {
+func (c *ServiceClient) GetAPIServiceInstances() ([]*v1alpha1.APIServiceInstance, error) {
 	query := map[string]string{
 		"query": "metadata.references.name==" + "scrum",
 		"sort":  "metadata.audit.createTimestamp,DESC",
 	}
 	resources, err := c.getAPIResources(query, c.cfg.GetInstancesURL(), "")
 	if err != nil {
-		return err
+		return nil, err
+	}
+	apiServiceIntances, err := v1alpha1.APIServiceInstanceFromInstanceArray(resources)
+	if err != nil {
+		return nil, err
 	}
 
-	resources = resources.([]v1alpha1.APIServiceInstance)
+	return apiServiceIntances, nil
 }
 
-func (c *ServiceClient) getAPIResources(queryParams map[string]string, URL, stage string) ([]interface{}, error) {
+func (c *ServiceClient) getAPIResources(queryParams map[string]string, URL, stage string) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
 
-	resourceInstance := make([]interface{}, 0)
+	resourceInstance := make([]*apiv1.ResourceInstance, 0)
 
 	for morePages {
 		query := map[string]string{
@@ -47,7 +51,7 @@ func (c *ServiceClient) getAPIResources(queryParams map[string]string, URL, stag
 			return nil, err
 		}
 
-		resourceInstancePage := make([]interface{}, 0)
+		resourceInstancePage := make([]*apiv1.ResourceInstance, 0)
 		json.Unmarshal(response, &resourceInstancePage)
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
