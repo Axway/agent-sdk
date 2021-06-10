@@ -23,7 +23,7 @@ var (
 const (
 	WebhookScope = "Environment"
 
-	WebhookResource = "webhooks"
+	WebhookResourceName = "webhooks"
 )
 
 func WebhookGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func WebhookGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_WebhookGVK, WebhookScope, WebhookResource)
+	apiv1.RegisterGVK(_WebhookGVK, WebhookScope, WebhookResourceName)
 }
 
 // Webhook Resource
@@ -62,6 +62,21 @@ func (res *Webhook) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Webhook{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// WebhookFromInstanceArray converts a []*ResourceInstance to a []*Webhook
+func WebhookFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Webhook, error) {
+	newArray := make([]*Webhook, 0)
+	for _, item := range fromArray {
+		res := &Webhook{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Webhook, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Webhook to a ResourceInstance

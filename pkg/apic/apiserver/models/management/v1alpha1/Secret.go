@@ -21,9 +21,9 @@ var (
 )
 
 const (
-	SecretScope = "Integration"
+	SecretScope = "Environment"
 
-	SecretResource = "secrets"
+	SecretResourceName = "secrets"
 )
 
 func SecretGVK() apiv1.GroupVersionKind {
@@ -31,12 +31,14 @@ func SecretGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResource)
+	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResourceName)
 }
 
 // Secret Resource
 type Secret struct {
 	apiv1.ResourceMeta
+
+	Owner struct{} `json:"owner"`
 
 	Spec SecretSpec `json:"spec"`
 }
@@ -62,6 +64,21 @@ func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Secret{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret
+func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, error) {
+	newArray := make([]*Secret, 0)
+	for _, item := range fromArray {
+		res := &Secret{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Secret, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Secret to a ResourceInstance

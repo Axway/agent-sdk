@@ -23,7 +23,7 @@ var (
 const (
 	DiscoveryAgentScope = "Environment"
 
-	DiscoveryAgentResource = "discoveryagents"
+	DiscoveryAgentResourceName = "discoveryagents"
 )
 
 func DiscoveryAgentGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func DiscoveryAgentGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_DiscoveryAgentGVK, DiscoveryAgentScope, DiscoveryAgentResource)
+	apiv1.RegisterGVK(_DiscoveryAgentGVK, DiscoveryAgentScope, DiscoveryAgentResourceName)
 }
 
 // DiscoveryAgent Resource
@@ -62,6 +62,21 @@ func (res *DiscoveryAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = DiscoveryAgent{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// DiscoveryAgentFromInstanceArray converts a []*ResourceInstance to a []*DiscoveryAgent
+func DiscoveryAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*DiscoveryAgent, error) {
+	newArray := make([]*DiscoveryAgent, 0)
+	for _, item := range fromArray {
+		res := &DiscoveryAgent{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*DiscoveryAgent, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a DiscoveryAgent to a ResourceInstance

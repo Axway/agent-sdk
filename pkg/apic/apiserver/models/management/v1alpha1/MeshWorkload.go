@@ -23,7 +23,7 @@ var (
 const (
 	MeshWorkloadScope = "Mesh"
 
-	MeshWorkloadResource = "meshworkloads"
+	MeshWorkloadResourceName = "meshworkloads"
 )
 
 func MeshWorkloadGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func MeshWorkloadGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshWorkloadGVK, MeshWorkloadScope, MeshWorkloadResource)
+	apiv1.RegisterGVK(_MeshWorkloadGVK, MeshWorkloadScope, MeshWorkloadResourceName)
 }
 
 // MeshWorkload Resource
@@ -62,6 +62,21 @@ func (res *MeshWorkload) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = MeshWorkload{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// MeshWorkloadFromInstanceArray converts a []*ResourceInstance to a []*MeshWorkload
+func MeshWorkloadFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshWorkload, error) {
+	newArray := make([]*MeshWorkload, 0)
+	for _, item := range fromArray {
+		res := &MeshWorkload{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*MeshWorkload, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a MeshWorkload to a ResourceInstance

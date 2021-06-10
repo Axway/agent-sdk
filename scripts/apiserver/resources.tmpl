@@ -25,7 +25,7 @@ const (
 	{{else}}
 	{{.res.kind}}Scope    = ""
 	{{end}}
-	{{.res.kind}}Resource = "{{.res.resource}}"
+	{{.res.kind}}ResourceName = "{{.res.resource}}"
 )
 
 func {{.res.kind}}GVK() apiv1.GroupVersionKind {
@@ -33,7 +33,7 @@ func {{.res.kind}}GVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scope, {{.res.kind}}Resource)
+	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scope, {{.res.kind}}ResourceName)
 }
 
 // {{.res.kind}} Resource
@@ -65,6 +65,21 @@ func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
 	*res = {{.res.kind}}{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// {{.res.kind}}FromInstanceArray converts a []*ResourceInstance to a []*{{.res.kind}}
+func {{.res.kind}}FromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*{{.res.kind}}, error) {
+	newArray := make([]*{{.res.kind}}, 0)
+	for _, item := range fromArray {
+		res := &{{.res.kind}}{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*{{.res.kind}}, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a {{.res.kind}} to a ResourceInstance

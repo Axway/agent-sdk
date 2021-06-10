@@ -23,7 +23,7 @@ var (
 const (
 	EnvironmentScope = ""
 
-	EnvironmentResource = "environments"
+	EnvironmentResourceName = "environments"
 )
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func EnvironmentGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScope, EnvironmentResource)
+	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScope, EnvironmentResourceName)
 }
 
 // Environment Resource
@@ -62,6 +62,21 @@ func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Environment{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// EnvironmentFromInstanceArray converts a []*ResourceInstance to a []*Environment
+func EnvironmentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Environment, error) {
+	newArray := make([]*Environment, 0)
+	for _, item := range fromArray {
+		res := &Environment{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Environment, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Environment to a ResourceInstance

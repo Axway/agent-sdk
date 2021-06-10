@@ -23,7 +23,7 @@ var (
 const (
 	ResourceHookScope = "Integration"
 
-	ResourceHookResource = "resourcehooks"
+	ResourceHookResourceName = "resourcehooks"
 )
 
 func ResourceHookGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func ResourceHookGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceHookGVK, ResourceHookScope, ResourceHookResource)
+	apiv1.RegisterGVK(_ResourceHookGVK, ResourceHookScope, ResourceHookResourceName)
 }
 
 // ResourceHook Resource
@@ -62,6 +62,21 @@ func (res *ResourceHook) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = ResourceHook{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ResourceHookFromInstanceArray converts a []*ResourceInstance to a []*ResourceHook
+func ResourceHookFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceHook, error) {
+	newArray := make([]*ResourceHook, 0)
+	for _, item := range fromArray {
+		res := &ResourceHook{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ResourceHook, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ResourceHook to a ResourceInstance

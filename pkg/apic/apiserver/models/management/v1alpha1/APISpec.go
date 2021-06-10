@@ -23,7 +23,7 @@ var (
 const (
 	APISpecScope = "K8SCluster"
 
-	APISpecResource = "apispecs"
+	APISpecResourceName = "apispecs"
 )
 
 func APISpecGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func APISpecGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_APISpecGVK, APISpecScope, APISpecResource)
+	apiv1.RegisterGVK(_APISpecGVK, APISpecScope, APISpecResourceName)
 }
 
 // APISpec Resource
@@ -62,6 +62,21 @@ func (res *APISpec) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = APISpec{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// APISpecFromInstanceArray converts a []*ResourceInstance to a []*APISpec
+func APISpecFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APISpec, error) {
+	newArray := make([]*APISpec, 0)
+	for _, item := range fromArray {
+		res := &APISpec{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*APISpec, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a APISpec to a ResourceInstance

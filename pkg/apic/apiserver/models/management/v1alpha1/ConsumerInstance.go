@@ -23,7 +23,7 @@ var (
 const (
 	ConsumerInstanceScope = "Environment"
 
-	ConsumerInstanceResource = "consumerinstances"
+	ConsumerInstanceResourceName = "consumerinstances"
 )
 
 func ConsumerInstanceGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func ConsumerInstanceGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_ConsumerInstanceGVK, ConsumerInstanceScope, ConsumerInstanceResource)
+	apiv1.RegisterGVK(_ConsumerInstanceGVK, ConsumerInstanceScope, ConsumerInstanceResourceName)
 }
 
 // ConsumerInstance Resource
@@ -64,6 +64,21 @@ func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = ConsumerInstance{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ConsumerInstanceFromInstanceArray converts a []*ResourceInstance to a []*ConsumerInstance
+func ConsumerInstanceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ConsumerInstance, error) {
+	newArray := make([]*ConsumerInstance, 0)
+	for _, item := range fromArray {
+		res := &ConsumerInstance{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ConsumerInstance, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ConsumerInstance to a ResourceInstance

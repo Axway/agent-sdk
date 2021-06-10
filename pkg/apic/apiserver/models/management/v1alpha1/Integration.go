@@ -23,7 +23,7 @@ var (
 const (
 	IntegrationScope = ""
 
-	IntegrationResource = "integrations"
+	IntegrationResourceName = "integrations"
 )
 
 func IntegrationGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func IntegrationGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_IntegrationGVK, IntegrationScope, IntegrationResource)
+	apiv1.RegisterGVK(_IntegrationGVK, IntegrationScope, IntegrationResourceName)
 }
 
 // Integration Resource
@@ -62,6 +62,21 @@ func (res *Integration) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Integration{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// IntegrationFromInstanceArray converts a []*ResourceInstance to a []*Integration
+func IntegrationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Integration, error) {
+	newArray := make([]*Integration, 0)
+	for _, item := range fromArray {
+		res := &Integration{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Integration, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Integration to a ResourceInstance

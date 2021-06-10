@@ -23,7 +23,7 @@ var (
 const (
 	SpecDiscoveryScope = "K8SCluster"
 
-	SpecDiscoveryResource = "specdiscoveries"
+	SpecDiscoveryResourceName = "specdiscoveries"
 )
 
 func SpecDiscoveryGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func SpecDiscoveryGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_SpecDiscoveryGVK, SpecDiscoveryScope, SpecDiscoveryResource)
+	apiv1.RegisterGVK(_SpecDiscoveryGVK, SpecDiscoveryScope, SpecDiscoveryResourceName)
 }
 
 // SpecDiscovery Resource
@@ -62,6 +62,21 @@ func (res *SpecDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = SpecDiscovery{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// SpecDiscoveryFromInstanceArray converts a []*ResourceInstance to a []*SpecDiscovery
+func SpecDiscoveryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*SpecDiscovery, error) {
+	newArray := make([]*SpecDiscovery, 0)
+	for _, item := range fromArray {
+		res := &SpecDiscovery{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*SpecDiscovery, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a SpecDiscovery to a ResourceInstance

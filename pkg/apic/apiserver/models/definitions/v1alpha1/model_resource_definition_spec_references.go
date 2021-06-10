@@ -14,5 +14,5 @@ type ResourceDefinitionSpecReferences struct {
 	// A list of resources that the current resources has references to.
 	ToResources []ResourceDefinitionSpecReferencesToResources `json:"toResources,omitempty"`
 	// A list of resources that the current resources is beging referenced from.
-	FromResources []ResourceDefinitionSpecReferencesToResources `json:"fromResources,omitempty"`
+	FromResources []ResourceDefinitionSpecReferencesFromResources `json:"fromResources,omitempty"`
 }

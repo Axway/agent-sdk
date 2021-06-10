@@ -11,7 +11,7 @@ package v1alpha1
 
 // ApiServiceRevisionSpecDefinition The api specification details.
 type ApiServiceRevisionSpecDefinition struct {
-	// The type of the api specification. Example oas3, oas2, wsdl, protobuf, asyncapi.
+	// The type of the api specification.
 	Type string `json:"type,omitempty"`
 	// Base64 encoded value of the api specification.
 	Value string `json:"value,omitempty"`
