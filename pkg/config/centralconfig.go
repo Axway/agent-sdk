@@ -165,7 +165,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		UpdateFromAPIServer:       false,
-		EventAggregationInterval:  5 * time.Minute,
+		EventAggregationInterval:  15 * time.Minute,
 		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
@@ -572,7 +572,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to AMPLIFY platform. Default to true")
 		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to AMPLIFY platform. Default to true")
-		props.AddDurationProperty(pathEventAggregationInterval, 5*time.Minute, "The time interval at which usage and metric event will be generated")
+		props.AddDurationProperty(pathEventAggregationInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to AMPLIFY Central")
