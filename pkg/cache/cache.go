@@ -57,7 +57,7 @@ type cacheAction struct {
 	path   string
 }
 
-type reply struct {
+type cacheReply struct {
 	item    *Item
 	key     string
 	err     error
@@ -69,7 +69,7 @@ type itemCache struct {
 	Items         map[string]*Item  `json:"cache"`
 	SecKeys       map[string]string `json:"secondaryKeys"`
 	actionChannel chan cacheAction
-	replyChannel  chan reply
+	replyChannel  chan cacheReply
 }
 
 func init() {
@@ -95,7 +95,7 @@ func New() Cache {
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
 		actionChannel: make(chan cacheAction),
-		replyChannel:  make(chan reply),
+		replyChannel:  make(chan cacheReply),
 	}
 	go newCache.handleAction()
 	return newCache
@@ -107,7 +107,7 @@ func Load(path string) Cache {
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
 		actionChannel: make(chan cacheAction),
-		replyChannel:  make(chan reply),
+		replyChannel:  make(chan cacheReply),
 	}
 	go newCache.handleAction()
 	newCache.Load(path)
@@ -116,42 +116,35 @@ func Load(path string) Cache {
 
 // handleAction - handles all calls to the cache to prevent locking issues
 func (c *itemCache) handleAction() {
+	actionMap := map[action]func(cacheAction) cacheReply{
+		getAction:          c.get,
+		setAction:          c.set,
+		deleteAction:       c.delete,
+		findAction:         c.findPrimaryKey,
+		hasChangedAction:   c.hasItemChanged,
+		setSecKeyAction:    c.setSecondaryKey,
+		deleteSecKeyAction: c.deleteSecondaryKey,
+		flushAction:        c.flush,
+		saveAction:         c.save,
+		loadAction:         c.load,
+	}
+
 	for {
 		thisAction := <-c.actionChannel
-		switch thisAction.action {
-		case getAction:
-			c.get(thisAction.key)
-		case hasChangedAction:
-			c.hasItemChanged(thisAction.key, thisAction.data)
-		case findAction:
-			c.findPrimaryKey(thisAction.secKey)
-		case setAction:
-			c.set(thisAction.key, thisAction.data)
-		case setSecKeyAction:
-			c.setSecondaryKey(thisAction.key, thisAction.secKey)
-		case deleteAction:
-			c.delete(thisAction.key)
-		case deleteSecKeyAction:
-			c.deleteSecondaryKey(thisAction.secKey)
-		case flushAction:
-			c.flush()
-		case saveAction:
-			c.save(thisAction.path)
-		case loadAction:
-			c.load(thisAction.path)
-		}
+		reply := actionMap[thisAction.action](thisAction)
+		c.replyChannel <- reply
 	}
 }
 
 // check the current hash vs the newHash, return true if it has changed
-func (c *itemCache) hasItemChanged(key string, data interface{}) {
-	thisReply := reply{
+func (c *itemCache) hasItemChanged(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	data := thisAction.data
+
+	thisReply = cacheReply{
 		changed: true,
 		err:     nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	// Get the current item by key=
 	item, ok := c.Items[key]
@@ -172,48 +165,53 @@ func (c *itemCache) hasItemChanged(key string, data interface{}) {
 	if item.Hash == newHash {
 		thisReply.changed = false
 		thisReply.err = nil
-		return
 	}
+	return
 }
 
 // returns the entire item, if found
-func (c *itemCache) get(key string) {
-	thisReply := reply{
+func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+
+	thisReply = cacheReply{
 		item: nil,
 		err:  fmt.Errorf("Could not find item with key: %s", key),
 	}
 	if item, ok := c.Items[key]; ok {
-		thisReply = reply{
+		thisReply = cacheReply{
 			item: item,
 			err:  nil,
 		}
 	}
-	c.replyChannel <- thisReply
+	return
 }
 
 // returns the primary key based on the secondary key
-func (c *itemCache) findPrimaryKey(secondaryKey string) {
-	thisReply := reply{
+func (c *itemCache) findPrimaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	secondaryKey := thisAction.secKey
+
+	thisReply = cacheReply{
 		key: "",
 		err: fmt.Errorf("Could not find secondary key: %s", secondaryKey),
 	}
+
 	if key, ok := c.SecKeys[secondaryKey]; ok {
-		thisReply = reply{
+		thisReply = cacheReply{
 			key: key,
 			err: nil,
 		}
 	}
-	c.replyChannel <- thisReply
+	return
 }
 
 // set the Item object to the key specified, updates the hash
-func (c *itemCache) set(key string, data interface{}) {
-	thisReply := reply{
+func (c *itemCache) set(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	data := thisAction.data
+
+	thisReply = cacheReply{
 		err: nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	hash, err := util.ComputeHash(data)
 	if err != nil {
@@ -235,13 +233,13 @@ func (c *itemCache) set(key string, data interface{}) {
 }
 
 // set the secondaryKey for the key given
-func (c *itemCache) setSecondaryKey(key string, secondaryKey string) {
-	thisReply := reply{
+func (c *itemCache) setSecondaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	secondaryKey := thisAction.secKey
+
+	thisReply = cacheReply{
 		err: nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	// check that the secondary key given is not used as primary
 	if _, ok := c.Items[secondaryKey]; ok {
@@ -264,16 +262,16 @@ func (c *itemCache) setSecondaryKey(key string, secondaryKey string) {
 
 	c.SecKeys[secondaryKey] = key
 	item.SecondaryKeys[secondaryKey] = true
+	return
 }
 
 // delete an item from the cache
-func (c *itemCache) delete(key string) {
-	thisReply := reply{
+func (c *itemCache) delete(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+
+	thisReply = cacheReply{
 		err: nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	// Check that the key given is in the cache
 	if _, ok := c.Items[key]; !ok {
@@ -287,14 +285,17 @@ func (c *itemCache) delete(key string) {
 	}
 
 	delete(c.Items, key)
+	return
 }
 
 //deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
-func (c *itemCache) deleteSecondaryKey(secondaryKey string) {
-	thisReply := reply{
+func (c *itemCache) deleteSecondaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	secondaryKey := thisAction.secKey
+
+	thisReply = cacheReply{
 		err: c.removeSecondaryKey(secondaryKey),
 	}
-	c.replyChannel <- thisReply
+	return
 }
 
 //removeSecondaryKey - removes a secondary key reference in the cache
@@ -310,22 +311,20 @@ func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	return nil
 }
 
-func (c *itemCache) flush() {
-	defer func() {
-		c.replyChannel <- reply{}
-	}()
+func (c *itemCache) flush(thisAction cacheAction) (thisReply cacheReply) {
+	thisReply = cacheReply{}
 
 	c.SecKeys = make(map[string]string)
 	c.Items = make(map[string]*Item)
+	return
 }
 
-func (c *itemCache) save(path string) {
-	thisReply := reply{
+func (c *itemCache) save(thisAction cacheAction) (thisReply cacheReply) {
+	path := thisAction.path
+
+	thisReply = cacheReply{
 		err: nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	file, err := os.Create(filepath.Clean(path))
 	if err != nil {
@@ -339,19 +338,19 @@ func (c *itemCache) save(path string) {
 		thisReply.err = err
 		return
 	}
+
 	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
 	file.Close()
 	thisReply.err = err
 	return
 }
 
-func (c *itemCache) load(path string) {
-	thisReply := reply{
+func (c *itemCache) load(thisAction cacheAction) (thisReply cacheReply) {
+	path := thisAction.path
+
+	thisReply = cacheReply{
 		err: nil,
 	}
-	defer func() {
-		c.replyChannel <- thisReply
-	}()
 
 	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
@@ -364,7 +363,7 @@ func (c *itemCache) load(path string) {
 	return
 }
 
-func (c *itemCache) runAction(thisAction cacheAction) reply {
+func (c *itemCache) runAction(thisAction cacheAction) cacheReply {
 	c.actionChannel <- thisAction
 	thisReply := <-c.replyChannel
 	return thisReply
