@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	util "github.com/Axway/agent-sdk/pkg/util"
@@ -35,12 +34,42 @@ type Cache interface {
 	Load(path string) error
 }
 
+type action int
+
+const (
+	getAction action = iota
+	setAction
+	deleteAction
+	findAction
+	hasChangedAction
+	setSecKeyAction
+	deleteSecKeyAction
+	flushAction
+	saveAction
+	loadAction
+)
+
+type cacheAction struct {
+	action action
+	key    string
+	secKey string
+	data   interface{}
+	path   string
+}
+
+type cacheReply struct {
+	item    *Item
+	key     string
+	err     error
+	changed bool
+}
+
 // itemCache
 type itemCache struct {
-	Items       map[string]*Item  `json:"cache"`
-	SecKeys     map[string]string `json:"secondaryKeys"`
-	itemsLock   *sync.RWMutex     // Use lock when making changes/reading the items map
-	secKeysLock *sync.RWMutex     // Use lock when making changes/reading the secKeys map
+	Items         map[string]*Item  `json:"cache"`
+	SecKeys       map[string]string `json:"secondaryKeys"`
+	actionChannel chan cacheAction
+	replyChannel  chan cacheReply
 }
 
 func init() {
@@ -63,81 +92,131 @@ func GetCache() Cache {
 // New - create a new cache object
 func New() Cache {
 	newCache := &itemCache{
-		Items:       make(map[string]*Item),
-		SecKeys:     make(map[string]string),
-		itemsLock:   &sync.RWMutex{},
-		secKeysLock: &sync.RWMutex{},
+		Items:         make(map[string]*Item),
+		SecKeys:       make(map[string]string),
+		actionChannel: make(chan cacheAction),
+		replyChannel:  make(chan cacheReply),
 	}
+	go newCache.handleAction()
 	return newCache
 }
 
 // Load - create a new cache object and load saved data
 func Load(path string) Cache {
 	newCache := &itemCache{
-		Items:       make(map[string]*Item),
-		SecKeys:     make(map[string]string),
-		itemsLock:   &sync.RWMutex{},
-		secKeysLock: &sync.RWMutex{},
+		Items:         make(map[string]*Item),
+		SecKeys:       make(map[string]string),
+		actionChannel: make(chan cacheAction),
+		replyChannel:  make(chan cacheReply),
 	}
+	go newCache.handleAction()
 	newCache.Load(path)
 	return newCache
 }
 
-// check the current hash vs the newHash, return true if it has changed
-func (c *itemCache) hasItemChanged(key string, data interface{}) (bool, error) {
-	c.itemsLock.RLock()
-	defer c.itemsLock.RUnlock()
+// handleAction - handles all calls to the cache to prevent locking issues
+func (c *itemCache) handleAction() {
+	actionMap := map[action]func(cacheAction) cacheReply{
+		getAction:          c.get,
+		setAction:          c.set,
+		deleteAction:       c.delete,
+		findAction:         c.findPrimaryKey,
+		hasChangedAction:   c.hasItemChanged,
+		setSecKeyAction:    c.setSecondaryKey,
+		deleteSecKeyAction: c.deleteSecondaryKey,
+		flushAction:        c.flush,
+		saveAction:         c.save,
+		loadAction:         c.load,
+	}
 
-	// Get the current item by key
-	item, err := c.get(key)
-	if err != nil {
-		return true, err
+	for {
+		thisAction := <-c.actionChannel
+		reply := actionMap[thisAction.action](thisAction)
+		c.replyChannel <- reply
+	}
+}
+
+// check the current hash vs the newHash, return true if it has changed
+func (c *itemCache) hasItemChanged(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	data := thisAction.data
+
+	thisReply = cacheReply{
+		changed: true,
+		err:     nil,
+	}
+
+	// Get the current item by key=
+	item, ok := c.Items[key]
+	if !ok {
+		thisReply.err = fmt.Errorf("Could not find item with key: %s", key)
+		return
 	}
 
 	// Get the hash of the new data
 	newHash, err := util.ComputeHash(data)
 	if err != nil {
-		return false, err
+		thisReply.changed = false
+		thisReply.err = err
+		return
 	}
 
 	// Check the hash
 	if item.Hash == newHash {
-		return false, nil
+		thisReply.changed = false
+		thisReply.err = nil
 	}
-	return true, nil
+	return
 }
 
 // returns the entire item, if found
-func (c *itemCache) get(key string) (*Item, error) {
-	c.itemsLock.RLock()
-	defer c.itemsLock.RUnlock()
+func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
 
-	if item, ok := c.Items[key]; ok {
-		return item, nil
+	thisReply = cacheReply{
+		item: nil,
+		err:  fmt.Errorf("Could not find item with key: %s", key),
 	}
-	return nil, fmt.Errorf("Could not find item with key: %s", key)
+	if item, ok := c.Items[key]; ok {
+		thisReply = cacheReply{
+			item: item,
+			err:  nil,
+		}
+	}
+	return
 }
 
 // returns the primary key based on the secondary key
-func (c *itemCache) findPrimaryKey(secondaryKey string) (string, error) {
-	c.secKeysLock.RLock()
-	defer c.secKeysLock.RUnlock()
+func (c *itemCache) findPrimaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	secondaryKey := thisAction.secKey
 
-	if key, ok := c.SecKeys[secondaryKey]; ok {
-		return key, nil
+	thisReply = cacheReply{
+		key: "",
+		err: fmt.Errorf("Could not find secondary key: %s", secondaryKey),
 	}
 
-	return "", fmt.Errorf("Could not find secondary key: %s", secondaryKey)
+	if key, ok := c.SecKeys[secondaryKey]; ok {
+		thisReply = cacheReply{
+			key: key,
+			err: nil,
+		}
+	}
+	return
 }
 
 // set the Item object to the key specified, updates the hash
-func (c *itemCache) set(key string, data interface{}) error {
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) set(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	data := thisAction.data
+
+	thisReply = cacheReply{
+		err: nil,
+	}
 
 	hash, err := util.ComputeHash(data)
 	if err != nil {
-		return err
+		thisReply.err = err
+		return
 	}
 
 	secKeys := make(map[string]bool)
@@ -150,45 +229,54 @@ func (c *itemCache) set(key string, data interface{}) error {
 		Hash:          hash,
 		SecondaryKeys: secKeys,
 	}
-	return nil
+	return
 }
 
 // set the secondaryKey for the key given
-func (c *itemCache) setSecondaryKey(key string, secondaryKey string) error {
-	c.secKeysLock.Lock()
-	defer c.secKeysLock.Unlock()
+func (c *itemCache) setSecondaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	secondaryKey := thisAction.secKey
+
+	thisReply = cacheReply{
+		err: nil,
+	}
 
 	// check that the secondary key given is not used as primary
 	if _, ok := c.Items[secondaryKey]; ok {
-		return fmt.Errorf("Can't use %s as a secondary key, it is already a primary key", secondaryKey)
+		thisReply.err = fmt.Errorf("Can't use %s as a secondary key, it is already a primary key", secondaryKey)
+		return
 	}
 
 	// check that the secondary key given is not already a secondary key
 	if _, ok := c.SecKeys[secondaryKey]; ok {
-		return fmt.Errorf("Can't use %s as a secondary key, it is already a secondary key", secondaryKey)
+		thisReply.err = fmt.Errorf("Can't use %s as a secondary key, it is already a secondary key", secondaryKey)
+		return
 	}
-
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
 
 	item, ok := c.Items[key]
 	// Check that the key given is in the cache
 	if !ok {
-		return fmt.Errorf("Can't set secondary key, %s, for a key, %s, as %s is not a known key", secondaryKey, key, key)
+		thisReply.err = fmt.Errorf("Can't set secondary key, %s, for a key, %s, as %s is not a known key", secondaryKey, key, key)
+		return
 	}
 
 	c.SecKeys[secondaryKey] = key
 	item.SecondaryKeys[secondaryKey] = true
-	return nil
+	return
 }
 
 // delete an item from the cache
-func (c *itemCache) delete(key string) error {
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) delete(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+
+	thisReply = cacheReply{
+		err: nil,
+	}
+
 	// Check that the key given is in the cache
 	if _, ok := c.Items[key]; !ok {
-		return fmt.Errorf("Cache item with key %s does not exist", key)
+		thisReply.err = fmt.Errorf("Cache item with key %s does not exist", key)
+		return
 	}
 
 	// Remove all secondary keys
@@ -197,22 +285,21 @@ func (c *itemCache) delete(key string) error {
 	}
 
 	delete(c.Items, key)
-	return nil
+	return
 }
 
 //deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
-func (c *itemCache) deleteSecondaryKey(secondaryKey string) error {
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) deleteSecondaryKey(thisAction cacheAction) (thisReply cacheReply) {
+	secondaryKey := thisAction.secKey
 
-	return c.removeSecondaryKey(secondaryKey)
+	thisReply = cacheReply{
+		err: c.removeSecondaryKey(secondaryKey),
+	}
+	return
 }
 
 //removeSecondaryKey - removes a secondary key reference in the cache
 func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
-	c.secKeysLock.Lock()
-	defer c.secKeysLock.Unlock()
-
 	// Check that the secondaryKey given is in the cache
 	key, ok := c.SecKeys[secondaryKey]
 	if !ok {
@@ -224,93 +311,119 @@ func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	return nil
 }
 
-func (c *itemCache) flush() {
-	c.secKeysLock.Lock()
-	defer c.secKeysLock.Unlock()
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) flush(thisAction cacheAction) (thisReply cacheReply) {
+	thisReply = cacheReply{}
 
 	c.SecKeys = make(map[string]string)
 	c.Items = make(map[string]*Item)
+	return
 }
 
-func (c *itemCache) save(path string) error {
-	c.secKeysLock.Lock()
-	defer c.secKeysLock.Unlock()
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) save(thisAction cacheAction) (thisReply cacheReply) {
+	path := thisAction.path
+
+	thisReply = cacheReply{
+		err: nil,
+	}
 
 	file, err := os.Create(filepath.Clean(path))
 	if err != nil {
-		return err
+		thisReply.err = err
+		return
 	}
 
 	cacheBytes, err := json.Marshal(c)
 	if err != nil {
 		file.Close()
-		return err
+		thisReply.err = err
+		return
 	}
+
 	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
 	file.Close()
-	return err
+	thisReply.err = err
+	return
 }
 
-func (c *itemCache) load(path string) error {
-	c.secKeysLock.Lock()
-	defer c.secKeysLock.Unlock()
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
+func (c *itemCache) load(thisAction cacheAction) (thisReply cacheReply) {
+	path := thisAction.path
+
+	thisReply = cacheReply{
+		err: nil,
+	}
 
 	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
-		return err
+		thisReply.err = err
+		return
 	}
 
-	err = json.NewDecoder(file).Decode(c)
+	thisReply.err = json.NewDecoder(file).Decode(c)
 	file.Close()
-	return err
+	return
+}
+
+func (c *itemCache) runAction(thisAction cacheAction) cacheReply {
+	c.actionChannel <- thisAction
+	thisReply := <-c.replyChannel
+	return thisReply
+}
+
+func (c *itemCache) runFindPrimaryKey(secondaryKey string) (string, error) {
+	findReply := c.runAction(cacheAction{
+		action: findAction,
+		secKey: secondaryKey,
+	})
+	if findReply.err != nil {
+		return "", findReply.err
+	}
+	return findReply.key, nil
 }
 
 // Get - return the object in the cache
 func (c *itemCache) Get(key string) (interface{}, error) {
-	item, err := c.get(key)
-	if err != nil {
-		return nil, err
+	item, err := c.GetItem(key)
+	if item != nil {
+		return item.Object, nil
 	}
-
-	return item.Object, nil
+	return nil, err
 }
 
 // GetItem - Return a pointer to the Item structure
 func (c *itemCache) GetItem(key string) (*Item, error) {
-	return c.get(key)
+	getReply := c.runAction(cacheAction{
+		action: getAction,
+		key:    key,
+	})
+	if getReply.err != nil {
+		return nil, getReply.err
+	}
+
+	return getReply.item, nil
 }
 
 // GetBySecondaryKey - Using the secondary key return the object in the cache
 func (c *itemCache) GetBySecondaryKey(secondaryKey string) (interface{}, error) {
-	// Find the primary key
-	key, err := c.findPrimaryKey(secondaryKey)
-	if err != nil {
-		return nil, err
+	item, err := c.GetItemBySecondaryKey(secondaryKey)
+	if item != nil {
+		return item.Object, nil
 	}
-
-	item, err := c.get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return item.Object, nil
+	return nil, err
 }
 
 // GetItemBySecondaryKey - Using the secondary key return a pointer to the Item structure
 func (c *itemCache) GetItemBySecondaryKey(secondaryKey string) (*Item, error) {
 	// Find the primary key
-	key, err := c.findPrimaryKey(secondaryKey)
+	key, err := c.runFindPrimaryKey(secondaryKey)
 	if err != nil {
 		return nil, err
 	}
+	getReply := c.runAction(cacheAction{
+		action: getAction,
+		key:    key,
+	})
 
-	return c.get(key)
+	return getReply.item, getReply.err
 }
 
 // GetKeys - Returns the keys in cache
@@ -324,72 +437,106 @@ func (c *itemCache) GetKeys() []string {
 
 // HasItemChanged - Check if the item has changed
 func (c *itemCache) HasItemChanged(key string, data interface{}) (bool, error) {
-	return c.hasItemChanged(key, data)
+	changedReply := c.runAction(cacheAction{
+		action: hasChangedAction,
+		key:    key,
+		data:   data,
+	})
+	return changedReply.changed, changedReply.err
 }
 
 // HasItemBySecondaryKeyChanged - Using the secondary key check if the item has changed
 func (c *itemCache) HasItemBySecondaryKeyChanged(secondaryKey string, data interface{}) (bool, error) {
 	// Find the primary key
-	key, err := c.findPrimaryKey(secondaryKey)
+	key, err := c.runFindPrimaryKey(secondaryKey)
 	if err != nil {
 		return false, err
 	}
 
-	return c.hasItemChanged(key, data)
+	return c.HasItemChanged(key, data)
 }
 
 // Set - Create a new item, or update an existing item, in the cache with key
 func (c *itemCache) Set(key string, data interface{}) error {
-	return c.set(key, data)
+	// Find the primary key
+	setReply := c.runAction(cacheAction{
+		action: setAction,
+		key:    key,
+		data:   data,
+	})
+	return setReply.err
 }
 
 // SetSecondaryKey - Create a new item in the cache with key and a secondaryKey reference
 func (c *itemCache) SetWithSecondaryKey(key string, secondaryKey string, data interface{}) error {
-	err := c.set(key, data)
+	err := c.Set(key, data)
 	if err != nil {
 		return err
 	}
 
-	return c.setSecondaryKey(key, secondaryKey)
+	return c.SetSecondaryKey(key, secondaryKey)
 }
 
 // SetSecondaryKey - Add the secondaryKey as a way to reference the item with key
 func (c *itemCache) SetSecondaryKey(key string, secondaryKey string) error {
-	return c.setSecondaryKey(key, secondaryKey)
+	setSecKeyReply := c.runAction(cacheAction{
+		action: setSecKeyAction,
+		key:    key,
+		secKey: secondaryKey,
+	})
+	return setSecKeyReply.err
 }
 
 // Delete - Remove the item which is found with this key
 func (c *itemCache) Delete(key string) error {
-	return c.delete(key)
+	deleteReply := c.runAction(cacheAction{
+		action: deleteAction,
+		key:    key,
+	})
+	return deleteReply.err
 }
 
 // DeleteBySecondaryKey - Remove the item which is found with this secondary key
 func (c *itemCache) DeleteBySecondaryKey(secondaryKey string) error {
 	// Find the primary key
-	key, err := c.findPrimaryKey(secondaryKey)
+	key, err := c.runFindPrimaryKey(secondaryKey)
 	if err != nil {
 		return err
 	}
 
-	return c.delete(key)
+	return c.Delete(key)
 }
 
 // DeleteSecondaryKey - Remove the secondary key, preserve the item
 func (c *itemCache) DeleteSecondaryKey(secondaryKey string) error {
-	return c.deleteSecondaryKey(secondaryKey)
+	deleteSecKeyReply := c.runAction(cacheAction{
+		action: deleteSecKeyAction,
+		secKey: secondaryKey,
+	})
+	return deleteSecKeyReply.err
 }
 
 // Flush - Clears the entire cache
 func (c *itemCache) Flush() {
-	c.flush()
+	c.runAction(cacheAction{
+		action: flushAction,
+	})
 }
 
 // Save - Save the data in this cache to file described by path
 func (c *itemCache) Save(path string) error {
-	return c.save(path)
+	saveReply := c.runAction(cacheAction{
+		action: saveAction,
+		path:   path,
+	})
+	return saveReply.err
 }
 
 // Load - Load the data from the file described by path to this cache
 func (c *itemCache) Load(path string) error {
-	return c.load(path)
+	loadReply := c.runAction(cacheAction{
+		action: loadAction,
+		path:   path,
+	})
+	return loadReply.err
 }
