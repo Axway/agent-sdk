@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// GetAPIServiceInstances - get v1alpha1.APIServiceInstance
 func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string) ([]*v1alpha1.APIServiceInstance, error) {
 	resources, err := c.getAPIResources(queryParams, c.cfg.GetInstancesURL(), "")
 	if err != nil {
@@ -25,6 +26,7 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string) ([
 	return apiServiceIntances, nil
 }
 
+// GetAPIServiceRevisions - v1alpha1.APIServiceRevision
 func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
 	resources, err := c.getAPIResources(queryParams, c.cfg.GetInstancesURL(), "")
 	if err != nil {
@@ -51,6 +53,7 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, st
 	return filteredAPIRevisions, nil
 }
 
+// getAPIResources
 func (c *ServiceClient) getAPIResources(queryParams map[string]string, URL, stage string) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
