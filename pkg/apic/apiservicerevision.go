@@ -170,18 +170,20 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	// If service is updated, identify the action based on the existing revisions and update type(minor/major)
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// Get revisions for the service and use the latest one as last reference
-		revisionFilter := map[string]string{
+		queryParams := map[string]string{
 			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)
+		// revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)
+		revisions, err := c.GetAPIServiceRevisions(queryParams, serviceBody.Stage)
 		if err != nil {
 			return err
 		}
+
 		if revisions != nil {
 			serviceBody.serviceContext.revisionCount = len(revisions)
 			if len(revisions) > 0 {
-				serviceBody.serviceContext.previousRevision = &revisions[0]
+				serviceBody.serviceContext.previousRevision = revisions[0]
 				if serviceBody.APIUpdateSeverity == MinorChange {
 					// For minor change use the latest revision and update existing
 					serviceBody.serviceContext.revisionAction = updateAPI

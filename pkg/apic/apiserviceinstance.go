@@ -125,20 +125,28 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 	// If service is updated, identify the action based on the existing instance
 	if serviceBody.serviceContext.serviceAction == updateAPI && serviceBody.serviceContext.previousRevision != nil {
 		// Get instances for the existing revision and use the latest one as last reference
-		instances, err := c.getAPIInstances(serviceBody.serviceContext.previousRevision.Name)
+		queryParams := map[string]string{
+			"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
+			"sort":  "metadata.audit.createTimestamp,DESC",
+		}
+		// instances, err := c.getAPIInstances(serviceBody.serviceContext.previousRevision.Name)
+		instances, err := c.GetAPIServiceInstances(queryParams)
 		if err != nil {
 			return err
 		}
 
 		if len(instances) > 0 {
 			err = c.updateServiceContext(instances, endpoints, serviceBody)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
+func (c *ServiceClient) updateServiceContext(instances []*v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
 	splitName := strings.Split(instances[0].Name, ".")
 	countStr := splitName[len(splitName)-1]
 	instanceCount, err := strconv.Atoi(countStr)
@@ -146,7 +154,7 @@ func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInst
 		return fmt.Errorf("failed to convert instance count to an int: %s", err)
 	}
 	serviceBody.serviceContext.instanceCount = instanceCount
-	serviceBody.serviceContext.previousInstance = &instances[0]
+	serviceBody.serviceContext.previousInstance = instances[0]
 	// if the endpoints are same update the current instance otherwise create new instance
 	if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
 		serviceBody.serviceContext.instanceAction = updateAPI
