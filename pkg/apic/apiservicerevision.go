@@ -102,6 +102,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
 func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+	//TODO - SHANE need to check with mulesoft for this
 	return c.getAPIRevisions(queryParams, stage)
 }
 
