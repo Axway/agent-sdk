@@ -53,7 +53,7 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, UR
 	return apiServiceIntances, nil
 }
 
-// GetAPIV1ResourceInstances
+// GetAPIV1ResourceInstances - return apiv1 Resource instance
 func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
