@@ -40,6 +40,7 @@
 | 1160 | error getting endpoints for the API specification                                                           | pkg/apic/ErrSetSpecEndPoints                        |
 | 1161 | error deleting API Service for catalog item in Amplify Central                                              | pkg/agent/ErrDeletingService                        |
 | 1162 | error deleting catalog item in Amplify Central                                                              | pkg/agent/ErrDeletingCatalogItem                    |
+| 1163 | error retrieving API Service resource instances                                                             | pkg/agent/ErrUnableToGetAPIV1Resources
 |      | 1300-1399 - for subscription notification errors                                                            |                                                     |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification              |
 | 1301 | subscription notifications not configured, check SUBSCRIPTION config                                        | pkg/notify/ErrSubscriptionNoNotifications           |

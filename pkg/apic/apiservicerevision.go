@@ -175,8 +175,8 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		// revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)
-		revisions, err := c.GetAPIServiceRevisions(queryParams, serviceBody.Stage)
+		// revisions, err := c.getAPIRevisions(queryParams, serviceBody.Stage)
+		revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), serviceBody.Stage)
 		if err != nil {
 			return err
 		}

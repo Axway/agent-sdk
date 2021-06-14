@@ -129,8 +129,8 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 			"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		// instances, err := c.getAPIInstances(serviceBody.serviceContext.previousRevision.Name)
-		instances, err := c.GetAPIServiceInstances(queryParams)
+
+		instances, err := c.GetAPIServiceInstances(queryParams, c.cfg.GetInstancesURL())
 		if err != nil {
 			return err
 		}
@@ -192,44 +192,6 @@ func (c *ServiceClient) compareEndpoint(endPointSrc, endPointTarget v1alpha1.Api
 		endPointSrc.Port == endPointTarget.Port &&
 		endPointSrc.Protocol == endPointTarget.Protocol &&
 		endPointSrc.Routing.BasePath == endPointTarget.Routing.BasePath
-}
-
-// getAPIInstances
-func (c *ServiceClient) getAPIInstances(previousRevisionName string) ([]v1alpha1.APIServiceInstance, error) {
-	apiInstancesURL := c.cfg.GetInstancesURL()
-	morePages := true
-	page := 1
-
-	apiInstances := make([]v1alpha1.APIServiceInstance, 0)
-
-	for morePages {
-		query := map[string]string{
-			"query":    "metadata.references.name==" + previousRevisionName,
-			"sort":     "metadata.audit.createTimestamp,DESC",
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
-		}
-
-		response, err := c.ExecuteAPI(coreapi.GET, apiInstancesURL, query, nil)
-
-		if err != nil {
-			log.Debugf("Error while retrieving apiserviceinstances: %s", err.Error())
-			return nil, err
-		}
-
-		apiInstancesPage := make([]v1alpha1.APIServiceInstance, 0)
-		json.Unmarshal(response, &apiInstancesPage)
-
-		// add to final apiInstances
-		apiInstances = append(apiInstances, apiInstancesPage...)
-
-		if len(apiInstancesPage) < apiServerPageSize {
-			morePages = false
-		}
-		page++
-	}
-
-	return apiInstances, nil
 }
 
 // getAPIServiceInstanceByName - Returns the API service instance for specified name

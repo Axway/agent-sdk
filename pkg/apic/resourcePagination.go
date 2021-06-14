@@ -12,23 +12,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// GetAPIServiceInstances - get v1alpha1.APIServiceInstance
-func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string) ([]*v1alpha1.APIServiceInstance, error) {
-	resources, err := c.getAPIResources(queryParams, c.cfg.GetInstancesURL(), "")
-	if err != nil {
-		return nil, err
-	}
-	apiServiceIntances, err := v1alpha1.APIServiceInstanceFromInstanceArray(resources)
-	if err != nil {
-		return nil, err
-	}
-
-	return apiServiceIntances, nil
-}
-
 // GetAPIServiceRevisions - v1alpha1.APIServiceRevision
-func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
-	resources, err := c.getAPIResources(queryParams, c.cfg.GetInstancesURL(), "")
+func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	resources, err := c.GetAPIV1ResourceInstances(queryParams, URL)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +39,22 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, st
 	return filteredAPIRevisions, nil
 }
 
-// getAPIResources
-func (c *ServiceClient) getAPIResources(queryParams map[string]string, URL, stage string) ([]*apiv1.ResourceInstance, error) {
+// GetAPIServiceInstances - get v1alpha1.APIServiceInstance
+func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+	resources, err := c.GetAPIV1ResourceInstances(queryParams, URL)
+	if err != nil {
+		return nil, err
+	}
+	apiServiceIntances, err := v1alpha1.APIServiceInstanceFromInstanceArray(resources)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiServiceIntances, nil
+}
+
+// GetAPIV1ResourceInstances
+func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
 
