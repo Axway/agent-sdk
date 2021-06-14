@@ -256,7 +256,7 @@ func registerHealthCheckers(config *Config) error {
 		}
 
 		// TBD. Remove in future when Jobs interface is complete
-		err = registerOldHealthChecker(hcJob, "Traceability Agent", ta.host, config.Protocol)
+		err = registerOldHealthChecker(hcJob, ta.host)
 		if err != nil {
 			return err
 		}
@@ -265,7 +265,7 @@ func registerHealthCheckers(config *Config) error {
 }
 
 // TODO: From here down all temporary until Jobs interface finishes full implementation
-func registerOldHealthChecker(hcJob *condorHealthCheckJob, name, host, protocol string) error {
+func registerOldHealthChecker(hcJob *condorHealthCheckJob, host string) error {
 	checkStatus := hcJob.agentHealthChecker.connectionHealthcheck
 
 	_, err := hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
