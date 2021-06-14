@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"fmt"
 	"net/url"
 	"reflect"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/elastic/beats/v7/libbeat/publisher"
+
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
 // OutputEventProcessor - P
@@ -43,6 +46,8 @@ type traceabilityAgentHealthChecker struct {
 	host     string
 	proxyURL string
 	timeout  time.Duration
+	// TBD. Remove in future when Jobs interface is complete
+	hcJob *condorHealthCheckJob
 }
 
 func init() {
@@ -241,10 +246,47 @@ func registerHealthCheckers(config *Config) error {
 		hcJob := &condorHealthCheckJob{
 			agentHealthChecker: ta,
 		}
+
+		// TBD. Remove in future when Jobs interface is complete
+		ta.hcJob = hcJob
+
 		_, err := jobs.RegisterIntervalJob(hcJob, config.Timeout)
+		if err != nil {
+			return err
+		}
+
+		// TBD. Remove in future when Jobs interface is complete
+		err = registerOldHealthChecker(hcJob, "Traceability Agent", ta.host, config.Protocol)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// TODO: From here down all temporary until Jobs interface finishes full implementation
+func registerOldHealthChecker(hcJob *condorHealthCheckJob, name, host, protocol string) error {
+	checkStatus := hcJob.agentHealthChecker.connectionHealthcheck
+
+	_, err := hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ta *traceabilityAgentHealthChecker) connectionHealthcheck(host string) *hc.Status {
+	// Create the default status
+	status := &hc.Status{
+		Result: hc.OK,
+	}
+
+	err := ta.hcJob.checkConnections(healthcheckCondor)
+	if err != nil {
+		status = &hc.Status{
+			Result:  hc.FAIL,
+			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
+		}
+	}
+	return status
 }
