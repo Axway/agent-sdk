@@ -199,7 +199,7 @@ func TestCreateLogstashClient(t *testing.T) {
 
 	testConfig.Pipelining = 5
 	testConfig.Hosts = []string{
-		"somehost",
+		"somehost2",
 	}
 	group, err = createTransport(testConfig)
 	assert.Nil(t, err)
