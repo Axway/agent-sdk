@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -101,60 +98,14 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
-	return c.getAPIRevisions(queryParams, stage)
-}
-
-// getAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
-	apiRevisionsURL := c.cfg.GetRevisionsURL()
-	morePages := true
-	page := 1
-
-	apiRevisions := make([]v1alpha1.APIServiceRevision, 0)
-	filteredAPIRevisions := make([]v1alpha1.APIServiceRevision, 0)
-
-	for morePages {
-		query := map[string]string{
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
-		}
-
-		// Add query params for getting revisions for the service and use the latest one as last reference
-		for key, value := range queryParams {
-			query[key] = value
-		}
-
-		response, err := c.ExecuteAPI(coreapi.GET, apiRevisionsURL, query, nil)
-
-		if err != nil {
-			log.Debugf("Error while retrieving apirevisions: %s", err.Error())
-			return nil, err
-		}
-
-		apiRevisionsPage := make([]v1alpha1.APIServiceRevision, 0)
-		json.Unmarshal(response, &apiRevisionsPage)
-
-		apiRevisions = append(apiRevisions, apiRevisionsPage...)
-
-		if len(apiRevisionsPage) < apiServerPageSize {
-			morePages = false
-		}
-		page++
+// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*v1alpha1.APIServiceRevision
+func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), stage)
+	if err != nil {
+		return nil, err
 	}
 
-	//create array and filter by stage name. Check the stage name as this does not apply for v7
-	if stage != "" {
-		for _, apiServer := range apiRevisions {
-			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
-				filteredAPIRevisions = append(filteredAPIRevisions, apiServer)
-			}
-		}
-	} else {
-		filteredAPIRevisions = apiRevisions
-	}
-
-	return filteredAPIRevisions, nil
+	return revisions, nil
 }
 
 func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
@@ -174,7 +125,7 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		// revisions, err := c.getAPIRevisions(queryParams, serviceBody.Stage)
+
 		revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), serviceBody.Stage)
 		if err != nil {
 			return err

@@ -20,7 +20,7 @@ type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
-func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
 	return nil, nil
 }
 
