@@ -169,8 +169,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		UpdateFromAPIServer:       false,
 		EventAggregationInterval:  15 * time.Minute,
 		ReportActivityFrequency:   5 * time.Minute,
-		// TODO: kf does this need to be here?
-		// APIServiceRevisionPattern: "${APIServiceName} - YYYY/MM/DD - r ${version}",
 	}
 }
 
@@ -511,7 +509,6 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	if c.GetClientTimeout() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
 	}
-	//TODO: kf regex check on APIServiceRevisionPattern??
 }
 
 func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
@@ -575,7 +572,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
-	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{version}}", "The naming pattern for APIServiceRevision Title")
+	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -629,7 +626,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
-	//TODO: kf does this need to be here?
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 
 	if agentType == TraceabilityAgent {

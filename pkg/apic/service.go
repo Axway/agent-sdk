@@ -33,13 +33,12 @@ func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APISe
 	if err != nil {
 		return nil, err
 	}
-
+	// Update description title after creating APIService to inlcude the stage name if it exists
+	c.postAPIServiceUpdate(&serviceBody)
 	err = c.processRevision(&serviceBody)
 	if err != nil {
 		return nil, err
 	}
-	// Update APIServiceRevision title after creating APIService to inlcude the APIServiceRevision Pattern
-	c.updateAPIServiceRevisionTitle(&serviceBody)
 	err = c.processInstance(&serviceBody)
 	if err != nil {
 		return nil, err
@@ -117,14 +116,30 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey, subscriptionSchema)
 }
 
-// updateAPIServiceRevisionTitle - called after APIService gets created or updated.
-// Update title after creating or updating APIService according to the APIServiceRevision Pattern
-func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) {
-	title := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{version}}"
-	version := strconv.Itoa(serviceBody.serviceContext.revisionCount + 1)
+// postApiServiceUpdate - called after APIService was created or updated.
+// Update description and title after updating or creating APIService to include the stage name if it exists
+func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
+	if serviceBody.Stage != "" {
+		addDescription := fmt.Sprintf("StageName: %s", serviceBody.Stage)
+		if len(serviceBody.Description) > 0 {
+			serviceBody.Description = fmt.Sprintf("%s, %s", serviceBody.Description, addDescription)
+		} else {
+			serviceBody.Description = addDescription
+		}
+		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
+	} else if c.cfg.GetAppendEnvironmentToTitle() {
+		// Append the environment name to the title, if set
+		serviceBody.NameToPush = fmt.Sprintf("%v (%v)", serviceBody.NameToPush, c.cfg.GetEnvironmentName())
+	}
+}
 
-	replaceVars := map[string]string{"APIServiceName": serviceBody.APIName, "version": version}
-	// replace occurrences of `APIServiceName` and `version` in title
+// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
+func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
+	title := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
+	revision := strconv.Itoa(serviceBody.serviceContext.revisionCount + 1)
+
+	replaceVars := map[string]string{"APIServiceName": serviceBody.APIName, "revision": revision}
+	// replace occurrences of `APIServiceName` and `revision` in title
 	for k, v := range replaceVars {
 		title = strings.Replace(title, fmt.Sprintf("{{%s}}", k), v, -1)
 	}
@@ -132,10 +147,10 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
 	if dateRegEx.MatchString(title) {
 		if serviceBody.serviceContext.previousRevision == nil {
-			return
+			return serviceBody.NameToPush
 		}
-		var createdOn time.Time
-		createdOn = time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
+		createdOn := time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
+
 		year := strconv.Itoa(createdOn.Year())
 		month := createdOn.Format("01")
 		day := strconv.Itoa(createdOn.Day())
@@ -143,15 +158,16 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		date := dateRegEx.FindString(title)
 		replaceDate := map[string]string{"MM": month, "DD": day, "YYYY": year}
 		for k, v := range replaceDate {
-			date = strings.Replace(date, fmt.Sprintf("%s", k), v, -1)
+			date = strings.Replace(date, k, v, -1)
 		}
-		date = strings.Trim(date, "{{date:")
-		date = strings.Trim(date, "}}")
+		date = strings.TrimPrefix(date, "{{date:")
+		date = strings.TrimSuffix(date, "}}")
 
 		//swap the date pattern with the date variable in the title
-		title = strings.Replace(title, fmt.Sprintf("%s", dateRegEx.FindString(title)), date, -1)
+		title = strings.Replace(title, dateRegEx.FindString(title), date, -1)
 	}
 	serviceBody.NameToPush = title
+	return title
 }
 
 func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
