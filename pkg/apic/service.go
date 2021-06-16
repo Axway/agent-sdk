@@ -146,11 +146,12 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 
 	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
 	if dateRegEx.MatchString(title) {
+		var createdOn time.Time
 		if serviceBody.serviceContext.previousRevision == nil {
-			return serviceBody.NameToPush
+			createdOn = time.Now()
+		} else {
+			createdOn = time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
 		}
-		createdOn := time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
-
 		year := strconv.Itoa(createdOn.Year())
 		month := createdOn.Format("01")
 		day := strconv.Itoa(createdOn.Day())
