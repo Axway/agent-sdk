@@ -151,6 +151,7 @@ type CentralConfiguration struct {
 	// PublishMetricEvents       bool  `config:"publishMetric"`
 	environmentID string
 	teamID        string
+	TitlePattern  TitlePattern
 }
 
 // NewCentralConfig - Creates the default central config
@@ -385,6 +386,43 @@ func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
 // GetClientTimeout - Returns the interval for http client timeouts
 func (c *CentralConfiguration) GetClientTimeout() time.Duration {
 	return c.ClientTimeout
+}
+
+// TitlePattern -
+type TitlePattern struct {
+	APIServiceName string
+	CreationDate   string
+	Revision       string
+	DateFormat     string //time.Format
+}
+
+// GetTitlePattern - Returns the TitlePattern
+func (c *CentralConfiguration) GetTitlePattern() TitlePattern {
+	return c.TitlePattern
+}
+
+// SetAPIServiceName - sets the TitlePattern APIServiceName
+func (tp *TitlePattern) SetAPIServiceName(n string) *TitlePattern {
+	tp.APIServiceName = n
+	return tp
+}
+
+// SetCreationDate - sets the TitlePattern CreationDate
+func (tp *TitlePattern) SetCreationDate(d string) *TitlePattern {
+	tp.CreationDate = d
+	return tp
+}
+
+// SetRevision - sets the TitlePattern Revision
+func (tp *TitlePattern) SetRevision(r string) *TitlePattern {
+	tp.Revision = r
+	return tp
+}
+
+// SetDateFormat - sets the TitlePattern DateFormat
+func (tp *TitlePattern) SetDateFormat(d string) *TitlePattern {
+	tp.DateFormat = d
+	return tp
 }
 
 // GetAPIServiceRevisionPattern - Returns the naming pattern for APIServiceRevition title
