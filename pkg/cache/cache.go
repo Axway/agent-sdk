@@ -47,6 +47,7 @@ const (
 	flushAction
 	saveAction
 	loadAction
+	getKeysAction
 )
 
 type cacheAction struct {
@@ -62,6 +63,7 @@ type cacheReply struct {
 	key     string
 	err     error
 	changed bool
+	keys    []string
 }
 
 // itemCache
@@ -118,6 +120,7 @@ func Load(path string) Cache {
 func (c *itemCache) handleAction() {
 	actionMap := map[action]func(cacheAction) cacheReply{
 		getAction:          c.get,
+		getKeysAction:      c.getKeys,
 		setAction:          c.set,
 		deleteAction:       c.delete,
 		findAction:         c.findPrimaryKey,
@@ -182,6 +185,19 @@ func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
 			item: item,
 			err:  nil,
 		}
+	}
+	return
+}
+
+// getKeys - Returns the keys in cache
+func (c *itemCache) getKeys(thisAction cacheAction) (thisReply cacheReply) {
+	keys := []string{}
+	for key := range c.Items {
+		keys = append(keys, key)
+	}
+	thisReply = cacheReply{
+		keys: keys,
+		err:  nil,
 	}
 	return
 }
@@ -428,11 +444,14 @@ func (c *itemCache) GetItemBySecondaryKey(secondaryKey string) (*Item, error) {
 
 // GetKeys - Returns the keys in cache
 func (c *itemCache) GetKeys() []string {
-	keys := []string{}
-	for key := range c.Items {
-		keys = append(keys, key)
+	getKeysReply := c.runAction(cacheAction{
+		action: getKeysAction,
+	})
+	if getKeysReply.err != nil {
+		return []string{}
 	}
-	return keys
+
+	return getKeysReply.keys
 }
 
 // HasItemChanged - Check if the item has changed
