@@ -112,6 +112,7 @@ type CentralConfig interface {
 	GetPollInterval() time.Duration
 	GetReportActivityFrequency() time.Duration
 	GetClientTimeout() time.Duration
+	GetAPIServiceRevisionPattern() string
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	CanPublishUsageEvent() bool
@@ -142,6 +143,7 @@ type CentralConfiguration struct {
 	PollInterval              time.Duration      `config:"pollInterval"`
 	ReportActivityFrequency   time.Duration      `config:"reportActivityFrequency"`
 	ClientTimeout             time.Duration      `config:"clientTimeout"`
+	APIServiceRevisionPattern string             `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string             `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublishUsageEvents        bool               `config:"publishUsage"`
@@ -385,6 +387,11 @@ func (c *CentralConfiguration) GetClientTimeout() time.Duration {
 	return c.ClientTimeout
 }
 
+// GetAPIServiceRevisionPattern - Returns the naming pattern for APIServiceRevition title
+func (c *CentralConfiguration) GetAPIServiceRevisionPattern() string {
+	return c.APIServiceRevisionPattern
+}
+
 // GetAppendEnvironmentToTitle - Returns the value of append environment name to title attribute
 func (c *CentralConfiguration) GetAppendEnvironmentToTitle() bool {
 	return c.AppendEnvironmentToTitle
@@ -411,38 +418,39 @@ func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
 }
 
 const (
-	pathTenantID                 = "central.organizationID"
-	pathURL                      = "central.url"
-	pathPlatformURL              = "central.platformURL"
-	pathLighthouseURL            = "central.lighthouseURL"
-	pathAuthPrivateKey           = "central.auth.privateKey"
-	pathAuthPublicKey            = "central.auth.publicKey"
-	pathAuthKeyPassword          = "central.auth.keyPassword"
-	pathAuthURL                  = "central.auth.url"
-	pathAuthRealm                = "central.auth.realm"
-	pathAuthClientID             = "central.auth.clientId"
-	pathAuthTimeout              = "central.auth.timeout"
-	pathSSLNextProtos            = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify    = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites          = "central.ssl.cipherSuites"
-	pathSSLMinVersion            = "central.ssl.minVersion"
-	pathSSLMaxVersion            = "central.ssl.maxVersion"
-	pathEnvironment              = "central.environment"
-	pathAgentName                = "central.agentName"
-	pathDeployment               = "central.deployment"
-	pathMode                     = "central.mode"
-	pathTeam                     = "central.team"
-	pathPollInterval             = "central.pollInterval"
-	pathReportActivityFrequency  = "central.reportActivityFrequency"
-	pathClientTimeout            = "central.clientTimeout"
-	pathProxyURL                 = "central.proxyUrl"
-	pathAPIServerVersion         = "central.apiServerVersion"
-	pathAdditionalTags           = "central.additionalTags"
-	pathAppendEnvironmentToTitle = "central.appendEnvironmentToTitle"
-	pathUpdateFromAPIServer      = "central.updateFromAPIServer"
-	pathPublishUsage             = "central.publishUsage"
-	pathPublishMetric            = "central.publishMetric"
-	pathEventAggregationInterval = "central.eventAggregationInterval"
+	pathTenantID                  = "central.organizationID"
+	pathURL                       = "central.url"
+	pathPlatformURL               = "central.platformURL"
+	pathLighthouseURL             = "central.lighthouseURL"
+	pathAuthPrivateKey            = "central.auth.privateKey"
+	pathAuthPublicKey             = "central.auth.publicKey"
+	pathAuthKeyPassword           = "central.auth.keyPassword"
+	pathAuthURL                   = "central.auth.url"
+	pathAuthRealm                 = "central.auth.realm"
+	pathAuthClientID              = "central.auth.clientId"
+	pathAuthTimeout               = "central.auth.timeout"
+	pathSSLNextProtos             = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify     = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites           = "central.ssl.cipherSuites"
+	pathSSLMinVersion             = "central.ssl.minVersion"
+	pathSSLMaxVersion             = "central.ssl.maxVersion"
+	pathEnvironment               = "central.environment"
+	pathAgentName                 = "central.agentName"
+	pathDeployment                = "central.deployment"
+	pathMode                      = "central.mode"
+	pathTeam                      = "central.team"
+	pathPollInterval              = "central.pollInterval"
+	pathReportActivityFrequency   = "central.reportActivityFrequency"
+	pathClientTimeout             = "central.clientTimeout"
+	pathAPIServiceRevisionPattern = "central.apiServiceRevisionPattern"
+	pathProxyURL                  = "central.proxyUrl"
+	pathAPIServerVersion          = "central.apiServerVersion"
+	pathAdditionalTags            = "central.additionalTags"
+	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
+	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
+	pathPublishUsage              = "central.publishUsage"
+	pathPublishMetric             = "central.publishMetric"
+	pathEventAggregationInterval  = "central.eventAggregationInterval"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -564,6 +572,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
+	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
@@ -585,14 +594,15 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
-		AgentType:               agentType,
-		TenantID:                props.StringPropertyValue(pathTenantID),
-		PollInterval:            props.DurationPropertyValue(pathPollInterval),
-		ReportActivityFrequency: props.DurationPropertyValue(pathReportActivityFrequency),
-		ClientTimeout:           props.DurationPropertyValue(pathClientTimeout),
-		Environment:             props.StringPropertyValue(pathEnvironment),
-		TeamName:                props.StringPropertyValue(pathTeam),
-		AgentName:               props.StringPropertyValue(pathAgentName),
+		AgentType:                 agentType,
+		TenantID:                  props.StringPropertyValue(pathTenantID),
+		PollInterval:              props.DurationPropertyValue(pathPollInterval),
+		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
+		ClientTimeout:             props.DurationPropertyValue(pathClientTimeout),
+		APIServiceRevisionPattern: props.StringPropertyValue(pathAPIServiceRevisionPattern),
+		Environment:               props.StringPropertyValue(pathEnvironment),
+		TeamName:                  props.StringPropertyValue(pathTeam),
+		AgentName:                 props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
@@ -616,6 +626,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
+	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
