@@ -167,7 +167,6 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		//swap the date pattern with the date variable in the title
 		title = strings.Replace(title, dateRegEx.FindString(title), date, -1)
 	}
-	serviceBody.NameToPush = title
 	return title
 }
 
