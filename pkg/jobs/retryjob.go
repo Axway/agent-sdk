@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type retryJobProps struct {
@@ -20,6 +19,7 @@ func newRetryJob(newJob Job, retries int, failJobChan chan string) (JobExecution
 		baseJob{
 			id:       newUUID(),
 			job:      newJob,
+			jobType:  JobTypeRetry,
 			status:   JobStatusInitializing,
 			failChan: failJobChan,
 		},
@@ -34,7 +34,7 @@ func newRetryJob(newJob Job, retries int, failJobChan chan string) (JobExecution
 
 //start - calls the Execute function from the Job definition
 func (b *retryJob) start() {
-	log.Debugf("Starting %v job %v", JobTypeRetry, b.id)
+	b.startLog()
 	b.waitForReady()
 
 	b.SetStatus(JobStatusRunning)
@@ -44,7 +44,7 @@ func (b *retryJob) start() {
 			// job was successful
 			return
 		}
-		b.err = errors.Wrap(ErrExecutingRetryJob, b.err.Error()).FormatError(JobTypeRetry, b.id, b.retries)
+		b.setExecutionRetryError()
 		b.SetStatus(JobStatusRetrying)
 	}
 	b.SetStatus(JobStatusFailed)
@@ -52,6 +52,10 @@ func (b *retryJob) start() {
 
 //stop - noop
 func (b *retryJob) stop() {
-	log.Debugf("Stopping %v job %v", JobTypeRetry, b.id)
+	b.stop()
 	return
+}
+
+func (b *retryJob) setExecutionRetryError() {
+	b.err = errors.Wrap(ErrExecutingRetryJob, b.err.Error()).FormatError(b.jobType, b.id, b.retries)
 }

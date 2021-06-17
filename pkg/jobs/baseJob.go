@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -11,6 +12,7 @@ type baseJob struct {
 	JobExecution
 	id         string       // UUID generated for this job
 	job        Job          // the job definition
+	jobType    string       // type of job
 	status     JobStatus    // current job status
 	err        error        // the error thrown
 	statusLock sync.RWMutex // lock on preventing status write/read at the same time
@@ -23,6 +25,7 @@ func newBaseJob(newJob Job, failJobChan chan string) (JobExecution, error) {
 	thisJob := baseJob{
 		id:       newUUID(),
 		job:      newJob,
+		jobType:  JobTypeSingleRun,
 		status:   JobStatusInitializing,
 		failChan: failJobChan,
 	}
@@ -49,7 +52,9 @@ func (b *baseJob) executeCronJob() {
 
 	b.err = b.job.Execute()
 	if b.err != nil {
-		b.failChan <- b.id
+		if b.failChan != nil {
+			b.failChan <- b.id
+		}
 		b.SetStatus(JobStatusFailed)
 	}
 }
@@ -77,6 +82,7 @@ func (b *baseJob) updateStatus() JobStatus {
 	jobStatus := b.job.Status()   // get the current status
 	if jobStatus != nil {         // on error set the status to failed
 		b.failChan <- b.id
+		log.Errorf("job with ID %s failed: %s", b.id, jobStatus.Error())
 		newStatus = JobStatusFailed
 	}
 	b.statusLock.Lock()
@@ -116,7 +122,7 @@ func (b *baseJob) waitForReady() {
 
 //start - waits for Ready to return true then calls the Execute function from the Job definition
 func (b *baseJob) start() {
-	log.Debugf("Starting %v job %v", JobTypeSingleRun, b.id)
+	b.startLog()
 	b.waitForReady()
 
 	b.SetStatus(JobStatusRunning)
@@ -125,6 +131,19 @@ func (b *baseJob) start() {
 
 //stop - noop in base
 func (b *baseJob) stop() {
-	log.Debugf("Stopping %v job %v", JobTypeSingleRun, b.id)
+	b.stopLog()
 	return
+}
+
+func (b *baseJob) startLog() {
+	log.Debugf("Starting %v job %v", b.jobType, b.id)
+
+}
+
+func (b *baseJob) stopLog() {
+	log.Debugf("Stopping %v job %v", b.jobType, b.id)
+}
+
+func (b *baseJob) setExecutionError() {
+	b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(b.jobType, b.id)
 }

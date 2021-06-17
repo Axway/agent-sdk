@@ -19,6 +19,11 @@ func RegisterIntervalJob(newJob Job, interval time.Duration) (string, error) {
 	return globalPool.RegisterIntervalJob(newJob, interval)
 }
 
+//RegisterDetachedIntervalJob - Runs a job with a specific interval between each run in the globalPool, detached from other jobs to always run
+func RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
+	return globalPool.RegisterDetachedIntervalJob(newJob, interval)
+}
+
 //RegisterScheduledJob - Runs a job on a specific schedule in the globalPool
 func RegisterScheduledJob(newJob Job, schedule string) (string, error) {
 	return globalPool.RegisterScheduledJob(newJob, schedule)

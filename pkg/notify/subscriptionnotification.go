@@ -214,6 +214,7 @@ func (s *SubscriptionNotification) UpdateTemplate(template string) string {
 
 	for k, v := range jsonMap {
 		template = strings.Replace(template, fmt.Sprintf("${%s}", k), v, -1)
+		template = strings.Replace(template, fmt.Sprintf("{{%s}}", k), v, -1)
 	}
 
 	return template

@@ -27,7 +27,7 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceRevisionGVK(),
 			Name:             revisionName,
-			Title:            serviceBody.NameToPush,
+			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, revAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},

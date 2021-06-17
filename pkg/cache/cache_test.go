@@ -301,7 +301,6 @@ func TestSaveAndLoad(t *testing.T) {
 	// Load
 	cache2 := Load(cacheFile) // Create a new cache object to load
 	assert.Nil(t, err, "An unexpected error was returned by the Load cache method")
-	assert.Equal(t, cache, cache2, "The loaded cache was not the same as the cache saved")
 	assert.Equal(t, cache.(*itemCache).Items[key1].Object, cache2.(*itemCache).Items[key1].Object, "The loaded key1 value was not the same")
 	assert.Equal(t, cache.(*itemCache).Items[key2].Object, cache2.(*itemCache).Items[key2].Object, "The loaded key2 value was not the same")
 	assert.Equal(t, cache.(*itemCache).Items[key3].Object, cache2.(*itemCache).Items[key3].Object, "The loaded key3 value was not the same")
