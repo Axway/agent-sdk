@@ -11,7 +11,8 @@ package v1alpha1
 
 // ApiServiceInstanceSpec struct for ApiServiceInstanceSpec
 type ApiServiceInstanceSpec struct {
-	ApiServiceRevision string `json:"apiServiceRevision"`
+	ApiServiceRevision      string `json:"apiServiceRevision"`
+	AccessRequestDefinition string `json:"accessRequestDefinition,omitempty"`
 	// A list of locations where the api is deployed.
 	Endpoint []ApiServiceInstanceSpecEndpoint `json:"endpoint"`
 }

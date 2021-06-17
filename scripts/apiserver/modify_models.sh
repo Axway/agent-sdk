@@ -47,3 +47,25 @@ $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec.go
 $SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec.go
 # reformat the code
 go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
+
+
+######################
+# Update any time imports in the models, we want to turn "time" into
+# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
+######################
+MODELS=`find pkg/apic/apiserver/models -type f -name "model_*.go"`
+
+SEARCH="\s*\"time\"$"
+REPLACE="time \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done

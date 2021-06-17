@@ -38,6 +38,8 @@ func init() {
 type Integration struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec IntegrationSpec `json:"spec"`
 }
 

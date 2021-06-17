@@ -38,6 +38,10 @@ func init() {
 type ConsumerInstance struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
+	References ConsumerInstanceReferences `json:"references"`
+
 	Spec ConsumerInstanceSpec `json:"spec"`
 
 	Status ConsumerInstanceStatus `json:"status"`

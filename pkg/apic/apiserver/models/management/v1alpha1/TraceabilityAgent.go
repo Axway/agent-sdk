@@ -38,6 +38,8 @@ func init() {
 type TraceabilityAgent struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec TraceabilityAgentSpec `json:"spec"`
 
 	Status TraceabilityAgentStatus `json:"status"`

@@ -582,6 +582,9 @@ func TestUpdateMerge(t *testing.T) {
 		},
 	}
 
+	thisBytes, _ := json.Marshal(newAPISvc)
+	t.Log(string(thisBytes))
+
 	mergedTags := &management.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{},

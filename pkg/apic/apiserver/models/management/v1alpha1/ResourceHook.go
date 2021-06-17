@@ -38,6 +38,8 @@ func init() {
 type ResourceHook struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec ResourceHookSpec `json:"spec"`
 }
 

@@ -38,6 +38,8 @@ func init() {
 type CommandLineInterface struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec CommandLineInterfaceSpec `json:"spec"`
 }
 

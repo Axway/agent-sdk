@@ -38,6 +38,8 @@ func init() {
 type Webhook struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec WebhookSpec `json:"spec"`
 }
 

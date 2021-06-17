@@ -38,6 +38,8 @@ func init() {
 type MeshService struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec MeshServiceSpec `json:"spec"`
 }
 

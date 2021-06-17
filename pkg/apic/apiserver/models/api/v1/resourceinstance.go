@@ -3,6 +3,7 @@ package v1
 // ResourceInstance API Server generic resource structure.
 type ResourceInstance struct {
 	ResourceMeta
+	Owner struct{} `json:"owner"`
 	// Resource instance specs.
 	Spec map[string]interface{} `json:"spec"`
 }

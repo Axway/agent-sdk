@@ -1,9 +1,11 @@
 package agent
 
 import (
+	"encoding/json"
 	"reflect"
 	"time"
 
+	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -12,11 +14,14 @@ const apiServerTimeFormat = "2006-01-02T15:04:05.000-0700"
 
 // getTimestamp - Returns current timestamp formatted for API Server
 // if the local status exists, return the local timestamp, otherwise return Now()
-func getTimestamp() string {
+func getTimestamp() v1Time.Time {
+	activityTime := time.Now().Format(apiServerTimeFormat)
 	if statusUpdate != nil {
-		return getLocalActivityTime().Format(apiServerTimeFormat)
+		activityTime = getLocalActivityTime().Format(apiServerTimeFormat)
 	}
-	return time.Now().Format(apiServerTimeFormat)
+	newV1Time := v1Time.Time{}
+	json.Unmarshal([]byte(activityTime), &newV1Time)
+	return newV1Time
 }
 
 // ApplyResouceToConfig - applies the resources to agent configs

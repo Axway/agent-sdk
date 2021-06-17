@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AwsDiscoveryAgentSpecLogging Logging config
-type AwsDiscoveryAgentSpecLogging struct {
-	// Defines the log level.
-	Level string `json:"level,omitempty"`
+// StageSpec struct for StageSpec
+type StageSpec struct {
+	// description of the stage
+	Description string `json:"description,omitempty"`
 }

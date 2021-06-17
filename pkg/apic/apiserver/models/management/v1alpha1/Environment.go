@@ -38,6 +38,8 @@ func init() {
 type Environment struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec EnvironmentSpec `json:"spec"`
 }
 

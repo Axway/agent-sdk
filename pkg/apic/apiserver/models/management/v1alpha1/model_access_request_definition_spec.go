@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// EdgeDataplaneSpec struct for EdgeDataplaneSpec
-type EdgeDataplaneSpec struct {
-	ApiManager        EdgeDataplaneSpecApiManager        `json:"apiManager,omitempty"`
-	ApiGatewayManager EdgeDataplaneSpecApiGatewayManager `json:"apiGatewayManager,omitempty"`
+// AccessRequestDefinitionSpec struct for AccessRequestDefinitionSpec
+type AccessRequestDefinitionSpec struct {
+	// JSON Schema draft \\#7 for defining the AccessRequest properties needed to get access to an APIServiceInstance.
+	Schema string `json:"schema"`
 }
