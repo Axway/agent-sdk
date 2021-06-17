@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -101,53 +98,14 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
-	return c.getAPIRevisions(queryParams, stage)
-}
-
-// getAPIRevisions - Returns the list of API revisions for the specified filter
-func (c *ServiceClient) getAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
-	headers, err := c.createHeader()
+// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*v1alpha1.APIServiceRevision
+func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), stage)
 	if err != nil {
 		return nil, err
 	}
 
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetRevisionsURL(),
-		Headers:     headers,
-		QueryParams: queryParams,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-		return nil, nil
-	}
-	revisions := make([]v1alpha1.APIServiceRevision, 0)
-	json.Unmarshal(response.Body, &revisions)
-
-	apiServerRevisions := make([]v1alpha1.APIServiceRevision, 0)
-
-	//create array and filter by stage name. Check the stage name as this does not apply for v7
-	if stage != "" {
-		for _, apiServer := range revisions {
-			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
-				apiServerRevisions = append(apiServerRevisions, apiServer)
-			}
-		}
-	} else {
-		apiServerRevisions = revisions
-	}
-
-	return apiServerRevisions, nil
-
+	return revisions, nil
 }
 
 func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
@@ -163,18 +121,20 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	// If service is updated, identify the action based on the existing revisions and update type(minor/major)
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// Get revisions for the service and use the latest one as last reference
-		revisionFilter := map[string]string{
+		queryParams := map[string]string{
 			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		revisions, err := c.getAPIRevisions(revisionFilter, serviceBody.Stage)
+
+		revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), serviceBody.Stage)
 		if err != nil {
 			return err
 		}
+
 		if revisions != nil {
 			serviceBody.serviceContext.revisionCount = len(revisions)
 			if len(revisions) > 0 {
-				serviceBody.serviceContext.previousRevision = &revisions[0]
+				serviceBody.serviceContext.previousRevision = revisions[0]
 				if serviceBody.APIUpdateSeverity == MinorChange {
 					// For minor change use the latest revision and update existing
 					serviceBody.serviceContext.revisionAction = updateAPI

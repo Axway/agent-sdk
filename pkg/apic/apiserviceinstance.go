@@ -125,24 +125,28 @@ func (c *ServiceClient) setInstanceAction(serviceBody *ServiceBody, endpoints []
 	// If service is updated, identify the action based on the existing instance
 	if serviceBody.serviceContext.serviceAction == updateAPI && serviceBody.serviceContext.previousRevision != nil {
 		// Get instances for the existing revision and use the latest one as last reference
-		instanceFilter := map[string]string{
+		queryParams := map[string]string{
 			"query": "metadata.references.name==" + serviceBody.serviceContext.previousRevision.Name,
 			"sort":  "metadata.audit.createTimestamp,DESC",
 		}
-		instances, err := c.getAPIInstances(instanceFilter)
+
+		instances, err := c.GetAPIServiceInstances(queryParams, c.cfg.GetInstancesURL())
 		if err != nil {
 			return err
 		}
 
 		if len(instances) > 0 {
 			err = c.updateServiceContext(instances, endpoints, serviceBody)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
+func (c *ServiceClient) updateServiceContext(instances []*v1alpha1.APIServiceInstance, endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint, serviceBody *ServiceBody) error {
 	splitName := strings.Split(instances[0].Name, ".")
 	countStr := splitName[len(splitName)-1]
 	instanceCount, err := strconv.Atoi(countStr)
@@ -150,7 +154,7 @@ func (c *ServiceClient) updateServiceContext(instances []v1alpha1.APIServiceInst
 		return fmt.Errorf("failed to convert instance count to an int: %s", err)
 	}
 	serviceBody.serviceContext.instanceCount = instanceCount
-	serviceBody.serviceContext.previousInstance = &instances[0]
+	serviceBody.serviceContext.previousInstance = instances[0]
 	// if the endpoints are same update the current instance otherwise create new instance
 	if c.compareEndpoints(endpoints, serviceBody.serviceContext.previousInstance.Spec.Endpoint) {
 		serviceBody.serviceContext.instanceAction = updateAPI
@@ -188,37 +192,6 @@ func (c *ServiceClient) compareEndpoint(endPointSrc, endPointTarget v1alpha1.Api
 		endPointSrc.Port == endPointTarget.Port &&
 		endPointSrc.Protocol == endPointTarget.Protocol &&
 		endPointSrc.Routing.BasePath == endPointTarget.Routing.BasePath
-}
-
-// getAPIServiceInstanceForRevision - Returns the API service instance based on the
-func (c *ServiceClient) getAPIInstances(queryParams map[string]string) ([]v1alpha1.APIServiceInstance, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetInstancesURL(),
-		Headers:     headers,
-		QueryParams: queryParams,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-		return nil, nil
-	}
-	apiInstances := make([]v1alpha1.APIServiceInstance, 0)
-	json.Unmarshal(response.Body, &apiInstances)
-
-	return apiInstances, nil
 }
 
 // getAPIServiceInstanceByName - Returns the API service instance for specified name

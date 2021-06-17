@@ -23,7 +23,7 @@ var (
 const (
 	ResourceDefinitionScope = "ResourceGroup"
 
-	ResourceDefinitionResource = "resources"
+	ResourceDefinitionResourceName = "resources"
 )
 
 func ResourceDefinitionGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func ResourceDefinitionGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceDefinitionGVK, ResourceDefinitionScope, ResourceDefinitionResource)
+	apiv1.RegisterGVK(_ResourceDefinitionGVK, ResourceDefinitionScope, ResourceDefinitionResourceName)
 }
 
 // ResourceDefinition Resource
@@ -62,6 +62,21 @@ func (res *ResourceDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = ResourceDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ResourceDefinitionFromInstanceArray converts a []*ResourceInstance to a []*ResourceDefinition
+func ResourceDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceDefinition, error) {
+	newArray := make([]*ResourceDefinition, 0)
+	for _, item := range fromArray {
+		res := &ResourceDefinition{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ResourceDefinition, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ResourceDefinition to a ResourceInstance

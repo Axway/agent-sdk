@@ -23,7 +23,7 @@ var (
 const (
 	MeshDiscoveryScope = "Mesh"
 
-	MeshDiscoveryResource = "meshdiscoveries"
+	MeshDiscoveryResourceName = "meshdiscoveries"
 )
 
 func MeshDiscoveryGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func MeshDiscoveryGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshDiscoveryGVK, MeshDiscoveryScope, MeshDiscoveryResource)
+	apiv1.RegisterGVK(_MeshDiscoveryGVK, MeshDiscoveryScope, MeshDiscoveryResourceName)
 }
 
 // MeshDiscovery Resource
@@ -62,6 +62,21 @@ func (res *MeshDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = MeshDiscovery{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// MeshDiscoveryFromInstanceArray converts a []*ResourceInstance to a []*MeshDiscovery
+func MeshDiscoveryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshDiscovery, error) {
+	newArray := make([]*MeshDiscovery, 0)
+	for _, item := range fromArray {
+		res := &MeshDiscovery{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*MeshDiscovery, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a MeshDiscovery to a ResourceInstance

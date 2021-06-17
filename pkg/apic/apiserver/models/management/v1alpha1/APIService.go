@@ -23,7 +23,7 @@ var (
 const (
 	APIServiceScope = "Environment"
 
-	APIServiceResource = "apiservices"
+	APIServiceResourceName = "apiservices"
 )
 
 func APIServiceGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func APIServiceGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_APIServiceGVK, APIServiceScope, APIServiceResource)
+	apiv1.RegisterGVK(_APIServiceGVK, APIServiceScope, APIServiceResourceName)
 }
 
 // APIService Resource
@@ -62,6 +62,21 @@ func (res *APIService) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = APIService{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// APIServiceFromInstanceArray converts a []*ResourceInstance to a []*APIService
+func APIServiceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APIService, error) {
+	newArray := make([]*APIService, 0)
+	for _, item := range fromArray {
+		res := &APIService{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*APIService, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a APIService to a ResourceInstance

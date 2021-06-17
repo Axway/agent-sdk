@@ -353,9 +353,9 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 
 func createAgentStatusSubResource(agentResourceType, status, message string) interface{} {
 	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResource:
+	case v1alpha1.DiscoveryAgentResourceName:
 		return createDiscoveryAgentStatusResource(status, message)
-	case v1alpha1.TraceabilityAgentResource:
+	case v1alpha1.TraceabilityAgentResourceName:
 		return createTraceabilityAgentStatusResource(status, message)
 	default:
 		panic(ErrUnsupportedAgentType)
@@ -369,9 +369,9 @@ func mergeResourceWithConfig() {
 	}
 
 	switch getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResource:
+	case v1alpha1.DiscoveryAgentResourceName:
 		mergeDiscoveryAgentWithConfig(agent.cfg)
-	case v1alpha1.TraceabilityAgentResource:
+	case v1alpha1.TraceabilityAgentResourceName:
 		mergeTraceabilityAgentWithConfig(agent.cfg)
 	default:
 		panic(ErrUnsupportedAgentType)

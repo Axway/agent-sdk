@@ -561,7 +561,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 		},
 	})
 
-	label := "Thrift"
+	label := "Apache Thrift"
 	cloneServiceBody = serviceBody
 	cloneServiceBody.ResourceType = Unstructured
 	cloneServiceBody.SpecDefinition = thriftBytes

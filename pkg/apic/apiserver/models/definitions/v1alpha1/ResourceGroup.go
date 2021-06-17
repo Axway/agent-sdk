@@ -23,7 +23,7 @@ var (
 const (
 	ResourceGroupScope = ""
 
-	ResourceGroupResource = "groups"
+	ResourceGroupResourceName = "groups"
 )
 
 func ResourceGroupGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func ResourceGroupGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceGroupGVK, ResourceGroupScope, ResourceGroupResource)
+	apiv1.RegisterGVK(_ResourceGroupGVK, ResourceGroupScope, ResourceGroupResourceName)
 }
 
 // ResourceGroup Resource
@@ -62,6 +62,21 @@ func (res *ResourceGroup) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = ResourceGroup{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ResourceGroupFromInstanceArray converts a []*ResourceInstance to a []*ResourceGroup
+func ResourceGroupFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceGroup, error) {
+	newArray := make([]*ResourceGroup, 0)
+	for _, item := range fromArray {
+		res := &ResourceGroup{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ResourceGroup, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ResourceGroup to a ResourceInstance

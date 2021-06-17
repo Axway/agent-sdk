@@ -3,17 +3,18 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/apic"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/h2non/gock.v1"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/apic"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/h2non/gock.v1"
 )
 
 const privKey = "testdata/privatekey"

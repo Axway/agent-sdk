@@ -123,7 +123,7 @@ func TestAgentInitialize(t *testing.T) {
 	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
 	cfg.AgentType = config.DiscoveryAgent
-	AgentResourceType = v1alpha1.DiscoveryAgentResource
+	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = daName
 	resetResources()
 	err = Initialize(cfg)
@@ -133,7 +133,7 @@ func TestAgentInitialize(t *testing.T) {
 	assertResource(t, da, discoveryAgentRes)
 
 	cfg.AgentType = config.TraceabilityAgent
-	AgentResourceType = v1alpha1.TraceabilityAgentResource
+	AgentResourceType = v1alpha1.TraceabilityAgentResourceName
 	cfg.AgentName = taName
 	agent.isInitialized = false
 	err = Initialize(cfg)
@@ -198,7 +198,7 @@ func TestAgentConfigOverride(t *testing.T) {
 	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
 	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
-	AgentResourceType = v1alpha1.DiscoveryAgentResource
+	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"
 	resetResources()
 	err := Initialize(cfg)

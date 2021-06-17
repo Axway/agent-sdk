@@ -23,7 +23,7 @@ var (
 const (
 	ConsumerSubscriptionDefinitionScope = "Environment"
 
-	ConsumerSubscriptionDefinitionResource = "consumersubscriptiondefs"
+	ConsumerSubscriptionDefinitionResourceName = "consumersubscriptiondefs"
 )
 
 func ConsumerSubscriptionDefinitionGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func ConsumerSubscriptionDefinitionGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_ConsumerSubscriptionDefinitionGVK, ConsumerSubscriptionDefinitionScope, ConsumerSubscriptionDefinitionResource)
+	apiv1.RegisterGVK(_ConsumerSubscriptionDefinitionGVK, ConsumerSubscriptionDefinitionScope, ConsumerSubscriptionDefinitionResourceName)
 }
 
 // ConsumerSubscriptionDefinition Resource
@@ -62,6 +62,21 @@ func (res *ConsumerSubscriptionDefinition) FromInstance(ri *apiv1.ResourceInstan
 	*res = ConsumerSubscriptionDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ConsumerSubscriptionDefinitionFromInstanceArray converts a []*ResourceInstance to a []*ConsumerSubscriptionDefinition
+func ConsumerSubscriptionDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ConsumerSubscriptionDefinition, error) {
+	newArray := make([]*ConsumerSubscriptionDefinition, 0)
+	for _, item := range fromArray {
+		res := &ConsumerSubscriptionDefinition{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ConsumerSubscriptionDefinition, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ConsumerSubscriptionDefinition to a ResourceInstance

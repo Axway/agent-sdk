@@ -20,7 +20,19 @@ type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
-func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]v1alpha1.APIServiceRevision, error) {
+func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
 	return nil, nil
 }
 
@@ -138,14 +150,14 @@ func TestDiscoveryCache(t *testing.T) {
 	serverAPISvcResponse = emptyAPISvc
 	updateAPICache()
 	assert.Equal(t, 0, len(agent.apiMap.GetKeys()))
-	assert.False(t, IsAPIPublished("1111"))
-	assert.False(t, IsAPIPublished("2222"))
+	assert.False(t, IsAPIPublishedByID("1111"))
+	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
-	assert.True(t, IsAPIPublished("1111"))
-	assert.False(t, IsAPIPublished("2222"))
+	assert.True(t, IsAPIPublishedByID("1111"))
+	assert.False(t, IsAPIPublishedByID("2222"))
 	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
 	assert.Equal(t, "", GetAttributeOnPublishedAPI("2222", apic.AttrExternalAPIID))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
@@ -160,14 +172,14 @@ func TestDiscoveryCache(t *testing.T) {
 	agent.apicClient = apicClient
 	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
-	assert.True(t, IsAPIPublished("2222"))
+	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
-	assert.True(t, IsAPIPublished("1111"))
+	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
-	assert.False(t, IsAPIPublished("2222"))
+	assert.False(t, IsAPIPublishedByID("2222"))
 
 	restoreCacheUpdateCalls()
 }

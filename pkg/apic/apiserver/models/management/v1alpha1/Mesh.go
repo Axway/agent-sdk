@@ -23,7 +23,7 @@ var (
 const (
 	MeshScope = ""
 
-	MeshResource = "meshes"
+	MeshResourceName = "meshes"
 )
 
 func MeshGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func MeshGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshGVK, MeshScope, MeshResource)
+	apiv1.RegisterGVK(_MeshGVK, MeshScope, MeshResourceName)
 }
 
 // Mesh Resource
@@ -62,6 +62,21 @@ func (res *Mesh) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Mesh{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// MeshFromInstanceArray converts a []*ResourceInstance to a []*Mesh
+func MeshFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Mesh, error) {
+	newArray := make([]*Mesh, 0)
+	for _, item := range fromArray {
+		res := &Mesh{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Mesh, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Mesh to a ResourceInstance

@@ -23,7 +23,7 @@ var (
 const (
 	K8SResourceScope = "K8SCluster"
 
-	K8SResourceResource = "k8sresources"
+	K8SResourceResourceName = "k8sresources"
 )
 
 func K8SResourceGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func K8SResourceGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScope, K8SResourceResource)
+	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScope, K8SResourceResourceName)
 }
 
 // K8SResource Resource
@@ -62,6 +62,21 @@ func (res *K8SResource) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = K8SResource{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// K8SResourceFromInstanceArray converts a []*ResourceInstance to a []*K8SResource
+func K8SResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*K8SResource, error) {
+	newArray := make([]*K8SResource, 0)
+	for _, item := range fromArray {
+		res := &K8SResource{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*K8SResource, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a K8SResource to a ResourceInstance

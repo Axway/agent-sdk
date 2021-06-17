@@ -23,7 +23,7 @@ var (
 const (
 	TraceabilityAgentScope = "Environment"
 
-	TraceabilityAgentResource = "traceabilityagents"
+	TraceabilityAgentResourceName = "traceabilityagents"
 )
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
@@ -31,7 +31,7 @@ func TraceabilityAgentGVK() apiv1.GroupVersionKind {
 }
 
 func init() {
-	apiv1.RegisterGVK(_TraceabilityAgentGVK, TraceabilityAgentScope, TraceabilityAgentResource)
+	apiv1.RegisterGVK(_TraceabilityAgentGVK, TraceabilityAgentScope, TraceabilityAgentResourceName)
 }
 
 // TraceabilityAgent Resource
@@ -64,6 +64,21 @@ func (res *TraceabilityAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = TraceabilityAgent{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// TraceabilityAgentFromInstanceArray converts a []*ResourceInstance to a []*TraceabilityAgent
+func TraceabilityAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*TraceabilityAgent, error) {
+	newArray := make([]*TraceabilityAgent, 0)
+	for _, item := range fromArray {
+		res := &TraceabilityAgent{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*TraceabilityAgent, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a TraceabilityAgent to a ResourceInstance

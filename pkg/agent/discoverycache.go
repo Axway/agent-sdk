@@ -3,7 +3,6 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -30,10 +29,7 @@ type discoveryCache struct {
 //Ready -
 func (j *discoveryCache) Ready() bool {
 	status := hc.GetStatus(healthcheckEndpoint)
-	if status == hc.OK {
-		return true
-	}
-	return false
+	return status == hc.OK
 }
 
 //Status -
@@ -58,43 +54,24 @@ func (j *discoveryCache) Execute() error {
 
 func updateAPICache() {
 	log.Trace("updating API cache")
-	apiServerURL := agent.cfg.GetServicesURL()
 
 	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
+	query := map[string]string{
+		"query":  attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
+		"fields": apiServerFields,
+	}
 
-	morePages := true
-	page := 1
-	for morePages {
-		query := map[string]string{
-			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   apiServerFields,
+	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstances(query, agent.cfg.GetServicesURL())
+
+	for _, apiService := range apiServices {
+		externalAPIID := addItemToAPICache(*apiService)
+		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+			existingAPIs[externalAPIPrimaryKey] = true
+		} else {
+			existingAPIs[externalAPIID] = true
 		}
 
-		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
-		if err != nil {
-			log.Debugf("Error while updating published API cache: %s", err.Error())
-			return
-		}
-
-		apiServices := make([]apiV1.ResourceInstance, 0)
-		json.Unmarshal(response, &apiServices)
-
-		for _, apiService := range apiServices {
-			externalAPIID := addItemToAPICache(apiService)
-			if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
-				existingAPIs[externalAPIPrimaryKey] = true
-			} else {
-				existingAPIs[externalAPIID] = true
-			}
-		}
-
-		if len(apiServices) < apiServerPageSize {
-			morePages = false
-		}
-		page++
 	}
 
 	// Remove items that are not published as Resources
@@ -148,39 +125,24 @@ func validateConsumerInstances() {
 		return
 	}
 
-	consumerInstancesURL := agent.cfg.GetConsumerInstancesURL()
-	morePages := true
-	page := 1
-	for morePages {
-		query := map[string]string{
-			"query":    attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
-			"fields":   apiServerFields,
-		}
-
-		response, err := agent.apicClient.ExecuteAPI(coreapi.GET, consumerInstancesURL, query, nil)
-		if err != nil {
-			log.Debugf("Error while validating published catalog items: %s", err.Error())
-			return
-		}
-		consumerInstances := make([]apiV1.ResourceInstance, 0)
-		json.Unmarshal(response, &consumerInstances)
-
-		validateAPIOnDataplane(consumerInstances)
-
-		if len(consumerInstances) < apiServerPageSize {
-			morePages = false
-		}
-		page++
+	query := map[string]string{
+		"query":  attributesQueryParam + apic.AttrExternalAPIID + "!=\"\"",
+		"fields": apiServerFields,
 	}
+
+	consumerInstances, err := GetCentralClient().GetAPIV1ResourceInstances(query, agent.cfg.GetConsumerInstancesURL())
+	if err != nil {
+		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("ConsumerInstance"))
+		return
+	}
+	validateAPIOnDataplane(consumerInstances)
 }
 
-func validateAPIOnDataplane(consumerInstances []apiV1.ResourceInstance) {
+func validateAPIOnDataplane(consumerInstances []*apiV1.ResourceInstance) {
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
 	for _, consumerInstanceResource := range consumerInstances {
 		consumerInstance := &v1alpha1.ConsumerInstance{}
-		consumerInstance.FromInstance(&consumerInstanceResource)
+		consumerInstance.FromInstance(consumerInstanceResource)
 		externalAPIID := consumerInstance.Attributes[apic.AttrExternalAPIID]
 		externalAPIStage := consumerInstance.Attributes[apic.AttrExternalAPIStage]
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
