@@ -4,10 +4,8 @@ package v1
 type ResourceInstance struct {
 	ResourceMeta
 	// GENERATE: The following code has been modified after code generation
-	// GENERATE: The following code has been modified after code generation
-	////  	Owner struct{} `json:"owner"`
+	//  	Owner struct{} `json:"owner"`
 	Owner *struct{} `json:"owner,omitempty"`
-	Owner struct{}  `json:"owner,omitempty"`
 	// Resource instance specs.
 	Spec map[string]interface{} `json:"spec"`
 }
