@@ -38,7 +38,9 @@ func init() {
 type AssetMapping struct {
 	apiv1.ResourceMeta
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner *struct{} `json:"owner,omitempty"`
 
 	Spec AssetMappingSpec `json:"spec"`
 
@@ -66,6 +68,21 @@ func (res *AssetMapping) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = AssetMapping{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// AssetMappingFromInstanceArray converts a []*ResourceInstance to a []*AssetMapping
+func AssetMappingFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetMapping, error) {
+	newArray := make([]*AssetMapping, 0)
+	for _, item := range fromArray {
+		res := &AssetMapping{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*AssetMapping, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a AssetMapping to a ResourceInstance

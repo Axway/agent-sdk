@@ -38,7 +38,9 @@ func init() {
 type ReleaseTag struct {
 	apiv1.ResourceMeta
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner *struct{} `json:"owner,omitempty"`
 
 	References ReleaseTagReferences `json:"references"`
 
@@ -68,6 +70,21 @@ func (res *ReleaseTag) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = ReleaseTag{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// ReleaseTagFromInstanceArray converts a []*ResourceInstance to a []*ReleaseTag
+func ReleaseTagFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ReleaseTag, error) {
+	newArray := make([]*ReleaseTag, 0)
+	for _, item := range fromArray {
+		res := &ReleaseTag{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*ReleaseTag, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a ReleaseTag to a ResourceInstance

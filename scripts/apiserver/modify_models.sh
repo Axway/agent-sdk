@@ -69,3 +69,27 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
+
+######################
+# Update any structure with Owner to have omitempty
+# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
+######################
+FILES=`find pkg/apic/apiserver/models -type f -name "*.go"`
+
+SEARCH="\s*Owner\s*struct{}\s*\`json:\"owner\"\`.*"
+REPLACE="Owner \*struct{} \`json:\"owner,omitempty\"\`"
+# SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
+# REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
+for file in ${FILES}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done

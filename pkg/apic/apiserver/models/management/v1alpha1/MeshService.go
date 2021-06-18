@@ -38,7 +38,9 @@ func init() {
 type MeshService struct {
 	apiv1.ResourceMeta
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner *struct{} `json:"owner,omitempty"`
 
 	Spec MeshServiceSpec `json:"spec"`
 }

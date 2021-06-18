@@ -40,7 +40,9 @@ type AssetRelease struct {
 
 	Icon struct{} `json:"icon"`
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner *struct{} `json:"owner,omitempty"`
 
 	References AssetReleaseReferences `json:"references"`
 
@@ -68,6 +70,21 @@ func (res *AssetRelease) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = AssetRelease{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// AssetReleaseFromInstanceArray converts a []*ResourceInstance to a []*AssetRelease
+func AssetReleaseFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetRelease, error) {
+	newArray := make([]*AssetRelease, 0)
+	for _, item := range fromArray {
+		res := &AssetRelease{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*AssetRelease, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a AssetRelease to a ResourceInstance
