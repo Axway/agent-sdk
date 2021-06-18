@@ -38,7 +38,9 @@ func init() {
 type Document struct {
 	apiv1.ResourceMeta
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner struct{} `json:"owner,omitempty"`
 
 	Spec DocumentSpec `json:"spec"`
 }
@@ -64,6 +66,21 @@ func (res *Document) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Document{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// DocumentFromInstanceArray converts a []*ResourceInstance to a []*Document
+func DocumentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Document, error) {
+	newArray := make([]*Document, 0)
+	for _, item := range fromArray {
+		res := &Document{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Document, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Document to a ResourceInstance

@@ -40,7 +40,9 @@ type Asset struct {
 
 	Icon struct{} `json:"icon"`
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner struct{} `json:"owner,omitempty"`
 
 	References AssetReferences `json:"references"`
 
@@ -70,6 +72,21 @@ func (res *Asset) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Asset{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// AssetFromInstanceArray converts a []*ResourceInstance to a []*Asset
+func AssetFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Asset, error) {
+	newArray := make([]*Asset, 0)
+	for _, item := range fromArray {
+		res := &Asset{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Asset, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Asset to a ResourceInstance

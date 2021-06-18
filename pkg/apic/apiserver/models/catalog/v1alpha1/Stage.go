@@ -40,7 +40,9 @@ type Stage struct {
 
 	Icon struct{} `json:"icon"`
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner struct{} `json:"owner,omitempty"`
 
 	Spec StageSpec `json:"spec"`
 }
@@ -66,6 +68,21 @@ func (res *Stage) FromInstance(ri *apiv1.ResourceInstance) error {
 	*res = Stage{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// StageFromInstanceArray converts a []*ResourceInstance to a []*Stage
+func StageFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Stage, error) {
+	newArray := make([]*Stage, 0)
+	for _, item := range fromArray {
+		res := &Stage{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*Stage, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a Stage to a ResourceInstance

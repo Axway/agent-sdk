@@ -38,7 +38,9 @@ func init() {
 type AccessRequestDefinition struct {
 	apiv1.ResourceMeta
 
-	Owner struct{} `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	Owner struct{} `json:"owner"`
+	Owner struct{} `json:"owner,omitempty"`
 
 	Spec AccessRequestDefinitionSpec `json:"spec"`
 }
@@ -64,6 +66,21 @@ func (res *AccessRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) err
 	*res = AccessRequestDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
+}
+
+// AccessRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AccessRequestDefinition
+func AccessRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequestDefinition, error) {
+	newArray := make([]*AccessRequestDefinition, 0)
+	for _, item := range fromArray {
+		res := &AccessRequestDefinition{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*AccessRequestDefinition, 0), err
+		}
+		newArray = append(newArray, res)
+	}
+
+	return newArray, nil
 }
 
 // AsInstance converts a AccessRequestDefinition to a ResourceInstance
