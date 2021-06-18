@@ -8,10 +8,12 @@ PORT=${3:?"Port to connect to the host"}
 export GO_POST_PROCESS_FILE="`command -v gofmt` -w"
 export GO111MODULE=on
 
-node ./scripts/apiserver/generate.js $PROTOCOL $HOST $PORT
+if node ./scripts/apiserver/generate.js $PROTOCOL $HOST $PORT; then
+  # update all go imports
+  goimports -w=true ./pkg/apic/apiserver
 
-# update all go imports
-goimports -w=true ./pkg/apic/apiserver
-
-# run script to modify any files that need tweaking
-./scripts/apiserver/modify_models.sh
+  # run script to modify any files that need tweaking
+  ./scripts/apiserver/modify_models.sh
+else
+  echo "FAILED: gnerating resources"
+fi

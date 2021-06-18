@@ -38,6 +38,8 @@ func init() {
 type MeshDiscovery struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec MeshDiscoverySpec `json:"spec"`
 }
 

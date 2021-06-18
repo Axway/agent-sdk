@@ -18,6 +18,7 @@ const { execSync } = require('child_process');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
+const { exit } = require('process');
 
 const clientsPath = 'pkg/apic/apiserver/clients/';
 const modelsPath = 'pkg/apic/apiserver/models/';
@@ -61,6 +62,9 @@ const fetch = () => {
 
 fetch()
 	.then(resources => {
+		if (resources == "") {
+			process.exit(1)
+		}
 		const [subResources, mainResources] = createMainAndSubResources(resources);
 		// uncomment to see how the resources are grouped
 		// fs.writeFileSync('./sub-resources.json', JSON.stringify(subResources));
@@ -71,7 +75,10 @@ fetch()
 
 		writeSet(mainResources);
 	})
-	.catch(err => console.log('ERROR: ', err));
+	.catch(err => {
+		console.log('ERROR: ', err)
+		process.exit(1)
+	});
 
 // sub resources are grouped together into their corresponding group & version. For each version found in each group the openapi-generator will be used
 // to create the resources. This allows us to split resources up into their logical groups and give them their own package.

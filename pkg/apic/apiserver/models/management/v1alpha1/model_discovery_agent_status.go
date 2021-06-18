@@ -9,6 +9,12 @@
 
 package v1alpha1
 
+import (
+	// GENERATE: The following code has been modified after code generation
+	// 	"time"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
+
 // DiscoveryAgentStatus struct for DiscoveryAgentStatus
 type DiscoveryAgentStatus struct {
 	// Version name for the agent revision.
@@ -18,5 +24,5 @@ type DiscoveryAgentStatus struct {
 	// A way to communicate details about the current status by the agent
 	Message string `json:"message,omitempty"`
 	// The last updated event timestamp provided by the agent
-	LastActivityTime string `json:"lastActivityTime,omitempty"`
+	LastActivityTime time.Time `json:"lastActivityTime,omitempty"`
 }

@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// EdgeDiscoveryAgentSpecLogging Logging config
-type EdgeDiscoveryAgentSpecLogging struct {
-	// Defines the log level.
-	Level string `json:"level,omitempty"`
+// ReleaseTagReferences struct for ReleaseTagReferences
+type ReleaseTagReferences struct {
+	// Reference to Release that got created from this tag.
+	AssetRelease string `json:"assetRelease,omitempty"`
 }

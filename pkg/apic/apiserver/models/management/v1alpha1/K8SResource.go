@@ -38,6 +38,8 @@ func init() {
 type K8SResource struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec K8SResourceSpec `json:"spec"`
 }
 

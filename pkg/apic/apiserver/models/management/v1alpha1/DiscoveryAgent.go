@@ -37,7 +37,11 @@ func init() {
 // DiscoveryAgent Resource
 type DiscoveryAgent struct {
 	apiv1.ResourceMeta
-	Spec   DiscoveryAgentSpec   `json:"spec"`
+
+	Owner struct{} `json:"owner"`
+
+	Spec DiscoveryAgentSpec `json:"spec"`
+
 	Status DiscoveryAgentStatus `json:"status"`
 }
 

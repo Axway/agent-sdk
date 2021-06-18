@@ -12,5 +12,5 @@ package v1alpha1
 // MeshDiscoverySpec struct for MeshDiscoverySpec
 type MeshDiscoverySpec struct {
 	// Target environment.
-	EnvironmentRef string `json:"environmentRef,omitempty"`
+	EnvironmentRef string `json:"environmentRef"`
 }

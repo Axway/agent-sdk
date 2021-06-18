@@ -38,6 +38,8 @@ func init() {
 type APIService struct {
 	apiv1.ResourceMeta
 
+	Owner struct{} `json:"owner"`
+
 	Spec ApiServiceSpec `json:"spec"`
 }
 
@@ -95,5 +97,5 @@ func (res *APIService) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
 	meta.GroupVersionKind = APIServiceGVK()
 
-	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
+	return &apiv1.ResourceInstance{ResourceMeta: meta, Owner: res.Owner, Spec: spec}, nil
 }
