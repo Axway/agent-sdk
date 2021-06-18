@@ -21,23 +21,30 @@ import (
 type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error)
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
+	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 }
 
 // Generator - Create the events to be published to Condor
 type Generator struct {
-	shouldAddFields bool
+	shouldAddFields                bool
+	shouldUseTrafficForAggregation bool
+	collector                      metric.Collector
 }
 
 // NewEventGenerator - Create a new event generator
 func NewEventGenerator() EventGenerator {
 	eventGen := &Generator{
-		shouldAddFields: !traceability.IsHTTPTransport(),
+		shouldAddFields:                !traceability.IsHTTPTransport(),
+		shouldUseTrafficForAggregation: true,
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
-	// Initialize the metric collector to load usage/metric data from previous agent execution
-	metric.GetMetricCollector()
 	return eventGen
+}
+
+// SetUseTrafficForAggregation - set the flag to use traffic events for aggregation.
+func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
+	e.shouldUseTrafficForAggregation = useTrafficForAggregation
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
@@ -60,7 +67,7 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	if err != nil {
 		return event, err
 	}
-	if logEvent.TransactionSummary != nil {
+	if e.shouldUseTrafficForAggregation && logEvent.TransactionSummary != nil {
 		apiID := logEvent.TransactionSummary.Proxy.ID
 		apiName := logEvent.TransactionSummary.Proxy.Name
 		statusCode := logEvent.TransactionSummary.StatusDetail
