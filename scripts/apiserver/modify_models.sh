@@ -78,7 +78,7 @@ done
 FILES=`find pkg/apic/apiserver/models -type f -name "*.go"`
 
 SEARCH="\s*Owner\s*struct{}\s*\`json:\"owner\"\`.*"
-REPLACE="Owner struct{} \`json:\"owner,omitempty\"\`"
+REPLACE="Owner \*struct{} \`json:\"owner,omitempty\"\`"
 # SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
 # REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
 for file in ${FILES}; do

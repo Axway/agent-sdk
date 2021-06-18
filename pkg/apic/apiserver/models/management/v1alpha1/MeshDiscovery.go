@@ -40,7 +40,7 @@ type MeshDiscovery struct {
 
 	// GENERATE: The following code has been modified after code generation
 	// 	Owner struct{} `json:"owner"`
-	Owner struct{} `json:"owner,omitempty"`
+	Owner *struct{} `json:"owner,omitempty"`
 
 	Spec MeshDiscoverySpec `json:"spec"`
 }
