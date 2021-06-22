@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"reflect"
 	"time"
 
@@ -9,18 +8,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
-// apiServerTimeFormat is the date-time format for API Server
-const apiServerTimeFormat = "2006-01-02T15:04:05.000-0700"
-
 // getTimestamp - Returns current timestamp formatted for API Server
 // if the local status exists, return the local timestamp, otherwise return Now()
 func getTimestamp() v1Time.Time {
-	activityTime := time.Now().Format(apiServerTimeFormat)
+	activityTime := time.Now()
 	if statusUpdate != nil {
-		activityTime = getLocalActivityTime().Format(apiServerTimeFormat)
+		activityTime = getLocalActivityTime()
 	}
-	newV1Time := v1Time.Time{}
-	json.Unmarshal([]byte(activityTime), &newV1Time)
+	newV1Time := v1Time.Time(activityTime)
 	return newV1Time
 }
 
