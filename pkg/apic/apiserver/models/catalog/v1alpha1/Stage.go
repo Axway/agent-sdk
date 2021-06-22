@@ -65,7 +65,13 @@ func (res *Stage) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = Stage{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var icon *struct{}
+	err = json.Unmarshal(ri.SubResources["icon"], icon)
+	if err != nil {
+		return err
+	}
+
+	*res = Stage{ResourceMeta: ri.ResourceMeta, Spec: *spec, Icon: *icon}
 
 	return err
 }

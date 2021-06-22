@@ -68,13 +68,13 @@ func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	}
 
 	var references *ConsumerInstanceReferences
-	err = json.Unmarshal(ri.SubResources["ConsumerInstanceReferences"], references)
+	err = json.Unmarshal(ri.SubResources["references"], references)
 	if err != nil {
 		return err
 	}
 
 	var status *ConsumerInstanceStatus
-	err = json.Unmarshal(ri.SubResources["ConsumerInstanceStatus"], status)
+	err = json.Unmarshal(ri.SubResources["status"], status)
 	if err != nil {
 		return err
 	}

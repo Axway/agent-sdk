@@ -66,7 +66,7 @@ func (res *AssetMapping) FromInstance(ri *apiv1.ResourceInstance) error {
 	}
 
 	var status *AssetMappingStatus
-	err = json.Unmarshal(ri.SubResources["AssetMappingStatus"], status)
+	err = json.Unmarshal(ri.SubResources["status"], status)
 	if err != nil {
 		return err
 	}

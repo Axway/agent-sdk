@@ -66,7 +66,7 @@ func (res *AssetResource) FromInstance(ri *apiv1.ResourceInstance) error {
 	}
 
 	var references *AssetResourceReferences
-	err = json.Unmarshal(ri.SubResources["AssetResourceReferences"], references)
+	err = json.Unmarshal(ri.SubResources["references"], references)
 	if err != nil {
 		return err
 	}

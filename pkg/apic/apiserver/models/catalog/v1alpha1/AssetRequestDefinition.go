@@ -65,7 +65,13 @@ func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) erro
 		return err
 	}
 
-	*res = AssetRequestDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var references *struct{}
+	err = json.Unmarshal(ri.SubResources["references"], references)
+	if err != nil {
+		return err
+	}
+
+	*res = AssetRequestDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec, References: *references}
 
 	return err
 }

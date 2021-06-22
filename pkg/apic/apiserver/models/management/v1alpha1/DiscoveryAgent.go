@@ -66,7 +66,7 @@ func (res *DiscoveryAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 	}
 
 	var status *DiscoveryAgentStatus
-	err = json.Unmarshal(ri.SubResources["DiscoveryAgentStatus"], status)
+	err = json.Unmarshal(ri.SubResources["status"], status)
 	if err != nil {
 		return err
 	}

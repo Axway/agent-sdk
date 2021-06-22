@@ -66,16 +66,20 @@ func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
 
 	{{ $w := "" }}
 	{{range $field, $isNotEmpty := .res.fields}}
-		{{ $type := $field | strings.Title }}
 		{{ $jsonKey := $field | strings.ToLower }}
 		{{ $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" }}
-		{{if and (ne $field "owner") (ne $field "spec") ($isNotEmpty)}} 
-			var {{ $jsonKey }} *{{$.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws"}}{{$type}}
-			err = json.Unmarshal(ri.SubResources["{{printf "%s%s" $varName $type}}"], {{ $jsonKey }})
+		{{ $type := "struct{}" }}
+		{{ $title := $field | strings.Title }}
+		{{ if $isNotEmpty }}
+			{{ $type = printf "%s%s" $varName $title }}
+		{{ end }}
+		{{if and (ne $field "owner") (ne $field "spec") }} 
+			var {{ $jsonKey }} *{{$type}}
+			err = json.Unmarshal(ri.SubResources["{{ $jsonKey }}"], {{ $jsonKey }})
 			if err != nil {
 				return err
 			}
-			{{ $w = printf "%s %s: *%s," $w $type $jsonKey }} 
+			{{ $w = printf "%s %s: *%s," $w $title $jsonKey }} 
 		{{end}}
 	{{end}}
 	

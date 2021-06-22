@@ -69,7 +69,25 @@ func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = Product{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var assetrelease *struct{}
+	err = json.Unmarshal(ri.SubResources["assetrelease"], assetrelease)
+	if err != nil {
+		return err
+	}
+
+	var icon *struct{}
+	err = json.Unmarshal(ri.SubResources["icon"], icon)
+	if err != nil {
+		return err
+	}
+
+	var state *struct{}
+	err = json.Unmarshal(ri.SubResources["state"], state)
+	if err != nil {
+		return err
+	}
+
+	*res = Product{ResourceMeta: ri.ResourceMeta, Spec: *spec, AssetRelease: *assetrelease, Icon: *icon, State: *state}
 
 	return err
 }

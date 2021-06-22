@@ -68,13 +68,13 @@ func (res *ReleaseTag) FromInstance(ri *apiv1.ResourceInstance) error {
 	}
 
 	var references *ReleaseTagReferences
-	err = json.Unmarshal(ri.SubResources["ReleaseTagReferences"], references)
+	err = json.Unmarshal(ri.SubResources["references"], references)
 	if err != nil {
 		return err
 	}
 
 	var status *ReleaseTagStatus
-	err = json.Unmarshal(ri.SubResources["ReleaseTagStatus"], status)
+	err = json.Unmarshal(ri.SubResources["status"], status)
 	if err != nil {
 		return err
 	}
