@@ -65,7 +65,13 @@ func (res *AssetResource) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = AssetResource{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var references *AssetResourceReferences
+	err = json.Unmarshal(ri.SubResources["AssetResourceReferences"], references)
+	if err != nil {
+		return err
+	}
+
+	*res = AssetResource{ResourceMeta: ri.ResourceMeta, Spec: *spec, References: *references}
 
 	return err
 }

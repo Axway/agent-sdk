@@ -65,7 +65,13 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = AccessRequest{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var state *AccessRequestState
+	err = json.Unmarshal(ri.SubResources["AccessRequestState"], state)
+	if err != nil {
+		return err
+	}
+
+	*res = AccessRequest{ResourceMeta: ri.ResourceMeta, Spec: *spec, State: *state}
 
 	return err
 }

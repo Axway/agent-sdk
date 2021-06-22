@@ -11,32 +11,34 @@ import (
 )
 
 var (
-	_AssetGVK = apiv1.GroupVersionKind{
+	_ProductGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Asset",
+			Kind:  "Product",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	AssetScope = ""
+	ProductScope = ""
 
-	AssetResourceName = "assets"
+	ProductResourceName = "products"
 )
 
-func AssetGVK() apiv1.GroupVersionKind {
-	return _AssetGVK
+func ProductGVK() apiv1.GroupVersionKind {
+	return _ProductGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetGVK, AssetScope, AssetResourceName)
+	apiv1.RegisterGVK(_ProductGVK, ProductScope, ProductResourceName)
 }
 
-// Asset Resource
-type Asset struct {
+// Product Resource
+type Product struct {
 	apiv1.ResourceMeta
+
+	AssetRelease struct{} `json:"assetrelease"`
 
 	Icon struct{} `json:"icon"`
 
@@ -44,15 +46,13 @@ type Asset struct {
 	// 	Owner struct{} `json:"owner"`
 	Owner *struct{} `json:"owner,omitempty"`
 
-	References AssetReferences `json:"references"`
-
-	Spec AssetSpec `json:"spec"`
+	Spec ProductSpec `json:"spec"`
 
 	State struct{} `json:"state"`
 }
 
-// FromInstance converts a ResourceInstance to a Asset
-func (res *Asset) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Product
+func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -63,31 +63,25 @@ func (res *Asset) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	spec := &AssetSpec{}
+	spec := &ProductSpec{}
 	err = json.Unmarshal(m, spec)
 	if err != nil {
 		return err
 	}
 
-	var references *AssetReferences
-	err = json.Unmarshal(ri.SubResources["AssetReferences"], references)
-	if err != nil {
-		return err
-	}
-
-	*res = Asset{ResourceMeta: ri.ResourceMeta, Spec: *spec, References: *references}
+	*res = Product{ResourceMeta: ri.ResourceMeta, Spec: *spec}
 
 	return err
 }
 
-// AssetFromInstanceArray converts a []*ResourceInstance to a []*Asset
-func AssetFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Asset, error) {
-	newArray := make([]*Asset, 0)
+// ProductFromInstanceArray converts a []*ResourceInstance to a []*Product
+func ProductFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Product, error) {
+	newArray := make([]*Product, 0)
 	for _, item := range fromArray {
-		res := &Asset{}
+		res := &Product{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Asset, 0), err
+			return make([]*Product, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -95,8 +89,8 @@ func AssetFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Asset, erro
 	return newArray, nil
 }
 
-// AsInstance converts a Asset to a ResourceInstance
-func (res *Asset) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Product to a ResourceInstance
+func (res *Product) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
 		return nil, err
@@ -109,7 +103,7 @@ func (res *Asset) AsInstance() (*apiv1.ResourceInstance, error) {
 	}
 
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AssetGVK()
+	meta.GroupVersionKind = ProductGVK()
 
 	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

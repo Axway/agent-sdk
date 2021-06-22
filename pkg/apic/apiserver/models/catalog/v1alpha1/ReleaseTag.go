@@ -67,7 +67,19 @@ func (res *ReleaseTag) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = ReleaseTag{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var references *ReleaseTagReferences
+	err = json.Unmarshal(ri.SubResources["ReleaseTagReferences"], references)
+	if err != nil {
+		return err
+	}
+
+	var status *ReleaseTagStatus
+	err = json.Unmarshal(ri.SubResources["ReleaseTagStatus"], status)
+	if err != nil {
+		return err
+	}
+
+	*res = ReleaseTag{ResourceMeta: ri.ResourceMeta, Spec: *spec, References: *references, Status: *status}
 
 	return err
 }

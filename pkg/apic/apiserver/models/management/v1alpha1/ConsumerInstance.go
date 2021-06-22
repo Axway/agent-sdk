@@ -67,7 +67,19 @@ func (res *ConsumerInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = ConsumerInstance{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var references *ConsumerInstanceReferences
+	err = json.Unmarshal(ri.SubResources["ConsumerInstanceReferences"], references)
+	if err != nil {
+		return err
+	}
+
+	var status *ConsumerInstanceStatus
+	err = json.Unmarshal(ri.SubResources["ConsumerInstanceStatus"], status)
+	if err != nil {
+		return err
+	}
+
+	*res = ConsumerInstance{ResourceMeta: ri.ResourceMeta, Spec: *spec, References: *references, Status: *status}
 
 	return err
 }

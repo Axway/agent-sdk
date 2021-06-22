@@ -65,7 +65,13 @@ func (res *TraceabilityAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 		return err
 	}
 
-	*res = TraceabilityAgent{ResourceMeta: ri.ResourceMeta, Spec: *spec}
+	var status *TraceabilityAgentStatus
+	err = json.Unmarshal(ri.SubResources["TraceabilityAgentStatus"], status)
+	if err != nil {
+		return err
+	}
+
+	*res = TraceabilityAgent{ResourceMeta: ri.ResourceMeta, Spec: *spec, Status: *status}
 
 	return err
 }
