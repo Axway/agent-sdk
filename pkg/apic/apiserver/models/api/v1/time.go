@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -9,7 +8,7 @@ const (
 	// apiServerTimeFormat - api-server time lacks the colon in timezone
 	apiServerTimeFormat = "2006-01-02T15:04:05.000-0700"
 
-	// apiServerTimeFormat_ - time with the colon in timezone
+	// apiServerTimeFormat - api-server time with colon in timezone
 	apiServerTimeFormat_ = "2006-01-02T15:04:05.000-07:00"
 )
 
@@ -33,9 +32,11 @@ func (t *Time) UnmarshalJSON(bytes []byte) error {
 }
 
 // MarshalJSON -
-func (t *Time) MarshalJSON() ([]byte, error) {
-	tt := time.Time(*t)
-
-	timeStr := fmt.Sprintf("\"%s\"", tt.Format(apiServerTimeFormat))
-	return []byte(timeStr), nil
+func (t Time) MarshalJSON() ([]byte, error) {
+	tt := time.Time(t)
+	b := make([]byte, 0, len(apiServerTimeFormat)+2)
+	b = append(b, '"')
+	b = tt.AppendFormat(b, apiServerTimeFormat)
+	b = append(b, '"')
+	return b, nil
 }
