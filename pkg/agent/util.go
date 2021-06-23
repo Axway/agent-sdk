@@ -13,7 +13,10 @@ import (
 func getTimestamp() v1Time.Time {
 	activityTime := time.Now()
 	if statusUpdate != nil {
-		activityTime = getLocalActivityTime()
+		curTime := getLocalActivityTime()
+		if !curTime.IsZero() {
+			activityTime = curTime
+		}
 	}
 	newV1Time := v1Time.Time(activityTime)
 	return newV1Time
