@@ -11,42 +11,40 @@ import (
 )
 
 var (
-	_StageGVK = apiv1.GroupVersionKind{
+	_CategoryGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Stage",
+			Kind:  "Category",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	StageScope = ""
+	CategoryScope = ""
 
-	StageResourceName = "stages"
+	CategoryResourceName = "categories"
 )
 
-func StageGVK() apiv1.GroupVersionKind {
-	return _StageGVK
+func CategoryGVK() apiv1.GroupVersionKind {
+	return _CategoryGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_StageGVK, StageScope, StageResourceName)
+	apiv1.RegisterGVK(_CategoryGVK, CategoryScope, CategoryResourceName)
 }
 
-// Stage Resource
-type Stage struct {
+// Category Resource
+type Category struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
 
 	Owner interface{} `json:"owner"`
 
-	Spec StageSpec `json:"spec"`
+	Spec CategorySpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a Stage
-func (res *Stage) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Category
+func (res *Category) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -56,14 +54,14 @@ func (res *Stage) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// StageFromInstanceArray converts a []*ResourceInstance to a []*Stage
-func StageFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Stage, error) {
-	newArray := make([]*Stage, 0)
+// CategoryFromInstanceArray converts a []*ResourceInstance to a []*Category
+func CategoryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Category, error) {
+	newArray := make([]*Category, 0)
 	for _, item := range fromArray {
-		res := &Stage{}
+		res := &Category{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Stage, 0), err
+			return make([]*Category, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -71,8 +69,8 @@ func StageFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Stage, erro
 	return newArray, nil
 }
 
-// AsInstance converts a Stage to a ResourceInstance
-func (res *Stage) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Category to a ResourceInstance
+func (res *Category) AsInstance() (*apiv1.ResourceInstance, error) {
 	m, err := json.Marshal(res.Spec)
 	if err != nil {
 		return nil, err
@@ -85,7 +83,7 @@ func (res *Stage) AsInstance() (*apiv1.ResourceInstance, error) {
 	}
 
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = StageGVK()
+	meta.GroupVersionKind = CategoryGVK()
 
 	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
 }

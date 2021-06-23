@@ -38,9 +38,7 @@ func init() {
 type AccessRequest struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
 	Spec AccessRequestSpec `json:"spec"`
 
@@ -54,25 +52,7 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &AccessRequestSpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	var state *AccessRequestState
-	err = json.Unmarshal(ri.SubResources["state"], state)
-	if err != nil {
-		return err
-	}
-
-	*res = AccessRequest{ResourceMeta: ri.ResourceMeta, Spec: *spec, State: *state}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

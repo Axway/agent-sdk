@@ -38,17 +38,15 @@ func init() {
 type Product struct {
 	apiv1.ResourceMeta
 
-	AssetRelease struct{} `json:"assetrelease"`
+	AssetRelease interface{} `json:"assetrelease"`
 
-	Icon struct{} `json:"icon"`
+	Icon interface{} `json:"icon"`
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
 	Spec ProductSpec `json:"spec"`
 
-	State struct{} `json:"state"`
+	State interface{} `json:"state"`
 }
 
 // FromInstance converts a ResourceInstance to a Product
@@ -58,37 +56,7 @@ func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &ProductSpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	var assetrelease *struct{}
-	err = json.Unmarshal(ri.SubResources["assetrelease"], assetrelease)
-	if err != nil {
-		return err
-	}
-
-	var icon *struct{}
-	err = json.Unmarshal(ri.SubResources["icon"], icon)
-	if err != nil {
-		return err
-	}
-
-	var state *struct{}
-	err = json.Unmarshal(ri.SubResources["state"], state)
-	if err != nil {
-		return err
-	}
-
-	*res = Product{ResourceMeta: ri.ResourceMeta, Spec: *spec, AssetRelease: *assetrelease, Icon: *icon, State: *state}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

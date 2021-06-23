@@ -2,15 +2,26 @@ package v1
 
 import "encoding/json"
 
+var metaKeys map[string]struct{} = map[string]struct{}{
+	"group":      {},
+	"apiVersion": {},
+	"kind":       {},
+	"name":       {},
+	"title":      {},
+	"metadata":   {},
+	"attributes": {},
+	"tags":       {},
+}
+
 // ResourceInstance API Server generic resource structure.
 type ResourceInstance struct {
 	ResourceMeta
 
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner,omitempty"`
 	// Resource instance specs.
 	Spec map[string]interface{} `json:"spec"`
 
-	SubResources map[string]json.RawMessage
+	RawResource json.RawMessage
 }
 
 //UnmarshalJSON - custom unmarshaler for ResourceInstance struct to additionally use a custom subscriptionField
@@ -21,15 +32,7 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	var allFields interface{}
-	json.Unmarshal(data, &allFields)
-	b := allFields.(map[string][]byte)
-
-	for key, value := range b {
-		if key != "owner" && key != "spec" {
-			ri.SubResources[key] = value
-		}
-	}
+	ri.RawResource = data
 	return nil
 }
 
