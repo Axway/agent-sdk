@@ -6,10 +6,10 @@ import (
 
 const (
 	// RFC3339Z api-server time lacks the colon in timezone
-	RFC3339Z = "2006-01-02T15:04:05Z0700"
+	RFC3339Z = "2006-01-02T15:04:05.000Z0700"
 
 	// RFC3339Z_ time with the colon in timezone
-	RFC3339Z_ = "2006-01-02T15:04:05Z07:00"
+	RFC3339Z_ = "2006-01-02T15:04:05.000Z07:00"
 )
 
 // Time - time
