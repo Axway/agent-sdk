@@ -8,7 +8,7 @@ import (
 
 func TestUnmarshall(t *testing.T) {
 	time := &Time{}
-	err := time.UnmarshalJSON([]byte(`"2006-01-02T15:04:05+0700"`))
+	err := time.UnmarshalJSON([]byte(`"2006-01-02T15:04:05.000+0700"`))
 
 	if err != nil {
 		t.Fatalf("Error: %s", err)
@@ -24,7 +24,7 @@ func TestUnmarshall(t *testing.T) {
 
 func TestMarshall(t *testing.T) {
 	time := &Time{}
-	in := `"2006-01-02T15:04:05+0700"`
+	in := `"2006-01-02T15:04:05.000+0700"`
 
 	err := time.UnmarshalJSON([]byte(in))
 	if err != nil {
