@@ -38,11 +38,9 @@ func init() {
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
-	References struct{} `json:"references"`
+	References interface{} `json:"references"`
 
 	Spec AssetRequestDefinitionSpec `json:"spec"`
 }
@@ -54,19 +52,7 @@ func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) erro
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &AssetRequestDefinitionSpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = AssetRequestDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

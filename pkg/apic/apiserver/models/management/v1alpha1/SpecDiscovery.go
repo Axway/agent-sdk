@@ -38,9 +38,7 @@ func init() {
 type SpecDiscovery struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
 	Spec SpecDiscoverySpec `json:"spec"`
 }
@@ -52,19 +50,7 @@ func (res *SpecDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &SpecDiscoverySpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = SpecDiscovery{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

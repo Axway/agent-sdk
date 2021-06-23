@@ -38,9 +38,7 @@ func init() {
 type MeshDiscovery struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
 	Spec MeshDiscoverySpec `json:"spec"`
 }
@@ -52,19 +50,7 @@ func (res *MeshDiscovery) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &MeshDiscoverySpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = MeshDiscovery{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

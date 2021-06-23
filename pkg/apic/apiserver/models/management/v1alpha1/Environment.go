@@ -38,9 +38,7 @@ func init() {
 type Environment struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
 	Spec EnvironmentSpec `json:"spec"`
 }
@@ -52,19 +50,7 @@ func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &EnvironmentSpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = Environment{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err := json.Unmarshal(ri.RawResource, res)
 	return err
 }
 

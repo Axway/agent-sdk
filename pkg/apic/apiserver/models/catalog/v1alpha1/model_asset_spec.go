@@ -14,4 +14,6 @@ type AssetSpec struct {
 	// description of the asset.
 	Description string `json:"description,omitempty"`
 	Type        string `json:"type,omitempty"`
+	// list of categories for the asset.
+	Categories []string `json:"categories,omitempty"`
 }
