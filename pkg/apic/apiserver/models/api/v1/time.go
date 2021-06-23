@@ -5,11 +5,11 @@ import (
 )
 
 const (
-	// RFC3339Z api-server time lacks the colon in timezone
-	RFC3339Z = "2006-01-02T15:04:05.000Z0700"
+	// apiServerTimeFormat - api-server time lacks the colon in timezone
+	apiServerTimeFormat = "2006-01-02T15:04:05.000-0700"
 
-	// RFC3339Z_ time with the colon in timezone
-	RFC3339Z_ = "2006-01-02T15:04:05.000Z07:00"
+	// apiServerTimeFormat - api-server time with colon in timezone
+	apiServerTimeFormat_ = "2006-01-02T15:04:05.000-07:00"
 )
 
 // Time - time
@@ -17,13 +17,13 @@ type Time time.Time
 
 // UnmarshalJSON - unmarshal json for time
 func (t *Time) UnmarshalJSON(bytes []byte) error {
-	tt, err := time.Parse(`"`+RFC3339Z+`"`, string(bytes))
+	tt, err := time.Parse(`"`+apiServerTimeFormat+`"`, string(bytes))
 
 	if err == nil {
 		*t = Time(tt)
 		return nil
 	}
-	tt, err = time.Parse(`"`+RFC3339Z_+`"`, string(bytes))
+	tt, err = time.Parse(`"`+apiServerTimeFormat_+`"`, string(bytes))
 	if err != nil {
 		return err
 	}
@@ -34,10 +34,9 @@ func (t *Time) UnmarshalJSON(bytes []byte) error {
 // MarshalJSON -
 func (t Time) MarshalJSON() ([]byte, error) {
 	tt := time.Time(t)
-
-	b := make([]byte, 0, len(RFC3339Z)+2)
+	b := make([]byte, 0, len(apiServerTimeFormat)+2)
 	b = append(b, '"')
-	b = tt.AppendFormat(b, RFC3339Z)
+	b = tt.AppendFormat(b, apiServerTimeFormat)
 	b = append(b, '"')
 	return b, nil
 }
