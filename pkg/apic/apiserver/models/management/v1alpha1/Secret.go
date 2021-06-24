@@ -21,7 +21,7 @@ var (
 )
 
 const (
-	SecretScope = "Environment"
+	SecretScope = "Integration"
 
 	SecretResourceName = "secrets"
 )
@@ -50,7 +50,7 @@ func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	err := json.Unmarshal(ri.RawResource, res)
+	err := json.Unmarshal(ri.GetRawResource(), res)
 	return err
 }
 
@@ -71,19 +71,20 @@ func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, er
 
 // AsInstance converts a Secret to a ResourceInstance
 func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
-	m, err := json.Marshal(res.Spec)
-	if err != nil {
-		return nil, err
-	}
-
-	spec := map[string]interface{}{}
-	err = json.Unmarshal(m, &spec)
-	if err != nil {
-		return nil, err
-	}
-
 	meta := res.ResourceMeta
 	meta.GroupVersionKind = SecretGVK()
+	res.ResourceMeta = meta
 
-	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
+	m, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	instance := apiv1.ResourceInstance{}
+	err = json.Unmarshal(m, &instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &instance, nil
 }
