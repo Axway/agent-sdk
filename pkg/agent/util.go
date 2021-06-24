@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -32,12 +33,12 @@ func ApplyResourceToConfig(cfg interface{}) error {
 	obj := cfg
 	defer func() {
 		if err := recover(); err != nil {
-			if errObj, ok := err.(error); ok {
-				if strings.Contains(errObj.Error(), "nil pointer dereference") {
-					log.Errorf("The function 'ApplyResources' for interface IResourceConfigCallback is not implemented in %s.", reflect.TypeOf(obj))
-				}
+			str := fmt.Sprintf("%v", err)
+			if strings.Contains(str, "nil pointer dereference") {
+				log.Errorf("The function 'ApplyResources' for interface IResourceConfigCallback is not implemented in %s.", reflect.TypeOf(obj))
 			}
 		}
+		// }
 	}()
 
 	agentRes := GetAgentResource()
