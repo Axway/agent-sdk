@@ -2,10 +2,12 @@ package agent
 
 import (
 	"reflect"
+	"strings"
 	"time"
 
 	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // getTimestamp - Returns current timestamp formatted for API Server
@@ -22,11 +24,22 @@ func getTimestamp() v1Time.Time {
 	return newV1Time
 }
 
-// ApplyResouceToConfig - applies the resources to agent configs
+// ApplyResourceToConfig - applies the resources to agent configs
 // Uses reflection to get the IResourceConfigCallback interface on the config struct or
 // struct variable.
 // Makes call to ApplyResources method with dataplane and agent resources from API server
-func ApplyResouceToConfig(cfg interface{}) error {
+func ApplyResourceToConfig(cfg interface{}) error {
+	obj := cfg
+	defer func() {
+		if err := recover(); err != nil {
+			if errObj, ok := err.(error); ok {
+				if strings.Contains(errObj.Error(), "nil pointer dereference") {
+					log.Errorf("The function 'ApplyResources' for interface IResourceConfigCallback is not implemented in %s.", reflect.TypeOf(obj))
+				}
+			}
+		}
+	}()
+
 	agentRes := GetAgentResource()
 	if agentRes == nil {
 		return nil
@@ -46,12 +59,12 @@ func ApplyResouceToConfig(cfg interface{}) error {
 		v = reflect.Indirect(v)
 	}
 
-	// Look for Validate method on struct properties and invoke it
+	// Look for ApplyResouceToConfig method on struct properties and invoke it
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).CanInterface() {
 			fieldInterface := v.Field(i).Interface()
 			if objInterface, ok := fieldInterface.(config.IResourceConfigCallback); ok {
-				err := ApplyResouceToConfig(objInterface)
+				err := ApplyResourceToConfig(objInterface)
 				if err != nil {
 					return err
 				}

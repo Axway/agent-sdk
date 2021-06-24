@@ -1,6 +1,11 @@
 package config
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
+)
 
 // ValidateConfig - Validates the agent config
 // Uses reflection to get the IConfigValidator interface on the config struct or
@@ -8,6 +13,17 @@ import "reflect"
 // Makes call to ValidateCfg method except if the struct variable is of CentralConfig type
 // as the validation for CentralConfig is already done during parseCentralConfig
 func ValidateConfig(cfg interface{}) error {
+	obj := cfg
+	defer func() {
+		if err := recover(); err != nil {
+			if errObj, ok := err.(error); ok {
+				if strings.Contains(errObj.Error(), "nil pointer dereference") {
+					log.Errorf("The function 'ValidateCfg' for interface IConfigValidator is not implemented in %s.", reflect.TypeOf(obj))
+				}
+			}
+		}
+	}()
+
 	// Check if top level struct has Validate. If it does then call Validate
 	// only at top level
 	if cfg == nil {
