@@ -275,7 +275,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counte
 		metric: transactionCount,
 	}
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
-	log.Infof("Generated usage events [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+	log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
 }
 
 // func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
@@ -354,7 +354,7 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Error("Failed to publish event : ", err.Error())
+				log.Error("Failed to publish usage event : ", err.Error())
 			} else {
 				c.cleanupCounters(eventQueueItem)
 			}
