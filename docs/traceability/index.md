@@ -155,7 +155,7 @@ type GatewayConfig struct {
 }
 ```
 
-To validate the config, following interface provided by config package in SDK can be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
+To validate the config, the following interface provided by config package in SDK must be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
 
 ```
 // IConfigValidator - Interface to be implemented for config validation by agent
@@ -179,6 +179,40 @@ func (c *GatewayConfig) ValidateCfg() (err error) {
 	return nil
 }
 
+```
+If there are ResourceInstance values that you want to apply to your agent config, the following interface provided by config package in SDK must be implemented for the agent config. The ApplyResources() method is called by SDK after parsing the config from command line.
+```
+// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource for agent
+type IResourceConfigCallback interface {
+	ApplyResources(agentResource *v1.ResourceInstance) error
+}
+```
+
+For e.g.
+
+```
+// ApplyResources - Applies the agent and dataplane resource to config
+func (c *GatewayConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
+	const (
+		resourceConfigKey = "config"
+		enableAPIConfig   = "processHeaders"
+	)
+
+	config, ok := agentResource.Spec[resourceConfigKey]
+	if !ok {
+		return fmt.Errorf("resource from central did not have a config map")
+	}
+
+	if value, ok := config.(map[string]interface{})[enableAPIConfig]; ok {
+		c.EnableAPICalls = value.(bool)
+	}
+
+	// copy any other values from the agentResource to the AgentConfig
+	...
+	...
+
+	return nil
+}
 ```
 
 ### Amplify Ingestion output configuration
