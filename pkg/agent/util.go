@@ -1,14 +1,12 @@
 package agent
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // getTimestamp - Returns current timestamp formatted for API Server
@@ -30,20 +28,10 @@ func getTimestamp() v1Time.Time {
 // struct variable.
 // Makes call to ApplyResources method with dataplane and agent resources from API server
 func ApplyResourceToConfig(cfg interface{}) error {
-	obj := cfg
-
 	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IResourceConfig interface
 	// within its struct, but does NOT implement the ApplyResources method. While it might be that this method really isn't necessary, we will
 	// log an error alerting the user in case it wasn't intentional.
-	defer func() {
-		if err := recover(); err != nil {
-			str := fmt.Sprintf("%v", err)
-			if strings.Contains(str, "nil pointer dereference") {
-				log.Errorf("The function 'ApplyResources' for interface IResourceConfigCallback is not implemented in %s.", reflect.TypeOf(obj))
-			}
-		}
-		// }
-	}()
+	defer util.HandleInterfaceFuncNotImplemented(cfg, "ApplyResources", "IResourceConfigCallback")
 
 	agentRes := GetAgentResource()
 	if agentRes == nil {
