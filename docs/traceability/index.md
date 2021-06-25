@@ -951,7 +951,7 @@ go mod tidy
 go mod verify
 ```
 
-To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system.
+To build the agent once the dependencies are resolved, the *make build* command can be used which compile the source and generates the binary executable for the target system.
 The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to setup agent name, version, commit SHA and build time.
 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
