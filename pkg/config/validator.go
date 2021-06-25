@@ -15,6 +15,9 @@ import (
 // as the validation for CentralConfig is already done during parseCentralConfig
 func ValidateConfig(cfg interface{}) error {
 	obj := cfg
+	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IConfigValidator interface
+	// within its struct, but does NOT implement the ValidateCfg method. While it might be that this method really isn't necessary, we will
+	// log an error alerting the user in case it wasn't intentional.
 	defer func() {
 		if err := recover(); err != nil {
 			str := fmt.Sprintf("%v", err)

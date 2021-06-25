@@ -31,6 +31,10 @@ func getTimestamp() v1Time.Time {
 // Makes call to ApplyResources method with dataplane and agent resources from API server
 func ApplyResourceToConfig(cfg interface{}) error {
 	obj := cfg
+
+	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IResourceConfig interface
+	// within its struct, but does NOT implement the ApplyResources method. While it might be that this method really isn't necessary, we will
+	// log an error alerting the user in case it wasn't intentional.
 	defer func() {
 		if err := recover(); err != nil {
 			str := fmt.Sprintf("%v", err)
