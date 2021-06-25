@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"time"
 
-	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // getTimestamp - Returns current timestamp formatted for API Server
 // if the local status exists, return the local timestamp, otherwise return Now()
-func getTimestamp() v1Time.Time {
+func getTimestamp() v1.Time {
 	activityTime := time.Now()
 	if statusUpdate != nil {
 		curTime := getLocalActivityTime()
@@ -19,7 +19,7 @@ func getTimestamp() v1Time.Time {
 			activityTime = curTime
 		}
 	}
-	newV1Time := v1Time.Time(activityTime)
+	newV1Time := v1.Time(activityTime)
 	return newV1Time
 }
 
