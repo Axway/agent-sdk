@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
@@ -16,7 +17,7 @@ import (
 func ComputeHash(data interface{}) (uint64, error) {
 	dataB, err := json.Marshal(data)
 	if err != nil {
-		return 0, fmt.Errorf("Could not marshal data to bytes")
+		return 0, fmt.Errorf("could not marshal data to bytes")
 	}
 
 	h := fnv.New64a()
@@ -109,4 +110,9 @@ func RemoveDuplicateValuesFromStringSlice(strSlice []string) []string {
 		}
 	}
 	return list
+}
+
+// ConvertTimeToMillis - convert to milliseconds
+func ConvertTimeToMillis(tm time.Time) int64 {
+	return tm.UnixNano() / 1e6
 }

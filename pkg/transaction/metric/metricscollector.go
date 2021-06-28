@@ -9,6 +9,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	jwt "github.com/dgrijalva/jwt-go"
 	metrics "github.com/rcrowley/go-metrics"
@@ -131,10 +132,7 @@ func (c *collector) Status() error {
 
 // Ready - indicates that the collector job is ready to process
 func (c *collector) Ready() bool {
-	if agent.GetCentralConfig().GetEnvironmentID() == "" {
-		return false
-	}
-	return true
+	return agent.GetCentralConfig().GetEnvironmentID() != ""
 }
 
 // Execute - process the metric collection and generation of usage/metric event
@@ -144,7 +142,7 @@ func (c *collector) Execute() error {
 
 	c.endTime = time.Now()
 	c.orgGUID = c.getOrgGUID()
-	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 	defer func() {
 		c.cleanup()
 	}()
@@ -152,10 +150,6 @@ func (c *collector) Execute() error {
 	c.generateEvents()
 	c.publishEvents()
 	return nil
-}
-
-func convertTimeToMillis(tm time.Time) int64 {
-	return tm.UnixNano() / 1e6
 }
 
 // AddMetric - add metric for API transaction to collection
@@ -228,7 +222,7 @@ func (c *collector) generateEvents() {
 
 	c.registry.Each(c.processUsageFromRegistry)
 	if len(c.publishItemQueue) == 0 {
-		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 	}
 }
 
@@ -275,7 +269,7 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counte
 		metric: transactionCount,
 	}
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
-	log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", convertTimeToMillis(c.startTime), convertTimeToMillis(c.endTime))
+	log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 }
 
 // func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
@@ -354,7 +348,7 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Error("Failed to publish usage event : ", err.Error())
+				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval. ", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
 			} else {
 				c.cleanupCounters(eventQueueItem)
 			}
