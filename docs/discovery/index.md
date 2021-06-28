@@ -136,7 +136,7 @@ type AgentConfig struct {
 }
 ```
 
-To validate the config, following interface provided by config package in SDK can be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
+To validate the config, the following interface provided by config package in SDK must be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
 ```
 // IConfigValidator - Interface to be implemented for config validation by agent
 type IConfigValidator interface {
@@ -157,6 +157,35 @@ func (c *AgentConfig) ValidateCfg() (err error) {
 		return errors.New("Error: azure.tenantID is empty"))
 	}
 
+	...
+	...
+
+	return nil
+}
+
+```
+If there are ResourceInstance values that you want to apply to your agent config, the following interface provided by config package in SDK must be implemented for the agent config. The ApplyResources() method is called by SDK after parsing the config from command line.
+```
+// IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource for agent
+type IResourceConfigCallback interface {
+	ApplyResources(agentResource *v1.ResourceInstance) error
+}
+```
+
+For e.g.
+
+```
+// ApplyResources - Applies the agent and dataplane resource to config
+func (a *AgentConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
+	var da *v1alpha1.DiscoveryAgent
+	if agentResource.ResourceMeta.GroupKind.Kind == "DiscoveryAgent" {
+		da = &v1alpha1.DiscoveryAgent{}
+		err := da.FromInstance(agentResource)
+		if err != nil {
+			return err
+		}
+	}
+	// copy any values from the agentResource to the AgentConfig
 	...
 	...
 
@@ -655,7 +684,7 @@ go mod tidy
 go mod verify
 ```
 
-To build the agent once the dependencies are resolved *go build* command can be used which compile the source and generates the binary executable for the target system. 
+After resolving the dependencies, run *make build* to compile the source and generate the binary executable for the target system.
 The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to set up agent name, version, commit SHA and build time.
 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
