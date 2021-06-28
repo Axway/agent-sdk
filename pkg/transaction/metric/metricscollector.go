@@ -348,7 +348,7 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
+				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval. ", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
 			} else {
 				c.cleanupCounters(eventQueueItem)
 			}
