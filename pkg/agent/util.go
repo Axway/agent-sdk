@@ -13,7 +13,7 @@ import (
 // if the local status exists, return the local timestamp, otherwise return Now()
 func getTimestamp() v1.Time {
 	activityTime := time.Now()
-	if statusUpdate != nil {
+	if periodicStatusUpdate != nil {
 		curTime := getLocalActivityTime()
 		if !curTime.IsZero() {
 			activityTime = curTime

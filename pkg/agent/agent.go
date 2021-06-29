@@ -119,7 +119,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 			hc.StartPeriodicHealthCheck()
 		}
 
-		StartPeriodicStatusUpdate()
+		StartAgentStatusUpdate()
 		startAPIServiceCache()
 	}
 	agent.isInitialized = true
@@ -180,11 +180,8 @@ func isRunningInDockerContainer() bool {
 
 	// Convert []byte to string and print to screen
 	text := string(bytes)
-	if strings.Contains(text, ":/docker") {
-		return true
-	}
 
-	return false
+	return strings.Contains(text, ":/docker")
 }
 
 // initializeTokenRequester - Create a new auth token requestor

@@ -9,16 +9,24 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-type periodicStatusUpdate struct {
+const (
+	periodic  = "Periodic status change"
+	immediate = "Immediate status change"
+)
+
+type agentStatusUpdate struct {
 	jobs.Job
-	previousActivityTime time.Time
-	currentActivityTime  time.Time
-	prevStatus           string
+	previousActivityTime  time.Time
+	currentActivityTime   time.Time
+	prevStatus            string
+	immediateStatusChange bool
+	typeOfStatusUpdate    string
 }
 
-var statusUpdate *periodicStatusUpdate
+var periodicStatusUpdate *agentStatusUpdate
+var immediateStatusUpdate *agentStatusUpdate
 
-func (su *periodicStatusUpdate) Ready() bool {
+func (su *agentStatusUpdate) Ready() bool {
 	if runStatusUpdateCheck() != nil {
 		return false
 	}
@@ -34,7 +42,7 @@ func (su *periodicStatusUpdate) Ready() bool {
 	return true
 }
 
-func (su *periodicStatusUpdate) Status() error {
+func (su *agentStatusUpdate) Status() error {
 	// error out if the agent name does not exist
 	err := runStatusUpdateCheck()
 	if err != nil {
@@ -43,7 +51,7 @@ func (su *periodicStatusUpdate) Status() error {
 	return nil
 }
 
-func (su *periodicStatusUpdate) Execute() error {
+func (su *agentStatusUpdate) Execute() error {
 	// error out if the agent name does not exist
 	err := runStatusUpdateCheck()
 	if err != nil {
@@ -53,8 +61,20 @@ func (su *periodicStatusUpdate) Execute() error {
 
 	// get the status from the health check and jobs
 	status := su.getCombinedStatus()
+	log.Debugf("Type of agent status update being checked %s : ", su.typeOfStatusUpdate)
 
 	if su.prevStatus != status {
+		// Check to see if this is the immediate status change
+		if su.immediateStatusChange {
+			// If change of status is coming FROM or TO 'unhealthy', then report this immediately
+			if su.prevStatus == AgentRunning || status == AgentRunning {
+				log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", su.prevStatus, status)
+				UpdateStatus(status, "")
+				su.prevStatus = status
+				return nil
+			}
+		}
+
 		UpdateLocalActivityTime()
 	}
 
@@ -68,18 +88,40 @@ func (su *periodicStatusUpdate) Execute() error {
 	return nil
 }
 
-// StartPeriodicStatusUpdate - starts a job that runs the periodic status updates
-func StartPeriodicStatusUpdate() {
+// StartAgentStatusUpdate - starts a job that runs the periodic status updates
+func StartAgentStatusUpdate() {
+	startPeriodicStatusUpdate()
+	startImmediateStatusUpdate()
+}
+
+// startPeriodicStatusUpdate - start periodic status updates based on report activity frequency config
+func startPeriodicStatusUpdate() {
 	interval := agent.cfg.GetReportActivityFrequency()
-	statusUpdate = &periodicStatusUpdate{}
-	_, err := jobs.RegisterDetachedIntervalJob(statusUpdate, interval)
+	periodicStatusUpdate = &agentStatusUpdate{
+		typeOfStatusUpdate: periodic,
+	}
+	_, err := jobs.RegisterDetachedIntervalJob(periodicStatusUpdate, interval)
 
 	if err != nil {
 		log.Error(errors.Wrap(errors.ErrStartingPeriodicStatusUpdate, err.Error()))
 	}
 }
 
-func (su *periodicStatusUpdate) getCombinedStatus() string {
+// startImmediateStatusUpdate - start job that will 'immediately' update status.  NOTE : the time interval for this job is hard coded
+func startImmediateStatusUpdate() {
+	interval := 10 * time.Second
+	immediateStatusUpdate = &agentStatusUpdate{
+		immediateStatusChange: true,
+		typeOfStatusUpdate:    immediate,
+	}
+	_, err := jobs.RegisterDetachedIntervalJob(immediateStatusUpdate, interval)
+
+	if err != nil {
+		log.Error(errors.Wrap(errors.ErrStartingImmediateStatusUpdate, err.Error()))
+	}
+}
+
+func (su *agentStatusUpdate) getCombinedStatus() string {
 	status := su.getJobPoolStatus()
 	hcStatus := su.getHealthcheckStatus()
 	if hcStatus != AgentRunning {
@@ -89,7 +131,7 @@ func (su *periodicStatusUpdate) getCombinedStatus() string {
 }
 
 // getJobPoolStatus
-func (su *periodicStatusUpdate) getJobPoolStatus() string {
+func (su *agentStatusUpdate) getJobPoolStatus() string {
 	status := jobs.GetStatus()
 
 	// update the status only if not running
@@ -100,7 +142,7 @@ func (su *periodicStatusUpdate) getJobPoolStatus() string {
 }
 
 // getHealthcheckStatus
-func (su *periodicStatusUpdate) getHealthcheckStatus() string {
+func (su *agentStatusUpdate) getHealthcheckStatus() string {
 	hcStatus := hc.GetGlobalStatus()
 
 	// update the status only if not running
@@ -120,9 +162,9 @@ func runStatusUpdateCheck() error {
 
 // UpdateLocalActivityTime - updates the local activity timestamp for the event to compare against
 func UpdateLocalActivityTime() {
-	statusUpdate.currentActivityTime = time.Now()
+	periodicStatusUpdate.currentActivityTime = time.Now()
 }
 
 func getLocalActivityTime() time.Time {
-	return statusUpdate.currentActivityTime
+	return periodicStatusUpdate.currentActivityTime
 }
