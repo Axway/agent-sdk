@@ -107,7 +107,8 @@ func startPeriodicStatusUpdate() {
 	}
 }
 
-// startImmediateStatusUpdate - start job that will 'immediately' update status.  NOTE : the time interval for this job is hard coded
+// startImmediateStatusUpdate - start job that will 'immediately' update status.  NOTE : By 'immediately', this means currently 10 seconds.
+// The time interval for this job is hard coded.
 func startImmediateStatusUpdate() {
 	interval := 10 * time.Second
 	immediateStatusUpdate = &agentStatusUpdate{
