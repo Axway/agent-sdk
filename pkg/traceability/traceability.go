@@ -11,7 +11,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
@@ -207,14 +206,23 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	}
 
 	publishCount := len(batch.Events())
-	log.Infof("Publishing %d events", publishCount)
+
+	if publishCount > 0 {
+		log.Infof("Creating %d transaction events", publishCount)
+	}
+
 	//update the local activity timestamp for the event to compare against
 	agent.UpdateLocalActivityTime()
 	err = client.transportClient.Publish(batch)
 	if err != nil {
+		log.Error("Failed to publish transaction event : ", err.Error())
 		return err
 	}
-	log.Infof("Published %d events", publishCount-len(batch.Events()))
+
+	if publishCount-len(batch.Events()) > 0 {
+		log.Infof("%d events have been published", publishCount-len(batch.Events()))
+	}
+
 	return nil
 }
 

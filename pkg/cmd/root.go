@@ -242,7 +242,7 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	if c.agentCfg != nil {
-		err := agent.ApplyResouceToConfig(c.agentCfg)
+		err := agent.ApplyResourceToConfig(c.agentCfg)
 		if err != nil {
 			return err
 		}

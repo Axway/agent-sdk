@@ -4,13 +4,14 @@ import (
 	"reflect"
 	"time"
 
-	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // getTimestamp - Returns current timestamp formatted for API Server
 // if the local status exists, return the local timestamp, otherwise return Now()
-func getTimestamp() v1Time.Time {
+func getTimestamp() v1.Time {
 	activityTime := time.Now()
 	if statusUpdate != nil {
 		curTime := getLocalActivityTime()
@@ -18,15 +19,20 @@ func getTimestamp() v1Time.Time {
 			activityTime = curTime
 		}
 	}
-	newV1Time := v1Time.Time(activityTime)
+	newV1Time := v1.Time(activityTime)
 	return newV1Time
 }
 
-// ApplyResouceToConfig - applies the resources to agent configs
+// ApplyResourceToConfig - applies the resources to agent configs
 // Uses reflection to get the IResourceConfigCallback interface on the config struct or
 // struct variable.
 // Makes call to ApplyResources method with dataplane and agent resources from API server
-func ApplyResouceToConfig(cfg interface{}) error {
+func ApplyResourceToConfig(cfg interface{}) error {
+	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IResourceConfig interface
+	// within its struct, but does NOT implement the ApplyResources method. While it might be that this method really isn't necessary, we will
+	// log an error alerting the user in case it wasn't intentional.
+	defer util.HandleInterfaceFuncNotImplemented(cfg, "ApplyResources", "IResourceConfigCallback")
+
 	agentRes := GetAgentResource()
 	if agentRes == nil {
 		return nil
@@ -46,12 +52,12 @@ func ApplyResouceToConfig(cfg interface{}) error {
 		v = reflect.Indirect(v)
 	}
 
-	// Look for Validate method on struct properties and invoke it
+	// Look for ApplyResouceToConfig method on struct properties and invoke it
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).CanInterface() {
 			fieldInterface := v.Field(i).Interface()
 			if objInterface, ok := fieldInterface.(config.IResourceConfigCallback); ok {
-				err := ApplyResouceToConfig(objInterface)
+				err := ApplyResourceToConfig(objInterface)
 				if err != nil {
 					return err
 				}

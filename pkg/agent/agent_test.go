@@ -146,7 +146,7 @@ func TestAgentInitialize(t *testing.T) {
 		resourceChanged: false,
 	}
 
-	ApplyResouceToConfig(agentCfg)
+	ApplyResourceToConfig(agentCfg)
 
 	assert.True(t, agentCfg.resourceChanged)
 
