@@ -54,7 +54,16 @@ func (res *AssetRelease) FromInstance(ri *apiv1.ResourceInstance) error {
 		return nil
 	}
 
-	err := json.Unmarshal(ri.GetRawResource(), res)
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = json.Unmarshal(rawResource, res)
 	return err
 }
 

@@ -35,8 +35,10 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	// unmarshal the rawResource to map[string]interface{}
 	rawStruct := map[string]interface{}{}
-	if err := json.Unmarshal(ri.rawResource, &rawStruct); err != nil {
-		return []byte{}, err
+	if ri.rawResource != nil {
+		if err := json.Unmarshal(ri.rawResource, &rawStruct); err != nil {
+			return []byte{}, err
+		}
 	}
 
 	// marshal the current resource instance then unmarshal it into map[string]interface{}{}
