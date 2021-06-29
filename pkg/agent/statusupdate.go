@@ -88,7 +88,7 @@ func (su *agentStatusUpdate) Execute() error {
 	return nil
 }
 
-// StartAgentStatusUpdate - starts a job that runs the periodic status updates
+// StartAgentStatusUpdate - starts 2 separate jobs that runs the periodic status updates and immediate status updates
 func StartAgentStatusUpdate() {
 	startPeriodicStatusUpdate()
 	startImmediateStatusUpdate()
