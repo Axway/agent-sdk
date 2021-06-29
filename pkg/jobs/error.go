@@ -2,7 +2,7 @@ package jobs
 
 import "github.com/Axway/agent-sdk/pkg/util/errors"
 
-// Errors hit when validating AMPLIFY Central connectivity
+// Errors hit when validating Amplify Central connectivity
 var (
 	ErrRegisteringJob    = errors.Newf(1600, "%v job registration failed")
 	ErrExecutingJob      = errors.Newf(1601, "Error in %v job %v execution")

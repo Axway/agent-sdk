@@ -1,4 +1,4 @@
-# AMPLIFY Agent SDK Utilities
+# Amplify Agent SDK Utilities
 
 In addition to the core features provided by Agent SDK around API discovery and traceability, it also provide some of the helpful utilities that developers can use while building agent as and where needed.
 

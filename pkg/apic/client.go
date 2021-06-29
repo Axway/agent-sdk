@@ -25,7 +25,7 @@ const (
 	Oauth       = "verify-oauth-token"
 )
 
-const serverName = "AMPLIFY Central"
+const serverName = "Amplify Central"
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
