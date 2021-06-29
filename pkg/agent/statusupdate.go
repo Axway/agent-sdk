@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	periodic  = "Periodic status change"
-	immediate = "Immediate status change"
+	periodic  = "periodic status change"
+	immediate = "immediate status change"
 )
 
 type agentStatusUpdate struct {
@@ -61,7 +61,7 @@ func (su *agentStatusUpdate) Execute() error {
 
 	// get the status from the health check and jobs
 	status := su.getCombinedStatus()
-	log.Debugf("Type of agent status update being checked %s : ", su.typeOfStatusUpdate)
+	log.Tracef("Type of agent status update being checked %s : ", su.typeOfStatusUpdate)
 
 	if su.prevStatus != status {
 		// Check to see if this is the immediate status change
@@ -98,10 +98,10 @@ func startPeriodicStatusUpdate() {
 	periodicStatusUpdate = &agentStatusUpdate{
 		typeOfStatusUpdate: periodic,
 	}
-	_, err := jobs.RegisterDetachedIntervalJob(periodicStatusUpdate, interval)
+	_, err := jobs.RegisterIntervalJob(periodicStatusUpdate, interval)
 
 	if err != nil {
-		log.Error(errors.Wrap(errors.ErrStartingPeriodicStatusUpdate, err.Error()))
+		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(periodic))
 	}
 }
 
@@ -116,7 +116,7 @@ func startImmediateStatusUpdate() {
 	_, err := jobs.RegisterDetachedIntervalJob(immediateStatusUpdate, interval)
 
 	if err != nil {
-		log.Error(errors.Wrap(errors.ErrStartingImmediateStatusUpdate, err.Error()))
+		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(immediate))
 	}
 }
 
@@ -154,7 +154,7 @@ func (su *agentStatusUpdate) getHealthcheckStatus() string {
 // runStatusUpdateCheck - returns an error if agent name is blank
 func runStatusUpdateCheck() error {
 	if agent.cfg.GetAgentName() == "" {
-		return errors.ErrStartingPeriodicStatusUpdate
+		return errors.ErrStartingAgentStatusUpdate.FormatError(periodic)
 	}
 	return nil
 }
