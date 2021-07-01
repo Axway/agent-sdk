@@ -280,7 +280,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	traceabilityClient := group.Clients[0].(*Client)
 	batch := createBatch("{\"f1\":\"test\"}")
 	traceabilityClient.Connect()
-	agent.StartPeriodicStatusUpdate()
+	agent.StartAgentStatusUpdate()
 	err = traceabilityClient.Publish(batch)
 	traceabilityClient.Close()
 
@@ -317,7 +317,7 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 	batch := createBatch("{\"f0\":\"dummy\"}")
 
 	traceabilityClient.Connect()
-	agent.StartPeriodicStatusUpdate()
+	agent.StartAgentStatusUpdate()
 	err = traceabilityClient.Publish(batch)
 	traceabilityClient.Close()
 	assert.Nil(t, err)
