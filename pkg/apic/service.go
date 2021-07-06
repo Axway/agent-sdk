@@ -37,7 +37,7 @@ func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APISe
 	if err != nil {
 		return nil, err
 	}
-	// Update description title after creating APIService to inlcude the stage name if it exists
+	// Update description title after creating APIService to include the stage name if it exists
 	c.postAPIServiceUpdate(&serviceBody)
 	err = c.processRevision(&serviceBody)
 	if err != nil {

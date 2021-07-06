@@ -100,7 +100,7 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 
 	// Force piplining to 0
 	if outputConfig.Pipelining > 0 {
-		log.Warn("Pipelining is not supported by AMPLIFY Visibility yet, forcing to synchronous")
+		log.Warn("Pipelining is not supported by Amplify Visibility yet, forcing to synchronous")
 		outputConfig.Pipelining = 0
 	}
 

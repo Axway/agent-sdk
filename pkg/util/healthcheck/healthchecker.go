@@ -89,7 +89,7 @@ func WaitForReady() error {
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {
-				log.Info("Services are Ready")
+				log.Debug("Services are Ready")
 				return nil
 			}
 		}
@@ -233,7 +233,6 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func checkHandler(w http.ResponseWriter, r *http.Request) {
 	// Run the checks to get the latest results
 	path := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	log.Infof("%v", path)
 	if len(path) != 2 || path[0] != "status" {
 		log.Errorf("Error getting status for path %s, expected /status/[endpoint]", r.URL.Path)
 		w.WriteHeader(http.StatusInternalServerError)

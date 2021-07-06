@@ -113,6 +113,7 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
 		ret, err := agent.apicClient.PublishService(serviceBody)
 		if err == nil {
+			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.Environment)
 			apiSvc, e := ret.AsInstance()
 			if e == nil {
 				addItemToAPICache(*apiSvc)

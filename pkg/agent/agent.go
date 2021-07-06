@@ -274,16 +274,12 @@ func refreshResources() (bool, error) {
 }
 
 func setupSignalProcessor() {
-	// IMP - To be removed once the model is in production
-	if agent.cfg.GetAgentName() == "" {
-		return
-	}
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-sigs
 		cleanUp()
+		log.Info("Stopping Discovery agent")
 		os.Exit(0)
 	}()
 }

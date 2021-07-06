@@ -1,4 +1,4 @@
-# AMPLIFY Agent SDK Utilities
+# Amplify Agent SDK Utilities
 
 In addition to the core features provided by Agent SDK around API discovery and traceability, it also provide some of the helpful utilities that developers can use while building agent as and where needed.
 
@@ -45,8 +45,8 @@ Below is a sample of constructing the request, use the HTTP client to send the r
 
     response, err := apiClient.Send(request)
 
-    log.Info("Status : " + strconv.Itoa(response.Code))
-    log.Info("Body : " + string(response.Body))
+    log.Debug("Status : " + strconv.Itoa(response.Code))
+    log.Debug("Body : " + string(response.Body))
 ```
 
 # Cache
@@ -169,7 +169,7 @@ func Warn(args ...interface{})
 func Warnf(format string, args ...interface{})
 ```
 
-Some of the samples of log using Agent SDK logger
+Some of the samples of logging using Agent SDK logger
 ```
 log.Info("Some thing to log")
 log.Infof("Log entry with format, %s", "additional log ~~message")

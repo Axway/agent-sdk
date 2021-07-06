@@ -10,6 +10,7 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -68,12 +69,14 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
 		c.updateRevisionResource(revision, serviceBody)
+		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	} else {
 		revAttributes = make(map[string]string)
 		if serviceBody.serviceContext.previousRevision != nil {
 			revAttributes[AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
 		}
 		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
+		log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	}
 
 	buffer, err := json.Marshal(revision)

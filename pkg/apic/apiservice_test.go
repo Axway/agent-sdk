@@ -329,7 +329,7 @@ func TestDeleteConsumerInstance(t *testing.T) {
 	httpClient.ResponseCode = http.StatusRequestTimeout
 	err := client.DeleteConsumerInstance("12345")
 	assert.NotNil(t, err)
-	assert.Contains(t, "[Error Code 1120] - error making a request to AMPLIFY: status - 408", err.Error())
+	assert.Contains(t, "[Error Code 1120] - error making a request to Amplify: status - 408", err.Error())
 
 	httpClient.ResponseCode = http.StatusNoContent
 	err = client.DeleteConsumerInstance("12345")
