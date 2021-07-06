@@ -159,7 +159,7 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
-	assert.Equal(t, "", GetAttributeOnPublishedAPI("2222", apic.AttrExternalAPIID))
+	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", apic.AttrExternalAPIID))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByName("NAME", attributeKey))
 
@@ -167,7 +167,7 @@ func TestDiscoveryCache(t *testing.T) {
 	var apiSvc v1alpha1.APIService
 	apiSvc.FromInstance(&apiSvc2)
 	agent.apicClient = &mockSvcClient{apiSvc: &apiSvc}
-	StartPeriodicStatusUpdate()
+	StartAgentStatusUpdate()
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
 	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))

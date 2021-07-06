@@ -37,4 +37,5 @@ type ConsumerInstanceSpec struct {
 	UnstructuredDataProperties ConsumerInstanceSpecUnstructuredDataProperties `json:"unstructuredDataProperties,omitempty"`
 	AdditionalDataProperties   ConsumerInstanceSpecAdditionalDataProperties   `json:"additionalDataProperties,omitempty"`
 	Subscription               ConsumerInstanceSpecSubscription               `json:"subscription,omitempty"`
+	Categories                 []string                                       `json:"categories,omitempty"`
 }
