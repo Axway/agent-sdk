@@ -12,9 +12,12 @@ package v1alpha1
 // ResourceDefinitionSpecReferencesToResources struct for ResourceDefinitionSpecReferencesToResources
 type ResourceDefinitionSpecReferencesToResources struct {
 	// Defines the kind of the resource.
+	Group string `json:"group,omitempty"`
+	// Defines the kind of the resource.
 	Kind string `json:"kind,omitempty"`
 	// Defines the scope kind of the resource. Omit for unscoped resources.
 	ScopeKind string `json:"scopeKind,omitempty"`
 	// The type of the reference.
-	Types []string `json:"types,omitempty"`
+	Types []string                             `json:"types,omitempty"`
+	From  ResourceDefinitionSpecReferencesFrom `json:"from,omitempty"`
 }
