@@ -40,7 +40,9 @@ func init() {
 type {{.res.kind}} struct {
 	apiv1.ResourceMeta
 	{{range $field, $isNotEmpty := .res.fields}}
-		{{$field | strings.Title}} {{if $isNotEmpty}} {{$.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws"}}{{$field | strings.Title}} {{else}} struct{} {{end}} `json:"{{$field | strings.ToLower}}"`
+		{{ $type := $field | strings.Title }}
+		{{ $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" }}
+		{{	$type }} {{if $isNotEmpty}} {{$varName}}{{$type}} {{else}} interface{} {{end}} `json:"{{$field | strings.ToLower}}"`
 	{{end}}
 }
 
@@ -51,19 +53,16 @@ func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
 	}
 
-	spec := &{{if .res.fields.spec }}{{$.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws"}}Spec{{else}}struct{}{{end}}{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = {{.res.kind}}{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err = json.Unmarshal(rawResource, res)
 	return err
 }
 
@@ -84,19 +83,20 @@ func {{.res.kind}}FromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*{{.
 
 // AsInstance converts a {{.res.kind}} to a ResourceInstance
 func (res *{{.res.kind}}) AsInstance() (*apiv1.ResourceInstance, error) {
-	m, err := json.Marshal(res.Spec)
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = {{.res.kind}}GVK()
+	res.ResourceMeta = meta
+
+	m, err := json.Marshal(res)
 	if err != nil {
 		return nil, err
 	}
 
-	spec := map[string]interface{}{}
-	err = json.Unmarshal(m, &spec)
+	instance := apiv1.ResourceInstance{}
+	err = json.Unmarshal(m, &instance)
 	if err != nil {
 		return nil, err
 	}
 
-        meta := res.ResourceMeta
-        meta.GroupVersionKind = {{.res.kind}}GVK()
-
-	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
+	return &instance, nil
 }

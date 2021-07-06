@@ -38,11 +38,9 @@ func init() {
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
 
-	// GENERATE: The following code has been modified after code generation
-	// 	Owner struct{} `json:"owner"`
-	Owner *struct{} `json:"owner,omitempty"`
+	Owner interface{} `json:"owner"`
 
-	References struct{} `json:"references"`
+	References interface{} `json:"references"`
 
 	Spec AssetRequestDefinitionSpec `json:"spec"`
 }
@@ -54,19 +52,16 @@ func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) erro
 		return nil
 	}
 
-	m, err := json.Marshal(ri.Spec)
-	if err != nil {
-		return err
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
 	}
 
-	spec := &AssetRequestDefinitionSpec{}
-	err = json.Unmarshal(m, spec)
-	if err != nil {
-		return err
-	}
-
-	*res = AssetRequestDefinition{ResourceMeta: ri.ResourceMeta, Spec: *spec}
-
+	err = json.Unmarshal(rawResource, res)
 	return err
 }
 
@@ -87,19 +82,20 @@ func AssetRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance
 
 // AsInstance converts a AssetRequestDefinition to a ResourceInstance
 func (res *AssetRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error) {
-	m, err := json.Marshal(res.Spec)
-	if err != nil {
-		return nil, err
-	}
-
-	spec := map[string]interface{}{}
-	err = json.Unmarshal(m, &spec)
-	if err != nil {
-		return nil, err
-	}
-
 	meta := res.ResourceMeta
 	meta.GroupVersionKind = AssetRequestDefinitionGVK()
+	res.ResourceMeta = meta
 
-	return &apiv1.ResourceInstance{ResourceMeta: meta, Spec: spec}, nil
+	m, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	instance := apiv1.ResourceInstance{}
+	err = json.Unmarshal(m, &instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &instance, nil
 }
