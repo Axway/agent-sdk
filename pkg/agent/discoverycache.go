@@ -165,21 +165,21 @@ func shouldDeleteService(apiID, stage string) bool {
 
 func deleteConsumerInstanceOrService(consumerInstance *v1alpha1.ConsumerInstance, externalAPIID, externalAPIStage string) {
 	if shouldDeleteService(externalAPIID, externalAPIStage) {
-		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from Amplify Central", consumerInstance.Title)
+		log.Debugf("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s from Amplify Central", consumerInstance.Title)
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
 		if err != nil {
 			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(consumerInstance.Title))
 		} else {
-			log.Infof("Deleted API Service for catalog item %s from Amplify Central", consumerInstance.Title)
+			log.Debugf("Deleted API Service for catalog item %s from Amplify Central", consumerInstance.Title)
 		}
 	} else {
-		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s from Amplify Central", consumerInstance.Title)
+		log.Debugf("API no longer exists on the dataplane, deleting the catalog item %s from Amplify Central", consumerInstance.Title)
 		err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
 		if err != nil {
 			log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(consumerInstance.Title))
 		} else {
-			log.Infof("Deleted catalog item %s from Amplify Central", consumerInstance.Title)
+			log.Debugf("Deleted catalog item %s from Amplify Central", consumerInstance.Title)
 		}
 	}
 }

@@ -72,7 +72,7 @@ func (s *SubscriptionNotification) SetOauthInfo(clientID, clientSecret string) {
 // SetAuthorizationTemplate - Set the authtemplate in the config central.subscriptions.notifications.smtp.subscribe.body {authtemplate}
 func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 	if authType == "" {
-		log.Info("Subcription notification configuration for authorization type is not set")
+		log.Debug("Subscription notification configuration for authorization type is not set")
 		return
 	}
 
@@ -110,6 +110,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 			log.Debugf("Webhook notification sent to %s.", recipient)
 
 		case config.NotifySMTP:
+			log.Info("Sending subscription email to subscriber.")
 			err := s.notifyViaSMTP()
 			if err != nil {
 				return utilerrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("smtp")

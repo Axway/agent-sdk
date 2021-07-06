@@ -311,7 +311,6 @@ func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
 	startTime := time.Now()
 	client := ptg.getHTTPClient()
-	log.Debugf("token to be used: %s", requestToken)
 	resp, err := client.PostForm(ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
 		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},

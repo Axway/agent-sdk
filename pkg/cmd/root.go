@@ -169,7 +169,7 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Infof("Config file changed : %s", e.Name)
+		log.Debugf("Config file changed : %s", e.Name)
 		c.onConfigChange()
 	})
 
