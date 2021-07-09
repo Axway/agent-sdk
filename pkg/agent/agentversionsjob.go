@@ -150,10 +150,8 @@ func (avj *agentVersionCheckJob) getLatestVersionFromJFrog() string {
 		if trimmed != ".." && trimmed != "latest" && trimmed != "" {
 			v := getSemVer(trimmed)
 			// avoid a version with an 8 digit date as the patch number: 1.0.20210421
-			if !re.MatchString(strconv.Itoa(v.patch)) {
-				if isVersionSmaller(tempMaxVersion, v) {
-					copyVersionStruct(&tempMaxVersion, v)
-				}
+			if !re.MatchString(strconv.Itoa(v.patch)) && isVersionSmaller(tempMaxVersion, v) {
+				copyVersionStruct(&tempMaxVersion, v)
 			}
 		}
 	}
