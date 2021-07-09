@@ -73,33 +73,11 @@ func (avj *agentVersionCheckJob) Execute() error {
 		log.Error(err)
 		return err
 	}
-
 	// compare build to latest version
-	if isVersionOlder(avj.buildVersion, avj.latestVersion) {
+	if isVersionStringOlder(avj.buildVersion, avj.latestVersion) {
 		log.Infof("Running older version of %s. Please consider upgrading from version %s to version %s", avj.dataPlaneType, avj.buildVersion, avj.latestVersion)
 	}
 	return nil
-}
-
-// isVersionOlder - return true if version of arg1 is older than arg2
-func isVersionOlder(build string, latest string) bool {
-	vB := getSemVer(build)
-	vL := getSemVer(latest)
-
-	if vB.major < vL.major {
-		return true
-	} else if vB.major == vL.major && vB.minor < vL.minor {
-		return true
-	} else if vB.major == vL.major && vB.minor == vL.minor && vB.patch < vL.patch {
-		return true
-	}
-
-	return false
-}
-
-func (avj *agentVersionCheckJob) setURLName() {
-	avj.dataPlaneType = agent.cfg.GetBuildDataPlaneType()
-	avj.urlName = agentURL[avj.dataPlaneType]
 }
 
 func (avj *agentVersionCheckJob) getBuildVersion() error {
@@ -126,12 +104,37 @@ func (avj *agentVersionCheckJob) getJFrogVersions(name string) error {
 	}
 
 	avj.allVersions = hAnchors.VersionList
-	avj.latestVersion = avj.setLatestFromJFrog()
+	avj.latestVersion = avj.getLatestVersionFromJFrog()
 	return nil
 }
 
-func (avj *agentVersionCheckJob) setLatestFromJFrog() string {
-	maxTempVersion := version{
+// isVersionStringOlder - return true if version of str1 is older than str2
+func isVersionStringOlder(build string, latest string) bool {
+	vB := getSemVer(build)
+	vL := getSemVer(latest)
+
+	return isVersionSmaller(vB, vL)
+}
+
+// isVersionSmaller - return true if version1 smaller than version2
+func isVersionSmaller(v1 version, v2 version) bool {
+	if v1.major < v2.major {
+		return true
+	} else if v1.major == v2.major && v1.minor < v2.minor {
+		return true
+	} else if v1.major == v2.major && v1.minor == v2.minor && v1.patch < v2.patch {
+		return true
+	}
+	return false
+}
+
+func (avj *agentVersionCheckJob) setURLName() {
+	avj.dataPlaneType = agent.cfg.GetBuildDataPlaneType()
+	avj.urlName = agentURL[avj.dataPlaneType]
+}
+
+func (avj *agentVersionCheckJob) getLatestVersionFromJFrog() string {
+	tempMaxVersion := version{
 		major: 0,
 		minor: 0,
 		patch: 0,
@@ -140,24 +143,23 @@ func (avj *agentVersionCheckJob) setLatestFromJFrog() string {
 	re := regexp.MustCompile(`\d{8}`)
 
 	for _, v := range avj.allVersions {
+		//trimming version of / that comes from jfrog webpage
 		trimmed := strings.TrimSuffix(v, "/")
 		if trimmed != ".." && trimmed != "latest" && trimmed != "" {
 			v := getSemVer(trimmed)
 			// avoid a version with an 8 digit date as the patch number: 1.0.20210421
 			if !re.MatchString(strconv.Itoa(v.patch)) {
-				if maxTempVersion.major < v.major {
-					copyStruct(&maxTempVersion, v)
-				} else if maxTempVersion.major == v.major && maxTempVersion.minor < v.minor {
-					copyStruct(&maxTempVersion, v)
-				} else if maxTempVersion.major == v.major && maxTempVersion.minor == v.minor && maxTempVersion.patch < v.patch {
-					copyStruct(&maxTempVersion, v)
+				if isVersionSmaller(tempMaxVersion, v) {
+					copyVersionStruct(&tempMaxVersion, v)
 				}
 			}
 		}
 	}
-	return maxTempVersion.val
+	return tempMaxVersion.val
 }
 
+// getSemVer - getting a semantic version struct from version string
+// pre-req is that string is already in semantic versioning with major, minor, and patch
 func getSemVer(str string) version {
 	s := strings.Split(str, ".")
 	maj, err := strconv.Atoi(s[0])
@@ -175,7 +177,8 @@ func getSemVer(str string) version {
 	return version{}
 }
 
-func copyStruct(v1 *version, v2 version) {
+// copyVersionStruct - copying version struct by value
+func copyVersionStruct(v1 *version, v2 version) {
 	v1.major = v2.major
 	v1.minor = v2.minor
 	v1.patch = v2.patch
