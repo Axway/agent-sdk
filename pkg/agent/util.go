@@ -10,15 +10,8 @@ import (
 )
 
 // getTimestamp - Returns current timestamp formatted for API Server
-// if the local status exists, return the local timestamp, otherwise return Now()
 func getTimestamp() v1.Time {
 	activityTime := time.Now()
-	if periodicStatusUpdate != nil {
-		curTime := getLocalActivityTime()
-		if !curTime.IsZero() {
-			activityTime = curTime
-		}
-	}
 	newV1Time := v1.Time(activityTime)
 	return newV1Time
 }
