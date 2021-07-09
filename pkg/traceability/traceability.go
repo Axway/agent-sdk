@@ -211,8 +211,6 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		log.Infof("Creating %d transaction events", publishCount)
 	}
 
-	//update the local activity timestamp for the event to compare against
-	agent.UpdateLocalActivityTime()
 	err = client.transportClient.Publish(batch)
 	if err != nil {
 		log.Error("Failed to publish transaction event : ", err.Error())

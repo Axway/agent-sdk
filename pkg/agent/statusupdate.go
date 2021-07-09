@@ -72,17 +72,16 @@ func (su *agentStatusUpdate) Execute() error {
 			su.prevStatus = status
 			return nil
 		}
-
-		UpdateLocalActivityTime()
 	}
 
-	// if the last timestamp for an event has changed, update the resource
-	if time.Time(su.currentActivityTime).After(time.Time(su.previousActivityTime)) {
-		log.Tracef("Activity change detected at %s, from previous activity at %s, updating status", su.currentActivityTime, su.previousActivityTime)
+	// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
+	if su.typeOfStatusUpdate == periodic {
+		log.Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
 		UpdateStatus(status, "")
 		su.prevStatus = status
 		su.previousActivityTime = su.currentActivityTime
 	}
+
 	return nil
 }
 
@@ -157,13 +156,4 @@ func runStatusUpdateCheck() error {
 		return errors.ErrStartingAgentStatusUpdate.FormatError(periodic)
 	}
 	return nil
-}
-
-// UpdateLocalActivityTime - updates the local activity timestamp for the event to compare against
-func UpdateLocalActivityTime() {
-	periodicStatusUpdate.currentActivityTime = time.Now()
-}
-
-func getLocalActivityTime() time.Time {
-	return periodicStatusUpdate.currentActivityTime
 }
