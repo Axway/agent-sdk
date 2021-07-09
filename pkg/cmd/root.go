@@ -67,6 +67,7 @@ type agentRootCommand struct {
 func init() {
 	config.AgentTypeName = BuildAgentName
 	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
+	config.AgentDataPlaneType = BuildDataPlaneType
 	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
 	rand.Seed(time.Now().UnixNano())
 }

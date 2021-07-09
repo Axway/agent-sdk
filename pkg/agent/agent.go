@@ -121,6 +121,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 		StartAgentStatusUpdate()
 		startAPIServiceCache()
+		startAgentVersionChecker()
 	}
 	agent.isInitialized = true
 	return nil
@@ -167,6 +168,17 @@ func startAPIServiceCache() {
 		return
 	}
 	log.Tracef("registered API cache update job: %s", id)
+}
+
+// startAgentVersionChecker - single run job to check for a newer agent version on jfrog
+func startAgentVersionChecker() {
+	// register the agent version checker single run job
+	id, err := jobs.RegisterSingleRunJob(&agentVersionCheckJob{})
+	if err != nil {
+		log.Errorf("could not start the agent version checker job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered agent version checker job: %s", id)
 }
 
 func isRunningInDockerContainer() bool {
