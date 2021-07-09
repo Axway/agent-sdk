@@ -17,7 +17,7 @@ import (
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-var agentUrl = map[string]string{
+var agentURL = map[string]string{
 	"AWSDiscoveryAgent":                      "aws-apigw-discovery-agent",
 	"AWSTraceabilityAgent":                   "aws-apigw-traceability-agent",
 	"AzureDiscoveryAgent":                    "azure-discovery-agent",
@@ -117,7 +117,7 @@ func isVersionOlder(build string, latest string) bool {
 
 func (avj *agentVersionCheckJob) setURLName() {
 	avj.dataPlaneType = agent.cfg.GetBuildDataPlaneType()
-	avj.urlName = agentUrl[avj.dataPlaneType]
+	avj.urlName = agentURL[avj.dataPlaneType]
 }
 
 func (avj *agentVersionCheckJob) getBuildVersion() error {
