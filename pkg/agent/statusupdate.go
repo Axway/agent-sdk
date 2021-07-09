@@ -72,8 +72,6 @@ func (su *agentStatusUpdate) Execute() error {
 			su.prevStatus = status
 			return nil
 		}
-
-		UpdateLocalActivityTime()
 	}
 
 	// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
@@ -158,9 +156,4 @@ func runStatusUpdateCheck() error {
 		return errors.ErrStartingAgentStatusUpdate.FormatError(periodic)
 	}
 	return nil
-}
-
-// UpdateLocalActivityTime - updates the local activity timestamp for the event to compare against
-func UpdateLocalActivityTime() {
-	periodicStatusUpdate.currentActivityTime = time.Now()
 }
