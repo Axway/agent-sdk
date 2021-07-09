@@ -60,17 +60,17 @@ func (avj *agentVersionCheckJob) Status() error {
 func (avj *agentVersionCheckJob) Execute() error {
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
 		err := errors.ErrStartingVersionChecker.FormatError("empty or generic data plane type name")
-		log.Error(err)
+		log.Trace(err)
 		return err
 	}
 	err := avj.getBuildVersion()
 	if err != nil {
-		log.Error(err)
+		log.Trace(err)
 		return err
 	}
 	err = avj.getJFrogVersions(avj.urlName)
 	if err != nil {
-		log.Error(err)
+		log.Trace(err)
 		return err
 	}
 	// compare build to latest version
@@ -195,13 +195,13 @@ func loadPage(name string) []byte {
 	page := fmt.Sprintf("https://axway.jfrog.io/artifactory/ampc-public-docker-release/agent/%v/", name)
 	resp, err := http.Get(page)
 	if err != nil {
-		log.Errorf("Unable to poll jfrog for agent versions. %s", err.Error())
+		log.Tracef("Unable to poll jfrog for agent versions. %s", err.Error())
 	}
 	defer resp.Body.Close()
 	// reads html as a slice of bytes
 	html, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error(err)
+		log.Trace(err)
 	}
 	return html
 }
