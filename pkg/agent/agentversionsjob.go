@@ -89,11 +89,13 @@ func (avj *agentVersionCheckJob) getBuildVersion() error {
 	//regex check for semantic versioning
 	semVerRegexp := regexp.MustCompile(`\d.\d.\d`)
 	if avj.buildVersion == "" || !semVerRegexp.MatchString(avj.buildVersion) {
-		return errors.ErrStartingVersionChecker.FormatError("missing or non compliant build version")
+		return errors.ErrStartingVersionChecker.FormatError("build version is missing or of noncompliant semantic versioning")
 	}
 	return nil
 }
 
+// getJFrogVersions - obtaining the versions from JFrog website
+// **Note** this is a temporary solution to obtaining the list of versions by querying jfrog
 func (avj *agentVersionCheckJob) getJFrogVersions(name string) error {
 	b := loadPage(name)
 
@@ -177,7 +179,7 @@ func getSemVer(str string) version {
 	return version{}
 }
 
-// copyVersionStruct - copying version struct by value
+// copyVersionStruct - copying version2 into version1 struct by value
 func copyVersionStruct(v1 *version, v2 version) {
 	v1.major = v2.major
 	v1.minor = v2.minor
