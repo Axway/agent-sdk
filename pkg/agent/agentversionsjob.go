@@ -31,8 +31,8 @@ type htmlAnchors struct {
 }
 
 type version struct {
-	maj, min, patch int
-	val             string
+	major, minor, patch int
+	val                 string
 }
 
 // agentVersionCheckJob - polls for agent versions
@@ -83,35 +83,17 @@ func (avj *agentVersionCheckJob) Execute() error {
 
 // isVersionOlder - return true if version of arg1 is older than arg2
 func isVersionOlder(build string, latest string) bool {
-	b := strings.Split(build, ".")
-	l := strings.Split(latest, ".")
+	vB := getSemVer(build)
+	vL := getSemVer(latest)
 
-	bMaj, err := strconv.Atoi(b[0])
-	bMin, err2 := strconv.Atoi(b[1])
-	bPat, err3 := strconv.Atoi(b[2])
-	lMaj, err4 := strconv.Atoi(l[0])
-	lMin, err5 := strconv.Atoi(l[1])
-	lPat, err6 := strconv.Atoi(l[2])
-	if err == nil && err2 == nil && err3 == nil && err4 == nil && err5 == nil && err6 == nil {
-		vB := version{
-			maj:   bMaj,
-			min:   bMin,
-			patch: bPat,
-		}
-		vL := version{
-			maj:   lMaj,
-			min:   lMin,
-			patch: lPat,
-		}
-
-		if vB.maj < vL.maj {
-			return true
-		} else if vB.maj == vL.maj && vB.min < vL.min {
-			return true
-		} else if vB.maj == vL.maj && vB.min == vL.min && vB.patch < vL.patch {
-			return true
-		}
+	if vB.major < vL.major {
+		return true
+	} else if vB.major == vL.major && vB.minor < vL.minor {
+		return true
+	} else if vB.major == vL.major && vB.minor == vL.minor && vB.patch < vL.patch {
+		return true
 	}
+
 	return false
 }
 
@@ -149,53 +131,57 @@ func (avj *agentVersionCheckJob) getJFrogVersions(name string) error {
 }
 
 func (avj *agentVersionCheckJob) setLatestFromJFrog() string {
-	maxVer := version{
-		maj:   0,
-		min:   0,
+	maxTempVersion := version{
+		major: 0,
+		minor: 0,
 		patch: 0,
 		val:   "",
 	}
 	re := regexp.MustCompile(`\d{8}`)
 
 	for _, v := range avj.allVersions {
-		trim := strings.TrimSuffix(v, "/")
-
-		if trim != ".." && trim != "latest" {
-			s := strings.Split(trim, ".")
-
-			mn, err := strconv.Atoi(s[0])
-			mx, err2 := strconv.Atoi(s[1])
-			pat, err3 := strconv.Atoi(s[2])
-			if err == nil && err2 == nil && err3 == nil {
-				v := version{
-					maj:   mn,
-					min:   mx,
-					patch: pat,
-					val:   trim,
-				}
-				// avoid a version with an 8 digit date as the patch number: 1.0.20210421
-				if !re.MatchString(strconv.Itoa(v.patch)) {
-					if maxVer.maj < v.maj {
-						maxVer.maj = v.maj
-						maxVer.min = v.min
-						maxVer.patch = v.patch
-						maxVer.val = v.val
-					} else if maxVer.maj == v.maj && maxVer.min < v.min {
-						maxVer.maj = v.maj
-						maxVer.min = v.min
-						maxVer.patch = v.patch
-						maxVer.val = v.val
-					} else if maxVer.maj == v.maj && maxVer.min == v.min && maxVer.patch < v.patch {
-						maxVer.maj = v.maj
-						maxVer.min = v.min
-						maxVer.patch = v.patch
-						maxVer.val = v.val
-					}
+		trimmed := strings.TrimSuffix(v, "/")
+		if trimmed != ".." && trimmed != "latest" && trimmed != "" {
+			v := getSemVer(trimmed)
+			// avoid a version with an 8 digit date as the patch number: 1.0.20210421
+			if !re.MatchString(strconv.Itoa(v.patch)) {
+				if maxTempVersion.major < v.major {
+					maxTempVersion.major = v.major
+					maxTempVersion.minor = v.minor
+					maxTempVersion.patch = v.patch
+					maxTempVersion.val = v.val
+				} else if maxTempVersion.major == v.major && maxTempVersion.minor < v.minor {
+					maxTempVersion.major = v.major
+					maxTempVersion.minor = v.minor
+					maxTempVersion.patch = v.patch
+					maxTempVersion.val = v.val
+				} else if maxTempVersion.major == v.major && maxTempVersion.minor == v.minor && maxTempVersion.patch < v.patch {
+					maxTempVersion.major = v.major
+					maxTempVersion.minor = v.minor
+					maxTempVersion.patch = v.patch
+					maxTempVersion.val = v.val
 				}
 			}
 		}
 	}
-	return maxVer.val
+	return maxTempVersion.val
+}
+
+func getSemVer(str string) version {
+	s := strings.Split(str, ".")
+	maj, err := strconv.Atoi(s[0])
+	min, err2 := strconv.Atoi(s[1])
+	pat, err3 := strconv.Atoi(s[2])
+	if err == nil && err2 == nil && err3 == nil {
+		v := version{
+			major: maj,
+			minor: min,
+			patch: pat,
+			val:   str,
+		}
+		return v
+	}
+	return version{}
 }
 
 func loadPage(name string) []byte {
@@ -205,7 +191,6 @@ func loadPage(name string) []byte {
 		log.Errorf("Unable to poll jfrog for agent versions. %s", err.Error())
 	}
 	defer resp.Body.Close()
-
 	// reads html as a slice of bytes
 	html, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
