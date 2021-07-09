@@ -146,20 +146,11 @@ func (avj *agentVersionCheckJob) setLatestFromJFrog() string {
 			// avoid a version with an 8 digit date as the patch number: 1.0.20210421
 			if !re.MatchString(strconv.Itoa(v.patch)) {
 				if maxTempVersion.major < v.major {
-					maxTempVersion.major = v.major
-					maxTempVersion.minor = v.minor
-					maxTempVersion.patch = v.patch
-					maxTempVersion.val = v.val
+					copyStruct(&maxTempVersion, v)
 				} else if maxTempVersion.major == v.major && maxTempVersion.minor < v.minor {
-					maxTempVersion.major = v.major
-					maxTempVersion.minor = v.minor
-					maxTempVersion.patch = v.patch
-					maxTempVersion.val = v.val
+					copyStruct(&maxTempVersion, v)
 				} else if maxTempVersion.major == v.major && maxTempVersion.minor == v.minor && maxTempVersion.patch < v.patch {
-					maxTempVersion.major = v.major
-					maxTempVersion.minor = v.minor
-					maxTempVersion.patch = v.patch
-					maxTempVersion.val = v.val
+					copyStruct(&maxTempVersion, v)
 				}
 			}
 		}
@@ -182,6 +173,13 @@ func getSemVer(str string) version {
 		return v
 	}
 	return version{}
+}
+
+func copyStruct(v1 *version, v2 version) {
+	v1.major = v2.major
+	v1.minor = v2.minor
+	v1.patch = v2.patch
+	v1.val = v2.val
 }
 
 func loadPage(name string) []byte {
