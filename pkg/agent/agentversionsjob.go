@@ -75,7 +75,7 @@ func (avj *agentVersionCheckJob) Execute() error {
 	}
 	// compare build to latest version
 	if isVersionStringOlder(avj.buildVersion, avj.latestVersion) {
-		log.Infof("Running older version of %s. Please consider upgrading from version %s to version %s", avj.dataPlaneType, avj.buildVersion, avj.latestVersion)
+		log.Warnf("Running older version of %s. Please consider upgrading from version %s to version %s", avj.dataPlaneType, avj.buildVersion, avj.latestVersion)
 	}
 	return nil
 }
@@ -95,7 +95,9 @@ func (avj *agentVersionCheckJob) getBuildVersion() error {
 }
 
 // getJFrogVersions - obtaining the versions from JFrog website
-// **Note** this is a temporary solution to obtaining the list of versions by querying jfrog
+// **Note** polling the jfrog website is the current solution to obtaining the list of versions
+// In the future, adding a (Generic) resource for grouping versions together under the same scope is a possible solution
+// ie: a new unscoped resource that represents the platform services, so that other products can plug in their releases.
 func (avj *agentVersionCheckJob) getJFrogVersions(name string) error {
 	b := loadPage(name)
 
@@ -122,10 +124,14 @@ func isVersionStringOlder(build string, latest string) bool {
 func isVersionSmaller(v1 version, v2 version) bool {
 	if v1.major < v2.major {
 		return true
-	} else if v1.major == v2.major && v1.minor < v2.minor {
-		return true
-	} else if v1.major == v2.major && v1.minor == v2.minor && v1.patch < v2.patch {
-		return true
+	}
+	if v1.major == v2.major {
+		if v1.minor < v2.minor {
+			return true
+		}
+		if v1.minor == v2.minor && v1.patch < v2.patch {
+			return true
+		}
 	}
 	return false
 }
