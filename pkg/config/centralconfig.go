@@ -57,6 +57,9 @@ var AgentTypeName string
 // AgentVersion - Holds the version of agent
 var AgentVersion string
 
+// AgentDataPlaneType - Holds the data plane type of agent
+var AgentDataPlaneType string
+
 // IConfigValidator - Interface to be implemented for config validation by agent
 type IConfigValidator interface {
 	ValidateCfg() error
@@ -82,6 +85,8 @@ type CentralConfig interface {
 	GetEnvironmentName() string
 	GetAgentName() string
 	GetTeamName() string
+	GetBuildVersion() string
+	GetBuildDataPlaneType() string
 	GetTeamID() string
 	SetTeamID(teamID string)
 	GetURL() string
@@ -405,6 +410,16 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 // CanPublishUsageEvent - Returns flag to indicate agent can publish usage events
 func (c *CentralConfiguration) CanPublishUsageEvent() bool {
 	return c.PublishUsageEvents
+}
+
+// GetBuildVersion - Returns build version name
+func (c *CentralConfiguration) GetBuildVersion() string {
+	return AgentVersion
+}
+
+// GetBuildDataPlaneType - Returns build data plane type name
+func (c *CentralConfiguration) GetBuildDataPlaneType() string {
+	return AgentDataPlaneType
 }
 
 // CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
