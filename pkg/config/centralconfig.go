@@ -118,6 +118,7 @@ type CentralConfig interface {
 	CanPublishUsageEvent() bool
 	// CanPublishMetricEvent() bool
 	GetEventAggregationInterval() time.Duration
+	GetUpdateFromAPIServer() bool
 }
 
 // CentralConfiguration - Structure to hold the central config

@@ -54,7 +54,7 @@ type agentData struct {
 	prevAgentResource *apiV1.ResourceInstance
 
 	apicClient     apic.Client
-	cfg            *config.CentralConfiguration
+	cfg            config.CentralConfig
 	agentCfg       interface{}
 	tokenRequester auth.PlatformTokenGetter
 	loggerName     string
@@ -85,8 +85,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return err
 	}
 
-	agent.cfg = centralCfg.(*config.CentralConfiguration)
-
 	// validate the central config
 	err = config.ValidateConfig(centralCfg)
 	if err != nil {
@@ -104,12 +102,13 @@ func Initialize(centralCfg config.CentralConfig) error {
 		agent.apicClient.SetTokenGetter(agent.tokenRequester)
 		agent.apicClient.OnConfigChange(centralCfg)
 	}
+	agent.cfg = centralCfg
 
 	if !agent.isInitialized {
 		if getAgentResourceType() != "" {
 			fetchConfig()
 			updateAgentStatus(AgentRunning, "")
-		} else if agent.cfg.AgentName != "" {
+		} else if agent.cfg.GetAgentName() != "" {
 			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 		}
 
@@ -161,7 +160,7 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	id, err := jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.PollInterval)
+	id, err := jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.GetPollInterval())
 	if err != nil {
 		log.Errorf("could not start the API cache update job: %v", err.Error())
 		return
@@ -292,7 +291,7 @@ func cleanUp() {
 // GetAgentResourceType - Returns the Agent Resource path element
 func getAgentResourceType() string {
 	// Set resource for Agent Type
-	return agentTypesMap[agent.cfg.AgentType]
+	return agentTypesMap[agent.cfg.GetAgentType()]
 }
 
 // GetAgentResource - returns the agent resource
@@ -363,9 +362,9 @@ func mergeResourceWithConfig() {
 
 	switch getAgentResourceType() {
 	case v1alpha1.DiscoveryAgentResourceName:
-		mergeDiscoveryAgentWithConfig(agent.cfg)
+		mergeDiscoveryAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
 	case v1alpha1.TraceabilityAgentResourceName:
-		mergeTraceabilityAgentWithConfig(agent.cfg)
+		mergeTraceabilityAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
 	}

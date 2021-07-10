@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"reflect"
 	"time"
@@ -34,6 +35,14 @@ const (
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
 )
+
+var traceabilityClients []*Client
+
+// GetClient - returns a random client from the clients array
+func GetClient() *Client {
+	randomIndex := rand.Intn(len(traceabilityClients))
+	return traceabilityClients[randomIndex]
+}
 
 // Client - struct
 type Client struct {
@@ -102,6 +111,7 @@ func makeTraceabilityAgent(
 			transportClient: client,
 		}
 		clients = append(clients, outputClient)
+		traceabilityClients = append(traceabilityClients, outputClient)
 	}
 	traceabilityGroup.Clients = clients
 	return traceabilityGroup, nil
@@ -187,6 +197,7 @@ func (client *Client) Close() error {
 // Publish sends events to the clients sink.
 func (client *Client) Publish(batch publisher.Batch) error {
 	events := batch.Events()
+
 	if outputEventProcessor != nil {
 		updatedEvents := outputEventProcessor.Process(events)
 		if len(updatedEvents) > 0 {
