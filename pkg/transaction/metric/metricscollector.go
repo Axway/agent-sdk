@@ -68,29 +68,6 @@ type metricEventPublishItem interface {
 	GetStatusCode() string
 }
 
-type metricEventQueueItem struct {
-	metricEventPublishItem
-	event     V4Event
-	metric    metrics.Histogram
-	apiMetric *APIMetric
-}
-
-func (qi *metricEventQueueItem) GetEvent() interface{} {
-	return qi.event
-}
-
-func (qi *metricEventQueueItem) GetMetric() interface{} {
-	return qi.metric
-}
-
-func (qi *metricEventQueueItem) GetAPIID() string {
-	return qi.apiMetric.API.ID
-}
-
-func (qi *metricEventQueueItem) GetStatusCode() string {
-	return qi.apiMetric.StatusCode
-}
-
 var globalMetricCollector Collector
 
 // GetMetricCollector - Create metric collector
