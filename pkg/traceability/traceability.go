@@ -39,9 +39,12 @@ const (
 var traceabilityClients []*Client
 
 // GetClient - returns a random client from the clients array
-func GetClient() *Client {
+func GetClient() (*Client, error) {
+	if len(traceabilityClients) == 0 {
+		return nil, fmt.Errorf("No traceability clients, can't publish metrics")
+	}
 	randomIndex := rand.Intn(len(traceabilityClients))
-	return traceabilityClients[randomIndex]
+	return traceabilityClients[randomIndex], nil
 }
 
 // Client - struct

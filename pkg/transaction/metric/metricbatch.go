@@ -97,10 +97,14 @@ func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) 
 }
 
 // Publish - connects to the traceability clients and sends this batch of events
-func (b *EventBatch) Publish() {
-	client := traceability.GetClient()
+func (b *EventBatch) Publish() error {
+	client, err := traceability.GetClient()
+	if err != nil {
+		return err
+	}
 	client.Connect()
 	client.Publish(b)
+	return nil
 }
 
 // Events - return the events in the batch

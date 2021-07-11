@@ -201,9 +201,12 @@ func (c *collector) generateEvents() {
 
 	c.metricBatch = NewEventBatch(c)
 	c.registry.Each(c.processUsageFromRegistry)
-	c.metricBatch.Publish()
 	if len(c.publishItemQueue) == 0 {
 		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	}
+	err := c.metricBatch.Publish()
+	if err != nil {
+		log.Errorf("Could not send metric event: %s", err.Error())
 	}
 }
 
