@@ -6,7 +6,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 	metrics "github.com/rcrowley/go-metrics"
@@ -50,7 +49,6 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 
 	// convert the CondorMetricEvent to json then to map[string]interface{}
 	cmeJSON, err := json.Marshal(c)
-	log.Tracef(string(cmeJSON))
 	if err != nil {
 		return beatPub.Event{}, err
 	}

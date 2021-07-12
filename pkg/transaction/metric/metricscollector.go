@@ -212,7 +212,7 @@ func (c *collector) generateEvents() {
 	if agent.GetCentralConfig().CanPublishMetricEvent() {
 		err := c.metricBatch.Publish()
 		if err != nil {
-			log.Errorf("Could not send metric event: %s", err.Error())
+			log.Errorf("Could not send metric event: %s, current metric data is kept and will be added to the next trigger interval.", err.Error())
 		}
 	}
 }
@@ -335,7 +335,7 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval. ", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
+				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval.", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
 			} else {
 				log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 				c.cleanupCounters(eventQueueItem)
@@ -374,4 +374,5 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, event V4Ev
 		}
 		histogram.Clear()
 	}
+	log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 }
