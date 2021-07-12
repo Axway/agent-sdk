@@ -2,7 +2,14 @@ package metric
 
 import "time"
 
-const metricEvent = "api.transaction.status.metric"
+const (
+	metricEvent   = "api.transaction.status.metric"
+	messageKey    = "message"
+	metricKey     = "metric"
+	metricFlow    = "api-central-metric"
+	metricRetries = "metricRetry"
+	retries       = "retries"
+)
 
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {

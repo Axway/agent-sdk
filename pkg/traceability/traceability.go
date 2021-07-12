@@ -39,7 +39,9 @@ const (
 var traceabilityClients []*Client
 
 // GetClient - returns a random client from the clients array
-func GetClient() (*Client, error) {
+var GetClient = getClient
+
+func getClient() (*Client, error) {
 	switch clients := len(traceabilityClients); clients {
 	case 0:
 		return nil, fmt.Errorf("No traceability clients, can't publish metrics")
@@ -54,6 +56,11 @@ func GetClient() (*Client, error) {
 // Client - struct
 type Client struct {
 	transportClient outputs.Client
+}
+
+// SetTransportClient - set the transport client
+func (c *Client) SetTransportClient(client outputs.Client) {
+	c.transportClient = client
 }
 
 type traceabilityAgentHealthChecker struct {

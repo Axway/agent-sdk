@@ -2,87 +2,11 @@ package metric
 
 import (
 	"encoding/json"
-	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability"
-	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/beat"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/rcrowley/go-metrics"
 )
-
-const (
-	messageKey    = "message"
-	metricKey     = "metric"
-	metricFlow    = "api-central-metric"
-	metricRetries = "metricRetry"
-	retries       = "retries"
-)
-
-// CondorMetricEvent - the condor event format to send metric data
-type CondorMetricEvent struct {
-	Message   string                 `json:"message"`
-	Fields    map[string]interface{} `json:"fields"`
-	Timestamp time.Time              `json:"-"`
-	ID        string                 `json:"-"`
-}
-
-// AddCondorMetricEventToBatch - creates the condor metric event and adds to the batch
-func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogram metrics.Histogram) error {
-	metricData, _ := json.Marshal(metricEvent)
-
-	cme := &CondorMetricEvent{
-		Message:   string(metricData),
-		Fields:    make(map[string]interface{}),
-		Timestamp: metricEvent.Data.StartTime,
-		ID:        metricEvent.ID,
-	}
-	event, err := cme.CreateEvent()
-	log.Tracef("%+v", event)
-	if err != nil {
-		return err
-	}
-	batch.AddEvent(event, histogram)
-	return nil
-}
-
-// CreateEvent - creates the beat event to add to the batch
-func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
-	// Get the event token
-	token, err := agent.GetCentralAuthToken()
-	if err != nil {
-		return beatPub.Event{}, err
-	}
-	c.Fields["token"] = token
-	// c.Fields["axway-target-flow"] = metricFlow
-
-	// convert the CondorMetricEvent to json then to map[string]interface{}
-	cmeJSON, err := json.Marshal(c)
-	log.Tracef(string(cmeJSON))
-	if err != nil {
-		return beatPub.Event{}, err
-	}
-
-	var fieldsData map[string]interface{}
-	err = json.Unmarshal(cmeJSON, &fieldsData)
-	if err != nil {
-		return beatPub.Event{}, err
-	}
-
-	return beatPub.Event{
-		Content: beat.Event{
-			Timestamp: c.Timestamp,
-			Meta: map[string]interface{}{
-				metricKey:          c.ID,
-				sampling.SampleKey: true, // All metric events should be sent
-			},
-			Fields: fieldsData,
-		},
-		Flags: beatPub.GuaranteedSend,
-	}, nil
-}
 
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
@@ -110,9 +34,14 @@ func (b *EventBatch) Publish() error {
 func (b *EventBatch) publish() error {
 	client, err := traceability.GetClient()
 	if err != nil {
+		b.collector.batchLock.Unlock()
 		return err
 	}
-	client.Connect()
+	err = client.Connect()
+	if err != nil {
+		b.collector.batchLock.Unlock()
+		return err
+	}
 	client.Publish(b)
 	return nil
 }
@@ -146,7 +75,7 @@ func (b *EventBatch) Drop() {
 
 // Retry - batch sent for retry, publish again
 func (b *EventBatch) Retry() {
-	b.publish()
+	b.retryEvents(b.events)
 }
 
 // Cancelled - batch has been cancelled
@@ -154,8 +83,7 @@ func (b *EventBatch) Cancelled() {
 	b.collector.batchLock.Unlock()
 }
 
-// RetryEvents - certain events sent to retry
-func (b *EventBatch) RetryEvents(events []beatPub.Event) {
+func (b *EventBatch) retryEvents(events []beatPub.Event) {
 	retryEvents := make([]beatPub.Event, 0)
 	for _, event := range b.events {
 		if _, found := event.Content.Meta[metricRetries]; !found {
@@ -175,6 +103,11 @@ func (b *EventBatch) RetryEvents(events []beatPub.Event) {
 	}
 	b.events = retryEvents
 	b.publish()
+}
+
+// RetryEvents - certain events sent to retry
+func (b *EventBatch) RetryEvents(events []beatPub.Event) {
+	b.retryEvents(events)
 }
 
 // CancelledEvents - events have been cancelled

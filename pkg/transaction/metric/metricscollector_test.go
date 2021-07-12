@@ -29,7 +29,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
 	cfg.PublishUsageEvents = true
-	// cfg.PublishMetricEvents = true
+	cfg.PublishMetricEvents = true
 	return cfg
 }
 
@@ -110,6 +110,7 @@ func TestMetricCollector(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		loopCount                int
+		retryBatchCount          int
 		apiTransactionCount      []int
 		failUsageEventOnServer   []bool
 		expectedLHEvents         []int
@@ -119,6 +120,7 @@ func TestMetricCollector(t *testing.T) {
 		{
 			name:                     "WithLighthouse",
 			loopCount:                1,
+			retryBatchCount:          0,
 			apiTransactionCount:      []int{5},
 			failUsageEventOnServer:   []bool{false},
 			expectedLHEvents:         []int{1},
@@ -128,6 +130,7 @@ func TestMetricCollector(t *testing.T) {
 		{
 			name:                     "WithLighthouseNoUsageReport",
 			loopCount:                1,
+			retryBatchCount:          0,
 			apiTransactionCount:      []int{0},
 			failUsageEventOnServer:   []bool{false},
 			expectedLHEvents:         []int{0},
@@ -137,15 +140,37 @@ func TestMetricCollector(t *testing.T) {
 		{
 			name:                     "WithLighthouseWithFailure",
 			loopCount:                3,
+			retryBatchCount:          0,
 			apiTransactionCount:      []int{5, 10, 2},
 			failUsageEventOnServer:   []bool{false, true, false},
 			expectedLHEvents:         []int{1, 1, 2},
 			expectedTransactionCount: []int{5, 5, 17},
 		},
+		// Success case, retry metrics
+		{
+			name:                     "WithLighthouse",
+			loopCount:                1,
+			retryBatchCount:          1,
+			apiTransactionCount:      []int{5},
+			failUsageEventOnServer:   []bool{false},
+			expectedLHEvents:         []int{1},
+			expectedTransactionCount: []int{5},
+		},
+		// Retry limit hit
+		{
+			name:                     "WithLighthouse",
+			loopCount:                1,
+			retryBatchCount:          4,
+			apiTransactionCount:      []int{5},
+			failUsageEventOnServer:   []bool{false},
+			expectedLHEvents:         []int{1},
+			expectedTransactionCount: []int{5},
+		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			setupMockClient(1)
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricCollector.AddMetric("111", "111", "200", 10, "", "")

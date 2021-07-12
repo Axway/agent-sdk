@@ -121,7 +121,7 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	CanPublishUsageEvent() bool
-	// CanPublishMetricEvent() bool
+	CanPublishMetricEvent() bool
 	GetEventAggregationInterval() time.Duration
 	GetUpdateFromAPIServer() bool
 }
@@ -154,9 +154,9 @@ type CentralConfiguration struct {
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublishUsageEvents        bool               `config:"publishUsage"`
 	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
-	// PublishMetricEvents       bool  `config:"publishMetric"`
-	environmentID string
-	teamID        string
+	PublishMetricEvents       bool               `config:"publishMetric"`
+	environmentID             string
+	teamID                    string
 }
 
 // NewCentralConfig - Creates the default central config
@@ -424,9 +424,9 @@ func (c *CentralConfiguration) GetBuildDataPlaneType() string {
 }
 
 // CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
-// func (c *CentralConfiguration) CanPublishMetricEvent() bool {
-// 	return c.PublishMetricEvents
-// }
+func (c *CentralConfiguration) CanPublishMetricEvent() bool {
+	return c.PublishMetricEvents
+}
 
 // GetEventAggregationInterval - Returns the interval duration to generate usage and metric events
 func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
@@ -596,7 +596,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
-		// props.AddBoolProperty(pathPublishMetric, true, "Indicates if the agent can publish metric event to Amplify platform. Default to true")
+		props.AddBoolProperty(pathPublishMetric, false, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
 		props.AddDurationProperty(pathEventAggregationInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
@@ -648,7 +648,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
 		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
-		// cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
+		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
