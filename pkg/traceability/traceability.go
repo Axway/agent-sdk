@@ -58,11 +58,6 @@ type Client struct {
 	transportClient outputs.Client
 }
 
-// SetTransportClient - set the transport client
-func (c *Client) SetTransportClient(client outputs.Client) {
-	c.transportClient = client
-}
-
 type traceabilityAgentHealthChecker struct {
 	protocol string
 	host     string
@@ -187,6 +182,11 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 
 	registerHealthCheckers(traceCfg)
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
+}
+
+// SetTransportClient - set the transport client
+func (client *Client) SetTransportClient(outputClient outputs.Client) {
+	client.transportClient = outputClient
 }
 
 // Connect establishes a connection to the clients sink.

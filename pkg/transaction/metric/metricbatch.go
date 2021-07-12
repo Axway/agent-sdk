@@ -12,9 +12,10 @@ import (
 type EventBatch struct {
 	beatPub.Batch
 
-	events     []beatPub.Event
-	histograms map[string]metrics.Histogram
-	collector  *collector
+	events        []beatPub.Event
+	histograms    map[string]metrics.Histogram
+	collector     *collector
+	haveBatchLock bool
 }
 
 // AddEvent - adds an event to the batch
@@ -26,7 +27,7 @@ func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) 
 
 // Publish - connects to the traceability clients and sends this batch of events
 func (b *EventBatch) Publish() error {
-	b.collector.batchLock.Lock()
+	b.batchLock()
 
 	return b.publish()
 }
@@ -34,16 +35,36 @@ func (b *EventBatch) Publish() error {
 func (b *EventBatch) publish() error {
 	client, err := traceability.GetClient()
 	if err != nil {
-		b.collector.batchLock.Unlock()
+		b.batchUnlock()
 		return err
 	}
 	err = client.Connect()
 	if err != nil {
-		b.collector.batchLock.Unlock()
+		b.batchUnlock()
 		return err
 	}
-	client.Publish(b)
+	err = client.Publish(b)
+	if err != nil {
+		b.batchUnlock()
+		return err
+	}
 	return nil
+}
+
+// make sure batch does not lock multiple times
+func (b *EventBatch) batchLock() {
+	if !b.haveBatchLock {
+		b.collector.batchLock.Lock()
+		b.haveBatchLock = true
+	}
+}
+
+// make sure batch does not unlock multiple times
+func (b *EventBatch) batchUnlock() {
+	if b.haveBatchLock {
+		b.collector.batchLock.Unlock()
+		b.haveBatchLock = false
+	}
 }
 
 // Events - return the events in the batch
@@ -65,12 +86,12 @@ func (b *EventBatch) ACK() {
 			b.collector.cleanupMetricCounter(b.histograms[eventID], v4Event)
 		}
 	}
-	b.collector.batchLock.Unlock()
+	b.batchUnlock()
 }
 
 // Drop - drop the entire batch
 func (b *EventBatch) Drop() {
-	b.collector.batchLock.Unlock()
+	b.batchUnlock()
 }
 
 // Retry - batch sent for retry, publish again
@@ -80,7 +101,7 @@ func (b *EventBatch) Retry() {
 
 // Cancelled - batch has been cancelled
 func (b *EventBatch) Cancelled() {
-	b.collector.batchLock.Unlock()
+	b.batchUnlock()
 }
 
 func (b *EventBatch) retryEvents(events []beatPub.Event) {
@@ -119,7 +140,8 @@ func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
 // NewEventBatch - creates a new batch
 func NewEventBatch(c *collector) *EventBatch {
 	return &EventBatch{
-		collector:  c,
-		histograms: make(map[string]metrics.Histogram),
+		collector:     c,
+		histograms:    make(map[string]metrics.Histogram),
+		haveBatchLock: false,
 	}
 }
