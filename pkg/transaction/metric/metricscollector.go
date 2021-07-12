@@ -30,6 +30,7 @@ type collector struct {
 	orgGUID          string
 	eventChannel     chan interface{}
 	lock             *sync.Mutex
+	batchLock        *sync.Mutex
 	registry         metrics.Registry
 	metricBatch      *EventBatch
 	metricMap        map[string]map[string]*APIMetric
@@ -84,6 +85,7 @@ func createMetricCollector() Collector {
 		// if any usage event are to be generated on startup
 		startTime:        time.Now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
+		batchLock:        &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
@@ -136,6 +138,8 @@ func (c *collector) Execute() error {
 func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
 	c.updateUsage(1)
 	c.updateMetric(apiID, apiName, statusCode, duration)
 }
@@ -355,11 +359,11 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 	}
 }
 
-func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, apiID string, statusCode string) {
+func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, event V4Event) {
 	// Clean up entry in api status metric map and histogram counter
-	apiStatusMap, ok := c.metricMap[apiID]
-	if ok {
-		c.storage.removeMetric(apiStatusMap[statusCode])
+	apiID := event.Data.API.ID
+	if apiStatusMap, ok := c.metricMap[apiID]; ok {
+		c.storage.removeMetric(apiStatusMap[event.Data.StatusCode])
 		if len(apiStatusMap) != 0 {
 			c.metricMap[apiID] = apiStatusMap
 		} else {

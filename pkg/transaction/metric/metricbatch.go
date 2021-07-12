@@ -16,6 +16,7 @@ import (
 const (
 	messageKey = "message"
 	metricKey  = "metric"
+	metricFlow = "api-central-metric"
 )
 
 // CondorMetricEvent - the condor event format to send metric data
@@ -53,6 +54,7 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 		return beatPub.Event{}, err
 	}
 	c.Fields["token"] = token
+	// c.Fields["axway-target-flow"] = metricFlow
 
 	// convert the CondorMetricEvent to json then to map[string]interface{}
 	cmeJSON, err := json.Marshal(c)
@@ -98,6 +100,12 @@ func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) 
 
 // Publish - connects to the traceability clients and sends this batch of events
 func (b *EventBatch) Publish() error {
+	b.collector.batchLock.Lock()
+
+	return b.publish()
+}
+
+func (b *EventBatch) publish() error {
 	client, err := traceability.GetClient()
 	if err != nil {
 		return err
@@ -123,30 +131,38 @@ func (b *EventBatch) ACK() {
 				continue
 			}
 			eventID := event.Content.Meta[metricKey].(string)
-			b.collector.cleanupMetricCounter(b.histograms[eventID], v4Event.Data.API.ID, v4Event.Data.StatusCode)
+			b.collector.cleanupMetricCounter(b.histograms[eventID], v4Event)
 		}
 	}
+	b.collector.batchLock.Unlock()
 }
 
 // Drop - drop the entire batch
-func (b *EventBatch) Drop() {}
+func (b *EventBatch) Drop() {
+	b.collector.batchLock.Unlock()
+}
 
 // Retry - batch sent for retry, publish again
 func (b *EventBatch) Retry() {
-	b.Publish()
+	b.publish()
 }
 
 // Cancelled - batch has been cancelled
-func (b *EventBatch) Cancelled() {}
+func (b *EventBatch) Cancelled() {
+	b.collector.batchLock.Unlock()
+}
 
 // RetryEvents - certain events sent to retry
 func (b *EventBatch) RetryEvents(events []beatPub.Event) {
 	b.events = events
-	b.Publish()
+	b.publish()
 }
 
 // CancelledEvents - events have been cancelled
-func (b *EventBatch) CancelledEvents(events []beatPub.Event) {}
+func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
+	b.events = events
+	b.publish()
+}
 
 // NewEventBatch - creates a new batch
 func NewEventBatch(c *collector) *EventBatch {
