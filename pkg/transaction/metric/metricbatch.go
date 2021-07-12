@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	messageKey = "message"
-	metricKey  = "metric"
-	metricFlow = "api-central-metric"
+	messageKey    = "message"
+	metricKey     = "metric"
+	metricFlow    = "api-central-metric"
+	metricRetries = "metricRetry"
+	retries       = "retries"
 )
 
 // CondorMetricEvent - the condor event format to send metric data
@@ -154,7 +156,24 @@ func (b *EventBatch) Cancelled() {
 
 // RetryEvents - certain events sent to retry
 func (b *EventBatch) RetryEvents(events []beatPub.Event) {
-	b.events = events
+	retryEvents := make([]beatPub.Event, 0)
+	for _, event := range b.events {
+		if _, found := event.Content.Meta[metricRetries]; !found {
+			event.Content.Meta[metricRetries] = 0
+		}
+		count := event.Content.Meta[metricRetries].(int)
+		newCount := count + 1
+		if newCount <= 3 {
+			event.Content.Meta[metricRetries] = newCount
+			retryEvents = append(retryEvents, event)
+		}
+
+		// let the metric batch handle its own retries
+		if _, found := event.Content.Meta[retries]; found {
+			event.Content.Meta[retries] = 0
+		}
+	}
+	b.events = retryEvents
 	b.publish()
 }
 
