@@ -41,8 +41,6 @@ type AuthConfiguration struct {
 func newAuthConfig() AuthConfig {
 	return &AuthConfiguration{
 		Timeout: 30 * time.Second,
-		URL:     "https://login.axway.com/auth",
-		Realm:   "Broker",
 	}
 }
 

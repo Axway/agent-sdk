@@ -161,43 +161,22 @@ type CentralConfiguration struct {
 	teamID                    string
 }
 
-const (
-	centralURL                       = "https://apicentral.axway.com"
-	centralPlatformURL               = "https://platform.axway.com"
-	centralPollInterval              = 60 * time.Second
-	centralReportActivityFrequency   = 5 * time.Minute
-	centralClientTimeout             = 60 * time.Second
-	centralAPIServiceRevisionPattern = "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
-	centralAPIServerVersion          = "v1alpha1"
-	centralDeployment                = "prod"
-	centralLighthouseURL             = "https://lighthouse.admin.axway.com"
-	centralPublishUsage              = true
-	centralPublishMetric             = false
-	centralEventAggregationInterval  = 15 * time.Minute
-	centralMode                      = "publishToEnvironmentAndCatalog"
-	centralAppendEnvironmentToTitle  = true
-)
-
 // NewCentralConfig - Creates the default central config
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
 		AgentType:                 agentType,
-		URL:                       centralURL,
-		APICDeployment:            centralDeployment,
-		Mode:                      StringAgentModeMap[centralMode],
-		APIServerVersion:          centralAPIServerVersion,
+		Mode:                      PublishToEnvironmentAndCatalog,
+		APIServerVersion:          "v1alpha1",
 		Auth:                      newAuthConfig(),
 		TLS:                       NewTLSConfig(),
-		PollInterval:              centralPollInterval,
-		ClientTimeout:             centralClientTimeout,
-		PlatformURL:               centralPlatformURL,
+		PollInterval:              60 * time.Second,
+		ClientTimeout:             60 * time.Second,
+		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
-		AppendEnvironmentToTitle:  centralAppendEnvironmentToTitle,
-		EventAggregationInterval:  centralEventAggregationInterval,
-		ReportActivityFrequency:   centralReportActivityFrequency,
-		LighthouseURL:             centralLighthouseURL,
-		PublishUsageEvents:        centralPublishUsage,
-		PublishMetricEvents:       centralPublishMetric,
+		AppendEnvironmentToTitle:  true,
+		UpdateFromAPIServer:       false,
+		EventAggregationInterval:  15 * time.Minute,
+		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
 
@@ -589,9 +568,9 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
-	props.AddStringProperty(pathURL, centralURL, "URL of Amplify Central")
+	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of Amplify Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
-	props.AddStringProperty(pathPlatformURL, centralPlatformURL, "URL of the platform")
+	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -608,23 +587,23 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathEnvironment, "", "The Environment that the APIs will be associated with in Amplify Central")
 	props.AddStringProperty(pathAgentName, "", "The name of the asociated agent resource in Amplify Central")
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to Amplify Central")
-	props.AddDurationProperty(pathPollInterval, centralPollInterval, "The time interval at which the central will be polled for subscription processing")
-	props.AddDurationProperty(pathReportActivityFrequency, centralReportActivityFrequency, "The time interval at which the agent polls for event changes for the periodic agent status updater")
-	props.AddDurationProperty(pathClientTimeout, centralClientTimeout, "The time interval at which the http client times out making HTTP requests and processing the response")
-	props.AddStringProperty(pathAPIServiceRevisionPattern, centralAPIServiceRevisionPattern, "The naming pattern for APIServiceRevision Title")
-	props.AddStringProperty(pathAPIServerVersion, centralAPIServerVersion, "Version of the API Server")
+	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
+	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
+	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
+	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}", "The naming pattern for APIServiceRevision Title")
+	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
 	if agentType == TraceabilityAgent {
-		props.AddStringProperty(pathDeployment, centralDeployment, "Amplify Central")
-		props.AddStringProperty(pathLighthouseURL, centralLighthouseURL, "URL of the Lighthouse")
-		props.AddBoolProperty(pathPublishUsage, centralPublishUsage, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
-		props.AddBoolProperty(pathPublishMetric, centralPublishMetric, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
-		props.AddDurationProperty(pathEventAggregationInterval, centralEventAggregationInterval, "The time interval at which usage and metric event will be generated")
+		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
+		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
+		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
+		props.AddBoolProperty(pathPublishMetric, false, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
+		props.AddDurationProperty(pathEventAggregationInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
 	} else {
-		props.AddStringProperty(pathMode, centralMode, "Agent Mode")
+		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
-		props.AddBoolProperty(pathAppendEnvironmentToTitle, centralAppendEnvironmentToTitle, "When true API titles and descriptions will be appended with environment name")
+		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 	}
 }
