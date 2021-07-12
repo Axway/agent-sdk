@@ -15,6 +15,8 @@ type AssetReleaseSpec struct {
 	Description string `json:"description,omitempty"`
 	Type        string `json:"type"`
 	// version of the asset release.
-	Version string `json:"version,omitempty"`
+	Version string `json:"version"`
 	Asset   string `json:"asset"`
+	// list of categories for the released asset.
+	Categories []string `json:"categories,omitempty"`
 }

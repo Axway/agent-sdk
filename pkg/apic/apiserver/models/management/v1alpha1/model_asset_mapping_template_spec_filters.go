@@ -13,6 +13,8 @@ package v1alpha1
 type AssetMappingTemplateSpecFilters struct {
 	ApiService []AssetMappingTemplateSpecApiService `json:"apiService,omitempty"`
 	// name of the stage
-	Stage string                        `json:"stage,omitempty"`
-	Asset AssetMappingTemplateSpecAsset `json:"asset,omitempty"`
+	Stage string `json:"stage,omitempty"`
+	// list of categories for the asset.
+	Categories []string                      `json:"categories,omitempty"`
+	Asset      AssetMappingTemplateSpecAsset `json:"asset,omitempty"`
 }

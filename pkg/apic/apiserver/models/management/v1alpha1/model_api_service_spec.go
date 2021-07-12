@@ -13,5 +13,6 @@ package v1alpha1
 type ApiServiceSpec struct {
 	// The description of the api service.
 	Description string             `json:"description,omitempty"`
+	Categories  []string           `json:"categories,omitempty"`
 	Icon        ApiServiceSpecIcon `json:"icon,omitempty"`
 }
