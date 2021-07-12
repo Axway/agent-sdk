@@ -15,4 +15,6 @@ type ApiServiceRevisionSpecDefinition struct {
 	Type string `json:"type,omitempty"`
 	// Base64 encoded value of the api specification.
 	Value string `json:"value,omitempty"`
+	// content-type of the spec.
+	ContentType string `json:"contentType,omitempty"`
 }

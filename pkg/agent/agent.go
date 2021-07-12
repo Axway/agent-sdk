@@ -47,6 +47,7 @@ type ConfigChangeHandler func()
 var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    "discoveryagents",
 	config.TraceabilityAgent: "traceabilityagents",
+	config.GovernanceAgent:   "governanceagents",
 }
 
 type agentData struct {
@@ -361,6 +362,8 @@ func createAgentStatusSubResource(agentResourceType, status, message string) int
 		return createDiscoveryAgentStatusResource(status, message)
 	case v1alpha1.TraceabilityAgentResourceName:
 		return createTraceabilityAgentStatusResource(status, message)
+	case v1alpha1.GovernanceAgentResourceName:
+		return createGovernanceAgentStatusResource(status, message)
 	default:
 		panic(ErrUnsupportedAgentType)
 	}
@@ -377,6 +380,8 @@ func mergeResourceWithConfig() {
 		mergeDiscoveryAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
 	case v1alpha1.TraceabilityAgentResourceName:
 		mergeTraceabilityAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
+	case v1alpha1.GovernanceAgentResourceName:
+		mergeGovernanceAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
 	}

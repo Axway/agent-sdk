@@ -11,46 +11,44 @@ import (
 )
 
 var (
-	_ProductGVK = apiv1.GroupVersionKind{
+	_VirtualAPIGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
-			Group: "catalog",
-			Kind:  "Product",
+			Group: "management",
+			Kind:  "VirtualAPI",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	ProductScope = ""
+	VirtualAPIScope = ""
 
-	ProductResourceName = "products"
+	VirtualAPIResourceName = "virtualapis"
 )
 
-func ProductGVK() apiv1.GroupVersionKind {
-	return _ProductGVK
+func VirtualAPIGVK() apiv1.GroupVersionKind {
+	return _VirtualAPIGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ProductGVK, ProductScope, ProductResourceName)
+	apiv1.RegisterGVK(_VirtualAPIGVK, VirtualAPIScope, VirtualAPIResourceName)
 }
 
-// Product Resource
-type Product struct {
+// VirtualAPI Resource
+type VirtualAPI struct {
 	apiv1.ResourceMeta
-
-	Assetrelease ProductAssetrelease `json:"assetrelease"`
 
 	Icon interface{} `json:"icon"`
 
 	Owner interface{} `json:"owner"`
 
-	Spec ProductSpec `json:"spec"`
+	Spec VirtualApiSpec `json:"spec"`
 
 	State interface{} `json:"state"`
 }
 
-// FromInstance converts a ResourceInstance to a Product
-func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a VirtualAPI
+func (res *VirtualAPI) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -69,14 +67,14 @@ func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// ProductFromInstanceArray converts a []*ResourceInstance to a []*Product
-func ProductFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Product, error) {
-	newArray := make([]*Product, 0)
+// VirtualAPIFromInstanceArray converts a []*ResourceInstance to a []*VirtualAPI
+func VirtualAPIFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualAPI, error) {
+	newArray := make([]*VirtualAPI, 0)
 	for _, item := range fromArray {
-		res := &Product{}
+		res := &VirtualAPI{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Product, 0), err
+			return make([]*VirtualAPI, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -84,10 +82,10 @@ func ProductFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Product, 
 	return newArray, nil
 }
 
-// AsInstance converts a Product to a ResourceInstance
-func (res *Product) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a VirtualAPI to a ResourceInstance
+func (res *VirtualAPI) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ProductGVK()
+	meta.GroupVersionKind = VirtualAPIGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
