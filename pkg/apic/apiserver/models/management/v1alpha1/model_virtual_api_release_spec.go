@@ -9,11 +9,12 @@
 
 package v1alpha1
 
-// AssetSpec struct for AssetSpec
-type AssetSpec struct {
+// VirtualApiReleaseSpec struct for VirtualApiReleaseSpec
+type VirtualApiReleaseSpec struct {
 	// description of the asset.
 	Description string `json:"description,omitempty"`
-	Type        string `json:"type,omitempty"`
-	// list of categories for the asset.
-	Categories []string `json:"categories,omitempty"`
+	Type        string `json:"type"`
+	// version of the virtual API release.
+	Version    string `json:"version"`
+	Virtualapi string `json:"virtualapi"`
 }
