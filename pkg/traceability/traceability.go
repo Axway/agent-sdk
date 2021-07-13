@@ -252,7 +252,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
-		log.Infof("%d %s events have been published", eventType, publishCount-len(batch.Events()))
+		log.Infof("%d %s events have been published", publishCount-len(batch.Events()), eventType)
 	}
 
 	return nil
