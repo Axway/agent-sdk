@@ -29,7 +29,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
 	cfg.PublishUsageEvents = true
-	// cfg.PublishMetricEvents = true
+	cfg.PublishMetricEvents = true
 	return cfg
 }
 
@@ -108,44 +108,75 @@ func TestMetricCollector(t *testing.T) {
 	metricCollector := myCollector.(*collector)
 
 	testCases := []struct {
-		name                     string
-		loopCount                int
-		apiTransactionCount      []int
-		failUsageEventOnServer   []bool
-		expectedLHEvents         []int
-		expectedTransactionCount []int
+		name                      string
+		loopCount                 int
+		retryBatchCount           int
+		apiTransactionCount       []int
+		failUsageEventOnServer    []bool
+		expectedLHEvents          []int
+		expectedTransactionCount  []int
+		expectedMetricEventsAcked int
 	}{
 		// Success case
 		{
-			name:                     "WithLighthouse",
-			loopCount:                1,
-			apiTransactionCount:      []int{5},
-			failUsageEventOnServer:   []bool{false},
-			expectedLHEvents:         []int{1},
-			expectedTransactionCount: []int{5},
+			name:                      "WithLighthouse",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			expectedMetricEventsAcked: 1,
 		},
 		// Success case with no usage report
 		{
-			name:                     "WithLighthouseNoUsageReport",
-			loopCount:                1,
-			apiTransactionCount:      []int{0},
-			failUsageEventOnServer:   []bool{false},
-			expectedLHEvents:         []int{0},
-			expectedTransactionCount: []int{0},
+			name:                      "WithLighthouseNoUsageReport",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{0},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{0},
+			expectedTransactionCount:  []int{0},
+			expectedMetricEventsAcked: 0,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
-			name:                     "WithLighthouseWithFailure",
-			loopCount:                3,
-			apiTransactionCount:      []int{5, 10, 2},
-			failUsageEventOnServer:   []bool{false, true, false},
-			expectedLHEvents:         []int{1, 1, 2},
-			expectedTransactionCount: []int{5, 5, 17},
+			name:                      "WithLighthouseWithFailure",
+			loopCount:                 3,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5, 10, 2},
+			failUsageEventOnServer:    []bool{false, true, false},
+			expectedLHEvents:          []int{1, 1, 2},
+			expectedTransactionCount:  []int{5, 5, 17},
+			expectedMetricEventsAcked: 1,
+		},
+		// Success case, retry metrics
+		{
+			name:                      "WithLighthouseAndMetricRetry",
+			loopCount:                 1,
+			retryBatchCount:           1,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			expectedMetricEventsAcked: 1,
+		},
+		// Retry limit hit
+		{
+			name:                      "WithLighthouseAndFailedMetric",
+			loopCount:                 1,
+			retryBatchCount:           4,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			expectedMetricEventsAcked: 0,
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricCollector.AddMetric("111", "111", "200", 10, "", "")
@@ -154,6 +185,7 @@ func TestMetricCollector(t *testing.T) {
 				metricCollector.Execute()
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
+				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
 			s.resetConfig()
 		})

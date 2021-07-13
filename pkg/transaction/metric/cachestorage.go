@@ -1,15 +1,19 @@
 package metric
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -22,8 +26,8 @@ const (
 type storageCache interface {
 	initialize()
 	updateUsage(usageCount int)
-	// updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
-	// removeMetric(apiMetric *APIMetric)
+	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
+	removeMetric(apiMetric *APIMetric)
 	save()
 }
 
@@ -50,7 +54,7 @@ func newStorageCache(collector *collector, cacheFilePath string) storageCache {
 func (c *cacheStorage) initialize() {
 	storageCache := cache.Load(c.cacheFilePath)
 	c.loadUsage(storageCache)
-	// c.loadAPIMetric(storageCache)
+	c.loadAPIMetric(storageCache)
 
 	// Not a job as the loop requires signal processing
 	if !c.isInitialized && flag.Lookup("test.v") == nil {
@@ -76,7 +80,7 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
-	if !c.isInitialized {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() {
 		return
 	}
 
@@ -86,56 +90,56 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 	c.storage.Set(usageCountKey, usageCount)
 }
 
-// func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
-// 	cacheKeys := storageCache.GetKeys()
-// 	for _, cacheKey := range cacheKeys {
-// 		if strings.Contains(cacheKey, metricKeyPrefix) {
-// 			cacheItem, _ := storageCache.Get(cacheKey)
+func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
+	cacheKeys := storageCache.GetKeys()
+	for _, cacheKey := range cacheKeys {
+		if strings.Contains(cacheKey, metricKeyPrefix) {
+			cacheItem, _ := storageCache.Get(cacheKey)
 
-// 			buffer, _ := json.Marshal(cacheItem)
-// 			var apiMetric cachedMetric
-// 			json.Unmarshal(buffer, &apiMetric)
+			buffer, _ := json.Marshal(cacheItem)
+			var apiMetric cachedMetric
+			json.Unmarshal(buffer, &apiMetric)
 
-// 			storageCache.Set(cacheKey, apiMetric)
+			storageCache.Set(cacheKey, apiMetric)
 
-// 			var apiStatusMetric *APIMetric
-// 			for _, duration := range apiMetric.Values {
-// 				apiStatusMetric = c.collector.updateMetric(apiMetric.API.ID, apiMetric.API.Name, apiMetric.StatusCode, duration)
-// 			}
-// 			if apiStatusMetric != nil {
-// 				apiStatusMetric.StartTime = apiMetric.StartTime
-// 			}
-// 		}
-// 	}
-// }
+			var apiStatusMetric *APIMetric
+			for _, duration := range apiMetric.Values {
+				apiStatusMetric = c.collector.updateMetric(apiMetric.API.ID, apiMetric.API.Name, apiMetric.StatusCode, duration)
+			}
+			if apiStatusMetric != nil {
+				apiStatusMetric.StartTime = apiMetric.StartTime
+			}
+		}
+	}
+}
 
-// func (c *cacheStorage) updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric) {
-// 	if !c.isInitialized {
-// 		return
-// 	}
+func (c *cacheStorage) updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric) {
+	if !c.isInitialized {
+		return
+	}
 
-// 	c.storageLock.Lock()
-// 	defer c.storageLock.Unlock()
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
 
-// 	cachedAPIMetric := cachedMetric{
-// 		API:        apiMetric.API,
-// 		StatusCode: apiMetric.StatusCode,
-// 		Count:      apiStatusMetric.Count(),
-// 		Values:     apiStatusMetric.Sample().Values(),
-// 		StartTime:  apiMetric.StartTime,
-// 	}
-// 	c.storage.Set(metricKeyPrefix + apiMetric.API.ID + "."+apiMetric.StatusCode, cachedAPIMetric)
-// }
+	cachedAPIMetric := cachedMetric{
+		API:        apiMetric.API,
+		StatusCode: apiMetric.StatusCode,
+		Count:      apiStatusMetric.Count(),
+		Values:     apiStatusMetric.Sample().Values(),
+		StartTime:  apiMetric.StartTime,
+	}
+	c.storage.Set(metricKeyPrefix+apiMetric.API.ID+"."+apiMetric.StatusCode, cachedAPIMetric)
+}
 
-// func (c *cacheStorage) removeMetric(apiMetric *APIMetric) {
-// 	if !c.isInitialized {
-// 		return
-// 	}
+func (c *cacheStorage) removeMetric(apiMetric *APIMetric) {
+	if !c.isInitialized {
+		return
+	}
 
-// 	c.storageLock.Lock()
-// 	defer c.storageLock.Unlock()
-// 	c.storage.Delete(metricKeyPrefix + apiMetric.API.ID + "." + apiMetric.StatusCode)
-// }
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
+	c.storage.Delete(metricKeyPrefix + apiMetric.API.ID + "." + apiMetric.StatusCode)
+}
 
 func (c *cacheStorage) save() {
 	if !c.isInitialized {
