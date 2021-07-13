@@ -2,6 +2,7 @@ package metric
 
 import (
 	"flag"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -28,7 +30,9 @@ type collector struct {
 	orgGUID          string
 	eventChannel     chan interface{}
 	lock             *sync.Mutex
+	batchLock        *sync.Mutex
 	registry         metrics.Registry
+	metricBatch      *EventBatch
 	metricMap        map[string]map[string]*APIMetric
 	publishItemQueue []publishQueueItem
 	jobID            string
@@ -59,34 +63,11 @@ func (qi *usageEventQueueItem) GetMetric() interface{} {
 	return qi.metric
 }
 
-// type metricEventPublishItem interface {
-// 	publishQueueItem
-// 	GetAPIID() string
-// 	GetStatusCode() string
-// }
-
-// type metricEventQueueItem struct {
-// 	metricEventPublishItem
-// 	event     V4Event
-// 	metric    metrics.Histogram
-// 	apiMetric *APIMetric
-// }
-
-// func (qi *metricEventQueueItem) GetEvent() interface{} {
-// 	return qi.event
-// }
-
-// func (qi *metricEventQueueItem) GetMetric() interface{} {
-// 	return qi.metric
-// }
-
-// func (qi *metricEventQueueItem) GetAPIID() string {
-// 	return qi.apiMetric.API.ID
-// }
-
-// func (qi *metricEventQueueItem) GetStatusCode() string {
-// 	return qi.apiMetric.StatusCode
-// }
+type metricEventPublishItem interface {
+	publishQueueItem
+	GetAPIID() string
+	GetStatusCode() string
+}
 
 var globalMetricCollector Collector
 
@@ -104,6 +85,7 @@ func createMetricCollector() Collector {
 		// if any usage event are to be generated on startup
 		startTime:        time.Now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
+		batchLock:        &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
@@ -156,8 +138,10 @@ func (c *collector) Execute() error {
 func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
 	c.updateUsage(1)
-	// c.updateMetric(apiID, apiName, statusCode, duration)
+	c.updateMetric(apiID, apiName, statusCode, duration)
 }
 
 func (c *collector) updateUsage(count int64) {
@@ -166,33 +150,35 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-// func (c *collector) updateMetric(apiID, apiName, statusCode string, duration int64) *APIMetric {
-// 	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
+func (c *collector) updateMetric(apiID, apiName, statusCode string, duration int64) *APIMetric {
+	if !agent.GetCentralConfig().CanPublishMetricEvent() {
+		return nil // no need to update metrics with publish off
+	}
+	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
 
-// 	apiStatusMap, ok := c.metricMap[apiID]
-// 	if !ok {
-// 		apiStatusMap = make(map[string]*APIMetric)
-// 		c.metricMap[apiID] = apiStatusMap
-// 	}
+	apiStatusMap, ok := c.metricMap[apiID]
+	if !ok {
+		apiStatusMap = make(map[string]*APIMetric)
+		c.metricMap[apiID] = apiStatusMap
+	}
 
-// 	_, ok = apiStatusMap[statusCode]
-// 	if !ok {
-// 		// First api metric for api+statuscode,
-// 		// setup the start time to be used for reporting metric event
-// 		apiStatusMap[statusCode] = &APIMetric{
-// 			API: APIDetails{
-// 				Name: apiName,
-// 				ID:   apiID,
-// 			},
-// 			StatusCode: statusCode,
-// 			StartTime:  time.Now(),
-// 		}
-// 	}
+	if _, ok := apiStatusMap[statusCode]; !ok {
+		// First api metric for api+statuscode,
+		// setup the start time to be used for reporting metric event
+		apiStatusMap[statusCode] = &APIMetric{
+			API: APIDetails{
+				Name: apiName,
+				ID:   apiID,
+			},
+			StatusCode: statusCode,
+			StartTime:  time.Now(),
+		}
+	}
 
-// 	apiStatusDuration.Update(duration)
-// 	c.storage.updateMetric(apiStatusDuration, apiStatusMap[statusCode])
-// 	return apiStatusMap[statusCode]
-// }
+	apiStatusDuration.Update(duration)
+	c.storage.updateMetric(apiStatusDuration, apiStatusMap[statusCode])
+	return apiStatusMap[statusCode]
+}
 
 func (c *collector) cleanup() {
 	c.publishItemQueue = make([]publishQueueItem, 0)
@@ -220,9 +206,17 @@ func (c *collector) generateEvents() {
 		return
 	}
 
-	c.registry.Each(c.processUsageFromRegistry)
 	if len(c.publishItemQueue) == 0 {
 		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	}
+
+	c.metricBatch = NewEventBatch(c)
+	c.registry.Each(c.processUsageFromRegistry)
+	if agent.GetCentralConfig().CanPublishMetricEvent() {
+		err := c.metricBatch.Publish()
+		if err != nil {
+			log.Errorf("Could not send metric event: %s, current metric data is kept and will be added to the next trigger interval.", err.Error())
+		}
 	}
 }
 
@@ -236,7 +230,7 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 		}
 	}
 
-	// c.processTransactionMetric(name, metric)
+	c.processTransactionMetric(name, metric)
 }
 
 func (c *collector) generateUsageEvent(transactionCounter metrics.Counter, orgGUID string) {
@@ -271,55 +265,52 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counte
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 }
 
-// func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
-// 	elements := strings.Split(metricName, ".")
-// 	if len(elements) > 2 {
-// 		apiID := elements[2]
-// 		apiStatusMap, ok := c.metricMap[apiID]
-// 		if ok {
-// 			if strings.HasPrefix(metricName, "transaction.status") {
-// 				statusCode := elements[3]
-// 				statusCodeDetail, ok := apiStatusMap[statusCode]
-// 				if ok {
-// 					statusMetric := (metric.(metrics.Histogram))
-// 					c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
-// 					c.generateAPIStatusMetricEvent(statusMetric, statusCodeDetail)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
+	elements := strings.Split(metricName, ".")
+	if len(elements) > 2 {
+		apiID := elements[2]
+		if apiStatusMap, ok := c.metricMap[apiID]; ok && strings.HasPrefix(metricName, "transaction.status") {
+			statusCode := elements[3]
+			if statusCodeDetail, ok := apiStatusMap[statusCode]; ok {
+				statusMetric := (metric.(metrics.Histogram))
+				c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
+				c.generateAPIStatusMetricEvent(statusMetric, statusCodeDetail, apiID)
+			}
+		}
+	}
+}
 
-// func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
-// 	apiStatusDetails.Count = histogram.Count()
-// 	apiStatusDetails.Response.Max = histogram.Max()
-// 	apiStatusDetails.Response.Min = histogram.Min()
-// 	apiStatusDetails.Response.Avg = histogram.Mean()
-// }
+func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
+	apiStatusDetails.Count = histogram.Count()
+	apiStatusDetails.Response.Max = histogram.Max()
+	apiStatusDetails.Response.Min = histogram.Min()
+	apiStatusDetails.Response.Avg = histogram.Mean()
+}
 
-// func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, apiStatusMetric *APIMetric) {
-// 	apiStatusMetric.Observation.Start = convertTimeToMillis(apiStatusMetric.StartTime)
-// 	apiStatusMetric.Observation.End = convertTimeToMillis(c.endTime)
-// 	apiStatusMetricEventID, _ := uuid.NewV4()
-// 	apiStatusMetricEvent := V4Event{
-// 		ID:        apiStatusMetricEventID.String(),
-// 		Timestamp: apiStatusMetric.StartTime.UnixNano() / 1e6,
-// 		Event:     "api.transaction.status.metric",
-// 		App:       c.orgGUID,
-// 		Version:   "4",
-// 		Distribution: V4EventDistribution{
-// 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
-// 			Version:     "1",
-// 		},
-// 		Data: apiStatusMetric,
-// 	}
-// 	queueItem := &metricEventQueueItem{
-// 		event:     apiStatusMetricEvent,
-// 		metric:    histogram,
-// 		apiMetric: apiStatusMetric,
-// 	}
-// 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
-// }
+func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, apiStatusMetric *APIMetric, apiID string) {
+	if apiStatusMetric.Count == 0 {
+		return
+	}
+
+	apiStatusMetric.Observation.Start = util.ConvertTimeToMillis(apiStatusMetric.StartTime)
+	apiStatusMetric.Observation.End = util.ConvertTimeToMillis(c.endTime)
+	apiStatusMetricEventID, _ := uuid.NewRandom()
+	apiStatusMetricEvent := V4Event{
+		ID:        apiStatusMetricEventID.String(),
+		Timestamp: apiStatusMetric.StartTime.UnixNano() / 1e6,
+		Event:     metricEvent,
+		App:       c.orgGUID,
+		Version:   "4",
+		Distribution: &V4EventDistribution{
+			Environment: agent.GetCentralConfig().GetEnvironmentID(),
+			Version:     "1",
+		},
+		Data: apiStatusMetric,
+	}
+
+	// Add all metrics to the batch
+	AddCondorMetricEventToBatch(apiStatusMetricEvent, c.metricBatch, histogram)
+}
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
 	counter := c.registry.Get(name)
@@ -347,7 +338,7 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval. ", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
+				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval.", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
 			} else {
 				log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 				c.cleanupCounters(eventQueueItem)
@@ -357,13 +348,6 @@ func (c *collector) publishEvents() {
 }
 
 func (c *collector) cleanupCounters(eventQueueItem publishQueueItem) {
-	// // Check metricEventPublishItem interface first since usageEventPublishItem will pass for metric event item as well
-	// metricEventItem, ok := eventQueueItem.(metricEventPublishItem)
-	// if ok {
-	// 	c.cleanupMetricCounter(metricEventItem)
-	// 	return
-	// }
-
 	usageEventItem, ok := eventQueueItem.(usageEventPublishItem)
 	if ok {
 		c.cleanupUsageCounter(usageEventItem)
@@ -381,21 +365,17 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 	}
 }
 
-// func (c *collector) cleanupMetricCounter(metricEventItem metricEventPublishItem) {
-// 	itemMetric := metricEventItem.GetMetric()
-// 	histogram, ok := itemMetric.(metrics.Histogram)
-// 	if ok {
-// 		// Clean up entry in api status metric map and histogram counter
-// 		apiStatusMap, ok := c.metricMap[metricEventItem.GetAPIID()]
-// 		if ok {
-// 			c.storage.removeMetric(apiStatusMap[metricEventItem.GetStatusCode()])
-// 			delete(apiStatusMap, metricEventItem.GetStatusCode())
-// 			if len(apiStatusMap) != 0 {
-// 				c.metricMap[metricEventItem.GetAPIID()] = apiStatusMap
-// 			} else {
-// 				delete(c.metricMap, metricEventItem.GetAPIID())
-// 			}
-// 			histogram.Clear()
-// 		}
-// 	}
-// }
+func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, event V4Event) {
+	// Clean up entry in api status metric map and histogram counter
+	apiID := event.Data.API.ID
+	if apiStatusMap, ok := c.metricMap[apiID]; ok {
+		c.storage.removeMetric(apiStatusMap[event.Data.StatusCode])
+		if len(apiStatusMap) != 0 {
+			c.metricMap[apiID] = apiStatusMap
+		} else {
+			delete(c.metricMap, apiID)
+		}
+		histogram.Clear()
+	}
+	log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+}

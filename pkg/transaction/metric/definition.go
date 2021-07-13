@@ -2,6 +2,15 @@ package metric
 
 import "time"
 
+const (
+	metricEvent   = "api.transaction.status.metric"
+	messageKey    = "message"
+	metricKey     = "metric"
+	metricFlow    = "api-central-metric"
+	metricRetries = "metricRetry"
+	retries       = "retries"
+)
+
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
 	Max int64   `json:"max"`
@@ -40,22 +49,22 @@ type cachedMetric struct {
 	StartTime  time.Time  `json:"startTime"`
 }
 
-// // V4EventDistribution - represents V7 distribution
-// type V4EventDistribution struct {
-// 	Environment string `json:"environment"`
-// 	Version     string `json:"version"`
-// }
+// V4EventDistribution - represents V7 distribution
+type V4EventDistribution struct {
+	Environment string `json:"environment"`
+	Version     string `json:"version"`
+}
 
-// // V4Event - represents V7 event
-// type V4Event struct {
-// 	ID           string              `json:"id"`
-// 	Timestamp    int64               `json:"timestamp"`
-// 	Event        string              `json:"event"`
-// 	App          string              `json:"app"` // ORG GUID
-// 	Version      string              `json:"version"`
-// 	Distribution V4EventDistribution `json:"distribution"`
-// 	Data         interface{}         `json:"data"`
-// }
+// V4Event - represents V7 event
+type V4Event struct {
+	ID           string               `json:"id"`
+	Timestamp    int64                `json:"timestamp"`
+	Event        string               `json:"event"`
+	App          string               `json:"app"` // ORG GUID
+	Version      string               `json:"version"`
+	Distribution *V4EventDistribution `json:"distribution"`
+	Data         *APIMetric           `json:"data"`
+}
 
 // LighthouseUsageReport -Lighthouse Usage report
 type LighthouseUsageReport struct {

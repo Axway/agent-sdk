@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"reflect"
 	"time"
@@ -34,6 +35,23 @@ const (
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
 )
+
+var traceabilityClients []*Client
+
+// GetClient - returns a random client from the clients array
+var GetClient = getClient
+
+func getClient() (*Client, error) {
+	switch clients := len(traceabilityClients); clients {
+	case 0:
+		return nil, fmt.Errorf("No traceability clients, can't publish metrics")
+	case 1:
+		return traceabilityClients[0], nil
+	default:
+		randomIndex := rand.Intn(len(traceabilityClients))
+		return traceabilityClients[randomIndex], nil
+	}
+}
 
 // Client - struct
 type Client struct {
@@ -102,6 +120,7 @@ func makeTraceabilityAgent(
 			transportClient: client,
 		}
 		clients = append(clients, outputClient)
+		traceabilityClients = append(traceabilityClients, outputClient)
 	}
 	traceabilityGroup.Clients = clients
 	return traceabilityGroup, nil
@@ -165,6 +184,11 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 
+// SetTransportClient - set the transport client
+func (client *Client) SetTransportClient(outputClient outputs.Client) {
+	client.transportClient = outputClient
+}
+
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
 	networkClient := client.transportClient.(outputs.NetworkClient)
@@ -187,38 +211,48 @@ func (client *Client) Close() error {
 // Publish sends events to the clients sink.
 func (client *Client) Publish(batch publisher.Batch) error {
 	events := batch.Events()
-	if outputEventProcessor != nil {
-		updatedEvents := outputEventProcessor.Process(events)
-		if len(updatedEvents) > 0 {
-			updateEvent(batch, updatedEvents)
-			events = batch.Events() // update the events, for changes from outputEventProcessor
-		} else {
-			batch.ACK()
-			return nil
-		}
+
+	eventType := "metric"
+	isMetric := false
+	if len(events) > 0 {
+		_, isMetric = events[0].Content.Meta["metric"]
 	}
 
-	sampledEvents, err := sampling.FilterEvents(events)
-	if err != nil {
-		log.Error(err.Error())
-	} else {
-		updateEvent(batch, sampledEvents)
+	if !isMetric {
+		eventType = "transaction"
+		if outputEventProcessor != nil {
+			updatedEvents := outputEventProcessor.Process(events)
+			if len(updatedEvents) > 0 {
+				updateEvent(batch, updatedEvents)
+				events = batch.Events() // update the events, for changes from outputEventProcessor
+			} else {
+				batch.ACK()
+				return nil
+			}
+		}
+
+		sampledEvents, err := sampling.FilterEvents(events)
+		if err != nil {
+			log.Error(err.Error())
+		} else {
+			updateEvent(batch, sampledEvents)
+		}
 	}
 
 	publishCount := len(batch.Events())
 
 	if publishCount > 0 {
-		log.Infof("Creating %d transaction events", publishCount)
+		log.Infof("Creating %d %s events", publishCount, eventType)
 	}
 
-	err = client.transportClient.Publish(batch)
+	err := client.transportClient.Publish(batch)
 	if err != nil {
-		log.Error("Failed to publish transaction event : ", err.Error())
+		log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
 		return err
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
-		log.Infof("%d events have been published", publishCount-len(batch.Events()))
+		log.Infof("%d %s events have been published", publishCount-len(batch.Events()), eventType)
 	}
 
 	return nil
