@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	metrics "github.com/rcrowley/go-metrics"
@@ -79,7 +80,7 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
-	if !c.isInitialized {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() {
 		return
 	}
 

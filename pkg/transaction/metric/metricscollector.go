@@ -151,6 +151,9 @@ func (c *collector) updateUsage(count int64) {
 }
 
 func (c *collector) updateMetric(apiID, apiName, statusCode string, duration int64) *APIMetric {
+	if !agent.GetCentralConfig().CanPublishMetricEvent() {
+		return nil // no need to update metrics with publish off
+	}
 	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
 
 	apiStatusMap, ok := c.metricMap[apiID]

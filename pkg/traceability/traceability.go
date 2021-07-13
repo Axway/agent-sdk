@@ -212,38 +212,47 @@ func (client *Client) Close() error {
 func (client *Client) Publish(batch publisher.Batch) error {
 	events := batch.Events()
 
-	if outputEventProcessor != nil {
-		updatedEvents := outputEventProcessor.Process(events)
-		if len(updatedEvents) > 0 {
-			updateEvent(batch, updatedEvents)
-			events = batch.Events() // update the events, for changes from outputEventProcessor
-		} else {
-			batch.ACK()
-			return nil
-		}
+	eventType := "metric"
+	isMetric := false
+	if len(events) > 0 {
+		_, isMetric = events[0].Content.Meta["metric"]
 	}
 
-	sampledEvents, err := sampling.FilterEvents(events)
-	if err != nil {
-		log.Error(err.Error())
-	} else {
-		updateEvent(batch, sampledEvents)
+	if !isMetric {
+		eventType = "transaction"
+		if outputEventProcessor != nil {
+			updatedEvents := outputEventProcessor.Process(events)
+			if len(updatedEvents) > 0 {
+				updateEvent(batch, updatedEvents)
+				events = batch.Events() // update the events, for changes from outputEventProcessor
+			} else {
+				batch.ACK()
+				return nil
+			}
+		}
+
+		sampledEvents, err := sampling.FilterEvents(events)
+		if err != nil {
+			log.Error(err.Error())
+		} else {
+			updateEvent(batch, sampledEvents)
+		}
 	}
 
 	publishCount := len(batch.Events())
 
 	if publishCount > 0 {
-		log.Infof("Creating %d transaction events", publishCount)
+		log.Infof("Creating %d %s events", publishCount, eventType)
 	}
 
-	err = client.transportClient.Publish(batch)
+	err := client.transportClient.Publish(batch)
 	if err != nil {
-		log.Error("Failed to publish transaction event : ", err.Error())
+		log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
 		return err
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
-		log.Infof("%d events have been published", publishCount-len(batch.Events()))
+		log.Infof("%d %s events have been published", eventType, publishCount-len(batch.Events()))
 	}
 
 	return nil

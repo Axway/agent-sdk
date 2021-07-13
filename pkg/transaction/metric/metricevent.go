@@ -6,6 +6,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 	metrics "github.com/rcrowley/go-metrics"
@@ -45,7 +46,7 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 		return beatPub.Event{}, err
 	}
 	c.Fields["token"] = token
-	// c.Fields["axway-target-flow"] = metricFlow
+	c.Fields["axway-target-flow"] = metricFlow
 
 	// convert the CondorMetricEvent to json then to map[string]interface{}
 	cmeJSON, err := json.Marshal(c)
@@ -59,7 +60,7 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 		return beatPub.Event{}, err
 	}
 
-	return beatPub.Event{
+	beatEnv := beatPub.Event{
 		Content: beat.Event{
 			Timestamp: c.Timestamp,
 			Meta: map[string]interface{}{
@@ -69,5 +70,7 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 			Fields: fieldsData,
 		},
 		Flags: beatPub.GuaranteedSend,
-	}, nil
+	}
+	log.Tracef("Created Metric Event: %+v", beatEnv)
+	return beatEnv, nil
 }
