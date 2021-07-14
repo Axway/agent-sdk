@@ -235,7 +235,7 @@ func (c *agentRootCommand) initConfig() error {
 	if err != nil {
 		return err
 	}
-
+	startAgentVersionChecker()
 	// Initialize Agent Config
 	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
