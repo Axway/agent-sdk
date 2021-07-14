@@ -176,6 +176,7 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	c.checkStatusFlag()
 	agentsync.SetSyncMode(c.GetProperties())
+	startAgentVersionChecker()
 	return nil
 }
 
@@ -235,7 +236,6 @@ func (c *agentRootCommand) initConfig() error {
 	if err != nil {
 		return err
 	}
-	startAgentVersionChecker()
 	// Initialize Agent Config
 	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
