@@ -32,6 +32,10 @@ func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	return nil, nil
 }
 
+func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
 func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
 	return nil, nil
 }
