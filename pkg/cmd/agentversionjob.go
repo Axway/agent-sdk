@@ -1,4 +1,4 @@
-package agent
+package cmd
 
 import (
 	"bytes"
@@ -35,8 +35,8 @@ type version struct {
 	val                 string
 }
 
-// agentVersionCheckJob - polls for agent versions
-type agentVersionCheckJob struct {
+// AgentVersionCheckJob - polls for agent versions
+type AgentVersionCheckJob struct {
 	jobs.Job
 	allVersions   []string
 	latestVersion string
@@ -46,18 +46,18 @@ type agentVersionCheckJob struct {
 }
 
 // Ready -
-func (avj *agentVersionCheckJob) Ready() bool {
-	avj.setURLName()
+func (avj *AgentVersionCheckJob) Ready() bool {
 	return true
 }
 
 // Status -
-func (avj *agentVersionCheckJob) Status() error {
+func (avj *AgentVersionCheckJob) Status() error {
 	return nil
 }
 
 // Execute - run agent version check job one time
-func (avj *agentVersionCheckJob) Execute() error {
+func (avj *AgentVersionCheckJob) Execute() error {
+	avj.urlName = agentURL[BuildAgentName]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
 		err := errors.ErrStartingVersionChecker.FormatError("empty or generic data plane type name")
 		log.Trace(err)
@@ -80,8 +80,8 @@ func (avj *agentVersionCheckJob) Execute() error {
 	return nil
 }
 
-func (avj *agentVersionCheckJob) getBuildVersion() error {
-	avj.buildVersion = agent.cfg.GetBuildVersion()
+func (avj *AgentVersionCheckJob) getBuildVersion() error {
+	avj.buildVersion = BuildVersion
 	//remove -SHA from build version
 	noSHA := strings.Split(avj.buildVersion, "-")
 	avj.buildVersion = noSHA[0]
@@ -98,7 +98,7 @@ func (avj *agentVersionCheckJob) getBuildVersion() error {
 // **Note** polling the jfrog website is the current solution to obtaining the list of versions
 // In the future, adding a (Generic) resource for grouping versions together under the same scope is a possible solution
 // ie: a new unscoped resource that represents the platform services, so that other products can plug in their releases.
-func (avj *agentVersionCheckJob) getJFrogVersions(name string) error {
+func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
 	b := loadPage(name)
 
 	hAnchors := htmlAnchors{}
@@ -136,12 +136,7 @@ func isVersionSmaller(v1 version, v2 version) bool {
 	return false
 }
 
-func (avj *agentVersionCheckJob) setURLName() {
-	avj.dataPlaneType = agent.cfg.GetBuildDataPlaneType()
-	avj.urlName = agentURL[avj.dataPlaneType]
-}
-
-func (avj *agentVersionCheckJob) getLatestVersionFromJFrog() string {
+func (avj *AgentVersionCheckJob) getLatestVersionFromJFrog() string {
 	tempMaxVersion := version{
 		major: 0,
 		minor: 0,
@@ -204,4 +199,15 @@ func loadPage(name string) []byte {
 		log.Trace(err)
 	}
 	return html
+}
+
+// startAgentVersionChecker - single run job to check for a newer agent version on jfrog
+func startAgentVersionChecker() {
+	// register the agent version checker single run job
+	id, err := jobs.RegisterSingleRunJob(&AgentVersionCheckJob{})
+	if err != nil {
+		log.Errorf("could not start the agent version checker job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered agent version checker job: %s", id)
 }
