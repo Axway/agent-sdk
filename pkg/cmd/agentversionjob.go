@@ -76,7 +76,7 @@ func (avj *AgentVersionCheckJob) Execute() error {
 	}
 	// compare build to latest version
 	if isVersionStringOlder(avj.buildVersion, avj.latestVersion) {
-		log.Warnf("Running older version of %s. Please consider upgrading from version %s to version %s", avj.dataPlaneType, avj.buildVersion, avj.latestVersion)
+		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, avj.latestVersion)
 	}
 	return nil
 }
