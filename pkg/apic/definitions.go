@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"sync"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -145,6 +147,7 @@ type ServiceClient struct {
 	subscriptionSchemaCache            cache.Cache
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
+	subscriptionRegistrationLock       sync.Mutex
 }
 
 // APIServerInfoProperty -

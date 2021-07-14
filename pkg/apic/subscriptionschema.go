@@ -123,6 +123,9 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
+	c.subscriptionRegistrationLock.Lock()
+	defer c.subscriptionRegistrationLock.Unlock()
+
 	var registeredSpecHash uint64
 	registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
 	if registeredSchema != nil {
