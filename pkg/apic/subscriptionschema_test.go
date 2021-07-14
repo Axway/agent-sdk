@@ -3,10 +3,14 @@ package apic
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/stretchr/testify/assert"
@@ -34,35 +38,67 @@ func commonSetup(t *testing.T) (Client, *api.MockHTTPClient, SubscriptionSchema)
 }
 
 func TestRegisterSubscriptionSchema(t *testing.T) {
-	svcClient, mockHTTPClient, apiKeySchema := commonSetup(t)
-	mockHTTPClient.ResponseCode = http.StatusOK
-	err := svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
-	assert.NotNil(t, err)
+	svcClient, _, apiKeySchema := commonSetup(t)
+	serviceClient := svcClient.(*ServiceClient)
+	schemaExists := false
+	schemaCreated := false
+	schemaUpdate := false
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		b := []byte("")
 
-	// this return code should be good
-	mockHTTPClient.ResponseCode = http.StatusCreated
+		if strings.Contains(req.RequestURI, "/consumersubscriptiondefs/"+apiKeySchema.GetSubscriptionName()) {
+			if req.Method == http.MethodGet {
+				if schemaExists {
+					existingSchema := v1alpha1.ConsumerSubscriptionDefinition{}
+					b, _ = json.Marshal(existingSchema)
+				} else {
+					rw.WriteHeader(http.StatusNotFound)
+				}
+			} else {
+				// PUT call
+				schemaUpdate = true
+				rw.WriteHeader(http.StatusOK)
+				spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(apiKeySchema)
+				b, _ = serviceClient.marshalSubscriptionDefinition(apiKeySchema.GetSubscriptionName(), spec)
+			}
+		}
+		if req.Method == http.MethodPost && strings.Contains(req.RequestURI, "/consumersubscriptiondefs") {
+			schemaCreated = true
+			rw.WriteHeader(http.StatusCreated)
+			spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(apiKeySchema)
+			b, _ = serviceClient.marshalSubscriptionDefinition(apiKeySchema.GetSubscriptionName(), spec)
+		}
+		// Send response to be tested
+		rw.Write(b)
+	}))
+	// Close the server when test finishes
+	defer server.Close()
+	cfg := serviceClient.cfg.(*config.CentralConfiguration)
+	cfg.URL = server.URL
+	serviceClient.apiClient = api.NewClient(nil, "")
+	err := svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
+	assert.Nil(t, err)
+	cachedSchema, err := serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	assert.NotNil(t, cachedSchema)
+	assert.True(t, schemaCreated)
+	assert.False(t, schemaUpdate)
+
+	schemaCreated = false
+	serviceClient.subscriptionSchemaCache = cache.New()
+	schemaExists = true
 	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.Nil(t, err)
+	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	assert.NotNil(t, cachedSchema)
+	assert.False(t, schemaCreated)
+	assert.False(t, schemaUpdate)
 
-	serviceClient := svcClient.(*ServiceClient)
-	registeredAPIKeySchema := serviceClient.RegisteredSubscriptionSchema
-	assert.NotNil(t, registeredAPIKeySchema)
-	rawAPIJson, _ := registeredAPIKeySchema.rawJSON()
-
-	var registeredSchema subscriptionSchema
-	json.Unmarshal([]byte(rawAPIJson), &registeredSchema)
-
-	prop1 := registeredSchema.Properties["prop1"]
-	assert.NotNil(t, prop1)
-	assert.Equal(t, "string", prop1.Type)
-	assert.Equal(t, "someproperty", prop1.Description)
-
-	prop2 := registeredSchema.Properties["prop2"]
-	assert.NotNil(t, prop2)
-	assert.Equal(t, "string", prop1.Type)
-	assert.Equal(t, "someproperty2", prop2.Description)
-
-	assert.Contains(t, registeredSchema.Required, "prop1")
+	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, true)
+	assert.Nil(t, err)
+	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	assert.NotNil(t, cachedSchema)
+	assert.False(t, schemaCreated)
+	assert.True(t, schemaUpdate)
 }
 
 func TestUpdateSubscriptionSchema(t *testing.T) {
