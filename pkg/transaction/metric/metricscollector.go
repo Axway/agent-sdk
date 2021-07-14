@@ -98,7 +98,7 @@ func createMetricCollector() Collector {
 
 	if flag.Lookup("test.v") == nil {
 		var err error
-		metricCollector.jobID, err = jobs.RegisterIntervalJob(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval())
+		metricCollector.jobID, err = jobs.RegisterIntervalJobWithName(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval(), "Metric Collector")
 		if err != nil {
 			panic(err)
 		}

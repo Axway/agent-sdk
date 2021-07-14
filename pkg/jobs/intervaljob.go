@@ -17,10 +17,11 @@ type intervalJob struct {
 }
 
 //newIntervalJob - creates an interval run job
-func newIntervalJob(newJob Job, interval time.Duration, failJobChan chan string) (JobExecution, error) {
+func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := intervalJob{
 		baseJob{
 			id:       newUUID(),
+			name:     name,
 			job:      newJob,
 			jobType:  JobTypeInterval,
 			status:   JobStatusInitializing,
@@ -43,7 +44,9 @@ func (b *intervalJob) handleExecution() {
 		b.setExecutionError()
 		log.Error(b.err)
 		b.SetStatus(JobStatusStopped)
+		b.consecutiveFails++
 	}
+	b.consecutiveFails = 0
 }
 
 //start - calls the Execute function from the Job definition

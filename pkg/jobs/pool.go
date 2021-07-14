@@ -23,6 +23,7 @@ type Pool struct {
 	failJobChan             chan string
 	stopJobsChan            chan bool
 	retryInterval           time.Duration
+	origRetryInterval       time.Duration
 }
 
 func newPool() *Pool {
@@ -32,14 +33,15 @@ func newPool() *Pool {
 	}
 
 	newPool := Pool{
-		jobs:             make(map[string]JobExecution),
-		cronJobs:         make(map[string]JobExecution),
-		detachedCronJobs: make(map[string]JobExecution),
-		poolStatus:       PoolStatusInitializing,
-		failedJob:        "",
-		failJobChan:      make(chan string),
-		stopJobsChan:     make(chan bool),
-		retryInterval:    interval,
+		jobs:              make(map[string]JobExecution),
+		cronJobs:          make(map[string]JobExecution),
+		detachedCronJobs:  make(map[string]JobExecution),
+		poolStatus:        PoolStatusInitializing,
+		failedJob:         "",
+		failJobChan:       make(chan string),
+		stopJobsChan:      make(chan bool),
+		retryInterval:     interval,
+		origRetryInterval: interval,
 	}
 
 	// start routine that catches all failures whenever written and acts on first
@@ -111,7 +113,12 @@ func (p *Pool) removeJob(jobID string) {
 
 //RegisterSingleRunJob - Runs a single run job
 func (p *Pool) RegisterSingleRunJob(newJob Job) (string, error) {
-	job, err := newBaseJob(newJob, p.failJobChan)
+	return p.RegisterSingleRunJobWithName(newJob, "")
+}
+
+//RegisterSingleRunJobWithName - Runs a single run job
+func (p *Pool) RegisterSingleRunJobWithName(newJob Job, name string) (string, error) {
+	job, err := newBaseJob(newJob, p.failJobChan, name)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +127,12 @@ func (p *Pool) RegisterSingleRunJob(newJob Job) (string, error) {
 
 //RegisterIntervalJob - Runs a job with a specific interval between each run
 func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	job, err := newIntervalJob(newJob, interval, p.failJobChan)
+	return p.RegisterIntervalJobWithName(newJob, interval, "")
+}
+
+//RegisterIntervalJobWithName - Runs a job with a specific interval between each run
+func (p *Pool) RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
+	job, err := newIntervalJob(newJob, interval, name, p.failJobChan)
 	if err != nil {
 		return "", err
 	}
@@ -129,7 +141,12 @@ func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, 
 
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run, detached from other jobs
 func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	job, err := newDetachedIntervalJob(newJob, interval)
+	return p.RegisterDetachedIntervalJobWithName(newJob, interval, "")
+}
+
+//RegisterDetachedIntervalJobWithName - Runs a job with a specific interval between each run, detached from other jobs
+func (p *Pool) RegisterDetachedIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
+	job, err := newDetachedIntervalJob(newJob, interval, name)
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +155,12 @@ func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (
 
 //RegisterScheduledJob - Runs a job on a specific schedule
 func (p *Pool) RegisterScheduledJob(newJob Job, schedule string) (string, error) {
-	job, err := newScheduledJob(newJob, schedule, p.failJobChan)
+	return p.RegisterScheduledJobWithName(newJob, schedule, "")
+}
+
+//RegisterScheduledJobWithName - Runs a job on a specific schedule
+func (p *Pool) RegisterScheduledJobWithName(newJob Job, schedule, name string) (string, error) {
+	job, err := newScheduledJob(newJob, schedule, name, p.failJobChan)
 	if err != nil {
 		return "", err
 	}
@@ -147,7 +169,12 @@ func (p *Pool) RegisterScheduledJob(newJob Job, schedule string) (string, error)
 
 //RegisterRetryJob - Runs a job with a limited number of retries
 func (p *Pool) RegisterRetryJob(newJob Job, retries int) (string, error) {
-	job, err := newRetryJob(newJob, retries, p.failJobChan)
+	return p.RegisterRetryJobWithName(newJob, retries, "")
+}
+
+//RegisterRetryJobWithName  - Runs a job with a limited number of retries
+func (p *Pool) RegisterRetryJobWithName(newJob Job, retries int, name string) (string, error) {
+	job, err := newRetryJob(newJob, retries, name, p.failJobChan)
 	if err != nil {
 		return "", err
 	}
@@ -186,12 +213,14 @@ func (p *Pool) GetStatus() string {
 
 //startAll - starts all jobs defined in the cronJobs map, used by watchJobs
 //           other jobs are single run and never restarted
-func (p *Pool) startAll() {
+// 					 returns true when successful, false when not
+func (p *Pool) startAll() bool {
 	// Check that all are ready before starting
 	log.Debug("Checking for all cron jobs to be ready")
 	for _, job := range p.cronJobs {
 		if !job.Ready() {
-			return
+			log.Debugf("Job %v is not ready", job.GetID())
+			return false
 		}
 	}
 	log.Debug("Starting all cron jobs")
@@ -199,6 +228,7 @@ func (p *Pool) startAll() {
 	for _, job := range p.cronJobs {
 		go job.start()
 	}
+	return true
 }
 
 //stopAll - stops all jobs defined in the cronJobs map, used by watchJobs
@@ -206,9 +236,27 @@ func (p *Pool) startAll() {
 func (p *Pool) stopAll() {
 	log.Debug("Stopping all cron jobs")
 	p.poolStatus = PoolStatusStopped
+	maxErrors := 0
 	for _, job := range p.cronJobs {
 		job.stop()
+		if job.getConsecutiveFails() > maxErrors {
+			maxErrors = job.getConsecutiveFails()
+		}
 	}
+	for i := 1; i < maxErrors; i++ {
+		p.backoffTimeout()
+	}
+}
+
+func (p *Pool) backoffTimeout() {
+	p.retryInterval = p.retryInterval * 2
+	if p.retryInterval > 10*time.Minute {
+		p.retryInterval = 10 * time.Minute // max of 10 minute
+	}
+}
+
+func (p *Pool) resetTimeout() {
+	p.retryInterval = p.origRetryInterval
 }
 
 //catchFails - catches all writes to the failJobChan and only sends one stop signal
@@ -233,10 +281,16 @@ func (p *Pool) watchJobs() {
 			log.Debugf("Job with id %v failed, stop all jobs", p.failedJob)
 			p.stopAll()
 		} else {
-			log.Debug("Pool not running, start all jobs")
+			if p.failedJob != "" {
+				log.Debugf("Pool not running, start all jobs in %v seconds", p.retryInterval.Seconds())
+				time.Sleep(p.retryInterval)
+			}
 			// attempt to restart all jobs
-			p.startAll()
-			time.Sleep(p.retryInterval)
+			if p.startAll() {
+				p.resetTimeout()
+			} else {
+				p.backoffTimeout()
+			}
 		}
 	}
 }

@@ -161,7 +161,7 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	id, err := jobs.RegisterIntervalJob(&discoveryCache{}, agent.cfg.GetPollInterval())
+	id, err := jobs.RegisterIntervalJobWithName(&discoveryCache{}, agent.cfg.GetPollInterval(), "Discovery Cache")
 	if err != nil {
 		log.Errorf("could not start the API cache update job: %v", err.Error())
 		return

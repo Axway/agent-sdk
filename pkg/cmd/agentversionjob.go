@@ -205,7 +205,7 @@ func loadPage(name string) []byte {
 // startAgentVersionChecker - single run job to check for a newer agent version on jfrog
 func startAgentVersionChecker() {
 	// register the agent version checker single run job
-	id, err := jobs.RegisterSingleRunJob(&AgentVersionCheckJob{})
+	id, err := jobs.RegisterSingleRunJobWithName(&AgentVersionCheckJob{}, "Version Check")
 	if err != nil {
 		log.Errorf("could not start the agent version checker job: %v", err.Error())
 		return

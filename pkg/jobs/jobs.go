@@ -14,9 +14,19 @@ func RegisterSingleRunJob(newJob Job) (string, error) {
 	return globalPool.RegisterSingleRunJob(newJob)
 }
 
+//RegisterSingleRunJobWithName - Runs a single run job in the globalPool
+func RegisterSingleRunJobWithName(newJob Job, name string) (string, error) {
+	return globalPool.RegisterSingleRunJobWithName(newJob, name)
+}
+
 //RegisterIntervalJob - Runs a job with a specific interval between each run in the globalPool
 func RegisterIntervalJob(newJob Job, interval time.Duration) (string, error) {
 	return globalPool.RegisterIntervalJob(newJob, interval)
+}
+
+//RegisterIntervalJobWithName - Runs a job with a specific interval between each run in the globalPool
+func RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
+	return globalPool.RegisterIntervalJobWithName(newJob, interval, name)
 }
 
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run in the globalPool, detached from other jobs to always run
@@ -24,14 +34,29 @@ func RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, er
 	return globalPool.RegisterDetachedIntervalJob(newJob, interval)
 }
 
+//RegisterDetachedIntervalJobWithName - Runs a job with a specific interval between each run in the globalPool, detached from other jobs to always run
+func RegisterDetachedIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
+	return globalPool.RegisterDetachedIntervalJobWithName(newJob, interval, name)
+}
+
 //RegisterScheduledJob - Runs a job on a specific schedule in the globalPool
 func RegisterScheduledJob(newJob Job, schedule string) (string, error) {
 	return globalPool.RegisterScheduledJob(newJob, schedule)
 }
 
-//RegisterRetryJob - Runs a job with a limited number of retries in the globalPool
+//RegisterScheduledJobWithName - Runs a job on a specific schedule in the globalPool
+func RegisterScheduledJobWithName(newJob Job, schedule, name string) (string, error) {
+	return globalPool.RegisterScheduledJobWithName(newJob, schedule, name)
+}
+
+//RegisterRetryJob - Runs a job with a WithName
 func RegisterRetryJob(newJob Job, retries int) (string, error) {
 	return globalPool.RegisterRetryJob(newJob, retries)
+}
+
+//RegisterRetryJobWithName - Runs a job with a limited number of retries in the globalPool
+func RegisterRetryJobWithName(newJob Job, retries int, name string) (string, error) {
+	return globalPool.RegisterRetryJobWithName(newJob, retries, name)
 }
 
 //UnregisterJob - Removes the specified job in the globalPool

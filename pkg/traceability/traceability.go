@@ -290,7 +290,7 @@ func registerHealthCheckers(config *Config) error {
 		// TBD. Remove in future when Jobs interface is complete
 		ta.hcJob = hcJob
 
-		_, err := jobs.RegisterIntervalJob(hcJob, config.Timeout)
+		_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Healthcheck")
 		if err != nil {
 			return err
 		}

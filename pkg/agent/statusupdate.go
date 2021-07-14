@@ -32,7 +32,7 @@ func (su *agentStatusUpdate) Ready() bool {
 	}
 	// Do not start until status will be running
 	status := su.getCombinedStatus()
-	if status != AgentRunning {
+	if status != AgentRunning && su.immediateStatusChange == true {
 		return false
 	}
 
@@ -97,7 +97,7 @@ func startPeriodicStatusUpdate() {
 	periodicStatusUpdate = &agentStatusUpdate{
 		typeOfStatusUpdate: periodic,
 	}
-	_, err := jobs.RegisterIntervalJob(periodicStatusUpdate, interval)
+	_, err := jobs.RegisterIntervalJobWithName(periodicStatusUpdate, interval, "Status Update")
 
 	if err != nil {
 		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(periodic))
@@ -112,7 +112,7 @@ func startImmediateStatusUpdate() {
 		immediateStatusChange: true,
 		typeOfStatusUpdate:    immediate,
 	}
-	_, err := jobs.RegisterDetachedIntervalJob(immediateStatusUpdate, interval)
+	_, err := jobs.RegisterDetachedIntervalJobWithName(immediateStatusUpdate, interval, "Immediate Status Update")
 
 	if err != nil {
 		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(immediate))

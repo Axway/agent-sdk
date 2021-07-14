@@ -14,7 +14,7 @@ type retryJob struct {
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
-func newRetryJob(newJob Job, retries int, failJobChan chan string) (JobExecution, error) {
+func newRetryJob(newJob Job, retries int, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := retryJob{
 		baseJob{
 			id:       newUUID(),

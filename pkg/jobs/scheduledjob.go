@@ -20,7 +20,7 @@ type scheduleJob struct {
 }
 
 //newScheduledJob - creates a job that is ran at a specific time (@hourly,@daily,@weekly,min hour dow dom)
-func newScheduledJob(newJob Job, schedule string, failJobChan chan string) (JobExecution, error) {
+func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string) (JobExecution, error) {
 	exp, err := cronexpr.Parse(schedule)
 	if err != nil {
 		return nil, errors.Wrap(ErrRegisteringJob, err.Error()).FormatError("scheduled")
