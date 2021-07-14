@@ -12,6 +12,7 @@ import (
 
 	"net/http"
 
+	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -47,7 +48,6 @@ type agentVersionCheckJob struct {
 
 // Ready -
 func (avj *agentVersionCheckJob) Ready() bool {
-	avj.setURLName()
 	return true
 }
 
@@ -58,6 +58,7 @@ func (avj *agentVersionCheckJob) Status() error {
 
 // Execute - run agent version check job one time
 func (avj *agentVersionCheckJob) Execute() error {
+	avj.urlName = agentURL[cmd.BuildAgentName]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
 		err := errors.ErrStartingVersionChecker.FormatError("empty or generic data plane type name")
 		log.Trace(err)
@@ -81,7 +82,7 @@ func (avj *agentVersionCheckJob) Execute() error {
 }
 
 func (avj *agentVersionCheckJob) getBuildVersion() error {
-	avj.buildVersion = agent.cfg.GetBuildVersion()
+	avj.buildVersion = cmd.BuildVersion
 	//remove -SHA from build version
 	noSHA := strings.Split(avj.buildVersion, "-")
 	avj.buildVersion = noSHA[0]
@@ -134,11 +135,6 @@ func isVersionSmaller(v1 version, v2 version) bool {
 		}
 	}
 	return false
-}
-
-func (avj *agentVersionCheckJob) setURLName() {
-	avj.dataPlaneType = agent.cfg.GetBuildDataPlaneType()
-	avj.urlName = agentURL[avj.dataPlaneType]
 }
 
 func (avj *agentVersionCheckJob) getLatestVersionFromJFrog() string {
