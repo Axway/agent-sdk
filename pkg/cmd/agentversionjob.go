@@ -57,8 +57,8 @@ func (avj *AgentVersionCheckJob) Status() error {
 
 // Execute - run agent version check job one time
 func (avj *AgentVersionCheckJob) Execute() error {
-	avj.dataPlaneType = BuildAgentName
-	avj.urlName = agentURL[BuildAgentName]
+	avj.dataPlaneType = BuildDataPlaneType
+	avj.urlName = agentURL[avj.dataPlaneType]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
 		err := errors.ErrStartingVersionChecker.FormatError("empty or generic data plane type name")
 		log.Trace(err)
