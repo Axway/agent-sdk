@@ -123,10 +123,77 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 // RegisterSubscriptionSchema - Adds a new subscription schema for the specified auth type. In publishToEnvironment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
-	c.RegisteredSubscriptionSchema = subscriptionSchema
+	c.subscriptionRegistrationLock.Lock()
+	defer c.subscriptionRegistrationLock.Unlock()
 
+	var registeredSpecHash uint64
+	registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+	if registeredSchema != nil {
+		registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
+	} else {
+		update = true
+	}
+
+	spec, err := c.prepareSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+	// Create New definition
+	if registeredSchema == nil {
+		return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+	}
+
+	if update {
+		// Check if the schema definitions changed before update
+		currentHash, _ := util.ComputeHash(spec)
+		if currentHash != registeredSpecHash {
+			return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+		}
+	}
+
+	return nil
+}
+
+func (c *ServiceClient) getCachedSubscriptionSchema(defName string) *v1alpha1.ConsumerSubscriptionDefinition {
+	cachedSchema, err := c.subscriptionSchemaCache.Get(defName)
+	if err != nil {
+		registeredSchema, _ := c.getSubscriptionSchema(defName)
+		if registeredSchema != nil {
+			c.subscriptionSchemaCache.Set(defName, registeredSchema)
+		}
+		return registeredSchema
+	}
+	return cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition)
+}
+
+func (c *ServiceClient) getSubscriptionSchema(schemaName string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + schemaName,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusOK {
+		return nil, nil
+	}
+	registeredSchema := &v1alpha1.ConsumerSubscriptionDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	return registeredSchema, nil
+}
+
+func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	//Add API Server resource - SubscriptionDefinition
-	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
+	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -144,25 +211,19 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
-	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
+	if response.Code != http.StatusCreated {
 		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
-	if response.Code == http.StatusConflict && update {
-		// Call update if a conflict was returned
-		return c.UpdateSubscriptionSchema(subscriptionSchema)
-	}
-
+	registeredSchema := &v1alpha1.ConsumerSubscriptionDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	c.subscriptionSchemaCache.Set(defName, registeredSchema)
 	return nil
 }
 
-// UpdateSubscriptionSchema - Updates a subscription schema in Publish to environment mode
-// creates a API Server resource for subscription definition
-func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
-	c.RegisteredSubscriptionSchema = subscriptionSchema
-
+func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
-	buffer, err := c.marshalSubscriptionDefinition(subscriptionSchema)
+	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -170,7 +231,7 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 	}
 	request := coreapi.Request{
 		Method:  coreapi.PUT,
-		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + subscriptionSchema.GetSubscriptionName(),
+		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + defName,
 		Headers: headers,
 		Body:    buffer,
 	}
@@ -183,11 +244,23 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 	}
-
+	registeredSchema := &v1alpha1.ConsumerSubscriptionDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	c.subscriptionSchemaCache.Set(defName, registeredSchema)
 	return nil
 }
 
-func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema SubscriptionSchema) ([]byte, error) {
+// UpdateSubscriptionSchema - Updates a subscription schema in Publish to environment mode
+// creates a API Server resource for subscription definition
+func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	spec, err := c.prepareSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+	return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+}
+
+func (c *ServiceClient) prepareSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.ConsumerSubscriptionDefinitionSpec, error) {
 	catalogSubscriptionSchema, err := subscriptionSchema.mapStringInterface()
 	if err != nil {
 		return nil, err
@@ -197,7 +270,8 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 	if c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalMode() == corecfg.WebhookApproval {
 		webhooks = append(webhooks, DefaultSubscriptionWebhookName)
 	}
-	spec := v1alpha1.ConsumerSubscriptionDefinitionSpec{
+
+	return &v1alpha1.ConsumerSubscriptionDefinitionSpec{
 		Webhooks: webhooks,
 		Schema: v1alpha1.ConsumerSubscriptionDefinitionSpecSchema{
 			Properties: []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
@@ -207,17 +281,19 @@ func (c *ServiceClient) marshalSubscriptionDefinition(subscriptionSchema Subscri
 				},
 			},
 		},
-	}
+	}, nil
+}
 
+func (c *ServiceClient) marshalSubscriptionDefinition(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) ([]byte, error) {
 	apiServerService := v1alpha1.ConsumerSubscriptionDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.ConsumerSubscriptionDefinitionGVK(),
-			Name:             subscriptionSchema.GetSubscriptionName(),
+			Name:             defName,
 			Title:            "Subscription definition created by agent",
 			Attributes:       nil,
 			Tags:             nil,
 		},
-		Spec: spec,
+		Spec: *spec,
 	}
 
 	return json.Marshal(apiServerService)

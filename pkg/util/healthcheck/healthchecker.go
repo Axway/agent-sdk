@@ -158,7 +158,7 @@ func HandleRequests() {
 // CheckIsRunning - Checks if another instance is already running by looking at the healthcheck
 func CheckIsRunning() error {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
-		apiClient := api.NewClient(nil, "")
+		apiClient := api.NewClientWithTimeout(nil, "", 5*time.Second)
 		req := api.Request{
 			Method: "GET",
 			URL:    "http://0.0.0.0:" + strconv.Itoa(statusConfig.GetPort()) + "/status",
