@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -171,7 +172,7 @@ func startAPIServiceCache() {
 	log.Tracef("registered API cache update job: %s", id)
 
 	allDiscoveryCacheJob := newDiscoveryCache(true)
-	id, err = jobs.RegisterScheduledJobWithName(allDiscoveryCacheJob, "0 1 * * *", "All APIs Cache")
+	id, err = jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
 		return
