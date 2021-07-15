@@ -3,10 +3,12 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -24,6 +26,17 @@ const (
 
 type discoveryCache struct {
 	jobs.Job
+	lastServicesTime  time.Time
+	lastInstancesTime time.Time
+	getAll            bool
+}
+
+func newDiscoveryCache(getAll bool) *discoveryCache {
+	return &discoveryCache{
+		lastServicesTime:  time.Time{},
+		lastInstancesTime: time.Time{},
+		getAll:            getAll,
+	}
 }
 
 //Ready -
@@ -44,15 +57,15 @@ func (j *discoveryCache) Status() error {
 //Execute -
 func (j *discoveryCache) Execute() error {
 	log.Trace("executing API cache update job")
-	updateAPICache()
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-		validateAPIServiceInstances()
+	j.updateAPICache()
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent && j.getAll {
+		j.validateAPIServiceInstances()
 	}
 	fetchConfig()
 	return nil
 }
 
-func updateAPICache() {
+func (j *discoveryCache) updateAPICache() {
 	log.Trace("updating API cache")
 
 	// Update cache with published resources
@@ -61,6 +74,11 @@ func updateAPICache() {
 		"fields": apiServerFields,
 	}
 
+	if !j.lastServicesTime.IsZero() && !j.getAll {
+		query["query"] = fmt.Sprintf("metadata.audit.createTimestamp>\"%s\"", j.lastServicesTime.Format(v1.APIServerTimeFormat))
+	}
+
+	j.lastServicesTime = time.Now()
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
 	for _, apiService := range apiServices {
@@ -73,16 +91,39 @@ func updateAPICache() {
 		} else {
 			existingAPIs[externalAPIID] = true
 		}
-
 	}
 
-	// Remove items that are not published as Resources
-	cacheKeys := agent.apiMap.GetKeys()
-	for _, key := range cacheKeys {
-		if _, ok := existingAPIs[key]; !ok {
-			agent.apiMap.Delete(key)
+	if j.getAll {
+		// Remove items that are not published as Resources
+		cacheKeys := agent.apiMap.GetKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingAPIs[key]; !ok {
+				agent.apiMap.Delete(key)
+			}
 		}
 	}
+}
+
+func (j *discoveryCache) validateAPIServiceInstances() {
+	if agent.apiValidator == nil {
+		return
+	}
+
+	query := map[string]string{
+		"fields": apiServerFields,
+	}
+
+	if !j.lastInstancesTime.IsZero() && !j.getAll {
+		query["query"] = fmt.Sprintf("metadata.audit.createTimestamp>%d", j.lastInstancesTime.UnixNano())
+	}
+
+	j.lastInstancesTime = time.Now()
+	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetInstancesURL(), apiServerPageSize)
+	if err != nil {
+		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
+		return
+	}
+	validateAPIOnDataplane(serviceInstances)
 }
 
 var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
@@ -120,23 +161,6 @@ var updateCacheForExternalAPI = func(query map[string]string) (interface{}, erro
 	json.Unmarshal(response, &apiService)
 	addItemToAPICache(apiService)
 	return apiService, nil
-}
-
-func validateAPIServiceInstances() {
-	if agent.apiValidator == nil {
-		return
-	}
-
-	query := map[string]string{
-		"fields": apiServerFields,
-	}
-
-	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetInstancesURL(), apiServerPageSize)
-	if err != nil {
-		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
-		return
-	}
-	validateAPIOnDataplane(serviceInstances)
 }
 
 func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) {

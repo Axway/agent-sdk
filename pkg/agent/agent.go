@@ -12,6 +12,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -161,12 +162,21 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	id, err := jobs.RegisterIntervalJobWithName(&discoveryCache{}, agent.cfg.GetPollInterval(), "Discovery Cache")
+	newDiscoveryCacheJob := newDiscoveryCache(false)
+	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 	if err != nil {
-		log.Errorf("could not start the API cache update job: %v", err.Error())
+		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 		return
 	}
 	log.Tracef("registered API cache update job: %s", id)
+
+	allDiscoveryCacheJob := newDiscoveryCache(true)
+	id, err = jobs.RegisterScheduledJobWithName(allDiscoveryCacheJob, "0 1 * * *", "All APIs Cache")
+	if err != nil {
+		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
+		return
+	}
+
 }
 
 func isRunningInDockerContainer() bool {
@@ -344,14 +354,20 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 	return nil
 }
 
-func createAgentStatusSubResource(agentResourceType, status, message string) interface{} {
+func createAgentStatusSubResource(agentResourceType, status, message string) *v1.ResourceInstance {
 	switch agentResourceType {
 	case v1alpha1.DiscoveryAgentResourceName:
-		return createDiscoveryAgentStatusResource(status, message)
+		agentRes := createDiscoveryAgentStatusResource(status, message)
+		resourceInstance, _ := agentRes.AsInstance()
+		return resourceInstance
 	case v1alpha1.TraceabilityAgentResourceName:
-		return createTraceabilityAgentStatusResource(status, message)
+		agentRes := createTraceabilityAgentStatusResource(status, message)
+		resourceInstance, _ := agentRes.AsInstance()
+		return resourceInstance
 	case v1alpha1.GovernanceAgentResourceName:
-		return createGovernanceAgentStatusResource(status, message)
+		agentRes := createGovernanceAgentStatusResource(status, message)
+		resourceInstance, _ := agentRes.AsInstance()
+		return resourceInstance
 	default:
 		panic(ErrUnsupportedAgentType)
 	}

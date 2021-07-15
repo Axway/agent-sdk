@@ -108,6 +108,7 @@ func restoreCacheUpdateCalls() {
 
 func TestDiscoveryCache(t *testing.T) {
 	fakeCacheUpdateCalls()
+	dcj := newDiscoveryCache(true)
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
@@ -152,13 +153,13 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Nil(t, err)
 
 	serverAPISvcResponse = emptyAPISvc
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 0, len(agent.apiMap.GetKeys()))
 	assert.False(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
@@ -179,7 +180,7 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
