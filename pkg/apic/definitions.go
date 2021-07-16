@@ -23,6 +23,11 @@ const (
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
 	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
 	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
+
+	FieldsKey = "fields"
+	QueryKey  = "query"
+
+	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
 )
 
 // Constants for attributes
@@ -144,6 +149,7 @@ type ServiceClient struct {
 	RegisteredSubscriptionSchema       SubscriptionSchema
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
+	newService                         chan interface{}
 }
 
 // APIServerInfoProperty -
