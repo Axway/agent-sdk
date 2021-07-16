@@ -10,20 +10,23 @@ import (
 
 type baseJob struct {
 	JobExecution
-	id         string       // UUID generated for this job
-	job        Job          // the job definition
-	jobType    string       // type of job
-	status     JobStatus    // current job status
-	err        error        // the error thrown
-	statusLock sync.RWMutex // lock on preventing status write/read at the same time
-	failChan   chan string  // channel to send signal to pool of failure
-	jobLock    sync.Mutex   // lock used for signalling that the job is being executed
+	id               string       // UUID generated for this job
+	name             string       // Name of the job
+	job              Job          // the job definition
+	jobType          string       // type of job
+	status           JobStatus    // current job status
+	err              error        // the error thrown
+	statusLock       sync.RWMutex // lock on preventing status write/read at the same time
+	failChan         chan string  // channel to send signal to pool of failure
+	jobLock          sync.Mutex   // lock used for signalling that the job is being executed
+	consecutiveFails int
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
-func newBaseJob(newJob Job, failJobChan chan string) (JobExecution, error) {
+func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution, error) {
 	thisJob := baseJob{
 		id:       newUUID(),
+		name:     name,
 		job:      newJob,
 		jobType:  JobTypeSingleRun,
 		status:   JobStatusInitializing,
@@ -74,6 +77,10 @@ func (b *baseJob) Lock() {
 //Unlock - unlocks the job, execution can now take place
 func (b *baseJob) Unlock() {
 	b.jobLock.Unlock()
+}
+
+func (b *baseJob) getConsecutiveFails() int {
+	return b.consecutiveFails
 }
 
 //GetStatusValue - returns the job status
@@ -136,12 +143,19 @@ func (b *baseJob) stop() {
 }
 
 func (b *baseJob) startLog() {
-	log.Debugf("Starting %v job %v", b.jobType, b.id)
-
+	if b.name != "" {
+		log.Debugf("Starting %v (%v) job %v", b.jobType, b.name, b.id)
+	} else {
+		log.Debugf("Starting %v job %v", b.jobType, b.id)
+	}
 }
 
 func (b *baseJob) stopLog() {
-	log.Debugf("Stopping %v job %v", b.jobType, b.id)
+	if b.name != "" {
+		log.Debugf("Stopping %v (%v) job %v", b.jobType, b.name, b.id)
+	} else {
+		log.Debugf("Stopping %v job %v", b.jobType, b.id)
+	}
 }
 
 func (b *baseJob) setExecutionError() {

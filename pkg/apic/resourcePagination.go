@@ -53,8 +53,13 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, UR
 	return apiServiceIntances, nil
 }
 
-// GetAPIV1ResourceInstances - return apiv1 Resource instance
+// GetAPIV1ResourceInstances - return apiv1 Resource instance with the default page size
 func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
+	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, URL, apiServerPageSize)
+}
+
+// GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
+func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, queryPageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
 
@@ -63,7 +68,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 	for morePages {
 		query := map[string]string{
 			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(apiServerPageSize),
+			"pageSize": strconv.Itoa(queryPageSize),
 		}
 
 		// Add query params for getting revisions for the service and use the latest one as last reference
@@ -83,7 +88,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 
-		if len(resourceInstancePage) < apiServerPageSize {
+		if len(resourceInstancePage) < queryPageSize {
 			morePages = false
 		} else {
 			log.Debug("More resource instance pages exist.  Continue retrieval of resource instances.")

@@ -26,6 +26,11 @@ const (
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
 	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
 	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
+
+	FieldsKey = "fields"
+	QueryKey  = "query"
+
+	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
 )
 
 // Constants for attributes

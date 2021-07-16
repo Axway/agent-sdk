@@ -51,7 +51,7 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	}
 
 	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
-		_, err := jobs.RegisterIntervalJob(subscriptionMgr, apicClient.cfg.GetPollInterval())
+		_, err := jobs.RegisterIntervalJobWithName(subscriptionMgr, apicClient.cfg.GetPollInterval(), "Subscription Manager")
 		if err != nil {
 			log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
 		}

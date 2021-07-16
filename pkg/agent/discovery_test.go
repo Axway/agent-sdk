@@ -32,6 +32,10 @@ func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	return nil, nil
 }
 
+func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
 func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
 	return nil, nil
 }
@@ -104,6 +108,7 @@ func restoreCacheUpdateCalls() {
 
 func TestDiscoveryCache(t *testing.T) {
 	fakeCacheUpdateCalls()
+	dcj := newDiscoveryCache(true)
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
@@ -148,13 +153,13 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Nil(t, err)
 
 	serverAPISvcResponse = emptyAPISvc
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 0, len(agent.apiMap.GetKeys()))
 	assert.False(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
@@ -175,7 +180,7 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	updateAPICache()
+	dcj.updateAPICache()
 	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))

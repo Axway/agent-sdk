@@ -12,7 +12,7 @@ func TestPoolCoordination(t *testing.T) {
 	testPool.retryInterval = time.Second
 	failJob := &intervalJobImpl{
 		name:      "FailedIntervalJob",
-		runTime:   50 * time.Millisecond,
+		runTime:   500 * time.Millisecond,
 		ready:     true,
 		failEvery: 3,
 		failTime:  50 * time.Millisecond,
@@ -45,7 +45,7 @@ func TestPoolCoordination(t *testing.T) {
 	// continue to get pool status to check that it was in a stopped state during test
 	wasStopped := false
 	stoppedThenStarted := false
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		if !wasStopped && testPool.GetStatus() == PoolStatusStopped.String() {
 			wasStopped = true
 			assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once before failure")

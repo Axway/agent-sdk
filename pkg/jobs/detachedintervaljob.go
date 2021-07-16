@@ -5,10 +5,11 @@ import (
 )
 
 //newDetachedIntervalJob - creates an interval run job, detached from other cron jobs
-func newDetachedIntervalJob(newJob Job, interval time.Duration) (JobExecution, error) {
+func newDetachedIntervalJob(newJob Job, interval time.Duration, name string) (JobExecution, error) {
 	thisJob := intervalJob{
 		baseJob{
 			id:       newUUID(),
+			name:     name,
 			job:      newJob,
 			jobType:  JobTypeDetachedInterval,
 			status:   JobStatusInitializing,
