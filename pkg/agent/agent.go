@@ -163,21 +163,25 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(false)
-	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		return
-	}
-	log.Tracef("registered API cache update job: %s", id)
-
 	allDiscoveryCacheJob := newDiscoveryCache(true)
-	id, err = jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
+	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
 		return
 	}
+	log.Tracef("registered API cache update all job: %s", id)
 
+	// Start the regular update after the first interval
+	go func() {
+		time.Sleep(agent.cfg.GetPollInterval())
+		newDiscoveryCacheJob := newDiscoveryCache(false)
+		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
+		if err != nil {
+			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
+			return
+		}
+		log.Tracef("registered API cache update job: %s", id)
+	}()
 }
 
 func isRunningInDockerContainer() bool {
