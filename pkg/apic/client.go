@@ -11,6 +11,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -71,7 +72,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 
 	serviceClient := &ServiceClient{}
 	serviceClient.SetTokenGetter(tokenRequester)
-
+	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.OnConfigChange(cfg)
 	hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
 	return serviceClient

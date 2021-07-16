@@ -95,9 +95,7 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 	// if there isn't a registered subscription schema, do not enable subscriptions,
 	// or if the status is not PUBLISHED, do not enable subscriptions
-	if enableSubscription && c.RegisteredSubscriptionSchema == nil ||
-		serviceBody.Status != PublishedStatus ||
-		serviceBody.SubscriptionName == "" {
+	if serviceBody.Status != PublishedStatus || serviceBody.SubscriptionName == "" {
 		enableSubscription = false
 	}
 
