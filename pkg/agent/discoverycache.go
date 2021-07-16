@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -25,6 +26,12 @@ const (
 	apiServerFields      = "name,title,attributes"
 	serviceInstanceCache = "ServiceInstances"
 )
+
+var discoveryCacheLock *sync.Mutex
+
+func init() {
+	discoveryCacheLock = &sync.Mutex{}
+}
 
 type discoveryCache struct {
 	jobs.Job
@@ -58,6 +65,8 @@ func (j *discoveryCache) Status() error {
 
 //Execute -
 func (j *discoveryCache) Execute() error {
+	discoveryCacheLock.Lock()
+	defer discoveryCacheLock.Unlock()
 	log.Trace("executing API cache update job")
 	j.updateAPICache()
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {

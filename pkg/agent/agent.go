@@ -173,8 +173,10 @@ func startAPIServiceCache() {
 
 	// Start the regular update after the first interval
 	go func() {
-		time.Sleep(agent.cfg.GetPollInterval())
 		newDiscoveryCacheJob := newDiscoveryCache(false)
+		newDiscoveryCacheJob.lastInstanceTime = time.Now()
+		newDiscoveryCacheJob.lastServiceTime = time.Now()
+		time.Sleep(agent.cfg.GetPollInterval())
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
