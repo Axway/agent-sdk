@@ -3,7 +3,6 @@ module github.com/Axway/agent-sdk
 go 1.16
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
 	github.com/elastic/beats/v7 v7.7.1
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.13.0
@@ -11,6 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/getkin/kin-openapi v0.61.0
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75

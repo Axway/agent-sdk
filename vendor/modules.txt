@@ -1,8 +1,5 @@
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dgrijalva/jwt-go v3.2.1-0.20190620180102-5e25c22bd5d6+incompatible
-## explicit
-github.com/dgrijalva/jwt-go
 # github.com/elastic/beats/v7 v7.7.1
 ## explicit
 github.com/elastic/beats/v7/libbeat/beat
@@ -81,6 +78,9 @@ github.com/go-openapi/jsonpointer
 github.com/go-openapi/swag
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
+# github.com/golang-jwt/jwt v3.2.1+incompatible
+## explicit
+github.com/golang-jwt/jwt
 # github.com/google/go-cmp v0.5.0
 ## explicit
 # github.com/google/uuid v1.1.2
