@@ -17,7 +17,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string) v1alpha1.ConsumerInstanceSpec {
+func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) v1alpha1.ConsumerInstanceSpec {
 	subscriptionDefinitionName := serviceBody.SubscriptionName
 
 	autoSubscribe := false
@@ -49,6 +49,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			SubscriptionDefinition: subscriptionDefinitionName,
 		},
 		UnstructuredDataProperties: c.buildUnstructuredDataProperties(serviceBody),
+		Categories:                 categories,
 	}
 }
 
@@ -116,7 +117,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildConsumerInstanceSpec(serviceBody, doc),
+		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, nil),
 	}
 }
 
@@ -125,7 +126,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 	consumerInstance.Title = serviceBody.NameToPush
 	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
 	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc)
+	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, consumerInstance.Spec.Categories)
 }
 
 //processConsumerInstance - deal with either a create or update of a consumerInstance
