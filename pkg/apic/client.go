@@ -46,6 +46,7 @@ type Client interface {
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
+	DeleteAPIServiceInstance(instanceName string) error
 	DeleteConsumerInstance(instanceName string) error
 	DeleteServiceByAPIID(externalAPIID string) error
 	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
