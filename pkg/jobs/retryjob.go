@@ -18,6 +18,7 @@ func newRetryJob(newJob Job, retries int, name string, failJobChan chan string) 
 	thisJob := retryJob{
 		baseJob{
 			id:       newUUID(),
+			name:     name,
 			job:      newJob,
 			jobType:  JobTypeRetry,
 			status:   JobStatusInitializing,

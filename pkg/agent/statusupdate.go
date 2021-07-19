@@ -32,7 +32,7 @@ func (su *agentStatusUpdate) Ready() bool {
 	}
 	// Do not start until status will be running
 	status := su.getCombinedStatus()
-	if status != AgentRunning && su.immediateStatusChange == true {
+	if status != AgentRunning && su.immediateStatusChange {
 		return false
 	}
 
@@ -63,15 +63,13 @@ func (su *agentStatusUpdate) Execute() error {
 	status := su.getCombinedStatus()
 	log.Tracef("Type of agent status update being checked %s : ", su.typeOfStatusUpdate)
 
-	if su.prevStatus != status {
-		// Check to see if this is the immediate status change
-		// If change of status is coming FROM or TO 'unhealthy', then report this immediately
-		if su.immediateStatusChange && su.prevStatus == AgentRunning || status == AgentRunning {
-			log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", su.prevStatus, status)
-			UpdateStatus(status, "")
-			su.prevStatus = status
-			return nil
-		}
+	// Check to see if this is the immediate status change
+	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
+	if su.prevStatus != status && su.immediateStatusChange && su.prevStatus == AgentRunning || status == AgentRunning {
+		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", su.prevStatus, status)
+		UpdateStatus(status, "")
+		su.prevStatus = status
+		return nil
 	}
 
 	// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
