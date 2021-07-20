@@ -95,6 +95,11 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 	return c.deleteConsumerInstance(instanceName)
 }
 
+// DeleteAPIServiceInstance -
+func (c *ServiceClient) DeleteAPIServiceInstance(instanceName string) error {
+	return c.deleteAPIServiceInstance(instanceName)
+}
+
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID((consumerInstanceID))

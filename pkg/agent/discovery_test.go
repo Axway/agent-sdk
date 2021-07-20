@@ -55,8 +55,9 @@ func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { retu
 func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
-func (m *mockSvcClient) DeleteServiceByAPIID(externalAPIID string) error  { return nil }
-func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
+func (m *mockSvcClient) DeleteServiceByAPIID(externalAPIID string) error    { return nil }
+func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error   { return nil }
+func (m *mockSvcClient) DeleteAPIServiceInstance(instanceName string) error { return nil }
 func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
 	return nil
 }

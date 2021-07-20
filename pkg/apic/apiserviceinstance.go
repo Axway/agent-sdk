@@ -222,3 +222,12 @@ func (c *ServiceClient) getAPIServiceInstanceByName(instanceName string) (*v1alp
 	json.Unmarshal(response.Body, apiInstance)
 	return apiInstance, nil
 }
+
+// deleteAPIServiceInstance -
+func (c *ServiceClient) deleteAPIServiceInstance(name string) error {
+	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetInstancesURL()+"/"+name, nil)
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
+		return err
+	}
+	return nil
+}

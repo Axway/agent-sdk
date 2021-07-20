@@ -228,23 +228,23 @@ func shouldDeleteService(apiID, stage string) bool {
 	return agent.deleteServiceValidator(apiID, stage)
 }
 
-func deleteServiceInstanceOrService(consumerInstance *v1alpha1.APIServiceInstance, externalAPIID, externalAPIStage string) {
+func deleteServiceInstanceOrService(serviceInstance *v1alpha1.APIServiceInstance, externalAPIID, externalAPIStage string) {
 	if shouldDeleteService(externalAPIID, externalAPIStage) {
-		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", consumerInstance.Title)
+		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", serviceInstance.Title)
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
 		if err != nil {
-			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(consumerInstance.Title))
+			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(serviceInstance.Title))
 		} else {
-			log.Debugf("Deleted API Service for catalog item %s from Amplify Central", consumerInstance.Title)
+			log.Debugf("Deleted API Service for catalog item %s from Amplify Central", serviceInstance.Title)
 		}
 	} else {
-		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", consumerInstance.Title)
-		err := agent.apicClient.DeleteConsumerInstance(consumerInstance.Name)
+		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", serviceInstance.Title)
+		err := agent.apicClient.DeleteAPIServiceInstance(serviceInstance.Name)
 		if err != nil {
-			log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(consumerInstance.Title))
+			log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(serviceInstance.Title))
 		} else {
-			log.Debugf("Deleted catalog item %s from Amplify Central", consumerInstance.Title)
+			log.Debugf("Deleted catalog item %s from Amplify Central", serviceInstance.Title)
 		}
 	}
 }
