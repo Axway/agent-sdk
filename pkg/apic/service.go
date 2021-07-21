@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	unifiedcatalog "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/tidwall/gjson"
 )
 
@@ -33,10 +35,19 @@ const (
 	apiServerPageSize = 20
 )
 
+// APIServiceRevisionTitle - apiservicerevision template for title
 type APIServiceRevisionTitle struct {
 	Name     string
 	Date     string
 	Revision string
+}
+
+// apiSvcRevTitleDateMap - map of date formats for apiservicerevision title
+var apiSvcRevTitleDateMap = map[string]string{
+	"MM-DD-YYYY": "01-02-2006",
+	"YYYY-MM-DD": "2006-01-02",
+	"MM/DD/YYYY": "01/02/2006",
+	"YYYY/MM/DD": "2006/01/02",
 }
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
@@ -150,32 +161,28 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
-// v7ToCentralAuthMap - map V7 string values to Central string values
-var apiSvcRevTitleDateMap = map[string]string{
-	"MM-DD-YYYY": "01-02-2006",
-	"YYYY-MM-DD": "2006-01-02",
-	"MM/DD/YYYY": "01/02/2006",
-	"YYYY/MM/DD": "2006/01/02",
-}
-
-// fubar
-func (c *ServiceClient) fubar(serviceBody *ServiceBody) {
+// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
+func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
 	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
 	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
 
-	var dateFormat = "YYYY-MM-DD"
+	var dateFormat = ""
 
 	if dateRegEx.MatchString(apiSvcRevPattern) {
-		datePattern := dateRegEx.FindString(apiSvcRevPattern) //{{date:YYYY/MM/DD}}
+		datePattern := dateRegEx.FindString(apiSvcRevPattern) //{{date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
 		index := strings.Index(datePattern, ":")              // get index of ":" (colon)
-		dateFormat = datePattern[index+1 : index+11]          // get the format of the date
+		date := datePattern[index+1 : index+11]               // sub out "{{date:" and "}}" to get the format of the date only
+		dateFormat = apiSvcRevTitleDateMap[date]              // make sure dateFormat is a valid date format
+		if dateFormat == "" {
+			log.Tracef("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
+			dateFormat = "2006/01/02"
+		}
 	}
 
-	titleDate := apiSvcRevTitleDateMap[dateFormat]
-
-	apiSvcRevTitle := APIServiceRevisionTitle{
+	// create apiservicerevision template
+	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
 		serviceBody.APIName,
-		time.Now().Format(titleDate),
+		time.Now().Format(dateFormat),
 		strconv.Itoa(serviceBody.serviceContext.revisionCount + 1),
 	}
 
@@ -184,50 +191,15 @@ func (c *ServiceClient) fubar(serviceBody *ServiceBody) {
 		panic(err)
 	}
 
-	err = title.Execute(os.Stdout, apiSvcRevTitle)
+	var apiSvcRevTitle bytes.Buffer
+
+	err = title.Execute(os.Stdout, apiSvcRevTitleTemplate)
 	if err != nil {
 		panic(err)
 	}
-}
 
-// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
-func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
-
-	c.fubar(serviceBody)
-
-	title := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
-	revision := strconv.Itoa(serviceBody.serviceContext.revisionCount + 1)
-
-	replaceVars := map[string]string{"APIServiceName": serviceBody.APIName, "revision": revision}
-	// replace occurrences of `APIServiceName` and `revision` in title
-	for k, v := range replaceVars {
-		title = strings.Replace(title, fmt.Sprintf("{{%s}}", k), v, -1)
-	}
-
-	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
-	if dateRegEx.MatchString(title) {
-		var createdOn time.Time
-		if serviceBody.serviceContext.previousRevision == nil {
-			createdOn = time.Now()
-		} else {
-			createdOn = time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
-		}
-		year := strconv.Itoa(createdOn.Year())
-		month := createdOn.Format("01")
-		day := strconv.Itoa(createdOn.Day())
-
-		date := dateRegEx.FindString(title)
-		replaceDate := map[string]string{"MM": month, "DD": day, "YYYY": year}
-		for k, v := range replaceDate {
-			date = strings.Replace(date, k, v, -1)
-		}
-		date = strings.TrimPrefix(date, "{{date:")
-		date = strings.TrimSuffix(date, "}}")
-
-		//swap the date pattern with the date variable in the title
-		title = strings.Replace(title, dateRegEx.FindString(title), date, -1)
-	}
-	return title
+	log.Debugf("Returning apiservicerevision title %s", apiSvcRevTitle.String())
+	return apiSvcRevTitle.String()
 }
 
 func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
