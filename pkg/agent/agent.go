@@ -171,7 +171,7 @@ func startAPIServiceCache() {
 	}
 	log.Tracef("registered API cache update job: %s", id)
 
-	// Start the regular update after the first interval
+	// Start the full update after the first interval
 	go func() {
 		time.Sleep(time.Hour)
 		allDiscoveryCacheJob := newDiscoveryCache(true)
