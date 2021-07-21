@@ -45,8 +45,8 @@ type APIServiceRevisionTitle struct {
 // apiSvcRevTitleDateMap - map of date formats for apiservicerevision title
 var apiSvcRevTitleDateMap = map[string]string{
 	"MM-DD-YYYY": "01-02-2006",
-	"YYYY-MM-DD": "2006-01-02",
 	"MM/DD/YYYY": "01/02/2006",
+	"YYYY-MM-DD": "2006-01-02",
 	"YYYY/MM/DD": "2006/01/02",
 }
 
