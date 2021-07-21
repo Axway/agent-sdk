@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -193,7 +192,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 
 	var apiSvcRevTitle bytes.Buffer
 
-	err = title.Execute(os.Stdout, apiSvcRevTitleTemplate)
+	err = title.Execute(&apiSvcRevTitle, apiSvcRevTitleTemplate)
 	if err != nil {
 		panic(err)
 	}
