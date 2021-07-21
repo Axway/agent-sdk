@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -30,6 +32,12 @@ const (
 const (
 	apiServerPageSize = 20
 )
+
+type APIServiceRevisionTitle struct {
+	Name     string
+	Date     string
+	Revision string
+}
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error) {
@@ -142,8 +150,51 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
+// v7ToCentralAuthMap - map V7 string values to Central string values
+var apiSvcRevTitleDateMap = map[string]string{
+	"MM-DD-YYYY": "01-02-2006",
+	"YYYY-MM-DD": "2006-01-02",
+	"MM/DD/YYYY": "01/02/2006",
+	"YYYY/MM/DD": "2006/01/02",
+}
+
+// fubar
+func (c *ServiceClient) fubar(serviceBody *ServiceBody) {
+	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
+	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
+
+	var dateFormat = "YYYY-MM-DD"
+
+	if dateRegEx.MatchString(apiSvcRevPattern) {
+		datePattern := dateRegEx.FindString(apiSvcRevPattern) //{{date:YYYY/MM/DD}}
+		index := strings.Index(datePattern, ":")              // get index of ":" (colon)
+		dateFormat = datePattern[index+1 : index+11]          // get the format of the date
+	}
+
+	titleDate := apiSvcRevTitleDateMap[dateFormat]
+
+	apiSvcRevTitle := APIServiceRevisionTitle{
+		serviceBody.APIName,
+		time.Now().Format(titleDate),
+		strconv.Itoa(serviceBody.serviceContext.revisionCount + 1),
+	}
+
+	title, err := template.New("apiSvcRevTitle").Parse("{{.Name}} - {{.Date}} - r {{.Revision}}")
+	if err != nil {
+		panic(err)
+	}
+
+	err = title.Execute(os.Stdout, apiSvcRevTitle)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
 func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
+
+	c.fubar(serviceBody)
+
 	title := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
 	revision := strconv.Itoa(serviceBody.serviceContext.revisionCount + 1)
 
@@ -183,10 +234,8 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 	attributes := make(map[string]string)
 
 	// Add attributes from resource if present
-	if additionalAttr != nil {
-		for key, val := range additionalAttr {
-			attributes[key] = val
-		}
+	for key, val := range additionalAttr {
+		attributes[key] = val
 	}
 
 	// Add attributes from service body setup by agent
