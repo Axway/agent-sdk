@@ -3,7 +3,6 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -129,8 +128,6 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 // RegisterAPIValidator - Registers callback for validating the API on gateway
 func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
-	// Execute a one time run to fully refresh the discovery cache
-	jobs.RegisterSingleRunJobWithName(newDiscoveryCache(true), "One Time API Cache")
 }
 
 // RegisterDeleteServiceValidator - Registers callback for validating if the service should be deleted

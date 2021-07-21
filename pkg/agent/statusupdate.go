@@ -65,7 +65,7 @@ func (su *agentStatusUpdate) Execute() error {
 
 	// Check to see if this is the immediate status change
 	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
-	if su.prevStatus != status && su.immediateStatusChange && su.prevStatus == AgentRunning || status == AgentRunning {
+	if su.prevStatus != status && (su.immediateStatusChange && su.prevStatus == AgentRunning || status == AgentRunning) {
 		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", su.prevStatus, status)
 		UpdateStatus(status, "")
 		su.prevStatus = status

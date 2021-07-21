@@ -20,11 +20,12 @@ import (
 )
 
 const (
-	apiServerPageSize    = 100
-	healthcheckEndpoint  = "central"
-	attributesQueryParam = "attributes."
-	apiServerFields      = "name,title,attributes"
-	serviceInstanceCache = "ServiceInstances"
+	apiServerPageSize        = 100
+	healthcheckEndpoint      = "central"
+	attributesQueryParam     = "attributes."
+	apiServerFields          = "name,title,attributes"
+	serviceInstanceCache     = "ServiceInstances"
+	serviceInstanceNameCache = "ServiceInstanceNames"
 )
 
 var discoveryCacheLock *sync.Mutex
@@ -88,14 +89,18 @@ func (j *discoveryCache) updateAPICache() {
 	if !j.lastServiceTime.IsZero() && !j.refreshAll {
 		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
 	}
-
-	j.lastServiceTime = time.Now()
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
 	for _, apiService := range apiServices {
 		if _, valid := apiService.Attributes[apic.AttrExternalAPIID]; !valid {
 			continue // skip service without external api id
 		}
+		// Update the lastServiceTime based on the newest service found
+		thisTime := time.Time(apiService.Metadata.Audit.CreateTimestamp)
+		if j.lastServiceTime.Before(thisTime) {
+			j.lastServiceTime = thisTime
+		}
+
 		externalAPIID := addItemToAPICache(*apiService)
 		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
 			existingAPIs[externalAPIPrimaryKey] = true
@@ -135,6 +140,20 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 		return
 	}
 
+	for _, instance := range serviceInstances {
+		if j.refreshAll {
+			break // no need to do this loop when refreshing the entire cache
+		}
+		if _, valid := instance.Attributes[apic.AttrExternalAPIID]; !valid {
+			continue // skip instance without external api id
+		}
+		// Update the lastInstanceTime based on the newest instance found
+		thisTime := time.Time(instance.Metadata.Audit.CreateTimestamp)
+		if j.lastInstanceTime.Before(thisTime) {
+			j.lastInstanceTime = thisTime
+		}
+	}
+
 	// When reloading all api service instances we can just write over the existing cache
 	if !j.refreshAll {
 		serviceInstances = j.loadServiceInstancesFromCache(serviceInstances)
@@ -144,19 +163,34 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 }
 
 func (j *discoveryCache) saveServiceInstancesToCache(serviceInstances []*apiV1.ResourceInstance) {
+	// Save all the instance names to make sure the map is unique
+	instanceNames := make(map[string]struct{})
+	for _, instance := range serviceInstances {
+		instanceNames[instance.Name] = struct{}{}
+	}
 	cache.GetCache().Set(serviceInstanceCache, serviceInstances)
+	cache.GetCache().Set(serviceInstanceNameCache, instanceNames)
 }
 
 func (j *discoveryCache) loadServiceInstancesFromCache(serviceInstances []*apiV1.ResourceInstance) []*apiV1.ResourceInstance {
-	cachedInstances, err := cache.GetCache().Get(serviceInstanceCache)
+	cachedInstancesInterface, err := cache.GetCache().Get(serviceInstanceCache)
 	if err != nil {
 		return serviceInstances
 	}
-	for _, instance := range cachedInstances.([]*apiV1.ResourceInstance) {
-		serviceInstances = append(serviceInstances, instance)
+	cachedInstancesNames, err := cache.GetCache().Get(serviceInstanceNameCache)
+	if err != nil {
+		return serviceInstances
+	}
+	cachedInstances := cachedInstancesInterface.([]*apiV1.ResourceInstance)
+	for _, instance := range serviceInstances {
+		// validate that the instance is not already in the array
+		if _, found := cachedInstancesNames.(map[string]struct{})[instance.Name]; !found {
+			cachedInstances = append(cachedInstances, instance)
+		}
 	}
 
-	return serviceInstances
+	// return the full list
+	return cachedInstances
 }
 
 var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
