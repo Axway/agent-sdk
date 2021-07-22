@@ -26,6 +26,12 @@ var queryParams = map[string][]string{
 	"param2": {"day", "time"},
 }
 
+var jmsProperties = map[string]string{
+	"jmsMessageID":   "messageid",
+	"jmsDestination": "queue://test-queue",
+	"jmsReplyTo":     "queue://reply-queue",
+}
+
 func TestDefaultRedaction(t *testing.T) {
 	redactionCfg := DefaultConfig()
 
@@ -69,6 +75,12 @@ func TestDefaultRedaction(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, redactedResponseHeaders)
 	assert.Len(t, redactedResponseHeaders, 0)
+
+	// JMS Property redaction
+	redactedJMSProperties, err := JMSPropertiesRedaction(jmsProperties)
+	assert.Nil(t, err)
+	assert.NotNil(t, redactedJMSProperties)
+	assert.Len(t, redactedJMSProperties, 0)
 }
 
 func TestBadSetupRedaction(t *testing.T) {
@@ -153,6 +165,31 @@ func TestBadSetupRedaction(t *testing.T) {
 		},
 		{
 			name: "RequestHeadersRegex",
+			config: Config{
+				RequestHeaders: filter{
+					Allowed: []show{
+						{
+							KeyMatch: "*test",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "JMSPropertiesSanitizeRegex",
+			config: Config{
+				RequestHeaders: filter{
+					Sanitize: []sanitize{
+						{
+							KeyMatch:   "*test",
+							ValueMatch: "*test",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "JMSPropertiesRegex",
 			config: Config{
 				RequestHeaders: filter{
 					Allowed: []show{

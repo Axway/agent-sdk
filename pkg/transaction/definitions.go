@@ -159,22 +159,3 @@ type Protocol struct {
 	WafStatus              int    `json:"wafStatus,omitempty"`
 	Timing                 string `json:"timing,omitempty"`
 }
-
-// JMSProtocol - Represents the details in a transaction event for the JMS protocol
-type JMSProtocol struct {
-	Type             string `json:"type,omitempty"`
-	AuthSubjectID    string `json:"authSubjectId,omitempty"`
-	JMSMessageID     string `json:"jmsMessageID,omitempty"`
-	JMSCorrelationID string `json:"jmsCorrelationID,omitempty"`
-	JMSDestination   string `json:"jmsDestination,omitempty"`
-	JMSProviderURL   string `json:"jmsProviderURL,omitempty"`
-	JMSDeliveryMode  int    `json:"jmsDeliveryMode,omitempty"`
-	JMSPriority      int    `json:"jmsPriority,omitempty"`
-	JMSReplyTo       string `json:"jmsReplyTo,omitempty"`
-	JMSRedelivered   int    `json:"jmsRedelivered,omitempty"`
-	JMSTimestamp     int    `json:"jmsTimestamp,omitempty"`
-	JMSExpiration    int    `json:"jmsExpiration,omitempty"`
-	JMSType          string `json:"jmsType,omitempty"`
-	JMSStatus        string `json:"jmsStatus,omitempty"`
-	JMSStatusText    string `json:"jmsStatusText,omitempty"`
-}
