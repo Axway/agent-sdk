@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -462,7 +463,8 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	json.Unmarshal([]byte(out), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+	dataStr := fmt.Sprintf("Starting test_with_non_defaults (%s)", buildCmdVersion())
+	assert.Equal(t, dataStr, logData["msg"])
 
 	// Remove the test keys file
 	os.Remove("./" + tmpFile.Name())
@@ -501,7 +503,8 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	json.Unmarshal([]byte(dat), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	assert.Equal(t, "Starting test_with_non_defaults (-)", logData["msg"])
+	dataStr := fmt.Sprintf("Starting test_with_non_defaults (%s)", buildCmdVersion())
+	assert.Equal(t, dataStr, logData["msg"])
 
 	// Remove the test keys file
 	os.Remove("./" + tmpFile.Name())
