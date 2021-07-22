@@ -68,8 +68,13 @@ func init() {
 	config.AgentTypeName = BuildAgentName
 	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
 	config.AgentDataPlaneType = BuildDataPlaneType
+	config.SDKVersion = SDKBuildVersion
 	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
 	rand.Seed(time.Now().UnixNano())
+}
+
+func buildCmdVersion() string {
+	return fmt.Sprintf("%s-%s\nSDK version %s", BuildVersion, BuildCommitSha, SDKBuildVersion)
 }
 
 // NewRootCmd - Creates a new Agent Root Command
@@ -85,7 +90,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.rootCmd = &cobra.Command{
 		Use:     c.agentName,
 		Short:   desc,
-		Version: fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha),
+		Version: buildCmdVersion(),
 		RunE:    c.run,
 		PreRunE: c.initialize,
 	}
@@ -114,7 +119,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.rootCmd = rootCmd
 	c.rootCmd.Use = c.agentName
 	c.rootCmd.Short = desc
-	c.rootCmd.Version = fmt.Sprintf("%s-%s", BuildVersion, BuildCommitSha)
+	c.rootCmd.Version = buildCmdVersion()
 	c.rootCmd.RunE = c.run
 	c.rootCmd.PreRunE = c.initialize
 
