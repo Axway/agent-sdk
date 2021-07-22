@@ -175,16 +175,6 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 		sanitizeValue = defaultSanitizeValue
 	}
 
-	// Setup the JMS properties filters
-	redactionSetup.jmsPropertiesFilters.show, err = setupShowRegex(cfg.JMSProperties.Allowed)
-	if err != nil {
-		return nil, err
-	}
-	redactionSetup.jmsPropertiesFilters.sanitize, err = setupSanitizeRegex(cfg.JMSProperties.Sanitize)
-	if err != nil {
-		return nil, err
-	}
-
 	return &redactionSetup, err
 }
 
