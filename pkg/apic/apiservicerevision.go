@@ -1,17 +1,41 @@
 package apic
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
+	"text/template"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+const (
+	apiSvcRevTemplate = "{{.Name}} - {{.Date}} - r {{.Revision}}"
+)
+
+// APIServiceRevisionTitle - apiservicerevision template for title
+type APIServiceRevisionTitle struct {
+	Name     string
+	Date     string
+	Revision string
+}
+
+// apiSvcRevTitleDateMap - map of date formats for apiservicerevision title
+var apiSvcRevTitleDateMap = map[string]string{
+	"MM-DD-YYYY": "01-02-2006",
+	"MM/DD/YYYY": "01/02/2006",
+	"YYYY-MM-DD": "2006-01-02",
+	"YYYY/MM/DD": "2006/01/02",
+}
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
 	return v1alpha1.ApiServiceRevisionSpec{
@@ -154,4 +178,50 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 		return Unstructured
 	}
 	return serviceBody.ResourceType
+}
+
+// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
+func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
+	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
+	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
+
+	var dateFormat = ""
+
+	if dateRegEx.MatchString(apiSvcRevPattern) {
+		datePattern := dateRegEx.FindString(apiSvcRevPattern) //{{date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
+		index := strings.Index(datePattern, ":")              // get index of ":" (colon)
+		date := datePattern[index+1 : index+11]               // sub out "{{date:" and "}}" to get the format of the date only
+		dateFormat = apiSvcRevTitleDateMap[date]              // make sure dateFormat is a valid date format
+		if dateFormat == "" {
+			log.Tracef("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
+			dateFormat = "2006/01/02"
+		}
+	}
+
+	// build default apiSvcRevTitle
+	defaultAPISvcRevTitle := serviceBody.APIName + time.Now().Format(dateFormat) + strconv.Itoa(serviceBody.serviceContext.revisionCount+1)
+
+	// create apiservicerevision template
+	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
+		serviceBody.APIName,
+		time.Now().Format(dateFormat),
+		strconv.Itoa(serviceBody.serviceContext.revisionCount + 1),
+	}
+
+	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevTemplate)
+	if err != nil {
+		log.Tracef("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
+		return defaultAPISvcRevTitle
+	}
+
+	var apiSvcRevTitle bytes.Buffer
+
+	err = title.Execute(&apiSvcRevTitle, apiSvcRevTitleTemplate)
+	if err != nil {
+		log.Tracef("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
+		return defaultAPISvcRevTitle
+	}
+
+	log.Debugf("Returning apiservicerevision title %s", apiSvcRevTitle.String())
+	return apiSvcRevTitle.String()
 }

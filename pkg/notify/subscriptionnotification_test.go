@@ -87,10 +87,12 @@ func TestSubscriptionNotification(t *testing.T) {
 	subNotif.SetAuthorizationTemplate(Apikeys)
 
 	err = subNotif.NotifySubscriber(recipient) // logon
+	assert.Nil(t, err)
 
 	cfg1 := cfg.(*config.SubscriptionConfiguration)
 	cfg1.Notifications.SMTP.AuthType = config.AnonymousAuth
 	err = subNotif.NotifySubscriber(recipient) // plainauth
+	assert.Nil(t, err)
 
 	cfg1.Notifications.SMTP.AuthType = config.PlainAuth
 	err = subNotif.NotifySubscriber(recipient) // anonymous
