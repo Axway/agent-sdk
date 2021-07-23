@@ -15,6 +15,9 @@ var BuildAgentName string
 // BuildDataPlaneType -
 var BuildDataPlaneType string
 
+// SDKBuildVersion -
+var SDKBuildVersion string
+
 // agentSDKDataPlaneType - default data plane type when not set at build time
 const agentSDKDataPlaneType = "AgentSDK"
 
