@@ -1,5 +1,9 @@
 package transaction
 
+import (
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+)
+
 // JMSProtocolBuilder - Interface to build the JMS protocol details for transaction log event
 type JMSProtocolBuilder interface {
 	SetMessageID(messageID string) JMSProtocolBuilder
@@ -149,5 +153,22 @@ func (b *jmsProtocolBuilder) Build() (TransportProtocol, error) {
 	if b.err != nil {
 		return nil, b.err
 	}
+
+	jmsPropertyMap, err := b.jmsProtocol.ToMapStringString()
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle the redaction of JMS Properties
+	redactedPropertyMap, err := redaction.JMSPropertiesRedaction(jmsPropertyMap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = b.jmsProtocol.FromMapStringString(redactedPropertyMap)
+	if err != nil {
+		return nil, err
+	}
+
 	return b.jmsProtocol, nil
 }

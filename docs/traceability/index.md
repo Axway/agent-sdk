@@ -958,6 +958,7 @@ The Agent SDK provides support for specifying the version of the agent at the bu
 - github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
 - github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha
 - github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName
+- github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion
 
 The following is an example of the build command that can be configured in the Makefile
 
@@ -965,11 +966,13 @@ The following is an example of the build command that can be configured in the M
 @export time=`date +%Y%m%d%H%M%S` && \
 export version=`cat version` && \
 export commit_id=`git rev-parse --short HEAD` && \
+export sdk_version=`go list -m github.com/Axway/agent-sdk | awk '{print $$2}' | awk -F'-' '{print substr($$1, 2)}'` && \
 go build -tags static_all \
 	-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${time}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent'" \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}' \
 	-a -o ${WORKSPACE}/bin/apic_traceability_agent ${WORKSPACE}/main.go
 ```
 

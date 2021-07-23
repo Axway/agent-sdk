@@ -25,6 +25,7 @@ type Redactions interface {
 	QueryArgsRedactionString(queryArgs string) (string, error)
 	RequestHeadersRedaction(requestHeaders map[string]string) (map[string]string, error)
 	ResponseHeadersRedaction(responseHeaders map[string]string) (map[string]string, error)
+	JMSPropertiesRedaction(jmsProperties map[string]string) (map[string]string, error)
 }
 
 // Config - the configuration of all redactions
@@ -34,6 +35,7 @@ type Config struct {
 	RequestHeaders    filter `config:"requestHeader" yaml:"requestHeader"`
 	ResponseHeaders   filter `config:"responseHeader" yaml:"responseHeader"`
 	MaskingCharacters string `config:"maskingCharacters" yaml:"maskingCharacters"`
+	JMSProperties     filter `config:"jmsProperties" yaml:"jmsProperties"`
 }
 
 // path - the keyMatches to show, all else are redacted
@@ -65,6 +67,7 @@ type redactionRegex struct {
 	argsFilters           filterRegex
 	requestHeaderFilters  filterRegex
 	responseHeaderFilters filterRegex
+	jmsPropertiesFilters  filterRegex
 }
 
 type filterRegex struct {
@@ -100,6 +103,10 @@ func DefaultConfig() Config {
 			Sanitize: []sanitize{},
 		},
 		MaskingCharacters: "{*}",
+		JMSProperties: filter{
+			Allowed:  []show{},
+			Sanitize: []sanitize{},
+		},
 	}
 }
 
@@ -140,6 +147,16 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 		return nil, err
 	}
 	redactionSetup.responseHeaderFilters.sanitize, err = setupSanitizeRegex(cfg.ResponseHeaders.Sanitize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup the jms properties filters
+	redactionSetup.jmsPropertiesFilters.show, err = setupShowRegex(cfg.JMSProperties.Allowed)
+	if err != nil {
+		return nil, err
+	}
+	redactionSetup.jmsPropertiesFilters.sanitize, err = setupSanitizeRegex(cfg.JMSProperties.Sanitize)
 	if err != nil {
 		return nil, err
 	}
@@ -268,32 +285,37 @@ func (r *redactionRegex) QueryArgsRedactionString(args string) (string, error) {
 	return queryArgString, nil
 }
 
-// RequestHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
+// RequestHeadersRedaction - accepts a map of response headers and returns the redacted and sanitize map
 func (r *redactionRegex) RequestHeadersRedaction(headers map[string]string) (map[string]string, error) {
 	return r.headersRedaction(headers, r.requestHeaderFilters)
 }
 
-// ResponseHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
+// ResponseHeadersRedaction - accepts a map of response headers and returns the redacted and sanitize map
 func (r *redactionRegex) ResponseHeadersRedaction(headers map[string]string) (map[string]string, error) {
 	return r.headersRedaction(headers, r.responseHeaderFilters)
 }
 
-// headersRedaction - accepts a string of headers and the filters to apply then returns the redacted and sanitize string
-func (r *redactionRegex) headersRedaction(headers map[string]string, filters filterRegex) (map[string]string, error) {
-	newHeaders := make(map[string]string)
+// JMSPropertiesRedaction - accepts a map of JMS properties and returns the redacted and sanitize map
+func (r *redactionRegex) JMSPropertiesRedaction(properties map[string]string) (map[string]string, error) {
+	return r.headersRedaction(properties, r.jmsPropertiesFilters)
+}
 
-	for headerName, headerValue := range headers {
+// headersRedaction - accepts a string of headers and the filters to apply then returns the redacted and sanitize map
+func (r *redactionRegex) headersRedaction(properties map[string]string, filters filterRegex) (map[string]string, error) {
+	newProperties := make(map[string]string)
+
+	for propName, propValue := range properties {
 		// If the name is not matched, remove it
-		if !isValidValueToShow(headerName, filters.show) {
+		if !isValidValueToShow(propName, filters.show) {
 			continue
 		}
 
-		newHeaders[headerName] = headerValue
+		newProperties[propName] = propValue
 		// Now check for sanitization
-		if runSanitize, sanitizeRegex := shouldSanitize(headerName, filters.sanitize); runSanitize {
-			newHeaders[headerName] = sanitizeRegex.ReplaceAllLiteralString(headerValue, sanitizeValue)
+		if runSanitize, sanitizeRegex := shouldSanitize(propName, filters.sanitize); runSanitize {
+			newProperties[propName] = sanitizeRegex.ReplaceAllLiteralString(propValue, sanitizeValue)
 		}
 	}
 
-	return newHeaders, nil
+	return newProperties, nil
 }

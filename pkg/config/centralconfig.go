@@ -62,6 +62,9 @@ var AgentVersion string
 // AgentDataPlaneType - Holds the data plane type of agent
 var AgentDataPlaneType string
 
+// SDKVersion - Holds the version of SDK
+var SDKVersion string
+
 // IConfigValidator - Interface to be implemented for config validation by agent
 type IConfigValidator interface {
 	ValidateCfg() error
