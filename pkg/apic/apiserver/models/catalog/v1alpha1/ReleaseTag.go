@@ -44,6 +44,8 @@ type ReleaseTag struct {
 
 	Spec ReleaseTagSpec `json:"spec"`
 
+	State interface{} `json:"state"`
+
 	Status ReleaseTagStatus `json:"status"`
 }
 
