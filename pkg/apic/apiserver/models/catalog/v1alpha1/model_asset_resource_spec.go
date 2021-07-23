@@ -21,4 +21,6 @@ type AssetResourceSpec struct {
 	Definition string `json:"definition"`
 	// Resource availabiltiy
 	Status string `json:"status"`
+	// information to access the definition.
+	AccessInfo []AssetResourceSpecAccessInfo `json:"accessInfo,omitempty"`
 }
