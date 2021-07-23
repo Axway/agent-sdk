@@ -4,10 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/stretchr/testify/assert"
 )
 
 func createJMSProtocol(msgID, correlationID, jmsType, url, destination, replyTo, status string, mode, priority, exp, timestamp int) (TransportProtocol, error) {
+	redaction.SetupGlobalRedaction(redaction.Config{})
 	return NewJMSProtocolBuilder().
 		SetMessageID(msgID).
 		SetCorrelationID(correlationID).

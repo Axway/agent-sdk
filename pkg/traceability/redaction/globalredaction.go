@@ -97,7 +97,7 @@ func QueryArgsRedactionString(args string) (string, error) {
 	return agentRedactions.QueryArgsRedactionString(args)
 }
 
-// RequestHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
+// RequestHeadersRedaction - accepts a map of response headers and returns the redacted and sanitize map
 func RequestHeadersRedaction(headers map[string]string) (map[string]string, error) {
 	if agentRedactions == nil {
 		return map[string]string{}, ErrGlobalRedactionCfg
@@ -105,12 +105,20 @@ func RequestHeadersRedaction(headers map[string]string) (map[string]string, erro
 	return agentRedactions.RequestHeadersRedaction(headers)
 }
 
-// ResponseHeadersRedaction - accepts a string of response headers and returns the redacted and sanitize string
+// ResponseHeadersRedaction - accepts a map of response headers and returns the redacted and sanitize map
 func ResponseHeadersRedaction(headers map[string]string) (map[string]string, error) {
 	if agentRedactions == nil {
 		return map[string]string{}, ErrGlobalRedactionCfg
 	}
 	return agentRedactions.ResponseHeadersRedaction(headers)
+}
+
+// JMSPropertiesRedaction - accepts a map of response headers and returns the redacted and sanitize map
+func JMSPropertiesRedaction(properties map[string]string) (map[string]string, error) {
+	if agentRedactions == nil {
+		return map[string]string{}, ErrGlobalRedactionCfg
+	}
+	return agentRedactions.JMSPropertiesRedaction(properties)
 }
 
 func isValidValueToShow(value string, matchers []showRegex) bool {
