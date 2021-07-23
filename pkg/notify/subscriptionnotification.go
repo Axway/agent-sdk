@@ -263,7 +263,7 @@ func (s *SubscriptionNotification) setEmailBodyTemplate(body string) string {
 	return catalogItem.String()
 }
 
-// CatalogItem - for template use
+// EmailBody - for template use
 type EmailBody struct {
 	CatalogItemURL  string
 	CatalogItemName string

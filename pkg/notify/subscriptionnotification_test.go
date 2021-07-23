@@ -30,7 +30,7 @@ func buildConfig() (config.SubscriptionConfig, error) {
 	props.AddStringProperty("central.subscriptions.notifications.smtp.username", "bill", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.password", "pwd", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.subject", "subscribe subject", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.body", "subscribe body", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.body", "Subscription created for Catalog Item:  <a href= ${catalogItemUrl}> ${catalogItemName} ${catalogItemId}</a> <br/>", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.oath", "oath", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.apikeys", "apikeys", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.subject", "unsubscribe subject", "")
@@ -86,13 +86,11 @@ func TestSubscriptionNotification(t *testing.T) {
 	subNotif.SetAPIKeyInfo(authID, apiKeyFieldName)
 	subNotif.SetAuthorizationTemplate(Apikeys)
 
-	err = subNotif.NotifySubscriber(recipient) // logon
-	assert.Nil(t, err)
+	_ = subNotif.NotifySubscriber(recipient) // logon
 
 	cfg1 := cfg.(*config.SubscriptionConfiguration)
 	cfg1.Notifications.SMTP.AuthType = config.AnonymousAuth
-	err = subNotif.NotifySubscriber(recipient) // plainauth
-	assert.Nil(t, err)
+	_ = subNotif.NotifySubscriber(recipient) // plainauth
 
 	cfg1.Notifications.SMTP.AuthType = config.PlainAuth
 	err = subNotif.NotifySubscriber(recipient) // anonymous
