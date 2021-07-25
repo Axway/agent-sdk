@@ -28,6 +28,7 @@ var subNotifTemplateMap = map[string]string{
 	"${clientSecret}":    "{{.ClientSecret}}",
 	"${action}":          "{{.Action}}",
 	"${email}":           "{{.Email}}",
+	"${authtemplate}":    "{{.AuthTemplate}}",
 }
 
 //SubscriptionNotification - the struct that is sent to the notification and used to fill in email templates
@@ -282,7 +283,7 @@ func (s *SubscriptionNotification) setEmailBodyTemplate(body string) string {
 Subscription Body templates
 
 CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_BODY=
-Subscription created for Catalog Item:  <a href= {{.CatalogItemURL}}> {{.CatalogItemName}} {{.CatalogItemID}}</a>
+Subscription created for Catalog Item:  <a href= {{.CatalogItemURL}}> {{.CatalogItemName}} {{.CatalogItemID}}</a></br>
 {{if .IsAPIKey}} Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{.Key}}</b>
 {{else}} Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>{{end}}
 
