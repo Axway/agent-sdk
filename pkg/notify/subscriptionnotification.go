@@ -17,6 +17,19 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// subNotifTemplateMap - map of date formats for apiservicerevision title
+var subNotifTemplateMap = map[string]string{
+	"${catalogItemUrl}":  "{{.CatalogItemURL}}",
+	"${catalogItemName}": "{{.CatalogItemName}}",
+	"${catalogItemId}":   "{{.CatalogItemID}}",
+	"${keyHeaderName}":   "{{.KeyHeaderName}}",
+	"${key}":             "{{.Key}}",
+	"${clientID}":        "{{.ClientID}}",
+	"${clientSecret}":    "{{.ClientSecret}}",
+	"${action}":          "{{.Action}}",
+	"${email}":           "{{.Email}}",
+}
+
 //SubscriptionNotification - the struct that is sent to the notification and used to fill in email templates
 type SubscriptionNotification struct {
 	CatalogItemID   string                 `json:"catalogItemId"`
@@ -30,7 +43,7 @@ type SubscriptionNotification struct {
 	ClientID        string                 `json:"clientID,omitempty"`
 	ClientSecret    string                 `json:"clientSecret,omitempty"`
 	AuthTemplate    string                 `json:"authtemplate,omitempty"`
-	AuthType        string                 `json:"authType,omitempty"`
+	IsAPIKey        bool                   `json:"isAPIKey,omitempty"`
 	apiClient       coreapi.Client
 }
 
@@ -86,11 +99,11 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 
 	switch authType {
 	case Apikeys:
-		s.AuthTemplate = s.UpdateTemplate(template.APIKey)
-		s.AuthType = Apikeys
+		s.AuthTemplate = template.APIKey
+		s.IsAPIKey = true
 	case Oauth:
-		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
-		s.AuthType = Oauth
+		s.AuthTemplate = template.Oauth
+		s.IsAPIKey = false
 	default:
 		log.Error(ErrSubscriptionBadAuthtype.FormatError(authType))
 		return
@@ -195,16 +208,21 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 
 	fromAddress := fmt.Sprintf("From: %s", globalCfg.GetSMTPFromAddress())
 	toAddress := fmt.Sprintf("To: %s", s.Email)
-	subject := fmt.Sprintf("Subject: %s", s.UpdateTemplate(template.Subject))
+	subject := fmt.Sprintf("Subject: %s", template.Subject)
 
 	log.Debugf("Sending email %s, %s, %s", fromAddress, toAddress, subject)
 
-	emailBody := s.UpdateTemplate(template.Body)
-	if strings.Contains(template.Body, "$") {
-		log.Warnf("Using '${tag}' as part of CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP is deprecated. Please start using '{{.Tag}}")
-	} else {
-		emailBody = s.setEmailBodyTemplate(template.Body)
+	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated
+	// Transform the old "${tag}" to the go template {{.Tag}}
+	if strings.Contains(template.Body, "${") {
+		log.Warnf("Using '${tag}' as part of CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP is being deprecated soon. Please start using '{{.Tag}}")
+		// Create template.Body using the old style Body and AuthTemplate
+		deprecatedEmailTemplate := s.UpdateTemplate(fmt.Sprintf("%s. </br>%s", template.Body, s.AuthTemplate))
+		log.Warnf("Transforming deprecated email template to : %s", deprecatedEmailTemplate)
+		template.Body = deprecatedEmailTemplate
 	}
+
+	emailBody := s.setEmailBodyTemplate(template.Body)
 
 	msgArray := []string{
 		fromAddress,
@@ -217,16 +235,11 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 	return strings.NewReader(strings.Join(msgArray, "\n"))
 }
 
-//UpdateTemplate -
+//UpdateTemplate - update ${tag} to {{.Tag}}.  ${tag} to be deprecated
 func (s *SubscriptionNotification) UpdateTemplate(template string) string {
-	var jsonMap map[string]string
-	data, _ := json.Marshal(s)
 
-	json.Unmarshal(data, &jsonMap)
-
-	for k, v := range jsonMap {
-		template = strings.Replace(template, fmt.Sprintf("${%s}", k), v, -1)
-		template = strings.Replace(template, fmt.Sprintf("{{%s}}", k), v, -1)
+	for k, v := range subNotifTemplateMap {
+		template = strings.ReplaceAll(template, k, v)
 	}
 
 	return template
@@ -234,18 +247,20 @@ func (s *SubscriptionNotification) UpdateTemplate(template string) string {
 
 // setEmailBodyTemplate - set email body using Go template
 func (s *SubscriptionNotification) setEmailBodyTemplate(body string) string {
-	isAPIKey := s.AuthType == Apikeys
-
-	// create emailBodyTemplate
-	emailBodyTemplate := EmailBody{
+	subNotifTemplate := SubscriptionNotification{
+		s.CatalogItemID,
 		s.CatalogItemURL,
 		s.CatalogItemName,
-		s.CatalogItemID,
-		s.KeyHeaderName,
+		s.Action,
+		s.Email,
+		s.Message,
 		s.Key,
-		isAPIKey,
+		s.KeyHeaderName,
 		s.ClientID,
 		s.ClientSecret,
+		s.AuthTemplate,
+		s.IsAPIKey,
+		s.apiClient,
 	}
 
 	c, err := template.New("catalogTemplate").Parse(body)
@@ -255,24 +270,12 @@ func (s *SubscriptionNotification) setEmailBodyTemplate(body string) string {
 
 	var catalogItem bytes.Buffer
 
-	err = c.Execute(&catalogItem, emailBodyTemplate)
+	err = c.Execute(&catalogItem, subNotifTemplate)
 	if err != nil {
 		log.Error("Could not render catalog item info : ", err)
 	}
 
 	return catalogItem.String()
-}
-
-// EmailBody - for template use
-type EmailBody struct {
-	CatalogItemURL  string
-	CatalogItemName string
-	CatalogItemID   string
-	KeyHeaderName   string
-	Key             string
-	IsAPIKey        bool
-	ClientID        string
-	ClientSecret    string
 }
 
 /*

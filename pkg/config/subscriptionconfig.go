@@ -143,15 +143,15 @@ func AddSubscriptionConfigProperties(props properties.Properties) {
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserName, "", "Login user for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUserPassword, "", "Login password for the SMTP server")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeSubject, "Subscription Notification", "Subject of the email notification for action subscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "Subscription created for Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a><br/>${authtemplate}<br/>", "Body of the email notification for action subscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>${clientID}</b> and client_secret=<b>${clientSecret}</b>", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "Your API is secured using an APIKey credential: header: <b>${keyHeaderName}</b> / value: <b>${key}</b>", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeBody, "Subscription created for Catalog Item:  <a href= {{.CatalogItemURL}}> {{.CatalogItemName}} {{.CatalogItemID}}.</br></a>{{if .IsAPIKey}} Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{.Key}}</b>{{else}} Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>{{end}}", "Body of the email notification for action subscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeOauth, "Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>{{end}}", "Body of the email notification for action subscribe on OAuth authorization if your API is secured using OAuth token")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeAPIKeys, "Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{.Key}}</b>", "Body of the email notification for action subscribe on APIKey authorization if your API is secured using an APIKey")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeSubject, "Subscription Removal Notification", "Subject of the email notification for action unsubscribe")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeBody, "Subscription for Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a> has been unsubscribed", "Body of the email notification for action unsubscribe")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeBody, "Subscription for Catalog Item: <a href= {{.CatalogItemURL}}> {{CatalogItemName}} </a> has been unsubscribed", "Body of the email notification for action unsubscribe")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedSubject, "Subscription Failed Notification", "Subject of the email notification for action subscribe failed")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "Could not subscribe to CatalogItem: <a href= ${catalogItemUrl}> ${catalogItemName}</a>", "Body of the email notification for action subscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPSubscribeFailedBody, "Could not subscribe to Catalog Item: <a href= {{CatalogItemURL}}> {{CatalogItemName}}</a> {{.Message}}", "Body of the email notification for action subscribe failed")
 	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedSubject, "Subscription Removal Failed Notification", "Subject of the email notification for action unsubscribe failed")
-	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "Could not unsubscribe to Catalog Item: <a href= ${catalogItemUrl}> ${catalogItemName}</a>", "Body of the email notification for action unsubscribe failed")
+	props.AddStringProperty(pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody, "Could not unsubscribe to Catalog Item: <a href= {{.CatalogItemUrl}}> {{.CatalogItemName}}  </a>*{{.Message}}", "Body of the email notification for action unsubscribe failed")
 }
 
 // ParseSubscriptionConfig -
@@ -417,7 +417,7 @@ func (s *SubscriptionConfiguration) validateWebhook() error {
 		if len(hvArray) != 2 {
 			return errors.New("could not parse value of central.subscriptions.notifications.headers")
 		}
-		hvArray[0] = strings.TrimLeft(hvArray[0], "Header=") // handle the first	header in the list
+		hvArray[0] = strings.TrimPrefix(hvArray[0], "Header=") // handle the first	header in the list
 		webhookConfig.webhookHeaders[hvArray[0]] = hvArray[1]
 	}
 
