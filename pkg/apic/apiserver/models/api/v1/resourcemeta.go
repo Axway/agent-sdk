@@ -18,11 +18,11 @@ type ResourceMeta struct {
 	Title    string   `json:"title,omitempty"`
 	Metadata Metadata `json:"metadata,omitempty"`
 	// Custom attributes added to objects.
-	Attributes map[string]string `json:"attributes,omitempty"`
+	Attributes map[string]string `json:"attributes"`
 	// List of tags.
-	Tags []string `json:"tags,omitempty"`
+	Tags []string `json:"tags"`
 	// Finalizer on the API server resource
-	Finalizers []Finalizer `json:"finalizers,omitempty"`
+	Finalizers []Finalizer `json:"finalizers"`
 }
 
 // GetName -
