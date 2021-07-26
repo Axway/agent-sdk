@@ -19,6 +19,7 @@ func createGovernanceAgentStatusResource(status, message string) *v1alpha1.Gover
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
+	agentRes.Status.SdkVersion = config.SDKVersion
 
 	return &agentRes
 }

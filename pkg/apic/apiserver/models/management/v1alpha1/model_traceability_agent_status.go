@@ -25,4 +25,6 @@ type TraceabilityAgentStatus struct {
 	Message string `json:"message,omitempty"`
 	// The last updated event timestamp provided by the agent
 	LastActivityTime time.Time `json:"lastActivityTime,omitempty"`
+	// Version name for the SDK revision.
+	SdkVersion string `json:"sdkVersion,omitempty"`
 }

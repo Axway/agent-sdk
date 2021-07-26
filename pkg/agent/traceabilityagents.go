@@ -20,6 +20,7 @@ func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.Tra
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
 	agentRes.Status.LastActivityTime = getTimestamp()
+	agentRes.Status.SdkVersion = config.SDKVersion
 
 	return &agentRes
 }

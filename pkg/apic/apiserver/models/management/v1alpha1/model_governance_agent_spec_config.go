@@ -9,9 +9,7 @@
 
 package v1alpha1
 
-// GovernanceAgentSpec struct for GovernanceAgentSpec
-type GovernanceAgentSpec struct {
-	// The dataplane type that this agent connects to
-	DataplaneType string                    `json:"dataplaneType"`
-	Config        GovernanceAgentSpecConfig `json:"config"`
+// GovernanceAgentSpecConfig Represents the governance agent config
+type GovernanceAgentSpecConfig struct {
+	Address GovernanceAgentSpecConfigAddress `json:"address"`
 }
