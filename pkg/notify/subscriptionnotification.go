@@ -17,6 +17,13 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+//TODO
+/*
+	1. Search for comment "DEPRECATED to be removed on major release"
+	2. Remove deprecated code left from APIGOV-19751
+*/
+
+//DEPRECATED to be removed on major release - this map will no longer be needed after "${tag} is invalid"
 // subNotifTemplateMap - map of date formats for apiservicerevision title
 var subNotifTemplateMap = map[string]string{
 	"${catalogItemUrl}":  "{{.CatalogItemURL}}",
@@ -98,6 +105,7 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 		return
 	}
 
+	//DEPRECATED to be removed on major release - setting s.AuthTemplate will no longer be needed after "${tag} is invalid"
 	switch authType {
 	case Apikeys:
 		s.AuthTemplate = template.APIKey
@@ -213,6 +221,8 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 
 	log.Debugf("Sending email %s, %s, %s", fromAddress, toAddress, subject)
 
+	//DEPRECATED to be removed on major release - this check for '${"' will no longer be needed after "${tag} is invalid"
+
 	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated
 	// Transform the old "${tag}" to the go template {{.Tag}}
 	if strings.Contains(template.Body, "${") {
@@ -278,22 +288,3 @@ func (s *SubscriptionNotification) setEmailBodyTemplate(body string) string {
 
 	return catalogItem.String()
 }
-
-/*
-Subscription Body templates
-
-CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_BODY=
-Subscription created for Catalog Item:  <a href= {{.CatalogItemURL}}> {{.CatalogItemName}} {{.CatalogItemID}}</a></br>
-{{if .IsAPIKey}} Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{.Key}}</b>
-{{else}} Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>{{end}}
-
-CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBE_BODY=
-Subscription for Catalog Item: <a href= {{.CatalogItemURL}}> {{CatalogItemName}} </a> has been unsubscribed
-
-CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBEFAILED_BODY=
-Could not subscribe to Catalog Item: <a href= {{CatalogItemURL}}> {{CatalogItemName}}</a> {{.Message}}
-
-CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBEFAILED_BODY=
-Could not unsubscribe to Catalog Item: <a href= {{.CatalogItemUrl}}> {{.CatalogItemName}}  </a>*{{.Message}} /
-
-*/

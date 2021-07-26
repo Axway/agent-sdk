@@ -12,6 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//TODO
+/*
+	1. Search for comment "DEPRECATED to be removed on major release"
+	2. Remove deprecated code left from APIGOV-19751
+*/
+
 func buildConfig() (config.SubscriptionConfig, error) {
 	rootCmd := &cobra.Command{
 		Use: "test",
@@ -30,15 +36,19 @@ func buildConfig() (config.SubscriptionConfig, error) {
 	props.AddStringProperty("central.subscriptions.notifications.smtp.username", "bill", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.password", "pwd", "")
 	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.subject", "subscribe subject", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.body", "Subscription created for Catalog Item:  <a href= ${catalogItemUrl}> ${catalogItemName} ${catalogItemId}</a> <br/>", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.oath", "oath", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.apikeys", "apikeys", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.subject", "unsubscribe subject", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.body", "unsubscribe body", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.subject", "subscribe failed subject", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.body", "subscribe failed body", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.subject", "unsubscribe failed subject", "")
-	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.body", "unsubscribe failed body", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.body", "Subscription created for Catalog Item:  <a href= {{.CatalogItemURL}}> {{.CatalogItemName}} {{.CatalogItemID}}.</br></a>{{if .IsAPIKey}} Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{.Key}}</b>{{else}} Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>{{end}}", "")
+
+	//DEPRECATED to be removed on major release - this property will no longer be needed after "${tag} is invalid"
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.oath", "Your API is secured using OAuth token. You can obtain your token using grant_type=client_credentials with the following client_id=<b>{{.ClientID}}</b> and client_secret=<b>{{.ClientSecret}}</b>", "")
+	//DEPRECATED to be removed on major release - this property will no longer be needed after "${tag} is invalid"
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribe.apikeys", "Your API is secured using an APIKey credential:header:<b>{{.KeyHeaderName}}</b>/value:<b>{{}.Key}}</b>", "")
+
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.subject", "Subscription Removal Notification", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribe.body", "Subscription for Catalog Item: <a href= {{.CatalogItemURL}}> {{CatalogItemName}} </a> has been unsubscribed", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.subject", "Subscription Failed Notification", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.subscribeFailed.body", "Could not subscribe to Catalog Item: <a href= {{CatalogItemURL}}> {{CatalogItemName}}</a> {{.Message}}", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.subject", "Subscription Removal Failed Notification", "")
+	props.AddStringProperty("central.subscriptions.notifications.smtp.unsubscribeFailed.body", "Could not unsubscribe to Catalog Item: <a href= {{.CatalogItemUrl}}> {{.CatalogItemName}}  </a>*{{.Message}}", "")
 
 	cfg := config.ParseSubscriptionConfig(props)
 	err := config.ValidateConfig(cfg)
