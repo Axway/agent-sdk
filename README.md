@@ -12,21 +12,21 @@ go get github.com/Axway/agent-sdk/
 
 ## Packages
 
-| Name         | Description                                                                                                                                         |
-|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| agent        | This package holds the interface for agent initialization and managing discovered APIs                                                              |
-| api          | This package provides client interface for making REST API calls                                                                                    |
-| apic         | This package contains Amplify Central service client                                                                                                |
-| cache        | This package can be used to create an in-memory cache of items                                                                                      |
-| cmd          | This package provides the implementation of the root command line processor                                                                         |
-| config       | This package provides the base configuration required by Amplify Agents SDK to communicate with AmplifyCentral                                      |
-| filter       | This package provides the filter implementation to allow discovering APIs based on certain conditions                                               |
-| jobs         | This package provides a tooling to coordinate agent tasks [SDK Jobs](./pkg/jobs/README.md)                                                          |
-| notification | This package contains structs that can be used for creating notifications and subscribers to those notifications                                    |
-| notify       | This package contains the subscription notification setup for the agents to send SMTP and/or webhook notification for subscription process outcomes |
-| transaction  | This package holds definitions of event and interfaces to process them for traceability                                                             |
-| traceability | This package provides the transport lumberjack/HTTP clients that can be used for building traceability agent                                        |
-| util         | This package has SDK utility packages for use by all agents                                                                                         |
+| Name         | Description                                                                                                                                          |
+|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| agent        | This package holds the interface for agent initialization and managing discovered APIs                                                               |
+| api          | This package provides client interface for making REST API calls                                                                                     |
+| apic         | This package contains Amplify Central service client                                                                                                 |
+| cache        | This package can be used to create an in-memory cache of items                                                                                       |
+| cmd          | This package provides the implementation of the root command line processor                                                                          |
+| config       | This package provides the base configuration required by Amplify Agents SDK to communicate with Amplify Central                                      |
+| filter       | This package provides the filter implementation to allow discovering APIs based on certain conditions                                                |
+| jobs         | This package provides a tooling to coordinate agent tasks [SDK Jobs](./pkg/jobs/README.md)                                                           |
+| notification | This package contains structs that can be used for creating notifications and subscribers to those notifications                                     |
+| notify       | This package contains the subscription notification setup for the agents to send SMTP and/or webhook notification for subscription process outcomes  |
+| transaction  | This package holds definitions of event and interfaces to process them for traceability                                                              |
+| traceability | This package provides the transport lumberjack/HTTP clients that can be used for building traceability agent                                         |
+| util         | This package has SDK utility packages for use by all agents                                                                                          |
 
 [Getting started to build discovery agent](./docs/discovery/index.md)
 
