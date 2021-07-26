@@ -22,7 +22,7 @@ type ResourceMeta struct {
 	// List of tags.
 	Tags []string `json:"tags,omitempty"`
 	// Finalizer on the API server resource
-	Finalizers []Finalizer
+	Finalizers []Finalizer `json:"finalizers,omitempty"`
 }
 
 // GetName -
