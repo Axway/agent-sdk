@@ -98,7 +98,7 @@ You may create your branches directly within the repo. You do not need to fork t
 Please make sure the following is done when you open a pull request.
 
 1. Labels are added to the pull request. These can be the same labels that are found on the issue.
-2. Assign the pull request to the 'Axway Agents SDK' project. This is the board for tracking work in progress.
+2. Assign the pull request to the 'Axway Agent SDK' project. This is the board for tracking work in progress.
 3. Link the pull request back to your issue.
 
 All of these steps can be taken care of after opening your pull request.
