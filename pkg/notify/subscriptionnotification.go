@@ -244,7 +244,7 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 	return strings.NewReader(strings.Join(msgArray, "\n")), nil
 }
 
-// ValidateSubscriptionConfig
+// ValidateSubscriptionConfig - validate passed in body and template tags
 func (s *SubscriptionNotification) ValidateSubscriptionConfig(body, authTemplate string) (string, error) {
 	//DEPRECATED to be removed on major release - this check for '${"' will no longer be needed after "${tag} is invalid"
 
