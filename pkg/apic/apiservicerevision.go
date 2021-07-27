@@ -202,13 +202,13 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		apiSvcRevPattern = strings.Replace(apiSvcRevPattern, datePattern, "{{.Date}}", -1) // Once we have the date format, change template to correct {{.Date}} tag
 		if dateFormat == "" {
 			// Customer is entered an incorrect date format.  Set template and pattern to defaults.
-			log.Tracef("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
+			log.Warnf("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
 			apiSvcRevPattern = apiSvcRevTemplate
 			dateFormat = "2006/01/02"
 		}
 	} else {
 		// Customer is still using deprecated date format.  Set template and pattern to defaults.
-		log.Warnf("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN is being deprecated. Please refer to axway.docs regarding valid {{.Date:*}} formats.")
+		log.Warnf("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN is deprecated. Please refer to axway.docs regarding valid {{.Date:*}} formats.")
 		apiSvcRevPattern = apiSvcRevTemplate
 		dateFormat = "2006/01/02"
 	}
@@ -225,7 +225,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 
 	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevPattern)
 	if err != nil {
-		log.Tracef("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle, err.Error())
+		log.Warnf("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
 		return defaultAPISvcRevTitle
 	}
 
@@ -233,7 +233,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 
 	err = title.Execute(&apiSvcRevTitle, apiSvcRevTitleTemplate)
 	if err != nil {
-		log.Tracef("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle, err.Error())
+		log.Warnf("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Please refer to axway.docs regarding valid CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
 		return defaultAPISvcRevTitle
 	}
 
