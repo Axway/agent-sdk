@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -142,51 +140,12 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
-// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
-func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
-	title := c.cfg.GetAPIServiceRevisionPattern() // "{{APIServiceName}} - {{date:YYYY/MM/DD}} - r {{revision}}"
-	revision := strconv.Itoa(serviceBody.serviceContext.revisionCount + 1)
-
-	replaceVars := map[string]string{"APIServiceName": serviceBody.APIName, "revision": revision}
-	// replace occurrences of `APIServiceName` and `revision` in title
-	for k, v := range replaceVars {
-		title = strings.Replace(title, fmt.Sprintf("{{%s}}", k), v, -1)
-	}
-
-	dateRegEx := regexp.MustCompile(`{{date:.*?}}`)
-	if dateRegEx.MatchString(title) {
-		var createdOn time.Time
-		if serviceBody.serviceContext.previousRevision == nil {
-			createdOn = time.Now()
-		} else {
-			createdOn = time.Time(serviceBody.serviceContext.previousRevision.ResourceMeta.Metadata.Audit.CreateTimestamp)
-		}
-		year := strconv.Itoa(createdOn.Year())
-		month := createdOn.Format("01")
-		day := strconv.Itoa(createdOn.Day())
-
-		date := dateRegEx.FindString(title)
-		replaceDate := map[string]string{"MM": month, "DD": day, "YYYY": year}
-		for k, v := range replaceDate {
-			date = strings.Replace(date, k, v, -1)
-		}
-		date = strings.TrimPrefix(date, "{{date:")
-		date = strings.TrimSuffix(date, "}}")
-
-		//swap the date pattern with the date variable in the title
-		title = strings.Replace(title, dateRegEx.FindString(title), date, -1)
-	}
-	return title
-}
-
 func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
 	attributes := make(map[string]string)
 
 	// Add attributes from resource if present
-	if additionalAttr != nil {
-		for key, val := range additionalAttr {
-			attributes[key] = val
-		}
+	for key, val := range additionalAttr {
+		attributes[key] = val
 	}
 
 	// Add attributes from service body setup by agent
