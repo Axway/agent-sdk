@@ -74,7 +74,7 @@ func init() {
 }
 
 func buildCmdVersion() string {
-	return fmt.Sprintf("%s-%s\nSDK version %s", BuildVersion, BuildCommitSha, SDKBuildVersion)
+	return fmt.Sprintf("%s-%s, SDK version %s", BuildVersion, BuildCommitSha, SDKBuildVersion)
 }
 
 // NewRootCmd - Creates a new Agent Root Command
