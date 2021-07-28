@@ -54,7 +54,7 @@ func ValidateSubscriptionConfig(body, authTemplate string, emailNotificationTemp
 	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated
 	// Transform the old "${tag}" to the go template {{.Tag}}
 	if strings.Contains(body, "${") {
-		log.Warnf("Using '${tag}' as part of CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP is deprecated. Please refer to docs.axway to start using '{{.Tag}}")
+		log.Warnf("Using '${tag}' as part of CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP is deprecated. Please refer to docs.axway to start using '{{.Tag}}. Please conider updating template for : %s", body)
 		// update body using the old style Body concat with AuthTemplate
 		body = updateTemplate(fmt.Sprintf("%s. </br>%s", body, authTemplate))
 	} // else customer is using the {{.Tag}} and therefore the body should already contain the authTemplate in the case of SUBSCRIBE
