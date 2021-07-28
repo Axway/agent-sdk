@@ -26,6 +26,7 @@ import (
 
 const (
 	apiSvcRevTemplate = "{{.APIServiceName}} - {{.Date}} - r {{.Revision}}"
+	defaultDateFormat = "2006/01/02"
 )
 
 // APIServiceRevisionTitle - apiservicerevision template for title
@@ -40,7 +41,7 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"MM-DD-YYYY": "01-02-2006",
 	"MM/DD/YYYY": "01/02/2006",
 	"YYYY-MM-DD": "2006-01-02",
-	"YYYY/MM/DD": "2006/01/02",
+	"YYYY/MM/DD": defaultDateFormat,
 }
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
@@ -204,13 +205,13 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 			// Customer is entered an incorrect date format.  Set template and pattern to defaults.
 			log.Warnf("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
 			apiSvcRevPattern = apiSvcRevTemplate
-			dateFormat = "2006/01/02"
+			dateFormat = defaultDateFormat
 		}
 	} else {
 		// Customer is still using deprecated date format.  Set template and pattern to defaults.
 		log.Warnf("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN is deprecated. Please refer to axway.docs regarding valid {{.Date:*}} formats.")
 		apiSvcRevPattern = apiSvcRevTemplate
-		dateFormat = "2006/01/02"
+		dateFormat = defaultDateFormat
 	}
 
 	// Build default apiSvcRevTitle.  To be used in case of error processing
