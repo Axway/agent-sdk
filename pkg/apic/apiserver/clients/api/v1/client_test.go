@@ -714,11 +714,6 @@ func TestUpdateMerge(t *testing.T) {
 					JSON(tc.expectedResource).
 					Reply(tc.otherStatus).
 					JSON(tc.expectedResource)
-				gock.New("http://localhost:8080/apis").
-					Put("/apis/management/v1alpha1/environments/myenv/apiservices/name").
-					JSON(tc.expectedResource).
-					Reply(tc.otherStatus).
-					JSON(tc.expectedResource)
 			}
 
 			newRI, err := tc.newResource.AsInstance()
