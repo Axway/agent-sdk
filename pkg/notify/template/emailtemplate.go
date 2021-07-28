@@ -32,6 +32,7 @@ var subNotifTemplateMap = map[string]string{
 	"${message}":         "{{.Message}}",
 }
 
+// EmailNotificationTemplate - (go) template for email notification
 type EmailNotificationTemplate struct {
 	CatalogItemID   string `json:"catalogItemId"`
 	CatalogItemURL  string `json:"catalogItemUrl"`
