@@ -7,8 +7,15 @@ import (
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	emailtemplate "github.com/Axway/agent-sdk/pkg/notify/template"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+//TODO
+/*
+	1. Search for comment "DEPRECATED to be removed on major release"
+	2. Remove deprecated code left from APIGOV-19751
+*/
 
 // NotificationType - Type definition for subscription state
 type NotificationType string
@@ -372,6 +379,10 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
 		log.Debug("SMTP notification set")
+		err := s.validateSubscriptionConfig()
+		if err != nil {
+			return err
+		}
 	}
 
 	switch s.GetSubscriptionApprovalMode() {
@@ -392,6 +403,61 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 		}
 	}
 
+	return nil
+}
+
+func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
+	emailTemplateAPIKey := emailtemplate.EmailNotificationTemplate{
+		CatalogItemID:   "CatalogItemID",
+		CatalogItemURL:  "CatalogItemURL",
+		CatalogItemName: "CatalogItemName",
+		Email:           "Email",
+		Message:         "Message",
+		Key:             "Key",
+		KeyHeaderName:   "KeyHeaderName",
+		ClientID:        "ClientID",
+		ClientSecret:    "ClientSecret",
+		AuthTemplate:    "AuthTemplate",
+		IsAPIKey:        true, // test for apikeys
+	}
+	//DEPRECATED to be removed on major release - second param for ValidateSubscriptionConfig cab be "" (empty string) for SubscribeTemplate body with APIKey and Oauth
+	_, err := emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeTemplate().Body, s.Notifications.SMTP.Subscribe.APIKey, emailTemplateAPIKey)
+	if err != nil {
+		return err
+	}
+
+	emailTemplateOauth := emailtemplate.EmailNotificationTemplate{
+		CatalogItemID:   "CatalogItemID",
+		CatalogItemURL:  "CatalogItemURL",
+		CatalogItemName: "CatalogItemName",
+		Email:           "Email",
+		Message:         "Message",
+		Key:             "Key",
+		KeyHeaderName:   "KeyHeaderName",
+		ClientID:        "ClientID",
+		ClientSecret:    "ClientSecret",
+		AuthTemplate:    "AuthTemplate",
+		IsAPIKey:        false, // test for oauth
+	}
+	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeTemplate().Body, s.Notifications.SMTP.Subscribe.Oauth, emailTemplateOauth)
+	if err != nil {
+		return err
+	}
+
+	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetUnsubscribeTemplate().Body, "", emailTemplateAPIKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeFailedTemplate().Body, "", emailTemplateAPIKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetUnsubscribeFailedTemplate().Body, "", emailTemplateAPIKey)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -1,12 +1,9 @@
 package notify
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
-	"text/template"
 
 	sasl "github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
@@ -14,6 +11,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	emailtemplate "github.com/Axway/agent-sdk/pkg/notify/template"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -23,22 +21,6 @@ import (
 	1. Search for comment "DEPRECATED to be removed on major release"
 	2. Remove deprecated code left from APIGOV-19751
 */
-
-//DEPRECATED to be removed on major release - this map will no longer be needed after "${tag} is invalid"
-// subNotifTemplateMap - map of date formats for apiservicerevision title
-var subNotifTemplateMap = map[string]string{
-	"${catalogItemUrl}":  "{{.CatalogItemURL}}",
-	"${catalogItemName}": "{{.CatalogItemName}}",
-	"${catalogItemId}":   "{{.CatalogItemID}}",
-	"${keyHeaderName}":   "{{.KeyHeaderName}}",
-	"${key}":             "{{.Key}}",
-	"${clientID}":        "{{.ClientID}}",
-	"${clientSecret}":    "{{.ClientSecret}}",
-	"${action}":          "{{.Action}}",
-	"${email}":           "{{.Email}}",
-	"${authtemplate}":    "{{.AuthTemplate}}",
-	"${message}":         "{{.Messaage}}",
-}
 
 //SubscriptionNotification - the struct that is sent to the notification and used to fill in email templates
 type SubscriptionNotification struct {
@@ -227,8 +209,22 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 
 	log.Debugf("Sending email %s, %s, %s", fromAddress, toAddress, subject)
 
+	emailNotificationTemplate := emailtemplate.EmailNotificationTemplate{
+		CatalogItemID:   s.CatalogItemID,
+		CatalogItemURL:  s.CatalogItemURL,
+		CatalogItemName: s.CatalogItemName,
+		Email:           s.Email,
+		Message:         s.Message,
+		Key:             s.Key,
+		KeyHeaderName:   s.KeyHeaderName,
+		ClientID:        s.ClientID,
+		ClientSecret:    s.ClientSecret,
+		AuthTemplate:    s.AuthTemplate,
+		IsAPIKey:        s.IsAPIKey,
+	}
+
 	// Shouldn't have to check error from ValidateSubscriptionConfig since startup passed the subscription validation check
-	emailBody, err := s.ValidateSubscriptionConfig(template.Body, s.AuthTemplate)
+	emailBody, err := emailtemplate.ValidateSubscriptionConfig(template.Body, s.AuthTemplate, emailNotificationTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -242,74 +238,4 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 	}
 
 	return strings.NewReader(strings.Join(msgArray, "\n")), nil
-}
-
-// ValidateSubscriptionConfig - validate body and auth template tags
-func (s *SubscriptionNotification) ValidateSubscriptionConfig(body, authTemplate string) (string, error) {
-	//DEPRECATED to be removed on major release - this check for '${"' will no longer be needed after "${tag} is invalid"
-
-	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated
-	// Transform the old "${tag}" to the go template {{.Tag}}
-	if strings.Contains(body, "${") {
-		log.Warnf("Using '${tag}' as part of CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP is deprecated. Please refer to docs.axway to start using '{{.Tag}}")
-		// update body using the old style Body concat with AuthTemplate
-		body = s.updateTemplate(fmt.Sprintf("%s. </br>%s", body, authTemplate))
-	} // else customer is using the {{.Tag}} and therefore the body should already contain the authTemplate in the case of SUBSCRIBE
-
-	return s.setEmailBodyTemplate(body)
-
-}
-
-//updateTemplate - update ${tag} to {{.Tag}}.  ${tag} to be deprecated
-func (s *SubscriptionNotification) updateTemplate(template string) string {
-
-	for k, v := range subNotifTemplateMap {
-		template = strings.ReplaceAll(template, k, v)
-	}
-
-	return template
-}
-
-// setEmailBodyTemplate - set email body using Go template
-func (s *SubscriptionNotification) setEmailBodyTemplate(body string) (string, error) {
-	subNotifTemplate := SubscriptionNotification{
-		s.CatalogItemID,
-		s.CatalogItemURL,
-		s.CatalogItemName,
-		s.Action,
-		s.Email,
-		s.Message,
-		s.Key,
-		s.KeyHeaderName,
-		s.ClientID,
-		s.ClientSecret,
-		s.AuthTemplate,
-		s.IsAPIKey,
-		s.apiClient,
-	}
-
-	c, err := template.New("catalogTemplate").Parse(body)
-	if err != nil {
-		return "", errors.New(err.Error())
-	}
-
-	var catalogItem bytes.Buffer
-
-	err = c.Execute(&catalogItem, subNotifTemplate)
-
-	// Errors are returned in the following format
-	// "template: catalogTemplate:1:63: executing "catalogTemplate" at <.CatffalogItemURL>: can't evaluate field CatffalogItemURL in type notify.SubscriptionNotification"
-	// "template: catalogTemplate:1:207: executing "catalogTemplate" at <.KeyHeafederName>: can't evaluate field KeyHeafederName in type notify.SubscriptionNotification"
-	if err != nil {
-		// attempt to grab error returned from .Execute() beginning, "can't evaluate"
-		errString := err.Error()
-		index := strings.Index(errString, "can't evaluate")
-		if index > 0 {
-			errString = string(err.Error()[index:len(err.Error())])
-		}
-
-		return "", errors.New(errString)
-	}
-
-	return catalogItem.String(), nil
 }
