@@ -259,6 +259,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		return err
 	}
 
+	c.cfg.SetAxwayManaged(apiEnvironment.Spec.AxwayManaged)
 	if c.cfg.GetEnvironmentID() == "" {
 		// need to save this ID for the traceability agent for later
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
