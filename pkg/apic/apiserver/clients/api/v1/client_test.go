@@ -595,8 +595,7 @@ func TestUpdateMerge(t *testing.T) {
 				},
 				References: []apiv1.Reference{},
 			},
-			Attributes: map[string]string{},
-			Tags:       []string{"old", "new"},
+			Tags: []string{"old", "new"},
 		},
 	}
 
@@ -712,6 +711,11 @@ func TestUpdateMerge(t *testing.T) {
 			case tc.getStatus == 200:
 				gock.New("http://localhost:8080/apis").
 					Put("/management/v1alpha1/environments/myenv/apiservices/name").
+					JSON(tc.expectedResource).
+					Reply(tc.otherStatus).
+					JSON(tc.expectedResource)
+				gock.New("http://localhost:8080/apis").
+					Put("/apis/management/v1alpha1/environments/myenv/apiservices/name").
 					JSON(tc.expectedResource).
 					Reply(tc.otherStatus).
 					JSON(tc.expectedResource)
