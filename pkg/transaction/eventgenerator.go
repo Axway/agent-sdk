@@ -57,11 +57,11 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	}
 	metaData.Put(sampling.SampleKey, true)
 
-	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
+	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData, false)
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
-func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
+func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}, volumeMetric bool) (beat.Event, error) {
 	event := beat.Event{}
 	serializedLogEvent, err := json.Marshal(logEvent)
 	if err != nil {
@@ -83,6 +83,17 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		collector := metric.GetMetricCollector()
 		if collector != nil {
 			collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
+		}
+	}
+	// Track the volume of data for this transaction event leg
+	if e.shouldUseTrafficForAggregation && logEvent.TransactionEvent != nil && volumeMetric {
+		collector := metric.GetMetricCollector()
+		if collector != nil {
+			bytes := 0
+			if httpEvent, ok := logEvent.TransactionEvent.Protocol.(*Protocol); ok {
+				bytes += httpEvent.BytesSent + httpEvent.BytesReceived
+			}
+			collector.AddVolumeMetric(int64(bytes))
 		}
 	}
 
@@ -115,13 +126,14 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		metaData.Put(sampling.SampleKey, true)
 	}
 
-	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
+	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData, false)
 	if err != nil {
 		return events, err
 	}
 	events = append(events, newEvent)
-	for _, event := range detailEvents {
-		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+	for i, event := range detailEvents {
+		// create an event for this leg, leg 0 will track volume usages if enabled
+		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData, i == 0)
 		if err == nil {
 			events = append(events, newEvent)
 		}

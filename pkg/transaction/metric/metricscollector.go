@@ -2,6 +2,7 @@ package metric
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ import (
 // Collector - interface for collecting metrics
 type Collector interface {
 	AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string)
+	AddVolumeMetric(bytes int64)
 }
 
 // collector - collects the metrics for transactions events
@@ -144,6 +146,24 @@ func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64,
 	c.updateMetric(apiID, apiName, statusCode, duration)
 }
 
+// AddVolumeMetric - add metric for API transaction to collection
+func (c *collector) AddVolumeMetric(bytes int64) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+	c.updateVolume(bytes)
+}
+
+func (c *collector) updateVolume(bytes int64) {
+	if !agent.GetCentralConfig().IsAxwayManaged() {
+		return // no need to update volume for customer managed
+	}
+	transactionVolume := c.getOrRegisterCounter("transaction.volume")
+	transactionVolume.Inc(bytes)
+	c.storage.updateVolume(transactionVolume.Count())
+}
+
 func (c *collector) updateUsage(count int64) {
 	transactionCount := c.getOrRegisterCounter("transaction.count")
 	transactionCount.Inc(count)
@@ -221,10 +241,10 @@ func (c *collector) generateEvents() {
 }
 
 func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
-	if name == "transaction.count" {
+	if name == "transaction.count" || name == "transaction.volume" {
 		counterMetric := metric.(metrics.Counter)
 		if agent.GetCentralConfig().CanPublishUsageEvent() {
-			c.generateUsageEvent(counterMetric, c.orgGUID)
+			c.generateUsageEvent(counterMetric, name, c.orgGUID)
 		} else {
 			log.Info("Publishing the usage event is turned off")
 		}
@@ -233,13 +253,17 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	c.processTransactionMetric(name, metric)
 }
 
-func (c *collector) generateUsageEvent(transactionCounter metrics.Counter, orgGUID string) {
+func (c *collector) generateUsageEvent(transactionCounter metrics.Counter, metricName, orgGUID string) {
 	if transactionCounter.Count() != 0 {
-		c.generateLighthouseUsageEvent(transactionCounter, orgGUID)
+		c.generateLighthouseUsageEvent(transactionCounter, metricName, orgGUID)
 	}
 }
 
-func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counter, orgGUID string) {
+func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counter, metricName, orgGUID string) {
+	eventType := map[string]string{
+		"transaction.count":  lighthouseTransactions,
+		"transaction.volume": lighthouseVolume,
+	}
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
@@ -250,14 +274,21 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metrics.Counte
 			c.startTime.Format(ISO8601): {
 				Product: cmd.GetBuildDataPlaneType(),
 				Usage: map[string]int64{
-					cmd.GetBuildDataPlaneType() + ".Transactions": transactionCount.Count(),
+					fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), eventType[metricName]): transactionCount.Count(),
 				},
 				Meta: make(map[string]interface{}),
 			},
 		},
 		Meta: make(map[string]interface{}),
 	}
-	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", transactionCount.Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+
+	switch eventType[metricName] {
+	case lighthouseTransactions:
+		log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", transactionCount.Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	case lighthouseVolume:
+		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", transactionCount.Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	}
+
 	queueItem := &usageEventQueueItem{
 		event:  lightHouseUsageEvent,
 		metric: transactionCount,

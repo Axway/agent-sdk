@@ -20,12 +20,14 @@ const (
 	cacheFileName     = "agent-usagemetric.json"
 	usageStartTimeKey = "usage_start_time"
 	usageCountKey     = "usage_count"
+	volumeKey         = "usage_volume"
 	metricKeyPrefix   = "metric."
 )
 
 type storageCache interface {
 	initialize()
 	updateUsage(usageCount int)
+	updateVolume(bytes int64)
 	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
 	removeMetric(apiMetric *APIMetric)
 	save()
@@ -88,6 +90,16 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 	defer c.storageLock.Unlock()
 	c.storage.Set(usageStartTimeKey, c.collector.startTime)
 	c.storage.Set(usageCountKey, usageCount)
+}
+
+func (c *cacheStorage) updateVolume(bytes int64) {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() {
+		return
+	}
+
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
+	c.storage.Set(volumeKey, bytes)
 }
 
 func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
