@@ -235,7 +235,7 @@ func init() {
 	// The first parameter identifies the name of the yaml file that agent will look for to load the config
 	RootCmd = corecmd.NewRootCmd(
 		"apic_discovery_agent_sample",
-		"Sample Discovery Agent",
+		"Sample Discovery Agent",		// you can set this to "" if you set BuildAgentDescription in your makefile
 		initConfig,
 		run,
 		corecfg.DiscoveryAgent,
@@ -690,7 +690,8 @@ The Agent SDK provides support for specifying the version of the agent at the bu
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
 - github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
 - github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha
-- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName
+- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName - this is an internal name
+- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription - this is a friendly description that will be displayed in the --version and --help commands
 - github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion
 
 The following is an example of the build command that can be configured in the Makefile
@@ -705,6 +706,7 @@ go build -tags static_all \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleDiscoveryAgent'" \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Sample Discovery Agent' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}' \
 	-a -o ${WORKSPACE}/bin/discovery_agent ${WORKSPACE}/main.go
 ```

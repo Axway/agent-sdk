@@ -9,8 +9,11 @@ var BuildVersion string
 // BuildCommitSha -
 var BuildCommitSha string
 
-// BuildAgentName -
+// BuildAgentName - internal identification name for the agent
 var BuildAgentName string
+
+// BuildAgentDescription - agent name you wish to display in things like the version and help command
+var BuildAgentDescription string
 
 // BuildDataPlaneType -
 var BuildDataPlaneType string

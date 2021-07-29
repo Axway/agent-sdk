@@ -5,14 +5,13 @@ import (
 	"os/exec"
 	"strings"
 
+	corecmd "github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/cmd/service/daemon"
 )
 
 var (
 	// Name -
 	Name string
-	// Description -
-	Description string
 
 	dependencies = []string{"network-online.target"}
 
@@ -34,7 +33,7 @@ type AgentService struct {
 }
 
 func newAgentService() (*AgentService, error) {
-	service, err := daemon.New(Name, Description, dependencies...)
+	service, err := daemon.New(Name, corecmd.BuildAgentDescription, dependencies...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +41,7 @@ func newAgentService() (*AgentService, error) {
 	return &AgentService{
 		service:     service,
 		Name:        Name,
-		Description: Description,
+		Description: corecmd.BuildAgentDescription,
 	}, nil
 }
 
