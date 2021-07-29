@@ -406,8 +406,17 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 	return nil
 }
 
+const (
+	subEnvVar       = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_BODY"
+	keyEnvVar       = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_APIKEYS" // DEPRECATED
+	oauthEnvVar     = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBE_OAUTH"   // DEPRECATED
+	unsubEnvVar     = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBE_BODY"
+	subFailEnvVar   = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_SUBSCRIBEFAILED_BODY"
+	unsubFailEnvVar = "CENTRAL_SUBSCRIPTIONS_NOTIFICATIONS_SMTP_UNSUBSCRIBEFAILED_BODY"
+)
+
 func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
-	emailTemplateAPIKey := emailtemplate.EmailNotificationTemplate{
+	emailTemplate := emailtemplate.EmailNotificationTemplate{
 		CatalogItemID:   "CatalogItemID",
 		CatalogItemURL:  "CatalogItemURL",
 		CatalogItemName: "CatalogItemName",
@@ -418,46 +427,27 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 		ClientID:        "ClientID",
 		ClientSecret:    "ClientSecret",
 		AuthTemplate:    "AuthTemplate",
-		IsAPIKey:        true, // test for apikeys
-	}
-	//DEPRECATED to be removed on major release - second param for ValidateSubscriptionConfig cab be "" (empty string) for SubscribeTemplate body with APIKey and Oauth
-	_, err := emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeTemplate().Body, s.Notifications.SMTP.Subscribe.APIKey, emailTemplateAPIKey)
-	if err != nil {
-		return err
 	}
 
-	emailTemplateOauth := emailtemplate.EmailNotificationTemplate{
-		CatalogItemID:   "CatalogItemID",
-		CatalogItemURL:  "CatalogItemURL",
-		CatalogItemName: "CatalogItemName",
-		Email:           "Email",
-		Message:         "Message",
-		Key:             "Key",
-		KeyHeaderName:   "KeyHeaderName",
-		ClientID:        "ClientID",
-		ClientSecret:    "ClientSecret",
-		AuthTemplate:    "AuthTemplate",
-		IsAPIKey:        false, // test for oauth
-	}
-	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeTemplate().Body, s.Notifications.SMTP.Subscribe.Oauth, emailTemplateOauth)
-	if err != nil {
-		return err
+	templates := map[string]string{
+		subEnvVar:       s.GetSubscribeTemplate().Body,
+		keyEnvVar:       s.GetSubscribeTemplate().Body,
+		oauthEnvVar:     s.GetSubscribeTemplate().Body,
+		unsubEnvVar:     s.GetUnsubscribeTemplate().Body,
+		subFailEnvVar:   s.GetSubscribeFailedTemplate().Body,
+		unsubFailEnvVar: s.GetUnsubscribeFailedTemplate().Body,
 	}
 
-	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetUnsubscribeTemplate().Body, "", emailTemplateAPIKey)
-	if err != nil {
-		return err
+	for variable, template := range templates {
+		emailTemplate.IsAPIKey = !(variable == oauthEnvVar) // apikey for all but oauth
+		_, err := emailtemplate.ValidateSubscriptionConfig(template, "", emailTemplate)
+		if err != nil {
+			templateErr := fmt.Errorf("%s template is not valid, check %s", variable, err.Error())
+			log.Error(templateErr)
+			return templateErr
+		}
 	}
 
-	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetSubscribeFailedTemplate().Body, "", emailTemplateAPIKey)
-	if err != nil {
-		return err
-	}
-
-	_, err = emailtemplate.ValidateSubscriptionConfig(s.GetUnsubscribeFailedTemplate().Body, "", emailTemplateAPIKey)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
