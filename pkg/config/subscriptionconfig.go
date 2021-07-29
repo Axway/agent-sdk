@@ -431,8 +431,8 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 
 	templates := map[string]string{
 		subEnvVar:       s.GetSubscribeTemplate().Body,
-		keyEnvVar:       s.GetSubscribeTemplate().Body,
-		oauthEnvVar:     s.GetSubscribeTemplate().Body,
+		keyEnvVar:       s.Notifications.SMTP.Subscribe.APIKey,
+		oauthEnvVar:     s.Notifications.SMTP.Subscribe.Oauth,
 		unsubEnvVar:     s.GetUnsubscribeTemplate().Body,
 		subFailEnvVar:   s.GetSubscribeFailedTemplate().Body,
 		unsubFailEnvVar: s.GetUnsubscribeFailedTemplate().Body,
