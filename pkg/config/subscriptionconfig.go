@@ -442,7 +442,7 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 		emailTemplate.IsAPIKey = !(variable == oauthEnvVar) // apikey for all but oauth
 		_, err := emailtemplate.ValidateSubscriptionConfig(template, "", emailTemplate)
 		if err != nil {
-			templateErr := fmt.Errorf("%s template is not valid, check %s", variable, err.Error())
+			templateErr := fmt.Errorf("%s template is not valid: %s", variable, err.Error())
 			log.Error(templateErr)
 			return templateErr
 		}
