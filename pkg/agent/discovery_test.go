@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
@@ -90,6 +91,9 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 	return nil, nil
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+
+func (m *mockSvcClient)SetConfig(cfg corecfg.CentralConfig) {
+}
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
 var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName
