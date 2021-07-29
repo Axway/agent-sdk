@@ -11,6 +11,7 @@ const (
 	retries                = "retries"
 	lighthouseTransactions = "Transactions"
 	lighthouseVolume       = "Volume"
+	transactionMetric      = "transaction.usage"
 )
 
 // ResponseMetrics - Holds metrics API response
