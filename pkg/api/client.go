@@ -161,6 +161,11 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	defer cancel()
 
 	req, err := c.prepareAPIRequest(cancelCtx, request)
+	if err != nil {
+		log.Errorf("Error preparing api request: %s", err.Error())
+		return nil, err
+	}
+
 	// Logging for the HTTP request
 	statusCode := 0
 	defer func() {
@@ -171,10 +176,6 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 			log.Tracef("%s [%dms] - %d - %s", req.Method, duration.Milliseconds(), statusCode, req.URL.String())
 		}
 	}()
-
-	if err != nil {
-		return nil, err
-	}
 
 	// Start the timer to manage the timeout
 	timer := time.AfterFunc(c.timeout, func() {
