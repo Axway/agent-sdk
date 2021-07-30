@@ -62,7 +62,7 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 		e.trackMetrics(logEvent, 0)
 	}
 
-	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData, false)
+	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
 }
 
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
@@ -87,7 +87,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
-func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}, volumeMetric bool) (beat.Event, error) {
+func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	event := beat.Event{}
 	serializedLogEvent, err := json.Marshal(logEvent)
 	if err != nil {
@@ -123,14 +123,13 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		metaData.Put(sampling.SampleKey, true)
 	}
 
-	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData, false)
+	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
 	if err != nil {
 		return events, err
 	}
 	events = append(events, newEvent)
-	for i, event := range detailEvents {
-		// create an event for this leg, leg 0 will track volume usages if enabled
-		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData, i == 0)
+	for _, event := range detailEvents {
+		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
 		if err == nil {
 			events = append(events, newEvent)
 		}
