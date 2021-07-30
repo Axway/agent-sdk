@@ -20,8 +20,7 @@ import (
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string)
-	AddVolumeMetric(bytes int64)
+	AddMetric(apiID, apiName, statusCode string, duration, bytes int64, appName, teamName string)
 }
 
 // collector - collects the metrics for transactions events
@@ -143,26 +142,14 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64, appName, teamName string) {
+func (c *collector) AddMetric(apiID, apiName, statusCode string, duration, bytes int64, appName, teamName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
 	c.updateUsage(1)
-	c.updateMetric(apiID, apiName, statusCode, duration)
-}
-
-// AddVolumeMetric - add metric for API transaction to collection
-func (c *collector) AddVolumeMetric(bytes int64) {
-	if !agent.GetCentralConfig().IsAxwayManaged() {
-		return // no need to update volume for customer managed
-	}
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.batchLock.Lock()
-	defer c.batchLock.Unlock()
 	c.updateVolume(bytes)
+	c.updateMetric(apiID, apiName, statusCode, duration)
 }
 
 func (c *collector) updateVolume(bytes int64) {
