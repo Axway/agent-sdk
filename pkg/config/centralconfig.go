@@ -3,12 +3,14 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -126,6 +128,7 @@ type CentralConfig interface {
 	CanPublishUsageEvent() bool
 	CanPublishMetricEvent() bool
 	GetEventAggregationInterval() time.Duration
+	GetEventAggregationOffline() bool
 	GetUpdateFromAPIServer() bool
 }
 
@@ -157,6 +160,7 @@ type CentralConfiguration struct {
 	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
 	PublishUsageEvents        bool               `config:"publishUsage"`
 	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
+	EventAggregationOffline   bool               `config:"eventAggregationOffline"`
 	PublishMetricEvents       bool               `config:"publishMetric"`
 	environmentID             string
 	teamID                    string
@@ -177,6 +181,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		AppendEnvironmentToTitle:  true,
 		UpdateFromAPIServer:       false,
 		EventAggregationInterval:  15 * time.Minute,
+		EventAggregationOffline:   false,
 		ReportActivityFrequency:   5 * time.Minute,
 	}
 }
@@ -426,6 +431,11 @@ func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
 	return c.EventAggregationInterval
 }
 
+// GetEventAggregationOffline - Returns the interval duration to generate usage and metric events
+func (c *CentralConfiguration) GetEventAggregationOffline() bool {
+	return c.EventAggregationOffline
+}
+
 const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
@@ -460,6 +470,7 @@ const (
 	pathPublishUsage              = "central.publishUsage"
 	pathPublishMetric             = "central.publishMetric"
 	pathEventAggregationInterval  = "central.eventAggregationInterval"
+	pathEventAggregationOffline   = "central.eventAggregationOffline"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -552,6 +563,16 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
 	}
 
+	// On validation if Event Aggregation is in Offline set the interval to at most hourly
+	if c.GetEventAggregationInterval() < time.Hour && c.GetEventAggregationOffline() {
+		c.EventAggregationInterval = time.Hour
+		// Add QA environment variable to allow to override this behavior
+		if qaVar := os.Getenv("QA_CENTRAL_EVENTAGGREGATIONINTERVAL"); qaVar != "" {
+			c.EventAggregationInterval, _ = time.ParseDuration(qaVar)
+			log.Tracef("Using QA_CENTRAL_EVENTAGGREGATIONINTERVAL time, %s, rather then the minimum 1 hour for non-QA", c.EventAggregationInterval)
+		}
+	}
+
 	// lighthouseurl
 	c.validateURL(c.GetLighthouseURL(), pathLighthouseURL, false)
 }
@@ -591,6 +612,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
 		props.AddBoolProperty(pathPublishMetric, false, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
 		props.AddDurationProperty(pathEventAggregationInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
+		props.AddBoolProperty(pathEventAggregationOffline, false, "Turn this on to save the usage events to disk for manual upload")
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
@@ -643,6 +665,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
 		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
 		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
+		cfg.EventAggregationOffline = props.BoolPropertyValue(pathEventAggregationOffline)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)

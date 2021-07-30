@@ -89,12 +89,12 @@ func createMetricCollector() Collector {
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
-		publisher:        newMetricPublisher(),
 	}
 
 	// Create and initialize the storage cache for usage/metric by loading from disk
 	metricCollector.storage = newStorageCache(metricCollector, traceability.GetDataDirPath()+"/"+cacheFileName)
 	metricCollector.storage.initialize()
+	metricCollector.publisher = newMetricPublisher(metricCollector.storage)
 
 	if flag.Lookup("test.v") == nil {
 		var err error

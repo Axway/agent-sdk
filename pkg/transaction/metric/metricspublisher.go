@@ -23,14 +23,38 @@ type publisher interface {
 
 type metricPublisher struct {
 	apiClient api.Client
+	storage   storageCache
 }
 
 func (pj *metricPublisher) publishEvent(event interface{}) error {
-	lighthouseUsageEvent, ok := event.(LighthouseUsageEvent)
-	if ok {
-		return pj.publishToLighthouse(lighthouseUsageEvent)
+	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
+		if agent.GetCentralConfig().GetEventAggregationOffline() {
+			return pj.publishToFile(lighthouseUsageEvent)
+		} else {
+			return pj.publishToLighthouse(lighthouseUsageEvent)
+		}
 	}
 	log.Error("event was not a lighthouse event")
+	return nil
+}
+
+func (pj *metricPublisher) publishToFile(event LighthouseUsageEvent) error {
+	// Open and load the existing usage file
+	savedEvents, loaded := pj.storage.loadOfflineEvents()
+
+	if loaded {
+		// Add the report from the latest event to the saved events
+		for key, report := range event.Report {
+			savedEvents.Report[key] = report
+		}
+		savedEvents.Timestamp = event.Timestamp
+	} else {
+		savedEvents = event
+	}
+
+	// Update the cache
+	pj.storage.updateOfflineEvents(savedEvents)
+
 	return nil
 }
 
@@ -92,10 +116,11 @@ func (pj *metricPublisher) createFilePart(w *multipart.Writer, filename string) 
 }
 
 // newMetricPublisher - Creates publisher job
-func newMetricPublisher() publisher {
+func newMetricPublisher(storage storageCache) publisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &metricPublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL()),
+		storage:   storage,
 	}
 
 	return publisher
