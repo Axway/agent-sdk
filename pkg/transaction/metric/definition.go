@@ -3,15 +3,16 @@ package metric
 import "time"
 
 const (
-	metricEvent            = "api.transaction.status.metric"
-	messageKey             = "message"
-	metricKey              = "metric"
-	metricFlow             = "api-central-metric"
-	metricRetries          = "metricRetry"
-	retries                = "retries"
-	lighthouseTransactions = "Transactions"
-	lighthouseVolume       = "Volume"
-	transactionMetric      = "transaction.usage"
+	metricEvent             = "api.transaction.status.metric"
+	messageKey              = "message"
+	metricKey               = "metric"
+	metricFlow              = "api-central-metric"
+	metricRetries           = "metricRetry"
+	retries                 = "retries"
+	lighthouseTransactions  = "Transactions"
+	lighthouseVolume        = "Volume"
+	transactionCountMetric  = "transaction.count"
+	transactionVolumeMetric = "transaction.volume"
 )
 
 // ResponseMetrics - Holds metrics API response

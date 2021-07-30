@@ -79,6 +79,13 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 		// un-marshalling the cache defaults the serialization of numeric values to float64
 		c.collector.updateUsage(int64(usageCount.(float64)))
 	}
+
+	// update transaction volume in registry.
+	usageVolume, err := storageCache.Get(volumeKey)
+	if err == nil {
+		// un-marshalling the cache defaults the serialization of numeric values to float64
+		c.collector.updateVolume(int64(usageVolume.(float64)))
+	}
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
@@ -93,7 +100,7 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 }
 
 func (c *cacheStorage) updateVolume(bytes int64) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() || !agent.GetCentralConfig().IsAxwayManaged() {
 		return
 	}
 

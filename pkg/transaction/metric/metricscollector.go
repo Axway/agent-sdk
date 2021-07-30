@@ -44,7 +44,8 @@ type collector struct {
 
 type publishQueueItem interface {
 	GetEvent() interface{}
-	GetMetric() interface{}
+	GetUsageMetric() interface{}
+	GetVolumeMetric() interface{}
 }
 
 type usageEventPublishItem interface {
@@ -53,16 +54,21 @@ type usageEventPublishItem interface {
 
 type usageEventQueueItem struct {
 	usageEventPublishItem
-	event  LighthouseUsageEvent
-	metric metricCounter
+	event        LighthouseUsageEvent
+	usageMetric  metrics.Counter
+	volumeMetric metrics.Counter
 }
 
 func (qi *usageEventQueueItem) GetEvent() interface{} {
 	return qi.event
 }
 
-func (qi *usageEventQueueItem) GetMetric() interface{} {
-	return qi.metric
+func (qi *usageEventQueueItem) GetUsageMetric() interface{} {
+	return qi.usageMetric
+}
+
+func (qi *usageEventQueueItem) GetVolumeMetric() interface{} {
+	return qi.volumeMetric
 }
 
 type metricEventPublishItem interface {
@@ -148,6 +154,10 @@ func (c *collector) AddMetric(apiID, apiName, statusCode string, duration int64,
 
 // AddVolumeMetric - add metric for API transaction to collection
 func (c *collector) AddVolumeMetric(bytes int64) {
+	if !agent.GetCentralConfig().IsAxwayManaged() {
+		return // no need to update volume for customer managed
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
@@ -159,14 +169,14 @@ func (c *collector) updateVolume(bytes int64) {
 	if !agent.GetCentralConfig().IsAxwayManaged() {
 		return // no need to update volume for customer managed
 	}
-	transactionVolume := c.getOrRegisterCounter(transactionMetric)
-	transactionVolume.IncVolume(bytes)
-	c.storage.updateVolume(transactionVolume.Volume())
+	transactionVolume := c.getOrRegisterCounter(transactionVolumeMetric)
+	transactionVolume.Inc(bytes)
+	c.storage.updateVolume(transactionVolume.Count())
 }
 
 func (c *collector) updateUsage(count int64) {
-	transactionCount := c.getOrRegisterCounter(transactionMetric)
-	transactionCount.IncCount(count)
+	transactionCount := c.getOrRegisterCounter(transactionCountMetric)
+	transactionCount.Inc(count)
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
@@ -241,33 +251,35 @@ func (c *collector) generateEvents() {
 }
 
 func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
-	if name == transactionMetric {
-		counterMetric := metric.(metricCounter)
+	switch name {
+	case transactionCountMetric:
 		if agent.GetCentralConfig().CanPublishUsageEvent() {
-			c.generateUsageEvent(counterMetric, c.orgGUID)
+			c.generateUsageEvent(c.orgGUID)
 		} else {
 			log.Info("Publishing the usage event is turned off")
 		}
-	}
-
-	c.processTransactionMetric(name, metric)
-}
-
-func (c *collector) generateUsageEvent(transactionCounter metricCounter, orgGUID string) {
-	if transactionCounter.Count() != 0 {
-		c.generateLighthouseUsageEvent(transactionCounter, orgGUID)
+	case transactionVolumeMetric:
+		return // skip volume metric as it is handled with Count metric
+	default:
+		c.processTransactionMetric(name, metric)
 	}
 }
 
-func (c *collector) generateLighthouseUsageEvent(transactionCount metricCounter, orgGUID string) {
+func (c *collector) generateUsageEvent(orgGUID string) {
+	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 {
+		c.generateLighthouseUsageEvent(orgGUID)
+	}
+}
+
+func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	usage := map[string]int64{
-		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): transactionCount.Count(),
+		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
-	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", transactionCount.Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionCountMetric).Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 
-	if !agent.GetCentralConfig().IsAxwayManaged() {
-		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = transactionCount.Volume()
-		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", transactionCount.Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	if agent.GetCentralConfig().IsAxwayManaged() {
+		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
+		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionVolumeMetric).Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 	}
 
 	lightHouseUsageEvent := LighthouseUsageEvent{
@@ -286,11 +298,10 @@ func (c *collector) generateLighthouseUsageEvent(transactionCount metricCounter,
 		Meta: make(map[string]interface{}),
 	}
 
-	log.Tracef("%+v", lightHouseUsageEvent)
-
 	queueItem := &usageEventQueueItem{
-		event:  lightHouseUsageEvent,
-		metric: transactionCount,
+		event:        lightHouseUsageEvent,
+		usageMetric:  c.getOrRegisterCounter(transactionCountMetric),
+		volumeMetric: c.getOrRegisterCounter(transactionVolumeMetric),
 	}
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 }
@@ -342,13 +353,13 @@ func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, ap
 	AddCondorMetricEventToBatch(apiStatusMetricEvent, c.metricBatch, histogram)
 }
 
-func (c *collector) getOrRegisterCounter(name string) metricCounter {
+func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
 	counter := c.registry.Get(name)
 	if counter == nil {
-		counter = newMetricCounter()
+		counter = metrics.NewCounter()
 		c.registry.Register(name, counter)
 	}
-	return counter.(metricCounter)
+	return counter.(metrics.Counter)
 }
 
 func (c *collector) getOrRegisterHistogram(name string) metrics.Histogram {
@@ -385,11 +396,14 @@ func (c *collector) cleanupCounters(eventQueueItem publishQueueItem) {
 }
 
 func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
-	itemMetric := usageEventItem.GetMetric()
-	counter, ok := itemMetric.(metrics.Counter)
-	if ok {
+	itemUsageMetric := usageEventItem.GetUsageMetric()
+	if usage, ok := itemUsageMetric.(metrics.Counter); ok {
 		// Clean up the usage counter and reset the start time to current endTime
-		counter.Clear()
+		usage.Clear()
+		itemVolumeMetric := usageEventItem.GetVolumeMetric()
+		if volume, ok := itemVolumeMetric.(metrics.Counter); ok {
+			volume.Clear()
+		}
 		c.startTime = c.endTime
 		c.storage.updateUsage(0)
 		c.storage.updateVolume(0)

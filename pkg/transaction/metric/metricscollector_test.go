@@ -38,6 +38,7 @@ var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0
 type testHTTPServer struct {
 	lighthouseEventCount int
 	transactionCount     int
+	transactionVolume    int
 	failUsageEvent       bool
 	server               *httptest.Server
 }
@@ -65,8 +66,12 @@ func (s *testHTTPServer) startServer() {
 					var usageEvent LighthouseUsageEvent
 					json.Unmarshal(body, &usageEvent)
 					for _, report := range usageEvent.Report {
-						for _, usage := range report.Usage {
-							s.transactionCount += int(usage)
+						for usageType, usage := range report.Usage {
+							if strings.Index(usageType, "Transactions") > 0 {
+								s.transactionCount += int(usage)
+							} else if strings.Index(usageType, "Volume") > 0 {
+								s.transactionVolume += int(usage)
+							}
 						}
 					}
 				}
@@ -84,6 +89,7 @@ func (s *testHTTPServer) closeServer() {
 func (s *testHTTPServer) resetConfig() {
 	s.lighthouseEventCount = 0
 	s.transactionCount = 0
+	s.transactionVolume = 0
 	s.failUsageEvent = false
 }
 
@@ -115,6 +121,8 @@ func TestMetricCollector(t *testing.T) {
 		failUsageEventOnServer    []bool
 		expectedLHEvents          []int
 		expectedTransactionCount  []int
+		trackVolume               bool
+		expectedTransactionVolume []int
 		expectedMetricEventsAcked int
 	}{
 		// Success case
@@ -126,6 +134,8 @@ func TestMetricCollector(t *testing.T) {
 			failUsageEventOnServer:    []bool{false},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 1,
 		},
 		// Success case with no usage report
@@ -137,6 +147,8 @@ func TestMetricCollector(t *testing.T) {
 			failUsageEventOnServer:    []bool{false},
 			expectedLHEvents:          []int{0},
 			expectedTransactionCount:  []int{0},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 0,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
@@ -148,6 +160,8 @@ func TestMetricCollector(t *testing.T) {
 			failUsageEventOnServer:    []bool{false, true, false},
 			expectedLHEvents:          []int{1, 1, 2},
 			expectedTransactionCount:  []int{5, 5, 17},
+			trackVolume:               true,
+			expectedTransactionVolume: []int{50, 50, 170},
 			expectedMetricEventsAcked: 1,
 		},
 		// Success case, retry metrics
@@ -159,6 +173,8 @@ func TestMetricCollector(t *testing.T) {
 			failUsageEventOnServer:    []bool{false},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
+			trackVolume:               true,
+			expectedTransactionVolume: []int{50},
 			expectedMetricEventsAcked: 1,
 		},
 		// Retry limit hit
@@ -170,21 +186,26 @@ func TestMetricCollector(t *testing.T) {
 			failUsageEventOnServer:    []bool{false},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 0,
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricCollector.AddMetric("111", "111", "200", 10, "", "")
+					metricCollector.AddVolumeMetric(10)
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				metricCollector.Execute()
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
+				assert.Equal(t, test.expectedTransactionVolume[l], s.transactionVolume)
 				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
 			s.resetConfig()
@@ -198,52 +219,90 @@ func TestMetricCollectorCache(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 
-	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.LighthouseURL = s.server.URL + "/lighthouse"
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
-	cmd.BuildDataPlaneType = "Azure"
-	agent.Initialize(cfg)
+	testCases := []struct {
+		name        string
+		trackVolume bool
+	}{
+		{
+			name:        "UsageOnly",
+			trackVolume: false,
+		},
+		{
+			name:        "UsageAndVolume",
+			trackVolume: true,
+		},
+	}
 
-	paths.Paths.Data = "."
-	myCollector := createMetricCollector()
-	metricCollector := myCollector.(*collector)
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := createCentralCfg(s.server.URL, "demo")
+			cfg.LighthouseURL = s.server.URL + "/lighthouse"
+			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+			cfg.SetAxwayManaged(test.trackVolume)
+			cmd.BuildDataPlaneType = "Azure"
+			agent.Initialize(cfg)
 
-	metricCollector.AddMetric("111", "111", "200", 5, "", "")
-	metricCollector.AddMetric("111", "111", "200", 10, "", "")
-	metricCollector.Execute()
-	metricCollector.AddMetric("111", "111", "401", 15, "", "")
-	metricCollector.AddMetric("222", "222", "200", 20, "", "")
-	metricCollector.AddMetric("222", "222", "200", 10, "", "")
+			paths.Paths.Data = "."
+			myCollector := createMetricCollector()
+			metricCollector := myCollector.(*collector)
 
-	// No event generation/publish, store the cache
-	metricCollector.storage.save()
-	// Validate only one usage report sent with first 2 transactions
-	assert.Equal(t, 1, s.lighthouseEventCount)
-	assert.Equal(t, 2, s.transactionCount)
-	s.resetConfig()
+			metricCollector.AddMetric("111", "111", "200", 5, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("111", "111", "200", 10, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.Execute()
+			metricCollector.AddMetric("111", "111", "401", 15, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("222", "222", "200", 20, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("222", "222", "200", 10, "", "")
+			metricCollector.AddVolumeMetric(10)
 
-	// Recreate the collector that loads the stored metrics, so 3 transactions
-	myCollector = createMetricCollector()
-	metricCollector = myCollector.(*collector)
+			// No event generation/publish, store the cache
+			metricCollector.storage.save()
+			// Validate only one usage report sent with first 2 transactions
+			assert.Equal(t, 1, s.lighthouseEventCount)
+			assert.Equal(t, 2, s.transactionCount)
+			if test.trackVolume {
+				assert.Equal(t, 20, s.transactionVolume)
+			}
+			s.resetConfig()
 
-	metricCollector.AddMetric("111", "111", "200", 5, "", "")
-	metricCollector.AddMetric("111", "111", "200", 10, "", "")
-	metricCollector.AddMetric("111", "111", "401", 15, "", "")
-	metricCollector.AddMetric("222", "222", "200", 20, "", "")
-	metricCollector.AddMetric("222", "222", "200", 10, "", "")
+			// Recreate the collector that loads the stored metrics, so 3 transactions
+			myCollector = createMetricCollector()
+			metricCollector = myCollector.(*collector)
 
-	metricCollector.Execute()
-	// Validate only one usage report sent with 3 previous transactions and 5 new transactions
-	assert.Equal(t, 1, s.lighthouseEventCount)
-	assert.Equal(t, 8, s.transactionCount)
+			metricCollector.AddMetric("111", "111", "200", 5, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("111", "111", "200", 10, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("111", "111", "401", 15, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("222", "222", "200", 20, "", "")
+			metricCollector.AddVolumeMetric(10)
+			metricCollector.AddMetric("222", "222", "200", 10, "", "")
+			metricCollector.AddVolumeMetric(10)
 
-	s.resetConfig()
-	// Recreate the collector that loads the stored metrics, 0 transactions
-	myCollector = createMetricCollector()
-	metricCollector = myCollector.(*collector)
+			metricCollector.Execute()
+			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
+			assert.Equal(t, 1, s.lighthouseEventCount)
+			assert.Equal(t, 8, s.transactionCount)
+			if test.trackVolume {
+				assert.Equal(t, 80, s.transactionVolume)
+			}
 
-	metricCollector.Execute()
-	// Validate only no usage report sent as no previous or new transactions
-	assert.Equal(t, 0, s.lighthouseEventCount)
-	assert.Equal(t, 0, s.transactionCount)
+			s.resetConfig()
+			// Recreate the collector that loads the stored metrics, 0 transactions
+			myCollector = createMetricCollector()
+			metricCollector = myCollector.(*collector)
+
+			metricCollector.Execute()
+			// Validate only no usage report sent as no previous or new transactions
+			assert.Equal(t, 0, s.lighthouseEventCount)
+			assert.Equal(t, 0, s.transactionCount)
+			if test.trackVolume {
+				assert.Equal(t, 0, s.transactionVolume)
+			}
+		})
+	}
 }
