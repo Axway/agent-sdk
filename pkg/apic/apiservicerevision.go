@@ -187,7 +187,7 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 	return serviceBody.ResourceType
 }
 
-//DEPRECATED to be removed on major release - else fucntion for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
+//DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
 // updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
 func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
 	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
