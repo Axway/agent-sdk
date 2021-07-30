@@ -109,8 +109,6 @@ type Schema struct {
 	Example      interface{}   `json:"example,omitempty" yaml:"example,omitempty"`
 	ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 
-	// Object-related, here for struct compactness
-	AdditionalPropertiesAllowed *bool `json:"-" multijson:"additionalProperties,omitempty" yaml:"-"`
 	// Array-related, here for struct compactness
 	UniqueItems bool `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
 	// Number-related, here for struct compactness
@@ -141,12 +139,13 @@ type Schema struct {
 	Items    *SchemaRef `json:"items,omitempty" yaml:"items,omitempty"`
 
 	// Object
-	Required             []string       `json:"required,omitempty" yaml:"required,omitempty"`
-	Properties           Schemas        `json:"properties,omitempty" yaml:"properties,omitempty"`
-	MinProps             uint64         `json:"minProperties,omitempty" yaml:"minProperties,omitempty"`
-	MaxProps             *uint64        `json:"maxProperties,omitempty" yaml:"maxProperties,omitempty"`
-	AdditionalProperties *SchemaRef     `json:"-" multijson:"additionalProperties,omitempty" yaml:"-"`
-	Discriminator        *Discriminator `json:"discriminator,omitempty" yaml:"discriminator,omitempty"`
+	Required                    []string       `json:"required,omitempty" yaml:"required,omitempty"`
+	Properties                  Schemas        `json:"properties,omitempty" yaml:"properties,omitempty"`
+	MinProps                    uint64         `json:"minProperties,omitempty" yaml:"minProperties,omitempty"`
+	MaxProps                    *uint64        `json:"maxProperties,omitempty" yaml:"maxProperties,omitempty"`
+	AdditionalPropertiesAllowed *bool          `multijson:"additionalProperties,omitempty" json:"-" yaml:"-"` // In this order...
+	AdditionalProperties        *SchemaRef     `multijson:"additionalProperties,omitempty" json:"-" yaml:"-"` // ...for multijson
+	Discriminator               *Discriminator `json:"discriminator,omitempty" yaml:"discriminator,omitempty"`
 }
 
 var _ jsonpointer.JSONPointable = (*Schema)(nil)
@@ -677,6 +676,11 @@ func (schema *Schema) validate(ctx context.Context, stack []*Schema) (err error)
 				}
 			}
 		}
+		if schema.Pattern != "" {
+			if err = schema.compilePattern(); err != nil {
+				return err
+			}
+		}
 	case "array":
 		if schema.Items == nil {
 			return errors.New("when schema type is 'array', schema 'items' must be non-null")
@@ -1139,15 +1143,9 @@ func (schema *Schema) visitJSONString(settings *schemaValidationSettings, value 
 	}
 
 	// "pattern"
-	if pattern := schema.Pattern; pattern != "" && schema.compiledPattern == nil {
+	if schema.Pattern != "" && schema.compiledPattern == nil {
 		var err error
-		if schema.compiledPattern, err = regexp.Compile(pattern); err != nil {
-			err = &SchemaError{
-				Value:       value,
-				Schema:      schema,
-				SchemaField: "pattern",
-				Reason:      fmt.Sprintf("cannot compile pattern %q: %v", pattern, err),
-			}
+		if err = schema.compilePattern(); err != nil {
 			if !settings.multiError {
 				return err
 			}
@@ -1459,6 +1457,17 @@ func (schema *Schema) expectedType(settings *schemaValidationSettings, typ strin
 		SchemaField: "type",
 		Reason:      "Field must be set to " + schema.Type + " or not be present",
 	}
+}
+
+func (schema *Schema) compilePattern() (err error) {
+	if schema.compiledPattern, err = regexp.Compile(schema.Pattern); err != nil {
+		return &SchemaError{
+			Schema:      schema,
+			SchemaField: "pattern",
+			Reason:      fmt.Sprintf("cannot compile pattern %q: %v", schema.Pattern, err),
+		}
+	}
+	return nil
 }
 
 type SchemaError struct {
