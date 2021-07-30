@@ -595,8 +595,7 @@ func TestUpdateMerge(t *testing.T) {
 				},
 				References: []apiv1.Reference{},
 			},
-			Attributes: map[string]string{},
-			Tags:       []string{"old", "new"},
+			Tags: []string{"old", "new"},
 		},
 	}
 

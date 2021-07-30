@@ -224,7 +224,7 @@ Below is the list of traceability output transport configuration properties in Y
 | YAML propery                          | Variable name                 | Description                                                                                                                                          |
 |---------------------------------------|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | output.traceability.enabled           |                               | Flag for enabling traceability output                                                                                                                |
-| output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default:`ingestion-lumberjack.datasearch.axway.com:453`)                                                     |
+| output.traceability.hosts             | TRACEABILITY_HOST             | The host name of the ingestion service (default:`ingestion.datasearch.axway.com:5044`)                                                     |
 | output.traceability.protocol          | TRACEABILITY_PROTOCOL         | The transport protocol to be used 'tcp' for lumberjack or 'https' for HTTPS protocol (default:`tcp`)                                                 |
 | output.traceability.compression_level | TRACEABILITY_COMPRESSIONLEVEL | Specifies the gzip compression level (default:`3`)                                                                                                   |
 | output.traceability.bulk_max_size     | TRACEABILITY_BULKMAXSIZE      | The max number of evnets in a single request to Condor (default:`100`)                                                                               |
@@ -261,7 +261,7 @@ apic_traceability_agent:
 output.traceability:
   enabled: true
   hosts:
-   - ${TRACEABILITY_HOST:"ingestion-lumberjack.datasearch.axway.com:453"}
+   - ${TRACEABILITY_HOST:"ingestion.datasearch.axway.com:5044"}
   protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
   compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
   ssl:

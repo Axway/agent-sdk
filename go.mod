@@ -9,7 +9,7 @@ require (
 	github.com/emicklei/proto v1.9.0
 	github.com/fsnotify/fsnotify v1.4.8-0.20180830220226-ccc981bf8038
 	github.com/gabriel-vasile/mimetype v1.1.2
-	github.com/getkin/kin-openapi v0.61.0
+	github.com/getkin/kin-openapi v0.67.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
