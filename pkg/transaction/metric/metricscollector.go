@@ -20,7 +20,7 @@ import (
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiID, apiName, statusCode string, duration, bytes int64, appName, teamName string)
+	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string)
 }
 
 // collector - collects the metrics for transactions events
@@ -142,14 +142,14 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiID, apiName, statusCode string, duration, bytes int64, appName, teamName string) {
+func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
 	c.updateUsage(1)
 	c.updateVolume(bytes)
-	c.updateMetric(apiID, apiName, statusCode, duration)
+	c.updateMetric(apiDetails, statusCode, duration)
 }
 
 func (c *collector) updateVolume(bytes int64) {
@@ -167,26 +167,23 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateMetric(apiID, apiName, statusCode string, duration int64) *APIMetric {
+func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64) *APIMetric {
 	if !agent.GetCentralConfig().CanPublishMetricEvent() {
 		return nil // no need to update metrics with publish off
 	}
-	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiID + "." + statusCode)
+	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiDetails.ID + "." + statusCode)
 
-	apiStatusMap, ok := c.metricMap[apiID]
+	apiStatusMap, ok := c.metricMap[apiDetails.ID]
 	if !ok {
 		apiStatusMap = make(map[string]*APIMetric)
-		c.metricMap[apiID] = apiStatusMap
+		c.metricMap[apiDetails.ID] = apiStatusMap
 	}
 
 	if _, ok := apiStatusMap[statusCode]; !ok {
 		// First api metric for api+statuscode,
 		// setup the start time to be used for reporting metric event
 		apiStatusMap[statusCode] = &APIMetric{
-			API: APIDetails{
-				Name: apiName,
-				ID:   apiID,
-			},
+			API:        apiDetails,
 			StatusCode: statusCode,
 			StartTime:  time.Now(),
 		}

@@ -30,8 +30,8 @@ type ObservationDetails struct {
 
 // APIDetails - Holds the api details
 type APIDetails struct {
-	Name string `json:"name"`
 	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions

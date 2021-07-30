@@ -67,8 +67,10 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 	if e.shouldUseTrafficForAggregation {
-		apiID := summaryEvent.TransactionSummary.Proxy.ID
-		apiName := summaryEvent.TransactionSummary.Proxy.Name
+		apiDetails := metric.APIDetails{
+			ID:   summaryEvent.TransactionSummary.Proxy.ID,
+			Name: summaryEvent.TransactionSummary.Proxy.Name,
+		}
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
 		appName := ""
@@ -81,7 +83,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 		}
 		collector := metric.GetMetricCollector()
 		if collector != nil {
-			collector.AddMetric(apiID, apiName, statusCode, int64(duration), bytes, appName, teamName)
+			collector.AddMetric(apiDetails, statusCode, int64(duration), bytes, appName, teamName)
 		}
 	}
 }
