@@ -1,17 +1,48 @@
 package apic
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
+	"text/template"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+//TODO
+/*
+	1. Search for comment "DEPRECATED to be removed on major release"
+	2. Remove deprecated code left from APIGOV-19751
+*/
+
+const (
+	apiSvcRevTemplate = "{{.APIServiceName}} - {{.Date}} - r {{.Revision}}"
+	defaultDateFormat = "2006/01/02"
+)
+
+// APIServiceRevisionTitle - apiservicerevision template for title
+type APIServiceRevisionTitle struct {
+	APIServiceName string
+	Date           string
+	Revision       string
+}
+
+// apiSvcRevTitleDateMap - map of date formats for apiservicerevision title
+var apiSvcRevTitleDateMap = map[string]string{
+	"MM-DD-YYYY": "01-02-2006",
+	"MM/DD/YYYY": "01/02/2006",
+	"YYYY-MM-DD": "2006-01-02",
+	"YYYY/MM/DD": defaultDateFormat,
+}
 
 func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
 	return v1alpha1.ApiServiceRevisionSpec{
@@ -154,4 +185,59 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 		return Unstructured
 	}
 	return serviceBody.ResourceType
+}
+
+//DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
+// updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
+func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
+	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
+	dateRegEx := regexp.MustCompile(`{{.Date:.*?}}`)
+
+	var dateFormat = ""
+
+	if dateRegEx.MatchString(apiSvcRevPattern) {
+		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              //{{date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
+		index := strings.Index(datePattern, ":")                                           // get index of ":" (colon)
+		date := datePattern[index+1 : index+11]                                            // sub out "{{date:" and "}}" to get the format of the date only
+		dateFormat = apiSvcRevTitleDateMap[date]                                           // make sure dateFormat is a valid date format
+		apiSvcRevPattern = strings.Replace(apiSvcRevPattern, datePattern, "{{.Date}}", -1) // Once we have the date format, change template to correct {{.Date}} tag
+		if dateFormat == "" {
+			// Customer is entered an incorrect date format.  Set template and pattern to defaults.
+			log.Warnf("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
+			apiSvcRevPattern = apiSvcRevTemplate
+			dateFormat = defaultDateFormat
+		}
+	} else {
+		// Customer is still using deprecated date format.  Set template and pattern to defaults.
+		log.Warnf("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN is deprecated. Please refer to axway.docs regarding valid {{.Date:*}} formats.")
+		apiSvcRevPattern = apiSvcRevTemplate
+		dateFormat = defaultDateFormat
+	}
+
+	// Build default apiSvcRevTitle.  To be used in case of error processing
+	defaultAPISvcRevTitle := fmt.Sprintf("%s - %s - r %s", serviceBody.APIName, time.Now().Format(dateFormat), strconv.Itoa(serviceBody.serviceContext.revisionCount+1))
+
+	// create apiservicerevision template
+	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
+		serviceBody.APIName,
+		time.Now().Format(dateFormat),
+		strconv.Itoa(serviceBody.serviceContext.revisionCount + 1),
+	}
+
+	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevPattern)
+	if err != nil {
+		log.Warnf("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
+		return defaultAPISvcRevTitle
+	}
+
+	var apiSvcRevTitle bytes.Buffer
+
+	err = title.Execute(&apiSvcRevTitle, apiSvcRevTitleTemplate)
+	if err != nil {
+		log.Warnf("Could not render CENTRAL_APISERVICEREVISIONPATTERN. Please refer to axway.docs regarding valid CENTRAL_APISERVICEREVISIONPATTERN. Returning %s", defaultAPISvcRevTitle)
+		return defaultAPISvcRevTitle
+	}
+
+	log.Debugf("Returning apiservicerevision title : %s", apiSvcRevTitle.String())
+	return apiSvcRevTitle.String()
 }

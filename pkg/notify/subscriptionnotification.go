@@ -10,11 +10,17 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	emailtemplate "github.com/Axway/agent-sdk/pkg/notify/template"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+//TODO
+/*
+	1. Search for comment "DEPRECATED to be removed on major release"
+	2. Remove deprecated code left from APIGOV-19751
+*/
 
 //SubscriptionNotification - the struct that is sent to the notification and used to fill in email templates
 type SubscriptionNotification struct {
@@ -29,6 +35,7 @@ type SubscriptionNotification struct {
 	ClientID        string                 `json:"clientID,omitempty"`
 	ClientSecret    string                 `json:"clientSecret,omitempty"`
 	AuthTemplate    string                 `json:"authtemplate,omitempty"`
+	IsAPIKey        bool                   `json:"isAPIKey,omitempty"`
 	apiClient       coreapi.Client
 }
 
@@ -82,11 +89,14 @@ func (s *SubscriptionNotification) SetAuthorizationTemplate(authType string) {
 		return
 	}
 
+	//DEPRECATED to be removed on major release - setting s.AuthTemplate will no longer be needed after "${tag} is invalid"
 	switch authType {
 	case Apikeys:
-		s.AuthTemplate = s.UpdateTemplate(template.APIKey)
+		s.AuthTemplate = template.APIKey
+		s.IsAPIKey = true
 	case Oauth:
-		s.AuthTemplate = s.UpdateTemplate(template.Oauth)
+		s.AuthTemplate = template.Oauth
+		s.IsAPIKey = false
 	default:
 		log.Error(ErrSubscriptionBadAuthtype.FormatError(authType))
 		return
@@ -101,7 +111,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 	for _, notificationType := range globalCfg.GetNotificationTypes() {
 		log.Debugf("Attempt to notify using %s", notificationType)
 		switch notificationType {
-		case config.NotifyWebhook:
+		case corecfg.NotifyWebhook:
 			err := s.notifyViaWebhook()
 			if err != nil {
 				return utilerrors.Wrap(ErrSubscriptionNotification, err.Error()).FormatError("webhook")
@@ -109,7 +119,7 @@ func (s *SubscriptionNotification) NotifySubscriber(recipient string) error {
 			notificationSent = true
 			log.Debugf("Webhook notification sent to %s.", recipient)
 
-		case config.NotifySMTP:
+		case corecfg.NotifySMTP:
 			log.Info("Sending subscription email to subscriber.")
 			err := s.notifyViaSMTP()
 			if err != nil {
@@ -172,8 +182,12 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 		auth = sasl.NewAnonymousClient(globalCfg.GetSMTPFromAddress())
 	}
 
-	msg := s.BuildSMTPMessage(template)
-	err := smtp.SendMail(globalCfg.GetSMTPURL(), auth, globalCfg.GetSMTPFromAddress(), []string{s.Email}, msg)
+	msg, err := s.BuildSMTPMessage(template)
+	if err != nil {
+		return err
+	}
+
+	err = smtp.SendMail(globalCfg.GetSMTPURL(), auth, globalCfg.GetSMTPFromAddress(), []string{s.Email}, msg)
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrSubscriptionSendEmail, err.Error()))
 		return err
@@ -182,7 +196,7 @@ func (s *SubscriptionNotification) notifyViaSMTP() error {
 }
 
 // BuildSMTPMessage -
-func (s *SubscriptionNotification) BuildSMTPMessage(template *config.EmailTemplate) *strings.Reader {
+func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTemplate) (*strings.Reader, error) {
 	mime := mimeMap{
 		"MIME-version": "1.0",
 		"Content-Type": "text/html",
@@ -191,32 +205,37 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *config.EmailTempla
 
 	fromAddress := fmt.Sprintf("From: %s", globalCfg.GetSMTPFromAddress())
 	toAddress := fmt.Sprintf("To: %s", s.Email)
-	subject := fmt.Sprintf("Subject: %s", s.UpdateTemplate(template.Subject))
+	subject := fmt.Sprintf("Subject: %s", template.Subject)
 
 	log.Debugf("Sending email %s, %s, %s", fromAddress, toAddress, subject)
+
+	emailNotificationTemplate := emailtemplate.EmailNotificationTemplate{
+		CatalogItemID:   s.CatalogItemID,
+		CatalogItemURL:  s.CatalogItemURL,
+		CatalogItemName: s.CatalogItemName,
+		Email:           s.Email,
+		Message:         s.Message,
+		Key:             s.Key,
+		KeyHeaderName:   s.KeyHeaderName,
+		ClientID:        s.ClientID,
+		ClientSecret:    s.ClientSecret,
+		AuthTemplate:    s.AuthTemplate,
+		IsAPIKey:        s.IsAPIKey,
+	}
+
+	// Shouldn't have to check error from ValidateSubscriptionConfig since startup passed the subscription validation check
+	emailBody, err := emailtemplate.ValidateSubscriptionConfig(template.Body, s.AuthTemplate, emailNotificationTemplate)
+	if err != nil {
+		return nil, err
+	}
 
 	msgArray := []string{
 		fromAddress,
 		toAddress,
 		subject,
 		mime.String(),
-		s.UpdateTemplate(template.Body),
+		emailBody,
 	}
 
-	return strings.NewReader(strings.Join(msgArray, "\n"))
-}
-
-//UpdateTemplate -
-func (s *SubscriptionNotification) UpdateTemplate(template string) string {
-	var jsonMap map[string]string
-	data, _ := json.Marshal(s)
-
-	json.Unmarshal(data, &jsonMap)
-
-	for k, v := range jsonMap {
-		template = strings.Replace(template, fmt.Sprintf("${%s}", k), v, -1)
-		template = strings.Replace(template, fmt.Sprintf("{{%s}}", k), v, -1)
-	}
-
-	return template
+	return strings.NewReader(strings.Join(msgArray, "\n")), nil
 }
