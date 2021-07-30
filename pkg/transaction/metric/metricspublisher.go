@@ -30,9 +30,8 @@ func (pj *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
 		if agent.GetCentralConfig().GetEventAggregationOffline() {
 			return pj.publishToFile(lighthouseUsageEvent)
-		} else {
-			return pj.publishToLighthouse(lighthouseUsageEvent)
 		}
+		return pj.publishToLighthouse(lighthouseUsageEvent)
 	}
 	log.Error("event was not a lighthouse event")
 	return nil
