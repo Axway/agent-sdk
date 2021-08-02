@@ -13,7 +13,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -39,6 +38,7 @@ type collector struct {
 	jobID            string
 	publisher        publisher
 	storage          storageCache
+	reports          offlineReportCache
 }
 
 type publishQueueItem interface {
@@ -92,10 +92,11 @@ func createMetricCollector() Collector {
 		publishItemQueue: make([]publishQueueItem, 0),
 	}
 
-	// Create and initialize the storage cache for usage/metric by loading from disk
-	metricCollector.storage = newStorageCache(metricCollector, traceability.GetDataDirPath()+"/"+cacheFileName)
+	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
+	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
-	metricCollector.publisher = newMetricPublisher(metricCollector.storage)
+	metricCollector.reports = newOfflineReportCache()
+	metricCollector.publisher = newMetricPublisher(metricCollector.storage, metricCollector.reports)
 
 	if flag.Lookup("test.v") == nil {
 		var err error

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"os"
+	"path"
 	"reflect"
 	"time"
 	"unsafe"
@@ -79,6 +81,23 @@ func SetOutputEventProcessor(eventProcessor OutputEventProcessor) {
 // GetDataDirPath - Returns the path of the data directory
 func GetDataDirPath() string {
 	return paths.Paths.Data
+}
+
+// checkCreateDir
+func createDirIfNotExist(dirPath string) {
+	_, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		// Create the directory with the same permissions as the data dir
+		dataInfo, _ := os.Stat(GetDataDirPath())
+		os.MkdirAll(dirPath, dataInfo.Mode().Perm())
+	}
+}
+
+// GetCacheDirPath - Returns the path of the cache directory
+func GetCacheDirPath() string {
+	cacheDir := path.Join(GetDataDirPath(), "cache")
+	createDirIfNotExist(cacheDir)
+	return cacheDir
 }
 
 func makeTraceabilityAgent(

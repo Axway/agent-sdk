@@ -17,11 +17,10 @@ import (
 )
 
 const (
-	cacheFileName       = "agent-usagemetric.json"
-	usageStartTimeKey   = "usage_start_time"
-	usageCountKey       = "usage_count"
-	lighthouseEventsKey = "lighthouse_events"
-	metricKeyPrefix     = "metric."
+	cacheFileName     = "agent-usagemetric.json"
+	usageStartTimeKey = "usage_start_time"
+	usageCountKey     = "usage_count"
+	metricKeyPrefix   = "metric."
 )
 
 type storageCache interface {
@@ -29,32 +28,43 @@ type storageCache interface {
 	updateUsage(usageCount int)
 	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
 	removeMetric(apiMetric *APIMetric)
-	updateOfflineEvents(lighthouseEvent LighthouseUsageEvent)
-	loadOfflineEvents() (LighthouseUsageEvent, bool)
 	save()
 }
 
 type cacheStorage struct {
-	cacheFilePath string
-	collector     *collector
-	storage       cache.Cache
-	storageLock   sync.Mutex
-	isInitialized bool
+	cacheFilePath    string
+	oldCacheFilePath string
+	collector        *collector
+	storage          cache.Cache
+	storageLock      sync.Mutex
+	isInitialized    bool
 }
 
-func newStorageCache(collector *collector, cacheFilePath string) storageCache {
+func newStorageCache(collector *collector) storageCache {
 	storageCache := &cacheStorage{
-		cacheFilePath: traceability.GetDataDirPath() + "/" + cacheFileName,
-		collector:     collector,
-		storageLock:   sync.Mutex{},
-		storage:       cache.New(),
-		isInitialized: false,
+		cacheFilePath:    traceability.GetCacheDirPath() + "/" + cacheFileName,
+		oldCacheFilePath: traceability.GetDataDirPath() + "/" + cacheFileName,
+		collector:        collector,
+		storageLock:      sync.Mutex{},
+		storage:          cache.New(),
+		isInitialized:    false,
 	}
 
 	return storageCache
 }
 
+func (c *cacheStorage) moveCacheFile() {
+	// to remove for next major release
+	_, err := os.Stat(c.oldCacheFilePath)
+	if os.IsNotExist(err) {
+		return
+	}
+	// file exists, move it over
+	os.Rename(c.oldCacheFilePath, c.cacheFilePath)
+}
+
 func (c *cacheStorage) initialize() {
+	c.moveCacheFile() // to remove for next major release
 	storageCache := cache.Load(c.cacheFilePath)
 	c.loadUsage(storageCache)
 	c.loadAPIMetric(storageCache)
@@ -82,25 +92,6 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 	}
 }
 
-func (c *cacheStorage) loadOfflineEvents() (LighthouseUsageEvent, bool) {
-	if !agent.GetCentralConfig().CanPublishUsageEvent() || !agent.GetCentralConfig().GetEventAggregationOffline() {
-		return LighthouseUsageEvent{}, false
-	}
-
-	var savedLighthouseEvents LighthouseUsageEvent
-	// update lighthouse events in registry.
-	savedEventString, err := c.storage.Get(lighthouseEventsKey)
-	if err != nil {
-		return LighthouseUsageEvent{}, false
-	}
-
-	err = json.Unmarshal([]byte(savedEventString.(string)), &savedLighthouseEvents)
-	if err != nil {
-		return LighthouseUsageEvent{}, false
-	}
-	return savedLighthouseEvents, true
-}
-
 func (c *cacheStorage) updateUsage(usageCount int) {
 	if !c.isInitialized || !agent.GetCentralConfig().CanPublishUsageEvent() {
 		return
@@ -110,21 +101,6 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 	defer c.storageLock.Unlock()
 	c.storage.Set(usageStartTimeKey, c.collector.startTime)
 	c.storage.Set(usageCountKey, usageCount)
-}
-
-func (c *cacheStorage) updateOfflineEvents(lighthouseEvent LighthouseUsageEvent) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishUsageEvent() || !agent.GetCentralConfig().GetEventAggregationOffline() {
-		return
-	}
-
-	c.storageLock.Lock()
-	defer c.storageLock.Unlock()
-
-	eventBytes, err := json.Marshal(lighthouseEvent)
-	if err != nil {
-		return
-	}
-	c.storage.Set(lighthouseEventsKey, string(eventBytes))
 }
 
 func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
