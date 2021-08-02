@@ -87,6 +87,8 @@ type CentralConfig interface {
 	GetAPICDeployment() string
 	GetEnvironmentID() string
 	SetEnvironmentID(environmentID string)
+	IsAxwayManaged() bool
+	SetAxwayManaged(isAxwayManaged bool)
 	GetEnvironmentName() string
 	GetAgentName() string
 	GetTeamName() string
@@ -160,6 +162,7 @@ type CentralConfiguration struct {
 	PublishMetricEvents       bool               `config:"publishMetric"`
 	environmentID             string
 	teamID                    string
+	isAxwayManaged            bool
 }
 
 // NewCentralConfig - Creates the default central config
@@ -234,6 +237,16 @@ func (c *CentralConfiguration) GetEnvironmentID() string {
 // SetEnvironmentID - Sets the environment ID
 func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 	c.environmentID = environmentID
+}
+
+// IsAxwayManaged - Returns the environment ID
+func (c *CentralConfiguration) IsAxwayManaged() bool {
+	return c.isAxwayManaged
+}
+
+// SetAxwayManaged - Sets the environment ID
+func (c *CentralConfiguration) SetAxwayManaged(isManaged bool) {
+	c.isAxwayManaged = isManaged
 }
 
 // GetEnvironmentName - Returns the environment name
