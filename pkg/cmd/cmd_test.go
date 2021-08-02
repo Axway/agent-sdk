@@ -463,7 +463,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	json.Unmarshal([]byte(out), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	dataStr := fmt.Sprintf("Starting test_with_non_defaults (%s)", buildCmdVersion())
+	dataStr := fmt.Sprintf("Starting test_with_non_defaults version -, Amplify Agents SDK version ")
 	assert.Equal(t, dataStr, logData["msg"])
 
 	// Remove the test keys file
@@ -503,7 +503,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	json.Unmarshal([]byte(dat), &logData)
 
 	assert.Equal(t, "info", logData["level"])
-	dataStr := fmt.Sprintf("Starting test_with_non_defaults (%s)", buildCmdVersion())
+	dataStr := fmt.Sprintf("Starting test_with_non_defaults version -, Amplify Agents SDK version ")
 	assert.Equal(t, dataStr, logData["msg"])
 
 	// Remove the test keys file
