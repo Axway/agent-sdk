@@ -1,12 +1,12 @@
 # Building Discovery Agent
 
-The Amplify Central Discovery Agents can be used for discovering APIs managed by external API Gateway and publish API Server resources to Amplify Central. The Agent SDK helps in building discovery agent by providing the necessary config, command line parser and interfaces to manage the communication with Amplify Central. 
+The Amplify Central Discovery Agents can be used for discovering APIs managed by external API Gateway and publish API Server resources to Amplify Central. The Amplify Agents SDK helps in building discovery agent by providing the necessary config, command line parser and interfaces to manage the communication with Amplify Central.
 
 ### Central Configuration
-The SDK provides a predefined configuration that can be set up based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. In addition, it is also used to set up subscription processing, see [Processing subscription](#processing-subscription)
+
+The Amplify Agents SDK provides a predefined configuration that can be set up based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. In addition, it is also used to set up subscription processing, see [Processing subscription](#processing-subscription)
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
-
 
 | YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
 |--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -29,6 +29,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
 
 The following is a sample of Central configuration in YAML
+
 ```
 central:
     url: https://apicentral.axway.com
@@ -43,78 +44,79 @@ central:
 ```
 
 #### Configuration interfaces
-Agent SDK expose the following interfaces to retrieve the configuration items.
+
+Amplify Agents SDK expose the following interfaces to retrieve the configuration items.
 
 ```
 // Central Configuration
 type CentralConfig interface {
-	GetAgentType() AgentType
-	IsPublishToEnvironmentMode() bool
-	IsPublishToEnvironmentOnlyMode() bool
-	IsPublishToEnvironmentAndCatalogMode() bool
-	GetAgentMode() AgentMode
-	GetAgentModeAsString() string
-	GetTenantID() string
-	GetEnvironmentID() string
-	GetEnvironmentName() string
-	GetTeamName() string
-	GetTeamID() string
+ GetAgentType() AgentType
+ IsPublishToEnvironmentMode() bool
+ IsPublishToEnvironmentOnlyMode() bool
+ IsPublishToEnvironmentAndCatalogMode() bool
+ GetAgentMode() AgentMode
+ GetAgentModeAsString() string
+ GetTenantID() string
+ GetEnvironmentID() string
+ GetEnvironmentName() string
+ GetTeamName() string
+ GetTeamID() string
 
-	GetURL() string
-	GetPlatformURL() string
-	GetCatalogItemsURL() string
-	GetAPIServerURL() string
-	GetEnvironmentURL() string
-	GetServicesURL() string
-	GetRevisionsURL() string
-	GetInstancesURL() string
-	DeleteServicesURL() string
-	GetConsumerInstancesURL() string
-	GetAPIServerSubscriptionDefinitionURL() string
-	GetAPIServerWebhooksURL() string
-	GetAPIServerSecretsURL() string
+ GetURL() string
+ GetPlatformURL() string
+ GetCatalogItemsURL() string
+ GetAPIServerURL() string
+ GetEnvironmentURL() string
+ GetServicesURL() string
+ GetRevisionsURL() string
+ GetInstancesURL() string
+ DeleteServicesURL() string
+ GetConsumerInstancesURL() string
+ GetAPIServerSubscriptionDefinitionURL() string
+ GetAPIServerWebhooksURL() string
+ GetAPIServerSecretsURL() string
 
-	GetSubscriptionURL() string
-	GetSubscriptionConfig() SubscriptionConfig
+ GetSubscriptionURL() string
+ GetSubscriptionConfig() SubscriptionConfig
 
-	GetCatalogItemSubscriptionsURL(string) string
-	GetCatalogItemSubscriptionStatesURL(string, string) string
-	GetCatalogItemSubscriptionPropertiesURL(string, string) string
-	GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
-	GetCatalogItemByIDURL(catalogItemID string) string
+ GetCatalogItemSubscriptionsURL(string) string
+ GetCatalogItemSubscriptionStatesURL(string, string) string
+ GetCatalogItemSubscriptionPropertiesURL(string, string) string
+ GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
+ GetCatalogItemByIDURL(catalogItemID string) string
 
-	GetAuthConfig() AuthConfig
-	GetTLSConfig() TLSConfig
-	GetTagsToPublish() string
+ GetAuthConfig() AuthConfig
+ GetTLSConfig() TLSConfig
+ GetTagsToPublish() string
 
-	GetProxyURL() string
-	GetPollInterval() time.Duration	
+ GetProxyURL() string
+ GetPollInterval() time.Duration 
 }
 ```
 
 ```
 // Central Authentication config
 type AuthConfig interface {
-	GetTokenURL() string
-	GetRealm() string
-	GetAudience() string
-	GetClientID() string
-	GetPrivateKey() string
-	GetPublicKey() string
-	GetKeyPassword() string
-	GetTimeout() time.Duration
+ GetTokenURL() string
+ GetRealm() string
+ GetAudience() string
+ GetClientID() string
+ GetPrivateKey() string
+ GetPublicKey() string
+ GetKeyPassword() string
+ GetTimeout() time.Duration
 }
 ```
 
 ```
 // TLS Config
 type TLSConfig interface {
-	GetNextProtos() []string
-	IsInsecureSkipVerify() bool
-	GetCipherSuites() []TLSCipherSuite
-	GetMinVersion() TLSVersion
-	GetMaxVersion() TLSVersion
-	BuildTLSConfig() *tls.Config
+ GetNextProtos() []string
+ IsInsecureSkipVerify() bool
+ GetCipherSuites() []TLSCipherSuite
+ GetMinVersion() TLSVersion
+ GetMaxVersion() TLSVersion
+ BuildTLSConfig() *tls.Config
 }
 ```
 
@@ -122,25 +124,26 @@ type TLSConfig interface {
 
 The agent can define a struct that holds the configuration it needs specifically to communicate with the external API Gateway. The agent config struct properties can be bound to command line processor to set up config, see [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
 
-
 #### Sample Agent configuration definition
+
 ```
 type AgentConfig struct {
-	TenantID          string `config:"tenantID"`
-	ClientID          string `config:"clientID"`
-	ClientSecret      string `config:"clientSecret"`
-	SubscriptionID    string `config:"subscriptionID"`
-	ResourceGroupName string `config:"resourceGroupName"`
-	ApimServiceName   string `config:"apimServiceName"`
-	Filter            string `config:"filter"`
+ TenantID          string `config:"tenantID"`
+ ClientID          string `config:"clientID"`
+ ClientSecret      string `config:"clientSecret"`
+ SubscriptionID    string `config:"subscriptionID"`
+ ResourceGroupName string `config:"resourceGroupName"`
+ ApimServiceName   string `config:"apimServiceName"`
+ Filter            string `config:"filter"`
 }
 ```
 
-To validate the config, the following interface provided by config package in SDK must be implemented for the agent config. The ValidateCfg() method is called by SDK after parsing the config from command line.
+To validate the config, the following interface provided by config package in Amplify Agents SDK must be implemented for the agent config. The ValidateCfg() method is called by Amplify Agents SDK after parsing the config from command line.
+
 ```
 // IConfigValidator - Interface to be implemented for config validation by agent
 type IConfigValidator interface {
-	ValidateCfg() error
+ ValidateCfg() error
 }
 ```
 
@@ -149,26 +152,28 @@ For e.g.
 ```
 // ValidateCfg - Validates the agent config
 func (c *AgentConfig) ValidateCfg() (err error) {
-	if c.TenantID == "" {
-		return errors.New("Error: azure.tenantID is empty"))
-	}
+ if c.TenantID == "" {
+  return errors.New("Error: azure.tenantID is empty"))
+ }
 
-	if c.ClientID == "" {
-		return errors.New("Error: azure.tenantID is empty"))
-	}
+ if c.ClientID == "" {
+  return errors.New("Error: azure.tenantID is empty"))
+ }
 
-	...
-	...
+ ...
+ ...
 
-	return nil
+ return nil
 }
 
 ```
-If there are ResourceInstance values that you want to apply to your agent config, the following interface provided by config package in SDK must be implemented for the agent config. The ApplyResources() method is called by SDK after parsing the config from command line.
+
+If there are ResourceInstance values that you want to apply to your agent config, the following interface provided by config package in Amplify Agents SDK must be implemented for the agent config. The ApplyResources() method is called by Amplify Agents SDK after parsing the config from command line.
+
 ```
 // IResourceConfigCallback - Interface to be implemented by configs to apply API Server resource for agent
 type IResourceConfigCallback interface {
-	ApplyResources(agentResource *v1.ResourceInstance) error
+ ApplyResources(agentResource *v1.ResourceInstance) error
 }
 ```
 
@@ -177,24 +182,24 @@ For e.g.
 ```
 // ApplyResources - Applies the agent and dataplane resource to config
 func (a *AgentConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
-	var da *v1alpha1.DiscoveryAgent
-	if agentResource.ResourceMeta.GroupKind.Kind == "DiscoveryAgent" {
-		da = &v1alpha1.DiscoveryAgent{}
-		err := da.FromInstance(agentResource)
-		if err != nil {
-			return err
-		}
-	}
-	// copy any values from the agentResource to the AgentConfig
-	...
-	...
+ var da *v1alpha1.DiscoveryAgent
+ if agentResource.ResourceMeta.GroupKind.Kind == "DiscoveryAgent" {
+  da = &v1alpha1.DiscoveryAgent{}
+  err := da.FromInstance(agentResource)
+  if err != nil {
+   return err
+  }
+ }
+ // copy any values from the agentResource to the AgentConfig
+ ...
+ ...
 
-	return nil
+ return nil
 }
 
 ```
 
-#### Sample Agent YAML configuration 
+#### Sample Agent YAML configuration
 
 ```
 central:
@@ -220,7 +225,7 @@ azure:
 
 ### Setting up command line parser and binding agent config
 
-Agent SDK internally uses [Cobra](https://github.com/spf13/cobra) for providing command line processing and [Viper](https://github.com/spf13/viper) to bind the configuration with command line processing and YAML based config file. The Agent SDK exposes an  interface for predefined configured root command for Agent that set up Central Configuration. The Agent root command allows to hook in the main routine for agent execution and a callback method that get called on initialization to set up agent specific config. The Agent SDK root command also allows the agent to set up command line flags and properties that are agent specific and bind these flag/properties to agent config.
+Amplify Agents SDK internally uses [Cobra](https://github.com/spf13/cobra) for providing command line processing and [Viper](https://github.com/spf13/viper) to bind the configuration with command line processing and YAML based config file. The Amplify Agents SDK exposes an  interface for predefined configured root command for Agent that set up Central Configuration. The Agent root command allows to hook in the main routine for agent execution and a callback method that get called on initialization to set up agent specific config. The Amplify Agents SDK root command also allows the agent to set up command line flags and properties that are agent specific and bind these flag/properties to agent config.
 
 #### Sample of agent command initialization and agent config setup
 
@@ -231,58 +236,59 @@ var RootCmd corecmd.AgentRootCmd
 var azConfig *config.AzureConfig
 
 func init() {
-	// Create new root command with callbacks to initialize the agent config and command execution.
-	// The first parameter identifies the name of the yaml file that agent will look for to load the config
-	RootCmd = corecmd.NewRootCmd(
-		"apic_discovery_agent_sample",
-		"Sample Discovery Agent",		// you can set this to "" if you set BuildAgentDescription in your makefile
-		initConfig,
-		run,
-		corecfg.DiscoveryAgent,
-	)
+ // Create new root command with callbacks to initialize the agent config and command execution.
+ // The first parameter identifies the name of the yaml file that agent will look for to load the config
+ RootCmd = corecmd.NewRootCmd(
+  "apic_discovery_agent_sample",
+  "Sample Discovery Agent",  // you can set this to "" if you set BuildAgentDescription in your makefile
+  initConfig,
+  run,
+  corecfg.DiscoveryAgent,
+ )
 
-	// Get the root command properties and bind the config property in YAML definition
-	rootProps := RootCmd.GetProperties()
-	rootProps.AddStringProperty("azure.tenantID", "", "Azure tenant ID")
-	rootProps.AddStringProperty("azure.clientID", "", "Azure client ID")
-	rootProps.AddStringProperty("azure.clientSecret", "", "Azure client secret")
-	rootProps.AddStringProperty("azure.subscriptionID", "", "Azure subscription ID")
-	rootProps.AddStringProperty("azure.resourceGroupName", "", "Azure resource group name")
-	rootProps.AddStringProperty("azure.apimServiceName", "", "Azure API Management service name")
+ // Get the root command properties and bind the config property in YAML definition
+ rootProps := RootCmd.GetProperties()
+ rootProps.AddStringProperty("azure.tenantID", "", "Azure tenant ID")
+ rootProps.AddStringProperty("azure.clientID", "", "Azure client ID")
+ rootProps.AddStringProperty("azure.clientSecret", "", "Azure client secret")
+ rootProps.AddStringProperty("azure.subscriptionID", "", "Azure subscription ID")
+ rootProps.AddStringProperty("azure.resourceGroupName", "", "Azure resource group name")
+ rootProps.AddStringProperty("azure.apimServiceName", "", "Azure API Management service name")
 }
 
 // Callback that agent will call to process the execution
 func run() error {
-	// Code for discovering API and publish
-	return nil
+ // Code for discovering API and publish
+ return nil
 }
 
-// Callback that agent will call to initialize the config. CentralConfig is parsed by Agent SDK
+// Callback that agent will call to initialize the config. CentralConfig is parsed by Amplify Agents SDK
 // and passed to the callback allowing the agent code to access the central config
 func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
 
-	rootProps := RootCmd.GetProperties()
-	// Parse the config from bound properties and set up agent config
-	azConfig = &config.AzureConfig{
-		TenantID:          rootProps.StringPropertyValue("azure.tenantID"),
-		ClientID:          rootProps.StringPropertyValue("azure.clientID"),
-		ClientSecret:      rootProps.StringPropertyValue("azure.clientSecret"),
-		SubscriptionID:    rootProps.StringPropertyValue("azure.subscriptionID"),
-		ResourceGroupName: rootProps.StringPropertyValue("azure.resourceGroupName"),
-		ApimServiceName:   rootProps.StringPropertyValue("azure.apimServiceName"),
-	}
+ rootProps := RootCmd.GetProperties()
+ // Parse the config from bound properties and set up agent config
+ azConfig = &config.AzureConfig{
+  TenantID:          rootProps.StringPropertyValue("azure.tenantID"),
+  ClientID:          rootProps.StringPropertyValue("azure.clientID"),
+  ClientSecret:      rootProps.StringPropertyValue("azure.clientSecret"),
+  SubscriptionID:    rootProps.StringPropertyValue("azure.subscriptionID"),
+  ResourceGroupName: rootProps.StringPropertyValue("azure.resourceGroupName"),
+  ApimServiceName:   rootProps.StringPropertyValue("azure.apimServiceName"),
+ }
 
-	agentConfig := config.AgentConfig{
-		CentralCfg: centralConfig,
-		AzureCfg:   azConfig,
-	}
-	return agentConfig, nil
+ agentConfig := config.AgentConfig{
+  CentralCfg: centralConfig,
+  AzureCfg:   azConfig,
+ }
+ return agentConfig, nil
 }
 
 ```
 
 ### Filtering
-The Agent SDK provides github.com/Axway/agent-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to Amplify Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
+
+The Amplify Agents SDK provides github.com/Axway/agent-sdk/pkg/filter package to allow setting up config for filtering the discovered APIS for publishing them to Amplify Central. The filter expression to be evaluated for discovering the API from Axway Edge API Gateway. The filter value is a conditional expression that can use logical operators to compare two value.
 The conditional expression must have "tag" as the prefix/selector in the symbol name. For e.g.
 
 ```
@@ -343,26 +349,26 @@ tag.MatchRegEx("(some){1}")
 
 The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to Amplify Central the following properties are needed.
 
-| API Service property | Description                                                                                                                       |
-|----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| ID                   | ID of the API.                                                                                                                    |
-| PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                       |
-| Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                |
-| Description:         | A brief summary about the API.                                                                                                    |
-| Version:             | Version of the API.                                                                                                               |
-| URL:                 | Endpoint for the API service.                                                                                                     |
-| Auth policy:         | Authentication/Authorization policies applied to API. For now, Amplify Central supports passthrough, api key and oauth.           |
-| Specification:       | The API service specification. The Agent SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured. |
-| Documentation:       | Documentation for the API.                                                                                                        |
-| Tags:                | List of resource tags.                                                                                                            |
-| Image:               | Image for the API service.                                                                                                        |
-| Image content type:  | Content type of the Image associated with API service.                                                                            |
-| Resource type        | Specifies the API specification type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").             |
-| State/Status         | State representation of API in external API Gateway(unpublished/published).                                                       |
-| Attributes           | List of string key-value pairs that will be set on the resources created by the agent.                                            |
-| Endpoints            | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                        |
+| API Service property | Description                                                                                                                                |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| ID                   | ID of the API.                                                                                                                             |
+| PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                                |
+| Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                         |
+| Description:         | A brief summary about the API.                                                                                                             |
+| Version:             | Version of the API.                                                                                                                        |
+| URL:                 | Endpoint for the API service.                                                                                                              |
+| Auth policy:         | Authentication/Authorization policies applied to API. For now, Amplify Central supports passthrough, api key and oauth.                    |
+| Specification:       | The API service specification. The Amplify Agents SDK provides support for swagger 2, openapi 3, WSDL, Protobuf, AsyncAPI or Unstructured. |
+| Documentation:       | Documentation for the API.                                                                                                                 |
+| Tags:                | List of resource tags.                                                                                                                     |
+| Image:               | Image for the API service.                                                                                                                 |
+| Image content type:  | Content type of the Image associated with API service.                                                                                     |
+| Resource type        | Specifies the API specification type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").                      |
+| State/Status         | State representation of API in external API Gateway(unpublished/published).                                                                |
+| Attributes           | List of string key-value pairs that will be set on the resources created by the agent.                                                     |
+| Endpoints            | List of endpoints(protocol, host, port, base path) to override the endpoints specified in spec definition.                                 |
 
-To set these properties the Agent SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to Amplify Central. 
+To set these properties the Amplify Agents SDK provides a builder (ServiceBodyBuilder) that allows the agent implementation to create a service body definition that will be used for publishing the API definition to Amplify Central.
 
 In case where the *SetResourceType* method is not explicitly invoked, the builder uses the spec content to discovers the type ("swaggerv2", "oas2", "oas3", "wsdl", "protobuf", "asyncapi" or "unstructured").
 
@@ -383,69 +389,68 @@ The builder will use these properties when set, or use the default if not.
 
 ```
 func (a *AzureClient) buildServiceBody(azAPI apim.APIContract, apiSpec []byte) (apic.ServiceBody, error) {
-	return apic.NewServiceBodyBuilder().
-		SetID(*azAPI.ID).
-		SetAPIName(*azAPI.Name).
-		SetTitle(a.getAzureAPITitle(azAPI)).
-		SetURL(a.getAzureAPIURL(azAPI)).
-		SetDescription(a.getAzureAPIDescription(azAPI)).
-		SetAPISpec(apiSpec).
-		SetVersion(a.getAzureAPIVersion(azAPI)).
-		SetAuthPolicy(a.getAzureAPIAuthPolicy(azAPI)).
-		SetDocumentation(a.getAzureAPIDocumentation(azAPI)).
-		SetResourceType(apic.Oas3).
-		Build()
+ return apic.NewServiceBodyBuilder().
+  SetID(*azAPI.ID).
+  SetAPIName(*azAPI.Name).
+  SetTitle(a.getAzureAPITitle(azAPI)).
+  SetURL(a.getAzureAPIURL(azAPI)).
+  SetDescription(a.getAzureAPIDescription(azAPI)).
+  SetAPISpec(apiSpec).
+  SetVersion(a.getAzureAPIVersion(azAPI)).
+  SetAuthPolicy(a.getAzureAPIAuthPolicy(azAPI)).
+  SetDocumentation(a.getAzureAPIDocumentation(azAPI)).
+  SetResourceType(apic.Oas3).
+  Build()
 }
 
 func (a *AzureClient) getAzureAPITitle(azAPI apim.APIContract) string {
-	return fmt.Sprintf("%s (Azure)", *azAPI.Name)
+ return fmt.Sprintf("%s (Azure)", *azAPI.Name)
 }
 
 func (a *AzureClient) getAzureAPIURL(azAPI apim.APIContract) string {
-	return *azAPI.ServiceURL + "/" + *azAPI.Path
+ return *azAPI.ServiceURL + "/" + *azAPI.Path
 }
 
 func (a *AzureClient) getAzureAPIDescription(azAPI apim.APIContract) string {
-	// Update description/summary if one exists in the API
-	description := "API From Azure API Management Service"
-	if azAPI.Description != nil && *azAPI.Description != "" {
-		description = *azAPI.Description
-	}
-	return description
+ // Update description/summary if one exists in the API
+ description := "API From Azure API Management Service"
+ if azAPI.Description != nil && *azAPI.Description != "" {
+  description = *azAPI.Description
+ }
+ return description
 }
 
 func (a *AzureClient) getAzureAPIVersion(azAPI apim.APIContract) string {
-	version := "0.0.0"
-	if azAPI.APIVersion != nil {
-		version = *azAPI.APIVersion
-	}
-	return version
+ version := "0.0.0"
+ if azAPI.APIVersion != nil {
+  version = *azAPI.APIVersion
+ }
+ return version
 }
 
 func (a *AzureClient) getAzureAPIDocumentation(azAPI apim.APIContract) []byte {
-	var documentation []byte
-	if azAPI.APIVersionDescription != nil {
-		documentation = []byte(*azAPI.APIVersionDescription)
-	}
-	return documentation
+ var documentation []byte
+ if azAPI.APIVersionDescription != nil {
+  documentation = []byte(*azAPI.APIVersionDescription)
+ }
+ return documentation
 }
 
 func (a *AzureClient) getAzureAPIAuthPolicy(azAPI apim.APIContract) string {
-	apiAuthSetting := azAPI.AuthenticationSettings
-	authType := apic.Passthrough
-	if apiAuthSetting != nil && apiAuthSetting.OAuth2 != nil {
-		authType = apic.Oauth
-	}
-	return authType
+ apiAuthSetting := azAPI.AuthenticationSettings
+ authType := apic.Passthrough
+ if apiAuthSetting != nil && apiAuthSetting.OAuth2 != nil {
+  authType = apic.Oauth
+ }
+ return authType
 }
 
 ```
 
-
-
-
 ### Publishing changes to Central
+
 The Agent can use the service body definition built by earlier set up and call the *PublishAPI* method in the *agent* package to publish the discovered API to Amplify Central. The method uses the service body to create following API server resources
+
 - APIService: Resource representing an Amplify Central API Service.
 - APIServiceRevision: Resource representing an Amplify Central API Service Revision
 - APIServiceInstance: Resource representing the deployed instance of the revision
@@ -454,22 +459,24 @@ The Agent can use the service body definition built by earlier set up and call t
 When *PublishAPI* is called for the first time for the discovered API, each of the above mentioned resources gets created with generated names. On subsequent calls to the method for the same discovered API, the *APIService* and *ConsumerInstance* resources are updated, while a new resource for *APIServiceRevision* is created to represent the updated revision of the API. For update, the *APIServiceInstance* resources is updated unless the endpoint in the service definitions are changed which triggers a creation of a new *APIServiceInstance* resource.
 
 The *PublishAPI* method while creating/updating the API server resources set the following attributes.
+
 - externalAPIID: Holds the ID of API discovered from remote API Gateway
 - externalAPIName: Holds the name of the API discovered from remote API Gateway
 - createdBy: Holds the name of the Agent creating the resource
 
 #### Sample of publishing API to Amplify Central
-```
-	serviceBody, err := buildServiceBody(azAPI, exportResponse.Body)
-	...
-	err = agent.PublishAPI(serviceBody)
-	if err != nil {
-		log.Fatalf("Error in publishing API to Amplify Central: %s", err)
-	}
-```
 
+```
+ serviceBody, err := buildServiceBody(azAPI, exportResponse.Body)
+ ...
+ err = agent.PublishAPI(serviceBody)
+ if err != nil {
+  log.Fatalf("Error in publishing API to Amplify Central: %s", err)
+ }
+```
 
 #### Sample of published API server resources
+
 *Note:* Few details are removed/updated in the sample resource definitions below for simplicity.
 
 ```
@@ -561,18 +568,20 @@ spec:
 ```
 
 ### Processing Subscription
-Amplify Central Subscriptions allows the consumers to subscribe with Amplify Unified Catalog item to gain access for the published asset. With agents built using Agents SDK, the published API server results in publishing catalog item under Amplify Unified Catalog, the agents can configure subscription metadata that is required from consumers at the time of subscription to provision the access in target API gateway.
 
-The Agent SDK provides a mechanism to set up subscription schema based on configuration parameters set up by discovery agent for the target API gateway. The agent on start up can sets up the subscription schema which is basically registering API server resource of type SubscriptionDefinition. When the agent discovers the API and publishing the API to Amplify Central, the agent implementation can choose the type of subscription schema to associate with the published API. This could be based on authentication type of API getting published, where the agents can associate registered subscription schema based on authentication type or choose to have a common subscription schema that holds the configuration for provisioning the subscription on target API gateway.
+Amplify Central Subscriptions allows the consumers to subscribe with Amplify Unified Catalog item to gain access for the published asset. With agents built using Amplify Agents SDK, the published API server results in publishing catalog item under Amplify Unified Catalog, the agents can configure subscription metadata that is required from consumers at the time of subscription to provision the access in target API gateway.
+
+The Amplify Agents SDK provides a mechanism to set up subscription schema based on configuration parameters set up by discovery agent for the target API gateway. The agent on start up can sets up the subscription schema which is basically registering API server resource of type SubscriptionDefinition. When the agent discovers the API and publishing the API to Amplify Central, the agent implementation can choose the type of subscription schema to associate with the published API. This could be based on authentication type of API getting published, where the agents can associate registered subscription schema based on authentication type or choose to have a common subscription schema that holds the configuration for provisioning the subscription on target API gateway.
 
 The agent implementation can use *apic.Client* interface to create subscription schema definition by making a call to *NewSubscriptionSchema()* method. The method return an interface ot type *apic.SubscriptionSchema* that can be used for setting up the subscription schema properties. Once the subscription schema definition is set up the agent can call *apic.Client.RegisterSubscriptionSchema()* method to register the subscription schema with Amplify Central. The subscription schema definition can then later be used while publishing the API to associate the subscription schema with the published API server resource.
 
 Below is an example of subscription schema registration. This could be called after the agent initialization.
+
 ```
 func createSubscriptionSchema() error {
-	subscriptionSchema := apic.NewSubscriptionSchema(agent.GetCentralConfig().GetEnvironmentName() + apic.SubscriptionSchemaNameSuffix)
-	subscriptionSchema.AddProperty("allowTracing", "string", "Allow tracing", "", true, make([]string, 0))
-	return agent.GetCentralClient().RegisterSubscriptionSchema(subscriptionSchema)
+ subscriptionSchema := apic.NewSubscriptionSchema(agent.GetCentralConfig().GetEnvironmentName() + apic.SubscriptionSchemaNameSuffix)
+ subscriptionSchema.AddProperty("allowTracing", "string", "Allow tracing", "", true, make([]string, 0))
+ return agent.GetCentralClient().RegisterSubscriptionSchema(subscriptionSchema)
 }
 ```
 
@@ -590,102 +599,106 @@ The Amplify Central subscriptions follows the state transition to manage the sub
 | failed_to_unsubscribe | This state indicates the request to unsubscribe could not be fulfilled due to an internal error.                             |
 | change_requested      | Indicates that a change was submitted for a subscription. Change requests can be approved or rejected by asset providers.    |
 
+To process the subscriptions, the Amplify Agents SDK provides a mechanism to register processors corresponding to subscription state. Typically the agent will register the processor for *approved* and *unsubscribe_initiated* to receive event for processing the provision or de-provision the subscription. The Amplify Agents SDK provides support for updating the subscription state to transition the subscription workflow to next state. For example, the processor for *approved* state can update the subscription state to *active* or *failed_to_subscribe* states.
 
-To process the subscriptions, the SDK provides a mechanism to register processors corresponding to subscription state. Typically the agent will register the processor for *approved* and *unsubscribe_initiated* to receive event for processing the provision or de-provision the subscription. The agent SDK provides support for updating the subscription state to transition the subscription workflow to next state. For example, the processor for *approved* state can update the subscription state to *active* or *failed_to_subscribe* states.
-
-The agent provides *apic.SubscriptionManager* interface that can be used for registering the callback function for validating the subscription and processing for specified state. The subscription manager manages calling the registered processor whenever there is a transition change in subscriptions on Amplify Central for the catalog items that were associated to discovered APIs. The subscription manager calls the registered validator before calling the registered callback for state processing. This allows the agent to perform any pre-validation before the callbacks are invoked. The processors are invoked onces the validator succeeds and the processor implementation can update the subscription state. When calling registered callbacks, the manager passes subscription object (*apic.Subscription* interface) as argument which provides methods to access the properties that are provided by the consumer for provisioning the subscription. 
+The agent provides *apic.SubscriptionManager* interface that can be used for registering the callback function for validating the subscription and processing for specified state. The subscription manager manages calling the registered processor whenever there is a transition change in subscriptions on Amplify Central for the catalog items that were associated to discovered APIs. The subscription manager calls the registered validator before calling the registered callback for state processing. This allows the agent to perform any pre-validation before the callbacks are invoked. The processors are invoked onces the validator succeeds and the processor implementation can update the subscription state. When calling registered callbacks, the manager passes subscription object (*apic.Subscription* interface) as argument which provides methods to access the properties that are provided by the consumer for provisioning the subscription.
 
 Below is the example of registering the subscription callbacks and sample processor/validator implementation
+
 ```
 func run() error {
-	...
-	...
-	subscriptionManager := agent.GetCentralClient().GetSubscriptionManager()
-	subscriptionManager.RegisterValidator(azClient.ValidateSubscription)
-	subscriptionManager.RegisterProcessor(apic.SubscriptionApproved, azClient.ProcessSubscribe)
-	subscriptionManager.RegisterProcessor(apic.SubscriptionUnsubscribeInitiated, azClient.ProcessUnsubscribe)
-	...
+ ...
+ ...
+ subscriptionManager := agent.GetCentralClient().GetSubscriptionManager()
+ subscriptionManager.RegisterValidator(azClient.ValidateSubscription)
+ subscriptionManager.RegisterProcessor(apic.SubscriptionApproved, azClient.ProcessSubscribe)
+ subscriptionManager.RegisterProcessor(apic.SubscriptionUnsubscribeInitiated, azClient.ProcessUnsubscribe)
+ ...
 
 }
 
 
 func (a *AzureClient) ValidateSubscription(subscription apic.Subscription) bool {
-	// Add validation here if the processor callbacks needs to be called or ignored
-	return true
+ // Add validation here if the processor callbacks needs to be called or ignored
+ return true
 }
 
 func (a *AzureClient) ProcessSubscribe(subscription apic.Subscription) {
-	allowTracing := subscription.GetPropertyValue("allowTracing")
-	subscriptionID := subscription.GetID()
-	...
-	...
-	// Process subscription provisioning here
-	...
-	...
-	subscription.UpdateState(apic.SubscriptionActive)
+ allowTracing := subscription.GetPropertyValue("allowTracing")
+ subscriptionID := subscription.GetID()
+ ...
+ ...
+ // Process subscription provisioning here
+ ...
+ ...
+ subscription.UpdateState(apic.SubscriptionActive)
 }
 
 func (a *AzureClient) ProcessSubscribe(subscription apic.Subscription) {
-	subscriptionID := subscription.GetID()
-	...
-	...
-	// Process subscription de-provisioning here
-	...
-	...
-	subscription.UpdateState(apic.SubscriptionUnsubscribed)
+ subscriptionID := subscription.GetID()
+ ...
+ ...
+ // Process subscription de-provisioning here
+ ...
+ ...
+ subscription.UpdateState(apic.SubscriptionUnsubscribed)
 }
 
 ```
 
 ### Validating ConsumerInstance
+
 Amplify Central *ConsumerInstance* resources hold information about the assets published to Amplify Unified Catalog. In order to keep these assets in sync with the associated discovered API, a background job runs to validate each *ConsumerInstance*. If the resource is no longer valid, it is an indication that the API has likely been removed and the resource can be cleaned up.
 
-It is the responsibility of the individual agent to determine the validity of the *ConsumerInstance*. The Agent SDK provides a mechanism for the discovery agent to register an API validator for this purpose. The agent implementation can call *RegisterAPIValidator* method in the *agent* package and provide a callback method. The SDK will periodically call this method in the agent, thereby allowing the agent to determine the validity of the API and keep the resources in sync. Note that if an agent does not register an API validator, the consumer instance will never be validated and will always be considered synced with API. The ConsumerInstance resource will never be removed.
+It is the responsibility of the individual agent to determine the validity of the *ConsumerInstance*. The Amplify Agents SDK provides a mechanism for the discovery agent to register an API validator for this purpose. The agent implementation can call *RegisterAPIValidator* method in the *agent* package and provide a callback method. The Amplify Agents SDK will periodically call this method in the agent, thereby allowing the agent to determine the validity of the API and keep the resources in sync. Note that if an agent does not register an API validator, the consumer instance will never be validated and will always be considered synced with API. The ConsumerInstance resource will never be removed.
 
 Below is the example of registering the API validator callback and sample validator implementation
+
 ```
 func run() error {
-	agent.RegisterAPIValidator(azAgent.validateAPI)
+ agent.RegisterAPIValidator(azAgent.validateAPI)
 }
 
 func (a *Agent) validateAPI(apiID, stageName string) bool {
-	// Add validation here if the API should be marked as invalid
-	return true
+ // Add validation here if the API should be marked as invalid
+ return true
 }
 ```
 
-Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The SDK will not remove the resource. Returning false will indicate to the SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
+Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The Amplify Agents SDK will not remove the resource. Returning false will indicate to the Amplify Agents SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
 
-In addition to registering to valid the *ConsumerInstance* resources, the agent can register to decide if the *APIService* should be removed along with the *ConsumerInstance*. The Agent SDK provides a mechanism for the discovery agent to register an Delete Service validator for this purpose. The agent implementation can call *RegisterDeleteServiceValidator* method in the *agent* package and provide a callback method. After determining that the *ConsumerInstance* is no longer valid, the SDK will call this method in the agent, thereby allowing the agent to determine whether or not to delete the APIService for the API. Note that if an agent does not register a Delete Service validator, the *APIService* be validated and will always be removed along with *ConsumerInstance* resource.
+In addition to registering to valid the *ConsumerInstance* resources, the agent can register to decide if the *APIService* should be removed along with the *ConsumerInstance*. The Amplify Agents SDK provides a mechanism for the discovery agent to register an Delete Service validator for this purpose. The agent implementation can call *RegisterDeleteServiceValidator* method in the *agent* package and provide a callback method. After determining that the *ConsumerInstance* is no longer valid, the Amplify Agents SDK will call this method in the agent, thereby allowing the agent to determine whether or not to delete the APIService for the API. Note that if an agent does not register a Delete Service validator, the *APIService* be validated and will always be removed along with *ConsumerInstance* resource.
 
 Below is the example of registering the Delete Service validator callback and sample validator implementation
+
 ```
 func run() error {
-	agent.RegisterDeleteServiceValidator(azAgent.validateService)
+ agent.RegisterDeleteServiceValidator(azAgent.validateService)
 }
 
 func (a *Agent) validateService(apiID, stageName string) bool {
-	// Add validation here if the service should be marked as deletable
-	return true
+ // Add validation here if the service should be marked as deletable
+ return true
 }
 ```
 
-Returning true from the validator will indicate that the *APIService* should be removed. The SDK will remove the resource. Returning false will indicate to the SDK that the *APIService* resource not should be removed.
-
+Returning true from the validator will indicate that the *APIService* should be removed. The Amplify Agents SDK will remove the resource. Returning false will indicate to the SDK that the *APIService* resource not should be removed.
 
 ### Building the Agent
-The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
 
-The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file. 
+The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Amplify Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
+
+The *go mod tidy* command will prune any unused dependencies from your *go.mod* and update the files to include used dependencies. The *go mod verify* command checks the dependencies, downloads them from the source repository and updates the cryptographic hashes in your go.sum file.
 
 Run the following commands to resolve the dependencies
+
 ```
 go mod tidy
 go mod verify
 ```
 
 After resolving the dependencies, run *make build* to compile the source and generate the binary executable for the target system.
-The Agent SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to set up agent name, version, commit SHA and build time.
+The Amplify Agents SDK provides support for specifying the version of the agent at the build time. The following variables can be set by compile flags to set up agent name, version, commit SHA and build time.
 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
 - github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
@@ -712,12 +725,15 @@ go build -tags static_all \
 ```
 
 #### Pre-requisites for executing the agent
-* An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
-* An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
-* An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
+
+- An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
+
+- An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
+- An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
 
 ### Executing Discovery Agent
-The Agent built using Amplify Central Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
+
+The Agent built using Amplify Agents SDK can be executed by running the executable. The agent on initialization tries to load the configuration from following sources and applies the configuration properties in the order described below.
 
 1. The configuration YAML file in the current working directory.
 2. Environment variable defined for configuration override on the shell executing the agent
@@ -725,23 +741,27 @@ The Agent built using Amplify Central Agents SDK can be executed by running the 
 4. Command line flags
 
 Below is the sample for executing the agent when the config YAML file only is used.
+
 ```
 cd <path-to-agent-install-directory>
 ./discovery_agent
 ```
 
 Typically, the configuration YAML can be placed in the same directory as the agent executable, but alternatively the YAML file could be placed in another directory and then *pathConfig* command line flags can be used to specify the directory path containing the YAML file.
+
 ```
 <path-to-agent-install-directory>/discovery_agent --pathConfig <directory-path-for-agent-yaml-config-file>
 ```
 
-The following is an example of command to execute the agent with a file holding environment variables 
+The following is an example of command to execute the agent with a file holding environment variables
+
 ```
 cd <path-to-agent-install-directory>
 ./discovery_agent --envFile <path-of-env-file>/config.env
 ```
 
 The agent configuration can also be passed as command line flags. Below is an example of agent usage that details the command line flags and configuration properties
+
 ```
 cd <path-to-agent-install-directory>
 ./discovery_agent --help

@@ -19,7 +19,7 @@ import (
 
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
-	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error)
+	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error) // DEPRECATED
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 }
@@ -49,6 +49,7 @@ func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
+	// DEPRECATED
 	log.Warnf("%s is deprecated, to enable sampling please start using %s", "CreateEvent", "CreateEvents")
 
 	// if CreateEvent is being used, sampling will not work, so all events need to be sent

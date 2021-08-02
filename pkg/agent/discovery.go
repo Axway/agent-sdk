@@ -55,6 +55,7 @@ func getAPIByName(apiName string) interface{} {
 
 // IsAPIPublished  - Returns true if the API Service is already published
 func IsAPIPublished(externalAPIID string) bool {
+	// DEPRECATED
 	deprecationWarning("IsAPIPublished", "IsAPIPublishedByID")
 	return IsAPIPublishedByID(externalAPIID)
 }
@@ -82,6 +83,7 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 
 // GetAttributeOnPublishedAPI - Returns the value on published proxy
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
+	// DEPRECATED
 	deprecationWarning("GetAttributeOnPublishedAPI", "GetAttributeOnPublishedAPIByID")
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
