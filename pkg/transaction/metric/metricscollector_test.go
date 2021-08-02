@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -94,7 +95,7 @@ func (s *testHTTPServer) resetConfig() {
 }
 
 func cleanUpCachedMetricFile() {
-	os.Remove("./" + cacheFileName)
+	os.RemoveAll("./cache")
 }
 
 func TestMetricCollector(t *testing.T) {
@@ -292,6 +293,80 @@ func TestMetricCollectorCache(t *testing.T) {
 			if test.trackVolume {
 				assert.Equal(t, 0, s.transactionVolume)
 			}
+		})
+	}
+}
+
+func TestOfflineMetricCollector(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	paths.Paths.Data = "."
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.LighthouseURL = s.server.URL + "/lighthouse"
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	cfg.EventAggregationOffline = true
+	agent.Initialize(cfg)
+
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+
+	testCases := []struct {
+		name                      string
+		loopCount                 int
+		retryBatchCount           int
+		apiTransactionCount       []int
+		failUsageEventOnServer    []bool
+		expectedPublishedLHEvents []int
+		expectedCachedLHEvents    []int
+		expectedTransactionCount  []int
+		expectedMetricEventsAcked int
+	}{
+		{
+			name:                      "MultipleReports",
+			loopCount:                 3,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5, 10, 2},
+			failUsageEventOnServer:    []bool{false, false, false},
+			expectedPublishedLHEvents: []int{0, 0, 0},
+			expectedCachedLHEvents:    []int{5, 10, 2},
+			expectedTransactionCount:  []int{0, 0, 0},
+			expectedMetricEventsAcked: 1,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			setupMockClient(test.retryBatchCount)
+			for l := 0; l < test.loopCount; l++ {
+				for i := 0; i < test.apiTransactionCount[l]; i++ {
+					metricCollector.AddMetric(APIDetails{"111", "111"}, "200", 10, 10, "", "")
+				}
+				s.failUsageEvent = test.failUsageEventOnServer[l]
+				metricCollector.Execute()
+				assert.Equal(t, test.expectedPublishedLHEvents[l], s.lighthouseEventCount)
+				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
+				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
+
+				// Get the usage report just sent
+				events, _ := myCollector.(*collector).reports.loadOfflineEvents()
+				var usageReport LighthouseUsageReport
+				j := 0
+				for _, report := range events.Report {
+					if j == l {
+						usageReport = report
+						break
+					}
+					j++
+				}
+
+				assert.Equal(t, test.expectedCachedLHEvents[l], int(usageReport.Usage[cmd.BuildDataPlaneType+".Transactions"]))
+				time.Sleep(time.Second)
+			}
+			s.resetConfig()
 		})
 	}
 }
