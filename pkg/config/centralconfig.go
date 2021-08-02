@@ -444,7 +444,7 @@ func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
 	return c.EventAggregationInterval
 }
 
-// GetEventAggregationOffline - Returns the interval duration to generate usage and metric events
+// GetEventAggregationOffline - Returns flag to indicate the event aggregation is in offline mode or not
 func (c *CentralConfiguration) GetEventAggregationOffline() bool {
 	return c.EventAggregationOffline
 }
