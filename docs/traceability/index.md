@@ -967,9 +967,9 @@ go build -tags static_all \
 	-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${time}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent'" \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent' \
 			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Sample Traceability Agent' \
-			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}'" \
 	-a -o ${WORKSPACE}/bin/apic_traceability_agent ${WORKSPACE}/main.go
 ```
 
