@@ -364,7 +364,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 				}
 
 				assert.Equal(t, test.expectedCachedLHEvents[l], int(usageReport.Usage[cmd.BuildDataPlaneType+".Transactions"]))
-				time.Sleep(time.Second)
+				time.Sleep(1500 * time.Millisecond)
 			}
 			s.resetConfig()
 		})
