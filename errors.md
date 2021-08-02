@@ -1,4 +1,4 @@
-# APIC Agents SDK Errors
+# Amplify Agents SDK Errors
 
 ## Use code 1000s for SDK
 

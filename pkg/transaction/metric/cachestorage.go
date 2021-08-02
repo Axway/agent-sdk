@@ -20,12 +20,14 @@ const (
 	cacheFileName     = "agent-usagemetric.json"
 	usageStartTimeKey = "usage_start_time"
 	usageCountKey     = "usage_count"
+	volumeKey         = "usage_volume"
 	metricKeyPrefix   = "metric."
 )
 
 type storageCache interface {
 	initialize()
 	updateUsage(usageCount int)
+	updateVolume(bytes int64)
 	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
 	removeMetric(apiMetric *APIMetric)
 	save()
@@ -90,6 +92,13 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 		// un-marshalling the cache defaults the serialization of numeric values to float64
 		c.collector.updateUsage(int64(usageCount.(float64)))
 	}
+
+	// update transaction volume in registry.
+	usageVolume, err := storageCache.Get(volumeKey)
+	if err == nil {
+		// un-marshalling the cache defaults the serialization of numeric values to float64
+		c.collector.updateVolume(int64(usageVolume.(float64)))
+	}
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
@@ -101,6 +110,16 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 	defer c.storageLock.Unlock()
 	c.storage.Set(usageStartTimeKey, c.collector.startTime)
 	c.storage.Set(usageCountKey, usageCount)
+}
+
+func (c *cacheStorage) updateVolume(bytes int64) {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() || !agent.GetCentralConfig().IsAxwayManaged() {
+		return
+	}
+
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
+	c.storage.Set(volumeKey, bytes)
 }
 
 func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
@@ -117,7 +136,7 @@ func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
 
 			var apiStatusMetric *APIMetric
 			for _, duration := range apiMetric.Values {
-				apiStatusMetric = c.collector.updateMetric(apiMetric.API.ID, apiMetric.API.Name, apiMetric.StatusCode, duration)
+				apiStatusMetric = c.collector.updateMetric(APIDetails{apiMetric.API.ID, apiMetric.API.Name}, apiMetric.StatusCode, duration)
 			}
 			if apiStatusMetric != nil {
 				apiStatusMetric.StartTime = apiMetric.StartTime

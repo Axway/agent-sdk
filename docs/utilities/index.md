@@ -1,18 +1,20 @@
-# Amplify Agent SDK Utilities
+# Amplify Agents SDK Utilities
 
-In addition to the core features provided by Agent SDK around API discovery and traceability, it also provide some of the helpful utilities that developers can use while building agent as and where needed.
+In addition to the core features provided by Amplify Agents SDK around API discovery and traceability, it also provide some of the helpful utilities that developers can use while building agent as and where needed.
 
 # REST API HTTP Client
+
 The agent provides support for creating HTTP clients with *api* package that can be used for making HTTP request and processing the response. The HTTP Client can be initialized with TLS security (*config.TLSConfig*) and can use proxy.
 
 The package provides *NewClient()* method to create a new HTTP client. This method take an interface of *config.TLSConfig* and proxy URL as argument. Below is a sample of creating HTTP Client with default TLS config and no proxy configured
 
 ```
-	tlsConfig := config.NewTLSConfig()
-	apiClient := api.NewClient(tlsConfig, "")
+ tlsConfig := config.NewTLSConfig()
+ apiClient := api.NewClient(tlsConfig, "")
 ```
 
 The HTTP client interface provides *Send()* method which takes an object of *api.Request* struct. The *api.Request* identifies the HTTP request to be sent and holds following properties
+
 - Method : Identifies the HTTP method to be used for the request. Supported values are "GET", "PUT", "POST" and "DELETE"
 - URL : Specifies the target HTTP endpoint where the request will be sent
 - QueryParams: : Map of key-value pairs that will be added as query parameter to HTTP request
@@ -20,11 +22,13 @@ The HTTP client interface provides *Send()* method which takes an object of *api
 - Body: Represents the body that is used for PUT and POST requests.
 
 The *Send()* method of the HTTP client returns an object of type *api.Response* which holds following properties
+
 - Code : Represents the HTTP response code returned for HTTP request
-- Header : Map of key-value pairs that represents HTTP response headers 
+- Header : Map of key-value pairs that represents HTTP response headers
 - Body : Represents the body returned as HTTP response.
 
-Below is a sample of constructing the request, use the HTTP client to send the request and receive response 
+Below is a sample of constructing the request, use the HTTP client to send the request and receive response
+
 ```
     query := map[string]string{
         "param1": "value1",
@@ -51,24 +55,24 @@ Below is a sample of constructing the request, use the HTTP client to send the r
 
 # Cache
 
-The Agent SDK provides an in-memory cache using *cache* package that developers can use to store items that are frequently used for faster access. The cache stores items based on key and optionally secondary key if needed by the implementation. The items can be queried using either key or secondary key assigned to the item. The Agent SDK exposes the following interface which that describes the methods provided by *cache*
+The Amplify Agents SDK provides an in-memory cache using *cache* package that developers can use to store items that are frequently used for faster access. The cache stores items based on key and optionally secondary key if needed by the implementation. The items can be queried using either key or secondary key assigned to the item. The Amplify Agents SDK exposes the following interface which that describes the methods provided by *cache*
 
 ```
 type Cache interface {
-	Get(key string) (interface{}, error)
-	GetBySecondaryKey(secondaryKey string) (interface{}, error)
-	GetKeys() []string
-	HasItemChanged(key string, data interface{}) (bool, error)
-	HasItemBySecondaryKeyChanged(secondaryKey string, data interface{}) (bool, error)
-	Set(key string, data interface{}) error
-	SetWithSecondaryKey(key string, secondaryKey string, data interface{}) error
-	SetSecondaryKey(key string, secondaryKey string) error
-	Delete(key string) error
-	DeleteBySecondaryKey(secondaryKey string) error
-	DeleteSecondaryKey(secondaryKey string) error
-	Flush()
-	Save(path string) error
-	Load(path string) error
+ Get(key string) (interface{}, error)
+ GetBySecondaryKey(secondaryKey string) (interface{}, error)
+ GetKeys() []string
+ HasItemChanged(key string, data interface{}) (bool, error)
+ HasItemBySecondaryKeyChanged(secondaryKey string, data interface{}) (bool, error)
+ Set(key string, data interface{}) error
+ SetWithSecondaryKey(key string, secondaryKey string, data interface{}) error
+ SetSecondaryKey(key string, secondaryKey string) error
+ Delete(key string) error
+ DeleteBySecondaryKey(secondaryKey string) error
+ DeleteSecondaryKey(secondaryKey string) error
+ Flush()
+ Save(path string) error
+ Load(path string) error
 }
 ```
 
@@ -102,6 +106,7 @@ err := objCache.DeleteBySecondaryKey("sub-key-1)
 ```
 
 The cache store the has of the item, so implementation can validate if the object has changed. For example
+
 ```
 obj.prop = 111
 objCache.Set("key", obj)
@@ -111,7 +116,8 @@ isChanged, err := objCache.HasItemChanged("key", obj)
 ```
 
 # Health checker
-The Agent SDK implements a health check service that gets initialized during agent initialization. The service calls the list of registered callbacks to perform the check on the corresponding service. The service also exposed an endpoint over port 8080, that users can use to make HTTP based call to verify health check of the agent overall and of individual components (registered health check callbacks). The health check endpoint port is configurable using *status.port* config. 
+
+The Amplify Agents SDK implements a health check service that gets initialized during agent initialization. The service calls the list of registered callbacks to perform the check on the corresponding service. The service also exposed an endpoint over port 8080, that users can use to make HTTP based call to verify health check of the agent overall and of individual components (registered health check callbacks). The health check endpoint port is configurable using *status.port* config.
 
 The health check callback function should be of CheckStatus type (described below). The callback implementation can set the status of the component/service by creating an object of type *healthcheck.Status* and setting *Result* field to represent the current status of the component. The status level can be "OK" or "FAIL"
 
@@ -119,9 +125,10 @@ The health check callback function should be of CheckStatus type (described belo
 type CheckStatus func(name string) *Status
 ```
 
-The Agent SDK provides *RegisterHealthCheck()* method in *healthcheck* package to register the callback function which will be invoked at an interval. The interval is configurable using config *status.healthCheckInterval* which can be set in yaml or overridden using environment variable.
+The Amplify Agents SDK provides *RegisterHealthCheck()* method in *healthcheck* package to register the callback function which will be invoked at an interval. The interval is configurable using config *status.healthCheckInterval* which can be set in yaml or overridden using environment variable.
 
 Following is a sample of callback registration and callback implementation
+
 ```
 func run() error {
     healthcheck.RegisterHealthcheck("API Manager", "apimanager", healthcheck)
@@ -140,7 +147,8 @@ func (c *v7Client) healthcheck(name string) (status *hc.Status) {
 ```
 
 # Logging
-The Agent SDK utilizes [logrus](https://github.com/sirupsen/logrus/blob/master/README.md) and provides a structured logger that can be used by agent implementation to have unified logging. The Agent SDK setup the logger during the initialization. Below are the list of configuration properties that Agent SDK provides to configure the logger. The logger supports both stdout and file outputs and can log in line or JSON format. The logger provided by Agent SDK supports log rotation based on size and can keep the configured number of backups of old log files. 
+
+The Amplify Agents SDK utilizes [logrus](https://github.com/sirupsen/logrus/blob/master/README.md) and provides a structured logger that can be used by agent implementation to have unified logging. The Amplify Agents SDK setup the logger during the initialization. Below are the list of configuration properties that Amplify Agents SDK provides to configure the logger. The logger supports both stdout and file outputs and can log in line or JSON format. The logger provided by Amplify Agents SDK supports log rotation based on size and can keep the configured number of backups of old log files.
 
 | Environment variable          | YAML                      | Description                                                                                                                                                                          |
 |-------------------------------|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -155,6 +163,7 @@ The Agent SDK utilizes [logrus](https://github.com/sirupsen/logrus/blob/master/R
 | LOG_FILE_CLEANBACKUPS         | log.file.cleanbackups     | The max age of a backup file, in days                                                                                                                                                |
 
 The *log* package provides following methods that agents can call to log
+
 ```
 func Error(args ...interface{})
 func Errorf(format string, args ...interface{})
@@ -169,7 +178,8 @@ func Warn(args ...interface{})
 func Warnf(format string, args ...interface{})
 ```
 
-Some of the samples of logging using Agent SDK logger
+Some of the samples of logging using Amplify Agents SDK logger
+
 ```
 log.Info("Some thing to log")
 log.Infof("Log entry with format, %s", "additional log ~~message")

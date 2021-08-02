@@ -58,7 +58,34 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	}
 	metaData.Put(sampling.SampleKey, true)
 
+	if logEvent.TransactionSummary != nil {
+		e.trackMetrics(logEvent, 0)
+	}
+
 	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
+}
+
+func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
+	if e.shouldUseTrafficForAggregation {
+		apiDetails := metric.APIDetails{
+			ID:   summaryEvent.TransactionSummary.Proxy.ID,
+			Name: summaryEvent.TransactionSummary.Proxy.Name,
+		}
+		statusCode := summaryEvent.TransactionSummary.StatusDetail
+		duration := summaryEvent.TransactionSummary.Duration
+		appName := ""
+		if summaryEvent.TransactionSummary.Application != nil {
+			appName = summaryEvent.TransactionSummary.Application.Name
+		}
+		teamName := ""
+		if summaryEvent.TransactionSummary.Team != nil {
+			teamName = summaryEvent.TransactionSummary.Team.ID
+		}
+		collector := metric.GetMetricCollector()
+		if collector != nil {
+			collector.AddMetric(apiDetails, statusCode, int64(duration), bytes, appName, teamName)
+		}
+	}
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
@@ -67,24 +94,6 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	serializedLogEvent, err := json.Marshal(logEvent)
 	if err != nil {
 		return event, err
-	}
-	if e.shouldUseTrafficForAggregation && logEvent.TransactionSummary != nil {
-		apiID := logEvent.TransactionSummary.Proxy.ID
-		apiName := logEvent.TransactionSummary.Proxy.Name
-		statusCode := logEvent.TransactionSummary.StatusDetail
-		duration := logEvent.TransactionSummary.Duration
-		appName := ""
-		if logEvent.TransactionSummary.Application != nil {
-			appName = logEvent.TransactionSummary.Application.Name
-		}
-		teamName := ""
-		if logEvent.TransactionSummary.Team != nil {
-			teamName = logEvent.TransactionSummary.Team.ID
-		}
-		collector := metric.GetMetricCollector()
-		if collector != nil {
-			collector.AddMetric(apiID, apiName, statusCode, int64(duration), appName, teamName)
-		}
 	}
 
 	eventData, err := e.createEventData(serializedLogEvent, eventFields)
@@ -127,6 +136,13 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 			events = append(events, newEvent)
 		}
 	}
+
+	bytes := 0
+	if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
+		bytes = httpEvent.BytesSent
+	}
+	e.trackMetrics(summaryEvent, int64(bytes))
+
 	return events, nil
 }
 

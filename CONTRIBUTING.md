@@ -1,6 +1,6 @@
 # Contributing
 
-Welcome to the Axway Agent SDK. Contributions are welcome from anyone. All work on this project happens directly on GitHub. Both core team members and external contributors send pull requests which go through the same review process.
+Welcome to the Amplify Agents SDK. Contributions are welcome from anyone. All work on this project happens directly on GitHub. Both core team members and external contributors send pull requests which go through the same review process.
 
 # Prerequisites
 
@@ -8,7 +8,7 @@ Before submitting code to this project you must first sign the Axway Contributor
 
 # Semantic Versioning
 
-The Agent SDK follow semantic versioning. We release patch versions for critical bugfixes, minor versions for new features or non-essential changes, and major versions for any breaking changes. When we make breaking changes, we also introduce deprecation warnings in a minor version so that our users learn about the upcoming changes and migrate their code in advance.
+The Amplify Agents SDK follow semantic versioning. We release patch versions for critical bugfixes, minor versions for new features or non-essential changes, and major versions for any breaking changes. When we make breaking changes, we also introduce deprecation warnings in a minor version so that our users learn about the upcoming changes and migrate their code in advance.
 
 Every significant change is documented in the changelog file.
 
@@ -76,7 +76,7 @@ Please make sure the following is done before submitting a pull request:
 
 # Development Workflow
 
-After cloning the Agent SDK, run `make download` to download all the project dependencies.
+After cloning the Amplify Agents SDK, run `make download` to download all the project dependencies.
 
 * `make lint` checks the code style.
 * `make format` formats your code.
@@ -84,7 +84,7 @@ After cloning the Agent SDK, run `make download` to download all the project dep
 
 ## Starting local development
 
-Two sample stubs are provided within the SDK source code:
+Two sample stubs are provided within the Amplify Agents SDK source code:
 
 * Discovery agent: <https://github.com/Axway/agent-sdk/raw/main/samples/apic_discovery_agent.zip>
 * Traceability agent: <https://github.com/Axway/agent-sdk/raw/main/samples/apic_traceability_agent.zip>
