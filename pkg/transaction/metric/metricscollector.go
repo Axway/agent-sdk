@@ -6,15 +6,16 @@ import (
 	"sync"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+	metrics "github.com/rcrowley/go-metrics"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	jwt "github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 // Collector - interface for collecting metrics

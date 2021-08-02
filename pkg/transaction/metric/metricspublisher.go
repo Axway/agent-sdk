@@ -10,10 +10,11 @@ import (
 	"net/textproto"
 	"strconv"
 
+	"github.com/google/uuid"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/google/uuid"
 )
 
 // publisher - interface for metric publisher
@@ -29,7 +30,7 @@ type metricPublisher struct {
 func (pj *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
 		if agent.GetCentralConfig().GetEventAggregationOffline() {
-			return pj.publishToFile(lighthouseUsageEvent)
+			return pj.publishToCache(lighthouseUsageEvent)
 		}
 		return pj.publishToLighthouse(lighthouseUsageEvent)
 	}
@@ -37,7 +38,7 @@ func (pj *metricPublisher) publishEvent(event interface{}) error {
 	return nil
 }
 
-func (pj *metricPublisher) publishToFile(event LighthouseUsageEvent) error {
+func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
 	// Open and load the existing usage file
 	savedEvents, loaded := pj.storage.loadOfflineEvents()
 
