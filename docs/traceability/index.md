@@ -309,7 +309,7 @@ func init() {
  RootCmd = corecmd.NewCmd(
   &cmd,
   name,                        // Name of the agent and yaml config file
-  "Sample Traceability Agent", // Agent description
+  "Sample Traceability Agent", // Agent description - you can set this to "" if you set BuildAgentDescription in your makefile
   initConfig,                  // Callback for initializing the agent config
   run,                         // Callback for executing the agent
   corecfg.TraceabilityAgent,   // Agent Type (Discovery or Traceability)
@@ -951,7 +951,8 @@ The Amplify Agents SDK provides support for specifying the version of the agent 
 - github.com/Axway/agent-sdk/pkg/cmd.BuildTime
 - github.com/Axway/agent-sdk/pkg/cmd.BuildVersion
 - github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha
-- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName
+- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName - this is an internal name
+- github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription - this is a friendly description that will be displayed in the --version and --help commands
 - github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion
 
 The following is an example of the build command that can be configured in the Makefile
@@ -962,12 +963,13 @@ export version=`cat version` && \
 export commit_id=`git rev-parse --short HEAD` && \
 export sdk_version=`go list -m github.com/Axway/agent-sdk | awk '{print $$2}' | awk -F'-' '{print substr($$1, 2)}'` && \
 go build -tags static_all \
- -ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${time}' \
-   -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
-   -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
-   -X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent'" \
-   -X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}' \
- -a -o ${WORKSPACE}/bin/apic_traceability_agent ${WORKSPACE}/main.go
+	-ldflags="-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildTime=$${time}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildVersion=$${version}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildCommitSha=$${commit_id}' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentName=SampleTraceabilityAgent' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.BuildAgentDescription=Sample Traceability Agent' \
+			-X 'github.com/Axway/agent-sdk/pkg/cmd.SDKBuildVersion=$${sdk_version}'" \
+	-a -o ${WORKSPACE}/bin/apic_traceability_agent ${WORKSPACE}/main.go
 ```
 
 #### Pre-requisites for executing the agent

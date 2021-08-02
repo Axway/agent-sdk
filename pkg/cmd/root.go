@@ -73,8 +73,12 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func buildCmdVersion() string {
-	return fmt.Sprintf("%s-%s, SDK version %s", BuildVersion, BuildCommitSha, SDKBuildVersion)
+func buildCmdVersion(desc string) string {
+	return fmt.Sprintf("- %s", buildAgentInfo(desc))
+}
+
+func buildAgentInfo(desc string) string {
+	return fmt.Sprintf("%s version %s-%s, Amplify Agents SDK version %s", desc, BuildVersion, BuildCommitSha, SDKBuildVersion)
 }
 
 // NewRootCmd - Creates a new Agent Root Command
@@ -87,13 +91,19 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		secretResolver:    resolver.NewSecretResolver(),
 	}
 
+	// use the description from the build if available
+	if BuildAgentDescription != "" {
+		desc = BuildAgentDescription
+	}
+
 	c.rootCmd = &cobra.Command{
 		Use:     c.agentName,
 		Short:   desc,
-		Version: buildCmdVersion(),
+		Version: buildCmdVersion(desc),
 		RunE:    c.run,
 		PreRunE: c.initialize,
 	}
+
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
 	c.addBaseProps()
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
@@ -116,10 +126,16 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
 	}
+
+	// use the description from the build if available
+	if BuildAgentDescription != "" {
+		desc = BuildAgentDescription
+	}
+
 	c.rootCmd = rootCmd
 	c.rootCmd.Use = c.agentName
 	c.rootCmd.Short = desc
-	c.rootCmd.Version = buildCmdVersion()
+	c.rootCmd.Version = buildCmdVersion(desc)
 	c.rootCmd.RunE = c.run
 	c.rootCmd.PreRunE = c.initialize
 
@@ -280,7 +296,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			os.Exit(exitcode)
 		}
 
-		log.Infof("Starting %s (%s)", c.rootCmd.Short, c.rootCmd.Version)
+		log.Infof("Starting %s", buildAgentInfo(c.rootCmd.Short))
 		if c.commandHandler != nil {
 			// Setup logp to use beats logger.
 			// Setting up late here as log entries for agent/command initialization are not logged

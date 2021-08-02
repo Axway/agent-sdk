@@ -56,6 +56,9 @@ var StringAgentModeMap = map[string]AgentMode{
 // AgentTypeName - Holds the name Agent type
 var AgentTypeName string
 
+// AgentDisplayName - Holds the name Agent name for displaying in version command or elsewhere
+var AgentDisplayName string
+
 // AgentVersion - Holds the version of agent
 var AgentVersion string
 

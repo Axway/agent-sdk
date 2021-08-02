@@ -109,7 +109,6 @@ func TestGenServiceCmd(t *testing.T) {
 
 func TestRunGenServiceCmd(t *testing.T) {
 	Name = "discovery-agent"
-	Description = "Discovery Agent Description"
 	a := newMockAgentService()
 	globalAgentService = a
 	cmd := GenServiceCmd("pathConfig")

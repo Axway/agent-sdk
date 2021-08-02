@@ -294,7 +294,7 @@ func setupSignalProcessor() {
 	go func() {
 		<-sigs
 		cleanUp()
-		log.Info("Stopping Discovery agent")
+		log.Info("Stopping agent")
 		os.Exit(0)
 	}()
 }
