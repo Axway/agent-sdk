@@ -576,7 +576,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
 	}
 
-	// On validation if Event Aggregation is in Offline set the interval to at most hourly
+	// On validation if Event Aggregation is in Offline set the interval to at least hourly
 	if c.GetEventAggregationInterval() < time.Hour && c.GetEventAggregationOffline() {
 		c.EventAggregationInterval = time.Hour
 		// Add QA environment variable to allow to override this behavior
