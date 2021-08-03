@@ -582,7 +582,7 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 		// Add QA environment variable to allow to override this behavior
 		if qaVar := os.Getenv("QA_CENTRAL_EVENTAGGREGATIONINTERVAL"); qaVar != "" {
 			c.EventAggregationInterval, _ = time.ParseDuration(qaVar)
-			log.Tracef("Using QA_CENTRAL_EVENTAGGREGATIONINTERVAL time, %s, rather then the minimum 1 hour for non-QA", c.EventAggregationInterval)
+			log.Tracef("Using QA_CENTRAL_EVENTAGGREGATIONINTERVAL time, %s, rather than the minimum 1 hour for non-QA", c.EventAggregationInterval)
 		}
 	}
 
