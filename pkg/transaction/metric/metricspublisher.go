@@ -10,10 +10,11 @@ import (
 	"net/textproto"
 	"strconv"
 
+	"github.com/google/uuid"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/google/uuid"
 )
 
 // publisher - interface for metric publisher
@@ -23,14 +24,38 @@ type publisher interface {
 
 type metricPublisher struct {
 	apiClient api.Client
+	storage   storageCache
+	report    offlineReportCache
 }
 
 func (pj *metricPublisher) publishEvent(event interface{}) error {
-	lighthouseUsageEvent, ok := event.(LighthouseUsageEvent)
-	if ok {
+	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
+		if agent.GetCentralConfig().GetEventAggregationOffline() {
+			return pj.publishToCache(lighthouseUsageEvent)
+		}
 		return pj.publishToLighthouse(lighthouseUsageEvent)
 	}
 	log.Error("event was not a lighthouse event")
+	return nil
+}
+
+func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
+	// Open and load the existing usage file
+	savedEvents, loaded := pj.report.loadOfflineEvents()
+
+	if loaded {
+		// Add the report from the latest event to the saved events
+		for key, report := range event.Report {
+			savedEvents.Report[key] = report
+		}
+		savedEvents.Timestamp = event.Timestamp
+	} else {
+		savedEvents = event
+	}
+
+	// Update the cache
+	pj.report.updateOfflineEvents(savedEvents)
+
 	return nil
 }
 
@@ -92,10 +117,12 @@ func (pj *metricPublisher) createFilePart(w *multipart.Writer, filename string) 
 }
 
 // newMetricPublisher - Creates publisher job
-func newMetricPublisher() publisher {
+func newMetricPublisher(storage storageCache, report offlineReportCache) publisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &metricPublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL()),
+		storage:   storage,
+		report:    report,
 	}
 
 	return publisher

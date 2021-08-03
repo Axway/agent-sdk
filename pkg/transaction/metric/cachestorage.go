@@ -34,26 +34,39 @@ type storageCache interface {
 }
 
 type cacheStorage struct {
-	cacheFilePath string
-	collector     *collector
-	storage       cache.Cache
-	storageLock   sync.Mutex
-	isInitialized bool
+	cacheFilePath    string
+	oldCacheFilePath string
+	collector        *collector
+	storage          cache.Cache
+	storageLock      sync.Mutex
+	isInitialized    bool
 }
 
-func newStorageCache(collector *collector, cacheFilePath string) storageCache {
+func newStorageCache(collector *collector) storageCache {
 	storageCache := &cacheStorage{
-		cacheFilePath: traceability.GetDataDirPath() + "/" + cacheFileName,
-		collector:     collector,
-		storageLock:   sync.Mutex{},
-		storage:       cache.New(),
-		isInitialized: false,
+		cacheFilePath:    traceability.GetCacheDirPath() + "/" + cacheFileName,
+		oldCacheFilePath: traceability.GetDataDirPath() + "/" + cacheFileName,
+		collector:        collector,
+		storageLock:      sync.Mutex{},
+		storage:          cache.New(),
+		isInitialized:    false,
 	}
 
 	return storageCache
 }
 
+func (c *cacheStorage) moveCacheFile() {
+	// to remove for next major release
+	_, err := os.Stat(c.oldCacheFilePath)
+	if os.IsNotExist(err) {
+		return
+	}
+	// file exists, move it over
+	os.Rename(c.oldCacheFilePath, c.cacheFilePath)
+}
+
 func (c *cacheStorage) initialize() {
+	c.moveCacheFile() // to remove for next major release
 	storageCache := cache.Load(c.cacheFilePath)
 	c.loadUsage(storageCache)
 	c.loadAPIMetric(storageCache)
@@ -89,7 +102,7 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() {
+	if !c.isInitialized || !agent.GetCentralConfig().CanPublishUsageEvent() {
 		return
 	}
 
