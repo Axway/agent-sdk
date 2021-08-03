@@ -232,6 +232,9 @@ func parseDER(publicKey []byte) ([]byte, error) {
 	_, err := x509.ParsePKIXPublicKey(publicKey)
 	if err != nil {
 		pemBlock, _ := pem.Decode(publicKey)
+		if pemBlock == nil {
+			return nil, errors.New("data in key was not valid")
+		}
 		if pemBlock.Type != "PUBLIC KEY" {
 			return nil, errors.New("unsupported key type")
 		}
