@@ -121,6 +121,7 @@ type ServiceBody struct {
 	serviceContext    serviceContext
 	Endpoints         []EndpointDefinition
 	UnstructuredProps *UnstructuredProperties
+	OrganizationName  string
 }
 
 // APIError - api response error
@@ -153,6 +154,7 @@ type ServiceClient struct {
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
+	// teamsListCache                     cache.Cache
 }
 
 // APIServerInfoProperty -

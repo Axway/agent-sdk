@@ -59,6 +59,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetUnstructuredLabel("Label").
 		SetUnstructuredType("Type").
 		SetAltRevisionPrefix("1.1.1").
+		SetOrganizationName("00000").
 		Build()
 
 	assert.Nil(t, err)
@@ -95,6 +96,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "test.zip", sb.UnstructuredProps.Filename)
 	assert.Equal(t, "Label", sb.UnstructuredProps.Label)
 	assert.Equal(t, "Type", sb.UnstructuredProps.AssetType)
+	assert.Equal(t, "00000", sb.OrganizationName)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {

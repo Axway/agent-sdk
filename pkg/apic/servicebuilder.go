@@ -41,6 +41,7 @@ type ServiceBuilder interface {
 	SetUnstructuredContentType(contentType string) ServiceBuilder
 	SetUnstructuredLabel(label string) ServiceBuilder
 	SetUnstructuredFilename(filename string) ServiceBuilder
+	SetOrganizationName(teamName string) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -203,8 +204,14 @@ func (b *serviceBodyBuilder) SetUnstructuredFilename(filename string) ServiceBui
 	b.serviceBody.UnstructuredProps.Filename = filename
 	return b
 }
+
 func (b *serviceBodyBuilder) SetAltRevisionPrefix(revisionPrefix string) ServiceBuilder {
 	b.serviceBody.AltRevisionPrefix = revisionPrefix
+	return b
+}
+
+func (b *serviceBodyBuilder) SetOrganizationName(id string) ServiceBuilder {
+	b.serviceBody.OrganizationName = id
 	return b
 }
 

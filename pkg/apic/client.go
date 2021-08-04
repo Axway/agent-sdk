@@ -26,7 +26,11 @@ const (
 	Oauth       = "verify-oauth-token"
 )
 
-const serverName = "Amplify Central"
+// other consts
+const (
+	serverName = "Amplify Central"
+	TeamMapKey = "TeamMap"
+)
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
@@ -70,7 +74,6 @@ type Client interface {
 
 // New -
 func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
-
 	serviceClient := &ServiceClient{}
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
@@ -248,7 +251,6 @@ func (c *ServiceClient) checkPlatformHealth() error {
 }
 
 func (c *ServiceClient) checkAPIServerHealth() error {
-
 	headers, err := c.createHeader()
 	if err != nil {
 		return errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -274,7 +276,23 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		// Set the team Id
 		c.cfg.SetTeamID(team.ID)
 	}
-	return nil
+
+	// reset the cache of team names
+	return c.setTeamCache()
+}
+
+func (c *ServiceClient) setTeamCache() error {
+	// passing nil to getTeam will return the full list of teams
+	platformTeams, err := c.getTeam(nil)
+	if err != nil {
+		return err
+	}
+
+	teamMap := make(map[string]string)
+	for _, team := range platformTeams {
+		teamMap[team.Name] = team.ID
+	}
+	return cache.GetCache().Set(TeamMapKey, teamMap)
 }
 
 func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {
@@ -392,6 +410,7 @@ func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
 			"query": fmt.Sprintf("name==\"%s\"", teamName),
 		}
 	}
+
 	platformTeams, err := c.getTeam(queryParams)
 	if err != nil {
 		return nil, err
