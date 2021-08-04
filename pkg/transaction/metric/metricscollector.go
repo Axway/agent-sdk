@@ -14,6 +14,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -59,6 +60,14 @@ type usageEventQueueItem struct {
 	volumeMetric metrics.Counter
 }
 
+func init() {
+	go func() {
+		for traceability.GetDataDirPath() == "" {
+		}
+		GetMetricCollector()
+	}()
+}
+
 func (qi *usageEventQueueItem) GetEvent() interface{} {
 	return qi.event
 }
@@ -91,7 +100,7 @@ func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		startTime:        time.Now().Add(-1 * time.Minute),
+		startTime:        time.Now().Add(-1 * agent.GetCentralConfig().GetEventAggregationInterval()),
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
@@ -252,7 +261,7 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 }
 
 func (c *collector) generateUsageEvent(orgGUID string) {
-	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 {
+	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || agent.GetCentralConfig().GetEventAggregationOffline() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
 }
@@ -268,12 +277,17 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionVolumeMetric).Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 	}
 
+	granularity := int(c.endTime.Sub(c.startTime).Milliseconds())
+	if agent.GetCentralConfig().GetEventAggregationOffline() {
+		granularity = int(agent.GetCentralConfig().GetEventAggregationInterval().Milliseconds())
+	}
+
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.endTime),
 		SchemaID:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
-		Granularity: int(c.endTime.Sub(c.startTime).Milliseconds()),
+		Granularity: granularity,
 		Report: map[string]LighthouseUsageReport{
 			c.startTime.Format(ISO8601): {
 				Product: cmd.GetBuildDataPlaneType(),

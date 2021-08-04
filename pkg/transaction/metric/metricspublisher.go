@@ -48,6 +48,7 @@ func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
 		for key, report := range event.Report {
 			savedEvents.Report[key] = report
 		}
+		savedEvents.Granularity = event.Granularity
 		savedEvents.Timestamp = event.Timestamp
 	} else {
 		savedEvents = event
