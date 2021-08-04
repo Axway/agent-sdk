@@ -283,7 +283,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 
 func (c *ServiceClient) setTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
-	platformTeams, err := c.getTeam(nil)
+	platformTeams, err := c.getTeam(make(map[string]string))
 	if err != nil {
 		return err
 	}

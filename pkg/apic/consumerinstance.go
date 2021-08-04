@@ -37,12 +37,12 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
 	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
-	if serviceBody.OrganizationName != "" {
+	if serviceBody.TeamName != "" {
 		obj, err := cache.GetCache().Get(TeamMapKey)
 		if err == nil {
 			teamMap := obj.(map[string]string)
-			if _, found := teamMap[serviceBody.OrganizationName]; found {
-				owningTeam = serviceBody.OrganizationName
+			if _, found := teamMap[serviceBody.TeamName]; found {
+				owningTeam = serviceBody.TeamName
 			}
 		}
 	}
