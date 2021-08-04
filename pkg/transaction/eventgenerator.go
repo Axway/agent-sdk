@@ -138,8 +138,10 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	bytes := 0
-	if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
-		bytes = httpEvent.BytesSent
+	if len(detailEvents) > 0 {
+		if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
+			bytes = httpEvent.BytesSent
+		}
 	}
 	e.trackMetrics(summaryEvent, int64(bytes))
 
