@@ -154,7 +154,6 @@ type ServiceClient struct {
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
-	// teamsListCache                     cache.Cache
 }
 
 // APIServerInfoProperty -
