@@ -35,7 +35,6 @@ include:
     file:
       - "/.gitlab-ci-prepcsr.yml"
       - "/.gitlab-ci-fortify.yml"
-      - "/.gitlab-ci-dependencycheck.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
 
@@ -64,13 +63,11 @@ stages:
 run-csr:
   dependencies:
     - fetch-fortify
-    - dependencycheck
     - whitesource
 
 update-csr:
   dependencies:
     - fetch-fortify
-    - dependencycheck:on-schedule
     - whitesource:on-schedule
 
 ############################################################
