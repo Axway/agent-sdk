@@ -175,7 +175,7 @@ func (u *UsageReportingConfiguration) GetInterval() time.Duration {
 	return u.Interval
 }
 
-// GetOffline - Returns the offline boolean
+// IsOfflineMode - Returns the offline boolean
 func (u *UsageReportingConfiguration) IsOfflineMode() bool {
 	return u.Offline
 }
