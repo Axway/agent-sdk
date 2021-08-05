@@ -11,6 +11,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -32,6 +33,20 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	enableSubscription := c.enableSubscription(serviceBody)
 
+	owningTeam := c.cfg.GetTeamName()
+
+	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
+	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
+	if serviceBody.TeamName != "" {
+		obj, err := cache.GetCache().Get(TeamMapKey)
+		if err == nil {
+			teamMap := obj.(map[string]string)
+			if _, found := teamMap[serviceBody.TeamName]; found {
+				owningTeam = serviceBody.TeamName
+			}
+		}
+	}
+
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		ApiServiceInstance: serviceBody.serviceContext.currentInstance,
@@ -42,7 +57,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		Status:             serviceBody.Status,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
-		OwningTeam:         c.cfg.GetTeamName(),
+		OwningTeam:         owningTeam,
 		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
 			AutoSubscribe:          autoSubscribe,

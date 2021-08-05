@@ -121,6 +121,7 @@ type ServiceBody struct {
 	serviceContext    serviceContext
 	Endpoints         []EndpointDefinition
 	UnstructuredProps *UnstructuredProperties
+	TeamName          string
 }
 
 // APIError - api response error

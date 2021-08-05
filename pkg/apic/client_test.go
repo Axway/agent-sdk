@@ -51,6 +51,10 @@ func TestCheckAPIServerHealth(t *testing.T) {
 			FileName: "./testdata/apic-team.json", // this for call to getTeamByName
 			RespCode: http.StatusOK,
 		},
+		{
+			FileName: "./testdata/apic-team.json", // this for call to getTeamByName
+			RespCode: http.StatusOK,
+		},
 	})
 	cfg.SetEnvironmentID("")
 	err = svcClient.checkAPIServerHealth()
@@ -180,6 +184,7 @@ func TestHealthCheck(t *testing.T) {
 	// success
 	responses := []api.MockResponse{
 		{FileName: "./testdata/apiserver-environment.json", RespCode: http.StatusOK},
+		{FileName: "./testdata/apic-team.json", RespCode: http.StatusOK},
 		{FileName: "./testdata/apic-team.json", RespCode: http.StatusOK},
 	}
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
