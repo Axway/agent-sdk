@@ -30,7 +30,7 @@ type metricPublisher struct {
 
 func (pj *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
-		if agent.GetCentralConfig().GetEventAggregationOffline() {
+		if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 			return pj.publishToCache(lighthouseUsageEvent)
 		}
 		return pj.publishToLighthouse(lighthouseUsageEvent)

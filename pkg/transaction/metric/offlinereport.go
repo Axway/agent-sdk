@@ -32,7 +32,7 @@ const (
 )
 
 type offlineReportCache interface {
-	initialize()
+	isReady() bool
 	updateOfflineEvents(lighthouseEvent LighthouseUsageEvent)
 	loadOfflineEvents() (LighthouseUsageEvent, bool)
 }
@@ -46,11 +46,12 @@ type cacheOfflineReport struct {
 	isInitialized   bool
 	jobID           string
 	dateFormat      string
+	ready           bool
 }
 
 func newOfflineReportCache() offlineReportCache {
 	// Do not initialize if not needed
-	if !agent.GetCentralConfig().GetEventAggregationOffline() {
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
 	}
 
@@ -59,18 +60,26 @@ func newOfflineReportCache() offlineReportCache {
 		reportCacheLock: sync.Mutex{},
 		reportCache:     cache.New(),
 		isInitialized:   false,
+		ready:           false,
 		dateFormat:      offlineReportDateFormat,
+	}
+	if agent.GetCentralConfig().GetUsageReportingConfig().UsingQAVars() {
+		reportManager.dateFormat = qaOfflineReportDateFormat
 	}
 
 	reportManager.initialize()
 	return reportManager
 }
 
+func (c *cacheOfflineReport) isReady() bool {
+	return c.ready
+}
+
 func (c *cacheOfflineReport) initialize() {
 	reportCache := cache.Load(c.cacheFilePath)
 	c.reportCache = reportCache
-	c.isInitialized = true
 	c.registerOfflineReportJob()
+	c.isInitialized = true
 }
 
 func (c *cacheOfflineReport) registerOfflineReportJob() {
@@ -78,30 +87,12 @@ func (c *cacheOfflineReport) registerOfflineReportJob() {
 		return // skip setting up the job in test
 	}
 
-	// default schedule to run the report monthly
-	schedule := "@monthly"
-
-	// Add QA environment variable to allow to override this behavior
-	if qaVar := os.Getenv("QA_CENTRAL_EVENTAGGREGATIONOFFLINE_SCHEDULE"); qaVar != "" {
-		_, err := cronexpr.Parse(qaVar)
-		if err != nil {
-			log.Tracef("Could not use QA_CENTRAL_EVENTAGGREGATIONOFFLINE_SCHEDULE time, %s, it is not a proper schedule", qaVar)
-		} else {
-			log.Tracef("Using QA_CENTRAL_EVENTAGGREGATIONOFFLINE_SCHEDULE schedule, %s, rather than the monthly schedule for non-QA", qaVar)
-			schedule = qaVar
-			c.dateFormat = qaOfflineReportDateFormat // set the dateformat to use the hour and minute in QA
-		}
-	}
-
-	// parse the cron string
-	c.cronExp, _ = cronexpr.Parse(schedule)
-
 	// start the job according to teh cron schedule
-	jobID, err := jobs.RegisterScheduledJobWithName(c, schedule, "Offline Usage Report")
+	var err error
+	c.jobID, err = jobs.RegisterScheduledJobWithName(c, agent.GetCentralConfig().GetUsageReportingConfig().GetReportSchedule(), "Offline Usage Report")
 	if err != nil {
 		log.Errorf("could not register usage report creation job: %s", err.Error())
 	}
-	c.jobID = jobID
 }
 
 // getOfflineEvents - gets the offline events from the cache, lock before calling this
@@ -122,7 +113,8 @@ func (c *cacheOfflineReport) getOfflineEvents() (LighthouseUsageEvent, bool) {
 
 // loadOfflineEvents - locks the cache before getting the offline events
 func (c *cacheOfflineReport) loadOfflineEvents() (LighthouseUsageEvent, bool) {
-	if !agent.GetCentralConfig().CanPublishUsageEvent() || !agent.GetCentralConfig().GetEventAggregationOffline() {
+	if !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() ||
+		!agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return LighthouseUsageEvent{}, false
 	}
 	c.reportCacheLock.Lock()
@@ -143,7 +135,7 @@ func (c *cacheOfflineReport) setOfflineEvents(lighthouseEvent LighthouseUsageEve
 
 // updateOfflineEvents - locks the cache before setting the new light house events in the cache
 func (c *cacheOfflineReport) updateOfflineEvents(lighthouseEvent LighthouseUsageEvent) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishUsageEvent() || !agent.GetCentralConfig().GetEventAggregationOffline() {
+	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() || !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return
 	}
 
@@ -165,39 +157,36 @@ func (c *cacheOfflineReport) generateReportPath(timestamp ISO8601Time, index int
 func (c *cacheOfflineReport) validateReport(savedEvents LighthouseUsageEvent) LighthouseUsageEvent {
 	reportDuration := time.Duration(savedEvents.Granularity * int(time.Millisecond))
 
-	notValid := false
-	for !notValid {
-		// First sort the reports by the keys
-		orderedKeys := make([]string, 0, len(savedEvents.Report))
-		for k := range savedEvents.Report {
-			orderedKeys = append(orderedKeys, k)
-		}
-		sort.Strings(orderedKeys)
-
-		notValid = true
-		prevDateString := ""
-		for _, dateString := range orderedKeys {
-			if prevDateString == "" {
-				prevDateString = dateString
-				continue
-			}
-			prevTime, _ := time.Parse(ISO8601, prevDateString)
-			curTime, _ := time.Parse(ISO8601, dateString)
-			if curTime.Sub(prevTime) != reportDuration {
-				missingTime := prevTime.Add(reportDuration)
-				newReport := savedEvents.Report[dateString]
-				for usage := range newReport.Usage {
-					newReport.Usage[usage] = 0
-				}
-				savedEvents.Report[missingTime.Format(ISO8601)] = newReport
-				notValid = false
-				break
-			} else {
-				prevDateString = dateString
-			}
-		}
+	if len(savedEvents.Report) == 0 {
+		return savedEvents
 	}
 
+	// order all the keys, this will be used to find any missing times
+	orderedKeys := make([]string, 0, len(savedEvents.Report))
+	for k := range savedEvents.Report {
+		orderedKeys = append(orderedKeys, k)
+	}
+	sort.Strings(orderedKeys)
+
+	// create an empty report to insert when necessary
+	emptyReport := LighthouseUsageReport{
+		Product: savedEvents.Report[orderedKeys[0]].Product,
+		Usage:   make(map[string]int64),
+		Meta:    savedEvents.Report[orderedKeys[0]].Meta,
+	}
+	for usage := range savedEvents.Report[orderedKeys[0]].Usage {
+		emptyReport.Usage[usage] = 0
+	}
+
+	curDate, _ := time.Parse(ISO8601, orderedKeys[0])
+	lastDate, _ := time.Parse(ISO8601, orderedKeys[len(orderedKeys)-1])
+	for curDate.Before(lastDate) {
+		curDateString := curDate.Format(ISO8601)
+		if _, exists := savedEvents.Report[curDateString]; !exists {
+			savedEvents.Report[curDateString] = emptyReport
+		}
+		curDate = curDate.Add(reportDuration)
+	}
 	return savedEvents
 }
 
@@ -260,6 +249,8 @@ func (c *cacheOfflineReport) Ready() bool {
 	if agent.GetCentralConfig().GetEnvironmentID() == "" {
 		return false
 	}
+
+	defer func() { c.ready = true }() // once any existing reports are saved off this isReady
 
 	c.reportCacheLock.Lock()
 	defer c.reportCacheLock.Unlock()

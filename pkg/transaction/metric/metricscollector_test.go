@@ -29,8 +29,9 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.ClientID = "DOSA_1111"
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
-	cfg.PublishUsageEvents = true
-	cfg.PublishMetricEvents = true
+	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
+	usgCfg.Publish = true
+	usgCfg.PublishMetric = true
 	return cfg
 }
 
@@ -308,7 +309,8 @@ func TestOfflineMetricCollector(t *testing.T) {
 	cfg.LighthouseURL = s.server.URL + "/lighthouse"
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
-	cfg.EventAggregationOffline = true
+	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
+	usgCfg.Offline = true
 	agent.Initialize(cfg)
 
 	myCollector := createMetricCollector()
@@ -354,16 +356,13 @@ func TestOfflineMetricCollector(t *testing.T) {
 				// Get the usage report just sent
 				events, _ := myCollector.(*collector).reports.loadOfflineEvents()
 				var usageReport LighthouseUsageReport
-				j := 0
 				for _, report := range events.Report {
-					if j == l {
-						usageReport = report
-						break
-					}
-					j++
+					usageReport = report
 				}
 
 				assert.Equal(t, test.expectedCachedLHEvents[l], int(usageReport.Usage[cmd.BuildDataPlaneType+".Transactions"]))
+				events.Report = make(map[string]LighthouseUsageReport, 0)
+				myCollector.(*collector).reports.updateOfflineEvents(events)
 				time.Sleep(1500 * time.Millisecond)
 			}
 			s.resetConfig()

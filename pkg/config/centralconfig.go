@@ -3,14 +3,12 @@ package config
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -130,10 +128,7 @@ type CentralConfig interface {
 	GetAPIServiceRevisionPattern() string
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
-	CanPublishUsageEvent() bool
-	CanPublishMetricEvent() bool
-	GetEventAggregationInterval() time.Duration
-	GetEventAggregationOffline() bool
+	GetUsageReportingConfig() UsageReportingConfig
 	GetUpdateFromAPIServer() bool
 }
 
@@ -142,31 +137,28 @@ type CentralConfiguration struct {
 	CentralConfig
 	IConfigValidator
 	AgentType                 AgentType
-	Mode                      AgentMode          `config:"mode"`
-	TenantID                  string             `config:"organizationID"`
-	TeamName                  string             `config:"team"`
-	APICDeployment            string             `config:"deployment"`
-	Environment               string             `config:"environment"`
-	AgentName                 string             `config:"agentName"`
-	URL                       string             `config:"url"`
-	PlatformURL               string             `config:"platformURL"`
-	LighthouseURL             string             `config:"lighthouseURL"`
-	APIServerVersion          string             `config:"apiServerVersion"`
-	TagsToPublish             string             `config:"additionalTags"`
-	AppendEnvironmentToTitle  bool               `config:"appendEnvironmentToTitle"`
-	UpdateFromAPIServer       bool               `config:"updateFromAPIServer"`
-	Auth                      AuthConfig         `config:"auth"`
-	TLS                       TLSConfig          `config:"ssl"`
-	PollInterval              time.Duration      `config:"pollInterval"`
-	ReportActivityFrequency   time.Duration      `config:"reportActivityFrequency"`
-	ClientTimeout             time.Duration      `config:"clientTimeout"`
-	APIServiceRevisionPattern string             `config:"apiServiceRevisionPattern"`
-	ProxyURL                  string             `config:"proxyUrl"`
-	SubscriptionConfiguration SubscriptionConfig `config:"subscriptions"`
-	PublishUsageEvents        bool               `config:"publishUsage"`
-	EventAggregationInterval  time.Duration      `config:"eventAggregationInterval"`
-	EventAggregationOffline   bool               `config:"eventAggregationOffline"`
-	PublishMetricEvents       bool               `config:"publishMetric"`
+	Mode                      AgentMode            `config:"mode"`
+	TenantID                  string               `config:"organizationID"`
+	TeamName                  string               `config:"team"`
+	APICDeployment            string               `config:"deployment"`
+	Environment               string               `config:"environment"`
+	AgentName                 string               `config:"agentName"`
+	URL                       string               `config:"url"`
+	PlatformURL               string               `config:"platformURL"`
+	LighthouseURL             string               `config:"lighthouseURL"`
+	APIServerVersion          string               `config:"apiServerVersion"`
+	TagsToPublish             string               `config:"additionalTags"`
+	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
+	UpdateFromAPIServer       bool                 `config:"updateFromAPIServer"`
+	Auth                      AuthConfig           `config:"auth"`
+	TLS                       TLSConfig            `config:"ssl"`
+	PollInterval              time.Duration        `config:"pollInterval"`
+	ReportActivityFrequency   time.Duration        `config:"reportActivityFrequency"`
+	ClientTimeout             time.Duration        `config:"clientTimeout"`
+	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
+	ProxyURL                  string               `config:"proxyUrl"`
+	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
+	UsageReporting            UsageReportingConfig `config:"usageReporting"`
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
@@ -186,9 +178,8 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		UpdateFromAPIServer:       false,
-		EventAggregationInterval:  15 * time.Minute,
-		EventAggregationOffline:   false,
 		ReportActivityFrequency:   5 * time.Minute,
+		UsageReporting:            NewUsageReporting(),
 	}
 }
 
@@ -432,24 +423,9 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 	return c.UpdateFromAPIServer
 }
 
-// CanPublishUsageEvent - Returns flag to indicate agent can publish usage events
-func (c *CentralConfiguration) CanPublishUsageEvent() bool {
-	return c.PublishUsageEvents
-}
-
-// CanPublishMetricEvent - Returns flag to indicate agent can publish metric events
-func (c *CentralConfiguration) CanPublishMetricEvent() bool {
-	return c.PublishMetricEvents
-}
-
-// GetEventAggregationInterval - Returns the interval duration to generate usage and metric events
-func (c *CentralConfiguration) GetEventAggregationInterval() time.Duration {
-	return c.EventAggregationInterval
-}
-
-// GetEventAggregationOffline - Returns flag to indicate the event aggregation is in offline mode or not
-func (c *CentralConfiguration) GetEventAggregationOffline() bool {
-	return c.EventAggregationOffline
+// GetUsageReportingConfig -
+func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
+	return c.UsageReporting
 }
 
 const (
@@ -483,10 +459,6 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
-	pathPublishUsage              = "central.publishUsage"
-	pathPublishMetric             = "central.publishMetric"
-	pathEventAggregationInterval  = "central.eventAggregationInterval"
-	pathEventAggregationOffline   = "central.eventAggregationOffline"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -495,6 +467,9 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 		Try: func() {
 			c.validateConfig()
 			c.Auth.validate()
+			if c.AgentType == TraceabilityAgent {
+				c.UsageReporting.validate()
+			}
 		},
 		Catch: func(e error) {
 			err = e
@@ -574,25 +549,6 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetClientTimeout() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
 	}
-	eventAggSeconds := c.GetEventAggregationInterval().Milliseconds()
-	if eventAggSeconds < 60000 {
-		exception.Throw(ErrBadConfig.FormatError(pathEventAggregationInterval))
-	}
-
-	// On validation if Event Aggregation is in Offline set the interval to at least hourly
-	if c.GetEventAggregationInterval() < time.Hour && c.GetEventAggregationOffline() {
-		c.EventAggregationInterval = time.Hour
-		// Add QA environment variable to allow to override this behavior
-		if qaVar := os.Getenv("QA_CENTRAL_EVENTAGGREGATIONINTERVAL"); qaVar != "" {
-			interval, err := time.ParseDuration(qaVar)
-			if err != nil {
-				log.Tracef("Could not use QA_CENTRAL_EVENTAGGREGATIONINTERVAL time, %s, it is not a proper duration", interval)
-			} else {
-				log.Tracef("Using QA_CENTRAL_EVENTAGGREGATIONINTERVAL time, %s, rather than the minimum 1 hour for non-QA", interval)
-				c.EventAggregationInterval = interval
-			}
-		}
-	}
 
 	// lighthouseurl
 	c.validateURL(c.GetLighthouseURL(), pathLighthouseURL, false)
@@ -630,10 +586,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
-		props.AddBoolProperty(pathPublishUsage, true, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
-		props.AddBoolProperty(pathPublishMetric, false, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
-		props.AddDurationProperty(pathEventAggregationInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
-		props.AddBoolProperty(pathEventAggregationOffline, false, "Turn this on to save the usage events to disk for manual upload")
+		AddUsageReportingProperties(props)
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
@@ -683,10 +636,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
-		cfg.PublishUsageEvents = props.BoolPropertyValue(pathPublishUsage)
-		cfg.PublishMetricEvents = props.BoolPropertyValue(pathPublishMetric)
-		cfg.EventAggregationInterval = props.DurationPropertyValue(pathEventAggregationInterval)
-		cfg.EventAggregationOffline = props.BoolPropertyValue(pathEventAggregationOffline)
+		cfg.UsageReporting = ParseUsageReportingConfig(props)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)

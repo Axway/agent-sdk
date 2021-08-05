@@ -13,6 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -41,6 +42,7 @@ type collector struct {
 	publisher        publisher
 	storage          storageCache
 	reports          offlineReportCache
+	usageConfig      config.UsageReportingConfig
 }
 
 type publishQueueItem interface {
@@ -100,12 +102,13 @@ func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		startTime:        time.Now().Add(-1 * agent.GetCentralConfig().GetEventAggregationInterval()),
+		startTime:        time.Now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
+		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -116,7 +119,11 @@ func createMetricCollector() Collector {
 
 	if flag.Lookup("test.v") == nil {
 		var err error
-		metricCollector.jobID, err = jobs.RegisterIntervalJobWithName(metricCollector, agent.GetCentralConfig().GetEventAggregationInterval(), "Metric Collector")
+		if !metricCollector.usageConfig.IsOfflineMode() {
+			metricCollector.jobID, err = jobs.RegisterIntervalJobWithName(metricCollector, metricCollector.usageConfig.GetInterval(), "Metric Collector")
+		} else {
+			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.usageConfig.GetSchedule(), "Metric Collector")
+		}
 		if err != nil {
 			panic(err)
 		}
@@ -132,6 +139,10 @@ func (c *collector) Status() error {
 
 // Ready - indicates that the collector job is ready to process
 func (c *collector) Ready() bool {
+	// Wait until any existing offline reports are saved
+	if c.usageConfig.IsOfflineMode() && !c.reports.isReady() {
+		return false
+	}
 	return agent.GetCentralConfig().GetEnvironmentID() != ""
 }
 
@@ -179,7 +190,7 @@ func (c *collector) updateUsage(count int64) {
 }
 
 func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64) *APIMetric {
-	if !agent.GetCentralConfig().CanPublishMetricEvent() {
+	if !c.usageConfig.CanPublishMetric() {
 		return nil // no need to update metrics with publish off
 	}
 	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiDetails.ID + "." + statusCode)
@@ -237,7 +248,7 @@ func (c *collector) generateEvents() {
 
 	c.metricBatch = NewEventBatch(c)
 	c.registry.Each(c.processUsageFromRegistry)
-	if agent.GetCentralConfig().CanPublishMetricEvent() {
+	if c.usageConfig.CanPublishMetric() {
 		err := c.metricBatch.Publish()
 		if err != nil {
 			log.Errorf("Could not send metric event: %s, current metric data is kept and will be added to the next trigger interval.", err.Error())
@@ -248,7 +259,7 @@ func (c *collector) generateEvents() {
 func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	switch name {
 	case transactionCountMetric:
-		if agent.GetCentralConfig().CanPublishUsageEvent() {
+		if c.usageConfig.CanPublishUsage() {
 			c.generateUsageEvent(c.orgGUID)
 		} else {
 			log.Info("Publishing the usage event is turned off")
@@ -261,7 +272,7 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 }
 
 func (c *collector) generateUsageEvent(orgGUID string) {
-	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || agent.GetCentralConfig().GetEventAggregationOffline() {
+	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
 }
@@ -278,8 +289,10 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	}
 
 	granularity := int(c.endTime.Sub(c.startTime).Milliseconds())
-	if agent.GetCentralConfig().GetEventAggregationOffline() {
-		granularity = int(agent.GetCentralConfig().GetEventAggregationInterval().Milliseconds())
+	reportTime := c.startTime.Format(ISO8601)
+	if c.usageConfig.IsOfflineMode() {
+		granularity = c.usageConfig.GetReportGranularity()
+		reportTime = c.endTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
 	lightHouseUsageEvent := LighthouseUsageEvent{
@@ -289,7 +302,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		SchemaID:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
 		Granularity: granularity,
 		Report: map[string]LighthouseUsageReport{
-			c.startTime.Format(ISO8601): {
+			reportTime: {
 				Product: cmd.GetBuildDataPlaneType(),
 				Usage:   usage,
 				Meta:    make(map[string]interface{}),

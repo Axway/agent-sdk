@@ -82,7 +82,8 @@ func (c *cacheStorage) initialize() {
 func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 	// update the collector start time
 	usageStartTime, err := c.parseTimeFromCache(storageCache, usageStartTimeKey)
-	if err == nil {
+	if err == nil && !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// do not load this start time when offline
 		c.collector.startTime = usageStartTime
 	}
 
@@ -102,7 +103,7 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishUsageEvent() {
+	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
 		return
 	}
 
@@ -113,7 +114,8 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 }
 
 func (c *cacheStorage) updateVolume(bytes int64) {
-	if !c.isInitialized || !agent.GetCentralConfig().CanPublishMetricEvent() || !agent.GetCentralConfig().IsAxwayManaged() {
+	if !c.isInitialized || !agent.GetCentralConfig().IsAxwayManaged() ||
+		!agent.GetCentralConfig().GetUsageReportingConfig().CanPublishMetric() {
 		return
 	}
 
