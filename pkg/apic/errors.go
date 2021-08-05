@@ -31,6 +31,8 @@ var (
 	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
 
-	// Service body builer
+	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")
+
+	ErrTeamMismatch = errors.Newf(1164, "Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to team %s.")
 )
