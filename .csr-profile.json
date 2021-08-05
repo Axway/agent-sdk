@@ -1,7 +1,7 @@
 {
   "project": "APIC Agents SDK",
   "requirements": {
-    "dependency-check": true,
+    "dependency-check": false,
     "fortify": true,
     "irius-risk": false,
     "npm-audit": false,
@@ -24,26 +24,6 @@
       "justification": "kubernetes libraries are not used by agents",
       "ids": [
         "CVE-2019-11254"
-      ]
-    },
-    {
-      "path": ".*apic_traceability_agent\\.zip/.*",
-      "scanner": "dependency-check",
-      "classification": "No Risk",
-      "justification": "docker package not used by traceability agent sample. The package is referenced as dependency from libbeat",
-      "component": "docker",
-      "version": ".*",
-      "ids": [
-          "CVE-2018-15514",
-          "CVE-2019-13139",
-          "CVE-2019-13509",
-          "CVE-2019-15752",
-          "CVE-2019-16884",
-          "CVE-2019-5736",
-          "CVE-2020-14298",
-          "CVE-2020-14300",
-          "CVE-2018-10892",
-          "CVE-2020-27534"
       ]
     }
   ]
