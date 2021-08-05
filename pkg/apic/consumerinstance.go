@@ -43,6 +43,8 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			teamMap := obj.(map[string]string)
 			if _, found := teamMap[serviceBody.TeamName]; found {
 				owningTeam = serviceBody.TeamName
+			} else {
+				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, owningTeam))
 			}
 		}
 	}
