@@ -129,3 +129,13 @@ func SetLevel(level logrus.Level) {
 func GetLevel() logrus.Level {
 	return log.GetLevel()
 }
+
+// DeprecationWarningReplace - log a deprecation warning with the old and replaced usage
+func DeprecationWarningReplace(old string, new string) {
+	Warnf("%s is deprecated, please start using %s", old, new)
+}
+
+// DeprecationWarningDoc - log a deprecation warning with the old and replaced usage
+func DeprecationWarningDoc(old string, docRef string) {
+	Warnf("%s is deprecated, please refer to docs.axway.com regarding %s", old, docRef)
+}

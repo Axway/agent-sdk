@@ -209,7 +209,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		}
 	} else {
 		// Customer is still using deprecated date format.  Set template and pattern to defaults.
-		log.Warnf("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN is deprecated. Please refer to axway.docs regarding valid {{.Date:*}} formats.")
+		log.DeprecationWarningDoc("{{date:*}} format for CENTRAL_APISERVICEREVISIONPATTERN", "valid {{.Date:*}} formats")
 		apiSvcRevPattern = apiSvcRevTemplate
 		dateFormat = defaultDateFormat
 	}

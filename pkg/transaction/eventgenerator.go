@@ -50,7 +50,7 @@ func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 // CreateEvent - Creates a new event to be sent to Amplify Observability
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	// DEPRECATED
-	log.Warnf("%s is deprecated, to enable sampling please start using %s", "CreateEvent", "CreateEvents")
+	log.DeprecationWarningReplace("CreateEvent", "CreateEvents")
 
 	// if CreateEvent is being used, sampling will not work, so all events need to be sent
 	if metaData == nil {

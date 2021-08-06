@@ -24,8 +24,8 @@ const (
 	newUsageReportingIntervalEnvVar      = "CENTRAL_USAGEREPORTING_INTERVAL"
 
 	// QA EnvVars
-	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_SCHEDULE"
-	qaUsageReportingOfflineScheduleEnvVar = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
+	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
+	qaUsageReportingOfflineScheduleEnvVar = "QA_CENTRAL_USAGEREPORTING_OFFLINEREPORTSCHEDULE"
 
 	// Config paths
 	pathUsageReportingURL           = "central.usagereporting.url"
@@ -33,7 +33,7 @@ const (
 	pathUsageReportingPublishMetric = "central.usagereporting.publishMetric"
 	pathUsageReportingInterval      = "central.usagereporting.interval"
 	pathUsageReportingOffline       = "central.usagereporting.offline"
-	pathUsageReportingSchedule      = "central.usagereporting.schedule"
+	pathUsageReportingSchedule      = "central.usagereporting.offlineSchedule"
 )
 
 // UsageReportingConfig - Interface to get usage reporting config
@@ -58,7 +58,7 @@ type UsageReportingConfiguration struct {
 	PublishMetric     bool          `config:"publishMetric"`
 	Interval          time.Duration `config:"interval"`
 	Offline           bool          `config:"offline"`
-	Schedule          string        `config:"schedule"`
+	Schedule          string        `config:"offlineSchedule"`
 	reportSchedule    string
 	reportGranularity int
 	qaVars            bool
@@ -79,10 +79,6 @@ func NewUsageReporting() UsageReportingConfig {
 	}
 }
 
-func (u *UsageReportingConfiguration) deprecationWarning(old string, new string) {
-	log.Warnf("%s is deprecated, please start using %s", old, new)
-}
-
 func (u *UsageReportingConfiguration) validateURL() {
 	if val := os.Getenv(newUsageReportingURLEnvVar); val != "" {
 		return // this env var is set use what has been parsed
@@ -90,7 +86,7 @@ func (u *UsageReportingConfiguration) validateURL() {
 
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingURLEnvVar); val != "" {
-		u.deprecationWarning(oldUsageReportingURLEnvVar, newUsageReportingURLEnvVar)
+		log.DeprecationWarningReplace(oldUsageReportingURLEnvVar, newUsageReportingURLEnvVar)
 		u.URL = val
 	}
 }
@@ -103,7 +99,7 @@ func (u *UsageReportingConfiguration) validateInterval() {
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingIntervalEnvVar); val != "" {
 		if value, err := time.ParseDuration(val); err == nil {
-			u.deprecationWarning(oldUsageReportingIntervalEnvVar, newUsageReportingPublishEnvVar)
+			log.DeprecationWarningReplace(oldUsageReportingIntervalEnvVar, newUsageReportingPublishEnvVar)
 			u.Interval = value
 		}
 	}
@@ -118,7 +114,7 @@ func (u *UsageReportingConfiguration) validatePublish() {
 	val := os.Getenv(oldUsageReportingPublishEnvVar)
 	if val != "" {
 		if value, err := strconv.ParseBool(val); err == nil {
-			u.deprecationWarning(oldUsageReportingPublishEnvVar, newUsageReportingPublishEnvVar)
+			log.DeprecationWarningReplace(oldUsageReportingPublishEnvVar, newUsageReportingPublishEnvVar)
 			u.Publish = value
 		}
 	}
@@ -132,7 +128,7 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingPublishMetricEnvVar); val != "" {
 		if value, err := strconv.ParseBool(val); err == nil {
-			u.deprecationWarning(oldUsageReportingPublishMetricEnvVar, newUsageReportingPublishMetricEnvVar)
+			log.DeprecationWarningReplace(oldUsageReportingPublishMetricEnvVar, newUsageReportingPublishMetricEnvVar)
 			u.PublishMetric = value
 		}
 	}
