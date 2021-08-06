@@ -2,6 +2,9 @@ package metric
 
 import "time"
 
+// use a variable for this to fake it for tests
+var now = time.Now
+
 const (
 	metricEvent             = "api.transaction.status.metric"
 	messageKey              = "message"

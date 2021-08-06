@@ -28,21 +28,22 @@ type Collector interface {
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	startTime        time.Time
-	endTime          time.Time
-	orgGUID          string
-	eventChannel     chan interface{}
-	lock             *sync.Mutex
-	batchLock        *sync.Mutex
-	registry         metrics.Registry
-	metricBatch      *EventBatch
-	metricMap        map[string]map[string]*APIMetric
-	publishItemQueue []publishQueueItem
-	jobID            string
-	publisher        publisher
-	storage          storageCache
-	reports          offlineReportCache
-	usageConfig      config.UsageReportingConfig
+	startTime         time.Time
+	endTime           time.Time
+	orgGUID           string
+	eventChannel      chan interface{}
+	lock              *sync.Mutex
+	batchLock         *sync.Mutex
+	registry          metrics.Registry
+	metricBatch       *EventBatch
+	metricMap         map[string]map[string]*APIMetric
+	publishItemQueue  []publishQueueItem
+	jobID             string
+	publisher         publisher
+	storage           storageCache
+	reports           offlineReportCache
+	usageConfig       config.UsageReportingConfig
+	firstAfterRestart bool
 }
 
 type publishQueueItem interface {
@@ -102,13 +103,14 @@ func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		startTime:        time.Now().Add(-1 * time.Minute),
-		lock:             &sync.Mutex{},
-		batchLock:        &sync.Mutex{},
-		registry:         metrics.NewRegistry(),
-		metricMap:        make(map[string]map[string]*APIMetric),
-		publishItemQueue: make([]publishQueueItem, 0),
-		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
+		startTime:         now(),
+		lock:              &sync.Mutex{},
+		batchLock:         &sync.Mutex{},
+		registry:          metrics.NewRegistry(),
+		metricMap:         make(map[string]map[string]*APIMetric),
+		publishItemQueue:  make([]publishQueueItem, 0),
+		usageConfig:       agent.GetCentralConfig().GetUsageReportingConfig(),
+		firstAfterRestart: true,
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -151,7 +153,7 @@ func (c *collector) Execute() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.endTime = time.Now()
+	c.endTime = now()
 	c.orgGUID = c.getOrgGUID()
 	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 	defer func() {
@@ -207,7 +209,7 @@ func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, durat
 		apiStatusMap[statusCode] = &APIMetric{
 			API:        apiDetails,
 			StatusCode: statusCode,
-			StartTime:  time.Now(),
+			StartTime:  now(),
 		}
 	}
 
@@ -293,6 +295,11 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	if c.usageConfig.IsOfflineMode() {
 		granularity = c.usageConfig.GetReportGranularity()
 		reportTime = c.endTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
+	}
+	// first report after restart and not in online mode
+	if c.firstAfterRestart && !c.usageConfig.IsOfflineMode() {
+		reportTime = c.startTime.Add(-1 * time.Minute).Format(ISO8601)
+		c.firstAfterRestart = false
 	}
 
 	lightHouseUsageEvent := LighthouseUsageEvent{

@@ -202,10 +202,10 @@ func (c *cacheStorage) storeCacheJob() {
 }
 
 func (c *cacheStorage) parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
-	resultTime := time.Now()
+	resultTime := now()
 	item, err := storage.Get(key)
 	if err != nil {
-		return time.Now(), err
+		return now(), err
 	}
 	cachedTimeStr, ok := item.(string)
 	if ok {

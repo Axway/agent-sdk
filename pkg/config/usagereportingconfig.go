@@ -74,9 +74,13 @@ func NewUsageReporting() UsageReportingConfig {
 		Offline:           false,
 		Schedule:          "@hourly",
 		reportSchedule:    "@monthly",
-		reportGranularity: 3600000,
+		reportGranularity: 900000,
 		qaVars:            false,
 	}
+}
+
+func (u *UsageReportingConfiguration) deprecationWarning(old string, new string) {
+	log.Warnf("%s is deprecated, please start using %s", old, new)
 }
 
 func (u *UsageReportingConfiguration) validateURL() {
@@ -86,18 +90,20 @@ func (u *UsageReportingConfiguration) validateURL() {
 
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingURLEnvVar); val != "" {
+		u.deprecationWarning(oldUsageReportingURLEnvVar, newUsageReportingURLEnvVar)
 		u.URL = val
 	}
 }
 
 func (u *UsageReportingConfiguration) validateInterval() {
-	if val := os.Getenv(newUsageReportingPublishEnvVar); val != "" {
+	if val := os.Getenv(newUsageReportingIntervalEnvVar); val != "" {
 		return // this env var is set use what has been parsed
 	}
 
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingIntervalEnvVar); val != "" {
-		if value, err := time.ParseDuration(val); err != nil {
+		if value, err := time.ParseDuration(val); err == nil {
+			u.deprecationWarning(oldUsageReportingIntervalEnvVar, newUsageReportingPublishEnvVar)
 			u.Interval = value
 		}
 	}
@@ -109,8 +115,10 @@ func (u *UsageReportingConfiguration) validatePublish() {
 	}
 
 	// check if the old env var had a value
-	if val := os.Getenv(oldUsageReportingPublishEnvVar); val != "" {
-		if value, err := strconv.ParseBool(val); err != nil {
+	val := os.Getenv(oldUsageReportingPublishEnvVar)
+	if val != "" {
+		if value, err := strconv.ParseBool(val); err == nil {
+			u.deprecationWarning(oldUsageReportingPublishEnvVar, newUsageReportingPublishEnvVar)
 			u.Publish = value
 		}
 	}
@@ -123,7 +131,8 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingPublishMetricEnvVar); val != "" {
-		if value, err := strconv.ParseBool(val); err != nil {
+		if value, err := strconv.ParseBool(val); err == nil {
+			u.deprecationWarning(oldUsageReportingPublishMetricEnvVar, newUsageReportingPublishMetricEnvVar)
 			u.PublishMetric = value
 		}
 	}
@@ -139,18 +148,18 @@ func (u *UsageReportingConfiguration) validate() {
 
 	u.validateInterval() // DEPRECATE
 	eventAggSeconds := u.Interval
-	if eventAggSeconds < 60000 {
+	if eventAggSeconds < 60*time.Second {
 		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingInterval))
 	}
 
 	u.validatePublish()       // DEPRECATE
 	u.validatePublishMetric() // DEPRECATE
 
-	if _, err := cronexpr.Parse(u.Schedule); err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
-	}
-
 	if u.Offline {
+		if _, err := cronexpr.Parse(u.Schedule); err != nil {
+			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+		}
+
 		// reporting is offline, lets read the QA env vars
 		if val := os.Getenv(qaUsageReportingScheduleEnvVar); val != "" {
 			if _, err := cronexpr.Parse(val); err != nil {
@@ -182,6 +191,11 @@ func (u *UsageReportingConfiguration) validate() {
 			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
 		}
 		u.reportGranularity = int(nextTwoRuns[1].Sub(nextTwoRuns[0]).Milliseconds())
+
+		// if no QA env vars are set then validate the schedule is at least hourly
+		if nextTwoRuns[1].Sub(nextTwoRuns[0]) < time.Hour && !u.qaVars {
+			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+		}
 	}
 }
 
