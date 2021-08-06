@@ -281,7 +281,10 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 				Meta:    make(map[string]interface{}),
 			},
 		},
-		Meta: make(map[string]interface{}),
+		Meta: map[string]interface{}{
+			"AgentName":    agent.GetCentralConfig().GetAgentName(),
+			"AgentVersion": cmd.BuildVersion,
+		},
 	}
 
 	queueItem := &usageEventQueueItem{
