@@ -107,7 +107,7 @@ func TestMetricCollector(t *testing.T) {
 	paths.Paths.Data = "."
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.LighthouseURL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
@@ -237,7 +237,7 @@ func TestMetricCollectorCache(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			cfg := createCentralCfg(s.server.URL, "demo")
-			cfg.LighthouseURL = s.server.URL + "/lighthouse"
+			cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
 			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 			cfg.SetAxwayManaged(test.trackVolume)
 			cmd.BuildDataPlaneType = "Azure"
@@ -306,7 +306,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 	paths.Paths.Data = "."
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.LighthouseURL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)

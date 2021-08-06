@@ -299,7 +299,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.endTime),
-		SchemaID:    agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/report.schema.json",
+		SchemaID:    c.usageConfig.GetURL() + "/api/v1/report.schema.json",
 		Granularity: granularity,
 		Report: map[string]LighthouseUsageReport{
 			reportTime: {

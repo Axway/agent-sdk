@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -13,9 +14,11 @@ import (
 
 const (
 	// DEPRECATE remove old and new env vars as well as checks below
+	oldUsageReportingURLEnvVar           = "CENTRAL_LIGHTHOUSEURL"
 	oldUsageReportingPublishEnvVar       = "CENTRAL_PUBLISHUSAGE"
 	oldUsageReportingPublishMetricEnvVar = "CENTRAL_PUBLISHMETRIC"
 	oldUsageReportingIntervalEnvVar      = "CENTRAL_EVENTAGGREGATIONINTERVAL"
+	newUsageReportingURLEnvVar           = "CENTRAL_USAGEREPORTING_URL"
 	newUsageReportingPublishEnvVar       = "CENTRAL_USAGEREPORTING_PUBLISH"
 	newUsageReportingPublishMetricEnvVar = "CENTRAL_USAGEREPORTING_PUBLISHMETRIC"
 	newUsageReportingIntervalEnvVar      = "CENTRAL_USAGEREPORTING_INTERVAL"
@@ -25,6 +28,7 @@ const (
 	qaUsageReportingOfflineScheduleEnvVar = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
 
 	// Config paths
+	pathUsageReportingURL           = "central.usagereporting.url"
 	pathUsageReportingPublish       = "central.usagereporting.publish"
 	pathUsageReportingPublishMetric = "central.usagereporting.publishMetric"
 	pathUsageReportingInterval      = "central.usagereporting.interval"
@@ -34,6 +38,7 @@ const (
 
 // UsageReportingConfig - Interface to get usage reporting config
 type UsageReportingConfig interface {
+	GetURL() string
 	CanPublishUsage() bool
 	CanPublishMetric() bool
 	GetInterval() time.Duration
@@ -48,6 +53,7 @@ type UsageReportingConfig interface {
 // UsageReportingConfiguration - structure to hold all usage reporting settings
 type UsageReportingConfiguration struct {
 	UsageReportingConfig
+	URL               string        `config:"url"`
 	Publish           bool          `config:"publish"`
 	PublishMetric     bool          `config:"publishMetric"`
 	Interval          time.Duration `config:"interval"`
@@ -61,6 +67,7 @@ type UsageReportingConfiguration struct {
 // NewUsageReporting - Creates the default usage reporting config
 func NewUsageReporting() UsageReportingConfig {
 	return &UsageReportingConfiguration{
+		URL:               "https://lighthouse.admin.axway.com",
 		Publish:           true,
 		PublishMetric:     false,
 		Interval:          15 * time.Minute,
@@ -69,6 +76,17 @@ func NewUsageReporting() UsageReportingConfig {
 		reportSchedule:    "@monthly",
 		reportGranularity: 3600000,
 		qaVars:            false,
+	}
+}
+
+func (u *UsageReportingConfiguration) validateURL() {
+	if val := os.Getenv(newUsageReportingURLEnvVar); val != "" {
+		return // this env var is set use what has been parsed
+	}
+
+	// check if the old env var had a value
+	if val := os.Getenv(oldUsageReportingURLEnvVar); val != "" {
+		u.URL = val
 	}
 }
 
@@ -112,6 +130,13 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 }
 
 func (u *UsageReportingConfiguration) validate() {
+	u.validateURL() // DEPRECATE
+	if u.URL != "" {
+		if _, err := url.ParseRequestURI(u.URL); err != nil {
+			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingURL))
+		}
+	}
+
 	u.validateInterval() // DEPRECATE
 	eventAggSeconds := u.Interval
 	if eventAggSeconds < 60000 {
@@ -158,6 +183,11 @@ func (u *UsageReportingConfiguration) validate() {
 		}
 		u.reportGranularity = int(nextTwoRuns[1].Sub(nextTwoRuns[0]).Milliseconds())
 	}
+}
+
+// GetURL - Returns the usage reporting URL
+func (u *UsageReportingConfiguration) GetURL() string {
+	return u.URL
 }
 
 // CanPublishUsage - Returns the publish boolean

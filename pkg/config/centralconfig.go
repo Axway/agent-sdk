@@ -99,7 +99,6 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetPlatformURL() string
-	GetLighthouseURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
@@ -145,7 +144,6 @@ type CentralConfiguration struct {
 	AgentName                 string               `config:"agentName"`
 	URL                       string               `config:"url"`
 	PlatformURL               string               `config:"platformURL"`
-	LighthouseURL             string               `config:"lighthouseURL"`
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
 	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
@@ -186,11 +184,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
 	return c.PlatformURL
-}
-
-// GetLighthouseURL - Returns the lighthouse base URL
-func (c *CentralConfiguration) GetLighthouseURL() string {
-	return c.LighthouseURL
 }
 
 // GetAgentType - Returns the agent type
@@ -432,7 +425,6 @@ const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
 	pathPlatformURL               = "central.platformURL"
-	pathLighthouseURL             = "central.lighthouseURL"
 	pathAuthPrivateKey            = "central.auth.privateKey"
 	pathAuthPublicKey             = "central.auth.publicKey"
 	pathAuthKeyPassword           = "central.auth.keyPassword"
@@ -549,9 +541,6 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetClientTimeout() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
 	}
-
-	// lighthouseurl
-	c.validateURL(c.GetLighthouseURL(), pathLighthouseURL, false)
 }
 
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
@@ -585,7 +574,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 	if agentType == TraceabilityAgent {
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
-		props.AddStringProperty(pathLighthouseURL, "https://lighthouse.admin.axway.com", "URL of the Lighthouse")
 		AddUsageReportingProperties(props)
 	} else {
 		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
@@ -635,7 +623,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	if agentType == TraceabilityAgent {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
-		cfg.LighthouseURL = props.StringPropertyValue(pathLighthouseURL)
 		cfg.UsageReporting = ParseUsageReportingConfig(props)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
