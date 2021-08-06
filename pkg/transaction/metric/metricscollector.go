@@ -284,6 +284,9 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		Meta: make(map[string]interface{}),
 	}
 
+	lightHouseUsageEvent.Meta["AgentName"] = agent.GetCentralConfig().GetAgentName()
+	lightHouseUsageEvent.Meta["AgentVersion"] = cmd.BuildVersion
+
 	queueItem := &usageEventQueueItem{
 		event:        lightHouseUsageEvent,
 		usageMetric:  c.getOrRegisterCounter(transactionCountMetric),
