@@ -42,6 +42,13 @@ Report a bug [here](https://github.com/Axway/agent-sdk/issues/new?assignees=&lab
 
 If you have encountered a security vulnerability, then create an issue and attach the 'security' label.
 
+The Axway security team and associated development organizations will use reasonable efforts to:
+
+* Respond promptly in acknowledging the receipt of your vulnerability report
+* Work with you to understand the scope and severity of the vulnerability
+* Provide an estimated time frame for addressing the vulnerability
+* Update you when the vulnerability has been fixed
+
 # Proposing a Change
 
 If you intend to make any non-trivial changes to the implementation, we recommend filing an issue. This lets us reach an agreement on your proposal before you put significant effort into it.
