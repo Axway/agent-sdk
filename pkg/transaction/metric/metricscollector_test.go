@@ -101,6 +101,7 @@ func (s *testHTTPServer) resetOffline(myCollector Collector) {
 	events, _ := myCollector.(*collector).reports.loadOfflineEvents()
 	events.Report = make(map[string]LighthouseUsageReport)
 	myCollector.(*collector).reports.updateOfflineEvents(events)
+	s.resetConfig()
 }
 
 func cleanUpCachedMetricFile() {
@@ -327,30 +328,44 @@ func TestOfflineMetricCollector(t *testing.T) {
 	agent.Initialize(cfg)
 
 	testCases := []struct {
-		name                      string
-		loopCount                 int
-		apiTransactionCount       []int
-		expectedCachedLHEvents    []int
-		expectedMetricEventsAcked int
-		generateReport            bool
+		name                string
+		loopCount           int
+		apiTransactionCount []int
+		generateReport      bool
 	}{
 		{
-			name:                   "MultipleReports",
-			loopCount:              3,
-			apiTransactionCount:    []int{5, 10, 2},
-			expectedCachedLHEvents: []int{5, 10, 2},
-			generateReport:         true,
+			name:                "NoReports",
+			loopCount:           0,
+			apiTransactionCount: []int{},
+			generateReport:      true,
 		},
 		{
-			name:                   "MultipleReportsNoUsage",
-			loopCount:              3,
-			apiTransactionCount:    []int{0, 0, 0},
-			expectedCachedLHEvents: []int{0, 0, 0},
-			generateReport:         true,
+			name:                "OneReport",
+			loopCount:           1,
+			apiTransactionCount: []int{10},
+			generateReport:      true,
+		},
+		{
+			name:                "ThreeReports",
+			loopCount:           3,
+			apiTransactionCount: []int{5, 10, 2},
+			generateReport:      true,
+		},
+		{
+			name:                "ThreeReportsNoUsage",
+			loopCount:           3,
+			apiTransactionCount: []int{0, 0, 0},
+			generateReport:      true,
+		},
+		{
+			name:                "SixReports",
+			loopCount:           6,
+			apiTransactionCount: []int{5, 10, 2, 0, 3, 9},
+			generateReport:      true,
 		},
 	}
 
-	for _, test := range testCases {
+	for testNum, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
 			setupMockClient(0)
@@ -359,6 +374,17 @@ func TestOfflineMetricCollector(t *testing.T) {
 				next := startDate.Add(time.Hour * time.Duration(testLoops))
 				fmt.Println(next.Format(ISO8601))
 				return next
+			}
+
+			validateEvents := func(report LighthouseUsageEvent) {
+				for j := 0; j < test.loopCount; j++ {
+					reportKey := startDate.Add(time.Duration(j) * time.Hour).Format(ISO8601)
+					assert.Equal(t, test.apiTransactionCount[j], int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
+				}
+				// validate granularity when reports not empty
+				if test.loopCount != 0 {
+					assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
+				}
 			}
 
 			myCollector := createMetricCollector()
@@ -371,33 +397,38 @@ func TestOfflineMetricCollector(t *testing.T) {
 				metricCollector.Execute()
 				testLoops++
 			}
-			// Get the usage reports from the cache sent
+
+			// Get the usage reports from the cache and validate
 			events, _ := myCollector.(*collector).reports.loadOfflineEvents()
-			assert.Equal(t, test.expectedCachedLHEvents[0], int(events.Report[startDate.Add(-1*time.Hour).Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-			assert.Equal(t, test.expectedCachedLHEvents[1], int(events.Report[startDate.Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-			assert.Equal(t, test.expectedCachedLHEvents[2], int(events.Report[startDate.Add(time.Hour).Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
+			validateEvents(events)
 
 			// generate the report file
 			reportGenerator.Execute()
 
+			expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), testNum-1)
+			if test.loopCount == 0 {
+				// no report expected, end the test here
+				expectedFile = reportGenerator.generateReportPath(ISO8601Time(startDate), 0)
+				assert.NoFileExists(t, expectedFile)
+				return
+			}
+
 			// validate the file exists and open it
-			assert.DirExists(t, "./reports")
-			expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), 0)
 			assert.FileExists(t, expectedFile)
 			data, err := ioutil.ReadFile(expectedFile)
 			assert.Nil(t, err)
+
 			// unmarshall it
 			var reportEvents LighthouseUsageEvent
 			err = json.Unmarshal(data, &reportEvents)
 			assert.Nil(t, err)
 			assert.NotNil(t, reportEvents)
-			assert.Equal(t, test.expectedCachedLHEvents[0], int(reportEvents.Report[startDate.Add(-1*time.Hour).Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-			assert.Equal(t, test.expectedCachedLHEvents[1], int(reportEvents.Report[startDate.Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-			assert.Equal(t, test.expectedCachedLHEvents[2], int(reportEvents.Report[startDate.Add(time.Hour).Format(ISO8601)].Usage[cmd.BuildDataPlaneType+".Transactions"]))
 
-			s.resetConfig()
+			// validate event in generated reports
+			validateEvents(reportEvents)
+
 			s.resetOffline(myCollector)
-			cleanUpReportfiles()
 		})
 	}
+	cleanUpReportfiles()
 }
