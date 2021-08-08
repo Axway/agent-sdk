@@ -291,16 +291,15 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	granularity := int(c.endTime.Sub(c.startTime).Milliseconds())
 	reportTime := c.startTime.Format(ISO8601)
 	if c.usageConfig.IsOfflineMode() {
-		// reportTime = c.endTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 		granularity = c.usageConfig.GetReportGranularity()
-		reportTime = c.endTime.Format(ISO8601)
+		reportTime = c.endTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.endTime),
-		SchemaID:    c.usageConfig.GetURL() + "/api/v1/report.schema.json",
+		SchemaID:    c.usageConfig.GetURL() + schemaPath,
 		Granularity: granularity,
 		Report: map[string]LighthouseUsageReport{
 			reportTime: {

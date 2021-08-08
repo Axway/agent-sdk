@@ -378,12 +378,16 @@ func TestOfflineMetricCollector(t *testing.T) {
 
 			validateEvents := func(report LighthouseUsageEvent) {
 				for j := 0; j < test.loopCount; j++ {
-					reportKey := startDate.Add(time.Duration(j) * time.Hour).Format(ISO8601)
+					reportKey := startDate.Add(time.Duration(j-1) * time.Hour).Format(ISO8601)
+					assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
 					assert.Equal(t, test.apiTransactionCount[j], int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
 				}
 				// validate granularity when reports not empty
 				if test.loopCount != 0 {
 					assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
+					cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+					assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
+					assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
 				}
 			}
 

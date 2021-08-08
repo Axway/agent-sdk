@@ -6,6 +6,7 @@ import "time"
 var now = time.Now
 
 const (
+	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
