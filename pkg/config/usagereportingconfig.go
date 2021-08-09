@@ -152,46 +152,50 @@ func (u *UsageReportingConfiguration) validate() {
 	u.validatePublishMetric() // DEPRECATE
 
 	if u.Offline {
-		if _, err := cronexpr.Parse(u.Schedule); err != nil {
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
-		}
+		u.validateOffline()
+	}
+}
 
-		// reporting is offline, lets read the QA env vars
-		if val := os.Getenv(qaUsageReportingScheduleEnvVar); val != "" {
-			if _, err := cronexpr.Parse(val); err != nil {
-				log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingScheduleEnvVar, val)
-			} else {
-				log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingScheduleEnvVar, val, u.Schedule)
-				u.Schedule = val
-				u.qaVars = true
-			}
-		}
+func (u *UsageReportingConfiguration) validateOffline() {
+	if _, err := cronexpr.Parse(u.Schedule); err != nil {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+	}
 
-		if val := os.Getenv(qaUsageReportingOfflineScheduleEnvVar); val != "" {
-			if _, err := cronexpr.Parse(val); err != nil {
-				log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingOfflineScheduleEnvVar, val)
-			} else {
-				log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingOfflineScheduleEnvVar, val, u.reportSchedule)
-				u.reportSchedule = val
-				u.qaVars = true
-			}
+	// reporting is offline, lets read the QA env vars
+	if val := os.Getenv(qaUsageReportingScheduleEnvVar); val != "" {
+		if _, err := cronexpr.Parse(val); err != nil {
+			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingScheduleEnvVar, val)
+		} else {
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingScheduleEnvVar, val, u.Schedule)
+			u.Schedule = val
+			u.qaVars = true
 		}
+	}
 
-		// Check the cron expressions
-		cron, err := cronexpr.Parse(u.Schedule)
-		if err != nil {
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+	if val := os.Getenv(qaUsageReportingOfflineScheduleEnvVar); val != "" {
+		if _, err := cronexpr.Parse(val); err != nil {
+			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingOfflineScheduleEnvVar, val)
+		} else {
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingOfflineScheduleEnvVar, val, u.reportSchedule)
+			u.reportSchedule = val
+			u.qaVars = true
 		}
-		nextTwoRuns := cron.NextN(time.Now(), 2)
-		if len(nextTwoRuns) != 2 {
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
-		}
-		u.reportGranularity = int(nextTwoRuns[1].Sub(nextTwoRuns[0]).Milliseconds())
+	}
 
-		// if no QA env vars are set then validate the schedule is at least hourly
-		if nextTwoRuns[1].Sub(nextTwoRuns[0]) < time.Hour && !u.qaVars {
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
-		}
+	// Check the cron expressions
+	cron, err := cronexpr.Parse(u.Schedule)
+	if err != nil {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+	}
+	nextTwoRuns := cron.NextN(time.Now(), 2)
+	if len(nextTwoRuns) != 2 {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+	}
+	u.reportGranularity = int(nextTwoRuns[1].Sub(nextTwoRuns[0]).Milliseconds())
+
+	// if no QA env vars are set then validate the schedule is at least hourly
+	if nextTwoRuns[1].Sub(nextTwoRuns[0]) < time.Hour && !u.qaVars {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
 	}
 }
 
@@ -242,9 +246,9 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 
 // AddUsageReportingProperties - Adds the command properties needed for Uage Reporting Settings
 func AddUsageReportingProperties(props properties.Properties) {
-	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage event to Amplify platform. Default to true")
-	props.AddBoolProperty(pathUsageReportingPublishMetric, false, "Indicates if the agent can publish metric event to Amplify platform. Default to false")
-	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric event will be generated")
+	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
+	props.AddBoolProperty(pathUsageReportingPublishMetric, false, "Indicates if the agent can publish metric events to Amplify platform. Default to false")
+	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric events will be generated")
 	props.AddBoolProperty(pathUsageReportingOffline, false, "Turn this on to save the usage events to disk for manual upload")
 	props.AddStringProperty(pathUsageReportingSchedule, "@hourly", "The schedule at which usage events are generated, for offline mode only")
 }

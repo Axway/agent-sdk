@@ -40,7 +40,10 @@ error-check:
 	./build/scripts/error_check.sh ./pkg
 
 sonar: test-sonar
-	./sonar.sh $(mode) $(sonarHost)
+	./build/scripts/sonar.sh $(mode) $(sonarHost)
+
+sonar-preview:
+	@make sonar mode=preview sonarHost=quality1.ecd.axway.int
 
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
