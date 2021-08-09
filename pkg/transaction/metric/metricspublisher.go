@@ -30,7 +30,7 @@ type metricPublisher struct {
 
 func (pj *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
-		if agent.GetCentralConfig().GetEventAggregationOffline() {
+		if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 			return pj.publishToCache(lighthouseUsageEvent)
 		}
 		return pj.publishToLighthouse(lighthouseUsageEvent)
@@ -48,6 +48,7 @@ func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
 		for key, report := range event.Report {
 			savedEvents.Report[key] = report
 		}
+		savedEvents.Granularity = event.Granularity
 		savedEvents.Timestamp = event.Timestamp
 	} else {
 		savedEvents = event
@@ -74,7 +75,7 @@ func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error
 
 	request := api.Request{
 		Method:  api.POST,
-		URL:     agent.GetCentralConfig().GetLighthouseURL() + "/api/v1/usage/automatic",
+		URL:     agent.GetCentralConfig().GetUsageReportingConfig().GetURL() + "/api/v1/usage/automatic",
 		Headers: headers,
 		Body:    b.Bytes(),
 	}

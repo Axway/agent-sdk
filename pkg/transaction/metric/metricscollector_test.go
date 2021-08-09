@@ -2,6 +2,7 @@ package metric
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -19,18 +20,20 @@ import (
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 
-	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
+	cfg := config.NewCentralConfig(config.TraceabilityAgent).(*config.CentralConfiguration)
 	cfg.URL = url
 	cfg.TenantID = "123456"
 	cfg.Environment = env
+	cfg.APICDeployment = "test"
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "DOSA_1111"
 	authCfg.PrivateKey = "../../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
-	cfg.PublishUsageEvents = true
-	cfg.PublishMetricEvents = true
+	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
+	usgCfg.Publish = true
+	usgCfg.PublishMetric = true
 	return cfg
 }
 
@@ -94,8 +97,19 @@ func (s *testHTTPServer) resetConfig() {
 	s.failUsageEvent = false
 }
 
+func (s *testHTTPServer) resetOffline(myCollector Collector) {
+	events, _ := myCollector.(*collector).reports.loadOfflineEvents()
+	events.Report = make(map[string]LighthouseUsageReport)
+	myCollector.(*collector).reports.updateOfflineEvents(events)
+	s.resetConfig()
+}
+
 func cleanUpCachedMetricFile() {
 	os.RemoveAll("./cache")
+}
+
+func cleanUpReportfiles() {
+	os.RemoveAll("./reports")
 }
 
 func TestMetricCollector(t *testing.T) {
@@ -106,7 +120,8 @@ func TestMetricCollector(t *testing.T) {
 	paths.Paths.Data = "."
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.LighthouseURL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
@@ -236,7 +251,7 @@ func TestMetricCollectorCache(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			cfg := createCentralCfg(s.server.URL, "demo")
-			cfg.LighthouseURL = s.server.URL + "/lighthouse"
+			cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
 			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 			cfg.SetAxwayManaged(test.trackVolume)
 			cmd.BuildDataPlaneType = "Azure"
@@ -305,68 +320,119 @@ func TestOfflineMetricCollector(t *testing.T) {
 	paths.Paths.Data = "."
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.LighthouseURL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
-	cfg.EventAggregationOffline = true
+	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
+	usgCfg.Offline = true
 	agent.Initialize(cfg)
 
-	myCollector := createMetricCollector()
-	metricCollector := myCollector.(*collector)
-
 	testCases := []struct {
-		name                      string
-		loopCount                 int
-		retryBatchCount           int
-		apiTransactionCount       []int
-		failUsageEventOnServer    []bool
-		expectedPublishedLHEvents []int
-		expectedCachedLHEvents    []int
-		expectedTransactionCount  []int
-		expectedMetricEventsAcked int
+		name                string
+		loopCount           int
+		apiTransactionCount []int
+		generateReport      bool
 	}{
 		{
-			name:                      "MultipleReports",
-			loopCount:                 3,
-			retryBatchCount:           0,
-			apiTransactionCount:       []int{5, 10, 2},
-			failUsageEventOnServer:    []bool{false, false, false},
-			expectedPublishedLHEvents: []int{0, 0, 0},
-			expectedCachedLHEvents:    []int{5, 10, 2},
-			expectedTransactionCount:  []int{0, 0, 0},
-			expectedMetricEventsAcked: 1,
+			name:                "NoReports",
+			loopCount:           0,
+			apiTransactionCount: []int{},
+			generateReport:      true,
+		},
+		{
+			name:                "OneReport",
+			loopCount:           1,
+			apiTransactionCount: []int{10},
+			generateReport:      true,
+		},
+		{
+			name:                "ThreeReports",
+			loopCount:           3,
+			apiTransactionCount: []int{5, 10, 2},
+			generateReport:      true,
+		},
+		{
+			name:                "ThreeReportsNoUsage",
+			loopCount:           3,
+			apiTransactionCount: []int{0, 0, 0},
+			generateReport:      true,
+		},
+		{
+			name:                "SixReports",
+			loopCount:           6,
+			apiTransactionCount: []int{5, 10, 2, 0, 3, 9},
+			generateReport:      true,
 		},
 	}
 
-	for _, test := range testCases {
+	for testNum, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			setupMockClient(test.retryBatchCount)
-			for l := 0; l < test.loopCount; l++ {
-				for i := 0; i < test.apiTransactionCount[l]; i++ {
+			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
+			setupMockClient(0)
+			testLoops := 0
+			now = func() time.Time {
+				next := startDate.Add(time.Hour * time.Duration(testLoops))
+				fmt.Println(next.Format(ISO8601))
+				return next
+			}
+
+			validateEvents := func(report LighthouseUsageEvent) {
+				for j := 0; j < test.loopCount; j++ {
+					reportKey := startDate.Add(time.Duration(j-1) * time.Hour).Format(ISO8601)
+					assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
+					assert.Equal(t, test.apiTransactionCount[j], int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
+				}
+				// validate granularity when reports not empty
+				if test.loopCount != 0 {
+					assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
+					cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+					assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
+					assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
+				}
+			}
+
+			myCollector := createMetricCollector()
+			metricCollector := myCollector.(*collector)
+			reportGenerator := metricCollector.reports.(*cacheOfflineReport)
+			for testLoops < test.loopCount {
+				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
 					metricCollector.AddMetric(APIDetails{"111", "111"}, "200", 10, 10, "", "")
 				}
-				s.failUsageEvent = test.failUsageEventOnServer[l]
 				metricCollector.Execute()
-				assert.Equal(t, test.expectedPublishedLHEvents[l], s.lighthouseEventCount)
-				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
-				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
-
-				// Get the usage report just sent
-				events, _ := myCollector.(*collector).reports.loadOfflineEvents()
-				var usageReport LighthouseUsageReport
-				j := 0
-				for _, report := range events.Report {
-					if j == l {
-						usageReport = report
-						break
-					}
-					j++
-				}
-
-				assert.Equal(t, test.expectedCachedLHEvents[l], int(usageReport.Usage[cmd.BuildDataPlaneType+".Transactions"]))
-				time.Sleep(1500 * time.Millisecond)
+				testLoops++
 			}
-			s.resetConfig()
+
+			// Get the usage reports from the cache and validate
+			events, _ := myCollector.(*collector).reports.loadOfflineEvents()
+			validateEvents(events)
+
+			// generate the report file
+			reportGenerator.Execute()
+
+			expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), testNum-1)
+			if test.loopCount == 0 {
+				// no report expected, end the test here
+				expectedFile = reportGenerator.generateReportPath(ISO8601Time(startDate), 0)
+				assert.NoFileExists(t, expectedFile)
+				return
+			}
+
+			// validate the file exists and open it
+			assert.FileExists(t, expectedFile)
+			data, err := ioutil.ReadFile(expectedFile)
+			assert.Nil(t, err)
+
+			// unmarshall it
+			var reportEvents LighthouseUsageEvent
+			err = json.Unmarshal(data, &reportEvents)
+			assert.Nil(t, err)
+			assert.NotNil(t, reportEvents)
+
+			// validate event in generated reports
+			validateEvents(reportEvents)
+
+			s.resetOffline(myCollector)
 		})
 	}
+	cleanUpReportfiles()
 }

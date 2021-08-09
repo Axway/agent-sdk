@@ -100,6 +100,13 @@ func GetCacheDirPath() string {
 	return cacheDir
 }
 
+// GetReportsDirPath - Returns the path of the reports directory
+func GetReportsDirPath() string {
+	reportDir := path.Join(GetDataDirPath(), "reports")
+	createDirIfNotExist(reportDir)
+	return reportDir
+}
+
 func makeTraceabilityAgent(
 	indexManager outputs.IndexManager,
 	beat beat.Info,

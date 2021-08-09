@@ -2,7 +2,11 @@ package metric
 
 import "time"
 
+// use a variable for this to fake it for tests
+var now = time.Now
+
 const (
+	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
@@ -90,7 +94,7 @@ type LighthouseUsageEvent struct {
 
 // ISO8601 - time format
 const (
-	ISO8601 = "2006-01-02T15:04:05Z07:00"
+	ISO8601 = "2006-01-02T15:04:00Z07:00"
 )
 
 // ISO8601Time - time

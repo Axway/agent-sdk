@@ -9,11 +9,6 @@ import (
 // PublishAPIFunc definition for the PublishAPI func
 type PublishAPIFunc func(serviceBody apic.ServiceBody) error
 
-// deprecationWarning
-func deprecationWarning(old string, new string) {
-	log.Warnf("%s is deprecated, please start using %s", old, new)
-}
-
 // getAPIByPrimaryKey - finds the api by the Primary Key from cache or API Server query
 func getAPIByPrimaryKey(primaryKey string) interface{} {
 	var api interface{}
@@ -56,7 +51,7 @@ func getAPIByName(apiName string) interface{} {
 // IsAPIPublished  - Returns true if the API Service is already published
 func IsAPIPublished(externalAPIID string) bool {
 	// DEPRECATED
-	deprecationWarning("IsAPIPublished", "IsAPIPublishedByID")
+	log.DeprecationWarningReplace("IsAPIPublished", "IsAPIPublishedByID")
 	return IsAPIPublishedByID(externalAPIID)
 }
 
@@ -84,7 +79,7 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 // GetAttributeOnPublishedAPI - Returns the value on published proxy
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	// DEPRECATED
-	deprecationWarning("GetAttributeOnPublishedAPI", "GetAttributeOnPublishedAPIByID")
+	log.DeprecationWarningReplace("GetAttributeOnPublishedAPI", "GetAttributeOnPublishedAPIByID")
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
 

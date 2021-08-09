@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -123,14 +122,6 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
 
 	centralConfig.Environment = "111111"
-	centralConfig.EventAggregationInterval = 30 * time.Second
-
-	err = cfgValidator.ValidateCfg()
-	assert.Equal(t, "https://platform.axway.com", centralConfig.PlatformURL)
-	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.eventAggregationInterval, please set and/or check its value", err.Error())
-
-	centralConfig.EventAggregationInterval = 1 * time.Minute
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
