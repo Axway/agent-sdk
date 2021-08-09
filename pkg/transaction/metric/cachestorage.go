@@ -115,7 +115,8 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 
 func (c *cacheStorage) updateVolume(bytes int64) {
 	if !c.isInitialized || !agent.GetCentralConfig().IsAxwayManaged() ||
-		!agent.GetCentralConfig().GetUsageReportingConfig().CanPublishMetric() {
+		!agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+		// NOT initialized or NOT axway managed or can NOT publish usage
 		return
 	}
 
