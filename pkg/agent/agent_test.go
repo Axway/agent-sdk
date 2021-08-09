@@ -162,7 +162,7 @@ func TestAgentInitialize(t *testing.T) {
 
 	da = GetAgentResource()
 	assertResource(t, da, traceabilityAgentRes)
-	assert.Equal(t, 1, agentResChangeHandlerCall)
+	assert.Equal(t, 0, agentResChangeHandlerCall)
 }
 
 func TestAgentConfigOverride(t *testing.T) {
