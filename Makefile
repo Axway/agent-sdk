@@ -1,5 +1,5 @@
 .PHONY: all build
-
+#
 WORKSPACE ?= $$(pwd)
 
 GO_TEST_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
