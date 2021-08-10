@@ -44,18 +44,16 @@ func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
 	savedEvents, loaded := pj.report.loadOfflineEvents()
 
 	if loaded {
-		// Add the report from the latest event to the saved events
+		// Add the reports from the latest event to the saved events
 		for key, report := range event.Report {
 			savedEvents.Report[key] = report
 		}
-		savedEvents.Granularity = event.Granularity
-		savedEvents.Timestamp = event.Timestamp
-	} else {
-		savedEvents = event
+		// Put all reports into the new event
+		event.Report = savedEvents.Report
 	}
 
 	// Update the cache
-	pj.report.updateOfflineEvents(savedEvents)
+	pj.report.updateOfflineEvents(event)
 
 	return nil
 }
