@@ -246,6 +246,7 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 
 // AddUsageReportingProperties - Adds the command properties needed for Uage Reporting Settings
 func AddUsageReportingProperties(props properties.Properties) {
+	props.AddStringProperty(pathUsageReportingURL, "https://lighthouse.admin.axway.com", "The URL to publish usage events to in the Amplify platform. Default https://lighthouse.admin.axway.com")
 	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
 	props.AddBoolProperty(pathUsageReportingPublishMetric, false, "Indicates if the agent can publish metric events to Amplify platform. Default to false")
 	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric events will be generated")
@@ -259,6 +260,7 @@ func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig
 	cfg := NewUsageReporting().(*UsageReportingConfiguration)
 
 	// update the config
+	cfg.URL = props.StringPropertyValue(pathUsageReportingURL)
 	cfg.Publish = props.BoolPropertyValue(pathUsageReportingPublish)
 	cfg.PublishMetric = props.BoolPropertyValue(pathUsageReportingPublishMetric)
 	cfg.Interval = props.DurationPropertyValue(pathUsageReportingInterval)
