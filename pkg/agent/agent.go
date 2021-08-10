@@ -105,7 +105,11 @@ func Initialize(centralCfg config.CentralConfig) error {
 		agent.apicClient.SetTokenGetter(agent.tokenRequester)
 		agent.apicClient.OnConfigChange(centralCfg)
 	}
+
 	agent.cfg = centralCfg
+	if agent.isInitialized {
+		mergeResourceWithConfig()
+	}
 
 	if !agent.isInitialized {
 		if getAgentResourceType() != "" {
@@ -274,7 +278,7 @@ func refreshResources() (bool, error) {
 		return false, err
 	}
 
-	isChanged := true
+	isChanged := agent.isInitialized
 	if agent.prevAgentResource != nil {
 		agentResHash, _ := util.ComputeHash(agent.agentResource)
 		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
