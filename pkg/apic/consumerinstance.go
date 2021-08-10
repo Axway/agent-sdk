@@ -44,7 +44,11 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 			if _, found := teamMap[serviceBody.TeamName]; found {
 				owningTeam = serviceBody.TeamName
 			} else {
-				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, owningTeam))
+				teamForMsg := "the default team"
+				if owningTeam != "" {
+					teamForMsg = fmt.Sprintf("team %s", owningTeam)
+				}
+				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, teamForMsg))
 			}
 		}
 	}
