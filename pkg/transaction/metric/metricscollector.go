@@ -3,6 +3,7 @@ package metric
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -64,7 +65,12 @@ type usageEventQueueItem struct {
 
 func init() {
 	go func() {
-		for traceability.GetDataDirPath() == "" {
+		// Wait for the datadir to be set and exist
+		dataDir := ""
+		_, err := os.Stat(dataDir)
+		for dataDir == "" || os.IsNotExist(err) {
+			dataDir = traceability.GetDataDirPath()
+			_, err = os.Stat(dataDir)
 		}
 		GetMetricCollector()
 	}()
