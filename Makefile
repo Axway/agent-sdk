@@ -50,3 +50,13 @@ apiserver-generate: # generate api server resources. ex: make apiserver-generate
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
+
+
+PROTOFILES := $(shell find $(WORKSPACE)/proto -type f -name '*.proto')
+PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
+
+%.pb.go : %.proto
+	@echo $<
+	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=. --go_out=. $<
+
+protoc: $(PROTOTARGETS)

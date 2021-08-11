@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package apis.v1;
+
+import "apicentral.proto";
+
+option java_package = "com.axway.apicentral.watch.proto";
+option java_outer_classname = "WatchProto";
+option go_package = "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto";
+
+service WatchService {
+    rpc CreateWatch(Request) returns (stream Event) {
+    }
+}
+
+message Request {
+    repeated Trigger triggers = 1;
+}
+
+message Event {
+    string id = 1;
+    string time = 2;
+    string version = 3;
+    string product = 4;
+    string correlationId = 5;
+    Organization organization = 6;
+    enum Type {
+        CREATED = 0;
+        UPDATED = 1;
+        DELETED = 2;
+    }
+    Type type = 7;
+    .amplifycentral.datamodel.ResourceInstance payload = 8;
+}
+
+message Organization {
+    string id = 1;
+}
+
+message Trigger {
+    message Scope {
+        string kind = 1;
+        string name = 2;
+    }
+    string group = 1;
+    string kind = 2;
+    string name = 3;
+    Scope scope = 4;
+
+    enum Type {
+        CREATED = 0;
+        UPDATED = 1;
+        DELETED = 2;
+    }
+    repeated Type type = 5;
+}

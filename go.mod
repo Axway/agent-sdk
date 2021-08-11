@@ -11,7 +11,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/getkin/kin-openapi v0.67.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
@@ -30,8 +29,9 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/grpc v1.39.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

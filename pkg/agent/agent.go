@@ -72,6 +72,7 @@ type agentData struct {
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	isInitialized              bool
+	useGrpc                    bool
 }
 
 var agent = agentData{}
@@ -112,6 +113,10 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 
 	if !agent.isInitialized {
+		useGrpcCfg := os.Getenv("CENTRAL_USE_GRPC")
+		if useGrpcCfg != "" {
+			agent.useGrpc = true
+		}
 		if getAgentResourceType() != "" {
 			fetchConfig()
 			updateAgentStatus(AgentRunning, "")
@@ -167,25 +172,30 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(false)
+	newDiscoveryCacheJob, err := newDiscoveryCache(false)
+	if err != nil {
+		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
+		return
+	}
 	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 		return
 	}
 	log.Tracef("registered API cache update job: %s", id)
-
-	// Start the full update after the first interval
-	go func() {
-		time.Sleep(time.Hour)
-		allDiscoveryCacheJob := newDiscoveryCache(true)
-		id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-		if err != nil {
-			log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-			return
-		}
-		log.Tracef("registered API cache update all job: %s", id)
-	}()
+	if !agent.useGrpc {
+		// Start the full update after the first interval
+		go func() {
+			time.Sleep(time.Hour)
+			allDiscoveryCacheJob, err := newDiscoveryCache(true)
+			id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
+			if err != nil {
+				log.Errorf("could not start the All APIs cache update job: %v", err.Error())
+				return
+			}
+			log.Tracef("registered API cache update all job: %s", id)
+		}()
+	}
 }
 
 func isRunningInDockerContainer() bool {
