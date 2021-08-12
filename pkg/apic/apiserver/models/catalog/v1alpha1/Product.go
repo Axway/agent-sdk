@@ -42,7 +42,7 @@ type Product struct {
 
 	Icon interface{} `json:"icon"`
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec ProductSpec `json:"spec"`
 
