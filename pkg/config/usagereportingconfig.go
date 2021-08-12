@@ -99,7 +99,7 @@ func (u *UsageReportingConfiguration) validateInterval() {
 	// check if the old env var had a value
 	if val := os.Getenv(oldUsageReportingIntervalEnvVar); val != "" {
 		if value, err := time.ParseDuration(val); err == nil {
-			log.DeprecationWarningReplace(oldUsageReportingIntervalEnvVar, newUsageReportingPublishEnvVar)
+			log.DeprecationWarningReplace(oldUsageReportingIntervalEnvVar, newUsageReportingIntervalEnvVar)
 			u.Interval = value
 		}
 	}

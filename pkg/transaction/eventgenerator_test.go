@@ -10,6 +10,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,6 +45,20 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 		},
 	}
 	cfg.Central.SetEnvironmentID(envID)
+	return cfg
+}
+
+func createOfflineMapperTestConfig(envID string) *Config {
+	cfg := &Config{
+		Central: &corecfg.CentralConfiguration{
+			EnvironmentID: envID,
+			UsageReporting: &corecfg.UsageReportingConfiguration{
+				Offline: true,
+			},
+		},
+	}
+	cfg.Central.SetEnvironmentID(envID)
+	sampling.SetupSampling(sampling.DefaultConfig(), true)
 	return cfg
 }
 
@@ -106,4 +121,22 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	_, err := eventGenerator.CreateEvent(dummyLogEvent, time.Now(), nil, nil, nil)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad response from AxwayId: 403 Forbidden", err.Error())
+}
+
+func TestCreateEventsInOfflineMode(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		resp.WriteHeader(http.StatusForbidden)
+	}))
+	defer s.Close()
+
+	cfg := createOfflineMapperTestConfig("1111")
+	agent.Initialize(cfg.Central)
+	eventGenerator := NewEventGenerator()
+	eventGenerator.SetUseTrafficForAggregation(false)
+	dummySummaryEvent := LogEvent{
+		EnvironmentID: cfg.Central.GetEnvironmentID(),
+	}
+
+	_, err := eventGenerator.CreateEvents(dummySummaryEvent, []LogEvent{}, time.Now(), nil, nil, nil)
+	assert.Nil(t, err)
 }

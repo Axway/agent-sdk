@@ -321,7 +321,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cfg.EnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
 	cmd.BuildDataPlaneType = "Azure"
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
 	usgCfg.Offline = true

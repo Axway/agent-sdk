@@ -312,6 +312,11 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionEventBuilder) validateLogEvent() error {
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// Do not need this information in offline mode
+		return nil
+	}
+
 	if b.logEvent.TenantID == "" {
 		return errors.New("Tenant ID property not set in transaction event")
 	}
@@ -531,6 +536,11 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionSummaryBuilder) validateLogEvent() error {
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// Do not need this information in offline mode
+		return nil
+	}
+
 	if b.logEvent.TenantID == "" {
 		return errors.New("Tenant ID property not set in transaction summary event")
 	}

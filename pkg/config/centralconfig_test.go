@@ -138,6 +138,26 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	cleanupFiles(tmpFile.Name())
 }
 
+func TestTraceabilityAgentOfflineConfig(t *testing.T) {
+	cfg := NewCentralConfig(TraceabilityAgent)
+	centralConfig := cfg.(*CentralConfiguration)
+
+	// Set to offline mode
+	centralConfig.UsageReporting.(*UsageReportingConfiguration).Offline = true
+
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+	err := cfgValidator.ValidateCfg()
+
+	// Environment ID is the only config needed in offline mode
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.environmentID, please set and/or check its value", err.Error())
+	centralConfig.EnvironmentID = "abc123"
+	err = cfgValidator.ValidateCfg()
+	assert.Nil(t, err)
+}
+
 func TestTeamConfig(t *testing.T) {
 	cfg := NewCentralConfig(TraceabilityAgent)
 	centralConfig := cfg.(*CentralConfiguration)

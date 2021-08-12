@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -95,8 +96,12 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	// Setup the redaction regular expressions
 	redaction.SetupGlobalRedaction(outputConfig.Redaction)
 
-	// Setup the redaction regular expressions
-	sampling.SetupSampling(outputConfig.Sampling)
+	// Setup the sampling config, if central config can not be found assume online mode
+	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetUsageReportingConfig() != nil {
+		sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode())
+	} else {
+		sampling.SetupSampling(outputConfig.Sampling, false)
+	}
 
 	// Force piplining to 0
 	if outputConfig.Pipelining > 0 {
