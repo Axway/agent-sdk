@@ -55,13 +55,29 @@ type httpClient struct {
 	timeout    time.Duration
 }
 
-type ConfigAgent struct {
-	EnvironmentName string
-	IsDocker        bool
-	AgentName       string
+type configAgent struct {
+	environmentName string
+	isDocker        bool
+	agentName       string
 }
 
-var CfgAgent ConfigAgent
+var cfgAgent *configAgent
+
+func init() {
+	cfgAgent = &configAgent{}
+}
+
+// GetCfgAgent - return cfgAgent
+func GetCfgAgent() *configAgent {
+	return cfgAgent
+}
+
+// SetConfigAgent -
+func (ca *configAgent) SetConfigAgent(env string, isDocker bool, agentName string) {
+	ca.environmentName = env
+	ca.isDocker = isDocker
+	ca.agentName = agentName
+}
 
 // NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
@@ -129,13 +145,11 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 	}
 	if !hasUserAgentHeader {
-		var deploymentType string
-		if CfgAgent.IsDocker {
+		deploymentType := "Binary"
+		if GetCfgAgent().isDocker {
 			deploymentType = "Docker"
-		} else {
-			deploymentType = "Binary"
 		}
-		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, CfgAgent.EnvironmentName, CfgAgent.AgentName, deploymentType))
+		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, CfgAgent.environmentName, CfgAgent.agentName, deploymentType))
 	}
 	return req, err
 }
