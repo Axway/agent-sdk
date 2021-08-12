@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -53,6 +54,14 @@ type httpClient struct {
 	httpClient *http.Client
 	timeout    time.Duration
 }
+
+type ConfigAgent struct {
+	EnvironmentName string
+	IsDocker        bool
+	AgentName       string
+}
+
+var CfgAgent ConfigAgent
 
 // NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
@@ -120,7 +129,13 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 	}
 	if !hasUserAgentHeader {
-		req.Header.Set("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
+		var deploymentType string
+		if CfgAgent.IsDocker {
+			deploymentType = "Docker"
+		} else {
+			deploymentType = "Binary"
+		}
+		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, CfgAgent.EnvironmentName, CfgAgent.AgentName, deploymentType))
 	}
 	return req, err
 }

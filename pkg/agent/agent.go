@@ -107,6 +107,11 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 
 	agent.cfg = centralCfg
+	coreapi.CfgAgent = coreapi.ConfigAgent{
+		EnvironmentName: centralCfg.GetEnvironmentName(),
+		IsDocker:        isRunningInDockerContainer(),
+		AgentName:       centralCfg.GetAgentName(),
+	}
 	if agent.isInitialized {
 		mergeResourceWithConfig()
 	}
