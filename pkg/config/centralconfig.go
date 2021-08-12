@@ -605,6 +605,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if agentType == TraceabilityAgent {
 		// Check if this is offline usage reporting only
 		cfg := &CentralConfiguration{
+			AgentName: props.StringPropertyValue(pathAgentName),
 			AgentType: agentType,
 		}
 		cfg.UsageReporting = ParseUsageReportingConfig(props)

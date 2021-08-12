@@ -939,7 +939,7 @@ Below is the list of the sampling configuration properties in a YAML and their c
 
 ### Traceability usage reporting
 
-The Amplify Agents SDK has the ability to track API usages and report them back tot he Amplify platform.
+The Amplify Agents SDK has the ability to track API usages and report them back to the Amplify platform.
 
 By default usage reporting is on but can be configured using the following information.
 
