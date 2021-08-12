@@ -9,7 +9,7 @@ import (
 type ResourceInstance struct {
 	ResourceMeta
 
-	Owner interface{} `json:"owner,omitempty"`
+	Owner *Owner `json:"owner,omitempty"`
 	// Resource instance specs.
 	Spec map[string]interface{} `json:"spec"`
 
