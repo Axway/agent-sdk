@@ -27,6 +27,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.organizationID                 | CENTRAL_ORGANIZATIONID                 | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                 |
 | central.team                           | CENTRAL_TEAM                           | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to`Default Team`)                                                                                                                                                                |
 | central.environment                    | CENTRAL_ENVIRONMENT                    | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                        |
+| central.environmentID                  | CENTRAL_ENVIRONMENTID                  | Only required when `CENTRAL_USAGEREPORTING_OFFLINE=true`. The Amplify Central environment ID for usage reports.                                                                                                                                                                                                          |
 | central.deployment                     | CENTRAL_DEPLOYMENT                     | Specifies the Amplify Central deployment. This could be "prod" or "prod-eu" based on the Amplify Central region.                                                                                                                                                                                                         |
 | central.agentName                      | CENTRAL_AGENTNAME                      | The agent name of this agent on Amplify Central                                                                                                                                                                                                                                                                          |
 | central.reportActivityFrequency        | CENTRAL_REPORTACTIVITYFREQUENCY        | The frequency in which the agent published activity to Amplify Central (default: `15m`)                                                                                                                                                                                                                                  |
@@ -42,7 +43,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.ssl.minVersion                 | CENTRAL_SSL_MINVERSION                 | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                     |
 | central.ssl.maxVersion                 | CENTRAL_SSL_MAXVERSION                 | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                   |
 | central.proxyURL                       | CENTRAL_PROXYURL                       | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
-| central.usageReporting.url             | CENTRAL_USAGEREPORTING_URL             | The Lighthouse URL the agent publishes usage reports                                                                                                                                                                                                                                                                     |
+| central.usageReporting.url             | CENTRAL_USAGEREPORTING_URL             | The Lighthouse URL the agent publishes usage reports. See [Traceability usage reporting](#traceability-usage-reporting)                                                                                                                                                                                                  |
 | central.usageReporting.publish         | CENTRAL_USAGEREPORTING_PUBLISH         | Enables/disables the sending of usage events to Amplify (default: `true`)                                                                                                                                                                                                                                                |
 | central.usageReporting.publishMetric   | CENTRAL_USAGEREPORTING_PUBLISHMETRIC   | Enables/disables the sending of metric events to Amplify (default: `false`)                                                                                                                                                                                                                                              |
 | central.usageReporting.interval        | CENTRAL_USAGEREPORTING_INTERVAL        | The frequency in which the agent published activity to Amplify Central (default: `15m`)                                                                                                                                                                                                                                  |
@@ -934,6 +935,32 @@ Below is the list of the sampling configuration properties in a YAML and their c
 | percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-100) that are sent to Amplify                                 |
 | per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event |
 | reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                       |
+
+
+### Traceability usage reporting
+
+The Amplify Agents SDK has the ability to track API usages and report them back tot he Amplify platform.
+
+By default usage reporting is on but can be configured using the following information.
+
+Below is the list of the usage reporting configuration properties, all of these properties are children of [[agent type]].central.usageReporting in the yaml.
+
+| YAML property   | Variable name                          | Default                            | Description                                                                                                                                                 |
+|-----------------|----------------------------------------|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| url             | CENTRAL_USAGEREPORTING_URL             | https://lighthouse.admin.axway.com | Defines the url on the Amplify platform that usage events are sent to                                                                                       |
+| publish         | CENTRAL_USAGEREPORTING_PUBLISH         | `true`                             | Defines if API usage numbers will be published to Amplify                                                                                                   |
+| publishMetric   | CENTRAL_USAGEREPORTING_PUBLISHMETRIC   | `false`                            | Defines if individual API Metrics will be published to Anplify                                                                                              |
+| interval        | CENTRAL_USAGEREPORTING_INTERVAL        | _15m_                              | Defines the interval, in the default online mode, that usage data is sent to Amplify                                                                        |
+| offline         | CENTRAL_USAGEREPORTING_OFFLINE         | `false`                            | Defines if the agent is working in offline mode for generating usage reports, see [Offline usage reporting](#offline-usage-reporting)                       |
+| offlineSchedule | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE | `@hourly`                          | Defines the schedule in which the usage numbers are determined when in offline mode, see [Defining a schedule](../../pkg/job/README.md#defining-a-schedule) |
+
+#### Offline usage reporting
+
+If it is desired to create usage reports without connecting the agent to the Amplify platform offline usage reports may be used.  When in offline mode the agent will create a reports directory ([[agent_dir]]/data/reports) and at the end of every month create a report file.
+
+To operate in offline mode set `CENTRAL_USAGEREPORTING_OFFLINE=true` in addition to setting the corresponding Amplify environment ID `CENTRAL_ENVIRONMENTID=abc123`.
+
+By default this will save usages to a cache every hour, `CENTRAL_USAGEREPORTING_OFFLINESCHEDULE`, and that will be saved to the report file at the end of the month.
 
 ### Building the Agent
 
