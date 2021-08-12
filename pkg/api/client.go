@@ -149,7 +149,7 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		if GetCfgAgent().isDocker {
 			deploymentType = "Docker"
 		}
-		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, CfgAgent.environmentName, CfgAgent.agentName, deploymentType))
+		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
 	}
 	return req, err
 }
