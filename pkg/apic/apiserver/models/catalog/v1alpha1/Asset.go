@@ -40,7 +40,7 @@ type Asset struct {
 
 	Icon interface{} `json:"icon"`
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	References AssetReferences `json:"references"`
 
