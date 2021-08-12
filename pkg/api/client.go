@@ -61,22 +61,18 @@ type configAgent struct {
 	agentName       string
 }
 
-var cfgAgent *configAgent
+// CfgAgent -
+var CfgAgent *configAgent
 
 func init() {
-	cfgAgent = &configAgent{}
-}
-
-// GetCfgAgent - return cfgAgent
-func GetCfgAgent() *configAgent {
-	return cfgAgent
+	CfgAgent = &configAgent{}
 }
 
 // SetConfigAgent -
-func (ca *configAgent) SetConfigAgent(env string, isDocker bool, agentName string) {
-	ca.environmentName = env
-	ca.isDocker = isDocker
-	ca.agentName = agentName
+func SetConfigAgent(env string, isDocker bool, agentName string) {
+	CfgAgent.environmentName = env
+	CfgAgent.isDocker = isDocker
+	CfgAgent.agentName = agentName
 }
 
 // NewClient - creates a new HTTP client
@@ -146,10 +142,10 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 	}
 	if !hasUserAgentHeader {
 		deploymentType := "Binary"
-		if GetCfgAgent().isDocker {
+		if CfgAgent.isDocker {
 			deploymentType = "Docker"
 		}
-		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
+		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, CfgAgent.environmentName, CfgAgent.agentName, deploymentType))
 	}
 	return req, err
 }
