@@ -10,16 +10,16 @@ type OwnerType uint
 
 // values for Owner.Team
 const (
-	OwnerTeam OwnerType = iota
+	TeamOwner OwnerType = iota
 )
 
 // map of ownertype to string
 var ownerTypeToString = map[OwnerType]string{
-	OwnerTeam: "team",
+	TeamOwner: "team",
 }
 
 var ownerTypeFromString = map[string]OwnerType{
-	"team": OwnerTeam,
+	"team": TeamOwner,
 }
 
 // Owner structure.
@@ -59,7 +59,7 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON -
 func (o *Owner) UnmarshalJSON(bytes []byte) error {
 	type Alias Owner
-	aux := &struct {
+	aux := struct {
 		*Alias
 		Type string
 	}{
