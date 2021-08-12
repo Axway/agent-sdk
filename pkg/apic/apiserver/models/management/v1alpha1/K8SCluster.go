@@ -38,7 +38,7 @@ func init() {
 type K8SCluster struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec K8SClusterSpec `json:"spec"`
 }

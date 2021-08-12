@@ -38,7 +38,7 @@ func init() {
 type Document struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec DocumentSpec `json:"spec"`
 }

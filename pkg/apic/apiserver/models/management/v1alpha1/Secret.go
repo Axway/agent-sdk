@@ -21,7 +21,7 @@ var (
 )
 
 const (
-	SecretScope = "Integration"
+	SecretScope = "Environment"
 
 	SecretResourceName = "secrets"
 )
@@ -38,7 +38,7 @@ func init() {
 type Secret struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec SecretSpec `json:"spec"`
 }

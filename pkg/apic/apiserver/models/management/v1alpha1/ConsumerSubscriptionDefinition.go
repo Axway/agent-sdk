@@ -38,7 +38,7 @@ func init() {
 type ConsumerSubscriptionDefinition struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec ConsumerSubscriptionDefinitionSpec `json:"spec"`
 }

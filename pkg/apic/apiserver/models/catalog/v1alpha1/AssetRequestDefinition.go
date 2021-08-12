@@ -38,7 +38,7 @@ func init() {
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	References interface{} `json:"references"`
 
