@@ -94,6 +94,12 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return err
 	}
 
+	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		// Offline mode does not need more initialization
+		agent.cfg = centralCfg
+		return nil
+	}
+
 	err = initializeTokenRequester(centralCfg)
 	if err != nil {
 		return err

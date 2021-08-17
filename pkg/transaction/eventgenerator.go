@@ -96,7 +96,11 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		return event, err
 	}
 
-	eventData, err := e.createEventData(serializedLogEvent, eventFields)
+	eventData := eventFields
+	// No need to get the other field data if not being sampled
+	if sampled, found := metaData[sampling.SampleKey]; found && sampled.(bool) {
+		eventData, err = e.createEventData(serializedLogEvent, eventFields)
+	}
 	if err != nil {
 		return event, err
 	}
@@ -172,6 +176,11 @@ func (e *Generator) healthcheck(name string) *hc.Status {
 	status := &hc.Status{
 		Result:  hc.OK,
 		Details: "",
+	}
+
+	if percentage, _ := sampling.GetGlobalSamplingPercentage(); percentage == 0 {
+		// Do not execute the healthcheck when sampling is 0
+		return status
 	}
 
 	_, err := agent.GetCentralAuthToken()
