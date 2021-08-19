@@ -48,6 +48,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
 	cfg.GetUsageReportingConfig().(*config.UsageReportingConfiguration).Interval = 30 * time.Second
+	cfg.GetUsageReportingConfig().(*config.UsageReportingConfiguration).Offline = false
 	return cfg
 }
 
@@ -171,6 +172,12 @@ func (t *testEventProcessor) Process(events []publisher.Event) []publisher.Event
 }
 
 func TestCreateLogstashClient(t *testing.T) {
+	s := newMockHTTPServer()
+	defer s.Close()
+
+	cfg := createCentralCfg(s.server.URL, "v7")
+	agent.Initialize(cfg)
+
 	group, err := createTransport(nil)
 
 	assert.NotNil(t, err)

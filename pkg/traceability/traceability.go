@@ -284,13 +284,10 @@ func (client *Client) Publish(batch publisher.Batch) error {
 		log.Infof("Creating %d %s events", publishCount, eventType)
 	}
 
-	// do not call publish in offline mode
-	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
-		err := client.transportClient.Publish(batch)
-		if err != nil {
-			log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
-			return err
-		}
+	err := client.transportClient.Publish(batch)
+	if err != nil {
+		log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
+		return err
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
