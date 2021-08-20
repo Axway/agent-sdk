@@ -53,7 +53,7 @@ go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
 # Update any time imports in the models, we want to turn "time" into
 # time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
 ######################
-MODELS=`find ${OUTDIR}/apiserver/models -type f -name "model_*.go"`
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
 
 SEARCH="\s*\"time\"$"
 REPLACE="time \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""

@@ -10,7 +10,9 @@
 package v1alpha1
 
 import (
-	"time"
+	// GENERATE: The following code has been modified after code generation
+	// 	"time"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // GovernanceAgentStatus struct for GovernanceAgentStatus
