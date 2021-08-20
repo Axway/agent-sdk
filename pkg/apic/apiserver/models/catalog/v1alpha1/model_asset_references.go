@@ -11,6 +11,7 @@ package v1alpha1
 
 // AssetReferences struct for AssetReferences
 type AssetReferences struct {
+	Environments          []string `json:"environments,omitempty"`
 	ApiServices           []string `json:"apiServices,omitempty"`
 	AssetMappings         []string `json:"assetMappings,omitempty"`
 	AssetMappingTemplates []string `json:"assetMappingTemplates,omitempty"`

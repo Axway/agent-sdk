@@ -11,6 +11,7 @@ package v1alpha1
 
 // VirtualServiceSpec Configuration for operations on a route.
 type VirtualServiceSpec struct {
+	Id     string                  `json:"id"`
 	Method string                  `json:"method"`
 	Path   string                  `json:"path"`
 	Rules  VirtualServiceSpecRules `json:"rules,omitempty"`

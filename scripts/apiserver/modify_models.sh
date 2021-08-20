@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODEL_PATH="./pkg/apic/apiserver/models/management/v1alpha1"
+MODEL_PATH="${OUTDIR}/models/management/v1alpha1"
 COMMENT="// GENERATE: The following code has been modified after code generation"
 
 # for each file that needs changing, you can re-use the following 2 vars if you wish
@@ -53,35 +53,11 @@ go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
 # Update any time imports in the models, we want to turn "time" into
 # time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
 ######################
-MODELS=`find pkg/apic/apiserver/models -type f -name "model_*.go"`
+MODELS=`find ${OUTDIR}/apiserver/models -type f -name "model_*.go"`
 
 SEARCH="\s*\"time\"$"
 REPLACE="time \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""
 for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # add a comment to the code
-        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
-        # comment out the line we're changing
-        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
-        # add in the new line we want
-        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
-        # reformat the code
-        go fmt ${file}
-    fi
-done
-
-
-######################
-# Update any structure with Owner to have omitempty
-# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
-######################
-FILES=`find pkg/apic/apiserver/models -type f -name "*.go"`
-
-SEARCH="\s*Owner\s*struct{}\s*\`json:\"owner\"\`.*"
-REPLACE="Owner \*struct{} \`json:\"owner,omitempty\"\`"
-# SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
-# REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
-for file in ${FILES}; do
     if grep -e ${SEARCH} ${file} >> /dev/null; then
         # add a comment to the code
         $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}

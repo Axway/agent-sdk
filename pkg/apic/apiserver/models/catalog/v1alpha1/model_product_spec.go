@@ -13,5 +13,6 @@ package v1alpha1
 type ProductSpec struct {
 	// description of the Product.
 	Description string           `json:"description,omitempty"`
+	Categories  []string         `json:"categories,omitempty"`
 	Asset       ProductSpecAsset `json:"asset,omitempty"`
 }

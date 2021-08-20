@@ -20,10 +20,11 @@ const http = require('http');
 const fs = require('fs');
 const { exit } = require('process');
 
-const clientsPath = 'pkg/apic/apiserver/clients/';
-const modelsPath = 'pkg/apic/apiserver/models/';
-const resourcesTmplPath = 'scripts/apiserver/resources.tmpl';
-const clientsTmplPath = 'scripts/apiserver/clients.tmpl';
+const outDir = process.env.OUTDIR
+const clientsPath = outDir + '/clients/';
+const modelsPath = outDir + '/models/';
+const resourcesTmplPath = 'resources.tmpl';
+const clientsTmplPath = 'clients.tmpl';
 
 const fetch = () => {
 	const [, , protocol, host, port] = process.argv;
@@ -67,12 +68,11 @@ fetch()
 		}
 		const [subResources, mainResources] = createMainAndSubResources(resources);
 		// uncomment to see how the resources are grouped
-		// fs.writeFileSync('./sub-resources.json', JSON.stringify(subResources));
-		// fs.writeFileSync('./main-resources.json', JSON.stringify(mainResources));
+		//fs.writeFileSync(outDir + '/sub-resources.json', JSON.stringify(subResources));
+		//fs.writeFileSync(outDir + '/main-resources.json', JSON.stringify(mainResources));
 		delete subResources.api; // the api resources are common resources, and have been written manually.
 		writeSubResources(subResources);
-	        writeMainResources(mainResources);
-
+		writeMainResources(mainResources);
 		writeSet(mainResources);
 	})
 	.catch(err => {
@@ -268,7 +268,7 @@ const writeSet = resources => {
         const setInput = JSON.stringify({set: setResources}, null, 2)
 
         execSync(
-                `gomplate --context input='stdin:?type=application/json' -f scripts/apiserver/set.tmpl --out "pkg/apic/apiserver/clients/set.go"`,
+                `gomplate --context input='stdin:?type=application/json' -f ./set.tmpl --out "` + outDir + `/clients/set.go"`,
                 {input: setInput}
         )
 }
