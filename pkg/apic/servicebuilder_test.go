@@ -100,7 +100,7 @@ func TestServiceBodySetters(t *testing.T) {
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {
-	t.Logf("1")
+	t.Logf("12345dale")
 	serviceBuilder := NewServiceBodyBuilder()
 	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	t.Logf("2")
