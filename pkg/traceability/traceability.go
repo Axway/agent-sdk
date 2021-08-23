@@ -163,9 +163,12 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 		return outputs.Group{}, nil
 	}
 
-	err := registerHealthCheckers(traceCfg)
-	if err != nil {
-		return outputs.Group{}, err
+	// only run the health check if in online mode
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		err := registerHealthCheckers(traceCfg)
+		if err != nil {
+			return outputs.Group{}, err
+		}
 	}
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
@@ -217,6 +220,11 @@ func (client *Client) SetTransportClient(outputClient outputs.Client) {
 
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
+	// do not attempt to establish a connection in offline mode
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
 	networkClient := client.transportClient.(outputs.NetworkClient)
 	err := networkClient.Connect()
 	if err != nil {
@@ -227,6 +235,11 @@ func (client *Client) Connect() error {
 
 // Close publish a single event to output.
 func (client *Client) Close() error {
+	// do not attempt to close a connection in offline mode, it was never established
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
 	err := client.transportClient.Close()
 	if err != nil {
 		return err
