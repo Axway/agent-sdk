@@ -29,8 +29,7 @@ test: dep
 	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
 
 test-sonar: dep
-	@echo "GO_PKG_LIST: ${GO_PKG_LIST}"
-	@echo "WORKSPACE: ${WORKSPACE}"
+	@echo go version
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
