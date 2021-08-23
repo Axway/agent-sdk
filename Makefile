@@ -45,8 +45,8 @@ sonar: test-sonar
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
 
-apiserver-generate: # generate api server resources. ex: make apiserver-generate https apicentral.axway.com 443
-	./scripts/apiserver/apiserver_generate.sh $(protocol) $(host) $(port)
+apiserver-generate: # generate api server resources, prod by default. ex: make apiserver-generate protocol=https host=apicentral.axway.com port=443
+	docker run --rm -v $(shell pwd)/scripts/apiserver:/codegen/scripts -v $(shell pwd)/pkg/apic/apiserver:/codegen/output -e PROTOCOL='$(protocol)' -e HOST='$(host)'  -e PORT='$(port)' -e USERID=$(shell id -u) -e GROUPID=$(shell id -g) -w /codegen/scripts --entrypoint ./apiserver_generate.sh ampc-beano-docker-snapshot-phx.artifactory-phx.ecd.axway.int/beano-alpine-codegen:latest
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
