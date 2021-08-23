@@ -104,6 +104,7 @@ func TestServiceBodyWithParseError(t *testing.T) {
 	serviceBuilder := NewServiceBodyBuilder()
 	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	t.Logf("2")
+	t.Log(err)
 	assert.NotNil(t, err)
 
 	t.Logf("3")
