@@ -100,22 +100,29 @@ func TestServiceBodySetters(t *testing.T) {
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {
+	t.Logf("1")
 	serviceBuilder := NewServiceBodyBuilder()
 	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	t.Logf("2")
 	assert.NotNil(t, err)
 
+	t.Logf("3")
 	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.NotNil(t, err)
 
+	t.Logf("4")
 	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.NotNil(t, err)
 
+	t.Logf("5")
 	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.NotNil(t, err)
 
+	t.Logf("6")
 	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.NotNil(t, err)
 
+	t.Logf("7")
 	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.Nil(t, err)
 }
