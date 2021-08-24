@@ -107,10 +107,10 @@ func TestServiceBodyWithParseError(t *testing.T) {
 	t.Log(err)
 	assert.NotNil(t, err)
 
-	t.Logf("3")
-	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
-	t.Log(err)
-	assert.NotNil(t, err)
+	// t.Logf("3")
+	// _, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	// t.Log(err)
+	// assert.NotNil(t, err)
 
 	t.Logf("4")
 	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
