@@ -19,6 +19,7 @@ func createSpecParser(specFile, specType string) (specResourceParser, error) {
 func TestSpecDiscovery(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err := createSpecParser("./testdata/petstore-openapi3.json", "")
+	t.Logf("12345dale %s", err)
 	assert.Nil(t, err)
 	specProcessor := specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -28,6 +29,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// YAML OAS2 specification
 	specParser, err = createSpecParser("./testdata/petstore-openapi2.yaml", "")
+	t.Logf("12345daleoas2 %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -37,6 +39,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// JSON OAS2 specification
 	specParser, err = createSpecParser("./testdata/petstore-swagger2.json", "")
+	t.Logf("12345daleoas2swagger %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -46,6 +49,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// WSDL specification
 	specParser, err = createSpecParser("./testdata/weather.xml", "")
+	t.Logf("12345dalewsdl %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -55,6 +59,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// Protobuf specification
 	specParser, err = createSpecParser("./testdata/petstore.proto", "")
+	t.Logf("12345daleprotobuf %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -64,6 +69,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// AsyncAPI specification
 	specParser, err = createSpecParser("./testdata/asyncapi-sample.yaml", "")
+	t.Logf("12345daleasync %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
@@ -73,6 +79,7 @@ func TestSpecDiscovery(t *testing.T) {
 
 	// Unstructured specification
 	specParser, err = createSpecParser("./testdata/multiplication.thrift", "")
+	t.Logf("12345daleunstruct %s", err)
 	assert.Nil(t, err)
 	specProcessor = specParser.getSpecProcessor()
 	assert.NotNil(t, specProcessor)
