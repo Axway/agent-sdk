@@ -30,7 +30,8 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
@@ -50,5 +51,4 @@ replace (
 	github.com/google/gopacket => github.com/adriansr/gopacket v1.1.18-0.20200327165309-dd62abfa8a41
 	github.com/insomniacslk/dhcp => github.com/elastic/dhcp v0.0.0-20200227161230-57ec251c7eb3 // indirect
 	github.com/tonistiigi/fifo => github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c
-	golang.org/x/text => golang.org/x/text v0.3.5
 )
