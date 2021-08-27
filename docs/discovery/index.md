@@ -10,14 +10,14 @@ The Amplify Central Discovery Agents can be used for discovering APIs managed by
 - [Filtering](#Filtering)
 - [Processing Discovery](#Processing-Discovery)
 - [Publishing changes to Central](#Publishing-changes-to-Central)
-- [Subscriptions](./subscriptions)
+- [Subscriptions](./subscriptions.md)
 - [Validating ConsumerInstance](#Validating-ConsumerInstance)
 - [Building the Agent](#Building-the-Agent)
 - [Executing Discovery Agent](#Executing-Discovery-Agent)
 
 ## Central Configuration
 
-The Amplify Agents SDK provides a predefined configuration that can be set up based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. In addition, it is also used to set up subscription processing, see [subscription](./subscriptions)
+The Amplify Agents SDK provides a predefined configuration that can be set up based on yaml file, using environment variables or passed as command line flags. This configuration is used for setting up parameter that will be used for communicating with Amplify Central. In addition, it is also used to set up subscription processing, see [subscriptions](./subscriptions.md)
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
@@ -582,7 +582,7 @@ spec:
 
 ## Subscriptions
 
-See [Subscriptions](./subscriptions)
+See [Subscriptions](./subscriptions.md)
 
 ## Validating ConsumerInstance
 

@@ -34,10 +34,11 @@ func createSubscriptionSchema() error {
 
 Creating the schema above will result in the Subscription dialog looking like the following.
 
-![Subscription Dialog](subDialog1.jpg)
+![Subscription Dialog](./subDialog1.jpg)
 
 With the application name drop down looking like this.
-![Application Dropdown](subDialog2.jpg)
+
+![Application Dropdown](./subDialog2.jpg)
 
 ### Subscription Schema Builder
 
