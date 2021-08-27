@@ -1,3 +1,6 @@
 CENTRAL_URL=https://bbunny.dev.test.net
 CENTRAL_AUTH_URL=https://test.com/auth
 CENTRAL_PLATFORMURL=https://test.net
+
+# NOTE. The following line has a trailing TAB char to test an error that used to occur in parsing.
+CENTRAL_USAGEREPORTING_OFFLINE=true	

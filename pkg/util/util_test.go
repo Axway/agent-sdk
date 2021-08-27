@@ -2,7 +2,9 @@ package util
 
 import (
 	"net/url"
+	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,4 +81,9 @@ func TestLoadEnvFromFile(t *testing.T) {
 
 	err = LoadEnvFromFile("./testdata/env_vars.txt")
 	assert.Nil(t, err)
+
+	// CENTRAL_USAGEREPORTING_OFFLINE in the env_vars.txt has a value of true, followed by a TAB char
+	// this test is to verify that it gets parsed correctly
+	b, _ := strconv.ParseBool(os.Getenv("CENTRAL_USAGEREPORTING_OFFLINE"))
+	assert.True(t, b)
 }
