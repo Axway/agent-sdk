@@ -2,7 +2,9 @@ package util
 
 import (
 	"net/url"
+	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,4 +81,19 @@ func TestLoadEnvFromFile(t *testing.T) {
 
 	err = LoadEnvFromFile("./testdata/env_vars.txt")
 	assert.Nil(t, err)
+
+	assert.Equal(t, "https://bbunny.dev.test.net", os.Getenv("CENTRAL_URL"))
+	i, _ := strconv.ParseInt(os.Getenv("CENTRAL_INTVAL1"), 10, 0)
+	assert.Equal(t, int64(15), i)
+	b, _ := strconv.ParseBool(os.Getenv("CENTRAL_SSL_INSECURESKIPVERIFY"))
+	assert.True(t, b)
+
+	// These keys in the env_vars.txt all have values followed by a TAB char
+	// this test is to verify that they get parsed correctly
+	b, _ = strconv.ParseBool(os.Getenv("CENTRAL_USAGEREPORTING_OFFLINE"))
+	assert.True(t, b)
+	i, _ = strconv.ParseInt(os.Getenv("CENTRAL_INTVAL2"), 10, 0)
+	assert.Equal(t, int64(20), i)
+	b, _ = strconv.ParseBool(os.Getenv("CENTRAL_USAGEREPORTING_OFFLINE"))
+	assert.Equal(t, "https://test.net", os.Getenv("CENTRAL_AUTH_URL"))
 }
