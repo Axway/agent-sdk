@@ -1,6 +1,6 @@
 # Subscription Setup and Processing
 
-Amplify Central Subscriptions allows the consumers to subscribe with Amplify Unified Catalog item to gain access for the published asset. With agents built using Amplify Agents SDK, the published API server results in publishing catalog item under Amplify Unified Catalog, the agents can configure subscription metadata that is required from consumers at the time of subscription to provision the access in target API gateway.
+Amplify Central Subscriptions allow the consumer to subscribe, using Amplify Unified Catalog, in order to gain access for the published asset. Amplify Agents SDK publishes API server resources which result in catalog items within Amplify Unified Catalog. The agents can configure metadata that is required from consumers, at the time of subscription, to provision access to the resource in the connected gateway.
 
 ## Table of Contents
 
@@ -9,7 +9,7 @@ Amplify Central Subscriptions allows the consumers to subscribe with Amplify Uni
 
 ## Creating Subscription Schemas
 
-The Amplify Agent SDK provides a mechanism to set up subscription schemas based on configuration parameters set up by discovery agent for the target API gateway. The agent can set up subscription schemas which registers a resources of type SubscriptionDefinition an Amplify Central. When the agent discovers an API and publishes it to Amplify Central, the resource created references one of the SubscriptionDefinition resources to associate with the published API. This could be a schema per API on the target gateway or based on the authentication type of API.
+The Amplify Agent SDK provides a mechanism to set up subscription schemas based on configuration parameters set up by discovery agent for the target API gateway. The agent can set up subscription schemas which register resources of type ConsumerSubscriptionDefinition an Amplify Central. When the agent discovers an API and publishes it to Amplify Central, the created resource references one of the ConsumerSubscriptionDefinition resources and associates it with the published API. This could be a schema per API on the target gateway or based on the authentication type of API.
 
 The agent implementation can use the *SubscriptionSchemaBuilder* and *SubscriptionPropertyBuilder* interfaces to create a subscription schema with all properties needed and by calling the *Register()* method on *SubscriptionSchemaBuilder* the SDK creates the SubscriptionDefinition. The subscription schema definition can then later be used while publishing the API to associate the subscription schema with the published API server resource.
 
