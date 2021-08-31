@@ -440,7 +440,7 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 
 	for variable, template := range templates {
 		emailTemplate.IsAPIKey = !(variable == oauthEnvVar) // apikey for all but oauth
-		_, err := emailtemplate.ValidateSubscriptionConfig(template, "", emailTemplate, false)
+		_, err := emailtemplate.ValidateSubscriptionConfigOnStartup(template, "", emailTemplate)
 		if err != nil {
 			templateErr := fmt.Errorf("%s template is not valid: %s", variable, err.Error())
 			log.Error(templateErr)

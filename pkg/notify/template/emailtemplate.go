@@ -51,9 +51,19 @@ type EmailNotificationTemplate struct {
 	IsAPIKey        bool   `json:"isAPIKey,omitempty"`
 }
 
-// ValidateSubscriptionConfig - validate body and auth template tags
+// ValidateSubscriptionConfig - validate body and auth template tags during startup (config)
+func ValidateSubscriptionConfigOnStartup(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
+	return validateEmailTags(body, authTemplate, emailNotificationTemplate, false)
+}
+
+// ValidateSubscriptionConfigOnNotification - validate body and auth template tags  during notification
+func ValidateSubscriptionConfigOnNotification(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
+	return validateEmailTags(body, authTemplate, emailNotificationTemplate, true)
+}
+
+// validateEmailTags - validate body and auth template tags
 // duringProcessing bool indicates whether this func is called during startup (config) or duringProcessing (subscription notification)
-func ValidateSubscriptionConfig(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate, duringProcessing bool) (string, error) {
+func validateEmailTags(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate, duringProcessing bool) (string, error) {
 	//DEPRECATED to be removed on major release - this check for '${"' will no longer be needed after "${tag} is invalid"
 
 	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated

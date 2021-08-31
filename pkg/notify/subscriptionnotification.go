@@ -223,8 +223,8 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 		IsAPIKey:        s.IsAPIKey,
 	}
 
-	// Shouldn't have to check error from ValidateSubscriptionConfig since startup passed the subscription validation check
-	emailBody, err := emailtemplate.ValidateSubscriptionConfig(template.Body, s.AuthTemplate, emailNotificationTemplate, true)
+	// Shouldn't have to check error from ValidateSubscriptionConfigOnNotification since startup passed the subscription validation check
+	emailBody, err := emailtemplate.ValidateSubscriptionConfigOnNotification(template.Body, s.AuthTemplate, emailNotificationTemplate)
 	if err != nil {
 		return nil, err
 	}
