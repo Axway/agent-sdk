@@ -224,7 +224,7 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 	}
 
 	// Shouldn't have to check error from ValidateSubscriptionConfig since startup passed the subscription validation check
-	emailBody, err := emailtemplate.ValidateSubscriptionConfig(template.Body, s.AuthTemplate, emailNotificationTemplate)
+	emailBody, err := emailtemplate.ValidateSubscriptionConfig(template.Body, s.AuthTemplate, emailNotificationTemplate, true)
 	if err != nil {
 		return nil, err
 	}
