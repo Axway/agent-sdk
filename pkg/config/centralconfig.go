@@ -459,7 +459,7 @@ const (
 func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
-			if c.AgentType == TraceabilityAgent && c.UsageReporting.IsOfflineMode() {
+			if supportsTraceability(c.AgentType) && c.UsageReporting.IsOfflineMode() {
 				// only validate certain things when a traceability agent is in offline mode
 				c.validateOfflineConfig()
 				c.UsageReporting.validate()
@@ -467,7 +467,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 			c.validateConfig()
 			c.Auth.validate()
-			if c.AgentType == TraceabilityAgent {
+			if supportsTraceability(c.AgentType) {
 				c.UsageReporting.validate()
 			}
 		},
@@ -491,7 +491,7 @@ func (c *CentralConfiguration) validateConfig() {
 	// proxyURL
 	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
 
-	if c.GetAgentType() == TraceabilityAgent {
+	if supportsTraceability(c.AgentType) {
 		c.validateTraceabilityAgentConfig()
 	} else {
 		c.validatePublishToEnvironmentModeConfig()
@@ -588,7 +588,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
-	if agentType == TraceabilityAgent {
+	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		AddUsageReportingProperties(props)
@@ -602,7 +602,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
-	if agentType == TraceabilityAgent {
+	if supportsTraceability(agentType) {
 		// Check if this is offline usage reporting only
 		cfg := &CentralConfiguration{
 			AgentName: props.StringPropertyValue(pathAgentName),
@@ -653,7 +653,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 
-	if agentType == TraceabilityAgent {
+	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
@@ -667,4 +667,11 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	return cfg, nil
+}
+
+func supportsTraceability(agentType AgentType) bool {
+	if agentType == TraceabilityAgent || agentType == GovernanceAgent {
+		return true
+	}
+	return false
 }
