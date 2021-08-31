@@ -74,7 +74,7 @@ func validateEmailTags(body, authTemplate string, emailNotificationTemplate Emai
 		body = updateTemplate(fmt.Sprintf("%s. </br>%s", body, authTemplate))
 	} // else customer is using the {{.Tag}} and therefore the body should already contain the authTemplate in the case of SUBSCRIBE
 
-	// Bypass this check if the validation is happening during startup (config).  We won't know the auth type during starup
+	// Bypass this check if the validation is happening during startup (config).  We won't know the auth type during starup.
 	if duringProcessing && strings.Contains(body, authTemplateTag) {
 		body = strings.Replace(body, authTemplateTag, authTemplate, -1)
 	}
