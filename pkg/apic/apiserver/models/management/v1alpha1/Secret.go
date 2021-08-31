@@ -21,7 +21,7 @@ var (
 )
 
 const (
-	SecretScope = "Environment"
+	SecretScope = "Integration"
 
 	SecretResourceName = "secrets"
 )

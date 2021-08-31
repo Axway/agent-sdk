@@ -41,6 +41,8 @@ type Documentation struct {
 	Owner *apiv1.Owner `json:"owner"`
 
 	Spec DocumentationSpec `json:"spec"`
+
+	Status DocumentationStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a Documentation

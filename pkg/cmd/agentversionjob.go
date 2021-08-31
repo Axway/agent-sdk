@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/xml"
 
+	"github.com/Axway/agent-sdk/pkg/config"
+
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -39,7 +41,6 @@ type version struct {
 type AgentVersionCheckJob struct {
 	jobs.Job
 	allVersions   []string
-	latestVersion string
 	buildVersion  string
 	dataPlaneType string
 	urlName       string
@@ -75,7 +76,7 @@ func (avj *AgentVersionCheckJob) Execute() error {
 		return err
 	}
 	// compare build to latest version
-	if isVersionStringOlder(avj.buildVersion, avj.latestVersion) {
+	if isVersionStringOlder(avj.buildVersion, config.AgentLatestVersion) {
 		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, avj.latestVersion)
 	}
 	return nil
@@ -109,7 +110,7 @@ func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
 	}
 
 	avj.allVersions = hAnchors.VersionList
-	avj.latestVersion = avj.getLatestVersionFromJFrog()
+	config.AgentLatestVersion = avj.getLatestVersionFromJFrog()
 	return nil
 }
 
