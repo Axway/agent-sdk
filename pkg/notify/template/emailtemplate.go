@@ -51,7 +51,7 @@ type EmailNotificationTemplate struct {
 	IsAPIKey        bool   `json:"isAPIKey,omitempty"`
 }
 
-// ValidateSubscriptionConfig - validate body and auth template tags during startup (config)
+// ValidateSubscriptionConfigOnStartup - validate body and auth template tags during startup (config)
 func ValidateSubscriptionConfigOnStartup(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
 	return validateEmailTags(body, authTemplate, emailNotificationTemplate, false)
 }
