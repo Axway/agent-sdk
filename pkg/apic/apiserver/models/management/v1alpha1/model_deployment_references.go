@@ -9,10 +9,8 @@
 
 package v1alpha1
 
-// GovernanceAgentSpecConfigAddress The listener address configuration
-type GovernanceAgentSpecConfigAddress struct {
-	// The listener interface
-	Interface string `json:"interface"`
-	// The listener exposed port
-	Port int32 `json:"port"`
+// DeploymentReferences struct for DeploymentReferences
+type DeploymentReferences struct {
+	// Reference to the API Service that got created from this deployment.
+	ApiService string `json:"apiService,omitempty"`
 }

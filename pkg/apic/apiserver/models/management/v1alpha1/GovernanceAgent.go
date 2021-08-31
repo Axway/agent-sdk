@@ -38,9 +38,9 @@ func init() {
 type GovernanceAgent struct {
 	apiv1.ResourceMeta
 
-	Owner *apiv1.Owner `json:"owner"`
+	Agentconfigstatus GovernanceAgentAgentconfigstatus `json:"agentconfigstatus"`
 
-	Runtimeconfig interface{} `json:"runtimeconfig"`
+	Owner *apiv1.Owner `json:"owner"`
 
 	Spec GovernanceAgentSpec `json:"spec"`
 
