@@ -44,6 +44,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 // Client - interface
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
+	SetConfig(cfg corecfg.CentralConfig)
 	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
@@ -107,6 +108,12 @@ func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 // SetTokenGetter - sets the token getter
 func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) {
 	c.tokenRequester = tokenRequester
+}
+
+// SetConfig - sets the config and apiClient
+func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
+	c.cfg = cfg
+	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 }
 
 // mapToTagsArray -

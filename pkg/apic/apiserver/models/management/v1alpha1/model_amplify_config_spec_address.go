@@ -9,7 +9,10 @@
 
 package v1alpha1
 
-// GovernanceAgentSpecConfig Represents the governance agent config
-type GovernanceAgentSpecConfig struct {
-	Address GovernanceAgentSpecConfigAddress `json:"address"`
+// AmplifyConfigSpecAddress The listener address configuration.
+type AmplifyConfigSpecAddress struct {
+	// The listener interface
+	Interface string `json:"interface"`
+	// The listener exposed port
+	Port int32 `json:"port"`
 }

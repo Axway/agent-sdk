@@ -40,6 +40,8 @@ type Deployment struct {
 
 	Owner *apiv1.Owner `json:"owner"`
 
+	References DeploymentReferences `json:"references"`
+
 	Spec DeploymentSpec `json:"spec"`
 
 	State DeploymentState `json:"state"`
