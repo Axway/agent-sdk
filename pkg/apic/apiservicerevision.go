@@ -67,41 +67,53 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 	}
 }
 
-func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevision, serviceBody *ServiceBody) {
+func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevision, serviceBody *ServiceBody) *v1alpha1.APIServiceRevision {
 	revision.ResourceMeta.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
 	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
 	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
+	return revision
 }
 
 //processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	err := c.setRevisionAction(serviceBody)
+
 	if err != nil {
 		return err
 	}
 
-	httpMethod := http.MethodPost
-	revisionURL := c.cfg.GetRevisionsURL()
+	var httpMethod string
 	var revAttributes map[string]string
-
-	var revisionName string
-	if serviceBody.AltRevisionPrefix == "" {
-		revisionPrefix := c.getRevisionPrefix(serviceBody)
-		revisionName = revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount+1)
-	} else {
-		revisionName = serviceBody.AltRevisionPrefix
-	}
+	revisionPrefix := c.getRevisionPrefix(serviceBody)
+	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
+	revisionURL := c.cfg.GetRevisionsURL()
 	revision := serviceBody.serviceContext.previousRevision
 
+	if serviceBody.AltRevisionPrefix != "" {
+		revisionName = serviceBody.AltRevisionPrefix
+	}
+
 	if serviceBody.serviceContext.revisionAction == updateAPI {
-		revisionName = serviceBody.serviceContext.previousRevision.Name
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
-		c.updateRevisionResource(revision, serviceBody)
+
+		revision = c.updateRevisionResource(revision, serviceBody)
 		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
-	} else {
+	}
+
+	if serviceBody.serviceContext.revisionAction == addAPI {
+		httpMethod = http.MethodPost
+
+		// revisionCount is the total number of revisions so far. Add 1 since the action is to create a new revision.
+		serviceBody.serviceContext.revisionCount = serviceBody.serviceContext.revisionCount + 1
+		revisionCount := serviceBody.serviceContext.revisionCount
+
+		if serviceBody.AltRevisionPrefix == "" {
+			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
+		}
+
 		revAttributes = make(map[string]string)
 		if serviceBody.serviceContext.previousRevision != nil {
 			revAttributes[AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
@@ -215,13 +227,18 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 	}
 
 	// Build default apiSvcRevTitle.  To be used in case of error processing
-	defaultAPISvcRevTitle := fmt.Sprintf("%s - %s - r %s", serviceBody.APIName, time.Now().Format(dateFormat), strconv.Itoa(serviceBody.serviceContext.revisionCount+1))
+	defaultAPISvcRevTitle := fmt.Sprintf(
+		"%s - %s - r %s",
+		serviceBody.APIName,
+		time.Now().Format(dateFormat),
+		strconv.Itoa(serviceBody.serviceContext.revisionCount),
+	)
 
 	// create apiservicerevision template
 	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
 		serviceBody.APIName,
 		time.Now().Format(dateFormat),
-		strconv.Itoa(serviceBody.serviceContext.revisionCount + 1),
+		strconv.Itoa(serviceBody.serviceContext.revisionCount),
 	}
 
 	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevPattern)
