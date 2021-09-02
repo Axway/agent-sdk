@@ -58,6 +58,7 @@ func (avj *AgentVersionCheckJob) Status() error {
 
 // Execute - run agent version check job one time
 func (avj *AgentVersionCheckJob) Execute() error {
+	log.Info("Entering execute of agent version job")
 	avj.dataPlaneType = BuildDataPlaneType
 	avj.urlName = agentURL[avj.dataPlaneType]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
@@ -84,6 +85,7 @@ func (avj *AgentVersionCheckJob) Execute() error {
 }
 
 func (avj *AgentVersionCheckJob) getBuildVersion() error {
+	log.Info("Entering Build version of agentversion job")
 	avj.buildVersion = BuildVersion
 	//remove -SHA from build version
 	noSHA := strings.Split(avj.buildVersion, "-")
@@ -102,6 +104,7 @@ func (avj *AgentVersionCheckJob) getBuildVersion() error {
 // In the future, adding a (Generic) resource for grouping versions together under the same scope is a possible solution
 // ie: a new unscoped resource that represents the platform services, so that other products can plug in their releases.
 func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
+	log.Info("Entering getJFrogVersions of agentversion job")
 	b := loadPage(name)
 
 	hAnchors := htmlAnchors{}
