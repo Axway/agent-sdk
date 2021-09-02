@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/xml"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 
@@ -211,7 +212,7 @@ func loadPage(name string) []byte {
 func startAgentVersionChecker() {
 	// register the agent version checker single run job
 	log.Info("Registering the version check job")
-	id, err := jobs.RegisterSingleRunJobWithName(&AgentVersionCheckJob{}, "Version Check")
+	id, err := jobs.RegisterIntervalJobWithName(&AgentVersionCheckJob{}, time.Second*5, "Version Check")
 	if err != nil {
 		log.Errorf("could not start the agent version checker job: %v", err.Error())
 		return
