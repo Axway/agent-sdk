@@ -75,6 +75,7 @@ func (avj *AgentVersionCheckJob) Execute() error {
 		log.Trace(err)
 		return err
 	}
+	log.Info("Comparing the current version of the agent with the latest version")
 	// compare build to latest version
 	if isVersionStringOlder(avj.buildVersion, config.AgentLatestVersion) {
 		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, config.AgentLatestVersion)
@@ -110,6 +111,7 @@ func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
 	}
 
 	avj.allVersions = hAnchors.VersionList
+	log.Info("Trying to fetch the latest release from JFrog")
 	config.AgentLatestVersion = avj.getLatestVersionFromJFrog()
 	return nil
 }
