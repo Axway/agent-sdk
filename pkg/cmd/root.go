@@ -197,7 +197,9 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	c.checkStatusFlag()
 	agentsync.SetSyncMode(c.GetProperties())
+	log.Info("Before running version check job")
 	startAgentVersionChecker()
+	log.Info("After running version check")
 	return nil
 }
 
