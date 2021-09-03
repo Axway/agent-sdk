@@ -19,7 +19,7 @@ func (c *ServiceClient) buildAPIServiceInstanceSpec(
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) v1alpha1.ApiServiceInstanceSpec {
 	return v1alpha1.ApiServiceInstanceSpec{
-		ApiServiceRevision: serviceBody.serviceContext.currentRevision,
+		ApiServiceRevision: serviceBody.serviceContext.currentRevisionName,
 		Endpoint:           endPoints,
 	}
 }
@@ -66,13 +66,9 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	var instance *v1alpha1.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
-	instancePrefix := c.getRevisionPrefix(serviceBody)
-	instanceCount := serviceBody.serviceContext.revisionCount
-	serviceBody.serviceContext.instanceCount = instanceCount
-	instanceName := instancePrefix + "." + strconv.Itoa(instanceCount)
+	instanceName := serviceBody.serviceContext.currentRevisionName
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
-		instanceName = instancePrefix + "." + strconv.Itoa(instanceCount)
 		httpMethod = http.MethodPost
 		instanceAttributes := make(map[string]string)
 		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, instanceAttributes, instanceEndpoints)
@@ -85,7 +81,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			return err
 		}
 		if len(instances) == 0 {
-			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.currentRevision)
+			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.currentRevisionName)
 		}
 		instanceURL = instanceURL + "/" + instanceName
 		instance = c.updateInstanceResource(instances[0], serviceBody, instanceEndpoints)
@@ -107,7 +103,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	serviceBody.serviceContext.currentInstance = instanceName
+	serviceBody.serviceContext.currentInstanceName = instanceName
 
 	return err
 }

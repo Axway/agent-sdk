@@ -55,7 +55,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
-		ApiServiceInstance: serviceBody.serviceContext.currentInstance,
+		ApiServiceInstance: serviceBody.serviceContext.currentInstanceName,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
@@ -210,7 +210,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
-	serviceBody.serviceContext.consumerInstance = consumerInstanceName
+	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
 
 	return err
 }
