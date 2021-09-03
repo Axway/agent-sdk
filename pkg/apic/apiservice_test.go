@@ -14,23 +14,11 @@ import (
 )
 
 var serviceBody = ServiceBody{
-	// NameToPush:       nameToPush,
-	APIName: "daleapi",
-	// RestAPIID:        proxy.ID,
-	// URL:              url,
-	// TeamID:           teamID,
-	// Description:      description,
-	// Version:          version,
-	// AuthPolicy:       authType,
-	// Swagger:       []byte(swagger),
-	Documentation: []byte("\"docs\""),
-	// Tags:             tags,
-	// AgentMode:        a.getAgentMode(),
+	APIName:          "daleapi",
+	Documentation:    []byte("\"docs\""),
 	Image:            "abcde",
 	ImageContentType: "image/jpeg",
-	// CreatedBy:        corecmd.BuildAgentName,
-	ResourceType: Oas2,
-	// SubscriptionName: proxy.OrganizationID,
+	ResourceType:     Oas2,
 }
 
 func TestIsValidAuthPolicy(t *testing.T) {
