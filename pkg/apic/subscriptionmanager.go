@@ -153,7 +153,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscri
 			resource, _ := consumerInstance.AsInstance()
 			sm.setSubscriptionInfo(subscription, resource)
 		} else {
-			log.Debug("Preprocess subscription for environment mode only")
+			log.Trace("Preprocess subscription for environment mode only")
 			sm.preprocessSubscriptionForAPIServiceInstance(subscription, consumerInstance)
 		}
 	}

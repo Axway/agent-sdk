@@ -370,7 +370,7 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() Webho
 func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.Webhook.GetURL() != "" {
 		s.SetNotificationType(NotifyWebhook)
-		log.Debug("Webhook notification set")
+		log.Trace("Webhook notification set")
 		err := s.validateWebhook()
 		if err != nil {
 			return err
@@ -378,7 +378,7 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 	}
 	if s.Notifications.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
-		log.Debug("SMTP notification set")
+		log.Trace("SMTP notification set")
 		err := s.validateSubscriptionConfig()
 		if err != nil {
 			return err
@@ -393,7 +393,7 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 		return ErrBadConfig.FormatError(pathSubscriptionsApprovalMode)
 	}
 
-	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())
+	log.Tracef("Approval mode set: %s", s.GetSubscriptionApprovalMode())
 
 	// only validate the webhook approval config settings if the approval mode is for webhook
 	if s.GetSubscriptionApprovalMode() == WebhookApproval {

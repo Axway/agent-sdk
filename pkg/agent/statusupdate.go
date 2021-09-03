@@ -36,7 +36,7 @@ func (su *agentStatusUpdate) Ready() bool {
 		return false
 	}
 
-	log.Debug("Periodic status update is ready")
+	log.Trace("Periodic status update is ready")
 	su.currentActivityTime = time.Now()
 	su.previousActivityTime = su.currentActivityTime
 	return true
