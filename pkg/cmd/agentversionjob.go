@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"encoding/xml"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 
@@ -19,6 +18,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+const avcCronSchedule = "@daily"
 
 var agentURL = map[string]string{
 	"AWSDiscoveryAgent":                      "aws-apigw-discovery-agent",
@@ -59,7 +60,6 @@ func (avj *AgentVersionCheckJob) Status() error {
 
 // Execute - run agent version check job one time
 func (avj *AgentVersionCheckJob) Execute() error {
-	log.Trace("Entering execute() of agentversion job")
 	avj.dataPlaneType = BuildAgentName
 	avj.urlName = agentURL[avj.dataPlaneType]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
@@ -85,7 +85,6 @@ func (avj *AgentVersionCheckJob) Execute() error {
 }
 
 func (avj *AgentVersionCheckJob) getBuildVersion() error {
-	log.Trace("Entering getBuildVersion() of agentversion job")
 	avj.buildVersion = BuildVersion
 	//remove -SHA from build version
 	noSHA := strings.Split(avj.buildVersion, "-")
@@ -104,7 +103,6 @@ func (avj *AgentVersionCheckJob) getBuildVersion() error {
 // In the future, adding a (Generic) resource for grouping versions together under the same scope is a possible solution
 // ie: a new unscoped resource that represents the platform services, so that other products can plug in their releases.
 func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
-	log.Info("Entering getJFrogVersions() of agentversion job")
 	b := loadPage(name)
 
 	hAnchors := htmlAnchors{}
@@ -114,7 +112,6 @@ func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
 	}
 
 	avj.allVersions = hAnchors.VersionList
-	log.Info("Trying to fetch the latest release from JFrog")
 	config.AgentLatestVersion = avj.getLatestVersionFromJFrog()
 	return nil
 }
@@ -211,11 +208,20 @@ func loadPage(name string) []byte {
 // startAgentVersionChecker - single run job to check for a newer agent version on jfrog
 func startAgentVersionChecker() {
 	// register the agent version checker single run job
-	log.Info("Registering the version check job")
-	id, err := jobs.RegisterIntervalJobWithName(&AgentVersionCheckJob{}, time.Second*5, "Version Check")
+	id, err := jobs.RegisterSingleRunJobWithName(&AgentVersionCheckJob{}, "Version Check")
 	if err != nil {
 		log.Errorf("could not start the agent version checker job: %v", err.Error())
 		return
 	}
 	log.Tracef("registered agent version checker job: %s", id)
+}
+
+// startAgentVersionCheckerSchedule - cron job that checks for a newer agent version on jfrog on a daily basis
+func startAgentVersionCheckerSchedule() {
+	id, err := jobs.RegisterScheduledJobWithName(&AgentVersionCheckJob{}, avcCronSchedule, "Version Check Schedule")
+	if err != nil {
+		log.Errorf("could not start the agent version checker cronjob: %v", err.Error())
+		return
+	}
+	log.Tracef("registered agent version checker cronjob: %s", id)
 }

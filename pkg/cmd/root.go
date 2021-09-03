@@ -197,9 +197,10 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	c.checkStatusFlag()
 	agentsync.SetSyncMode(c.GetProperties())
-	log.Info("Before running version check job")
+	// Check the agent's latest version once at the agent's start time
 	startAgentVersionChecker()
-	log.Info("After running version check")
+	// Start a cronjob that regularly checks the agent's latest version and updates the agent resource
+	startAgentVersionCheckerSchedule()
 	return nil
 }
 
