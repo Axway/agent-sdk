@@ -312,7 +312,7 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionEventBuilder) validateLogEvent() error {
-	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if agent.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil
 	}
