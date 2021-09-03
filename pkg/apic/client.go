@@ -359,7 +359,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*PlatformUserInfo, error
 	}
 
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
-	log.Debugf("Platform URL being used to get user information %s", platformURL)
+	log.Tracef("Platform URL being used to get user information %s", platformURL)
 
 	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
 	if reqErr != nil {
@@ -387,7 +387,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	}
 
 	email := platformUserInfo.Result.Email
-	log.Debugf("Platform user email %s", email)
+	log.Tracef("Platform user email %s", email)
 
 	return email, nil
 }
@@ -402,7 +402,7 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 
 	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
 
-	log.Debugf("Platform user %s", userName)
+	log.Tracef("Platform user %s", userName)
 
 	return userName, nil
 }

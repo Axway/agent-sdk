@@ -238,6 +238,6 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		return defaultAPISvcRevTitle
 	}
 
-	log.Debugf("Returning apiservicerevision title : %s", apiSvcRevTitle.String())
+	log.Tracef("Returning apiservicerevision title : %s", apiSvcRevTitle.String())
 	return apiSvcRevTitle.String()
 }
