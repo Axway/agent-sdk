@@ -536,7 +536,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionSummaryBuilder) validateLogEvent() error {
-	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if agent.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil
 	}
