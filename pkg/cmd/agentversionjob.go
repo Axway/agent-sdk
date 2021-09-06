@@ -19,7 +19,7 @@ import (
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const avcCronSchedule = "@daily"
+const avcCronSchedule = "1 * * * * * *"
 
 var agentURL = map[string]string{
 	"AWSDiscoveryAgent":                      "aws-apigw-discovery-agent",
