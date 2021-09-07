@@ -56,11 +56,11 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
-		ApiServiceInstance: serviceBody.serviceContext.currentInstance,
+		ApiServiceInstance: serviceBody.serviceContext.instanceName,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
-		State:              string(serviceBody.State),
+		State:              serviceBody.State,
 		Status:             serviceBody.Status,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
@@ -151,7 +151,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, consumerInstance.Spec.Categories)
 }
 
-//processConsumerInstance - deal with either a create or update of a consumerInstance
+// processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
 
 	// Allow catalog asset to be created.  However, set to pass-through so subscriptions aren't enabled
@@ -211,7 +211,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
-	serviceBody.serviceContext.consumerInstance = consumerInstanceName
+	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
 
 	return err
 }

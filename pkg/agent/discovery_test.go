@@ -42,7 +42,7 @@ func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 }
 
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
-func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
 func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
@@ -92,7 +92,7 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
 
-func (m *mockSvcClient)SetConfig(cfg corecfg.CentralConfig) {
+func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {
 }
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID

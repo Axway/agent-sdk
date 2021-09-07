@@ -45,7 +45,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	SetConfig(cfg corecfg.CentralConfig)
-	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
+	PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error

@@ -14,23 +14,11 @@ import (
 )
 
 var serviceBody = ServiceBody{
-	// NameToPush:       nameToPush,
-	APIName: "daleapi",
-	// RestAPIID:        proxy.ID,
-	// URL:              url,
-	// TeamID:           teamID,
-	// Description:      description,
-	// Version:          version,
-	// AuthPolicy:       authType,
-	// Swagger:       []byte(swagger),
-	Documentation: []byte("\"docs\""),
-	// Tags:             tags,
-	// AgentMode:        a.getAgentMode(),
+	APIName:          "daleapi",
+	Documentation:    []byte("\"docs\""),
 	Image:            "abcde",
 	ImageContentType: "image/jpeg",
-	// CreatedBy:        corecmd.BuildAgentName,
-	ResourceType: Oas2,
-	// SubscriptionName: proxy.OrganizationID,
+	ResourceType:     Oas2,
 }
 
 func TestIsValidAuthPolicy(t *testing.T) {
@@ -74,10 +62,10 @@ func TestCreateService(t *testing.T) {
 	cloneServiceBody := serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
 
-	apiSvc, err := client.PublishService(cloneServiceBody)
+	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
-
+	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -89,7 +77,7 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err = client.PublishService(serviceBody)
+	apiSvc, err = client.PublishService(&serviceBody)
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 
@@ -112,7 +100,7 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err = client.PublishService(serviceBody)
+	apiSvc, err = client.PublishService(&serviceBody)
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 
@@ -139,7 +127,7 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err = client.PublishService(serviceBody)
+	apiSvc, err = client.PublishService(&serviceBody)
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 
@@ -169,7 +157,7 @@ func TestCreateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err = client.PublishService(serviceBody)
+	apiSvc, err = client.PublishService(&serviceBody)
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 }
@@ -250,9 +238,10 @@ func TestUpdateService(t *testing.T) {
 	defer oas2Json.Close()
 	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
 	cloneServiceBody.SpecDefinition = oas2Bytes
-	apiSvc, err := client.PublishService(cloneServiceBody)
+	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
+	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 
 	// this is a failure test
 	httpClient.SetResponses([]api.MockResponse{
@@ -262,7 +251,7 @@ func TestUpdateService(t *testing.T) {
 		},
 	})
 
-	apiSvc, err = client.PublishService(serviceBody)
+	apiSvc, err = client.PublishService(&serviceBody)
 	assert.NotNil(t, err)
 	assert.Nil(t, apiSvc)
 
@@ -308,7 +297,7 @@ func TestUpdateService(t *testing.T) {
 
 	cloneServiceBody = serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
-	apiSvc, err = client.PublishService(cloneServiceBody)
+	apiSvc, err = client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 }
@@ -318,11 +307,11 @@ func TestRevision(t *testing.T) {
 	//Alt Revision
 	cloneServiceBody.AltRevisionPrefix = "1.1.1"
 	client.processRevision(&cloneServiceBody)
-	assert.Contains(t, cloneServiceBody.serviceContext.currentRevision, "1.1.1")
+	assert.Contains(t, cloneServiceBody.serviceContext.revisionName, "1.1.1")
 	// Normal Revision
 	cloneServiceBody.AltRevisionPrefix = ""
 	client.processRevision(&cloneServiceBody)
-	assert.NotEqual(t, "", cloneServiceBody.serviceContext.currentRevision)
+	assert.NotEqual(t, "", cloneServiceBody.serviceContext.revisionName)
 }
 func TestDeleteConsumerInstance(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
@@ -523,7 +512,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 		ContentType: contentType,
 	}
 
-	apiSvc, err := client.PublishService(cloneServiceBody)
+	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 
@@ -571,7 +560,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 		ContentType: contentType,
 	}
 
-	apiSvc, err = client.PublishService(cloneServiceBody)
+	apiSvc, err = client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 
