@@ -108,7 +108,7 @@ func GetAttributeOnPublishedAPIByPrimaryKey(primaryKey string, attrName string) 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		ret, err := agent.apicClient.PublishService(serviceBody)
+		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 			apiSvc, e := ret.AsInstance()
