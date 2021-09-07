@@ -66,7 +66,8 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	var instance *v1alpha1.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
-	instanceName := serviceBody.serviceContext.currentRevisionName
+	instancePrefix := c.getRevisionPrefix(serviceBody)
+	instanceName := instancePrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
