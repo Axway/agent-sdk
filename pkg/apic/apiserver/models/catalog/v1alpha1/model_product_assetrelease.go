@@ -13,4 +13,6 @@ package v1alpha1
 type ProductAssetrelease struct {
 	// The Asset Release that the Product currently points to. Value is computed based on the selected asset filters.
 	Name string `json:"name,omitempty"`
+	// The Asset Release version that the Product currently points to.
+	Version string `json:"version,omitempty"`
 }

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/xml"
 
+	"github.com/Axway/agent-sdk/pkg/config"
+
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -16,6 +18,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+const avcCronSchedule = "@daily"
 
 var agentURL = map[string]string{
 	"AWSDiscoveryAgent":                      "aws-apigw-discovery-agent",
@@ -39,7 +43,6 @@ type version struct {
 type AgentVersionCheckJob struct {
 	jobs.Job
 	allVersions   []string
-	latestVersion string
 	buildVersion  string
 	dataPlaneType string
 	urlName       string
@@ -57,7 +60,7 @@ func (avj *AgentVersionCheckJob) Status() error {
 
 // Execute - run agent version check job one time
 func (avj *AgentVersionCheckJob) Execute() error {
-	avj.dataPlaneType = BuildDataPlaneType
+	avj.dataPlaneType = BuildAgentName
 	avj.urlName = agentURL[avj.dataPlaneType]
 	if avj.urlName == "AgentSDK" || avj.urlName == "" {
 		err := errors.ErrStartingVersionChecker.FormatError("empty or generic data plane type name")
@@ -75,8 +78,8 @@ func (avj *AgentVersionCheckJob) Execute() error {
 		return err
 	}
 	// compare build to latest version
-	if isVersionStringOlder(avj.buildVersion, avj.latestVersion) {
-		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, avj.latestVersion)
+	if isVersionStringOlder(avj.buildVersion, config.AgentLatestVersion) {
+		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, config.AgentLatestVersion)
 	}
 	return nil
 }
@@ -109,7 +112,7 @@ func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
 	}
 
 	avj.allVersions = hAnchors.VersionList
-	avj.latestVersion = avj.getLatestVersionFromJFrog()
+	config.AgentLatestVersion = avj.getLatestVersionFromJFrog()
 	return nil
 }
 
@@ -211,4 +214,14 @@ func startAgentVersionChecker() {
 		return
 	}
 	log.Tracef("registered agent version checker job: %s", id)
+}
+
+// startAgentVersionCheckerSchedule - cron job that checks for a newer agent version on jfrog on a daily basis
+func startAgentVersionCheckerSchedule() {
+	id, err := jobs.RegisterScheduledJobWithName(&AgentVersionCheckJob{}, avcCronSchedule, "Version Check Schedule")
+	if err != nil {
+		log.Errorf("could not start the agent version checker cronjob: %v", err.Error())
+		return
+	}
+	log.Tracef("registered agent version checker cronjob: %s", id)
 }

@@ -62,6 +62,9 @@ var AgentDisplayName string
 // AgentVersion - Holds the version of agent
 var AgentVersion string
 
+// AgentLatestVersion - Holds the latest version of the agent
+var AgentLatestVersion string
+
 // AgentDataPlaneType - Holds the data plane type of agent
 var AgentDataPlaneType string
 
