@@ -55,7 +55,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
-		ApiServiceInstance: serviceBody.serviceContext.currentInstanceName,
+		ApiServiceInstance: serviceBody.serviceContext.instanceName,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,

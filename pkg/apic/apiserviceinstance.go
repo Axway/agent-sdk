@@ -19,7 +19,7 @@ func (c *ServiceClient) buildAPIServiceInstanceSpec(
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) v1alpha1.ApiServiceInstanceSpec {
 	return v1alpha1.ApiServiceInstanceSpec{
-		ApiServiceRevision: serviceBody.serviceContext.currentRevisionName,
+		ApiServiceRevision: serviceBody.serviceContext.revisionName,
 		Endpoint:           endPoints,
 	}
 }
@@ -82,7 +82,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			return err
 		}
 		if len(instances) == 0 {
-			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.currentRevisionName)
+			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
 		}
 		instanceURL = instanceURL + "/" + instanceName
 		instance = c.updateInstanceResource(instances[0], serviceBody, instanceEndpoints)
@@ -104,7 +104,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	serviceBody.serviceContext.currentInstanceName = instanceName
+	serviceBody.serviceContext.instanceName = instanceName
 
 	return err
 }

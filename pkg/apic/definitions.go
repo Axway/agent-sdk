@@ -74,11 +74,11 @@ const (
 type serviceContext struct {
 	serviceName          string
 	serviceAction        actionType
-	currentRevisionName  string
+	revisionName         string
 	revisionCount        int
 	previousRevision     *v1alpha1.APIServiceRevision
 	revisionAction       actionType
-	currentInstanceName  string
+	instanceName         string
 	consumerInstanceName string
 }
 
