@@ -48,7 +48,8 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 				if owningTeam != "" {
 					teamForMsg = fmt.Sprintf("team %s", owningTeam)
 				}
-				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, teamForMsg))
+				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 			}
 		}
 	}
