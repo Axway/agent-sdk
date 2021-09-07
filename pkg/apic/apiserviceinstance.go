@@ -55,7 +55,7 @@ func (c *ServiceClient) updateInstanceResource(
 	return instance
 }
 
-// processInstance -
+// processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	instanceEndpoints, err := c.createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
