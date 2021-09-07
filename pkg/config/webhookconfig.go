@@ -75,7 +75,7 @@ func (c *WebhookConfiguration) ValidateConfig() error {
 				c.webhookHeaders[hvArray[0]] = hvArray[1]
 			}
 		}
-		log.Debug("Subscription approval webhook configuration set")
+		log.Trace("Subscription approval webhook configuration set")
 	}
 
 	return nil

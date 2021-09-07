@@ -91,7 +91,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 		if len(resourceInstancePage) < queryPageSize {
 			morePages = false
 		} else {
-			log.Debug("More resource instance pages exist.  Continue retrieval of resource instances.")
+			log.Trace("More resource instance pages exist.  Continue retrieval of resource instances.")
 		}
 
 		page++

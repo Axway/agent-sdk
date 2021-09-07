@@ -48,7 +48,8 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 				if owningTeam != "" {
 					teamForMsg = fmt.Sprintf("team %s", owningTeam)
 				}
-				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, teamForMsg))
+				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 			}
 		}
 	}
@@ -280,7 +281,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by external api id: %s", externalAPIID)
+	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==%s", externalAPIID),
@@ -321,7 +322,7 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.Co
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by id: %s", instanceID)
+	log.Tracef("Get consumer instance by id: %s", instanceID)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("metadata.id==%s", instanceID),
@@ -359,7 +360,7 @@ func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by name: %s", consumerInstanceName)
+	log.Tracef("Get consumer instance by name: %s", consumerInstanceName)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("name==%s", consumerInstanceName),

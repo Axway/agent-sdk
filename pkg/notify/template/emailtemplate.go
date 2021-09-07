@@ -1,4 +1,4 @@
-package fubar
+package template
 
 import (
 	"bytes"
@@ -16,6 +16,10 @@ import (
 	2. Remove deprecated code left from APIGOV-19751
 */
 
+const (
+	authTemplateTag = "{{.AuthTemplate}}"
+)
+
 //DEPRECATED to be removed on major release - this map will no longer be needed after "${tag} is invalid"
 // subNotifTemplateMap - map of date formats for apiservicerevision title
 var subNotifTemplateMap = map[string]string{
@@ -28,7 +32,7 @@ var subNotifTemplateMap = map[string]string{
 	"${clientSecret}":    "{{.ClientSecret}}",
 	"${action}":          "{{.Action}}",
 	"${email}":           "{{.Email}}",
-	"${authtemplate}":    "{{.AuthTemplate}}",
+	"${authtemplate}":    authTemplateTag,
 	"${message}":         "{{.Message}}",
 }
 
@@ -47,8 +51,19 @@ type EmailNotificationTemplate struct {
 	IsAPIKey        bool   `json:"isAPIKey,omitempty"`
 }
 
-// ValidateSubscriptionConfig - validate body and auth template tags
-func ValidateSubscriptionConfig(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
+// ValidateSubscriptionConfigOnStartup - validate body and auth template tags during startup (config)
+func ValidateSubscriptionConfigOnStartup(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
+	return validateEmailTags(body, authTemplate, emailNotificationTemplate, false)
+}
+
+// ValidateSubscriptionConfigOnNotification - validate body and auth template tags  during notification
+func ValidateSubscriptionConfigOnNotification(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate) (string, error) {
+	return validateEmailTags(body, authTemplate, emailNotificationTemplate, true)
+}
+
+// validateEmailTags - validate body and auth template tags
+// duringProcessing bool indicates whether this func is called during startup (config) or duringProcessing (subscription notification)
+func validateEmailTags(body, authTemplate string, emailNotificationTemplate EmailNotificationTemplate, duringProcessing bool) (string, error) {
 	//DEPRECATED to be removed on major release - this check for '${"' will no longer be needed after "${tag} is invalid"
 
 	// Verify if customer is still using "${tag}" teamplate.  Warn them that it is going to be deprecated
@@ -58,6 +73,11 @@ func ValidateSubscriptionConfig(body, authTemplate string, emailNotificationTemp
 		// update body using the old style Body concat with AuthTemplate
 		body = updateTemplate(fmt.Sprintf("%s. </br>%s", body, authTemplate))
 	} // else customer is using the {{.Tag}} and therefore the body should already contain the authTemplate in the case of SUBSCRIBE
+
+	// Bypass this check if the validation is happening during startup (config).  We won't know the auth type during starup.
+	if duringProcessing && strings.Contains(body, authTemplateTag) {
+		body = strings.Replace(body, authTemplateTag, authTemplate, -1)
+	}
 
 	return setEmailBodyTemplate(body, emailNotificationTemplate)
 

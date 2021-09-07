@@ -186,6 +186,8 @@ log.Infof("Log entry with format, %s", "additional log ~~message")
 
 log.Debugf("No changes detected in the API %s", *azAPI.Name)
 
+log.Trace("I got here in the code")
+
 log.Errorf("Error in processing : %s", err.Error())
 
 log.Warnf("Config not found: %s", missingItem)

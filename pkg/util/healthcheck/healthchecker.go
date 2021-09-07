@@ -89,7 +89,7 @@ func WaitForReady() error {
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {
-				log.Debug("Services are Ready")
+				log.Trace("Services are Ready")
 				return nil
 			}
 		}
@@ -128,7 +128,7 @@ func executeCheck(check *statusCheck) {
 	// Run the check
 	check.Status = check.checker(check.Name)
 	if check.Status.Result == OK {
-		log.Debugf("%s - %s", check.Name, check.Status.Result)
+		log.Tracef("%s - %s", check.Name, check.Status.Result)
 	} else {
 		log.Errorf("%s - %s (%s)", check.Name, check.Status.Result, check.Status.Details)
 	}

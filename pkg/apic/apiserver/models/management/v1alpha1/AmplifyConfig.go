@@ -11,40 +11,40 @@ import (
 )
 
 var (
-	_SecretGVK = apiv1.GroupVersionKind{
+	_AmplifyConfigGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "Secret",
+			Kind:  "AmplifyConfig",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	SecretScope = "Integration"
+	AmplifyConfigScope = "Environment"
 
-	SecretResourceName = "secrets"
+	AmplifyConfigResourceName = "ampconfigs"
 )
 
-func SecretGVK() apiv1.GroupVersionKind {
-	return _SecretGVK
+func AmplifyConfigGVK() apiv1.GroupVersionKind {
+	return _AmplifyConfigGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResourceName)
+	apiv1.RegisterGVK(_AmplifyConfigGVK, AmplifyConfigScope, AmplifyConfigResourceName)
 }
 
-// Secret Resource
-type Secret struct {
+// AmplifyConfig Resource
+type AmplifyConfig struct {
 	apiv1.ResourceMeta
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec SecretSpec `json:"spec"`
+	Spec AmplifyConfigSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a Secret
-func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a AmplifyConfig
+func (res *AmplifyConfig) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -63,14 +63,14 @@ func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret
-func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, error) {
-	newArray := make([]*Secret, 0)
+// AmplifyConfigFromInstanceArray converts a []*ResourceInstance to a []*AmplifyConfig
+func AmplifyConfigFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AmplifyConfig, error) {
+	newArray := make([]*AmplifyConfig, 0)
 	for _, item := range fromArray {
-		res := &Secret{}
+		res := &AmplifyConfig{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Secret, 0), err
+			return make([]*AmplifyConfig, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -78,10 +78,10 @@ func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, er
 	return newArray, nil
 }
 
-// AsInstance converts a Secret to a ResourceInstance
-func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a AmplifyConfig to a ResourceInstance
+func (res *AmplifyConfig) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = SecretGVK()
+	meta.GroupVersionKind = AmplifyConfigGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
