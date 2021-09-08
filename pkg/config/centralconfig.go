@@ -670,8 +670,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 }
 
 func supportsTraceability(agentType AgentType) bool {
-	if agentType == TraceabilityAgent || agentType == GovernanceAgent {
-		return true
-	}
-	return false
+	return agentType == TraceabilityAgent || agentType ==GovernanceAgent
 }
