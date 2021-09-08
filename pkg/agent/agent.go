@@ -140,6 +140,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 	return nil
 }
 
+//IsNotTest determines if a test is running or not
 func IsNotTest() bool {
 	return flag.Lookup("test.v") == nil
 }
