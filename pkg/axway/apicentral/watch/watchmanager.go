@@ -3,7 +3,6 @@ package watch
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	watchProto "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -50,18 +49,13 @@ func (m *watchManager) RegisterWatch(watchConfig Config, eventChannel chan *watc
 	uuiduuid, _ := uuid.NewUUID()
 	m.clientMap[uuiduuid.String()] = client
 
-	go client.processEvents(eventChannel)
+	client.processEvents(eventChannel)
 
 	return stream.Context(), nil
 }
 
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
-	parseURL, err := url.Parse(m.centralConfig.GetURL())
-	if err != nil {
-		return nil, err
-	}
-
-	address := fmt.Sprintf("%s:%s", parseURL.Hostname(), parseURL.Port())
+	address := fmt.Sprintf("%s:%s", "localhost", "8080")
 
 	rpcCredential := newRPCAuth(m.centralConfig.GetTenantID(), m.tokenGetter)
 	var dialOptions []grpc.DialOption

@@ -4,8 +4,6 @@ package apis.v1;
 
 import "apicentral.proto";
 
-option java_package = "com.axway.apicentral.watch.proto";
-option java_outer_classname = "WatchProto";
 option go_package = "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto";
 
 service WatchService {

@@ -5,8 +5,6 @@ package amplifycentral.datamodel;
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 
-option java_package = "com.axway.apicentral.datamodel.proto";
-option java_outer_classname = "Model";
 option go_package = "github.com/Axway/agent-sdk/pkg/axway/apicentral/datamodel/proto";
 
 // Read-only metadata for the record.

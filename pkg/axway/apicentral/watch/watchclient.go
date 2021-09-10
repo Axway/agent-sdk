@@ -2,6 +2,7 @@ package watch
 
 import (
 	"encoding/json"
+	"fmt"
 
 	watchProto "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -15,6 +16,7 @@ type watchClient struct {
 func (c *watchClient) processEvents(eventChannel chan *watchProto.Event) {
 	for {
 		event, err := c.stream.Recv()
+		fmt.Println("event", event)
 		if err != nil {
 			log.Errorf("Error while receiving watch events - %s", err.Error())
 			close(eventChannel)
