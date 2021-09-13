@@ -129,7 +129,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 		setupSignalProcessor()
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
-		if isNotTest() && !isRunningInDockerContainer() {
+		if IsNotTest() && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
 		}
 
@@ -140,13 +140,14 @@ func Initialize(centralCfg config.CentralConfig) error {
 	return nil
 }
 
-func isNotTest() bool {
+//IsNotTest determines if a test is running or not
+func IsNotTest() bool {
 	return flag.Lookup("test.v") == nil
 }
 
 func checkRunningAgent() error {
 	// Check only on startup of binary agents
-	if !agent.isInitialized && isNotTest() && !isRunningInDockerContainer() {
+	if !agent.isInitialized && IsNotTest() && !isRunningInDockerContainer() {
 		return hc.CheckIsRunning()
 	}
 	return nil
@@ -215,7 +216,7 @@ func isRunningInDockerContainer() bool {
 func initializeTokenRequester(centralCfg config.CentralConfig) error {
 	var err error
 	agent.tokenRequester = auth.NewPlatformTokenGetterWithCentralConfig(centralCfg)
-	if isNotTest() {
+	if IsNotTest() {
 		_, err = agent.tokenRequester.GetToken()
 	}
 	return err
