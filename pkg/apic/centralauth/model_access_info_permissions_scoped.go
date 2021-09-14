@@ -58,7 +58,7 @@ func (o *AccessInfoPermissionsScoped) GetType() string {
 // GetTypeOk returns a tuple with the Type field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfoPermissionsScoped) GetTypeOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Type, true
@@ -82,7 +82,7 @@ func (o *AccessInfoPermissionsScoped) GetId() string {
 // GetIdOk returns a tuple with the Id field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfoPermissionsScoped) GetIdOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Id, true
@@ -106,7 +106,7 @@ func (o *AccessInfoPermissionsScoped) GetValues() []string {
 // GetValuesOk returns a tuple with the Values field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfoPermissionsScoped) GetValuesOk() (*[]string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Values, true
@@ -166,5 +166,3 @@ func (v *NullableAccessInfoPermissionsScoped) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

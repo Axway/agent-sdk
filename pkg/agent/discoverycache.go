@@ -7,19 +7,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/axway/apicentral/watch"
-	"github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/watchmanager"
 )
 
 const (
@@ -42,7 +43,7 @@ type discoveryCache struct {
 	lastServiceTime                 time.Time
 	lastInstanceTime                time.Time
 	refreshAll                      bool
-	watchManager                    watch.Manager
+	watchManager                    watchmanager.Manager
 	apiSvcWatchEventChannel         chan *proto.Event
 	apiSvcWatchContext              context.Context
 	apiSvcInstanceWatchEventChannel chan *proto.Event
@@ -65,8 +66,8 @@ func newDiscoveryCache(getAll bool) (*discoveryCache, error) {
 }
 
 func newDiscoveryCacheWithGRPC() (*discoveryCache, error) {
-	watchManager := watch.New(agent.cfg, GetCentralAuthToken)
-	watchConfig := watch.Config{
+	watchManager := watchmanager.New(agent.cfg, GetCentralAuthToken)
+	watchConfig := watchmanager.Config{
 		ScopeKind:  v1alpha1.EnvironmentGVK().Kind,
 		Scope:      agent.cfg.GetEnvironmentName(),
 		Group:      v1alpha1.APIServiceGVK().Group,
@@ -79,7 +80,7 @@ func newDiscoveryCacheWithGRPC() (*discoveryCache, error) {
 		return nil, err
 	}
 
-	watchConfig = watch.Config{
+	watchConfig = watchmanager.Config{
 		ScopeKind:  v1alpha1.EnvironmentGVK().Kind,
 		Scope:      agent.cfg.GetEnvironmentName(),
 		Group:      v1alpha1.APIServiceInstanceGVK().Group,
@@ -110,7 +111,7 @@ func newDiscoveryCacheWithGRPC() (*discoveryCache, error) {
 	return instance, nil
 }
 
-func registerWatch(manager watch.Manager, watchConfig watch.Config) (context.Context, chan *proto.Event, error) {
+func registerWatch(manager watchmanager.Manager, watchConfig watchmanager.Config) (context.Context, chan *proto.Event, error) {
 	eventChannel := make(chan *proto.Event)
 	watchContext, err := manager.RegisterWatch(watchConfig, eventChannel)
 	return watchContext, eventChannel, err

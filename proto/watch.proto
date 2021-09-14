@@ -4,7 +4,7 @@ package apis.v1;
 
 import "apicentral.proto";
 
-option go_package = "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto";
+option go_package = "github.com/Axway/agent-sdk/pkg/watchmanager";
 
 service WatchService {
     rpc CreateWatch(Request) returns (stream Event) {

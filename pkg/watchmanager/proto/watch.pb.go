@@ -4,7 +4,6 @@ import (
 	reflect "reflect"
 	sync "sync"
 
-	proto "github.com/Axway/agent-sdk/pkg/axway/apicentral/datamodel/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -166,14 +165,14 @@ type Event struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Time          string                  `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`
-	Version       string                  `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
-	Product       string                  `protobuf:"bytes,4,opt,name=product,proto3" json:"product,omitempty"`
-	CorrelationId string                  `protobuf:"bytes,5,opt,name=correlationId,proto3" json:"correlationId,omitempty"`
-	Organization  *Organization           `protobuf:"bytes,6,opt,name=organization,proto3" json:"organization,omitempty"`
-	Type          Event_Type              `protobuf:"varint,7,opt,name=type,proto3,enum=apis.v1.Event_Type" json:"type,omitempty"`
-	Payload       *proto.ResourceInstance `protobuf:"bytes,8,opt,name=payload,proto3" json:"payload,omitempty"`
+	Id            string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Time          string            `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`
+	Version       string            `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Product       string            `protobuf:"bytes,4,opt,name=product,proto3" json:"product,omitempty"`
+	CorrelationId string            `protobuf:"bytes,5,opt,name=correlationId,proto3" json:"correlationId,omitempty"`
+	Organization  *Organization     `protobuf:"bytes,6,opt,name=organization,proto3" json:"organization,omitempty"`
+	Type          Event_Type        `protobuf:"varint,7,opt,name=type,proto3,enum=apis.v1.Event_Type" json:"type,omitempty"`
+	Payload       *ResourceInstance `protobuf:"bytes,8,opt,name=payload,proto3" json:"payload,omitempty"`
 }
 
 func (x *Event) Reset() {
@@ -257,7 +256,7 @@ func (x *Event) GetType() Event_Type {
 	return Event_CREATED
 }
 
-func (x *Event) GetPayload() *proto.ResourceInstance {
+func (x *Event) GetPayload() *ResourceInstance {
 	if x != nil {
 		return x.Payload
 	}
@@ -522,14 +521,14 @@ func file_watch_proto_rawDescGZIP() []byte {
 var file_watch_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_watch_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_watch_proto_goTypes = []interface{}{
-	(Event_Type)(0),                // 0: apis.v1.Event.Type
-	(Trigger_Type)(0),              // 1: apis.v1.Trigger.Type
-	(*Request)(nil),                // 2: apis.v1.Request
-	(*Event)(nil),                  // 3: apis.v1.Event
-	(*Organization)(nil),           // 4: apis.v1.Organization
-	(*Trigger)(nil),                // 5: apis.v1.Trigger
-	(*Trigger_Scope)(nil),          // 6: apis.v1.Trigger.Scope
-	(*proto.ResourceInstance)(nil), // 7: amplifycentral.datamodel.ResourceInstance
+	(Event_Type)(0),          // 0: apis.v1.Event.Type
+	(Trigger_Type)(0),        // 1: apis.v1.Trigger.Type
+	(*Request)(nil),          // 2: apis.v1.Request
+	(*Event)(nil),            // 3: apis.v1.Event
+	(*Organization)(nil),     // 4: apis.v1.Organization
+	(*Trigger)(nil),          // 5: apis.v1.Trigger
+	(*Trigger_Scope)(nil),    // 6: apis.v1.Trigger.Scope
+	(*ResourceInstance)(nil), // 7: amplifycentral.datamodel.ResourceInstance
 }
 var file_watch_proto_depIdxs = []int32{
 	5, // 0: apis.v1.Request.triggers:type_name -> apis.v1.Trigger

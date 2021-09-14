@@ -17,9 +17,9 @@ import (
 
 // AccessInfo struct for AccessInfo
 type AccessInfo struct {
-	Subject AccessInfoSubject `json:"subject"`
+	Subject      AccessInfoSubject      `json:"subject"`
 	Organization AccessInfoOrganization `json:"organization"`
-	Permissions AccessInfoPermissions `json:"permissions"`
+	Permissions  AccessInfoPermissions  `json:"permissions"`
 }
 
 // NewAccessInfo instantiates a new AccessInfo object
@@ -55,7 +55,7 @@ func (o *AccessInfo) GetSubject() AccessInfoSubject {
 // GetSubjectOk returns a tuple with the Subject field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfo) GetSubjectOk() (*AccessInfoSubject, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Subject, true
@@ -79,7 +79,7 @@ func (o *AccessInfo) GetOrganization() AccessInfoOrganization {
 // GetOrganizationOk returns a tuple with the Organization field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfo) GetOrganizationOk() (*AccessInfoOrganization, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Organization, true
@@ -103,7 +103,7 @@ func (o *AccessInfo) GetPermissions() AccessInfoPermissions {
 // GetPermissionsOk returns a tuple with the Permissions field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfo) GetPermissionsOk() (*AccessInfoPermissions, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Permissions, true
@@ -163,5 +163,3 @@ func (v *NullableAccessInfo) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

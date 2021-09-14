@@ -1,10 +1,10 @@
-package watch
+package watchmanager
 
 import (
 	"fmt"
 	"testing"
 
-	watchProto "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 )
@@ -22,7 +22,7 @@ func TestWatchmanager(t *testing.T) {
 		Name:       "abc",
 		EventTypes: []string{"CREATED", "UPDATED", "DELETED"},
 	}
-	ch := make(chan *watchProto.Event)
+	ch := make(chan *proto.Event)
 	ctx, err := wm.RegisterWatch(cfg, ch)
 	fmt.Println(ctx)
 	fmt.Println(err)

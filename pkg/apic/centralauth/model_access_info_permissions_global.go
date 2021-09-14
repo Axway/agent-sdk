@@ -52,7 +52,7 @@ func (o *AccessInfoPermissionsGlobal) GetValues() []string {
 // GetValuesOk returns a tuple with the Values field value
 // and a boolean to check if the value has been set.
 func (o *AccessInfoPermissionsGlobal) GetValuesOk() (*[]string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Values, true
@@ -106,5 +106,3 @@ func (v *NullableAccessInfoPermissionsGlobal) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

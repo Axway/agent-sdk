@@ -1,19 +1,20 @@
-package watch
+package watchmanager
 
 import (
 	"encoding/json"
 	"fmt"
 
-	watchProto "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type watchClient struct {
 	config Config
-	stream watchProto.WatchService_CreateWatchClient
+	stream proto.WatchService_CreateWatchClient
 }
 
-func (c *watchClient) processEvents(eventChannel chan *watchProto.Event) {
+func (c *watchClient) processEvents(eventChannel chan *proto.Event) {
 	for {
 		event, err := c.stream.Recv()
 		fmt.Println("event", event)

@@ -1,4 +1,4 @@
-package watch
+package watchmanager
 
 type TokenGetter func() (string, error)
 

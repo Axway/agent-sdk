@@ -1,10 +1,11 @@
-package watch
+package watchmanager
 
 import (
 	"context"
 	"fmt"
 
-	watchProto "github.com/Axway/agent-sdk/pkg/axway/apicentral/watch/proto"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -12,7 +13,7 @@ import (
 )
 
 type Manager interface {
-	RegisterWatch(watchConfig Config, eventChannel chan *watchProto.Event) (context.Context, error)
+	RegisterWatch(watchConfig Config, eventChannel chan *proto.Event) (context.Context, error)
 }
 
 type watchManager struct {
@@ -33,8 +34,8 @@ func New(centralConfig config.CentralConfig, tokenGetter TokenGetter) Manager {
 	return manager
 }
 
-func (m *watchManager) RegisterWatch(watchConfig Config, eventChannel chan *watchProto.Event) (context.Context, error) {
-	svcClient := watchProto.NewWatchServiceClient(m.connection)
+func (m *watchManager) RegisterWatch(watchConfig Config, eventChannel chan *proto.Event) (context.Context, error) {
+	svcClient := proto.NewWatchServiceClient(m.connection)
 	watchRequest := m.createWatchRequest(watchConfig)
 	stream, err := svcClient.CreateWatch(context.Background(), watchRequest)
 	if err != nil {
@@ -77,26 +78,26 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	return grpc.Dial(address, dialOptions...)
 }
 
-func (m *watchManager) createWatchRequest(config Config) *watchProto.Request {
-	triggerEventTypes := make([]watchProto.Trigger_Type, 0)
+func (m *watchManager) createWatchRequest(config Config) *proto.Request {
+	triggerEventTypes := make([]proto.Trigger_Type, 0)
 	for _, eventType := range config.EventTypes {
-		if val, ok := watchProto.Trigger_Type_value[eventType]; ok {
-			triggerEventTypes = append(triggerEventTypes, watchProto.Trigger_Type(val))
+		if val, ok := proto.Trigger_Type_value[eventType]; ok {
+			triggerEventTypes = append(triggerEventTypes, proto.Trigger_Type(val))
 		}
 	}
 
-	trigger := &watchProto.Trigger{
+	trigger := &proto.Trigger{
 		Group: config.Group,
 		Kind:  config.Kind,
 		Name:  config.Name,
-		Type:  []watchProto.Trigger_Type{watchProto.Trigger_CREATED, watchProto.Trigger_UPDATED, watchProto.Trigger_DELETED},
+		Type:  []proto.Trigger_Type{proto.Trigger_CREATED, proto.Trigger_UPDATED, proto.Trigger_DELETED},
 	}
 
 	if config.ScopeKind != "" || config.Scope != "" {
-		trigger.Scope = &watchProto.Trigger_Scope{Kind: config.ScopeKind, Name: config.Scope}
+		trigger.Scope = &proto.Trigger_Scope{Kind: config.ScopeKind, Name: config.Scope}
 	}
 
-	return &watchProto.Request{
-		Triggers: []*watchProto.Trigger{trigger},
+	return &proto.Request{
+		Triggers: []*proto.Trigger{trigger},
 	}
 }

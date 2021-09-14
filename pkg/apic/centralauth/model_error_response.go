@@ -17,7 +17,7 @@ import (
 
 // ErrorResponse Detail for standard error responses.
 type ErrorResponse struct {
-	Errors *[]map[string]map[string]interface{} `json:"errors,omitempty"`
+	Errors               *[]map[string]map[string]interface{} `json:"errors,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -137,5 +137,3 @@ func (v *NullableErrorResponse) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-
