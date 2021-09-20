@@ -20,6 +20,7 @@ type Pool struct {
 	jobsMapLock             sync.Mutex
 	cronJobsMapLock         sync.Mutex
 	detachedCronJobsMapLock sync.Mutex
+	poolStatusLock          sync.Mutex
 	failJobChan             chan string
 	stopJobsChan            chan bool
 	retryInterval           time.Duration
@@ -36,13 +37,13 @@ func newPool() *Pool {
 		jobs:              make(map[string]JobExecution),
 		cronJobs:          make(map[string]JobExecution),
 		detachedCronJobs:  make(map[string]JobExecution),
-		poolStatus:        PoolStatusInitializing,
 		failedJob:         "",
 		failJobChan:       make(chan string),
 		stopJobsChan:      make(chan bool),
 		retryInterval:     interval,
 		origRetryInterval: interval,
 	}
+	newPool.SetStatus(PoolStatusInitializing)
 
 	// start routine that catches all failures whenever written and acts on first
 	go newPool.catchFails()
@@ -208,7 +209,16 @@ func (p *Pool) GetJobStatus(id string) string {
 
 //GetStatus - returns the status of the pool of jobs
 func (p *Pool) GetStatus() string {
+	p.poolStatusLock.Lock()
+	defer p.poolStatusLock.Unlock()
 	return p.poolStatus.String()
+}
+
+//SetStatus - Sets the status of the pool of jobs
+func (p *Pool) SetStatus(status PoolStatus) {
+	p.poolStatusLock.Lock()
+	p.poolStatus = status
+	p.poolStatusLock.Unlock()
 }
 
 //startAll - starts all jobs defined in the cronJobs map, used by watchJobs
@@ -224,7 +234,7 @@ func (p *Pool) startAll() bool {
 		}
 	}
 	log.Debug("Starting all cron jobs")
-	p.poolStatus = PoolStatusRunning
+	p.SetStatus(PoolStatusRunning)
 	for _, job := range p.cronJobs {
 		go job.start()
 	}
@@ -235,7 +245,7 @@ func (p *Pool) startAll() bool {
 //           other jobs are single run and should not need stopped
 func (p *Pool) stopAll() {
 	log.Debug("Stopping all cron jobs")
-	p.poolStatus = PoolStatusStopped
+	p.SetStatus(PoolStatusStopped)
 	maxErrors := 0
 	for _, job := range p.cronJobs {
 		job.stop()
@@ -264,7 +274,7 @@ func (p *Pool) catchFails() {
 	for {
 		// continue rading all failed jobs, only stop the first time
 		failedJob := <-p.failJobChan
-		if p.poolStatus == PoolStatusRunning {
+		if p.GetStatus() == PoolStatusRunning.String() {
 			p.failedJob = failedJob // this is the job for the current fail loop
 			p.stopJobsChan <- true
 		}
@@ -273,9 +283,9 @@ func (p *Pool) catchFails() {
 
 //watchJobs - the main loop of a pool of jobs, constantly checks for status of jobs and acts accordingly
 func (p *Pool) watchJobs() {
-	p.poolStatus = PoolStatusRunning
+	p.SetStatus(PoolStatusRunning)
 	for {
-		if p.poolStatus == PoolStatusRunning {
+		if p.GetStatus() == PoolStatusRunning.String() {
 			// The pool is running, wait for any signal that a job went down
 			<-p.stopJobsChan
 			log.Debugf("Job with id %v failed, stop all jobs", p.failedJob)
