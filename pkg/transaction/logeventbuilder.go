@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 const defaultAPICDeployment = "prod"
@@ -312,7 +313,7 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionEventBuilder) validateLogEvent() error {
-	if agent.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil
 	}
@@ -536,7 +537,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionSummaryBuilder) validateLogEvent() error {
-	if agent.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil
 	}

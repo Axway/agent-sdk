@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -79,7 +80,9 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.OnConfigChange(cfg)
-	hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
+	if util.IsNotTest() {
+		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
+	}
 	return serviceClient
 }
 

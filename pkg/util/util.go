@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"hash/fnv"
 	"net/http"
@@ -103,4 +104,9 @@ func RemoveDuplicateValuesFromStringSlice(strSlice []string) []string {
 // ConvertTimeToMillis - convert to milliseconds
 func ConvertTimeToMillis(tm time.Time) int64 {
 	return tm.UnixNano() / 1e6
+}
+
+// IsNotTest determines if a test is running or not
+func IsNotTest() bool {
+	return flag.Lookup("test.v") == nil
 }

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"encoding/json"
-	"flag"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -129,25 +128,22 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 		setupSignalProcessor()
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
-		if IsNotTest() && !isRunningInDockerContainer() {
+		if util.IsNotTest() && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
 		}
 
-		StartAgentStatusUpdate()
-		startAPIServiceCache()
+		if util.IsNotTest() {
+			StartAgentStatusUpdate()
+			startAPIServiceCache()
+		}
 	}
 	agent.isInitialized = true
 	return nil
 }
 
-//IsNotTest determines if a test is running or not
-func IsNotTest() bool {
-	return flag.Lookup("test.v") == nil
-}
-
 func checkRunningAgent() error {
 	// Check only on startup of binary agents
-	if !agent.isInitialized && IsNotTest() && !isRunningInDockerContainer() {
+	if !agent.isInitialized && util.IsNotTest() && !isRunningInDockerContainer() {
 		return hc.CheckIsRunning()
 	}
 	return nil
@@ -216,7 +212,7 @@ func isRunningInDockerContainer() bool {
 func initializeTokenRequester(centralCfg config.CentralConfig) error {
 	var err error
 	agent.tokenRequester = auth.NewPlatformTokenGetterWithCentralConfig(centralCfg)
-	if IsNotTest() {
+	if util.IsNotTest() {
 		_, err = agent.tokenRequester.GetToken()
 	}
 	return err
