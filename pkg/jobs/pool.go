@@ -217,8 +217,8 @@ func (p *Pool) GetStatus() string {
 //SetStatus - Sets the status of the pool of jobs
 func (p *Pool) SetStatus(status PoolStatus) {
 	p.poolStatusLock.Lock()
+	defer p.poolStatusLock.Unlock()
 	p.poolStatus = status
-	p.poolStatusLock.Unlock()
 }
 
 //startAll - starts all jobs defined in the cronJobs map, used by watchJobs
