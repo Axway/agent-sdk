@@ -2,7 +2,6 @@ package metric
 
 import (
 	"encoding/json"
-	"flag"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -72,7 +72,7 @@ func (c *cacheStorage) initialize() {
 	c.loadAPIMetric(storageCache)
 
 	// Not a job as the loop requires signal processing
-	if !c.isInitialized && flag.Lookup("test.v") == nil {
+	if !c.isInitialized && util.IsNotTest() {
 		go c.storeCacheJob()
 	}
 	c.storage = storageCache
