@@ -247,6 +247,8 @@ func (p *Pool) stopAll() {
 	log.Debug("Stopping all cron jobs")
 	p.SetStatus(PoolStatusStopped)
 	maxErrors := 0
+	p.cronJobsMapLock.Lock()
+	defer p.cronJobsMapLock.Unlock()
 	for _, job := range p.cronJobs {
 		job.stop()
 		if job.getConsecutiveFails() > maxErrors {
