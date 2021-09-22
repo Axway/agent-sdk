@@ -30,7 +30,7 @@ test: dep
 
 test-sonar: dep
 	@go vet ${GO_PKG_LIST}
-	@go test -race -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
+	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
 error-check:
 	./build/scripts/error_check.sh ./pkg
