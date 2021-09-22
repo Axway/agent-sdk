@@ -248,11 +248,15 @@ func (p *Pool) stopAll() {
 	p.SetStatus(PoolStatusStopped)
 	maxErrors := 0
 
-	// can NOT do a defer on this unlock, or will get stuck
+	// Must do the map copy so that the loop can run without a race condition.
+	// Can NOT do a defer on this unlock, or will get stuck
+	mapCopy := make(map[string]JobExecution)
 	p.cronJobsMapLock.Lock()
-	jobs := p.cronJobs
+	for key, value := range p.cronJobs {
+		mapCopy[key] = value
+	}
 	p.cronJobsMapLock.Unlock()
-	for _, job := range jobs {
+	for _, job := range mapCopy {
 		job.stop()
 		if job.getConsecutiveFails() > maxErrors {
 			maxErrors = job.getConsecutiveFails()
