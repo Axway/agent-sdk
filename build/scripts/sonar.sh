@@ -8,6 +8,7 @@ fi
 sonar-scanner -X \
     -Dsonar.host.url=${SONAR_HOST} \
     -Dsonar.language=go \
+    -Dsonar.verbose=true
     -Dsonar.projectName=APIC_AGENTS_SDK \
     -Dsonar.projectVersion=1.0 \
     -Dsonar.projectKey=APIC_AGENTS_SDK \
