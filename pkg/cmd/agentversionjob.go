@@ -75,12 +75,15 @@ func (avj *AgentVersionCheckJob) Execute() error {
 	err = avj.getJFrogVersions(avj.urlName)
 	if err != nil {
 		log.Trace(err)
-		return err
+		// Could not get update from jfrog.  Warn that we could not determine version and continue processing
+		log.Warn("Agent cannot determine the next available release. Be aware that your agent could be outdated.")
+	} else {
+		// Successfully got jfrog version.  Now compare build to latest version
+		if isVersionStringOlder(avj.buildVersion, config.AgentLatestVersion) {
+			log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, config.AgentLatestVersion)
+		}
 	}
-	// compare build to latest version
-	if isVersionStringOlder(avj.buildVersion, config.AgentLatestVersion) {
-		log.Warnf("New version available. Please consider upgrading from version %s to version %s", avj.buildVersion, config.AgentLatestVersion)
-	}
+
 	return nil
 }
 
@@ -103,10 +106,13 @@ func (avj *AgentVersionCheckJob) getBuildVersion() error {
 // In the future, adding a (Generic) resource for grouping versions together under the same scope is a possible solution
 // ie: a new unscoped resource that represents the platform services, so that other products can plug in their releases.
 func (avj *AgentVersionCheckJob) getJFrogVersions(name string) error {
-	b := loadPage(name)
+	b, err := loadPage(name)
+	if err != nil {
+		return err
+	}
 
 	hAnchors := htmlAnchors{}
-	err := xml.NewDecoder(bytes.NewBuffer(b)).Decode(&hAnchors)
+	err = xml.NewDecoder(bytes.NewBuffer(b)).Decode(&hAnchors)
 	if err != nil {
 		return err
 	}
@@ -190,11 +196,12 @@ func copyVersionStruct(v1 *version, v2 version) {
 	v1.val = v2.val
 }
 
-func loadPage(name string) []byte {
+func loadPage(name string) ([]byte, error) {
 	page := fmt.Sprintf("https://axway.jfrog.io/artifactory/ampc-public-docker-release/agent/%v/", name)
 	resp, err := http.Get(page)
 	if err != nil {
 		log.Tracef("Unable to poll jfrog for agent versions. %s", err.Error())
+		return nil, err
 	}
 	defer resp.Body.Close()
 	// reads html as a slice of bytes
@@ -202,7 +209,7 @@ func loadPage(name string) []byte {
 	if err != nil {
 		log.Trace(err)
 	}
-	return html
+	return html, nil
 }
 
 // startAgentVersionChecker - single run job to check for a newer agent version on jfrog
