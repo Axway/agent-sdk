@@ -40,7 +40,7 @@ func TestSingleRunJob(t *testing.T) {
 	status := GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)
 	job.ready = true
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
 	time.Sleep(50 * time.Millisecond)
