@@ -139,7 +139,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, nil),
+		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 	}
 }
 
@@ -153,6 +153,16 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
+	// Before attempting to create the consumer instance ensure all categories exist
+	for _, categoryTitle := range serviceBody.categoryTitles {
+		categoryName := c.GetOrCreateCategory(categoryTitle)
+		// only add categories that exist on central
+		if categoryName != "" {
+			serviceBody.categoryNames = append(serviceBody.categoryNames, categoryName)
+		} else {
+			log.Tracef("Could not add category with title '%s' as it could not be found", categoryTitle)
+		}
+	}
 
 	// Allow catalog asset to be created.  However, set to pass-through so subscriptions aren't enabled
 	if !isValidAuthPolicy(serviceBody.AuthPolicy) {

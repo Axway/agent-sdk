@@ -9,6 +9,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -72,6 +73,9 @@ type Client interface {
 	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error)
 	GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	CreateCategory(categoryName string) (*catalog.Category, error)
+	AddCategoryCache(categoryCache cache.Cache)
+	GetOrCreateCategory(category string) string
 }
 
 // New -
@@ -84,6 +88,33 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
 	}
 	return serviceClient
+}
+
+// AddCategoryCache - add the pointer to the category cache that hte agent package will update
+func (c *ServiceClient) AddCategoryCache(categoryCache cache.Cache) {
+	c.categoryCache = categoryCache
+}
+
+// GetOrCreateCategory - Returns the value on published proxy
+func (c *ServiceClient) GetOrCreateCategory(category string) string {
+	if c.categoryCache != nil {
+		categoryInterface, _ := c.categoryCache.GetBySecondaryKey(category)
+		if categoryInterface == nil {
+			if !corecfg.IsCategoryAutocreationEnabled() {
+				return ""
+			}
+			// create the category and add it to the cache
+			newCategory, err := c.CreateCategory(category)
+			if err != nil {
+				return ""
+			}
+			categoryInterface, _ = newCategory.AsInstance()
+			c.categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
+		}
+		cat := categoryInterface.(*apiv1.ResourceInstance)
+		return cat.Name
+	}
+	return ""
 }
 
 // OnConfigChange - config change handler
