@@ -40,3 +40,12 @@ func TestMarshalHeadersAsJSONString(t *testing.T) {
 	}
 	assert.Equal(t, "{\"prop1\":\"aaa\\\"bbb\\\"ccc\"}", MarshalHeadersAsJSONString(m))
 }
+
+func TestFormatProxyID(t *testing.T) {
+	s := FormatProxyID("foobar")
+	assert.Equal(t, SummaryEventProxyIDPrefix+"foobar", s)
+}
+func TestFormatApplicationID(t *testing.T) {
+	s := FormatApplicationID("barfoo")
+	assert.Equal(t, SummaryEventApplicationIDPrefix+"barfoo", s)
+}

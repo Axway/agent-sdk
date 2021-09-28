@@ -3,31 +3,54 @@ package transaction
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+// IsHTTPSuccessStatus - Returns true if the HTTP status is between 200 and 400
+func IsHTTPSuccessStatus(status int) bool {
+	return status >= http.StatusOK && status < http.StatusBadRequest
+}
 
 // IsSuccessStatus - Returns true if the HTTP status is between 200 and 400
 func IsSuccessStatus(status int) bool {
-	return status >= http.StatusOK && status < http.StatusBadRequest
+	// DEPRECATED
+	log.DeprecationWarningReplace("IsSuccessStatus", "IsHTTPSuccessStatus")
+	return IsHTTPSuccessStatus(status)
+}
+
+// IsHTTPFailureStatus - Returns true if the HTTP status is between 400 and 500
+func IsHTTPFailureStatus(status int) bool {
+	return status >= http.StatusBadRequest && status < http.StatusInternalServerError
 }
 
 // IsFailureStatus - Returns true if the HTTP status is between 400 and 500
 func IsFailureStatus(status int) bool {
-	return status >= http.StatusBadRequest && status < http.StatusInternalServerError
+	// DEPRECATED
+	log.DeprecationWarningReplace("IsFailureStatus", "IsHTTPFailureStatus")
+	return IsHTTPFailureStatus(status)
+}
+
+// IsHTTPExceptionStatus - Returns true if the HTTP status is between 500 and 511
+func IsHTTPExceptionStatus(status int) bool {
+	return status >= http.StatusInternalServerError && status <= http.StatusNetworkAuthenticationRequired
 }
 
 // IsExceptionStatus - Returns true if the HTTP status is between 500 and 511
 func IsExceptionStatus(status int) bool {
-	return status >= http.StatusInternalServerError && status < http.StatusNetworkAuthenticationRequired
+	// DEPRECATED
+	log.DeprecationWarningReplace("IsExceptionStatus", "IsHTTPExceptionStatus")
+	return IsHTTPExceptionStatus(status)
 }
 
 // GetTransactionSummaryStatus - Returns the summary status based on HTTP status code.
 func GetTransactionSummaryStatus(status int) string {
 	transSummaryStatus := "Unknown"
-	if IsSuccessStatus(status) {
+	if IsHTTPSuccessStatus(status) {
 		transSummaryStatus = "Success"
-	} else if IsFailureStatus(status) {
+	} else if IsHTTPFailureStatus(status) {
 		transSummaryStatus = "Failure"
-	} else if IsExceptionStatus(status) {
+	} else if IsHTTPExceptionStatus(status) {
 		transSummaryStatus = "Exception"
 	}
 	return transSummaryStatus
@@ -36,7 +59,7 @@ func GetTransactionSummaryStatus(status int) string {
 // GetTransactionEventStatus - Returns the transaction event status based on HTTP status code.
 func GetTransactionEventStatus(status int) string {
 	transStatus := "Fail"
-	if IsSuccessStatus(status) {
+	if IsHTTPSuccessStatus(status) {
 		transStatus = "Pass"
 	}
 	return transStatus
