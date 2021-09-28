@@ -10,12 +10,14 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    name: Release discovery
+    name: Release SDK
     defaults:
       run:
         working-directory: .
     steps:
     - uses: actions/checkout@v2
+    - name: Branch name
+      run: echo running on branch ${GITHUB_REF##*/}
     # - name: Unshallow Fetch
     #   run: git fetch --prune --unshallow
     # - uses: actions/setup-go@v2
@@ -23,5 +25,6 @@ jobs:
     #     go-version: '^1.16.0'
     - name: Update version file
       run: cat ./version
-    - name: Set selected color
-      run: echo "The tag is $GITHUB_REF"
+    # - name: Set selected color
+    #   working-directory: ./build/scripts
+    #   run: ./promote.sh $GITHUB_REF
