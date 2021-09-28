@@ -8,6 +8,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/filter"
+	"github.com/Axway/agent-sdk/pkg/util"
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
@@ -106,12 +107,22 @@ func AddCategoryConfigProperties(props properties.Properties, basePath string) {
 	props.AddBoolProperty(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation), false, "Set to true to enable the createion of categories when they do not already exist")
 }
 
+// newCategoryConfig -
+func newCategoryConfig() *CategoryConfiguration {
+	return &CategoryConfiguration{
+		Mappings:         make([]*mapping, 0),
+		Autocreation:     false,
+		staticCategories: make([]string, 0),
+		configured:       false,
+	}
+}
+
 // ParseCategoryConfig -
 func ParseCategoryConfig(props properties.Properties, basePath string) CategoryConfig {
-	cfg := &CategoryConfiguration{
-		Autocreation:     props.BoolPropertyValue(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation)),
-		staticCategories: make([]string, 0),
-	}
+	cfg := newCategoryConfig()
+	cfg.Autocreation = props.BoolPropertyValue(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation))
+
+	// Set the global auto creation variable
 	autoCategoryCreation = &cfg.Autocreation
 
 	// Determine the auth type
@@ -134,7 +145,7 @@ func ParseCategoryConfig(props properties.Properties, basePath string) CategoryC
 	}
 
 	cfg.Mappings = categoryMappings
-	cfg.staticCategories = removeDuplicateCategories(cfg.staticCategories)
+	cfg.staticCategories = util.RemoveDuplicateValuesFromStringSlice(cfg.staticCategories)
 	cfg.configured = true
 	return cfg
 }
@@ -176,19 +187,5 @@ func (c *CategoryConfiguration) DetermineCategories(tags map[string]string) []st
 			}
 		}
 	}
-	return removeDuplicateCategories(categories)
-}
-
-//removeDuplicateCategories - removes any duplicate categories from the array
-func removeDuplicateCategories(matchedCategories []string) []string {
-	keys := make(map[string]bool)
-	list := []string{}
-
-	for _, entry := range matchedCategories {
-		if _, value := keys[entry]; !value {
-			keys[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
+	return util.RemoveDuplicateValuesFromStringSlice(categories)
 }

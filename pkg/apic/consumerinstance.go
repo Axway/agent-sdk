@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gabriel-vasile/mimetype"
@@ -148,7 +149,8 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 	consumerInstance.Title = serviceBody.NameToPush
 	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
 	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, consumerInstance.Spec.Categories)
+	// create an array of unique category names
+	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, util.RemoveDuplicateValuesFromStringSlice(append(serviceBody.categoryNames, consumerInstance.Spec.Categories...)))
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
