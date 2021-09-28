@@ -109,21 +109,21 @@ func AddCategoryConfigProperties(props properties.Properties, basePath string) {
 
 // newCategoryConfig -
 func newCategoryConfig() *CategoryConfiguration {
-	return &CategoryConfiguration{
+	cfg := &CategoryConfiguration{
 		Mappings:         make([]*mapping, 0),
 		Autocreation:     false,
 		staticCategories: make([]string, 0),
 		configured:       false,
 	}
+	// Set the global auto creation variable
+	autoCategoryCreation = &cfg.Autocreation
+	return cfg
 }
 
 // ParseCategoryConfig -
 func ParseCategoryConfig(props properties.Properties, basePath string) CategoryConfig {
 	cfg := newCategoryConfig()
 	cfg.Autocreation = props.BoolPropertyValue(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation))
-
-	// Set the global auto creation variable
-	autoCategoryCreation = &cfg.Autocreation
 
 	// Determine the auth type
 	categoryMapString := props.StringPropertyValue(fmt.Sprintf("%s.%s", basePath, pathCategoryMapping))
