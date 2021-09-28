@@ -75,4 +75,68 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		AddArg("newarg", []string{"one", "two"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		SetArgsMap(map[string][]string{"test": {"one", "two"}}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		SetRequestHeaders(map[string]string{"reqHead": "one"}).
+		SetResponseHeaders(map[string]string{"rspHead": "two"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		AddRequestHeader("key", "two").
+		AddResponseHeader("key", "two").
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		SetIndexedRequestHeaders(map[string]string{"test": "one"}).
+		SetIndexedResponseHeaders(map[string]string{"test": "two"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		AddIndexedRequestHeader("key", "one").
+		AddIndexedResponseHeader("key", "two").
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
 }
