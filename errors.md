@@ -42,6 +42,7 @@
 | 1162 | error deleting catalog item in Amplify Central                                                              | pkg/agent/ErrDeletingCatalogItem                    |
 | 1163 | error retrieving API Service resource instances                                                             | pkg/agent/ErrUnableToGetAPIV1Resources              |
 | 1163 | error retrieving API Service resource instances                                                             | pkg/agent/ErrUnableToGetAPIV1Resources              |
+| 1164 | Amplify Central does not contain a team for the API. The Catalog Item will be assigned to the default       | pkg/apic/ErrTeamMismatch                            |
 | 1165 | error creating category                                                                                     | pkg/apic/ErrCategoryCreate                          |
 |      | 1300-1399 - for subscription notification errors                                                            |                                                     |
 | 1300 | error communicating with server for subscription notifications (SMTP or webhook), check SUBSCRIPTION config | pkg/notify/ErrSubscriptionNotification              |
