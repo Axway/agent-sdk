@@ -101,19 +101,23 @@ func (c *ServiceClient) GetOrCreateCategory(category string) string {
 		categoryInterface, _ := c.categoryCache.GetBySecondaryKey(category)
 		if categoryInterface == nil {
 			if !corecfg.IsCategoryAutocreationEnabled() {
+				log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
 				return ""
 			}
 			// create the category and add it to the cache
 			newCategory, err := c.CreateCategory(category)
 			if err != nil {
+				log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
 				return ""
 			}
 			categoryInterface, _ = newCategory.AsInstance()
+			log.Infof("Created new category %s (%s)", newCategory.Title, newCategory.Name)
 			c.categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
 		}
 		cat := categoryInterface.(*apiv1.ResourceInstance)
 		return cat.Name
 	}
+	log.Errorf("Category cache has not been initialized")
 	return ""
 }
 

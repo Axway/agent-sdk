@@ -22,6 +22,7 @@ const (
 )
 
 var autoCategoryCreation *bool
+var isMappingConfigured *bool
 
 // tagValueRegex - used to parse out the category name from the array of
 var tagValueRegex = regexp.MustCompile(tagValueRegexStr)
@@ -29,6 +30,7 @@ var tagValueRegex = regexp.MustCompile(tagValueRegexStr)
 // CategoryConfig - Interface to get category config
 type CategoryConfig interface {
 	IsAutocreationEnabled() bool
+	IsConfigured() bool
 	DetermineCategories(tags map[string]string) []string
 	GetStaticCategories() []string
 }
@@ -115,8 +117,9 @@ func newCategoryConfig() *CategoryConfiguration {
 		staticCategories: make([]string, 0),
 		configured:       false,
 	}
-	// Set the global auto creation variable
+	// Set the global variables to point tot he configuration variables
 	autoCategoryCreation = &cfg.Autocreation
+	isMappingConfigured = &cfg.configured
 	return cfg
 }
 
@@ -155,9 +158,19 @@ func IsCategoryAutocreationEnabled() bool {
 	return *autoCategoryCreation
 }
 
+// IsMappingConfigured - return true when category mappings have been configured
+func IsMappingConfigured() bool {
+	return *isMappingConfigured
+}
+
 // IsAutocreationEnabled - return true when the auto creation of categories is enabled
 func (c *CategoryConfiguration) IsAutocreationEnabled() bool {
 	return c.Autocreation
+}
+
+// IsConfigured - return true when the auto creation of categories is enabled
+func (c *CategoryConfiguration) IsConfigured() bool {
+	return c.configured
 }
 
 // GetStaticCategories - returns the array of the static categories for all the mappings
