@@ -155,11 +155,17 @@ func ParseCategoryConfig(props properties.Properties, basePath string) CategoryC
 
 // IsCategoryAutocreationEnabled - return true when the global auto creation of categories is enabled
 func IsCategoryAutocreationEnabled() bool {
+	if autoCategoryCreation == nil {
+		return false
+	}
 	return *autoCategoryCreation
 }
 
 // IsMappingConfigured - return true when category mappings have been configured
 func IsMappingConfigured() bool {
+	if isMappingConfigured == nil {
+		return false
+	}
 	return *isMappingConfigured
 }
 

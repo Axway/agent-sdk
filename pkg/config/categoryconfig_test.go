@@ -29,8 +29,9 @@ func validatecategoryconfig(t *testing.T, expVals expectedCategoryConfig, cfg *C
 	assert.Len(t, cfg.Mappings, expVals.mappings)
 	assert.Equal(t, expVals.autoCreation, cfg.IsAutocreationEnabled())
 	assert.Equal(t, expVals.staticCategories, cfg.GetStaticCategories())
-	assert.Equal(t, expVals.configured, cfg.configured)
+	assert.Equal(t, expVals.configured, cfg.IsConfigured())
 	assert.Equal(t, expVals.autoCreation, IsCategoryAutocreationEnabled())
+	assert.Equal(t, expVals.configured, IsMappingConfigured())
 }
 
 func TestCategoryConfig(t *testing.T) {

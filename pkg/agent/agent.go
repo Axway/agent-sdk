@@ -81,6 +81,8 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Only create the api map cache if it does not already exist
 	if agent.apiMap == nil {
 		agent.apiMap = cache.New()
+	}
+	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
 	}
 
