@@ -184,7 +184,7 @@ func (c *CategoryConfiguration) GetStaticCategories() []string {
 	return c.staticCategories
 }
 
-// DetermineCategories - return a string array of all categories that need to be created
+// DetermineCategories - return a string array of all categories that match the configured conditions
 func (c *CategoryConfiguration) DetermineCategories(tags map[string]string) []string {
 	categories := make([]string, 0)
 	if !c.configured {
