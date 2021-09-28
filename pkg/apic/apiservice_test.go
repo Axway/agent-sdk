@@ -9,9 +9,14 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
+
+var testCategories = []string{"CategoryA", "CategoryB", "CategoryC"}
 
 var serviceBody = ServiceBody{
 	APIName:          "daleapi",
@@ -19,6 +24,7 @@ var serviceBody = ServiceBody{
 	Image:            "abcde",
 	ImageContentType: "image/jpeg",
 	ResourceType:     Oas2,
+	categoryTitles:   testCategories,
 }
 
 func TestIsValidAuthPolicy(t *testing.T) {
@@ -54,6 +60,21 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 	})
+
+	// Setup category cache
+	categoryCache := cache.New()
+	for _, category := range testCategories {
+		newID := uuid.New().String()
+		categoryInstance := &v1.ResourceInstance{
+			ResourceMeta: v1.ResourceMeta{
+				Name:  newID,
+				Title: category,
+			},
+			Spec: map[string]interface{}{},
+		}
+		categoryCache.SetWithSecondaryKey(newID, category, categoryInstance)
+	}
+	client.AddCategoryCache(categoryCache)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
