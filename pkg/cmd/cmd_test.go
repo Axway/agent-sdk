@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -102,6 +103,24 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "log.file.path", "logFilePath", "logs", "Log file path if output type is file or both")
 }
 
+func TestNewCmd(t *testing.T) {
+	rootCmd := &cobra.Command{}
+	newCmd := NewCmd(
+		rootCmd,
+		"test",
+		"discovery agent",
+		func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+			return nil, nil
+		},
+		func() error {
+			return nil
+		},
+		corecfg.DiscoveryAgent,
+	)
+
+	assert.NotNil(t, newCmd)
+
+}
 func TestRootCmdConfigFileLoad(t *testing.T) {
 
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
