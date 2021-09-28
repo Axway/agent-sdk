@@ -199,6 +199,10 @@ func (c *ServiceClient) CreateCategory(categoryName string) (*v1alpha1.Category,
 	if err != nil {
 		return nil, err
 	}
+	if response.Code != http.StatusCreated {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
 
 	var newCategory v1alpha1.Category
 	err = json.Unmarshal(response.Body, &newCategory)

@@ -152,3 +152,30 @@ func TestUpdateSubscriptionDefinitionPropertiesForCatalogItem(t *testing.T) {
 	err = client.updateSubscriptionDefinitionPropertiesForCatalogItem("id", "profile", schema)
 	assert.Nil(t, err)
 }
+
+func TestCreateCategory(t *testing.T) {
+	client, httpClientMock := GetTestServiceClient()
+	wd, _ := os.Getwd()
+
+	// success
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			FileName: wd + "/testdata/category.json",
+			RespCode: http.StatusCreated,
+		},
+	})
+	categoryResource, err := client.CreateCategory("CategoryC")
+	assert.Nil(t, err)
+	assert.NotNil(t, categoryResource)
+
+	// fail
+	httpClientMock.SetResponses([]api.MockResponse{
+		{
+			FileName: wd + "/testdata/empty-list.json",
+			RespCode: http.StatusNotFound,
+		},
+	})
+	categoryResource, err = client.CreateCategory("CategoryC")
+	assert.NotNil(t, err)
+	assert.Nil(t, categoryResource)
+}
