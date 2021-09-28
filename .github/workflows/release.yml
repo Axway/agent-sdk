@@ -22,3 +22,5 @@ jobs:
     #     go-version: '^1.16.0'
     - name: Update version file
       run: cat ./version
+    - name: Set selected color
+      run: echo "The tag is: $GITHUB_REF"
