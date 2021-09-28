@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 const defaultAPICDeployment = "prod"
@@ -312,6 +313,11 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionEventBuilder) validateLogEvent() error {
+	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// Do not need this information in offline mode
+		return nil
+	}
+
 	if b.logEvent.TenantID == "" {
 		return errors.New("Tenant ID property not set in transaction event")
 	}
@@ -531,6 +537,11 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionSummaryBuilder) validateLogEvent() error {
+	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// Do not need this information in offline mode
+		return nil
+	}
+
 	if b.logEvent.TenantID == "" {
 		return errors.New("Tenant ID property not set in transaction summary event")
 	}

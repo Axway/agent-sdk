@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -44,7 +45,8 @@ type SubscriptionValidator func(subscription Subscription) bool
 // Client - interface
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
-	PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error)
+	SetConfig(cfg corecfg.CentralConfig)
+	PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
@@ -78,7 +80,9 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.OnConfigChange(cfg)
-	hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
+	if util.IsNotTest() {
+		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
+	}
 	return serviceClient
 }
 
@@ -107,6 +111,12 @@ func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
 // SetTokenGetter - sets the token getter
 func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) {
 	c.tokenRequester = tokenRequester
+}
+
+// SetConfig - sets the config and apiClient
+func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
+	c.cfg = cfg
+	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 }
 
 // mapToTagsArray -
@@ -352,7 +362,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*PlatformUserInfo, error
 	}
 
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
-	log.Debugf("Platform URL being used to get user information %s", platformURL)
+	log.Tracef("Platform URL being used to get user information %s", platformURL)
 
 	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
 	if reqErr != nil {
@@ -380,7 +390,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	}
 
 	email := platformUserInfo.Result.Email
-	log.Debugf("Platform user email %s", email)
+	log.Tracef("Platform user email %s", email)
 
 	return email, nil
 }
@@ -395,7 +405,7 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 
 	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
 
-	log.Debugf("Platform user %s", userName)
+	log.Tracef("Platform user %s", userName)
 
 	return userName, nil
 }

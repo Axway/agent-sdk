@@ -38,7 +38,9 @@ func init() {
 type Deployment struct {
 	apiv1.ResourceMeta
 
-	Owner interface{} `json:"owner"`
+	Owner *apiv1.Owner `json:"owner"`
+
+	References DeploymentReferences `json:"references"`
 
 	Spec DeploymentSpec `json:"spec"`
 

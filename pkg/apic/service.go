@@ -30,23 +30,23 @@ const (
 )
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
-func (c *ServiceClient) PublishService(serviceBody ServiceBody) (*v1alpha1.APIService, error) {
-	apiSvc, err := c.processService(&serviceBody)
+func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+	apiSvc, err := c.processService(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 	// Update description title after creating APIService to include the stage name if it exists
-	c.postAPIServiceUpdate(&serviceBody)
-	err = c.processRevision(&serviceBody)
+	c.postAPIServiceUpdate(serviceBody)
+	err = c.processRevision(serviceBody)
 	if err != nil {
 		return nil, err
 	}
-	err = c.processInstance(&serviceBody)
+	err = c.processInstance(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 	if c.cfg.IsPublishToEnvironmentAndCatalogMode() {
-		err = c.processConsumerInstance(&serviceBody)
+		err = c.processConsumerInstance(serviceBody)
 		if err != nil {
 			return nil, err
 		}

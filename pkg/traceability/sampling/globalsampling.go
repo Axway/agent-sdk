@@ -26,8 +26,18 @@ func DefaultConfig() Sampling {
 	}
 }
 
+// GetGlobalSamplingPercentage -
+func GetGlobalSamplingPercentage() (int, error) {
+	return agentSamples.config.Percentage, nil
+}
+
 // SetupSampling - set up the global sampling for use by traceability
-func SetupSampling(cfg Sampling) error {
+func SetupSampling(cfg Sampling, offlineMode bool) error {
+	if offlineMode {
+		// In offline mode sampling is always 0
+		cfg.Percentage = 0
+	}
+
 	// Validate the config to make sure it is not out of bounds
 	if cfg.Percentage < 0 || cfg.Percentage > countMax {
 		return fmt.Errorf("sampling percentage must be between 0 and 100")

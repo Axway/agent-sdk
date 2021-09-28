@@ -35,6 +35,13 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
+func createOfflineCentralCfg(url, env string) *config.CentralConfiguration {
+	cfg := config.NewCentralConfig(config.TraceabilityAgent).(*config.CentralConfiguration)
+	cfg.EnvironmentID = "abc123"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).Offline = true
+	return cfg
+}
+
 func createDiscoveryAgentRes(id, name, dataplane, filter string) *v1.ResourceInstance {
 	res := &v1alpha1.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{
@@ -111,12 +118,20 @@ func TestAgentInitialize(t *testing.T) {
 
 	defer s.Close()
 
-	cfg := createCentralCfg(s.URL, "v7")
-	// Test with no agent name - config to be validate successfully as no calls made to get agent and dataplane resource
+	cfg := createOfflineCentralCfg(s.URL, "v7")
+	// Test with offline mode
 	resetResources()
 	err := Initialize(cfg)
 	assert.Nil(t, err)
 	da := GetAgentResource()
+	assert.Nil(t, da)
+
+	cfg = createCentralCfg(s.URL, "v7")
+	// Test with no agent name - config to be validate successfully as no calls made to get agent and dataplane resource
+	resetResources()
+	err = Initialize(cfg)
+	assert.Nil(t, err)
+	da = GetAgentResource()
 	assert.Nil(t, da)
 
 	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")

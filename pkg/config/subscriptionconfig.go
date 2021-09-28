@@ -370,7 +370,7 @@ func (s *SubscriptionConfiguration) GetSubscriptionApprovalWebhookConfig() Webho
 func (s *SubscriptionConfiguration) ValidateCfg() error {
 	if s.Notifications.Webhook.GetURL() != "" {
 		s.SetNotificationType(NotifyWebhook)
-		log.Debug("Webhook notification set")
+		log.Trace("Webhook notification set")
 		err := s.validateWebhook()
 		if err != nil {
 			return err
@@ -378,7 +378,7 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 	}
 	if s.Notifications.SMTP.Host != "" {
 		s.SetNotificationType(NotifySMTP)
-		log.Debug("SMTP notification set")
+		log.Trace("SMTP notification set")
 		err := s.validateSubscriptionConfig()
 		if err != nil {
 			return err
@@ -393,7 +393,7 @@ func (s *SubscriptionConfiguration) ValidateCfg() error {
 		return ErrBadConfig.FormatError(pathSubscriptionsApprovalMode)
 	}
 
-	log.Debugf("Approval mode set: %s", s.GetSubscriptionApprovalMode())
+	log.Tracef("Approval mode set: %s", s.GetSubscriptionApprovalMode())
 
 	// only validate the webhook approval config settings if the approval mode is for webhook
 	if s.GetSubscriptionApprovalMode() == WebhookApproval {
@@ -440,7 +440,7 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 
 	for variable, template := range templates {
 		emailTemplate.IsAPIKey = !(variable == oauthEnvVar) // apikey for all but oauth
-		_, err := emailtemplate.ValidateSubscriptionConfig(template, "", emailTemplate)
+		_, err := emailtemplate.ValidateSubscriptionConfigOnStartup(template, "", emailTemplate)
 		if err != nil {
 			templateErr := fmt.Errorf("%s template is not valid: %s", variable, err.Error())
 			log.Error(templateErr)

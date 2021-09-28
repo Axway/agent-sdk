@@ -48,18 +48,19 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 				if owningTeam != "" {
 					teamForMsg = fmt.Sprintf("team %s", owningTeam)
 				}
-				log.Info(ErrTeamMismatch.FormatError(serviceBody.TeamName, serviceBody.APIName, teamForMsg))
+				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 			}
 		}
 	}
 
 	return v1alpha1.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
-		ApiServiceInstance: serviceBody.serviceContext.currentInstance,
+		ApiServiceInstance: serviceBody.serviceContext.instanceName,
 		Description:        serviceBody.Description,
 		Visibility:         "RESTRICTED",
 		Version:            serviceBody.Version,
-		State:              string(serviceBody.State),
+		State:              serviceBody.State,
 		Status:             serviceBody.Status,
 		Tags:               c.mapToTagsArray(serviceBody.Tags),
 		Documentation:      doc,
@@ -150,7 +151,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, consumerInstance.Spec.Categories)
 }
 
-//processConsumerInstance - deal with either a create or update of a consumerInstance
+// processConsumerInstance - deal with either a create or update of a consumerInstance
 func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error {
 
 	// Allow catalog asset to be created.  However, set to pass-through so subscriptions aren't enabled
@@ -210,7 +211,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
-	serviceBody.serviceContext.consumerInstance = consumerInstanceName
+	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
 
 	return err
 }
@@ -280,7 +281,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by external api id: %s", externalAPIID)
+	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==%s", externalAPIID),
@@ -321,7 +322,7 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.Co
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by id: %s", instanceID)
+	log.Tracef("Get consumer instance by id: %s", instanceID)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("metadata.id==%s", instanceID),
@@ -359,7 +360,7 @@ func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (
 		return nil, err
 	}
 
-	log.Debugf("Get consumer instance by name: %s", consumerInstanceName)
+	log.Tracef("Get consumer instance by name: %s", consumerInstanceName)
 
 	params := map[string]string{
 		"query": fmt.Sprintf("name==%s", consumerInstanceName),

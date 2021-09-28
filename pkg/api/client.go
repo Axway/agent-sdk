@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -52,6 +53,25 @@ type httpClient struct {
 	Client
 	httpClient *http.Client
 	timeout    time.Duration
+}
+
+type configAgent struct {
+	agentName       string
+	environmentName string
+	isDocker        bool
+}
+
+var cfgAgent *configAgent
+
+func init() {
+	cfgAgent = &configAgent{}
+}
+
+// SetConfigAgent -
+func SetConfigAgent(env string, isDocker bool, agentName string) {
+	cfgAgent.environmentName = env
+	cfgAgent.isDocker = isDocker
+	cfgAgent.agentName = agentName
 }
 
 // NewClient - creates a new HTTP client
@@ -120,7 +140,11 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 	}
 	if !hasUserAgentHeader {
-		req.Header.Set("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
+		deploymentType := "binary"
+		if cfgAgent.isDocker {
+			deploymentType = "docker"
+		}
+		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
 	}
 	return req, err
 }

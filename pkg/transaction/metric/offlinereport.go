@@ -3,7 +3,6 @@ package metric
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -83,7 +83,7 @@ func (c *cacheOfflineReport) initialize() {
 }
 
 func (c *cacheOfflineReport) registerOfflineReportJob() {
-	if flag.Lookup("test.v") != nil {
+	if !util.IsNotTest() {
 		return // skip setting up the job in test
 	}
 

@@ -65,12 +65,14 @@ func TestSamplingConfig(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			err := SetupSampling(test.config)
+			err := SetupSampling(test.config, false)
 			if test.errExpected {
 				assert.NotNil(t, err, "Expected the config to fail")
 			} else {
 				assert.Nil(t, err, "Expected the config to pass")
 				assert.Equal(t, test.expectedConfig.Percentage, agentSamples.config.Percentage)
+				percentage, _ := GetGlobalSamplingPercentage()
+				assert.Equal(t, test.expectedConfig.Percentage, percentage)
 			}
 		})
 	}
@@ -196,7 +198,7 @@ func TestShouldSample(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			waitGroup := sync.WaitGroup{}
 			sampleCounterLock := sync.Mutex{}
-			err := SetupSampling(test.config)
+			err := SetupSampling(test.config, false)
 			assert.Nil(t, err)
 
 			sampled := 0
@@ -329,7 +331,7 @@ func TestFilterEvents(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			err := SetupSampling(test.config)
+			err := SetupSampling(test.config, false)
 			assert.Nil(t, err)
 
 			eventsInTest := createEvents(test.testEvents, test.config.Percentage)

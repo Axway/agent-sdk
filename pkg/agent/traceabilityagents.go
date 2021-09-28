@@ -17,6 +17,7 @@ func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.Tra
 	agentRes := v1alpha1.TraceabilityAgent{}
 	agentRes.Name = agent.cfg.GetAgentName()
 	agentRes.Status.Version = config.AgentVersion
+	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
 	agentRes.Status.State = status
 	agentRes.Status.Message = message
 	agentRes.Status.LastActivityTime = getTimestamp()

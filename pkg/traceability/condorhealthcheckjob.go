@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+
+	"golang.org/x/net/proxy"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -48,11 +51,23 @@ func (j *condorHealthCheckJob) checkConnections(name string) error {
 }
 
 func (j *condorHealthCheckJob) checkTCPConnection(host string) error {
-	hostURL := j.agentHealthChecker.host
+	var err error
+	defaultDialer := &net.Dialer{Timeout: j.agentHealthChecker.timeout}
+	d := proxy.FromEnvironmentUsing(defaultDialer)
+
+	// Setup the proxy if needed
 	if j.agentHealthChecker.proxyURL != "" {
-		hostURL = j.agentHealthChecker.proxyURL
+		uri, err := url.Parse(j.agentHealthChecker.proxyURL)
+		if err != nil {
+			return fmt.Errorf("%s proxy could not be parsed. %s", host, err.Error())
+		}
+		d, err = proxy.FromURL(uri, defaultDialer)
+		if err != nil {
+			return fmt.Errorf("%s could not setup proxy. %s", host, err.Error())
+		}
 	}
-	_, err := net.DialTimeout(j.agentHealthChecker.protocol, hostURL, j.agentHealthChecker.timeout)
+
+	_, err = d.Dial(j.agentHealthChecker.protocol, j.agentHealthChecker.host)
 	if err != nil {
 		return fmt.Errorf("%s connection failed. %s", host, err.Error())
 	}

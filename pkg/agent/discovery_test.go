@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,7 @@ func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 }
 
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
-func (m *mockSvcClient) PublishService(serviceBody apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
 func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
@@ -90,6 +91,9 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 	return nil, nil
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+
+func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {
+}
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
 var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName

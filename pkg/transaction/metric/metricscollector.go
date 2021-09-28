@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -98,7 +97,7 @@ var globalMetricCollector Collector
 
 // GetMetricCollector - Create metric collector
 func GetMetricCollector() Collector {
-	if globalMetricCollector == nil && flag.Lookup("test.v") == nil {
+	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
 	}
 	return globalMetricCollector
@@ -123,7 +122,7 @@ func createMetricCollector() Collector {
 	metricCollector.reports = newOfflineReportCache()
 	metricCollector.publisher = newMetricPublisher(metricCollector.storage, metricCollector.reports)
 
-	if flag.Lookup("test.v") == nil {
+	if util.IsNotTest() {
 		var err error
 		if !metricCollector.usageConfig.IsOfflineMode() {
 			metricCollector.jobID, err = jobs.RegisterIntervalJobWithName(metricCollector, metricCollector.usageConfig.GetInterval(), "Metric Collector")

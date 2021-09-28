@@ -72,17 +72,14 @@ const (
 )
 
 type serviceContext struct {
-	serviceName      string
-	serviceAction    actionType
-	currentRevision  string
-	revisionCount    int
-	previousRevision *v1alpha1.APIServiceRevision
-	revisionAction   actionType
-	currentInstance  string
-	instanceCount    int
-	previousInstance *v1alpha1.APIServiceInstance
-	instanceAction   actionType
-	consumerInstance string
+	serviceName          string
+	serviceAction        actionType
+	revisionName         string
+	revisionCount        int
+	previousRevision     *v1alpha1.APIServiceRevision
+	revisionAction       actionType
+	instanceName         string
+	consumerInstanceName string
 }
 
 // EndpointDefinition - holds the service endpoint definition

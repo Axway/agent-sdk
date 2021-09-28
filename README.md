@@ -4,6 +4,10 @@ The Amplify Agents SDK provides APIs and utilities that developers can use to bu
 
 The Amplify Agents SDK helps in reducing complexity in implementing against the direct Amplify Central REST API interface and hides low level plumbing to provide discovery and traceability related features.
 
+## Support Policy
+
+The Amplify Agents SDK is supported under [Axway support policy](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/amplify_relnotes/agent_agentsdk_support_policy/index.html).
+
 ## Installation
 
 Make sure you have [Go installed](https://golang.org/doc/install) and then use the following command to install the Amplify Agents SDK

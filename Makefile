@@ -2,12 +2,12 @@
 
 WORKSPACE ?= $$(pwd)
 
-GO_TEST_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock)
+GO_TEST_LIST := $(shell go list ./... | grep -v /mock)
 
-GO_PKG_LIST := $(shell go list ./... | grep -v /vendor/ | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
+GO_PKG_LIST := $(shell go list ./... | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
 	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models)
 
-export GOFLAGS := -mod=vendor
+export GOFLAGS := -mod=mod
 
 all : clean
 
@@ -19,20 +19,16 @@ dep-check:
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
-	@go mod vendor
 	@go mod tidy
-	@go mod vendor
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
 
-test:
+test: dep
 	@go vet ${GO_TEST_LIST}
 	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
 
-test-sonar:
-	@echo "GO_PKG_LIST: ${GO_PKG_LIST}"
-	@echo "WORKSPACE: ${WORKSPACE}"
+test-sonar: dep
 	@go vet ${GO_PKG_LIST}
 	@go test -short -coverpkg=./... -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} -json > ${WORKSPACE}/goreport.json
 
@@ -45,8 +41,8 @@ sonar: test-sonar
 lint: ## Lint the files
 	@golint -set_exit_status ${GO_PKG_LIST}
 
-apiserver-generate: # generate api server resources. ex: make apiserver-generate https apicentral.axway.com 443
-	./scripts/apiserver/apiserver_generate.sh $(protocol) $(host) $(port)
+apiserver-generate: # generate api server resources, prod by default. ex: make apiserver-generate protocol=https host=apicentral.axway.com port=443
+	docker run --rm -v $(shell pwd)/scripts/apiserver:/codegen/scripts -v $(shell pwd)/pkg/apic/apiserver:/codegen/output -e PROTOCOL='$(protocol)' -e HOST='$(host)'  -e PORT='$(port)' -e USERID=$(shell id -u) -e GROUPID=$(shell id -g) -w /codegen/scripts --entrypoint ./apiserver_generate.sh ampc-beano-docker-snapshot-phx.artifactory-phx.ecd.axway.int/beano-alpine-codegen:latest
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh

@@ -62,6 +62,9 @@ var AgentDisplayName string
 // AgentVersion - Holds the version of agent
 var AgentVersion string
 
+// AgentLatestVersion - Holds the latest version of the agent
+var AgentLatestVersion string
+
 // AgentDataPlaneType - Holds the data plane type of agent
 var AgentDataPlaneType string
 
@@ -141,6 +144,7 @@ type CentralConfiguration struct {
 	TeamName                  string               `config:"team"`
 	APICDeployment            string               `config:"deployment"`
 	Environment               string               `config:"environment"`
+	EnvironmentID             string               `config:"environmentID"`
 	AgentName                 string               `config:"agentName"`
 	URL                       string               `config:"url"`
 	PlatformURL               string               `config:"platformURL"`
@@ -438,6 +442,7 @@ const (
 	pathSSLMinVersion             = "central.ssl.minVersion"
 	pathSSLMaxVersion             = "central.ssl.maxVersion"
 	pathEnvironment               = "central.environment"
+	pathEnvironmentID             = "central.environmentID"
 	pathAgentName                 = "central.agentName"
 	pathDeployment                = "central.deployment"
 	pathMode                      = "central.mode"
@@ -457,9 +462,15 @@ const (
 func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
+			if supportsTraceability(c.AgentType) && c.UsageReporting.IsOfflineMode() {
+				// only validate certain things when a traceability agent is in offline mode
+				c.validateOfflineConfig()
+				c.UsageReporting.validate()
+				return
+			}
 			c.validateConfig()
 			c.Auth.validate()
-			if c.AgentType == TraceabilityAgent {
+			if supportsTraceability(c.AgentType) {
 				c.UsageReporting.validate()
 			}
 		},
@@ -483,7 +494,7 @@ func (c *CentralConfiguration) validateConfig() {
 	// proxyURL
 	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
 
-	if c.GetAgentType() == TraceabilityAgent {
+	if supportsTraceability(c.AgentType) {
 		c.validateTraceabilityAgentConfig()
 	} else {
 		c.validatePublishToEnvironmentModeConfig()
@@ -543,6 +554,14 @@ func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	}
 }
 
+func (c *CentralConfiguration) validateOfflineConfig() {
+	// validate environment ID
+	c.SetEnvironmentID(c.EnvironmentID)
+	if c.GetEnvironmentID() == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathEnvironmentID))
+	}
+}
+
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
@@ -572,7 +591,8 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 
-	if agentType == TraceabilityAgent {
+	if supportsTraceability(agentType) {
+		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		AddUsageReportingProperties(props)
 	} else {
@@ -585,6 +605,20 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
+	if supportsTraceability(agentType) {
+		// Check if this is offline usage reporting only
+		cfg := &CentralConfiguration{
+			AgentName: props.StringPropertyValue(pathAgentName),
+			AgentType: agentType,
+		}
+		cfg.UsageReporting = ParseUsageReportingConfig(props)
+		if cfg.UsageReporting.IsOfflineMode() {
+			// only need the environment ID in offline mode
+			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
+			return cfg, nil
+		}
+	}
+
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
@@ -596,6 +630,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
+		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
@@ -621,9 +656,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 
-	if agentType == TraceabilityAgent {
+	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
-		cfg.UsageReporting = ParseUsageReportingConfig(props)
 	} else {
 		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
@@ -636,4 +670,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	return cfg, nil
+}
+
+func supportsTraceability(agentType AgentType) bool {
+	return agentType == TraceabilityAgent || agentType ==GovernanceAgent
 }
