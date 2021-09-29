@@ -1,9 +1,10 @@
 
 name: Release SDK
 
-# run this action if there is a push of a new tag of the form v.n.n.n
+# run this action if there is a push of a new tag of the form v.n.n.n on main branch
 on:
   push:
+    branches: main
     tags:
       - v*.*.*
 
@@ -16,15 +17,7 @@ jobs:
         working-directory: .
     steps:
     - uses: actions/checkout@v2
-    - name: Branch name
-      run: echo running on branch ${GITHUB_REF##*/}
-    # - name: Unshallow Fetch
-    #   run: git fetch --prune --unshallow
-    # - uses: actions/setup-go@v2
-    #   with:
-    #     go-version: '^1.16.0'
     - name: Update version file
-      run: cat ./version
-    # - name: Set selected color
-    #   working-directory: ./build/scripts
-    #   run: ./promote.sh $GITHUB_REF
+      working-directory: ./build/scripts
+      # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+      run: ./promote.sh ${GITHUB_REF##*/}   
