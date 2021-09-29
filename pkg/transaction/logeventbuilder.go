@@ -290,7 +290,7 @@ func (b *transactionEventBuilder) SetProtocolDetail(protocolDetail interface{}) 
 	if ok {
 		b.logEvent.TransactionEvent.Protocol = protocolDetail
 	} else {
-		b.err = errors.New("Unsupported protocol type")
+		b.err = errors.New("unsupported protocol type")
 	}
 	return b
 }
@@ -319,23 +319,23 @@ func (b *transactionEventBuilder) validateLogEvent() error {
 	}
 
 	if b.logEvent.TenantID == "" {
-		return errors.New("Tenant ID property not set in transaction event")
+		return errors.New("tenant ID property not set in transaction event")
 	}
 
 	if b.logEvent.EnvironmentID == "" {
-		return errors.New("Environment ID property are not set in transaction event")
+		return errors.New("environment ID property are not set in transaction event")
 	}
 
 	if b.logEvent.TransactionEvent.ID == "" {
-		return errors.New("ID property not set in transaction event")
+		return errors.New("id property not set in transaction event")
 	}
 
 	if b.logEvent.TransactionEvent.Direction == "" {
-		return errors.New("Direction property not set in transaction event")
+		return errors.New("direction property not set in transaction event")
 	}
 
 	if b.logEvent.TransactionEvent.Status == "" {
-		return errors.New("Status property not set in transaction event")
+		return errors.New("status property not set in transaction event")
 	}
 
 	if b.logEvent.TransactionEvent.Protocol == nil {
@@ -543,23 +543,23 @@ func (b *transactionSummaryBuilder) validateLogEvent() error {
 	}
 
 	if b.logEvent.TenantID == "" {
-		return errors.New("Tenant ID property not set in transaction summary event")
+		return errors.New("tenant ID property not set in transaction summary event")
 	}
 
 	if b.logEvent.EnvironmentID == "" {
-		return errors.New("Environment ID property are not set in transaction summary event")
+		return errors.New("environment ID property are not set in transaction summary event")
 	}
 
 	if b.logEvent.TransactionSummary.Status == "" {
-		return errors.New("Status property not set in transaction summary event")
+		return errors.New("status property not set in transaction summary event")
 	}
 
 	if b.logEvent.TransactionSummary.EntryPoint == nil {
-		return errors.New("Transaction entry point details are not set in transaction summary event")
+		return errors.New("transaction entry point details are not set in transaction summary event")
 	}
 
 	if b.logEvent.TransactionSummary.Product != nil && b.logEvent.TransactionSummary.Product.ID == "" {
-		return errors.New("Product ID property not set in transaction summary event")
+		return errors.New("product ID property not set in transaction summary event")
 	}
 	return nil
 }

@@ -71,7 +71,7 @@ func (b *httpProtocolBuilder) SetURI(uri string) HTTPProtocolBuilder {
 	if b.err != nil {
 		return b
 	}
-
+	b.httpProtocol.URIRaw = uri
 	b.httpProtocol.URI, b.err = redaction.URIRedaction(uri)
 	return b
 }
@@ -101,7 +101,7 @@ func (b *httpProtocolBuilder) AddArg(key string, value []string) HTTPProtocolBui
 		return b
 	}
 	if _, ok := b.argsMap[key]; ok {
-		b.err = fmt.Errorf("Arg with key %s has already been added", key)
+		b.err = fmt.Errorf("arg with key %s has already been added", key)
 	} else {
 		b.argsMap[key] = value
 	}
@@ -233,7 +233,7 @@ func (b *httpProtocolBuilder) AddRequestHeader(key string, value string) HTTPPro
 		return b
 	}
 	if _, ok := b.requestHeaders[key]; ok {
-		b.err = fmt.Errorf("Response Header with key %s has already been added", key)
+		b.err = fmt.Errorf("response Header with key %s has already been added", key)
 	} else {
 		b.requestHeaders[key] = value
 	}
@@ -253,7 +253,7 @@ func (b *httpProtocolBuilder) AddResponseHeader(key string, value string) HTTPPr
 		return b
 	}
 	if _, ok := b.responseHeaders[key]; ok {
-		b.err = fmt.Errorf("Response Header with key %s has already been added", key)
+		b.err = fmt.Errorf("response Header with key %s has already been added", key)
 	} else {
 		b.responseHeaders[key] = value
 	}
@@ -294,7 +294,7 @@ func (b *httpProtocolBuilder) AddIndexedRequestHeader(key string, value string) 
 		return b
 	}
 	if _, ok := b.indexedRequestHeaders[key]; ok {
-		b.err = fmt.Errorf("Indexed Response Header with key %s has already been added", key)
+		b.err = fmt.Errorf("indexed Response Header with key %s has already been added", key)
 	} else {
 		b.indexedRequestHeaders[key] = value
 	}
@@ -314,7 +314,7 @@ func (b *httpProtocolBuilder) AddIndexedResponseHeader(key string, value string)
 		return b
 	}
 	if _, ok := b.indexedResponseHeaders[key]; ok {
-		b.err = fmt.Errorf("Indexed Response Header with key %s has already been added", key)
+		b.err = fmt.Errorf("indexed Response Header with key %s has already been added", key)
 	} else {
 		b.indexedResponseHeaders[key] = value
 	}
@@ -349,23 +349,23 @@ func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
 	}
 
 	if b.httpProtocol.RequestHeaders == "" || b.httpProtocol.ResponseHeaders == "" {
-		return nil, errors.New("Request or Response Headers not set in HTTP protocol details")
+		return nil, errors.New("request or Response Headers not set in HTTP protocol details")
 	}
 
 	if b.httpProtocol.URI == "" {
-		return nil, errors.New("URI property not set in HTTP protocol details")
+		return nil, errors.New("uri property not set in HTTP protocol details")
 	}
 
 	if b.httpProtocol.Method == "" {
-		return nil, errors.New("Method property not set in HTTP protocol details")
+		return nil, errors.New("method property not set in HTTP protocol details")
 	}
 
 	if b.httpProtocol.Host == "" {
-		return nil, errors.New("Host property not set in HTTP protocol details")
+		return nil, errors.New("host property not set in HTTP protocol details")
 	}
 
 	if b.httpProtocol.Status < 100 || b.httpProtocol.Status > 600 {
-		return nil, errors.New("Invalid status code set in HTTP protocol details")
+		return nil, errors.New("invalid status code set in HTTP protocol details")
 	}
 	return b.httpProtocol, nil
 }

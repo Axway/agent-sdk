@@ -118,6 +118,11 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
 
+	// See if the uri is in the api exceptions list
+	if len(detailEvents) > 0 && e.isInAPIExceptionsList(detailEvents) {
+		return events, nil
+	}
+
 	// Add this to sample or not
 	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {
@@ -131,12 +136,6 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
-
-	// See if the uri is in the api exceptions list
-	if e.isInAPIExceptionsList(newEvent) {
-		log.Warn()
-		return events, nil
-	}
 
 	if err != nil {
 		return events, err
@@ -180,11 +179,14 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 }
 
 // Validate APIs in the traceability exceptions list
-func (e *Generator) isInAPIExceptionsList(newEvent beat.Event) bool {
+func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 
-	msg, _ := newEvent.Fields.GetValue("message")
-	log.Debug("Message : ", msg)
-	uri := "api path"
+	// Check first leg for URI.  Use the raw value before redaction happens
+	uriRaw := ""
+
+	if httpEvent, ok := logEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
+		uriRaw = httpEvent.URIRaw
+	}
 
 	// Get the api exceptions list
 	apiExceptionsList := traceability.GetAPIExceptionsList()
@@ -195,7 +197,8 @@ func (e *Generator) isInAPIExceptionsList(newEvent beat.Event) bool {
 
 	// If the api path exists in the exceptions list, return true and ignore event
 	for _, value := range exceptions {
-		if value == uri {
+		if value == uriRaw {
+			log.Debugf("Found api path %s in traceability api exceptions list.  Ignore transaction event", uriRaw)
 			return true
 		}
 	}
