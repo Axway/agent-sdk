@@ -119,7 +119,8 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	events := make([]beat.Event, 0)
 
 	// See if the uri is in the api exceptions list
-	if len(detailEvents) > 0 && e.isInAPIExceptionsList(detailEvents) {
+	if e.isInAPIExceptionsList(detailEvents) {
+		log.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
 		return events, nil
 	}
 
@@ -181,6 +182,11 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 // Validate APIs in the traceability exceptions list
 func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 
+	// Sanity check.
+	if len(logEvents) == 0 {
+		return false
+	}
+
 	// Check first leg for URI.  Use the raw value before redaction happens
 	uriRaw := ""
 
@@ -198,11 +204,11 @@ func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 	// If the api path exists in the exceptions list, return true and ignore event
 	for _, value := range exceptions {
 		if value == uriRaw {
-			log.Debugf("Found api path %s in traceability api exceptions list.  Ignore transaction event", uriRaw)
 			return true
 		}
 	}
 
+	// api path not found in exceptions list
 	return false
 }
 
