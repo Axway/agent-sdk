@@ -19,7 +19,8 @@ set_version_variables() {
     version="${1:1}"
     export VERSION=$version
     export BASE_DIR=$(realpath $(dirname $0)/../..)
-    export MSG="update to new release ${VERSION}"}
+    export MSG="update to new release ${VERSION}"
+}
 
 update_version_file() {
     echo "Updating version file"
