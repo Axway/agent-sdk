@@ -17,23 +17,24 @@ import (
 
 // Config -
 type Config struct {
-	Index            string            `config:"index"`
-	LoadBalance      bool              `config:"loadbalance"`
-	BulkMaxSize      int               `config:"bulk_max_size"`
-	SlowStart        bool              `config:"slow_start"`
-	Timeout          time.Duration     `config:"client_timeout"    validate:"min=0"`
-	TTL              time.Duration     `config:"ttl"               validate:"min=0"`
-	Pipelining       int               `config:"pipelining"        validate:"min=0"`
-	CompressionLevel int               `config:"compression_level" validate:"min=0, max=9"`
-	MaxRetries       int               `config:"max_retries"       validate:"min=-1"`
-	TLS              *tlscommon.Config `config:"ssl"`
-	Proxy            ProxyConfig       `config:",inline"`
-	Backoff          Backoff           `config:"backoff"`
-	EscapeHTML       bool              `config:"escape_html"`
-	Protocol         string            `config:"protocol"`
-	Hosts            []string          `config:"hosts"`
-	Redaction        redaction.Config  `config:"redaction" yaml:"redaction"`
-	Sampling         sampling.Sampling `config:"sampling" yaml:"sampling"`
+	Index             string            `config:"index"`
+	LoadBalance       bool              `config:"loadbalance"`
+	BulkMaxSize       int               `config:"bulk_max_size"`
+	SlowStart         bool              `config:"slow_start"`
+	Timeout           time.Duration     `config:"client_timeout"    validate:"min=0"`
+	TTL               time.Duration     `config:"ttl"               validate:"min=0"`
+	Pipelining        int               `config:"pipelining"        validate:"min=0"`
+	CompressionLevel  int               `config:"compression_level" validate:"min=0, max=9"`
+	MaxRetries        int               `config:"max_retries"       validate:"min=-1"`
+	TLS               *tlscommon.Config `config:"ssl"`
+	Proxy             ProxyConfig       `config:",inline"`
+	Backoff           Backoff           `config:"backoff"`
+	EscapeHTML        bool              `config:"escape_html"`
+	Protocol          string            `config:"protocol"`
+	Hosts             []string          `config:"hosts"`
+	Redaction         redaction.Config  `config:"redaction" yaml:"redaction"`
+	Sampling          sampling.Sampling `config:"sampling" yaml:"sampling"`
+	APIExceptionsList string            `config:"apiExceptionsList"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -133,4 +134,12 @@ func GetMaxRetries() int {
 		return 3
 	}
 	return outputConfig.MaxRetries
+}
+
+// GetAPIExceptionsList - Returns traceability APIs exception list (api paths)
+func GetAPIExceptionsList() string {
+	if outputConfig == nil {
+		return ""
+	}
+	return outputConfig.APIExceptionsList
 }

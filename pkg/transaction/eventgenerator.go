@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -130,9 +131,17 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
+
+	// See if the uri is in the api exceptions list
+	if e.isInAPIExceptionsList(newEvent) {
+		log.Warn()
+		return events, nil
+	}
+
 	if err != nil {
 		return events, err
 	}
+
 	events = append(events, newEvent)
 	for _, event := range detailEvents {
 		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
@@ -168,6 +177,30 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 		Status: status,
 		APIID:  apiID,
 	}
+}
+
+// Validate APIs in the traceability exceptions list
+func (e *Generator) isInAPIExceptionsList(newEvent beat.Event) bool {
+
+	msg, _ := newEvent.Fields.GetValue("message")
+	log.Debug("Message : ", msg)
+	uri := "api path"
+
+	// Get the api exceptions list
+	apiExceptionsList := traceability.GetAPIExceptionsList()
+	exceptions := strings.Split(apiExceptionsList, ",")
+	for i := range exceptions {
+		exceptions[i] = strings.TrimSpace(exceptions[i])
+	}
+
+	// If the api path exists in the exceptions list, return true and ignore event
+	for _, value := range exceptions {
+		if value == uri {
+			return true
+		}
+	}
+
+	return false
 }
 
 // healthcheck -
