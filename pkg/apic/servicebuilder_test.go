@@ -60,6 +60,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetUnstructuredType("Type").
 		SetAltRevisionPrefix("1.1.1").
 		SetTeamName("00000").
+		SetCategories([]string{"CategoryA", "CategoryB", "CategoryC"}).
 		Build()
 
 	assert.Nil(t, err)
@@ -97,6 +98,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "Label", sb.UnstructuredProps.Label)
 	assert.Equal(t, "Type", sb.UnstructuredProps.AssetType)
 	assert.Equal(t, "00000", sb.TeamName)
+	assert.Equal(t, []string{"CategoryA", "CategoryB", "CategoryC"}, sb.categoryTitles)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {

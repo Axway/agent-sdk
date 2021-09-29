@@ -9,8 +9,10 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -39,6 +41,18 @@ func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
 	return nil, nil
+}
+
+func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {
+	return
+}
+
+func (m *mockSvcClient) GetOrCreateCategory(category string) string {
+	return ""
 }
 
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}

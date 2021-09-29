@@ -119,6 +119,8 @@ type ServiceBody struct {
 	Endpoints         []EndpointDefinition
 	UnstructuredProps *UnstructuredProperties
 	TeamName          string
+	categoryTitles    []string //Titles will be set via the service body builder
+	categoryNames     []string //Names will be determined based the Title
 }
 
 // APIError - api response error
@@ -148,6 +150,7 @@ type ServiceClient struct {
 	apiClient                          coreapi.Client
 	DefaultSubscriptionSchema          SubscriptionSchema
 	subscriptionSchemaCache            cache.Cache
+	categoryCache                      cache.Cache
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
