@@ -18,7 +18,7 @@ func (s TxEventStatus) IsValid() error {
 	case TxEventStatusPass, TxEventStatusFail:
 		return nil
 	}
-	return errors.New("Invalid transaction event status")
+	return errors.New("invalid transaction event status")
 }
 
 // IsValid - Validator for TxSummaryStatus
@@ -27,7 +27,7 @@ func (s TxSummaryStatus) IsValid() error {
 	case TxSummaryStatusSuccess, TxSummaryStatusFailure, TxSummaryStatusException, TxSummaryStatusUnknown:
 		return nil
 	}
-	return errors.New("Invalid transaction summary status")
+	return errors.New("invalid transaction summary status")
 }
 
 // EventBuilder - Interface to build the log event of type transaction event
@@ -339,7 +339,7 @@ func (b *transactionEventBuilder) validateLogEvent() error {
 	}
 
 	if b.logEvent.TransactionEvent.Protocol == nil {
-		return errors.New("Protocol details not set in transaction event")
+		return errors.New("protocol details not set in transaction event")
 	}
 	return nil
 }
