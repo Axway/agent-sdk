@@ -23,10 +23,11 @@ set_version_variables() {
 }
 
 checkout_main() {
+    # need these in order to commit
     git config --global user.name "Gitlab action"
     git config --global user.email "gitaction@axway.com"
     git fetch
-    git checkout APIGOV-12345
+    git checkout main
 }
 
 update_version_file() {
@@ -38,13 +39,9 @@ commit_promotion() {
     echo "Committing the new promoted version to main"
     # echo ${MSG}
     cd ${BASE_DIR}
-    # need these in order to commit
-    # git config --global user.name "Gitlab action"
-    # git config --global user.email "gitaction@axway.com"
-    # git status
     git add version
     git commit -m "INT - ${MSG}"
-    git push origin APIGOV-12345
+    git push origin main
 }
 
 main() {
@@ -59,10 +56,8 @@ main() {
 
     set_version_variables $1
 
-    # Update versions file
     update_version_file
 
-    # # Commit file
     commit_promotion
 }
 
