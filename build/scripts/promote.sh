@@ -37,7 +37,6 @@ update_version_file() {
 
 commit_promotion() {
     echo "Committing the new promoted version to main"
-    # echo ${MSG}
     cd ${BASE_DIR}
     git add version
     git commit -m "INT - ${MSG}"
