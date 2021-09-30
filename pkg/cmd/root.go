@@ -275,7 +275,7 @@ func (c *agentRootCommand) initConfig() error {
 		}
 	}
 
-	// Check the agent's latest version once at the agent's start time
+	// Start the initial and recurring version check jobs
 	startVersionCheckJobs(c.centralCfg)
 	// Init the healthcheck API
 	hc.HandleRequests()
