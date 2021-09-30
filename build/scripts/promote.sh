@@ -22,6 +22,12 @@ set_version_variables() {
     export MSG="update to new release ${VERSION}"
 }
 
+checkout_main() {
+    git config --global user.name "Gitlab action"
+    git config --global user.email "gitaction@axway.com"
+    git checkout main
+}
+
 update_version_file() {
     echo "Updating version file"
     echo ${VERSION} > ${BASE_DIR}/version
@@ -30,10 +36,12 @@ update_version_file() {
 commit_promotion() {
     echo "Committing the new promoted version to main"
     echo ${MSG}
-    cd ${BASE_DIR}
-    git status
-    git add .
-
+    # cd ${BASE_DIR}
+    # need these in order to commit
+    git config --global user.name "Gitlab action"
+    git config --global user.email "gitaction@axway.com"
+    # git status
+    git add version
     git commit -m "INT - ${MSG}"
     git push origin main
 }
