@@ -11,6 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	conditionsKey            = "conditions"
 	categoriesKey            = "categories"
 	tagValueRegexStr         = "^(tag\\.)(.*)(\\.Value)$"
+	categoryTitleRegExStr    = "[^a-zA-Z0-9_\\-\\(\\)\\[\\]\\s]+"
 )
 
 var autoCategoryCreation *bool
@@ -26,6 +28,7 @@ var isMappingConfigured *bool
 
 // tagValueRegex - used to parse out the category name from the array of
 var tagValueRegex = regexp.MustCompile(tagValueRegexStr)
+var categoryTitleRegex = regexp.MustCompile(categoryTitleRegExStr)
 
 // CategoryConfig - Interface to get category config
 type CategoryConfig interface {
@@ -206,5 +209,20 @@ func (c *CategoryConfiguration) DetermineCategories(tags map[string]string) []st
 			}
 		}
 	}
-	return util.RemoveDuplicateValuesFromStringSlice(categories)
+	return util.RemoveDuplicateValuesFromStringSlice(c.processCategoryNames(categories))
+}
+
+// process all category names removing characters that are not allowed on Amplify Central
+func (c *CategoryConfiguration) processCategoryNames(categories []string) []string {
+	processedCategories := make([]string, 0)
+
+	for _, categoryName := range categories {
+		processedCategoryName := categoryTitleRegex.ReplaceAllString(categoryName, "")
+		if processedCategoryName != categoryName {
+			log.Warnf("Category names can only contain a-z, A-Z, 0-9, _, -, (), [], and space. Updateing '%s' to '%s'", categoryName, processedCategoryName)
+		}
+		processedCategories = append(processedCategories, processedCategoryName)
+	}
+
+	return processedCategories
 }

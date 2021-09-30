@@ -98,7 +98,7 @@ func TestDetermineCategories(t *testing.T) {
 			inputTags: map[string]string{
 				"TagB": "tagBValue1, tagBValue2",
 			},
-			outputCategories: []string{"tagBValue1, tagBValue2"},
+			outputCategories: []string{"tagBValue1 tagBValue2"},
 		},
 		{
 			name: "Multiple Matches",
