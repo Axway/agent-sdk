@@ -158,5 +158,5 @@ type Protocol struct {
 	ResponsePayload        string `json:"responsePayload,omitempty"`
 	WafStatus              int    `json:"wafStatus,omitempty"`
 	Timing                 string `json:"timing,omitempty"`
-	URIRaw                 string `json:"uriRaw,omitempty"`
+	uriRaw                 string
 }

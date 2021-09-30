@@ -191,7 +191,7 @@ func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 	uriRaw := ""
 
 	if httpEvent, ok := logEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
-		uriRaw = httpEvent.URIRaw
+		uriRaw = httpEvent.uriRaw
 	}
 
 	// Get the api exceptions list

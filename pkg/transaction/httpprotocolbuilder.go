@@ -71,7 +71,7 @@ func (b *httpProtocolBuilder) SetURI(uri string) HTTPProtocolBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.httpProtocol.URIRaw = uri
+	b.httpProtocol.uriRaw = uri
 	b.httpProtocol.URI, b.err = redaction.URIRedaction(uri)
 	return b
 }
