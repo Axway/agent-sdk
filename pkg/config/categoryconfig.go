@@ -223,7 +223,11 @@ func (c *CategoryConfiguration) processCategoryNames(categories []string) []stri
 	for _, categoryName := range categories {
 		processedCategoryName := categoryTitleRegex.ReplaceAllString(categoryName, "")
 		if processedCategoryName != categoryName {
-			log.Warnf("Category names can only contain a-z, A-Z, 0-9, _, -, (), [], and space. Updateing '%s' to '%s'", categoryName, processedCategoryName)
+			log.Warnf("Category names can only contain a-z, A-Z, 0-9, _, -, (), [], and space. Updating '%s' to '%s'", categoryName, processedCategoryName)
+		}
+		if processedCategoryName == "" {
+			log.Warnf("Category name cannot be blank, skipping it")
+			continue
 		}
 		processedCategories = append(processedCategories, processedCategoryName)
 	}
