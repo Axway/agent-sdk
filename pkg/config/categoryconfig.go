@@ -87,7 +87,10 @@ func mappingStringToJSON(mappingString string) ([]*mapping, error) {
 		err             error
 	)
 
-	mappingString = strings.ReplaceAll(mappingString, " ", "")
+	mappingString, err = util.RemoveUnquotedSpaces(mappingString)
+	if err != nil {
+		return categoryMapping, err
+	}
 	// try to unmarshal, if no error return now
 	err = json.Unmarshal([]byte(mappingString), &categoryMapping)
 	if err == nil {
@@ -98,6 +101,7 @@ func mappingStringToJSON(mappingString string) ([]*mapping, error) {
 	for _, key := range []string{conditionsKey, categoriesKey} {
 		mappingString = strings.ReplaceAll(mappingString, fmt.Sprintf("%s:\"", key), fmt.Sprintf("\"%s\":\"", key))
 	}
+	fmt.Println(mappingString)
 
 	err = json.Unmarshal([]byte(mappingString), &categoryMapping)
 	return categoryMapping, err
