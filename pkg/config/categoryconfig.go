@@ -113,7 +113,7 @@ func AddCategoryConfigProperties(props properties.Properties, basePath string) {
 	props.AddStringProperty(fmt.Sprintf("%s.%s", basePath, pathCategoryMapping), "", "Set mappings to use for the categories")
 
 	// auto creation
-	props.AddBoolProperty(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation), false, "Set to true to enable the createion of categories when they do not already exist")
+	props.AddBoolProperty(fmt.Sprintf("%s.%s", basePath, pathCategoryAutoCreation), false, "Set to true to enable the creation of categories when they do not already exist")
 }
 
 // newCategoryConfig -
