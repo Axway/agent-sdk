@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -117,6 +118,12 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
 
+	// See if the uri is in the api exceptions list
+	if e.isInAPIExceptionsList(detailEvents) {
+		log.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
+		return events, nil
+	}
+
 	// Add this to sample or not
 	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {
@@ -130,9 +137,11 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
+
 	if err != nil {
 		return events, err
 	}
+
 	events = append(events, newEvent)
 	for _, event := range detailEvents {
 		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
@@ -168,6 +177,39 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 		Status: status,
 		APIID:  apiID,
 	}
+}
+
+// Validate APIs in the traceability exceptions list
+func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
+
+	// Sanity check.
+	if len(logEvents) == 0 {
+		return false
+	}
+
+	// Check first leg for URI.  Use the raw value before redaction happens
+	uriRaw := ""
+
+	if httpEvent, ok := logEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
+		uriRaw = httpEvent.uriRaw
+	}
+
+	// Get the api exceptions list
+	apiExceptionsList := traceability.GetAPIExceptionsList()
+	exceptions := strings.Split(apiExceptionsList, ",")
+	for i := range exceptions {
+		exceptions[i] = strings.TrimSpace(exceptions[i])
+	}
+
+	// If the api path exists in the exceptions list, return true and ignore event
+	for _, value := range exceptions {
+		if value == uriRaw {
+			return true
+		}
+	}
+
+	// api path not found in exceptions list
+	return false
 }
 
 // healthcheck -
