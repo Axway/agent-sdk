@@ -195,8 +195,7 @@ func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 	}
 
 	// Get the api exceptions list
-	apiExceptionsList := traceability.GetAPIExceptionsList()
-	exceptions := strings.Split(apiExceptionsList, ",")
+	exceptions := traceability.GetAPIExceptionsList()
 	for i := range exceptions {
 		exceptions[i] = strings.TrimSpace(exceptions[i])
 	}

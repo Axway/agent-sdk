@@ -34,7 +34,7 @@ type Config struct {
 	Hosts             []string          `config:"hosts"`
 	Redaction         redaction.Config  `config:"redaction" yaml:"redaction"`
 	Sampling          sampling.Sampling `config:"sampling" yaml:"sampling"`
-	APIExceptionsList string            `config:"apiExceptionsList"`
+	APIExceptionsList []string          `config:"apiExceptionsList"`
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -137,9 +137,9 @@ func GetMaxRetries() int {
 }
 
 // GetAPIExceptionsList - Returns traceability APIs exception list (api paths)
-func GetAPIExceptionsList() string {
+func GetAPIExceptionsList() []string {
 	if outputConfig == nil {
-		return ""
+		return []string{}
 	}
 	return outputConfig.APIExceptionsList
 }
