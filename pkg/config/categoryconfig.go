@@ -101,7 +101,6 @@ func mappingStringToJSON(mappingString string) ([]*mapping, error) {
 	for _, key := range []string{conditionsKey, categoriesKey} {
 		mappingString = strings.ReplaceAll(mappingString, fmt.Sprintf("%s:\"", key), fmt.Sprintf("\"%s\":\"", key))
 	}
-	fmt.Println(mappingString)
 
 	err = json.Unmarshal([]byte(mappingString), &categoryMapping)
 	return categoryMapping, err
