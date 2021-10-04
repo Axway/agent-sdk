@@ -71,7 +71,7 @@ func TestDetermineCategories(t *testing.T) {
 	rootCmd := &cobra.Command{}
 	props := properties.NewProperties(rootCmd)
 	props.AddBoolProperty(fmt.Sprintf("%s.%s", testBasePath, pathCategoryAutoCreation), true, "")
-	props.AddStringProperty(fmt.Sprintf("%s.%s", testBasePath, pathCategoryMapping), `[{conditions:"tag.TagA.Exists()",categories:"CategoryA"},{conditions:"tag.TagB.Exists()",categories:"tag.TagB.Value"},{conditions:"tag.TagC == tagged",categories:"CategoryA"}]`, "")
+	props.AddStringProperty(fmt.Sprintf("%s.%s", testBasePath, pathCategoryMapping), `[{conditions:"tag.TagA.Exists()",categories:"CategoryA"},{conditions:"tag.TagB.Exists()",categories:"tag.TagB.Value"},{conditions:"tag.TagC == tagged",categories:"CategoryA"},{conditions:"tag.TagD == \"tagV1, tagV2\"",categories:"tag.TagD.Value"}]`, "")
 	cfg = ParseCategoryConfig(props, testBasePath).(*CategoryConfiguration)
 
 	testCases := []struct {
@@ -79,13 +79,6 @@ func TestDetermineCategories(t *testing.T) {
 		inputTags        map[string]string
 		outputCategories []string
 	}{
-		{
-			name: "No Categories",
-			inputTags: map[string]string{
-				"Tag": "tagValue",
-			},
-			outputCategories: []string{},
-		},
 		{
 			name: "Static Category Match",
 			inputTags: map[string]string{
@@ -98,7 +91,7 @@ func TestDetermineCategories(t *testing.T) {
 			inputTags: map[string]string{
 				"TagB": "tagBValue1, tagBValue2",
 			},
-			outputCategories: []string{"tagBValue1, tagBValue2"},
+			outputCategories: []string{"tagBValue1 tagBValue2"},
 		},
 		{
 			name: "Multiple Matches",
@@ -129,6 +122,13 @@ func TestDetermineCategories(t *testing.T) {
 				"TagC": "tagged",
 			},
 			outputCategories: []string{"CategoryA"},
+		},
+		{
+			name: "Value with space match",
+			inputTags: map[string]string{
+				"TagD": "tagV1, tagV2",
+			},
+			outputCategories: []string{"tagV1 tagV2"},
 		},
 	}
 	for _, test := range testCases {
