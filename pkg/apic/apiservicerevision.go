@@ -261,6 +261,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 	return apiSvcRevTitle.String()
 }
 
+// GetAPIRevisionByName - Returns the API revision based on its revision name
 func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
