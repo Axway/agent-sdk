@@ -163,3 +163,30 @@ func (c *ServiceClient) getAPIServiceByAttribute(externalAPIID, primaryKey strin
 func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
 	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, nil)
 }
+
+// GetAPIServiceByName - Returns the API service based on its name
+func (c *ServiceClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetServicesURL() + "/" + serviceName,
+		Headers: headers,
+	}
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		if response.Code != http.StatusNotFound {
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		}
+		return nil, nil
+	}
+	apiService := new(v1alpha1.APIService)
+	json.Unmarshal(response.Body, apiService)
+	return apiService, nil
+}
