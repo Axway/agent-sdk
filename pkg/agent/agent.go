@@ -66,6 +66,7 @@ type agentData struct {
 	logPath        string
 
 	apiMap                     cache.Cache
+	categoryMap                cache.Cache
 	apiValidator               APIValidator
 	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
@@ -81,6 +82,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Only create the api map cache if it does not already exist
 	if agent.apiMap == nil {
 		agent.apiMap = cache.New()
+	}
+	if agent.categoryMap == nil {
+		agent.categoryMap = cache.New()
 	}
 
 	err := checkRunningAgent()
@@ -107,6 +111,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Init apic client
 	if agent.apicClient == nil {
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
+		agent.apicClient.AddCategoryCache(agent.categoryMap)
 	} else {
 		agent.apicClient.SetTokenGetter(agent.tokenRequester)
 		agent.apicClient.OnConfigChange(centralCfg)

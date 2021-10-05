@@ -1,13 +1,10 @@
 package agent
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -20,7 +17,6 @@ import (
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/Axway/agent-sdk/pkg/watchmanager"
 )
 
 const (
@@ -40,144 +36,18 @@ func init() {
 
 type discoveryCache struct {
 	jobs.Job
-	lastServiceTime                 time.Time
-	lastInstanceTime                time.Time
-	refreshAll                      bool
-	watchManager                    watchmanager.Manager
-	apiSvcWatchEventChannel         chan *proto.Event
-	apiSvcWatchContext              context.Context
-	apiSvcInstanceWatchEventChannel chan *proto.Event
-	apiSvcInstanceWatchContext      context.Context
+	lastServiceTime  time.Time
+	lastInstanceTime time.Time
+	lastCategoryTime time.Time
+	refreshAll       bool
 }
-type resourceProcessor func(resourceEvent *proto.Event) error
 
-func newDiscoveryCache(getAll bool) (*discoveryCache, error) {
-	if agent.useGrpc && !getAll {
-		return newDiscoveryCacheWithGRPC()
-	}
-
-	instance := &discoveryCache{
+func newDiscoveryCache(getAll bool) *discoveryCache {
+	return &discoveryCache{
 		lastServiceTime:  time.Time{},
 		lastInstanceTime: time.Time{},
+		lastCategoryTime: time.Time{},
 		refreshAll:       getAll,
-	}
-
-	return instance, nil
-}
-
-func newDiscoveryCacheWithGRPC() (*discoveryCache, error) {
-	watchManager := watchmanager.New(agent.cfg, GetCentralAuthToken)
-	watchConfig := watchmanager.Config{
-		ScopeKind:  v1alpha1.EnvironmentGVK().Kind,
-		Scope:      agent.cfg.GetEnvironmentName(),
-		Group:      v1alpha1.APIServiceGVK().Group,
-		Kind:       v1alpha1.APIServiceGVK().Kind,
-		Name:       "*",
-		EventTypes: []string{"CREATED", "UPDATED", "DELETED"},
-	}
-	apiSvcWatchContext, apiSvcWatchEventChannel, err := registerWatch(watchManager, watchConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	watchConfig = watchmanager.Config{
-		ScopeKind:  v1alpha1.EnvironmentGVK().Kind,
-		Scope:      agent.cfg.GetEnvironmentName(),
-		Group:      v1alpha1.APIServiceInstanceGVK().Group,
-		Kind:       v1alpha1.APIServiceInstanceGVK().Kind,
-		Name:       "*",
-		EventTypes: []string{"CREATED", "UPDATED", "DELETED"},
-	}
-	apiSvcInstanceWatchContext, apiSvcInstanceWatchEventChannel, err := registerWatch(watchManager, watchConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	instance := &discoveryCache{
-		watchManager:                    watchManager,
-		apiSvcWatchEventChannel:         apiSvcWatchEventChannel,
-		apiSvcWatchContext:              apiSvcWatchContext,
-		apiSvcInstanceWatchEventChannel: apiSvcInstanceWatchEventChannel,
-		apiSvcInstanceWatchContext:      apiSvcInstanceWatchContext,
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	instance.updateAPICache()
-	instance.validateAPIServiceInstances()
-	go instance.processWatchEvents(apiSvcWatchContext, apiSvcWatchEventChannel, instance.processAPIServiceWatchEvent)
-	go instance.processWatchEvents(apiSvcInstanceWatchContext, apiSvcInstanceWatchEventChannel, instance.processAPIServiceInstanceWatchEvent)
-	return instance, nil
-}
-
-func registerWatch(manager watchmanager.Manager, watchConfig watchmanager.Config) (context.Context, chan *proto.Event, error) {
-	eventChannel := make(chan *proto.Event)
-	watchContext, err := manager.RegisterWatch(watchConfig, eventChannel)
-	return watchContext, eventChannel, err
-}
-
-func (j *discoveryCache) processAPIServiceWatchEvent(resourceEvent *proto.Event) error {
-	discoveryCacheLock.Lock()
-	defer discoveryCacheLock.Unlock()
-	if resourceEvent.Type == proto.Event_DELETED {
-		log.Info("Removing API Service " + resourceEvent.Payload.Name + " from cache")
-		removeItemToAPICache(resourceEvent.Payload.Name)
-		return nil
-	}
-	log.Info("Updating cache with API Service  " + resourceEvent.Payload.Name)
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agent.cfg.GetServicesURL()+"/"+resourceEvent.Payload.Name, nil, nil)
-	if err != nil {
-		return err
-	}
-	apiService := apiV1.ResourceInstance{}
-	json.Unmarshal(response, &apiService)
-	addItemToAPICache(apiService)
-	return nil
-}
-
-func (j *discoveryCache) processAPIServiceInstanceWatchEvent(resourceEvent *proto.Event) error {
-	discoveryCacheLock.Lock()
-	defer discoveryCacheLock.Unlock()
-	serviceInstances := j.loadCachedServiceInstances()
-	if resourceEvent.Type == proto.Event_DELETED {
-		// What happens to the API on dataplane?
-		log.Info("Removing API Service Instance " + resourceEvent.Payload.Name + " from cache")
-		j.removeServiceInstanceFromCache(resourceEvent.Payload.Name)
-		return nil
-	}
-	log.Info("Updating cache with API Service Instance " + resourceEvent.Payload.Name)
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agent.cfg.GetInstancesURL()+"/"+resourceEvent.Payload.Name, nil, nil)
-	if err != nil {
-		return err
-	}
-	serviceInstanceResource := &apiV1.ResourceInstance{}
-	json.Unmarshal(response, serviceInstanceResource)
-	if _, valid := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]; !valid {
-		// skip instance without external api id
-		return nil
-	}
-
-	serviceInstances = append(serviceInstances, serviceInstanceResource)
-	j.saveServiceInstancesToCache(serviceInstances)
-	return nil
-}
-
-func (j *discoveryCache) processWatchEvents(ctx context.Context, eventChannel chan *proto.Event, processor resourceProcessor) {
-	for {
-		done := false
-		select {
-		case <-ctx.Done():
-			done = true
-		case resourceEvent := <-eventChannel:
-			err := processor(resourceEvent)
-			if err != nil {
-				log.Errorf("Failed to process received watch event - %s", err.Error())
-			}
-		}
-		if done {
-			break
-		}
 	}
 }
 
@@ -201,26 +71,15 @@ func (j *discoveryCache) Execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
 	log.Trace("executing API cache update job")
-	if !agent.useGrpc {
-		j.updateAPICache()
-		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-			if agent.apiValidator != nil {
-				j.validateAPIServiceInstances()
-			}
-		}
-	} else {
-		// Validate the existing APIs on dataplane using cached API service instances
-		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-			serviceInstances := j.loadCachedServiceInstances()
-			serviceInstances = validateAPIOnDataplane(serviceInstances)
-			j.saveServiceInstancesToCache(serviceInstances)
-		}
+	j.updateAPICache()
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		j.validateAPIServiceInstances()
+		j.updateCategoryCache()
 	}
 	fetchConfig()
 	return nil
 }
 
-// Called only once at the agent startup when GRPC watch is used
 func (j *discoveryCache) updateAPICache() {
 	log.Trace("updating API cache")
 
@@ -264,8 +123,11 @@ func (j *discoveryCache) updateAPICache() {
 	}
 }
 
-// Called only once at the agent startup when GRPC watch is used
 func (j *discoveryCache) validateAPIServiceInstances() {
+	if agent.apiValidator == nil {
+		return
+	}
+
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
@@ -303,6 +165,42 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 	j.saveServiceInstancesToCache(serviceInstances)
 }
 
+func (j *discoveryCache) updateCategoryCache() {
+	log.Trace("updating category cache")
+
+	// Update cache with published resources
+	existingCategories := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(v1.APIServerTimeFormat))
+	}
+	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetCategoriesURL(), apiServerPageSize)
+
+	for _, category := range categories {
+		// Update the lastCategoryTime based on the newest category found
+		thisTime := time.Time(category.Metadata.Audit.CreateTimestamp)
+		if j.lastCategoryTime.Before(thisTime) {
+			j.lastCategoryTime = thisTime
+		}
+
+		agent.categoryMap.SetWithSecondaryKey(category.Name, category.Title, category)
+		existingCategories[category.Name] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.categoryMap.GetKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingCategories[key]; !ok {
+				agent.categoryMap.Delete(key)
+			}
+		}
+	}
+}
+
 func (j *discoveryCache) saveServiceInstancesToCache(serviceInstances []*apiV1.ResourceInstance) {
 	// Save all the instance names to make sure the map is unique
 	instanceNames := make(map[string]struct{})
@@ -313,24 +211,17 @@ func (j *discoveryCache) saveServiceInstancesToCache(serviceInstances []*apiV1.R
 	cache.GetCache().Set(serviceInstanceNameCache, instanceNames)
 }
 
-func (j *discoveryCache) loadCachedServiceInstances() []*apiV1.ResourceInstance {
-	return j.loadServiceInstancesFromCache(nil)
-}
-
 func (j *discoveryCache) loadServiceInstancesFromCache(serviceInstances []*apiV1.ResourceInstance) []*apiV1.ResourceInstance {
 	cachedInstancesInterface, err := cache.GetCache().Get(serviceInstanceCache)
 	if err != nil {
-		return nil
+		return serviceInstances
 	}
 	cachedInstancesNames, err := cache.GetCache().Get(serviceInstanceNameCache)
 	if err != nil {
-		return nil
+		return serviceInstances
 	}
 	cachedInstances := cachedInstancesInterface.([]*apiV1.ResourceInstance)
-	if serviceInstances == nil {
-		serviceInstances = cachedInstances
-	}
-	for _, instance := range cachedInstances {
+	for _, instance := range serviceInstances {
 		// validate that the instance is not already in the array
 		if _, found := cachedInstancesNames.(map[string]struct{})[instance.Name]; !found {
 			cachedInstances = append(cachedInstances, instance)
@@ -339,22 +230,6 @@ func (j *discoveryCache) loadServiceInstancesFromCache(serviceInstances []*apiV1
 
 	// return the full list
 	return cachedInstances
-}
-
-func (j *discoveryCache) removeServiceInstanceFromCache(serviceInstanceName string) {
-	cachedInstancesInterface, err := cache.GetCache().Get(serviceInstanceCache)
-	if err != nil {
-		return
-	}
-	cleanServiceInstances := make([]*apiV1.ResourceInstance, 0)
-	cachedInstances := cachedInstancesInterface.([]*apiV1.ResourceInstance)
-	for _, instance := range cachedInstances {
-		// validate that the instance is not already in the array
-		if instance.Name != serviceInstanceName {
-			cleanServiceInstances = append(cleanServiceInstances, instance)
-		}
-	}
-	j.saveServiceInstancesToCache(cleanServiceInstances)
 }
 
 var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
@@ -465,19 +340,4 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
 	}
 	return externalAPIID
-}
-
-func removeItemToAPICache(apiServiceName string) {
-	keys := agent.apiMap.GetKeys()
-	keyToDelete := ""
-	for _, key := range keys {
-		apiSvc, err := agent.apiMap.Get(key)
-		if err == nil && (apiSvc.(apiV1.ResourceInstance)).Name == apiServiceName {
-			keyToDelete = key
-			break
-		}
-	}
-	if keyToDelete != "" {
-		agent.apiMap.Delete(keyToDelete)
-	}
 }

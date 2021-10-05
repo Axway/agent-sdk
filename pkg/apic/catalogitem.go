@@ -8,7 +8,10 @@ import (
 	"strconv"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/google/uuid"
 	"github.com/tidwall/gjson"
 )
 
@@ -161,4 +164,47 @@ func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(cat
 	}
 
 	return nil
+}
+
+// CreateCategory - Adds a new category
+func (c *ServiceClient) CreateCategory(categoryName string) (*v1alpha1.Category, error) {
+	spec := v1alpha1.CategorySpec{
+		Description: "",
+	}
+
+	newID, _ := uuid.NewUUID()
+	category := v1alpha1.Category{
+		ResourceMeta: v1.ResourceMeta{Name: newID.String(), Title: categoryName},
+		Spec:         spec,
+	}
+
+	buffer, err := json.Marshal(category)
+	if err != nil {
+		return nil, err
+	}
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.cfg.GetCategoriesURL(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusCreated {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var newCategory v1alpha1.Category
+	err = json.Unmarshal(response.Body, &newCategory)
+	return &newCategory, err
 }

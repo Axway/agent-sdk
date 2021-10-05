@@ -42,6 +42,7 @@ type ServiceBuilder interface {
 	SetUnstructuredLabel(label string) ServiceBuilder
 	SetUnstructuredFilename(filename string) ServiceBuilder
 	SetTeamName(teamName string) ServiceBuilder
+	SetCategories(categories []string) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -62,6 +63,8 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			ServiceAttributes: make(map[string]string),
 			Endpoints:         make([]EndpointDefinition, 0),
 			UnstructuredProps: &UnstructuredProperties{},
+			categoryTitles:    make([]string, 0),
+			categoryNames:     make([]string, 0),
 		},
 	}
 }
@@ -212,6 +215,11 @@ func (b *serviceBodyBuilder) SetAltRevisionPrefix(revisionPrefix string) Service
 
 func (b *serviceBodyBuilder) SetTeamName(teamName string) ServiceBuilder {
 	b.serviceBody.TeamName = teamName
+	return b
+}
+
+func (b *serviceBodyBuilder) SetCategories(categories []string) ServiceBuilder {
+	b.serviceBody.categoryTitles = categories
 	return b
 }
 

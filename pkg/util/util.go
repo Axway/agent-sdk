@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
@@ -109,4 +110,38 @@ func ConvertTimeToMillis(tm time.Time) int64 {
 // IsNotTest determines if a test is running or not
 func IsNotTest() bool {
 	return flag.Lookup("test.v") == nil
+}
+
+// RemoveUnquotedSpaces - Remove all whitespace not between matching quotes
+func RemoveUnquotedSpaces(s string) (string, error) {
+	rs := make([]rune, 0, len(s))
+	const out = rune(0)
+	var quote rune = out
+	var escape = false
+	for _, r := range s {
+		if !escape {
+			if r == '`' || r == '"' || r == '\'' {
+				if quote == out {
+					// start unescaped quote
+					quote = r
+				} else if quote == r {
+					// end unescaped quote
+					quote = out
+				}
+			}
+		}
+		// backslash (\) is the escape character
+		// except when it is the second backslash of a pair
+		escape = !escape && r == '\\'
+		if quote != out || !unicode.IsSpace(r) {
+			// between matching unescaped quotes
+			// or not whitespace
+			rs = append(rs, r)
+		}
+	}
+	if quote != out {
+		err := fmt.Errorf("unmatched unescaped quote: %q", quote)
+		return "", err
+	}
+	return string(rs), nil
 }

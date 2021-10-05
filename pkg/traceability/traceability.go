@@ -46,7 +46,7 @@ var GetClient = getClient
 func getClient() (*Client, error) {
 	switch clients := len(traceabilityClients); clients {
 	case 0:
-		return nil, fmt.Errorf("No traceability clients, can't publish metrics")
+		return nil, fmt.Errorf("no traceability clients, can't publish metrics")
 	case 1:
 		return traceabilityClients[0], nil
 	default:

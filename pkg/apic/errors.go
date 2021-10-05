@@ -33,4 +33,7 @@ var (
 
 	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")
+
+	// Category
+	ErrCategoryCreate = errors.Newf(1165, "error creating category %s")
 )
