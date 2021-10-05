@@ -9,10 +9,16 @@ option go_package = "github.com/Axway/agent-sdk/pkg/watchmanager";
 service WatchService {
     rpc CreateWatch(Request) returns (stream Event) {
     }
+    rpc SubscribeToTopic(Request) returns (stream Event) {
+    }
 }
 
 message Request {
     repeated Trigger triggers = 1;
+}
+
+message Topic {
+    string selfLink = 1;
 }
 
 message Event {
