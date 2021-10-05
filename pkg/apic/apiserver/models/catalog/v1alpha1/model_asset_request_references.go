@@ -9,9 +9,8 @@
 
 package v1alpha1
 
-// DocumentSpec struct for DocumentSpec
-type DocumentSpec struct {
-	// Markdown content.
-	Content string   `json:"content"`
-	Stages  []string `json:"stages"`
+// AssetRequestReferences struct for AssetRequestReferences
+type AssetRequestReferences struct {
+	// Reference to Access Request resource
+	AccessRequest string `json:"accessRequest,omitempty"`
 }

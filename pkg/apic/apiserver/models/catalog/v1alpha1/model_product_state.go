@@ -9,8 +9,13 @@
 
 package v1alpha1
 
-// ReleaseTagReferences struct for ReleaseTagReferences
-type ReleaseTagReferences struct {
-	// Reference to Release that got created from this tag.
-	AssetRelease string `json:"assetRelease,omitempty"`
-}
+// ProductState the model 'ProductState'
+type ProductState string
+
+// List of ProductState
+const (
+	DRAFT      ProductState = "draft"
+	ACTIVE     ProductState = "active"
+	DEPRECATED ProductState = "deprecated"
+	ARCHIVED   ProductState = "archived"
+)

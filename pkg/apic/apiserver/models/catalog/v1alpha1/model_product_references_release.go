@@ -9,8 +9,10 @@
 
 package v1alpha1
 
-// AssetReferences struct for AssetReferences
-type AssetReferences struct {
-	Kind string `json:"kind"`
+// ProductReferencesRelease struct for ProductReferencesRelease
+type ProductReferencesRelease struct {
+	// The latest AssetRelease computed based on the provided Asset filters.
 	Name string `json:"name,omitempty"`
+	// The AssetRelease version that the Product currently points to.
+	Version string `json:"version,omitempty"`
 }

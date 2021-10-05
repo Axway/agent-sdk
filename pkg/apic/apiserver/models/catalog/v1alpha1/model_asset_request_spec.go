@@ -14,4 +14,6 @@ type AssetRequestSpec struct {
 	Data                   map[string]interface{} `json:"data"`
 	AssetResource          string                 `json:"assetResource"`
 	AssetRequestDefinition string                 `json:"assetRequestDefinition,omitempty"`
+	// Reference to Release that got created from this asset request.
+	AssetRelease string `json:"assetRelease,omitempty"`
 }

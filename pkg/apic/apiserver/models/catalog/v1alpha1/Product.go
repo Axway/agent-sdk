@@ -38,15 +38,15 @@ func init() {
 type Product struct {
 	apiv1.ResourceMeta
 
-	Assetrelease ProductAssetrelease `json:"assetrelease"`
-
 	Icon interface{} `json:"icon"`
 
 	Owner *apiv1.Owner `json:"owner"`
 
+	References ProductReferences `json:"references"`
+
 	Spec ProductSpec `json:"spec"`
 
-	State interface{} `json:"state"`
+	State ProductState `json:"state"`
 }
 
 // FromInstance converts a ResourceInstance to a Product

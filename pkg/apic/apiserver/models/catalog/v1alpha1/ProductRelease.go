@@ -43,6 +43,8 @@ type ProductRelease struct {
 	Owner *apiv1.Owner `json:"owner"`
 
 	Spec ProductReleaseSpec `json:"spec"`
+
+	Status ProductReleaseStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a ProductRelease

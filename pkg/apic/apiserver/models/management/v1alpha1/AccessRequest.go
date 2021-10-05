@@ -40,6 +40,8 @@ type AccessRequest struct {
 
 	Owner *apiv1.Owner `json:"owner"`
 
+	References AccessRequestReferences `json:"references"`
+
 	Spec AccessRequestSpec `json:"spec"`
 
 	State AccessRequestState `json:"state"`

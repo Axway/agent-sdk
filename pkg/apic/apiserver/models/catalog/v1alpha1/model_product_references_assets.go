@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// ProductSpecAsset struct for ProductSpecAsset
-type ProductSpecAsset struct {
-	Name    string                  `json:"name"`
-	Filters ProductSpecAssetFilters `json:"filters,omitempty"`
+// ProductReferencesAssets struct for ProductReferencesAssets
+type ProductReferencesAssets struct {
+	// The Asset reference.
+	Name    string                   `json:"name,omitempty"`
+	Release ProductReferencesRelease `json:"release,omitempty"`
 }

@@ -182,11 +182,8 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	// register the update cache job
-	newDiscoveryCacheJob, err := newDiscoveryCache(false)
-	if err != nil {
-		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		return
-	}
+	newDiscoveryCacheJob := newDiscoveryCache(false)
+
 	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
@@ -197,7 +194,7 @@ func startAPIServiceCache() {
 		// Start the full update after the first interval
 		go func() {
 			time.Sleep(time.Hour)
-			allDiscoveryCacheJob, err := newDiscoveryCache(true)
+			allDiscoveryCacheJob := newDiscoveryCache(true)
 			id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 			if err != nil {
 				log.Errorf("could not start the All APIs cache update job: %v", err.Error())

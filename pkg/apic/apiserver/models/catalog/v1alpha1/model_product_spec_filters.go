@@ -9,10 +9,8 @@
 
 package v1alpha1
 
-// ProductAssetrelease struct for ProductAssetrelease
-type ProductAssetrelease struct {
-	// The Asset Release that the Product currently points to. Value is computed based on the selected asset filters.
-	Name string `json:"name,omitempty"`
-	// The Asset Release version that the Product currently points to.
+// ProductSpecFilters Filters what AssetRelease the Product points to.
+type ProductSpecFilters struct {
+	// The AssetRelease version to use. Examples:   - 1.0.1 for a specific asset release version   - 1.* for all minor and patch versions of version 1   - 1.2.* for all the patch version for version 1.2
 	Version string `json:"version,omitempty"`
 }

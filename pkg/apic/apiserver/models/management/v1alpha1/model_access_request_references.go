@@ -9,7 +9,8 @@
 
 package v1alpha1
 
-// ProductReleaseSpecAssetRelease struct for ProductReleaseSpecAssetRelease
-type ProductReleaseSpecAssetRelease struct {
-	Name string `json:"name,omitempty"`
+// AccessRequestReferences struct for AccessRequestReferences
+type AccessRequestReferences struct {
+	// The name of the assetRequest resource from which this access request is created.
+	AssetRequest string `json:"assetRequest,omitempty"`
 }
