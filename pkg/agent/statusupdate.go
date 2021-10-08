@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -15,6 +16,11 @@ const (
 )
 
 var previousStatus string // The global previous status to be used by both update jobs
+var updateStatusMutex *sync.Mutex
+
+func init() {
+	updateStatusMutex = &sync.Mutex{}
+}
 
 type agentStatusUpdate struct {
 	jobs.Job
@@ -53,6 +59,10 @@ func (su *agentStatusUpdate) Status() error {
 }
 
 func (su *agentStatusUpdate) Execute() error {
+	// only one status update should execute at a time
+	updateStatusMutex.Lock()
+	defer updateStatusMutex.Unlock()
+
 	// error out if the agent name does not exist
 	err := runStatusUpdateCheck()
 	if err != nil {
