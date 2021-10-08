@@ -9,9 +9,7 @@
 
 package v1alpha1
 
-// DocumentSpec struct for DocumentSpec
-type DocumentSpec struct {
-	// Markdown content.
-	Content string   `json:"content"`
-	Stages  []string `json:"stages"`
+// PublishedProductSpecProduct struct for PublishedProductSpecProduct
+type PublishedProductSpecProduct struct {
+	Name string `json:"name,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductReleaseSpecAssetRelease struct for ProductReleaseSpecAssetRelease
-type ProductReleaseSpecAssetRelease struct {
-	Name string `json:"name,omitempty"`
+// PublishedProductSpec struct for PublishedProductSpec
+type PublishedProductSpec struct {
+	Product PublishedProductSpecProduct `json:"product,omitempty"`
 }

@@ -14,11 +14,12 @@ const (
 	immediate = "immediate status change"
 )
 
+var previousStatus string // The global previous status to be used by both update jobs
+
 type agentStatusUpdate struct {
 	jobs.Job
 	previousActivityTime  time.Time
 	currentActivityTime   time.Time
-	prevStatus            string
 	immediateStatusChange bool
 	typeOfStatusUpdate    string
 }
@@ -65,21 +66,17 @@ func (su *agentStatusUpdate) Execute() error {
 
 	// Check to see if this is the immediate status change
 	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
-	if su.prevStatus != status && (su.immediateStatusChange && su.prevStatus == AgentRunning || status == AgentRunning) {
-		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", su.prevStatus, status)
-		UpdateStatus(status, "")
-		su.prevStatus = status
-		return nil
-	}
-
-	// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
-	if su.typeOfStatusUpdate == periodic {
+	if previousStatus != status && (su.immediateStatusChange && previousStatus == AgentRunning || status == AgentRunning) {
+		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", previousStatus, status)
+		UpdateStatus(status, previousStatus, "")
+	} else if su.typeOfStatusUpdate == periodic {
+		// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
 		log.Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
-		UpdateStatus(status, "")
-		su.prevStatus = status
+		UpdateStatus(status, previousStatus, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
 
+	previousStatus = status
 	return nil
 }
 
