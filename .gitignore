@@ -36,3 +36,4 @@ pkg/config/path
 openapitools.json
 main-resources.json
 sub-resources.json
+vendor
