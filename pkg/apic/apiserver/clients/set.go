@@ -14,7 +14,6 @@ import (
 )
 
 type Set struct {
-	WatchTopicManagementV1alpha1                     *management_v1alpha1.WatchTopicClient
 	DiscoveryAgentManagementV1alpha1                 *management_v1alpha1.UnscopedDiscoveryAgentClient
 	TraceabilityAgentManagementV1alpha1              *management_v1alpha1.UnscopedTraceabilityAgentClient
 	GovernanceAgentManagementV1alpha1                *management_v1alpha1.UnscopedGovernanceAgentClient
@@ -55,6 +54,7 @@ type Set struct {
 	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
 	CategoryCatalogV1alpha1                          *catalog_v1alpha1.CategoryClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
+	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
@@ -75,10 +75,6 @@ func New(b cAPIV1.Base) *Set {
 
 	var err error
 
-	s.WatchTopicManagementV1alpha1, err = management_v1alpha1.NewWatchTopicClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.WatchTopic: %s", err))
-	}
 	s.DiscoveryAgentManagementV1alpha1, err = management_v1alpha1.NewDiscoveryAgentClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.DiscoveryAgent: %s", err))
@@ -238,6 +234,10 @@ func New(b cAPIV1.Base) *Set {
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Marketplace: %s", err))
+	}
+	s.PublishedProductCatalogV1alpha1, err = catalog_v1alpha1.NewPublishedProductClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedProduct: %s", err))
 	}
 	s.ProductCatalogV1alpha1, err = catalog_v1alpha1.NewProductClient(b)
 	if err != nil {

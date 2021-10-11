@@ -9,9 +9,7 @@
 
 package v1alpha1
 
-// WatchTopicSpec struct for WatchTopicSpec
-type WatchTopicSpec struct {
-	// Description of the WatchTopic
-	Description string                  `json:"description,omitempty"`
-	Filters     []WatchTopicSpecFilters `json:"filters"`
+// PublishedProductSpec struct for PublishedProductSpec
+type PublishedProductSpec struct {
+	Product PublishedProductSpecProduct `json:"product,omitempty"`
 }
