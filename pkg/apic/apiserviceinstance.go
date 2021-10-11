@@ -184,3 +184,32 @@ func (c *ServiceClient) deleteAPIServiceInstance(name string) error {
 	}
 	return nil
 }
+
+// GetAPIServiceInstanceByName - Returns the API service instance for specified name
+func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetInstancesURL() + "/" + instanceName,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != http.StatusOK {
+		if response.Code != http.StatusNotFound {
+			responseErr := readResponseErrors(response.Code, response.Body)
+			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		}
+		return nil, nil
+	}
+	apiInstance := new(v1alpha1.APIServiceInstance)
+	json.Unmarshal(response.Body, apiInstance)
+	return apiInstance, nil
+}
