@@ -67,8 +67,9 @@ func (m *mapping) setupCategories() error {
 	m.tagValues = make([]string, 0)
 
 	// Split the configured categories
-	categories := strings.Split(strings.ReplaceAll(m.Categories, " ", ""), ",")
+	categories := strings.Split(m.Categories, ",")
 	for _, cat := range categories {
+		cat = strings.TrimSpace(cat)
 		switch {
 		case tagValueRegex.MatchString(cat):
 			groups := tagValueRegex.FindStringSubmatch(cat)

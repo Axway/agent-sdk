@@ -13,12 +13,13 @@ func traceabilityAgent(res *apiV1.ResourceInstance) *v1alpha1.TraceabilityAgent 
 	return agentRes
 }
 
-func createTraceabilityAgentStatusResource(status, message string) *v1alpha1.TraceabilityAgent {
+func createTraceabilityAgentStatusResource(status, prevStatus, message string) *v1alpha1.TraceabilityAgent {
 	agentRes := v1alpha1.TraceabilityAgent{}
 	agentRes.Name = agent.cfg.GetAgentName()
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
 	agentRes.Status.State = status
+	agentRes.Status.PreviousState = prevStatus
 	agentRes.Status.Message = message
 	agentRes.Status.LastActivityTime = getTimestamp()
 	agentRes.Status.SdkVersion = config.SDKVersion

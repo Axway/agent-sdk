@@ -131,7 +131,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 		if getAgentResourceType() != "" {
 			fetchConfig()
-			updateAgentStatus(AgentRunning, "")
+			updateAgentStatus(AgentRunning, "", "")
 		} else if agent.cfg.GetAgentName() != "" {
 			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 		}
@@ -262,8 +262,8 @@ func GetAgentResource() *apiV1.ResourceInstance {
 }
 
 // UpdateStatus - Updates the agent state
-func UpdateStatus(status, description string) {
-	updateAgentStatus(status, description)
+func UpdateStatus(status, prevStatus, description string) {
+	updateAgentStatus(status, prevStatus, description)
 }
 
 func fetchConfig() error {
@@ -322,7 +322,7 @@ func setupSignalProcessor() {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	updateAgentStatus(AgentStopped, "")
+	updateAgentStatus(AgentStopped, AgentRunning, "")
 }
 
 // GetAgentResourceType - Returns the Agent Resource path element
@@ -347,7 +347,7 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 }
 
 // updateAgentStatus - Updates the agent status in agent resource
-func updateAgentStatus(status, message string) error {
+func updateAgentStatus(status, prevStatus, message string) error {
 	// IMP - To be removed once the model is in production
 	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
 		return nil
@@ -355,7 +355,7 @@ func updateAgentStatus(status, message string) error {
 
 	if agent.agentResource != nil {
 		agentResourceType := getAgentResourceType()
-		resource := createAgentStatusSubResource(agentResourceType, status, message)
+		resource := createAgentStatusSubResource(agentResourceType, status, prevStatus, message)
 
 		err := updateAgentStatusAPI(resource, agentResourceType)
 		if err != nil {
@@ -380,18 +380,18 @@ func updateAgentStatusAPI(resource interface{}, agentResourceType string) error 
 	return nil
 }
 
-func createAgentStatusSubResource(agentResourceType, status, message string) *v1.ResourceInstance {
+func createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) *v1.ResourceInstance {
 	switch agentResourceType {
 	case v1alpha1.DiscoveryAgentResourceName:
-		agentRes := createDiscoveryAgentStatusResource(status, message)
+		agentRes := createDiscoveryAgentStatusResource(status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance
 	case v1alpha1.TraceabilityAgentResourceName:
-		agentRes := createTraceabilityAgentStatusResource(status, message)
+		agentRes := createTraceabilityAgentStatusResource(status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance
 	case v1alpha1.GovernanceAgentResourceName:
-		agentRes := createGovernanceAgentStatusResource(status, message)
+		agentRes := createGovernanceAgentStatusResource(status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance
 	default:
