@@ -54,16 +54,16 @@ type Set struct {
 	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
 	CategoryCatalogV1alpha1                          *catalog_v1alpha1.CategoryClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
+	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
-	ReleaseTagCatalogV1alpha1                        *catalog_v1alpha1.UnscopedReleaseTagClient
 	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
 	AssetRequestDefinitionCatalogV1alpha1            *catalog_v1alpha1.UnscopedAssetRequestDefinitionClient
 	AssetRequestCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetRequestClient
-	DocumentCatalogV1alpha1                          *catalog_v1alpha1.UnscopedDocumentClient
 	DocumentationCatalogV1alpha1                     *catalog_v1alpha1.UnscopedDocumentationClient
 	TermsCatalogV1alpha1                             *catalog_v1alpha1.UnscopedTermsClient
 	ReleaseNotesCatalogV1alpha1                      *catalog_v1alpha1.UnscopedReleaseNotesClient
+	ReleaseTagCatalogV1alpha1                        *catalog_v1alpha1.UnscopedReleaseTagClient
 	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
 	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
 	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
@@ -235,6 +235,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Marketplace: %s", err))
 	}
+	s.PublishedProductCatalogV1alpha1, err = catalog_v1alpha1.NewPublishedProductClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedProduct: %s", err))
+	}
 	s.ProductCatalogV1alpha1, err = catalog_v1alpha1.NewProductClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Product: %s", err))
@@ -242,10 +246,6 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductReleaseCatalogV1alpha1, err = catalog_v1alpha1.NewProductReleaseClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductRelease: %s", err))
-	}
-	s.ReleaseTagCatalogV1alpha1, err = catalog_v1alpha1.NewReleaseTagClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ReleaseTag: %s", err))
 	}
 	s.AssetResourceCatalogV1alpha1, err = catalog_v1alpha1.NewAssetResourceClient(b)
 	if err != nil {
@@ -259,10 +259,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.AssetRequest: %s", err))
 	}
-	s.DocumentCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Document: %s", err))
-	}
 	s.DocumentationCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentationClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Documentation: %s", err))
@@ -274,6 +270,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ReleaseNotesCatalogV1alpha1, err = catalog_v1alpha1.NewReleaseNotesClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ReleaseNotes: %s", err))
+	}
+	s.ReleaseTagCatalogV1alpha1, err = catalog_v1alpha1.NewReleaseTagClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ReleaseTag: %s", err))
 	}
 	s.ResourceGroupDefinitionsV1alpha1, err = definitions_v1alpha1.NewResourceGroupClient(b)
 	if err != nil {

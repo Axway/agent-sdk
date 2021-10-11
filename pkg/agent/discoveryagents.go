@@ -15,12 +15,13 @@ func discoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.DiscoveryAgent {
 	return agentRes
 }
 
-func createDiscoveryAgentStatusResource(status, message string) *v1alpha1.DiscoveryAgent {
+func createDiscoveryAgentStatusResource(status, prevStatus, message string) *v1alpha1.DiscoveryAgent {
 	agentRes := v1alpha1.DiscoveryAgent{}
 	agentRes.Name = agent.cfg.GetAgentName()
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
 	agentRes.Status.State = status
+	agentRes.Status.PreviousState = prevStatus
 	agentRes.Status.Message = message
 	agentRes.Status.LastActivityTime = getTimestamp()
 	agentRes.Status.SdkVersion = config.SDKVersion

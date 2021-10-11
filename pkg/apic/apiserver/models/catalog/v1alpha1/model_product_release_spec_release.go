@@ -9,11 +9,9 @@
 
 package v1alpha1
 
-// AssetSpec struct for AssetSpec
-type AssetSpec struct {
-	// description of the asset.
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type"`
-	// list of categories for the asset.
-	Categories []string `json:"categories,omitempty"`
+// ProductReleaseSpecRelease struct for ProductReleaseSpecRelease
+type ProductReleaseSpecRelease struct {
+	Name string `json:"name,omitempty"`
+	// The AssetRelease version
+	Version string `json:"version,omitempty"`
 }

@@ -12,15 +12,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type DocumentMergeFunc func(*v1alpha1.Document, *v1alpha1.Document) (*v1alpha1.Document, error)
+type PublishedProductMergeFunc func(*v1alpha1.PublishedProduct, *v1alpha1.PublishedProduct) (*v1alpha1.PublishedProduct, error)
 
 // Merge builds a merge option for an update operation
-func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
+func PublishedProductMerge(f PublishedProductMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Document{}, &v1alpha1.Document{}
+		p, n := &v1alpha1.PublishedProduct{}, &v1alpha1.PublishedProduct{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Document:
+		case *v1alpha1.PublishedProduct:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Document:
+		case *v1alpha1.PublishedProduct:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DocumentClient -
-type DocumentClient struct {
+// PublishedProductClient -
+type PublishedProductClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDocumentClient -
-type UnscopedDocumentClient struct {
+// UnscopedPublishedProductClient -
+type UnscopedPublishedProductClient struct {
 	client v1.Unscoped
 }
 
-// NewDocumentClient -
-func NewDocumentClient(c v1.Base) (*UnscopedDocumentClient, error) {
+// NewPublishedProductClient -
+func NewPublishedProductClient(c v1.Base) (*UnscopedPublishedProductClient, error) {
 
-	client, err := c.ForKind(v1alpha1.DocumentGVK())
+	client, err := c.ForKind(v1alpha1.PublishedProductGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedDocumentClient{client}, nil
+	return &UnscopedPublishedProductClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedDocumentClient) WithScope(scope string) *DocumentClient {
-	return &DocumentClient{
+func (c *UnscopedPublishedProductClient) WithScope(scope string) *PublishedProductClient {
+	return &PublishedProductClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedDocumentClient) Get(name string) (*v1alpha1.Document, error) {
+func (c *UnscopedPublishedProductClient) Get(name string) (*v1alpha1.PublishedProduct, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Document{}
+	service := &v1alpha1.PublishedProduct{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption) (*v1alpha1.Document, error) {
+func (c *UnscopedPublishedProductClient) Update(res *v1alpha1.PublishedProduct, opts ...v1.UpdateOption) (*v1alpha1.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.Document{}
+	updated := &v1alpha1.PublishedProduct{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.Updat
 }
 
 // List -
-func (c *DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Document, error) {
+func (c *PublishedProductClient) List(options ...v1.ListOptions) ([]*v1alpha1.PublishedProduct, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Document, len(riList))
+	result := make([]*v1alpha1.PublishedProduct, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Document{}
+		result[i] = &v1alpha1.PublishedProduct{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Document, 
 }
 
 // Get -
-func (c *DocumentClient) Get(name string) (*v1alpha1.Document, error) {
+func (c *PublishedProductClient) Get(name string) (*v1alpha1.PublishedProduct, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Document{}
+	service := &v1alpha1.PublishedProduct{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *DocumentClient) Delete(res *v1alpha1.Document) error {
+func (c *PublishedProductClient) Delete(res *v1alpha1.PublishedProduct) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *DocumentClient) Delete(res *v1alpha1.Document) error {
 }
 
 // Create -
-func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption) (*v1alpha1.Document, error) {
+func (c *PublishedProductClient) Create(res *v1alpha1.PublishedProduct, opts ...v1.CreateOption) (*v1alpha1.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption)
 		return nil, err
 	}
 
-	created := &v1alpha1.Document{}
+	created := &v1alpha1.PublishedProduct{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption)
 }
 
 // Update -
-func (c *DocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption) (*v1alpha1.Document, error) {
+func (c *PublishedProductClient) Update(res *v1alpha1.PublishedProduct, opts ...v1.UpdateOption) (*v1alpha1.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *DocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption)
 		return nil, err
 	}
 
-	updated := &v1alpha1.Document{}
+	updated := &v1alpha1.PublishedProduct{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
