@@ -55,15 +55,15 @@ func (m *mockSvcClient) GetOrCreateCategory(category string) string {
 	return ""
 }
 
-func (c *mockSvcClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
+func (m *mockSvcClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
 	return nil, nil
 }
 
-func (c *mockSvcClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
+func (m *mockSvcClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
 	return nil, nil
 }
 
-func (c *mockSvcClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
+func (m *mockSvcClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
 	return nil, nil
 }
 
