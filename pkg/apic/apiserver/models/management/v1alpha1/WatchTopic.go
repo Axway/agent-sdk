@@ -5,150 +5,95 @@
 package v1alpha1
 
 import (
-	"fmt"
+	"encoding/json"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type WatchTopicMergeFunc func(*v1alpha1.WatchTopic, *v1alpha1.WatchTopic) (*v1alpha1.WatchTopic, error)
+var (
+	_WatchTopicGVK = apiv1.GroupVersionKind{
+		GroupKind: apiv1.GroupKind{
+			Group: "management",
+			Kind:  "WatchTopic",
+		},
+		APIVersion: "v1alpha1",
+	}
+)
 
-// Merge builds a merge option for an update operation
-func WatchTopicMerge(f WatchTopicMergeFunc) v1.UpdateOption {
-	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.WatchTopic{}, &v1alpha1.WatchTopic{}
+const (
+	WatchTopicScope = ""
 
-		switch t := prev.(type) {
-		case *v1alpha1.WatchTopic:
-			p = t
-		case *apiv1.ResourceInstance:
-			err := p.FromInstance(t)
-			if err != nil {
-				return nil, fmt.Errorf("merge: failed to unserialise prev resource: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("merge: failed to unserialise prev resource, unxexpected resource type: %T", t)
-		}
+	WatchTopicResourceName = "watchtopics"
+)
 
-		switch t := new.(type) {
-		case *v1alpha1.WatchTopic:
-			n = t
-		case *apiv1.ResourceInstance:
-			err := n.FromInstance(t)
-			if err != nil {
-				return nil, fmt.Errorf("merge: failed to unserialize new resource: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("merge: failed to unserialise new resource, unxexpected resource type: %T", t)
-		}
-
-		return f(p, n)
-	})
+func WatchTopicGVK() apiv1.GroupVersionKind {
+	return _WatchTopicGVK
 }
 
-// WatchTopicClient -
-type WatchTopicClient struct {
-	client v1.Scoped
+func init() {
+	apiv1.RegisterGVK(_WatchTopicGVK, WatchTopicScope, WatchTopicResourceName)
 }
 
-// NewWatchTopicClient -
-func NewWatchTopicClient(c v1.Base) (*WatchTopicClient, error) {
+// WatchTopic Resource
+type WatchTopic struct {
+	apiv1.ResourceMeta
 
-	client, err := c.ForKind(v1alpha1.WatchTopicGVK())
-	if err != nil {
-		return nil, err
+	Owner *apiv1.Owner `json:"owner"`
+
+	Spec WatchTopicSpec `json:"spec"`
+}
+
+// FromInstance converts a ResourceInstance to a WatchTopic
+func (res *WatchTopic) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
 	}
 
-	return &WatchTopicClient{client}, nil
-
-}
-
-// List -
-func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*v1alpha1.WatchTopic, error) {
-	riList, err := c.client.List(options...)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*v1alpha1.WatchTopic, len(riList))
-
-	for i := range riList {
-		result[i] = &v1alpha1.WatchTopic{}
-		err := result[i].FromInstance(riList[i])
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return result, nil
+	err = json.Unmarshal(rawResource, res)
+	return err
 }
 
-// Get -
-func (c *WatchTopicClient) Get(name string) (*v1alpha1.WatchTopic, error) {
-	ri, err := c.client.Get(name)
-	if err != nil {
-		return nil, err
+// WatchTopicFromInstanceArray converts a []*ResourceInstance to a []*WatchTopic
+func WatchTopicFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*WatchTopic, error) {
+	newArray := make([]*WatchTopic, 0)
+	for _, item := range fromArray {
+		res := &WatchTopic{}
+		err := res.FromInstance(item)
+		if err != nil {
+			return make([]*WatchTopic, 0), err
+		}
+		newArray = append(newArray, res)
 	}
 
-	service := &v1alpha1.WatchTopic{}
-	service.FromInstance(ri)
-
-	return service, nil
+	return newArray, nil
 }
 
-// Delete -
-func (c *WatchTopicClient) Delete(res *v1alpha1.WatchTopic) error {
-	ri, err := res.AsInstance()
+// AsInstance converts a WatchTopic to a ResourceInstance
+func (res *WatchTopic) AsInstance() (*apiv1.ResourceInstance, error) {
+	meta := res.ResourceMeta
+	meta.GroupVersionKind = WatchTopicGVK()
+	res.ResourceMeta = meta
 
-	if err != nil {
-		return err
-	}
-
-	return c.client.Delete(ri)
-}
-
-// Create -
-func (c *WatchTopicClient) Create(res *v1alpha1.WatchTopic, opts ...v1.CreateOption) (*v1alpha1.WatchTopic, error) {
-	ri, err := res.AsInstance()
-
+	m, err := json.Marshal(res)
 	if err != nil {
 		return nil, err
 	}
 
-	cri, err := c.client.Create(ri, opts...)
+	instance := apiv1.ResourceInstance{}
+	err = json.Unmarshal(m, &instance)
 	if err != nil {
 		return nil, err
 	}
 
-	created := &v1alpha1.WatchTopic{}
-
-	err = created.FromInstance(cri)
-	if err != nil {
-		return nil, err
-	}
-
-	return created, err
-}
-
-// Update -
-func (c *WatchTopicClient) Update(res *v1alpha1.WatchTopic, opts ...v1.UpdateOption) (*v1alpha1.WatchTopic, error) {
-	ri, err := res.AsInstance()
-	if err != nil {
-		return nil, err
-	}
-	resource, err := c.client.Update(ri, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	updated := &v1alpha1.WatchTopic{}
-
-	// Updates the resource in place
-	err = updated.FromInstance(resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return updated, nil
+	return &instance, nil
 }
