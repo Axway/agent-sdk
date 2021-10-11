@@ -55,4 +55,5 @@ PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
 	@echo $<
 	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=. --go_out=. $<
 
+# generate protobufs
 protoc: $(PROTOTARGETS)
