@@ -42,7 +42,7 @@ type PlatformTokenGetter interface {
 	tokenGetterCloser
 }
 
-// ApicAuth provides authentication methods for calls agains APIC Cloud services.
+// ApicAuth provides authentication methods for calls against APIC Cloud services.
 type ApicAuth struct {
 	tenantID string
 	tokenGetterCloser
@@ -502,7 +502,7 @@ func (ctg *channelTokenGetter) loop() {
 	defer closeHelper(ctg.tokenGetter)
 	for {
 		if _, ok := <-ctg.requests; !ok { // wait for a request
-			break // if input channel is closed,s top
+			break // if input channel is closed, stop
 		}
 
 		t, err := ctg.tokenGetter.GetToken()

@@ -7,16 +7,13 @@ import "apicentral.proto";
 option go_package = "github.com/Axway/agent-sdk/pkg/proto";
 
 service WatchService {
-    rpc CreateWatch(Topic) returns (stream Event) {
+    rpc CreateWatch(stream Request) returns (stream Event) {
     }
 }
 
 message Request {
-    repeated Trigger triggers = 1;
-}
-
-message Topic {
     string selfLink = 1;
+    string token = 2;
 }
 
 message Event {
@@ -37,22 +34,4 @@ message Event {
 
 message Organization {
     string id = 1;
-}
-
-message Trigger {
-    message Scope {
-        string kind = 1;
-        string name = 2;
-    }
-    string group = 1;
-    string kind = 2;
-    string name = 3;
-    Scope scope = 4;
-
-    enum Type {
-        CREATED = 0;
-        UPDATED = 1;
-        DELETED = 2;
-    }
-    repeated Type type = 5;
 }

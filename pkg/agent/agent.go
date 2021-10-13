@@ -220,7 +220,7 @@ func isRunningInDockerContainer() bool {
 	return strings.Contains(text, ":/docker")
 }
 
-// initializeTokenRequester - Create a new auth token requestor
+// initializeTokenRequester - Create a new auth token requester
 func initializeTokenRequester(centralCfg config.CentralConfig) error {
 	var err error
 	agent.tokenRequester = auth.NewPlatformTokenGetterWithCentralConfig(centralCfg)
