@@ -64,7 +64,7 @@ func (w WatchClient) Watch() {
 
 	w.logger.
 		WithField("subscriptionId", subscriptionID).Infof("watch registered for 30 minutes")
-	wait := time.Duration(30 * time.Second)
+	wait := time.Duration(30 * time.Minute)
 	for {
 		select {
 		case err = <-errCh:
