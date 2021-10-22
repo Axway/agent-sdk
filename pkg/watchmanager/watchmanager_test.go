@@ -7,9 +7,15 @@ import (
 )
 
 func TestWatchmanager(t *testing.T) {
-	wm, err := New("localhost", 8080, "tenantID", func() (string, error) {
-		return "abc", nil
-	})
+	cfg := &Config{
+		Host:     "localhost",
+		Port:     8080,
+		TenantID: "tenantID",
+		TokenGetter: func() (string, error) {
+			return "abc", nil
+		},
+	}
+	wm, err := New(cfg, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, wm)
 	// ch := make(chan *proto.Event)
