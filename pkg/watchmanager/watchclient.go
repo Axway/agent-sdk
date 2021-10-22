@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -15,91 +17,96 @@ type watchClientConfig struct {
 }
 
 type watchClient struct {
-	cfg                     watchClientConfig
-	stream                  proto.WatchService_CreateWatchClient
-	streamWaitCancel        context.CancelFunc
-	processEventWaitContext context.Context
-	processEventWaitCancel  context.CancelFunc
+	cfg          watchClientConfig
+	stream       proto.WatchService_CreateWatchClient
+	cancelStream context.CancelFunc
+	timer        *time.Timer
 }
 
-func newWatchClient(svcClient proto.WatchServiceClient, clientCfg watchClientConfig) (*watchClient, error) {
-	streamContext, streamCancel := context.WithCancel(context.Background())
-	stream, err := svcClient.CreateWatch(streamContext)
+func newWatchClient(cc grpc.ClientConnInterface, clientCfg watchClientConfig) (*watchClient, error) {
+	svcClient := proto.NewWatchServiceClient(cc)
+
+	streamCtx, streamCancel := context.WithCancel(context.Background())
+	stream, err := svcClient.CreateWatch(streamCtx)
 	if err != nil {
 		streamCancel()
 		return nil, err
 	}
 
-	processEventWaitContext, cancel := context.WithCancel(context.Background())
 	client := &watchClient{
-		cfg:                     clientCfg,
-		stream:                  stream,
-		streamWaitCancel:        streamCancel,
-		processEventWaitContext: processEventWaitContext,
-		processEventWaitCancel:  cancel,
+		cfg:          clientCfg,
+		stream:       stream,
+		cancelStream: streamCancel,
+		timer:        time.NewTimer(0),
 	}
+
 	return client, nil
 }
 
+// processEvents process incoming chimera events
 func (c *watchClient) processEvents() {
-	<-c.processEventWaitContext.Done()
 	for {
-		event, err := c.stream.Recv()
+		err := c.recv()
 		if err != nil {
-			c.closeWithError(err)
+			c.handleError(err)
 			return
 		}
-		c.cfg.eventChannel <- event
 	}
 }
 
+// recv blocks until an event is received
+func (c *watchClient) recv() error {
+	event, err := c.stream.Recv()
+	if err != nil {
+		return err
+	}
+	c.cfg.eventChannel <- event
+	return nil
+}
+
+// processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
 func (c *watchClient) processRequest() {
-	wait := time.Duration(0)
 	for {
 		select {
 		case <-c.stream.Context().Done():
-			c.closeChannel(c.stream.Context().Err())
+			c.handleError(c.stream.Context().Err())
 			return
-		case <-time.After(wait):
-			token, err := c.cfg.tokenGetter()
+		case <-c.timer.C:
+			err := c.send()
 			if err != nil {
-				c.closeWithError(err)
+				c.handleError(err)
 				return
 			}
-			req := c.createWatchRequest(c.cfg.topicSelfLink, token)
-			err = c.stream.Send(req)
-			if err != nil {
-				c.closeWithError(err)
-				return
-			}
-			if wait == 0 {
-				c.processEventWaitCancel()
-				// token expiration time
-				wait = time.Minute * 29
-			}
+			c.timer.Reset(29 * time.Minute)
 		}
 	}
 }
 
-func (c *watchClient) createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
-	trigger := &proto.Request{
+// send a message with a new token to the grpc server
+func (c *watchClient) send() error {
+	token, err := c.cfg.tokenGetter()
+	if err != nil {
+		return err
+	}
+	req := createWatchRequest(c.cfg.topicSelfLink, token)
+	err = c.stream.Send(req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// handleError stop the running timer, send to the error channel, and close the open stream.
+func (c *watchClient) handleError(err error) {
+	c.timer.Stop()
+	c.cfg.errorChannel <- err
+	close(c.cfg.eventChannel)
+	c.cancelStream()
+}
+
+func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
+	return &proto.Request{
 		SelfLink: watchTopicSelfLink,
 		Token:    "Bearer " + token,
 	}
-
-	return trigger
-}
-
-func (c *watchClient) closeChannel(err error) {
-	c.cfg.errorChannel <- err
-	close(c.cfg.eventChannel)
-}
-
-func (c *watchClient) closeWithError(err error) {
-	c.closeChannel(err)
-	c.close()
-}
-func (c *watchClient) close() {
-	// Should trigger closing the event channel writing nil to error channel
-	c.streamWaitCancel()
 }
