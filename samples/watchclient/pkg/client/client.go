@@ -33,7 +33,12 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		watchmanager.WithLogger(entry))
 
 	ta := newTokenAuth(config.Auth, config.TenantID)
-	wm, err := watchmanager.New(config.Host, config.Port, config.TenantID, ta.GetToken, watchOptions...)
+	cfg := &watchmanager.Config{
+		Host:        config.Host,
+		Port:        config.Port,
+		TenantID:    config.TenantID,
+		TokenGetter: ta.GetToken}
+	wm, err := watchmanager.New(cfg, logger, watchOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +52,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 
 // Watch starts a two-way stream with the Watch Controller
 func (w WatchClient) Watch() {
-	w.logger.Info("opening the CreateWatch stream")
+	w.logger.Info("starting to watch events")
 
 	eventChannel := make(chan *proto.Event)
 	errCh := make(chan error)
@@ -58,18 +63,22 @@ func (w WatchClient) Watch() {
 	}
 
 	w.logger.
-		WithField("subscription-id", subscriptionID).Infof("Watch registered")
-
+		WithField("subscriptionId", subscriptionID).Infof("watch registered for 30 minutes")
+	wait := time.Duration(30 * time.Second)
 	for {
 		select {
 		case err = <-errCh:
 			w.logger.
-				WithField("subscription-id", subscriptionID).
+				WithField("subscriptionId", subscriptionID).
 				Error(err.Error())
 			return
+		case <-time.After(wait):
+			w.logger.
+				WithField("subscriptionId", subscriptionID).Infof("initiating watch close")
+			w.wm.CloseWatch(subscriptionID)
 		case resourceEvent := <-eventChannel:
 			w.logger.
-				WithField("subscription-id", subscriptionID).
+				WithField("subscriptionId", subscriptionID).
 				WithField("event", fmt.Sprintf("%+v", resourceEvent)).Infof("received message")
 		}
 	}

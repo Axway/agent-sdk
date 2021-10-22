@@ -38,7 +38,7 @@ func init() {
 	RootCmd.Flags().Duration("auth.timeout", 10*time.Second, "The connection timeout for AxwayID")
 	RootCmd.MarkFlagRequired("auth.clientId")
 
-	RootCmd.Flags().Bool("insecure", true, "Do not verify the server cert on TLS connection")
+	RootCmd.Flags().Bool("insecure", false, "Do not verify the server cert on TLS connection")
 	RootCmd.Flags().String("log.level", "info", "log level")
 	RootCmd.Flags().String("log.format", "json", "line or json")
 

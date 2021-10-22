@@ -7,58 +7,69 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+type watchClientConfig struct {
+	topicSelfLink string
+	tokenGetter   TokenGetter
+	eventChannel  chan *proto.Event
+	errorChannel  chan error
+}
+
 type watchClient struct {
-	watchTopicSelfLink      string
-	tokenGetter             TokenGetter
+	cfg                     watchClientConfig
 	stream                  proto.WatchService_CreateWatchClient
+	streamWaitCancel        context.CancelFunc
 	processEventWaitContext context.Context
 	processEventWaitCancel  context.CancelFunc
 }
 
-func newWatchClient(topicSelfLink string, tokenGetter TokenGetter, stream proto.WatchService_CreateWatchClient) *watchClient {
+func newWatchClient(svcClient proto.WatchServiceClient, clientCfg watchClientConfig) (*watchClient, error) {
+	streamContext, streamCancel := context.WithCancel(context.Background())
+	stream, err := svcClient.CreateWatch(streamContext)
+	if err != nil {
+		streamCancel()
+		return nil, err
+	}
+
 	processEventWaitContext, cancel := context.WithCancel(context.Background())
 	client := &watchClient{
-		tokenGetter:             tokenGetter,
-		watchTopicSelfLink:      topicSelfLink,
+		cfg:                     clientCfg,
 		stream:                  stream,
+		streamWaitCancel:        streamCancel,
 		processEventWaitContext: processEventWaitContext,
 		processEventWaitCancel:  cancel,
 	}
-	return client
+	return client, nil
 }
 
-func (c *watchClient) processEvents(eventChannel chan *proto.Event, errorChannel chan error) {
+func (c *watchClient) processEvents() {
 	<-c.processEventWaitContext.Done()
 	for {
 		event, err := c.stream.Recv()
 		if err != nil {
-			errorChannel <- err
-			close(eventChannel)
+			c.closeWithError(err)
 			return
 		}
-		if event != nil {
-			eventChannel <- event
-		}
+		c.cfg.eventChannel <- event
 	}
 }
 
-func (c *watchClient) processRequest(errorChannel chan error) {
+func (c *watchClient) processRequest() {
 	wait := time.Duration(0)
 	for {
 		select {
 		case <-c.stream.Context().Done():
+			c.closeChannel(c.stream.Context().Err())
 			return
 		case <-time.After(wait):
-			token, err := c.tokenGetter()
+			token, err := c.cfg.tokenGetter()
 			if err != nil {
-				c.stream.Context().Done()
-				errorChannel <- err
+				c.closeWithError(err)
 				return
 			}
-			req := c.createWatchRequest(c.watchTopicSelfLink, token)
+			req := c.createWatchRequest(c.cfg.topicSelfLink, token)
 			err = c.stream.Send(req)
 			if err != nil {
-				errorChannel <- err
+				c.closeWithError(err)
 				return
 			}
 			if wait == 0 {
@@ -77,4 +88,18 @@ func (c *watchClient) createWatchRequest(watchTopicSelfLink, token string) *prot
 	}
 
 	return trigger
+}
+
+func (c *watchClient) closeChannel(err error) {
+	c.cfg.errorChannel <- err
+	close(c.cfg.eventChannel)
+}
+
+func (c *watchClient) closeWithError(err error) {
+	c.closeChannel(err)
+	c.close()
+}
+func (c *watchClient) close() {
+	// Should trigger closing the event channel writing nil to error channel
+	c.streamWaitCancel()
 }

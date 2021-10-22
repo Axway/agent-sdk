@@ -65,7 +65,7 @@ func WithLogger(loggerEntry *logrus.Entry) Option {
 }
 
 func (m *watchManager) appendRPCCredentialsOption(grpcDialOptions []grpc.DialOption) []grpc.DialOption {
-	rpcCredential := newRPCAuth(m.tenantID, m.tokenGetter)
+	rpcCredential := newRPCAuth(m.cfg.Host, m.cfg.TokenGetter)
 	return append(grpcDialOptions,
 		grpc.WithPerRPCCredentials(rpcCredential),
 	)
