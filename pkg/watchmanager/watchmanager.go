@@ -119,6 +119,7 @@ func (m *watchManager) RegisterWatch(watchTopicSelfLink string, eventChannel cha
 	return subscriptionID.String(), nil
 }
 
+// Close - Close the specified watch stream
 func (m *watchManager) CloseWatch(subscriptionID string) error {
 	m.logger.WithField("subscriptionId", subscriptionID).Info("closing watch")
 	client, ok := m.clientMap[subscriptionID]
@@ -129,6 +130,7 @@ func (m *watchManager) CloseWatch(subscriptionID string) error {
 	return nil
 }
 
+// Close - Close the watch service connection
 func (m *watchManager) Close() {
 	m.logger.Info("closing watch service connection")
 	// should trigger close on all open steams

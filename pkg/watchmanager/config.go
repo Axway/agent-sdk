@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// Config - represents the config for watch service connection
 type Config struct {
 	Host        string
 	Port        uint32
