@@ -335,7 +335,7 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 	if resp.StatusCode != 200 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Debug("error reading response body: %s: %s", resp.Status, err.Error())
+			log.Debugf("error reading response body: %s: %s", resp.Status, err.Error())
 		} else {
 			log.Debugf("bad response from AxwayID: %s: %s", resp.Status, body)
 		}
