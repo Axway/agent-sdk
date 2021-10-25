@@ -121,12 +121,8 @@ func (m *watchManager) CloseWatch(id string) error {
 func (m *watchManager) Close() {
 	m.logger.Info("closing watch service connection")
 
-	for id, _ := range m.clientMap {
-		err := m.CloseWatch(id)
-		if err != nil {
-			m.logger.Error(err)
-		}
-	}
-
 	m.connection.Close()
+	for id := range m.clientMap {
+		delete(m.clientMap, id)
+	}
 }

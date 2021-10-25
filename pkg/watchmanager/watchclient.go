@@ -2,11 +2,13 @@ package watchmanager
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+	"github.com/golang-jwt/jwt"
 )
 
 type watchClientConfig struct {
@@ -72,28 +74,52 @@ func (c *watchClient) processRequest() {
 			c.handleError(c.stream.Context().Err())
 			return
 		case <-c.timer.C:
-			err := c.send()
+			exp, err := c.send()
 			if err != nil {
 				c.handleError(err)
 				return
 			}
-			c.timer.Reset(29 * time.Minute)
+			c.timer.Reset(exp)
 		}
 	}
 }
 
-// send a message with a new token to the grpc server
-func (c *watchClient) send() error {
+// send a message with a new token to the grpc server and returns the expiration time
+func (c *watchClient) send() (time.Duration, error) {
 	token, err := c.cfg.tokenGetter()
 	if err != nil {
-		return err
+		return time.Duration(0), err
+	}
+	exp, err := c.getTokenExpirationTime(token)
+	if err != nil {
+		return exp, err
 	}
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
 	err = c.stream.Send(req)
 	if err != nil {
-		return err
+		return exp, err
 	}
-	return nil
+	return exp, nil
+}
+
+func (c *watchClient) getTokenExpirationTime(token string) (time.Duration, error) {
+	parser := new(jwt.Parser)
+	parser.SkipClaimsValidation = true
+
+	claims := jwt.MapClaims{}
+	_, _, err := parser.ParseUnverified(token, claims)
+	if err != nil {
+		return time.Duration(0), err
+	}
+	var tm time.Time
+	switch exp := claims["exp"].(type) {
+	case float64:
+		tm = time.Unix(int64(exp), 0)
+	case json.Number:
+		v, _ := exp.Int64()
+		tm = time.Unix(v, 0)
+	}
+	return time.Until(tm), nil
 }
 
 // handleError stop the running timer, send to the error channel, and close the open stream.
