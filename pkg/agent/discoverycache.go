@@ -26,6 +26,7 @@ const (
 	apiServerFields          = "name,title,attributes"
 	serviceInstanceCache     = "ServiceInstances"
 	serviceInstanceNameCache = "ServiceInstanceNames"
+	queryFormatString        = "%s>\"%s\""
 )
 
 var discoveryCacheLock *sync.Mutex
@@ -90,7 +91,7 @@ func (j *discoveryCache) updateAPICache() {
 	}
 
 	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
 	}
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
@@ -133,7 +134,7 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 	}
 
 	if !j.lastInstanceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
 	}
 
 	j.lastInstanceTime = time.Now()
@@ -175,7 +176,7 @@ func (j *discoveryCache) updateCategoryCache() {
 	}
 
 	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(v1.APIServerTimeFormat))
 	}
 	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetCategoriesURL(), apiServerPageSize)
 
