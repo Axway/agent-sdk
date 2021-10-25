@@ -6,7 +6,7 @@ The Amplify Agents SDK helps in reducing complexity in implementing against the 
 
 ## Support Policy
 
-The Amplify Agents SDK is supported under [Axway support policy](https://docs.axway.com/bundle/axway-open-docs/page/docs/central/amplify_relnotes/agent_agentsdk_support_policy/index.html).
+The Amplify Agents SDK is supported under [Axway support policy](https://docs.axway.com/bundle/amplify-central/page/docs/amplify_relnotes/agent_agentsdk_support_policy/index.html).
 
 ## Installation
 
