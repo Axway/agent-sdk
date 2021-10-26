@@ -27,6 +27,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
+	"sync"
+
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
@@ -97,6 +99,7 @@ func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID str
 			password:  password,
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -117,6 +120,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			password:  centralCfg.GetAuthConfig().GetKeyPassword(),
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -377,6 +381,7 @@ type platformTokenGetter struct {
 	*platformTokenGenerator
 	*keyReader
 	*tokenHolder
+	getTokenMutex *sync.Mutex
 }
 
 // Close a PlatformTokenGetter
@@ -422,11 +427,15 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 		return "", err
 	}
 
-	almostExpires := (tokens.ExpiresIn * 4) / 5
+	expiryTimestamp := time.Unix(tokens.ExpiresIn, 0)
+	expiresInSecs := time.Until(expiryTimestamp).Seconds()
+	almostExpires := int64((expiresInSecs * 4) / 5)
+	almostExpiresDuration := time.Second * time.Duration(almostExpires)
+	log.Debugf("fetchNewToken almostExpiresDuration: %s", almostExpiresDuration)
 
 	ptp.tokenHolder = &tokenHolder{
 		tokens,
-		time.NewTimer(time.Duration(almostExpires) * time.Second),
+		time.NewTimer(time.Duration(almostExpiresDuration) * time.Second),
 	}
 
 	return tokens.AccessToken, nil
@@ -437,6 +446,10 @@ func (ptp *platformTokenGetter) GetToken() (string, error) {
 	if token := ptp.getCachedToken(); token != "" {
 		return token, nil
 	}
+
+	// only one status update should execute at a time
+	ptp.getTokenMutex.Lock()
+	defer ptp.getTokenMutex.Unlock()
 
 	// try fetching a new token
 	return ptp.fetchNewToken()
