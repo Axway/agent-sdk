@@ -439,13 +439,13 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 
 // GetToken returns a token from cache if not expired or fetches a new token
 func (ptp *platformTokenGetter) GetToken() (string, error) {
+	// only one GetToken should execute at a time
+	ptp.getTokenMutex.Lock()
+	defer ptp.getTokenMutex.Unlock()
+
 	if token := ptp.getCachedToken(); token != "" {
 		return token, nil
 	}
-
-	// only one status update should execute at a time
-	ptp.getTokenMutex.Lock()
-	defer ptp.getTokenMutex.Unlock()
 
 	// try fetching a new token
 	return ptp.fetchNewToken()
