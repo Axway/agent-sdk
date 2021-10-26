@@ -427,15 +427,11 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 		return "", err
 	}
 
-	expiryTimestamp := time.Unix(tokens.ExpiresIn, 0)
-	expiresInSecs := time.Until(expiryTimestamp).Seconds()
-	almostExpires := int64((expiresInSecs * 4) / 5)
-	almostExpiresDuration := time.Second * time.Duration(almostExpires)
-	log.Debugf("fetchNewToken almostExpiresDuration: %s", almostExpiresDuration)
+	almostExpires := (tokens.ExpiresIn * 4) / 5
 
 	ptp.tokenHolder = &tokenHolder{
 		tokens,
-		time.NewTimer(time.Duration(almostExpiresDuration) * time.Second),
+		time.NewTimer(time.Duration(almostExpires) * time.Second),
 	}
 
 	return tokens.AccessToken, nil
