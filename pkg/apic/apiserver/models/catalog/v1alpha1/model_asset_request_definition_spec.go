@@ -12,5 +12,5 @@ package v1alpha1
 // AssetRequestDefinitionSpec struct for AssetRequestDefinitionSpec
 type AssetRequestDefinitionSpec struct {
 	// JSON Schema draft \\#7 for defining the AssetRequest properties needed to get access to an APIServiceInstance.
-	Schema string `json:"schema"`
+	Schema map[string]interface{} `json:"schema"`
 }

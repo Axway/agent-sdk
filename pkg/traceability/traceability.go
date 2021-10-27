@@ -46,7 +46,7 @@ var GetClient = getClient
 func getClient() (*Client, error) {
 	switch clients := len(traceabilityClients); clients {
 	case 0:
-		return nil, fmt.Errorf("No traceability clients, can't publish metrics")
+		return nil, fmt.Errorf("no traceability clients, can't publish metrics")
 	case 1:
 		return traceabilityClients[0], nil
 	default:
@@ -115,13 +115,13 @@ func makeTraceabilityAgent(
 ) (outputs.Group, error) {
 	traceCfg, err := readConfig(libbeatCfg, beat)
 	if err != nil {
-		agent.UpdateStatus(agent.AgentFailed, err.Error())
+		agent.UpdateStatus(agent.AgentFailed, agent.AgentRunning, err.Error())
 		return outputs.Fail(err)
 	}
 
 	hosts, err := outputs.ReadHostList(libbeatCfg)
 	if err != nil {
-		agent.UpdateStatus(agent.AgentFailed, err.Error())
+		agent.UpdateStatus(agent.AgentFailed, agent.AgentRunning, err.Error())
 		return outputs.Fail(err)
 	}
 
@@ -177,7 +177,7 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string) (outputs.Group, error) {
 	tls, err := tlscommon.LoadTLSConfig(traceCfg.TLS)
 	if err != nil {
-		agent.UpdateStatus(agent.AgentFailed, err.Error())
+		agent.UpdateStatus(agent.AgentFailed, agent.AgentRunning, err.Error())
 		return outputs.Fail(err)
 	}
 

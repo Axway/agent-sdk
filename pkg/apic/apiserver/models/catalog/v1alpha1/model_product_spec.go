@@ -12,7 +12,8 @@ package v1alpha1
 // ProductSpec struct for ProductSpec
 type ProductSpec struct {
 	// description of the Product.
-	Description string           `json:"description,omitempty"`
-	Categories  []string         `json:"categories,omitempty"`
-	Asset       ProductSpecAsset `json:"asset,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Categories  []string `json:"categories,omitempty"`
+	// Defines all the Assets that the Product will be built from.
+	Assets []ProductSpecAssets `json:"assets,omitempty"`
 }

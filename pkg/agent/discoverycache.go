@@ -26,6 +26,7 @@ const (
 	apiServerFields          = "name,title,attributes"
 	serviceInstanceCache     = "ServiceInstances"
 	serviceInstanceNameCache = "ServiceInstanceNames"
+	queryFormatString        = "%s>\"%s\""
 )
 
 var discoveryCacheLock *sync.Mutex
@@ -38,6 +39,7 @@ type discoveryCache struct {
 	jobs.Job
 	lastServiceTime  time.Time
 	lastInstanceTime time.Time
+	lastCategoryTime time.Time
 	refreshAll       bool
 }
 
@@ -45,6 +47,7 @@ func newDiscoveryCache(getAll bool) *discoveryCache {
 	return &discoveryCache{
 		lastServiceTime:  time.Time{},
 		lastInstanceTime: time.Time{},
+		lastCategoryTime: time.Time{},
 		refreshAll:       getAll,
 	}
 }
@@ -72,6 +75,7 @@ func (j *discoveryCache) Execute() error {
 	j.updateAPICache()
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		j.validateAPIServiceInstances()
+		j.updateCategoryCache()
 	}
 	fetchConfig()
 	return nil
@@ -87,7 +91,7 @@ func (j *discoveryCache) updateAPICache() {
 	}
 
 	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
 	}
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
@@ -130,7 +134,7 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 	}
 
 	if !j.lastInstanceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf("%s>\"%s\"", apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
 	}
 
 	j.lastInstanceTime = time.Now()
@@ -160,6 +164,42 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 	}
 	serviceInstances = validateAPIOnDataplane(serviceInstances)
 	j.saveServiceInstancesToCache(serviceInstances)
+}
+
+func (j *discoveryCache) updateCategoryCache() {
+	log.Trace("updating category cache")
+
+	// Update cache with published resources
+	existingCategories := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(v1.APIServerTimeFormat))
+	}
+	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetCategoriesURL(), apiServerPageSize)
+
+	for _, category := range categories {
+		// Update the lastCategoryTime based on the newest category found
+		thisTime := time.Time(category.Metadata.Audit.CreateTimestamp)
+		if j.lastCategoryTime.Before(thisTime) {
+			j.lastCategoryTime = thisTime
+		}
+
+		agent.categoryMap.SetWithSecondaryKey(category.Name, category.Title, category)
+		existingCategories[category.Name] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.categoryMap.GetKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingCategories[key]; !ok {
+				agent.categoryMap.Delete(key)
+			}
+		}
+	}
 }
 
 func (j *discoveryCache) saveServiceInstancesToCache(serviceInstances []*apiV1.ResourceInstance) {

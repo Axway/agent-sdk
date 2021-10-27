@@ -15,12 +15,11 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ReleaseTagStatus struct for ReleaseTagStatus
-type ReleaseTagStatus struct {
+// AssetRequestStatus struct for AssetRequestStatus
+type AssetRequestStatus struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time                         `json:"timestamp"`
-	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 }

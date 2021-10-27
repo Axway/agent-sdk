@@ -27,7 +27,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "ID property not set in transaction event", err.Error())
+	assert.Equal(t, "id property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
@@ -36,7 +36,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Direction property not set in transaction event", err.Error())
+	assert.Equal(t, "direction property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
@@ -46,7 +46,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Status property not set in transaction event", err.Error())
+	assert.Equal(t, "status property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
@@ -57,7 +57,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Invalid transaction event status", err.Error())
+	assert.Equal(t, "invalid transaction event status", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
@@ -72,7 +72,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Protocol details not set in transaction event", err.Error())
+	assert.Equal(t, "protocol details not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
@@ -89,7 +89,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Unsupported protocol type", err.Error())
+	assert.Equal(t, "unsupported protocol type", err.Error())
 
 	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10)
 	logEvent, err = NewTransactionEventBuilder().
@@ -222,7 +222,7 @@ func TestSummaryBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Status property not set in transaction summary event", err.Error())
+	assert.Equal(t, "status property not set in transaction summary event", err.Error())
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetDuration(10).
@@ -230,7 +230,7 @@ func TestSummaryBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Invalid transaction summary status", err.Error())
+	assert.Equal(t, "invalid transaction summary status", err.Error())
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetDuration(10).
@@ -238,7 +238,7 @@ func TestSummaryBuilder(t *testing.T) {
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Transaction entry point details are not set in transaction summary event", err.Error())
+	assert.Equal(t, "transaction entry point details are not set in transaction summary event", err.Error())
 
 	// Test with explicitly setting properties that are set thru agent config by default
 	logEvent, err = NewTransactionSummaryBuilder().

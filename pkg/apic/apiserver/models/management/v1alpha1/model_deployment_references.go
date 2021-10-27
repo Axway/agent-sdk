@@ -13,4 +13,6 @@ package v1alpha1
 type DeploymentReferences struct {
 	// Reference to the API Service that got created from this deployment.
 	ApiService string `json:"apiService,omitempty"`
+	// Reference to the Virtual API Service that is bound to this deployment.
+	VirtualAPI string `json:"virtualAPI,omitempty"`
 }

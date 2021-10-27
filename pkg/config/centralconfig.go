@@ -113,6 +113,7 @@ type CentralConfig interface {
 	GetAPIServerSubscriptionDefinitionURL() string
 	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
+	GetCategoriesURL() string
 	GetSubscriptionURL() string
 	GetSubscriptionConfig() SubscriptionConfig
 	GetCatalogItemSubscriptionsURL(string) string
@@ -290,6 +291,11 @@ func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
 }
 
+// GetAPIServerCatalogURL - Returns the base path for the API server for catalog resources
+func (c *CentralConfiguration) GetAPIServerCatalogURL() string {
+	return c.URL + "/apis/catalog/" + c.APIServerVersion
+}
+
 // GetEnvironmentURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
@@ -323,6 +329,11 @@ func (c *CentralConfiguration) GetConsumerInstancesURL() string {
 // GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
 func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
+}
+
+// GetCategoriesURL - Returns the Categories URL
+func (c *CentralConfiguration) GetCategoriesURL() string {
+	return c.GetAPIServerCatalogURL() + "/categories"
 }
 
 // GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
@@ -673,5 +684,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 }
 
 func supportsTraceability(agentType AgentType) bool {
-	return agentType == TraceabilityAgent || agentType ==GovernanceAgent
+	return agentType == TraceabilityAgent || agentType == GovernanceAgent
 }

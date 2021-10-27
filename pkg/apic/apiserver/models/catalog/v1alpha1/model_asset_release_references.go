@@ -11,8 +11,6 @@ package v1alpha1
 
 // AssetReleaseReferences struct for AssetReleaseReferences
 type AssetReleaseReferences struct {
-	Environments          []string `json:"environments,omitempty"`
-	ApiServices           []string `json:"apiServices,omitempty"`
-	AssetMappings         []string `json:"assetMappings,omitempty"`
-	AssetMappingTemplates []string `json:"assetMappingTemplates,omitempty"`
+	Kind string `json:"kind"`
+	Name string `json:"name,omitempty"`
 }
