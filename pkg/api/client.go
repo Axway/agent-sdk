@@ -59,6 +59,8 @@ type configAgent struct {
 	agentName       string
 	environmentName string
 	isDocker        bool
+	altConn         string
+	connFilter      []string
 }
 
 var cfgAgent *configAgent
@@ -68,10 +70,12 @@ func init() {
 }
 
 // SetConfigAgent -
-func SetConfigAgent(env string, isDocker bool, agentName string) {
+func SetConfigAgent(env string, isDocker bool, agentName string, altConn string, connFilter []string) {
 	cfgAgent.environmentName = env
 	cfgAgent.isDocker = isDocker
 	cfgAgent.agentName = agentName
+	cfgAgent.altConn =  altConn
+	cfgAgent.connFilter = connFilter
 }
 
 // NewClient - creates a new HTTP client
@@ -122,9 +126,19 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 	}
 	return params.Encode()
 }
-
+func (c *httpClient) createURL(Url string) (string, string) {
+	purl,_:=url.Parse(Url)
+	for _, v := range cfgAgent.connFilter {
+		if (strings.Contains(Url,v)) {
+			Url=strings.Replace(Url, purl.Host, cfgAgent.altConn, 0)
+			break
+		}
+	}
+	return Url, purl.Host
+}
 func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
-	requestURL := request.URL
+	requestURL, host := c.createURL(request.URL)
+	urlMutated:=request.URL == requestURL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
@@ -146,14 +160,10 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
 	}
-	c.addHostHeader(req)
-	return req, err
-}
-func (c *httpClient) addHostHeader(request *http.Request) {
-	if (strings.Contains(request.URL.Host, "agent.")){
-		host:=strings.Replace(request.URL.Host,"agent.","",1)
-		request.Header.Set("Host", host)
+	if urlMutated {
+		req.Header.Set("Host", host )
 	}
+	return req, err
 }
 
 func (c *httpClient) prepareAPIResponse(res *http.Response, timer *time.Timer) (*Response, error) {
@@ -190,7 +200,6 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	ctx := context.Background()
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
 	req, err := c.prepareAPIRequest(cancelCtx, request)
 	if err != nil {
 		log.Errorf("Error preparing api request: %s", err.Error())

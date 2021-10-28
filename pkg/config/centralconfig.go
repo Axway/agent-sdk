@@ -133,7 +133,10 @@ type CentralConfig interface {
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
 	GetUpdateFromAPIServer() bool
+    GetAltConn() string
+	GetConnFilter() []string
 }
+
 
 // CentralConfiguration - Structure to hold the central config
 type CentralConfiguration struct {
@@ -148,6 +151,8 @@ type CentralConfiguration struct {
 	EnvironmentID             string               `config:"environmentID"`
 	AgentName                 string               `config:"agentName"`
 	URL                       string               `config:"url"`
+	altConn                   string               `config:"altConn"`
+	connFilter                []string             `config:"connFilter"`
 	PlatformURL               string               `config:"platformURL"`
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
@@ -184,6 +189,14 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 	}
+}
+// GetAltConn - Returns the Alternate base URL
+func (c *CentralConfiguration) GetAltConn() string {
+	return c.altConn
+}
+// GetConnFilter - Returns the central base URL
+func (c *CentralConfiguration) GetConnFilter() []string {
+	return c.connFilter
 }
 
 // GetPlatformURL - Returns the central base URL
@@ -439,6 +452,8 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
+	pathConnFilter                = "central.connFilter"
+	pathAltConn                	  = "central.altConn"
 	pathPlatformURL               = "central.platformURL"
 	pathAuthPrivateKey            = "central.auth.privateKey"
 	pathAuthPublicKey             = "central.auth.publicKey"
@@ -501,6 +516,8 @@ func (c *CentralConfiguration) validateConfig() {
 	c.validateURL(c.GetURL(), pathURL, true)
 
 	c.validateURL(c.GetPlatformURL(), pathPlatformURL, true)
+
+	c.validateURL(c.GetURL(), pathURL, true)
 
 	// proxyURL
 	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
@@ -577,6 +594,8 @@ func (c *CentralConfiguration) validateOfflineConfig() {
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of Amplify Central")
+	props.AddStringProperty(pathAltConn, "", "Alternate Connection for Agent if using static IP")
+	props.AddStringSliceProperty(pathConnFilter, nil, "Filter List of connections if using Static IP")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
@@ -663,6 +682,9 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)
+	cfg.altConn = props.StringPropertyValue(pathAltConn)
+	cfg.connFilter = props.StringSlicePropertyValue(pathConnFilter)
+
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
