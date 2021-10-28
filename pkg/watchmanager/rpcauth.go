@@ -24,7 +24,7 @@ func newRPCAuth(tenantID string, tokenGetter TokenGetter) rpcCredential {
 }
 
 // GetRequestMetadata - sets the http header prior to transport
-func (t rpcAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
+func (t rpcAuth) GetRequestMetadata(_ context.Context, _ ...string) (map[string]string, error) {
 	token, err := t.tokenGetter()
 	if err != nil {
 		return nil, err

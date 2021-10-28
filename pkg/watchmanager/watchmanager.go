@@ -1,103 +1,128 @@
 package watchmanager
 
 import (
-	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+	"github.com/sirupsen/logrus"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
+// Manager - Interface to manage watch connection
 type Manager interface {
-	RegisterWatch(watchConfig Config, eventChannel chan *proto.Event) (context.Context, error)
+	RegisterWatch(watchTopic string, eventChannel chan *proto.Event, errChannel chan error) (string, error)
+	CloseWatch(id string) error
+	Close()
 }
+
+// TokenGetter - function to acquire token
+type TokenGetter func() (string, error)
 
 type watchManager struct {
-	centralConfig config.CentralConfig
-	tokenGetter   TokenGetter
-	clientMap     map[string]*watchClient
-	connection    *grpc.ClientConn
+	cfg        *Config
+	clientMap  map[string]*watchClient
+	connection *grpc.ClientConn
+	options    *watchOptions
+	logger     logrus.FieldLogger
 }
 
-func New(centralConfig config.CentralConfig, tokenGetter TokenGetter) Manager {
-
-	manager := &watchManager{
-		centralConfig: centralConfig,
-		tokenGetter:   tokenGetter,
-		clientMap:     make(map[string]*watchClient),
-	}
-	manager.connection, _ = manager.createConnection()
-	return manager
-}
-
-func (m *watchManager) RegisterWatch(watchConfig Config, eventChannel chan *proto.Event) (context.Context, error) {
-	svcClient := proto.NewWatchServiceClient(m.connection)
-	watchRequest := m.createWatchRequest(watchConfig)
-	stream, err := svcClient.CreateWatch(context.Background(), watchRequest)
+// New - Creates a new watch manager
+func New(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error) {
+	err := cfg.validateCfg()
 	if err != nil {
 		return nil, err
 	}
-
-	client := &watchClient{
-		config: watchConfig,
-		stream: stream,
+	if logger == nil {
+		logger = logrus.New()
 	}
 
-	uuiduuid, _ := uuid.NewUUID()
-	m.clientMap[uuiduuid.String()] = client
+	manager := &watchManager{
+		cfg:       cfg,
+		logger:    logger.WithField("package", "watchmanager"),
+		clientMap: make(map[string]*watchClient),
+		options:   newWatchOptions(),
+	}
 
-	client.processEvents(eventChannel)
+	for _, opt := range opts {
+		opt.apply(manager.options)
+	}
 
-	return stream.Context(), nil
+	manager.connection, err = manager.createConnection()
+	if err != nil {
+		logger.Errorf("failed to establish connection with watch service: %s", err.Error())
+	}
+	return manager, err
 }
 
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
-	address := fmt.Sprintf("%s:%s", "localhost", "8080")
-
-	rpcCredential := newRPCAuth(m.centralConfig.GetTenantID(), m.tokenGetter)
-	var dialOptions []grpc.DialOption
-	dialOptions = append(dialOptions,
-		grpc.WithPerRPCCredentials(rpcCredential),
-	)
-
-	if m.centralConfig.GetTLSConfig() != nil {
-		tlsConfig := m.centralConfig.GetTLSConfig().BuildTLSConfig()
-		dialOptions = append(dialOptions,
-			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
-		)
-	} else {
-		dialOptions = append(dialOptions,
-			grpc.WithInsecure(),
-		)
+	grpcDialOptions := []grpc.DialOption{
+		withKeepaliveParams(m.options.keepAlive.time, m.options.keepAlive.timeout),
+		withRPCCredentials(m.cfg.Host, m.cfg.TokenGetter),
+		withTLSConfig(m.options.tlsCfg),
+		chainStreamClientInterceptor(
+			logrusStreamClientInterceptor(m.options.loggerEntry),
+		),
 	}
 
-	return grpc.Dial(address, dialOptions...)
+	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
+	m.logger.WithField("host", m.cfg.Host).
+		WithField("port", m.cfg.Port).
+		Info("connecting to watch service")
+
+	return grpc.Dial(address, grpcDialOptions...)
 }
 
-func (m *watchManager) createWatchRequest(config Config) *proto.Request {
-	triggerEventTypes := make([]proto.Trigger_Type, 0)
-	for _, eventType := range config.EventTypes {
-		if val, ok := proto.Trigger_Type_value[eventType]; ok {
-			triggerEventTypes = append(triggerEventTypes, proto.Trigger_Type(val))
-		}
+// RegisterWatch - Registers a subscription with watch service using topic
+func (m *watchManager) RegisterWatch(watchTopicSelfLink string, eventChannel chan *proto.Event, errorChannel chan error) (string, error) {
+	client, err := newWatchClient(
+		m.connection,
+		watchClientConfig{
+			topicSelfLink: watchTopicSelfLink,
+			tokenGetter:   m.cfg.TokenGetter,
+			eventChannel:  eventChannel,
+			errorChannel:  errorChannel,
+		},
+	)
+	if err != nil {
+		return "", err
 	}
 
-	trigger := &proto.Trigger{
-		Group: config.Group,
-		Kind:  config.Kind,
-		Name:  config.Name,
-		Type:  []proto.Trigger_Type{proto.Trigger_CREATED, proto.Trigger_UPDATED, proto.Trigger_DELETED},
-	}
+	subscriptionID, _ := uuid.NewUUID()
+	subID := subscriptionID.String()
 
-	if config.ScopeKind != "" || config.Scope != "" {
-		trigger.Scope = &proto.Trigger_Scope{Kind: config.ScopeKind, Name: config.Scope}
-	}
+	m.clientMap[subID] = client
 
-	return &proto.Request{
-		Triggers: []*proto.Trigger{trigger},
+	go client.processRequest()
+	go client.processEvents()
+
+	m.logger.WithField("watchtopic", watchTopicSelfLink).
+		WithField("subscriptionId", subID).
+		Info("registered new watch client[subscription]")
+
+	return subID, nil
+}
+
+// CloseWatch closes the specified watch stream by id
+func (m *watchManager) CloseWatch(id string) error {
+	m.logger.WithField("subscriptionId", id).Info("closing watch")
+	client, ok := m.clientMap[id]
+	if !ok {
+		return errors.New("invalid watch subscription ID")
+	}
+	client.cancelStream()
+	delete(m.clientMap, id)
+	return nil
+}
+
+// Close - Close the watch service connection, and all open streams
+func (m *watchManager) Close() {
+	m.logger.Info("closing watch service connection")
+
+	m.connection.Close()
+	for id := range m.clientMap {
+		delete(m.clientMap, id)
 	}
 }
