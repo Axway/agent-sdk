@@ -128,7 +128,9 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 }
 func (c *httpClient) createURL(Url string) (string, string) {
 	purl,_:=url.Parse(Url)
+	fmt.Print(cfgAgent)
 	for _, v := range cfgAgent.connFilter {
+		fmt.Printf("Matching %s contains %s", Url, v)
 		if (strings.Contains(Url,v)) {
 			Url=strings.Replace(Url, purl.Host, cfgAgent.altConn, 0)
 			break

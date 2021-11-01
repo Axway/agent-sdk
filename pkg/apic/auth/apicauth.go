@@ -314,7 +314,13 @@ func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
 	startTime := time.Now()
 	client := ptg.getHTTPClient()
-	resp, err := client.PostForm(ptg.url, url.Values{
+
+/*	resp, err := client.PostForm(ptg.url, url.Values{
+		"grant_type":            []string{"client_credentials"},
+		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
+		"client_assertion":      []string{requestToken},
+	})*/
+	resp, err := ptg.postAuthForm(client, ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
 		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
 		"client_assertion":      []string{requestToken},
@@ -347,7 +353,15 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 
 	return &tokens, nil
 }
-
+func (ptg *platformTokenGenerator) postAuthForm(client http.Client, url string, data url.Values) (resp *http.Response, err error) {
+	req, err := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// Add logic for Host header
+	return client.Do(req)
+}
 type tokenHolder struct {
 	tokens *axwayTokenResponse
 	expiry *time.Timer

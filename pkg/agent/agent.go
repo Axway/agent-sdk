@@ -103,6 +103,8 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return nil
 	}
 
+	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetAltConn(), centralCfg.GetConnFilter())
+
 	err = initializeTokenRequester(centralCfg)
 	if err != nil {
 		return err
@@ -117,8 +119,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 
 	agent.cfg = centralCfg
-	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetAltConn(), centralCfg.GetConnFilter())
-
 	if agent.isInitialized {
 		mergeResourceWithConfig()
 	}
