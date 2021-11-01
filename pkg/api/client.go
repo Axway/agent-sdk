@@ -130,9 +130,10 @@ func (c *httpClient) createURL(Url string) (string, string) {
 	purl,_:=url.Parse(Url)
 	fmt.Print(cfgAgent)
 	for _, v := range cfgAgent.connFilter {
-		fmt.Printf("Matching %s contains %s", Url, v)
+		log.Debugf("Matching %s contains %s\n", Url, v)
 		if (strings.Contains(Url,v)) {
-			Url=strings.Replace(Url, purl.Host, cfgAgent.altConn, 0)
+			Url=strings.Replace(Url, purl.Host, cfgAgent.altConn, -1)
+			log.Debugf("Replaced %s using Host header %s\n", Url, cfgAgent.altConn)
 			break
 		}
 	}
@@ -237,4 +238,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	parseResponse, err := c.prepareAPIResponse(res, timer)
 
 	return parseResponse, err
+}
+func GetAltConnection() string {
+	return cfgAgent.altConn
 }
