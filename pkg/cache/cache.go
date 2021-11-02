@@ -33,7 +33,8 @@ type Cache interface {
 	Delete(key string) error
 	DeleteBySecondaryKey(secondaryKey string) error
 	DeleteSecondaryKey(secondaryKey string) error
-	//DeleteForeignKey (secondaryKey string) error
+	DeleteForeignKey(foreignKey string) error
+	DeleteItemsByForeignKey(foreignKey string) error
 	Flush()
 	Save(path string) error
 	Load(path string) error
@@ -141,7 +142,7 @@ func (c *itemCache) handleAction() {
 		setForeignKeyAction:        c.setForeignKey,
 		getItemsByForeignKeyAction: c.getItemsByForeignKeys,
 		deleteSecKeyAction:         c.deleteSecondaryKey,
-		deleteForeignKeyAction:		c.deleteForeignKey,
+		deleteForeignKeyAction:     c.deleteForeignKey,
 		flushAction:                c.flush,
 		saveAction:                 c.save,
 		loadAction:                 c.load,
@@ -658,26 +659,24 @@ func (c *itemCache) DeleteBySecondaryKey(secondaryKey string) error {
 // DeleteItemsByForeignKey - Remove all the items which is found with this foreign key
 func (c *itemCache) DeleteItemsByForeignKey(foreignKey string) error {
 
-	for key := range c.Items{
+	for key := range c.Items {
 
-		if c.Items[key].ForeignKey == foreignKey{
+		if c.Items[key].ForeignKey == foreignKey {
 			deleteReply := c.runAction(cacheAction{
 				action: deleteAction,
 				key:    key,
 			})
 
-			if deleteReply.err !=nil {
+			if deleteReply.err != nil {
 				return deleteReply.err
 			}
 		}
-
 
 	}
 
 	return nil
 
 }
-
 
 // DeleteSecondaryKey - Remove the secondary key, preserve the item
 func (c *itemCache) DeleteSecondaryKey(secondaryKey string) error {
