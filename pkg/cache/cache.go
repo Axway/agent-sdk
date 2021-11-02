@@ -222,8 +222,11 @@ func (c *itemCache) getKeys(thisAction cacheAction) (thisReply cacheReply) {
 func (c *itemCache) getForeignKeys(thisAction cacheAction) (thisReply cacheReply) {
 	keys := []string{}
 	for key := range c.Items {
-		keys = append(keys, c.Items[key].ForeignKey)
+		if c.Items[key].ForeignKey != "" {
+			keys = append(keys, c.Items[key].ForeignKey)
+		}
 	}
+
 	thisReply = cacheReply{
 		keys: keys,
 		err:  nil,
@@ -659,6 +662,14 @@ func (c *itemCache) DeleteBySecondaryKey(secondaryKey string) error {
 // DeleteItemsByForeignKey - Remove all the items which is found with this foreign key
 func (c *itemCache) DeleteItemsByForeignKey(foreignKey string) error {
 
+	getItemsForeignKeyReply := c.runAction(cacheAction{
+		action: getItemsByForeignKeyAction,
+		forKey: foreignKey,
+	})
+	if len(getItemsForeignKeyReply.items) == 0 {
+		return fmt.Errorf("No items found with foreign key: %s", foreignKey)
+	}
+
 	for key := range c.Items {
 
 		if c.Items[key].ForeignKey == foreignKey {
@@ -688,10 +699,10 @@ func (c *itemCache) DeleteSecondaryKey(secondaryKey string) error {
 }
 
 // DeleteForeignKey - Remove the foreign key, preserve the item
-func (c *itemCache) DeleteForeignKey(foreignKey string) error {
+func (c *itemCache) DeleteForeignKey(key string) error {
 	deleteForeignKeyReply := c.runAction(cacheAction{
 		action: deleteForeignKeyAction,
-		forKey: foreignKey,
+		key:    key,
 	})
 	return deleteForeignKeyReply.err
 }
