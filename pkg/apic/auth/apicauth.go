@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/api"
 	"io"
 	"strings"
 	"time"
@@ -357,12 +356,12 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 func (ptg *platformTokenGenerator) postAuthForm(client http.Client, Url string, data url.Values) (resp *http.Response, err error) {
 
 	var altHost string=""
-	if api.GetAltConnection() != "" {
+/*	if api.GetAltConnection() != "" {
 		purl,_:=url.Parse(Url)
 		Url=strings.Replace(Url, purl.Host, api.GetAltConnection() , -1)
 		altHost=purl.Host
 		log.Debugf("Replaced %s using Host header %s", Url, altHost)
-	}
+	}*/
 	req, err := http.NewRequest("POST", Url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -371,6 +370,7 @@ func (ptg *platformTokenGenerator) postAuthForm(client http.Client, Url string, 
 	if altHost!="" {
 		req.Header.Set("Host", altHost)
 	}
+	log.Debugf("Dumping Request %+v", req)
 	return client.Do(req)
 }
 type tokenHolder struct {

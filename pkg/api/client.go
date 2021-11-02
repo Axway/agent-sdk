@@ -130,10 +130,10 @@ func (c *httpClient) createURL(Url string) (string, string) {
 	purl,_:=url.Parse(Url)
 	fmt.Print(cfgAgent)
 	for _, v := range cfgAgent.connFilter {
-		log.Debugf("Matching %s contains %s\n", Url, v)
+		log.Tracef("Matching %s contains %s", Url, v)
 		if (strings.Contains(Url,v)) {
 			Url=strings.Replace(Url, purl.Host, cfgAgent.altConn, -1)
-			log.Debugf("Replaced %s using Host header %s\n", Url, cfgAgent.altConn)
+			log.Debugf("Replaced %s using Host header %s", Url, purl.Host)
 			break
 		}
 	}
@@ -141,7 +141,7 @@ func (c *httpClient) createURL(Url string) (string, string) {
 }
 func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
 	requestURL, host := c.createURL(request.URL)
-	urlMutated:=request.URL == requestURL
+//	urlMutated:=request.URL == requestURL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
@@ -163,9 +163,8 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
 	}
-	if urlMutated {
-		req.Header.Set("Host", host )
-	}
+	req.Header.Set("Host", host )
+	log.Debugf("Dumping Request %+v", req)
 	return req, err
 }
 
