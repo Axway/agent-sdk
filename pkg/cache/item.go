@@ -6,6 +6,7 @@ type Item struct {
 	UpdateTime    int64           `json:"updateTime"`
 	Hash          uint64          `json:"hash"`
 	SecondaryKeys map[string]bool `json:"secondaryKeys"` // keep track of secondary keys for clean up
+	ForeignKey    string          `json:"foreignKey"`
 }
 
 // GetObject - returns the object saved in this cache item
