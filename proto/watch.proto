@@ -29,7 +29,16 @@ message Event {
         DELETED = 2;
     }
     Type type = 7;
+
     .amplifycentral.datamodel.ResourceInstance payload = 8;
+
+    EventMeta metadata = 9;
+}
+
+message EventMeta {
+    string watchTopicID = 1;
+    string watchTopicSelfLink = 2;
+    string sequenceID = 3;
 }
 
 message Organization {
