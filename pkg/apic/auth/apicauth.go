@@ -75,21 +75,22 @@ func NewWithStatic(tenantID, token string) *ApicAuth {
 }
 
 // NewWithFlow returns an ApicAuth that uses the axway authentication flow
-func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) *ApicAuth {
+func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, altConn string, timeout time.Duration) *ApicAuth {
 	return &ApicAuth{
 		tenantID,
-		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, timeout)),
+		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, altConn, timeout)),
 	}
 }
 
 // NewPlatformTokenGetter returns a token getter for axway ID
-func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) PlatformTokenGetter {
+func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, altConn string, timeout time.Duration) PlatformTokenGetter {
 	return &platformTokenGetter{
 		aud,
 		clientID,
 		&platformTokenGenerator{
 			url:     url,
 			timeout: timeout,
+			altConn: altConn,
 		},
 		&keyReader{
 			privKey:   privKey,
@@ -110,6 +111,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			timeout:   centralCfg.GetAuthConfig().GetTimeout(),
 			tlsConfig: centralCfg.GetTLSConfig(),
 			proxyURL:  centralCfg.GetProxyURL(),
+			altConn: centralCfg.GetAltConn(),
 		},
 		&keyReader{
 			privKey:   centralCfg.GetAuthConfig().GetPrivateKey(),
@@ -269,6 +271,7 @@ type platformTokenGenerator struct {
 	timeout   time.Duration    // timeout for the http request
 	tlsConfig config.TLSConfig // TLS Config
 	proxyURL  string           // ProxyURL
+	altConn   string //Alternate Connection for static IP routing
 }
 
 // prepareInitialToken prepares a token for an access request
@@ -356,21 +359,22 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 func (ptg *platformTokenGenerator) postAuthForm(client http.Client, Url string, data url.Values) (resp *http.Response, err error) {
 
 	var altHost string=""
-/*	if api.GetAltConnection() != "" {
+	if ptg.altConn != "" {
+		// Swap the baseURL with the static IP DNS entry
 		purl,_:=url.Parse(Url)
-		Url=strings.Replace(Url, purl.Host, api.GetAltConnection() , -1)
+		Url=strings.Replace(Url, purl.Host, ptg.altConn  , -1)
 		altHost=purl.Host
-		log.Debugf("Replaced %s using Host header %s", Url, altHost)
-	}*/
+	}
 	req, err := http.NewRequest("POST", Url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if altHost!="" {
-		req.Header.Set("Host", altHost)
+		// Force the host to original baseURL
+		log.Debugf("Replaced %s using Host header %s", Url, altHost)
+		req.Host = altHost
 	}
-	log.Debugf("Dumping Request %+v", req)
 	return client.Do(req)
 }
 type tokenHolder struct {
