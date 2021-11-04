@@ -60,7 +60,7 @@ func New(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	grpcDialOptions := []grpc.DialOption{
 		withKeepaliveParams(m.options.keepAlive.time, m.options.keepAlive.timeout),
-		withRPCCredentials(m.cfg.Host, m.cfg.TokenGetter),
+		withRPCCredentials(m.cfg.TenantID, m.cfg.TokenGetter),
 		withTLSConfig(m.options.tlsCfg),
 		chainStreamClientInterceptor(
 			logrusStreamClientInterceptor(m.options.loggerEntry),

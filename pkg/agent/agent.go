@@ -194,15 +194,20 @@ func startAPIServiceCache() {
 		// Start the full update after the first interval
 		go func() {
 			time.Sleep(time.Hour)
-			allDiscoveryCacheJob := newDiscoveryCache(true)
-			id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-			if err != nil {
-				log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-				return
-			}
-			log.Tracef("registered API cache update all job: %s", id)
+			discoveryPolling()
 		}()
+		return
 	}
+}
+
+func discoveryPolling() {
+	allDiscoveryCacheJob := newDiscoveryCache(true)
+	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
+	if err != nil {
+		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered API cache update all job: %s", id)
 }
 
 func isRunningInDockerContainer() bool {

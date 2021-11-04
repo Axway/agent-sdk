@@ -81,8 +81,8 @@ func WithLogger(loggerEntry *logrus.Entry) Option {
 }
 
 // withRPCCredentials sets credentials and places auth state on each outbound RPC.
-func withRPCCredentials(host string, tokenGetter TokenGetter) grpc.DialOption {
-	rpcCredential := newRPCAuth(host, tokenGetter)
+func withRPCCredentials(tenantID string, tokenGetter TokenGetter) grpc.DialOption {
+	rpcCredential := newRPCAuth(tenantID, tokenGetter)
 	return grpc.WithPerRPCCredentials(rpcCredential)
 }
 

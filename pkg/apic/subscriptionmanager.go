@@ -65,7 +65,7 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 	sm.apicClient = apicClient
 }
 
-// RegisterCallback - Register subscription processor callback for specified state
+// RegisterProcessor - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	processorList, ok := sm.processorMap[state]
 	if !ok {
@@ -215,7 +215,7 @@ func (sm *subscriptionManager) Start() {
 	// clean out the map each time start is called
 	sm.locklist = make(map[string]string)
 
-	// Add an polling interval delay prior to starting, but do not make calling function wait
+	// Add a polling interval delay prior to starting, but do not make calling function wait
 	go func() {
 		time.Sleep(sm.apicClient.cfg.GetPollInterval())
 		if !sm.isRunning {

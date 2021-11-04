@@ -15,7 +15,12 @@ const (
 func getFormatter(format string) (logrus.Formatter, error) {
 	switch format {
 	case lineFormat:
-		return &logrus.TextFormatter{TimestampFormat: time.RFC3339}, nil
+		return &logrus.TextFormatter{
+			TimestampFormat:  time.RFC3339,
+			FullTimestamp:    true,
+			PadLevelText:     true,
+			QuoteEmptyFields: true,
+		}, nil
 	case jsonFormat:
 		return &logrus.JSONFormatter{TimestampFormat: time.RFC3339}, nil
 	default:
