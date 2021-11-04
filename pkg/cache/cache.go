@@ -20,15 +20,21 @@ type Cache interface {
 	GetItem(key string) (*Item, error)
 	GetBySecondaryKey(secondaryKey string) (interface{}, error)
 	GetItemBySecondaryKey(secondaryKey string) (*Item, error)
+	GetForeignKeys() []string
+	GetItemsByForeignKey(foreignKey string) ([]*Item, error)
 	GetKeys() []string
 	HasItemChanged(key string, data interface{}) (bool, error)
 	HasItemBySecondaryKeyChanged(secondaryKey string, data interface{}) (bool, error)
 	Set(key string, data interface{}) error
 	SetWithSecondaryKey(key string, secondaryKey string, data interface{}) error
+	SetWithForeignKey(key string, foreignKey string, data interface{}) error
 	SetSecondaryKey(key string, secondaryKey string) error
+	SetForeignKey(key string, foreignKey string) error
 	Delete(key string) error
 	DeleteBySecondaryKey(secondaryKey string) error
 	DeleteSecondaryKey(secondaryKey string) error
+	DeleteForeignKey(foreignKey string) error
+	DeleteItemsByForeignKey(foreignKey string) error
 	Flush()
 	Save(path string) error
 	Load(path string) error
@@ -43,17 +49,22 @@ const (
 	findAction
 	hasChangedAction
 	setSecKeyAction
+	setForeignKeyAction
 	deleteSecKeyAction
+	deleteForeignKeyAction
 	flushAction
 	saveAction
 	loadAction
 	getKeysAction
+	getForeignKeysAction
+	getItemsByForeignKeyAction
 )
 
 type cacheAction struct {
 	action action
 	key    string
 	secKey string
+	forKey string
 	data   interface{}
 	path   string
 }
@@ -64,6 +75,7 @@ type cacheReply struct {
 	err     error
 	changed bool
 	keys    []string
+	items   []*Item
 }
 
 // itemCache
@@ -119,17 +131,21 @@ func Load(path string) Cache {
 // handleAction - handles all calls to the cache to prevent locking issues
 func (c *itemCache) handleAction() {
 	actionMap := map[action]func(cacheAction) cacheReply{
-		getAction:          c.get,
-		getKeysAction:      c.getKeys,
-		setAction:          c.set,
-		deleteAction:       c.delete,
-		findAction:         c.findPrimaryKey,
-		hasChangedAction:   c.hasItemChanged,
-		setSecKeyAction:    c.setSecondaryKey,
-		deleteSecKeyAction: c.deleteSecondaryKey,
-		flushAction:        c.flush,
-		saveAction:         c.save,
-		loadAction:         c.load,
+		getAction:                  c.get,
+		getKeysAction:              c.getKeys,
+		getForeignKeysAction:       c.getForeignKeys,
+		setAction:                  c.set,
+		deleteAction:               c.delete,
+		findAction:                 c.findPrimaryKey,
+		hasChangedAction:           c.hasItemChanged,
+		setSecKeyAction:            c.setSecondaryKey,
+		setForeignKeyAction:        c.setForeignKey,
+		getItemsByForeignKeyAction: c.getItemsByForeignKeys,
+		deleteSecKeyAction:         c.deleteSecondaryKey,
+		deleteForeignKeyAction:     c.deleteForeignKey,
+		flushAction:                c.flush,
+		saveAction:                 c.save,
+		loadAction:                 c.load,
 	}
 
 	for {
@@ -198,6 +214,39 @@ func (c *itemCache) getKeys(thisAction cacheAction) (thisReply cacheReply) {
 	thisReply = cacheReply{
 		keys: keys,
 		err:  nil,
+	}
+	return
+}
+
+// getForeignKeys - Returns the Foreign keys in cache
+func (c *itemCache) getForeignKeys(thisAction cacheAction) (thisReply cacheReply) {
+	keys := []string{}
+	for key := range c.Items {
+		if c.Items[key].ForeignKey != "" {
+			keys = append(keys, c.Items[key].ForeignKey)
+		}
+	}
+
+	thisReply = cacheReply{
+		keys: keys,
+		err:  nil,
+	}
+	return
+}
+
+// getItemsByForeignKeys - Returns the Items with a particular Foreign key in cache
+func (c *itemCache) getItemsByForeignKeys(thisAction cacheAction) (thisReply cacheReply) {
+
+	var items []*Item
+	for _, item := range c.Items {
+		if item.ForeignKey == thisAction.forKey {
+			items = append(items, item)
+
+		}
+	}
+	thisReply = cacheReply{
+		items: items,
+		err:   nil,
 	}
 	return
 }
@@ -281,6 +330,32 @@ func (c *itemCache) setSecondaryKey(thisAction cacheAction) (thisReply cacheRepl
 	return
 }
 
+// set the ForeignKey for the key given
+func (c *itemCache) setForeignKey(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+	foreignKey := thisAction.forKey
+
+	thisReply = cacheReply{
+		err: nil,
+	}
+
+	item, ok := c.Items[key]
+	// Check that the key given is in the cache
+	if !ok {
+		thisReply.err = fmt.Errorf("Can't set foreign key, %s, for a key, %s, as %s is not a known key", foreignKey, key, key)
+		return
+	}
+
+	// check that the foreign key given is not already a foreign key
+	if foreignKey == item.ForeignKey {
+		thisReply.err = fmt.Errorf("Can't use %s as a foreign key, it is already a foreign key for the item", foreignKey)
+		return
+	}
+
+	item.ForeignKey = foreignKey
+	return
+}
+
 // delete an item from the cache
 func (c *itemCache) delete(thisAction cacheAction) (thisReply cacheReply) {
 	key := thisAction.key
@@ -325,6 +400,21 @@ func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	delete(c.Items[key].SecondaryKeys, secondaryKey)
 	delete(c.SecKeys, secondaryKey)
 	return nil
+}
+
+//deleteForeignKey - removes a foreign key reference in the cache, but locks the items before doing so
+func (c *itemCache) deleteForeignKey(thisAction cacheAction) (thisReply cacheReply) {
+	key := thisAction.key
+
+	item, ok := c.Items[key]
+	// Check that the key given is in the cache
+	if !ok {
+		thisReply.err = fmt.Errorf("Cache item with key %s does not exist", key)
+		return
+	}
+
+	item.ForeignKey = ""
+	return
 }
 
 func (c *itemCache) flush(thisAction cacheAction) (thisReply cacheReply) {
@@ -442,10 +532,33 @@ func (c *itemCache) GetItemBySecondaryKey(secondaryKey string) (*Item, error) {
 	return getReply.item, getReply.err
 }
 
+// GetItemsByForeignKey - Using the foreign key return an array of pointers to the Items which have that particular foreign key
+func (c *itemCache) GetItemsByForeignKey(foreignKey string) ([]*Item, error) {
+
+	getItemsForeignKeyReply := c.runAction(cacheAction{
+		action: getItemsByForeignKeyAction,
+		forKey: foreignKey,
+	})
+
+	return getItemsForeignKeyReply.items, getItemsForeignKeyReply.err
+}
+
 // GetKeys - Returns the keys in cache
 func (c *itemCache) GetKeys() []string {
 	getKeysReply := c.runAction(cacheAction{
 		action: getKeysAction,
+	})
+	if getKeysReply.err != nil {
+		return []string{}
+	}
+
+	return getKeysReply.keys
+}
+
+// GetForeignKeys - Returns the Foreign keys in cache
+func (c *itemCache) GetForeignKeys() []string {
+	getKeysReply := c.runAction(cacheAction{
+		action: getForeignKeysAction,
 	})
 	if getKeysReply.err != nil {
 		return []string{}
@@ -506,6 +619,26 @@ func (c *itemCache) SetSecondaryKey(key string, secondaryKey string) error {
 	return setSecKeyReply.err
 }
 
+// SetWithForeignKey - Create a new item in the cache with key and a ForeignKey reference
+func (c *itemCache) SetWithForeignKey(key string, foreignKey string, data interface{}) error {
+	err := c.Set(key, data)
+	if err != nil {
+		return err
+	}
+
+	return c.SetForeignKey(key, foreignKey)
+}
+
+// SetForeignKey - Add the ForeignKey as a way to reference the item with key
+func (c *itemCache) SetForeignKey(key string, foreignKey string) error {
+	setForeignKeyReply := c.runAction(cacheAction{
+		action: setForeignKeyAction,
+		key:    key,
+		forKey: foreignKey,
+	})
+	return setForeignKeyReply.err
+}
+
 // Delete - Remove the item which is found with this key
 func (c *itemCache) Delete(key string) error {
 	deleteReply := c.runAction(cacheAction{
@@ -526,6 +659,36 @@ func (c *itemCache) DeleteBySecondaryKey(secondaryKey string) error {
 	return c.Delete(key)
 }
 
+// DeleteItemsByForeignKey - Remove all the items which is found with this foreign key
+func (c *itemCache) DeleteItemsByForeignKey(foreignKey string) error {
+
+	getItemsForeignKeyReply := c.runAction(cacheAction{
+		action: getItemsByForeignKeyAction,
+		forKey: foreignKey,
+	})
+	if len(getItemsForeignKeyReply.items) == 0 {
+		return fmt.Errorf("No items found with foreign key: %s", foreignKey)
+	}
+
+	for key := range c.Items {
+
+		if c.Items[key].ForeignKey == foreignKey {
+			deleteReply := c.runAction(cacheAction{
+				action: deleteAction,
+				key:    key,
+			})
+
+			if deleteReply.err != nil {
+				return deleteReply.err
+			}
+		}
+
+	}
+
+	return nil
+
+}
+
 // DeleteSecondaryKey - Remove the secondary key, preserve the item
 func (c *itemCache) DeleteSecondaryKey(secondaryKey string) error {
 	deleteSecKeyReply := c.runAction(cacheAction{
@@ -533,6 +696,15 @@ func (c *itemCache) DeleteSecondaryKey(secondaryKey string) error {
 		secKey: secondaryKey,
 	})
 	return deleteSecKeyReply.err
+}
+
+// DeleteForeignKey - Remove the foreign key, preserve the item
+func (c *itemCache) DeleteForeignKey(key string) error {
+	deleteForeignKeyReply := c.runAction(cacheAction{
+		action: deleteForeignKeyAction,
+		key:    key,
+	})
+	return deleteForeignKeyReply.err
 }
 
 // Flush - Clears the entire cache

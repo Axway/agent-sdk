@@ -163,7 +163,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 	if consumerInstance != nil && len(consumerInstance.Metadata.References) > 0 {
 		for _, reference := range consumerInstance.Metadata.References {
 			if reference.Kind == "APIServiceInstance" {
-				apiServiceInstance, err := sm.apicClient.getAPIServiceInstanceByName(reference.ID)
+				apiServiceInstance, err := sm.apicClient.GetAPIServiceInstanceByName(reference.ID)
 				if err == nil {
 					resource, _ := apiServiceInstance.AsInstance()
 					sm.setSubscriptionInfo(subscription, resource)

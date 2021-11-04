@@ -49,7 +49,7 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 	type Alias Owner
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type string `json:"type,omitempty"`
 	}{
 		Alias: (*Alias)(o),
 		Type:  t,
@@ -61,7 +61,7 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 	type Alias Owner
 	aux := struct {
 		*Alias
-		Type string
+		Type string `json:"type,omitempty"`
 	}{
 		Alias: (*Alias)(o),
 	}
