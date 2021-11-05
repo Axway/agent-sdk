@@ -318,6 +318,10 @@ func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
 	startTime := time.Now()
 	client := ptg.getHTTPClient()
+
+	log.Debug("ptg.url - ", ptg.url)
+	log.Debug("requestToken - ", requestToken)
+
 	resp, err := client.PostForm(ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
 		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
@@ -391,9 +395,10 @@ func (ptp *platformTokenGetter) Close() error {
 
 // fetchNewToken fetches a new token from the platform and updates the token cache.
 func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
-	log.Trace("Get cached token is empty.  Try and fetch a new token")
+	log.Debug("Get cached token is empty.  Try and fetch a new token")
 	privateKey, err := ptp.getPrivateKey()
 	if err != nil {
+		log.Error("Could not get private key")
 		return "", err
 	}
 	// cleanup memory used by decoded privatekey in a (futile) attempt to prevent heartbleed like attaks
@@ -409,21 +414,25 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 
 	publicKey, err := ptp.getPublicKey()
 	if err != nil {
+		log.Error("Could not get public key")
 		return "", err
 	}
 
 	kid, err := computeKIDFromDER(publicKey)
 	if err != nil {
+		log.Error("Could not compute KID from DER")
 		return "", err
 	}
 
 	requestToken, err := prepareInitialToken(privateKey, kid, ptp.clientID, ptp.aud)
 	if err != nil {
+		log.Error("Could not attain requested token")
 		return "", err
 	}
 
 	tokens, err := ptp.getPlatformTokens(requestToken)
 	if err != nil {
+		log.Error("Could not get platform token")
 		return "", err
 	}
 
