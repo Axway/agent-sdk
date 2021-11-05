@@ -16,7 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -26,10 +26,10 @@ import (
 
 // Constants for cmd flags
 const (
-	PathConfigFlag        = "pathConfig"
-	BeatsPathConfigFlag   = "path.config"
-	EnvFileFlag           = "envFile"
-	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
+	PathConfigFlag         = "pathConfig"
+	BeatsPathConfigFlag    = "path.config"
+	EnvFileFlag            = "envFile"
+	EnvFileFlagDescription = "Path of the file with environment variables to override configuration"
 )
 
 // CommandHandler - Root command execution handler
@@ -43,7 +43,7 @@ type AgentRootCmd interface {
 	RootCmd() *cobra.Command
 	Execute() error
 
-	// Get the agentType
+	// GetAgentType Get the agentType
 	GetAgentType() config.AgentType
 	AddCommand(*cobra.Command)
 
@@ -69,7 +69,7 @@ func init() {
 	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
 	config.AgentDataPlaneType = BuildDataPlaneType
 	config.SDKVersion = SDKBuildVersion
-	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
+	// initialize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
 	rand.Seed(time.Now().UnixNano())
 }
 
@@ -159,10 +159,10 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
-	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
+	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDescription)
 }
 
-func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
+func (c *agentRootCommand) initialize(_ *cobra.Command, _ []string) error {
 	_, envFile := c.props.StringFlagValue(EnvFileFlag)
 	err := util.LoadEnvFromFile(envFile)
 	if err != nil {
@@ -219,7 +219,10 @@ func (c *agentRootCommand) checkStatusFlag() {
 }
 
 func (c *agentRootCommand) onConfigChange() {
-	c.initConfig()
+	err := c.initConfig()
+	if err != nil {
+		log.Errorf("onConfigChange: %s", err)
+	}
 	agentConfigChangeHandler := agent.GetConfigChangeHandler()
 	if agentConfigChangeHandler != nil {
 		agentConfigChangeHandler()
@@ -283,18 +286,18 @@ func (c *agentRootCommand) initConfig() error {
 }
 
 // run - Executes the agent command
-func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
+func (c *agentRootCommand) run(_ *cobra.Command, _ []string) (err error) {
 	err = c.initConfig()
 	statusText := ""
 	if err == nil {
 		// Register resource change handler to re-initialize config on resource change
-		// This should trigger config init and applyresourcechange handlers
+		// This should trigger config init and apply resource change handlers
 		agent.OnAgentResourceChange(c.onConfigChange)
 
 		// Check the sync flag
-		exitcode := agentsync.CheckSyncFlag()
-		if exitcode > -1 {
-			os.Exit(exitcode)
+		exitCode := agentsync.CheckSyncFlag()
+		if exitCode > -1 {
+			os.Exit(exitCode)
 		}
 
 		log.Infof("Starting %s", buildAgentInfo(c.rootCmd.Short))
