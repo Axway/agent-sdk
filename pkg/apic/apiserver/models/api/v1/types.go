@@ -74,7 +74,7 @@ type Metadata struct {
 	// Internal version of this object that can be used by clients to determine when objects have changed.
 	ResourceVersion string      `json:"resourceVersion,omitempty"`
 	References      []Reference `json:"references,omitempty"`
-	// The URL to access the scope resource.
+	// The URL to access the resource.
 	SelfLink string `json:"selfLink,omitempty"`
 	// Defines the state of the resource. If present, indicates if the resource is in Deleting state.
 	State string `json:"state,omitempty"`
