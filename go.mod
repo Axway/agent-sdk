@@ -28,7 +28,7 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.0
-	github.com/tidwall/gjson v1.6.7
+	github.com/tidwall/gjson v1.9.4
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
 	google.golang.org/grpc v1.39.0

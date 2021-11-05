@@ -78,11 +78,11 @@ func (su *agentStatusUpdate) Execute() error {
 	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
 	if previousStatus != status && (su.immediateStatusChange && previousStatus == AgentRunning || status == AgentRunning) {
 		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", previousStatus, status)
-		UpdateStatus(status, previousStatus, "")
+		UpdateStatusWithPrevious(status, previousStatus, "")
 	} else if su.typeOfStatusUpdate == periodic {
 		// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
 		log.Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
-		UpdateStatus(status, previousStatus, "")
+		UpdateStatusWithPrevious(status, previousStatus, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
 

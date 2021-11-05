@@ -262,7 +262,13 @@ func GetAgentResource() *apiV1.ResourceInstance {
 }
 
 // UpdateStatus - Updates the agent state
-func UpdateStatus(status, prevStatus, description string) {
+func UpdateStatus(status, description string) {
+	// send the current status as the previous
+	updateAgentStatus(status, status, description)
+}
+
+// UpdateStatusWithPrevious - Updates the agent state providing a previous state
+func UpdateStatusWithPrevious(status, prevStatus, description string) {
 	updateAgentStatus(status, prevStatus, description)
 }
 

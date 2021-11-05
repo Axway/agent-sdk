@@ -124,6 +124,24 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return events, nil
 	}
 
+	//if no summary is sent then prepare the array of TransactionEvents for publishing
+	if summaryEvent == (LogEvent{}) {
+
+		for _, event := range detailEvents {
+			if metaData == nil {
+				metaData = common.MapStr{}
+			}
+			metaData.Put(sampling.SampleKey, true)
+			newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+			if err == nil {
+				events = append(events, newEvent)
+			}
+		}
+
+		return events, nil
+
+	}
+
 	// Add this to sample or not
 	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {

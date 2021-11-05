@@ -319,7 +319,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	if statusText != "" {
 		status = agent.AgentFailed
 	}
-	agent.UpdateStatus(status, agent.AgentRunning, statusText)
+	agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
 	return
 }
 
