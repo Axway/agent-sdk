@@ -535,8 +535,8 @@ type TokenAuth struct {
 	tokenRequester PlatformTokenGetter
 }
 
-// AuthConfig the auth config
-type AuthConfig struct {
+// Config the auth config
+type Config struct {
 	PrivateKey  string        `mapstructure:"private_key"`
 	PublicKey   string        `mapstructure:"public_key"`
 	KeyPassword string        `mapstructure:"key_password"`
@@ -547,7 +547,7 @@ type AuthConfig struct {
 }
 
 // NewTokenAuth Create a new auth token requester
-func NewTokenAuth(ac AuthConfig, tenantID string) *TokenAuth {
+func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
 	instance := &TokenAuth{tenantID: tenantID}
 	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
 	aud := ac.URL + "/realms/Broker"

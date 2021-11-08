@@ -13,6 +13,7 @@ import (
 
 var cfg = &client.Config{}
 
+// NewRootCmd creates a new cobra.Command
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
