@@ -65,7 +65,7 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 	sm.apicClient = apicClient
 }
 
-// RegisterProcessor - Register subscription processor callback for specified state
+// RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
 	processorList, ok := sm.processorMap[state]
 	if !ok {

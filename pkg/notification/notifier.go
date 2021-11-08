@@ -126,7 +126,7 @@ func (s *channelNotifier) Unsubscribe(id string) error {
 
 // remove the subscriber identified with id from the notifier list
 func (s *channelNotifier) unsubscribe(id string) error {
-	s.subLock.Lock() // Removing a subscriber
+	s.subLock.Lock() // Removing a dubscriber
 	defer s.subLock.Unlock()
 	if sub, ok := s.subscribers[id]; ok {
 		delete(s.subscribers, id)
@@ -137,14 +137,14 @@ func (s *channelNotifier) unsubscribe(id string) error {
 }
 
 func (s *channelNotifier) unsubscribeAll() {
-	// send messages to all subscribers
+	// sends messages to all of the subscribers
 	for _, sub := range s.subscribers {
 		s.unsubscribe(sub.GetID())
 	}
 }
 
 func (s *channelNotifier) sendMsgs(msg interface{}) {
-	// send messages to all subscribers
+	// sends messages to all of the subscribers
 	s.subLock.RLock() // reading the subscribers map
 	defer s.subLock.RUnlock()
 	for _, sub := range s.subscribers {

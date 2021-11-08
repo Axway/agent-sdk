@@ -202,7 +202,6 @@ func startAPIServiceCache() {
 			}
 			log.Tracef("registered API cache update all job: %s", id)
 		}()
-		return
 	}
 }
 

@@ -77,7 +77,6 @@ func (j *discoveryCache) Execute() error {
 		j.validateAPIServiceInstances()
 		j.updateCategoryCache()
 	}
-
 	fetchConfig()
 	return nil
 }
@@ -267,7 +266,6 @@ var updateCacheForExternalAPI = func(query map[string]string) (interface{}, erro
 	}
 	apiService := apiV1.ResourceInstance{}
 	json.Unmarshal(response, &apiService)
-
 	addItemToAPICache(apiService)
 	return apiService, nil
 }
