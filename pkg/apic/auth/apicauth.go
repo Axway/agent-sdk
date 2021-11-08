@@ -563,6 +563,7 @@ func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
 	return instance
 }
 
+// GetToken gets a token
 func (t TokenAuth) GetToken() (string, error) {
 	return t.tokenRequester.GetToken()
 }
