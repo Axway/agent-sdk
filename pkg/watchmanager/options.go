@@ -44,30 +44,24 @@ func newWatchOptions() *watchOptions {
 	}
 }
 
-type funcOption struct {
-	f func(*watchOptions)
-}
+// funcOption defines a func that receives a watchOptions. Implements the Option interface.
+type funcOption func(*watchOptions)
 
-func (foptn *funcOption) apply(opt *watchOptions) {
-	foptn.f(opt)
-}
-
-func newFuncOption(f func(*watchOptions)) Option {
-	return &funcOption{
-		f: f,
-	}
+// apply calls the original func to update the watchOptions.
+func (f funcOption) apply(opt *watchOptions) {
+	f(opt)
 }
 
 // WithTLSConfig - sets up the TLS credentials or insecure if nil
 func WithTLSConfig(tlsCfg *tls.Config) Option {
-	return newFuncOption(func(o *watchOptions) {
+	return funcOption(func(o *watchOptions) {
 		o.tlsCfg = tlsCfg
 	})
 }
 
 // WithKeepAlive - sets keep alive ping interval and timeout to wait for ping ack
 func WithKeepAlive(time, timeout time.Duration) Option {
-	return newFuncOption(func(o *watchOptions) {
+	return funcOption(func(o *watchOptions) {
 		o.keepAlive.time = time
 		o.keepAlive.timeout = timeout
 	})
@@ -75,7 +69,7 @@ func WithKeepAlive(time, timeout time.Duration) Option {
 
 // WithLogger sets the logger to be used by the client, overriding the default logger
 func WithLogger(loggerEntry *logrus.Entry) Option {
-	return newFuncOption(func(o *watchOptions) {
+	return funcOption(func(o *watchOptions) {
 		o.loggerEntry = loggerEntry
 	})
 }

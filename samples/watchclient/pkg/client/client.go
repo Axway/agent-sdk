@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+
 	"github.com/sirupsen/logrus"
 
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
@@ -27,7 +29,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
 
-	ta := newTokenAuth(config.Auth, config.TenantID)
+	ta := auth.NewTokenAuth(config.Auth, config.TenantID)
 
 	cfg := &wm.Config{
 		Host:        config.Host,

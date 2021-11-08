@@ -13,7 +13,7 @@ import (
 
 // Manager - Interface to manage watch connection
 type Manager interface {
-	RegisterWatch(watchTopic string, eventChannel chan *proto.Event, errChannel chan error) (string, error)
+	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
 	Close()
 }
@@ -76,14 +76,14 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic
-func (m *watchManager) RegisterWatch(watchTopicSelfLink string, eventChannel chan *proto.Event, errorChannel chan error) (string, error) {
+func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
 	client, err := newWatchClient(
 		m.connection,
 		watchClientConfig{
-			topicSelfLink: watchTopicSelfLink,
+			topicSelfLink: link,
 			tokenGetter:   m.cfg.TokenGetter,
-			eventChannel:  eventChannel,
-			errorChannel:  errorChannel,
+			eventChannel:  events,
+			errorChannel:  errors,
 		},
 	)
 	if err != nil {
@@ -98,7 +98,7 @@ func (m *watchManager) RegisterWatch(watchTopicSelfLink string, eventChannel cha
 	go client.processRequest()
 	go client.processEvents()
 
-	m.logger.WithField("watchtopic", watchTopicSelfLink).
+	m.logger.WithField("watchtopic", link).
 		WithField("subscriptionId", subID).
 		Info("registered new watch client[subscription]")
 
