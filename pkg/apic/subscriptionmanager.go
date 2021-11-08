@@ -215,7 +215,7 @@ func (sm *subscriptionManager) Start() {
 	// clean out the map each time start is called
 	sm.locklist = make(map[string]string)
 
-	// Add a polling interval delay prior to starting, but do not make calling function wait
+	// Add an polling interval delay prior to starting, but do not make calling function wait
 	go func() {
 		time.Sleep(sm.apicClient.cfg.GetPollInterval())
 		if !sm.isRunning {
