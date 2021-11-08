@@ -1,24 +1,17 @@
 package client
 
-import "time"
-
-// AuthConfig the auth config
-type AuthConfig struct {
-	PrivateKey  string
-	PublicKey   string
-	KeyPassword string
-	URL         string
-	Audience    string
-	ClientID    string
-	Timeout     time.Duration
-}
+import (
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+)
 
 // Config the configuration for the Watch client
 type Config struct {
-	TenantID      string
-	Host          string
-	Port          uint32
-	Insecure      bool
-	Auth          AuthConfig
-	TopicSelfLink string
+	TenantID      string      `mapstructure:"tenant_id"`
+	Host          string      `mapstructure:"host"`
+	Port          uint32      `mapstructure:"port"`
+	Insecure      bool        `mapstructure:"insecure"`
+	Auth          auth.Config `mapstructure:"auth"`
+	TopicSelfLink string      `mapstructure:"topic_self_link"`
+	Level         string      `mapstructure:"log_level"`
+	Format        string      `mapstructure:"log_format"`
 }

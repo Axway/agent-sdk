@@ -3,6 +3,7 @@ package watchmanager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc"
@@ -124,7 +125,7 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 	claims := jwt.MapClaims{}
 	_, _, err := parser.ParseUnverified(token, claims)
 	if err != nil {
-		return time.Duration(0), err
+		return time.Duration(0), fmt.Errorf("getTokenExpirationTime failed to parse token: %s", err)
 	}
 	var tm time.Time
 	switch exp := claims["exp"].(type) {
