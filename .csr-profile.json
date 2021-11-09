@@ -18,16 +18,5 @@
     "insightvm": false
   },
   "suppressions": [
-    {
-      "path": ".*github.com\\/elastic\\/go\\-ucfg\\-v0\\.8\\.3",
-      "scanner": "whitesource",
-      "component": "github.com\\/elastic\\/go\\-ucfg",
-      "version": "v0.8.3",
-      "classification": "False Positive",
-      "justification": "kubernetes libraries are not used by agents",
-      "ids": [
-        "CVE-2019-11254"
-      ]
-    }
   ]
 }
