@@ -87,6 +87,12 @@ func (s *secretResolver) ResolveSecret(secretRef string) (string, error) {
 		return "", errors.New(msg)
 	}
 
+	// If usage reporting is offline, do not resolve secretclear
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && strings.HasPrefix(secretRef, secretConfigPrefix) {
+		msg := "Securing password with @Secret resource is not possible when running agent in offline mode."
+		return "", errors.New(msg)
+	}
+
 	secretName, key := s.parseSecretRef(secretRef)
 	if secretName != "" && key != "" {
 		var secret *v1alpha1.Secret
