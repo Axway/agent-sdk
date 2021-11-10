@@ -20,6 +20,7 @@ import (
 
 var globalHealthChecker *healthChecker
 var statusConfig corecfg.StatusConfig
+var startHealthCheckServerFunc = startHealthCheckServer
 
 func init() {
 	globalHealthChecker = &healthChecker{
@@ -140,7 +141,6 @@ var server *http.Server
 func HandleRequests() {
 	if !globalHealthChecker.registered {
 		http.HandleFunc("/status", statusHandler)
-		http.HandleFunc("/status/", statusHandler)
 		globalHealthChecker.registered = true
 	}
 
@@ -149,6 +149,10 @@ func HandleRequests() {
 		server.Close()
 	}
 
+	startHealthCheckServerFunc()
+}
+
+func startHealthCheckServer() {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
 		server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
 		go server.ListenAndServe()
