@@ -14,6 +14,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+const (
+	APIService         = "APIService"
+	APIServiceInstance = "APIServiceInstance"
+	Category           = "Category"
+)
+
 // Starter an interface to start a process
 type Starter interface {
 	Start() error
@@ -27,14 +33,14 @@ type EventManager struct {
 	categories  cache.Cache
 	instances   cache.Cache
 	source      chan *proto.Event
-	getResource RiGetter
+	getResource ResourceGetter
 	cbs         []callback
 }
 
 // TODO: add option to pass in a list of callbacks for additional event processing.
 
 // NewEventManager creates a new EventManager to save events into the appropriate cache.
-func NewEventManager(source chan *proto.Event, ri RiGetter, apis, categories, instances cache.Cache, cbs ...callback) *EventManager {
+func NewEventManager(source chan *proto.Event, ri ResourceGetter, apis, categories, instances cache.Cache, cbs ...callback) *EventManager {
 	return &EventManager{
 		apis:        apis,
 		categories:  categories,
@@ -72,22 +78,17 @@ func (em *EventManager) start() error {
 
 // handleEvent fetches the api server resource based on the event self link, and then tries to save it to the cache.
 func (em *EventManager) handleEvent(event *proto.Event) error {
-	// TODO: can't fetch a deleted item.
+	if event.Type == proto.Event_DELETED {
+		return em.handleResourceType(event.Type, nil)
+	}
+
 	ri, err := em.getResource.Get(event.Payload.Metadata.SelfLink)
 	if err != nil {
 		return err
 	}
 
-	switch v := ri.(type) {
-	case *apiv1.ResourceInstance:
-		return em.handleResourceType(event.Type, v)
-	case nil:
-		return fmt.Errorf("received event, but the returned api server resource is nil")
-	default:
-		fmt.Printf("unable to convert type to *ResourceInstance. %s %+v", v.GetName(), v.GetGroupVersionKind())
-	}
+	return em.handleResourceType(event.Type, ri)
 
-	return nil
 }
 
 // handleResourceType determines the resource kind to save the item to the right cache.
@@ -95,11 +96,11 @@ func (em *EventManager) handleResourceType(action proto.Event_Type, resource *ap
 	var err error
 	kind := resource.GetGroupVersionKind().Kind
 	switch kind {
-	case "APIService":
+	case APIService:
 		err = em.handleAPISvc(action, resource)
-	case "APIServiceInstance":
+	case APIServiceInstance:
 		err = em.handleSvcInstance(action, resource)
-	case "Category":
+	case Category:
 		err = em.handleCategory(action, resource)
 	default:
 		logrus.Debugf("cache not provided for resource %s", kind)

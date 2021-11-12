@@ -3,13 +3,13 @@ package agent
 import (
 	"encoding/json"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
@@ -210,8 +210,8 @@ func startAPIServiceCache() {
 	host := agent.cfg.GetURL()
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
-
-	service, err := newStreamService(host, tenantID, insecure, agent.apiMap, agent.categoryMap, cache.New())
+	client := api.NewClient(agent.cfg.GetTLSConfig(), "")
+	service, err := newStreamService(host, tenantID, insecure, agent.apiMap, agent.categoryMap, cache.New(), client)
 	if err != nil {
 		log.Errorf("failed to create a stream service: %s", err)
 	}
@@ -488,7 +488,8 @@ func newWatchManager(cfg *wm.Config, insecure bool, logger logrus.FieldLogger) (
 	return wm.New(cfg, logger, watchOptions...)
 }
 
-func newStreamService(host, tenantID string, insecure bool, apis, categories, instances cache.Cache) (*stream.Service, error) {
+// newStreamService creates a grpc client and a service that will handle the events from the client.
+func newStreamService(host, tenantID string, insecure bool, apis, categories, instances cache.Cache, client api.Client) (*stream.Service, error) {
 	ta := &auth.TokenAuth{
 		TenantID:       tenantID,
 		TokenRequester: agent.tokenRequester,
@@ -508,6 +509,6 @@ func newStreamService(host, tenantID string, insecure bool, apis, categories, in
 		return nil, err
 	}
 
-	ric := stream.NewResourceInstanceClient(host, &http.Client{}, agent.tokenRequester, tenantID)
+	ric := stream.NewResourceClient(host, client, agent.tokenRequester, tenantID)
 	return stream.NewStreamService(wm, ric, apis, categories, instances), nil
 }

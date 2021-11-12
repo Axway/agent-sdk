@@ -9,15 +9,17 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// Service struct for processing events from a grpc stream
 type Service struct {
 	Manager    wm.Manager
-	ric        RiGetter
+	ric        ResourceGetter
 	apis       cache.Cache
 	categories cache.Cache
 	instances  cache.Cache
 }
 
-func NewStreamService(manager wm.Manager, ric RiGetter, apis, categories, instances cache.Cache) *Service {
+// NewStreamService creates a NewStreamService
+func NewStreamService(manager wm.Manager, ric ResourceGetter, apis, categories, instances cache.Cache) *Service {
 	return &Service{
 		Manager:    manager,
 		ric:        ric,
@@ -27,13 +29,14 @@ func NewStreamService(manager wm.Manager, ric RiGetter, apis, categories, instan
 	}
 }
 
+// Watch registers a WatchClient, and creates an EventManager to process the events
 func (s *Service) Watch(topic string, events chan *proto.Event, errors chan error, cbs ...callback) error {
 	id, err := s.Manager.RegisterWatch(topic, events, errors)
 	if err != nil {
 		return err
 	}
 
-	log.Debug("watch-controller subscription-id: %s", id)
+	log.Debugf("watch-controller subscription-id: %s", id)
 
 	em := NewEventManager(events, s.ric, s.apis, s.categories, s.instances, cbs...)
 
