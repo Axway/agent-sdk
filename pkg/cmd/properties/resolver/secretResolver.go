@@ -89,6 +89,8 @@ func (s *secretResolver) ResolveSecret(secretRef string) (string, error) {
 		return "", errors.New(msg)
 	}
 
+	log.Debug("Test for Vivek...hehe")
+
 	secretName, key := s.parseSecretRef(secretRef)
 	if secretName != "" && key != "" {
 		var secret *v1alpha1.Secret
