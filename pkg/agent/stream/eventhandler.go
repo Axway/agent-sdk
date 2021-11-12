@@ -3,6 +3,10 @@ package stream
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
+
+	"github.com/Axway/agent-sdk/pkg/apic"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/sirupsen/logrus"
 
@@ -15,28 +19,36 @@ type Starter interface {
 	Start() error
 }
 
+type callback func(action proto.Event_Type, resource *apiv1.ResourceInstance)
+
 // EventManager holds the various caches to save events into as they get written to the source channel.
 type EventManager struct {
 	apis        cache.Cache
 	categories  cache.Cache
+	instances   cache.Cache
 	source      chan *proto.Event
 	getResource RiGetter
+	cbs         []callback
 }
 
+// TODO: add option to pass in a list of callbacks for additional event processing.
+
 // NewEventManager creates a new EventManager to save events into the appropriate cache.
-func NewEventManager(source chan *proto.Event, getResource RiGetter, apis cache.Cache, categories cache.Cache) *EventManager {
+func NewEventManager(source chan *proto.Event, ri RiGetter, apis, categories, instances cache.Cache, cbs ...callback) *EventManager {
 	return &EventManager{
 		apis:        apis,
 		categories:  categories,
 		source:      source,
-		getResource: getResource,
+		getResource: ri,
+		instances:   instances,
+		cbs:         cbs,
 	}
 }
 
 // Start starts a loop that will cache events as they are sent on the channel
-func (ec *EventManager) Start() error {
+func (em *EventManager) Start() error {
 	for {
-		err := ec.start()
+		err := em.start()
 		if err != nil {
 			return err
 		}
@@ -44,25 +56,31 @@ func (ec *EventManager) Start() error {
 }
 
 // start waits for an event on the channel and then attempts to save the item.
-func (ec *EventManager) start() error {
-	event, ok := <-ec.source
+func (em *EventManager) start() error {
+	event, ok := <-em.source
 	if !ok {
 		return fmt.Errorf("event source has been closed")
 	}
 
-	return ec.handleEvent(event)
+	err := em.handleEvent(event)
+	if err != nil {
+		log.Error(err)
+	}
+
+	return nil
 }
 
 // handleEvent fetches the api server resource based on the event self link, and then tries to save it to the cache.
-func (ec *EventManager) handleEvent(event *proto.Event) error {
-	ri, err := ec.getResource.Get(event.Payload.Metadata.SelfLink)
+func (em *EventManager) handleEvent(event *proto.Event) error {
+	// TODO: can't fetch a deleted item.
+	ri, err := em.getResource.Get(event.Payload.Metadata.SelfLink)
 	if err != nil {
 		return err
 	}
 
 	switch v := ri.(type) {
 	case *apiv1.ResourceInstance:
-		return ec.handleResourceType(event.Type, v)
+		return em.handleResourceType(event.Type, v)
 	case nil:
 		return fmt.Errorf("received event, but the returned api server resource is nil")
 	default:
@@ -73,62 +91,64 @@ func (ec *EventManager) handleEvent(event *proto.Event) error {
 }
 
 // handleResourceType determines the resource kind to save the item to the right cache.
-func (ec *EventManager) handleResourceType(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (em *EventManager) handleResourceType(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+	var err error
 	kind := resource.GetGroupVersionKind().Kind
 	switch kind {
 	case "APIService":
-		return ec.handleSvcInstance(action, resource)
+		err = em.handleAPISvc(action, resource)
 	case "APIServiceInstance":
-		return ec.handleSvcInstance(action, resource)
+		err = em.handleSvcInstance(action, resource)
 	case "Category":
-		return ec.handleCategory(action, resource)
+		err = em.handleCategory(action, resource)
 	default:
-		logrus.Debugf("received unexpected event for kind %s. It will not be cached.", kind)
+		logrus.Debugf("cache not provided for resource %s", kind)
 	}
 
-	return nil
+	for _, cb := range em.cbs {
+		cb(action, resource)
+	}
+
+	return err
 }
 
-func (ec *EventManager) handleAPISvc(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
-	// id, ok := resource.Attributes[apic.AttrExternalAPIID]
-	// if !ok {
-	// 	return fmt.Errorf("%s not found on resource api service %s", apic.AttrExternalAPIID, resource.Name)
-	// }
-
-	// primaryKey, ok := resource.Attributes[apic.AttrExternalAPIPrimaryKey]
-	// if !ok {
-	//
-	// }
+func (em *EventManager) handleAPISvc(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+	id, ok := resource.Attributes[apic.AttrExternalAPIID]
+	if !ok {
+		return fmt.Errorf("%s not found on resource api service %s", apic.AttrExternalAPIID, resource.Name)
+	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		// return s.apis.SetWithSecondaryKey("", "", resource)
+		externalAPIName := resource.Attributes[apic.AttrExternalAPIName]
+		primaryKey, ok := resource.Attributes[apic.AttrExternalAPIPrimaryKey]
+		if !ok {
+			return em.apis.SetWithSecondaryKey(id, externalAPIName, resource)
+		}
+
+		return em.apis.SetWithSecondaryKey(primaryKey, externalAPIName, resource)
 	}
 
 	if action == proto.Event_DELETED {
-		// return s.apis.Delete(id)
+		return em.apis.Delete(id)
 	}
 
 	return nil
 }
 
-func (ec *EventManager) handleSvcInstance(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
-	// instances, err := s.apis.Get(serviceInstanceCache)
-	// if err != nil {
-	// 	return err
-	// }
-
+func (em *EventManager) handleSvcInstance(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+	key := resource.Metadata.ID
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		// return s.apis.SetWithSecondaryKey("", "", resource)
+		return em.instances.Set(key, resource)
 	}
 
 	if action == proto.Event_DELETED {
-		// return s.apis.Delete("")
+		return em.instances.Delete(key)
 	}
 
 	return nil
 }
 
-func (ec *EventManager) handleCategory(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (em *EventManager) handleCategory(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
 		// return s.categories.SetWithSecondaryKey(resource.Name, resource.Title, resource)
 	}

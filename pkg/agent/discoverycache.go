@@ -160,8 +160,10 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 
 	// When reloading all api service instances we can just write over the existing cache
 	if !j.refreshAll {
+		// TODO: load all instances into a map to be consistent with the stream event handler
 		serviceInstances = j.loadServiceInstancesFromCache(serviceInstances)
 	}
+	// TODO: this should be a cron job for both modes
 	serviceInstances = validateAPIOnDataplane(serviceInstances)
 	j.saveServiceInstancesToCache(serviceInstances)
 }
@@ -333,8 +335,7 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 				agent.apiMap.Delete(externalAPIID)
 			}
 
-			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
-			agent.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
+			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIName, apiService)
 		} else {
 			agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
 		}

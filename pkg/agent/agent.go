@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,6 +13,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
+
+	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
+
 	"github.com/sirupsen/logrus"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -194,56 +198,33 @@ func startAPIServiceCache() {
 		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 		return
 	}
+
 	log.Tracef("registered API cache update job: %s", id)
+
 	if !agent.useGrpc {
 		// Start the full update after the first interval
-		go func() {
-			time.Sleep(time.Hour)
-			allDiscoveryCacheJob := newDiscoveryCache(true)
-			id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-			if err != nil {
-				log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-				return
-			}
-			log.Tracef("registered API cache update all job: %s", id)
-		}()
+		go startDiscoveryCache()
 		return
 	}
 
-	cfg := &stream.Config{
-		Host:          agent.cfg.GetURL(),
-		Port:          443,
-		Insecure:      false,
-		TopicSelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
-		Auth: &auth.TokenAuth{
-			TenantID:       agent.cfg.GetTenantID(),
-			TokenRequester: agent.tokenRequester,
-		},
-	}
+	host := agent.cfg.GetURL()
+	tenantID := agent.cfg.GetTenantID()
+	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
 
-	entry := logrus.NewEntry(logrus.New())
-	manager, err := stream.NewWatchManager(cfg, entry)
+	service, err := newStreamService(host, tenantID, insecure, agent.apiMap, agent.categoryMap, cache.New())
 	if err != nil {
-		log.Errorf("failed to create the watch client: %s", err)
-		return
+		log.Errorf("failed to create a stream service: %s", err)
 	}
 
-	events, errorsCh := make(chan *proto.Event), make(chan error)
-	_, err = manager.RegisterWatch(cfg.TopicSelfLink, events, errorsCh)
-	if err != nil {
-		log.Errorf("failed to start the watch client: %s", err)
-		return
-	}
-
-	for {
-		select {
-		case event := <-events:
-			log.Info(event)
-		case err := <-errorsCh:
-			log.Error(err)
+	events, errCh := make(chan *proto.Event), make(chan error)
+	go func() {
+		err = service.Watch("/management/v1alpha1/watchtopics/mock-watch-topic", events, errCh)
+		if err != nil {
+			log.Errorf("failed to create a WatchClient: %s", err)
 			return
 		}
-	}
+	}()
+
 }
 
 func isRunningInDockerContainer() bool {
@@ -484,24 +465,49 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	}
 }
 
-func createStream(host, tenantID string, tokenGetter auth.PlatformTokenGetter) {
-	cfg := &stream.Config{
-		Host:          host,
-		Port:          443,
-		Insecure:      false,
-		TopicSelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
-		Auth: &auth.TokenAuth{
-			TenantID:       tenantID,
-			TokenRequester: tokenGetter,
-		},
-	}
-	entry := logrus.NewEntry(logrus.New())
-	wc, err := stream.NewWatchManager(cfg, entry)
-
-	events, errorsCh := make(chan *proto.Event), make(chan error)
-	_, err = wc.RegisterWatch(cfg.TopicSelfLink, events, errorsCh)
+func startDiscoveryCache() {
+	time.Sleep(time.Hour)
+	allDiscoveryCacheJob := newDiscoveryCache(true)
+	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
-		log.Errorf("failed to start the watch client: %s", err)
+		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
 		return
 	}
+	log.Tracef("registered API cache update all job: %s", id)
+}
+
+func newWatchManager(cfg *wm.Config, insecure bool, logger logrus.FieldLogger) (wm.Manager, error) {
+	entry := logger.WithField("package", "client")
+
+	var watchOptions []wm.Option
+	watchOptions = append(watchOptions, wm.WithLogger(entry))
+	if insecure {
+		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
+	}
+
+	return wm.New(cfg, logger, watchOptions...)
+}
+
+func newStreamService(host, tenantID string, insecure bool, apis, categories, instances cache.Cache) (*stream.Service, error) {
+	ta := &auth.TokenAuth{
+		TenantID:       tenantID,
+		TokenRequester: agent.tokenRequester,
+	}
+
+	cfg := &wm.Config{
+		Host:        host,
+		Port:        443,
+		TenantID:    tenantID,
+		TokenGetter: ta.GetToken,
+	}
+
+	entry := logrus.NewEntry(logrus.New())
+
+	wm, err := newWatchManager(cfg, insecure, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	ric := stream.NewResourceInstanceClient(host, &http.Client{}, agent.tokenRequester, tenantID)
+	return stream.NewStreamService(wm, ric, apis, categories, instances), nil
 }
