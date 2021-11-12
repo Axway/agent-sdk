@@ -9,6 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	"github.com/sirupsen/logrus"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -202,6 +207,42 @@ func startAPIServiceCache() {
 			}
 			log.Tracef("registered API cache update all job: %s", id)
 		}()
+		return
+	}
+
+	cfg := &stream.Config{
+		Host:          agent.cfg.GetURL(),
+		Port:          443,
+		Insecure:      false,
+		TopicSelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+		Auth: &auth.TokenAuth{
+			TenantID:       agent.cfg.GetTenantID(),
+			TokenRequester: agent.tokenRequester,
+		},
+	}
+
+	entry := logrus.NewEntry(logrus.New())
+	manager, err := stream.NewWatchManager(cfg, entry)
+	if err != nil {
+		log.Errorf("failed to create the watch client: %s", err)
+		return
+	}
+
+	events, errorsCh := make(chan *proto.Event), make(chan error)
+	_, err = manager.RegisterWatch(cfg.TopicSelfLink, events, errorsCh)
+	if err != nil {
+		log.Errorf("failed to start the watch client: %s", err)
+		return
+	}
+
+	for {
+		select {
+		case event := <-events:
+			log.Info(event)
+		case err := <-errorsCh:
+			log.Error(err)
+			return
+		}
 	}
 }
 
@@ -440,5 +481,27 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
 	if cfg.TeamName == "" && resCfgTeamName != "" {
 		cfg.TeamName = resCfgTeamName
+	}
+}
+
+func createStream(host, tenantID string, tokenGetter auth.PlatformTokenGetter) {
+	cfg := &stream.Config{
+		Host:          host,
+		Port:          443,
+		Insecure:      false,
+		TopicSelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+		Auth: &auth.TokenAuth{
+			TenantID:       tenantID,
+			TokenRequester: tokenGetter,
+		},
+	}
+	entry := logrus.NewEntry(logrus.New())
+	wc, err := stream.NewWatchManager(cfg, entry)
+
+	events, errorsCh := make(chan *proto.Event), make(chan error)
+	_, err = wc.RegisterWatch(cfg.TopicSelfLink, events, errorsCh)
+	if err != nil {
+		log.Errorf("failed to start the watch client: %s", err)
+		return
 	}
 }

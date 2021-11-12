@@ -20,6 +20,14 @@ type Option interface {
 	apply(*watchOptions)
 }
 
+// funcOption defines a func that receives a watchOptions. Implements the Option interface.
+type funcOption func(*watchOptions)
+
+// apply calls the original func to update the watchOptions.
+func (f funcOption) apply(opt *watchOptions) {
+	f(opt)
+}
+
 type keepAliveOption struct {
 	time    time.Duration
 	timeout time.Duration
@@ -42,14 +50,6 @@ func newWatchOptions() *watchOptions {
 			timeout: 10 * time.Second,
 		},
 	}
-}
-
-// funcOption defines a func that receives a watchOptions. Implements the Option interface.
-type funcOption func(*watchOptions)
-
-// apply calls the original func to update the watchOptions.
-func (f funcOption) apply(opt *watchOptions) {
-	f(opt)
 }
 
 // WithTLSConfig - sets up the TLS credentials or insecure if nil

@@ -529,10 +529,10 @@ func (ctg *channelTokenGetter) Close() error {
 	return nil
 }
 
-// TokenAuth implements the PerRPCCredentials interface
+// TokenAuth -
 type TokenAuth struct {
-	tenantID       string
-	tokenRequester PlatformTokenGetter
+	TenantID       string
+	TokenRequester PlatformTokenGetter
 }
 
 // Config the auth config
@@ -548,10 +548,10 @@ type Config struct {
 
 // NewTokenAuth Create a new auth token requester
 func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
-	instance := &TokenAuth{tenantID: tenantID}
+	instance := &TokenAuth{TenantID: tenantID}
 	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
 	aud := ac.URL + "/realms/Broker"
-	instance.tokenRequester = NewPlatformTokenGetter(
+	instance.TokenRequester = NewPlatformTokenGetter(
 		ac.PrivateKey,
 		ac.PublicKey,
 		ac.KeyPassword,
@@ -565,5 +565,5 @@ func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
 
 // GetToken gets a token
 func (t TokenAuth) GetToken() (string, error) {
-	return t.tokenRequester.GetToken()
+	return t.TokenRequester.GetToken()
 }
