@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"crypto/rsa"
@@ -97,6 +98,7 @@ func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID str
 			password:  password,
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -117,6 +119,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			password:  centralCfg.GetAuthConfig().GetKeyPassword(),
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -278,7 +281,7 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 		Issuer:    fmt.Sprintf("urn:ietf:params:oauth:client-assertion-type:jwt-bearer:%s", clientID),
 		Subject:   clientID,
 		Audience:  aud,
-		ExpiresAt: now.Add(60*time.Second).UnixNano() / 1e9,
+		ExpiresAt: now.Add(180*time.Second).UnixNano() / 1e9,
 		IssuedAt:  now.UnixNano() / 1e9,
 		Id:        uuid.New().String(),
 	})
@@ -374,6 +377,7 @@ type platformTokenGetter struct {
 	*platformTokenGenerator
 	*keyReader
 	*tokenHolder
+	getTokenMutex *sync.Mutex
 }
 
 // Close a PlatformTokenGetter
@@ -431,6 +435,10 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 
 // GetToken returns a token from cache if not expired or fetches a new token
 func (ptp *platformTokenGetter) GetToken() (string, error) {
+	// only one GetToken should execute at a time
+	ptp.getTokenMutex.Lock()
+	defer ptp.getTokenMutex.Unlock()
+
 	if token := ptp.getCachedToken(); token != "" {
 		return token, nil
 	}
