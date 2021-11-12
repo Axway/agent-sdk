@@ -3,7 +3,6 @@ package stream
 import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -11,26 +10,20 @@ import (
 
 // Service struct for processing events from a grpc stream
 type Service struct {
-	Manager    wm.Manager
-	ric        ResourceGetter
-	apis       cache.Cache
-	categories cache.Cache
-	instances  cache.Cache
+	Manager wm.Manager
+	ric     ResourceGetter
 }
 
 // NewStreamService creates a NewStreamService
-func NewStreamService(manager wm.Manager, ric ResourceGetter, apis, categories, instances cache.Cache) *Service {
+func NewStreamService(manager wm.Manager, ric ResourceGetter) *Service {
 	return &Service{
-		Manager:    manager,
-		ric:        ric,
-		apis:       apis,
-		categories: categories,
-		instances:  instances,
+		Manager: manager,
+		ric:     ric,
 	}
 }
 
 // Watch registers a WatchClient, and creates an EventManager to process the events
-func (s *Service) Watch(topic string, events chan *proto.Event, errors chan error, cbs ...callback) error {
+func (s *Service) Watch(topic string, events chan *proto.Event, errors chan error, cbs ...Handler) error {
 	id, err := s.Manager.RegisterWatch(topic, events, errors)
 	if err != nil {
 		return err
@@ -38,7 +31,7 @@ func (s *Service) Watch(topic string, events chan *proto.Event, errors chan erro
 
 	log.Debugf("watch-controller subscription-id: %s", id)
 
-	em := NewEventManager(events, s.ric, s.apis, s.categories, s.instances, cbs...)
+	em := NewEventManager(events, s.ric, cbs...)
 
 	return em.Start()
 }
