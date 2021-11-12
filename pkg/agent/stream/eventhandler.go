@@ -58,20 +58,22 @@ func (em *EventManager) start() error {
 
 // handleEvent fetches the api server resource based on the event self link, and then tries to save it to the cache.
 func (em *EventManager) handleEvent(event *proto.Event) error {
-	if event.Type == proto.Event_DELETED {
-		return em.handleResource(event.Type, nil)
+	var ri *apiv1.ResourceInstance
+	var err error
+	if event.Type == proto.Event_CREATED || event.Type == proto.Event_UPDATED {
+		ri, err = em.getResource.Get(event.Payload.Metadata.SelfLink)
+		if err != nil {
+			return err
+		}
 	}
 
-	ri, err := em.getResource.Get(event.Payload.Metadata.SelfLink)
-	if err != nil {
-		return err
-	}
+	em.handleResource(event.Type, ri)
 
-	return em.handleResource(event.Type, ri)
+	return nil
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
 	for _, cb := range em.handlers {
 		err := cb.callback(action, resource)
 		if err != nil {
@@ -79,5 +81,4 @@ func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.
 		}
 	}
 
-	return nil
 }
