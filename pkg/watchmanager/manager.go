@@ -82,12 +82,13 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
 	client, err := newWatchClient(
 		m.connection,
-		watchClientConfig{
+		clientConfig{
 			topicSelfLink: link,
 			tokenGetter:   m.cfg.TokenGetter,
-			eventChannel:  events,
-			errorChannel:  errors,
+			events:        events,
+			errors:        errors,
 		},
+		proto.NewWatchClient,
 	)
 	if err != nil {
 		return "", err

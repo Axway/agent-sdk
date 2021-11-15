@@ -12,22 +12,28 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-type watchClientConfig struct {
+type clientConfig struct {
 	topicSelfLink string
 	tokenGetter   TokenGetter
-	eventChannel  chan *proto.Event
-	errorChannel  chan error
+	events        chan *proto.Event
+	errors        chan error
 }
 
 type watchClient struct {
-	cfg          watchClientConfig
-	stream       proto.Watch_SubscribeClient
-	cancelStream context.CancelFunc
-	timer        *time.Timer
+	cfg                    clientConfig
+	stream                 proto.Watch_SubscribeClient
+	cancelStream           context.CancelFunc
+	timer                  *time.Timer
+	getTokenExpirationTime getTokenExpFunc
 }
 
-func newWatchClient(cc grpc.ClientConnInterface, clientCfg watchClientConfig) (*watchClient, error) {
-	svcClient := proto.NewWatchClient(cc)
+// newWatchClientFunc func signature to create a watch client
+type newWatchClientFunc func(cc grpc.ClientConnInterface) proto.WatchClient
+
+type getTokenExpFunc func(token string) (time.Duration, error)
+
+func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClient newWatchClientFunc) (*watchClient, error) {
+	svcClient := newClient(cc)
 
 	streamCtx, streamCancel := context.WithCancel(context.Background())
 	stream, err := svcClient.Subscribe(streamCtx)
@@ -37,10 +43,11 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg watchClientConfig) (*
 	}
 
 	client := &watchClient{
-		cfg:          clientCfg,
-		stream:       stream,
-		cancelStream: streamCancel,
-		timer:        time.NewTimer(0),
+		cfg:                    clientCfg,
+		stream:                 stream,
+		cancelStream:           streamCancel,
+		timer:                  time.NewTimer(0),
+		getTokenExpirationTime: getTokenExpirationTime,
 	}
 
 	return client, nil
@@ -63,7 +70,7 @@ func (c *watchClient) recv() error {
 	if err != nil {
 		return err
 	}
-	c.cfg.eventChannel <- event
+	c.cfg.events <- event
 	return nil
 }
 
@@ -91,23 +98,26 @@ func (c *watchClient) send() (time.Duration, error) {
 	if err != nil {
 		return time.Duration(0), err
 	}
-	exp, err := getTokenExpirationTime(token)
+
+	exp, err := c.getTokenExpirationTime(token)
 	if err != nil {
 		return exp, err
 	}
+
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
 	err = c.stream.Send(req)
 	if err != nil {
 		return exp, err
 	}
+
 	return exp, nil
 }
 
 // handleError stop the running timer, send to the error channel, and close the open stream.
 func (c *watchClient) handleError(err error) {
 	c.timer.Stop()
-	c.cfg.errorChannel <- err
-	close(c.cfg.eventChannel)
+	c.cfg.errors <- err
+	close(c.cfg.events)
 	c.cancelStream()
 }
 
@@ -127,6 +137,7 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 	if err != nil {
 		return time.Duration(0), fmt.Errorf("getTokenExpirationTime failed to parse token: %s", err)
 	}
+
 	var tm time.Time
 	switch exp := claims["exp"].(type) {
 	case float64:
@@ -135,6 +146,7 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 		v, _ := exp.Int64()
 		tm = time.Unix(v, 0)
 	}
+
 	exp := time.Until(tm)
-	return time.Duration((exp * 4) / 5), nil
+	return (exp * 4) / 5, nil
 }
