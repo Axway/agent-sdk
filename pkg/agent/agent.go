@@ -213,7 +213,7 @@ func startAPIServiceCache() {
 		stream.NewAPISvcHandler(agent.apiMap),
 		stream.NewInstanceHandler(cache.New()),
 		stream.NewCategoryHandler(agent.categoryMap),
-		// TODO: agents should be able to pass in their own custom handlers.
+		// TODO: agents should be able to pass in their own handlers.
 	)
 
 	go func() {

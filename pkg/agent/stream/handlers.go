@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	APIService         = "APIService"
-	APIServiceInstance = "APIServiceInstance"
-	Category           = "Category"
+	apiService         = "APIService"
+	apiServiceInstance = "APIServiceInstance"
+	category           = "Category"
 )
 
 type apiSvcHandler struct {
@@ -27,7 +27,7 @@ func NewAPISvcHandler(cache cache.Cache) Handler {
 }
 
 func (h apiSvcHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
-	if resource.Kind != APIService {
+	if resource.Kind != apiService {
 		return nil
 	}
 
@@ -65,7 +65,7 @@ func NewInstanceHandler(cache cache.Cache) Handler {
 }
 
 func (h instanceHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
-	if resource.Kind != APIServiceInstance {
+	if resource.Kind != apiServiceInstance {
 		return nil
 	}
 
@@ -93,7 +93,7 @@ func NewCategoryHandler(cache cache.Cache) Handler {
 }
 
 func (c categoryHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
-	if resource.Kind != Category {
+	if resource.Kind != category {
 		return nil
 	}
 

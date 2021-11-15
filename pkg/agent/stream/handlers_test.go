@@ -27,7 +27,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIService,
+							Kind: apiService,
 						},
 					},
 					Attributes: map[string]string{
@@ -45,7 +45,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIService,
+							Kind: apiService,
 						},
 					},
 					Attributes: map[string]string{
@@ -64,7 +64,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIService,
+							Kind: apiService,
 						},
 					},
 					Attributes: map[string]string{},
@@ -79,7 +79,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIService,
+							Kind: apiService,
 						},
 					},
 					Attributes: map[string]string{
@@ -97,7 +97,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: Category,
+							Kind: category,
 						},
 					},
 					Attributes: map[string]string{},
@@ -138,7 +138,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: Category,
+							Kind: category,
 						},
 					},
 				},
@@ -154,7 +154,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: Category,
+							Kind: category,
 						},
 					},
 				},
@@ -170,7 +170,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: Category,
+							Kind: category,
 						},
 					},
 				},
@@ -186,7 +186,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIService,
+							Kind: apiService,
 						},
 					},
 				},
@@ -229,7 +229,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIServiceInstance,
+							Kind: apiServiceInstance,
 						},
 					},
 				},
@@ -248,7 +248,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIServiceInstance,
+							Kind: apiServiceInstance,
 						},
 					},
 				},
@@ -267,7 +267,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: APIServiceInstance,
+							Kind: apiServiceInstance,
 						},
 					},
 				},
@@ -286,7 +286,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: Category,
+							Kind: category,
 						},
 					},
 				},
