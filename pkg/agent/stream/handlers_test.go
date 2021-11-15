@@ -121,6 +121,194 @@ func TestNewAPISvcHandler(t *testing.T) {
 
 }
 
+func TestNewCategoryHandler(t *testing.T) {
+	tests := []struct {
+		name     string
+		hasError bool
+		resource *apiv1.ResourceInstance
+		action   proto.Event_Type
+	}{
+		{
+			name:     "should save a category resource",
+			hasError: false,
+			action:   proto.Event_CREATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: Category,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should update a category resource",
+			hasError: false,
+			action:   proto.Event_UPDATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: Category,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should delete a category resource",
+			hasError: false,
+			action:   proto.Event_DELETED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: Category,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should return nil when the kind is not a Category",
+			hasError: false,
+			action:   proto.Event_UPDATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: APIService,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewCategoryHandler(&mockCache{})
+
+			err := handler.callback(tc.action, tc.resource)
+			if tc.hasError {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+
+}
+
+func TestNewInstanceHandler(t *testing.T) {
+	tests := []struct {
+		name     string
+		hasError bool
+		resource *apiv1.ResourceInstance
+		action   proto.Event_Type
+	}{
+		{
+			name:     "should save an API Service Instance",
+			hasError: false,
+			action:   proto.Event_CREATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: apiv1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: APIServiceInstance,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should update an API Service Instance",
+			hasError: false,
+			action:   proto.Event_UPDATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: apiv1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: APIServiceInstance,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should delete an API Service Instance",
+			hasError: false,
+			action:   proto.Event_DELETED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: apiv1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: APIServiceInstance,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should return nil when the kind is not an API Service Instance",
+			hasError: false,
+			action:   proto.Event_UPDATED,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: apiv1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: Category,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewInstanceHandler(&mockCache{})
+
+			err := handler.callback(tc.action, tc.resource)
+			if tc.hasError {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+
+}
+
 type mockCache struct {
 }
 

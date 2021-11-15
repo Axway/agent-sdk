@@ -98,11 +98,11 @@ func (c categoryHandler) callback(action proto.Event_Type, resource *apiv1.Resou
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		// return s.categories.SetWithSecondaryKey(resource.Name, resource.Title, resource)
+		return c.categories.SetWithSecondaryKey(resource.Name, resource.Title, resource)
 	}
 
 	if action == proto.Event_DELETED {
-		// return s.categories.Delete(resource.Name)
+		return c.categories.Delete(resource.Name)
 	}
 
 	return nil
