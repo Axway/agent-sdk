@@ -12,18 +12,20 @@ import (
 type Service struct {
 	Manager wm.Manager
 	ric     ResourceGetter
+	starter Starter
 }
 
 // NewStreamService creates a NewStreamService
-func NewStreamService(manager wm.Manager, ric ResourceGetter) *Service {
+func NewStreamService(manager wm.Manager, ric ResourceGetter, starter Starter) *Service {
 	return &Service{
 		Manager: manager,
 		ric:     ric,
+		starter: starter,
 	}
 }
 
 // Watch registers a WatchClient, and creates an EventManager to process the events
-func (s *Service) Watch(topic string, events chan *proto.Event, errors chan error, cbs ...Handler) error {
+func (s *Service) Watch(topic string, events chan *proto.Event, errors chan error) error {
 	id, err := s.Manager.RegisterWatch(topic, events, errors)
 	if err != nil {
 		return err
@@ -31,7 +33,5 @@ func (s *Service) Watch(topic string, events chan *proto.Event, errors chan erro
 
 	log.Debugf("watch-controller subscription-id: %s", id)
 
-	em := NewEventManager(events, s.ric, cbs...)
-
-	return em.Start()
+	return s.starter.Start()
 }

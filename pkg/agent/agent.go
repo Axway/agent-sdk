@@ -211,29 +211,7 @@ func startAPIServiceCache() {
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
 
-	client := api.NewClient(agent.cfg.GetTLSConfig(), "")
-	service, err := newStreamService(host, tenantID, insecure, client)
-	if err != nil {
-		log.Errorf("failed to create a stream service: %s", err)
-	}
-
-	events, errCh := make(chan *proto.Event), make(chan error)
-	go func() {
-		topic := "/management/v1alpha1/watchtopics/mock-watch-topic"
-		err = service.Watch(
-			topic,
-			events,
-			errCh,
-			stream.NewAPISvcHandler(agent.apiMap),
-			stream.NewCategoryHandler(agent.categoryMap),
-			stream.NewInstanceHandler(cache.New()),
-			// TODO: agents should be able to pass in their own custom handlers.
-		)
-		if err != nil {
-			log.Errorf("failed to create a WatchClient: %s", err)
-			return
-		}
-	}()
+	go startGrpcClient(host, tenantID, insecure, agent.cfg.GetTLSConfig())
 }
 
 func isRunningInDockerContainer() bool {
@@ -498,7 +476,13 @@ func newWatchManager(cfg *wm.Config, insecure bool, logger logrus.FieldLogger) (
 }
 
 // newStreamService creates a grpc client and a service that will handle the events from the client.
-func newStreamService(host, tenantID string, insecure bool, client api.Client) (*stream.Service, error) {
+func newStreamService(
+	host,
+	tenantID string,
+	insecure bool,
+	client api.Client,
+	events chan *proto.Event,
+) (*stream.Service, error) {
 	ta := &auth.TokenAuth{
 		TenantID:       tenantID,
 		TokenRequester: agent.tokenRequester,
@@ -513,11 +497,42 @@ func newStreamService(host, tenantID string, insecure bool, client api.Client) (
 
 	entry := logrus.NewEntry(logrus.New())
 
-	wm, err := newWatchManager(cfg, insecure, entry)
+	watch, err := newWatchManager(cfg, insecure, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	ric := stream.NewResourceClient(host, tenantID, client, agent.tokenRequester)
-	return stream.NewStreamService(wm, ric), nil
+
+	em := stream.NewEventManager(
+		events,
+		ric,
+		stream.NewAPISvcHandler(agent.apiMap),
+		stream.NewCategoryHandler(agent.categoryMap),
+		stream.NewInstanceHandler(cache.New()),
+		// TODO: agents should be able to pass in their own custom handlers.
+	)
+
+	return stream.NewStreamService(watch, ric, em), nil
+}
+
+func startGrpcClient(host, tenantID string, insecure bool, tlsConfig config.TLSConfig) {
+	events, errCh := make(chan *proto.Event), make(chan error)
+
+	client := api.NewClient(tlsConfig, "")
+	service, err := newStreamService(host, tenantID, insecure, client, events)
+	if err != nil {
+		log.Errorf("failed to create a stream service: %s", err)
+	}
+
+	topic := "/management/v1alpha1/watchtopics/mock-watch-topic"
+	err = service.Watch(
+		topic,
+		events,
+		errCh,
+	)
+	if err != nil {
+		log.Errorf("failed to create a WatchClient: %s", err)
+		return
+	}
 }

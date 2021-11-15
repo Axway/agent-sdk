@@ -15,6 +15,11 @@ type Handler interface {
 	callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
+// Starter starts the EventManager
+type Starter interface {
+	Start() error
+}
+
 // EventManager holds the various caches to save events into as they get written to the source channel.
 type EventManager struct {
 	source      chan *proto.Event
