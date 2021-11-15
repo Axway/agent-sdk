@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package apis.v1;
+package central.events.v1;
 
 import "apicentral.proto";
 
 option go_package = "github.com/Axway/agent-sdk/pkg/proto";
 
-service WatchService {
-    rpc CreateWatch(stream Request) returns (stream Event) {
+service watch {
+    rpc subscribe(stream Request) returns (stream Event) {
     }
 }
 
@@ -30,7 +30,7 @@ message Event {
     }
     Type type = 7;
 
-    .amplifycentral.datamodel.ResourceInstance payload = 8;
+    .central.events.v1.datamodel.ResourceInstance payload = 8;
 
     EventMeta metadata = 9;
 }

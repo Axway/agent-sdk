@@ -63,7 +63,7 @@ func (w WatchClient) Watch() {
 	}
 
 	log = log.WithField("subscriptionId", subscriptionID)
-	log.Infof("watch registered for 30 minutes")
+	log.Infof("watch registered successfully")
 
 	wait := 30 * time.Minute
 	for {
