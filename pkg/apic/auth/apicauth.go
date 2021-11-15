@@ -532,7 +532,7 @@ func (ctg *channelTokenGetter) Close() error {
 // TokenAuth -
 type TokenAuth struct {
 	TenantID       string
-	TokenRequester PlatformTokenGetter
+	TokenRequester TokenGetter
 }
 
 // Config the auth config

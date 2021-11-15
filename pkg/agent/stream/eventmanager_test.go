@@ -1,27 +1,17 @@
 package stream
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-	"github.com/Axway/agent-sdk/pkg/api"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-var url = "https://tjohnson.dev.ampc.axwaytest.net/apis"
+var apisHost = "https://tjohnson.dev.ampc.axwaytest.net/apis"
 var tenantID = "426937327920148"
 
 func TestEventManager_start(t *testing.T) {
@@ -174,56 +164,6 @@ func TestEventManager_handleEvent(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestEventHandlerOld(t *testing.T) {
-	t.Skip()
-	events := make(chan *proto.Event)
-	apis, categories, instances := cache.New(), cache.New(), cache.New()
-
-	client := api.NewClient(nil, "")
-	c := NewResourceClient(url, tenantID, client, &mockTokenGetter{})
-
-	sc := NewEventManager(
-		events,
-		c,
-		NewAPISvcHandler(apis),
-		NewCategoryHandler(categories),
-		NewInstanceHandler(instances),
-	)
-
-	go func() {
-		err := sc.Start()
-		if err != nil {
-			logrus.Errorf("stream cache error: %s", err)
-			os.Exit(1)
-		}
-	}()
-
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	filePath := path.Join(dir, "event.json")
-	f, err := os.Open(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	event := &proto.Event{}
-	err = json.Unmarshal(data, event)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	events <- event
-	time.Sleep(60 * time.Minute)
 }
 
 type mockTokenGetter struct {

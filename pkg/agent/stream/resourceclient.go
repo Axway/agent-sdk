@@ -19,19 +19,19 @@ type ResourceGetter interface {
 
 // ResourceClient client for getting a ResourceInstance
 type ResourceClient struct {
-	url      string
-	client   api.Client
 	auth     auth.TokenGetter
+	client   api.Client
 	tenantID string
+	url      string
 }
 
 // NewResourceClient creates a new ResourceClient
 func NewResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) *ResourceClient {
 	return &ResourceClient{
 		auth:     getToken,
-		url:      url,
 		client:   client,
 		tenantID: tenantID,
+		url:      url,
 	}
 }
 

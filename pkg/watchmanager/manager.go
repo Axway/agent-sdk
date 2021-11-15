@@ -18,6 +18,9 @@ type Manager interface {
 	Close()
 }
 
+// NewManagerFunc a function that returns a Manager
+type NewManagerFunc func(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error)
+
 // TokenGetter - function to acquire token
 type TokenGetter func() (string, error)
 
