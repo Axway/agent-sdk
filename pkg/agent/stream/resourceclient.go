@@ -26,7 +26,7 @@ type ResourceClient struct {
 }
 
 // NewResourceClient creates a new ResourceClient
-func NewResourceClient(url string, client api.Client, getToken auth.TokenGetter, tenantID string) *ResourceClient {
+func NewResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) *ResourceClient {
 	return &ResourceClient{
 		auth:     getToken,
 		url:      url,

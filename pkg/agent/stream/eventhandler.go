@@ -80,5 +80,4 @@ func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.
 			log.Error(err)
 		}
 	}
-
 }

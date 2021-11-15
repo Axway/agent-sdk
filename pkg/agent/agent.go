@@ -210,6 +210,7 @@ func startAPIServiceCache() {
 	host := agent.cfg.GetURL()
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
+
 	client := api.NewClient(agent.cfg.GetTLSConfig(), "")
 	service, err := newStreamService(host, tenantID, insecure, client)
 	if err != nil {
@@ -233,7 +234,6 @@ func startAPIServiceCache() {
 			return
 		}
 	}()
-
 }
 
 func isRunningInDockerContainer() bool {
@@ -518,6 +518,6 @@ func newStreamService(host, tenantID string, insecure bool, client api.Client) (
 		return nil, err
 	}
 
-	ric := stream.NewResourceClient(host, client, agent.tokenRequester, tenantID)
+	ric := stream.NewResourceClient(host, tenantID, client, agent.tokenRequester)
 	return stream.NewStreamService(wm, ric), nil
 }

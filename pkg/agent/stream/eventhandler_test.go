@@ -182,7 +182,7 @@ func TestEventHandlerOld(t *testing.T) {
 	apis, categories, instances := cache.New(), cache.New(), cache.New()
 
 	client := api.NewClient(nil, "")
-	c := NewResourceClient(url, client, &mockTokenGetter{}, tenantID)
+	c := NewResourceClient(url, tenantID, client, &mockTokenGetter{})
 
 	sc := NewEventManager(
 		events,
