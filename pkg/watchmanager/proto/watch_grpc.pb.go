@@ -14,45 +14,45 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// WatchServiceClient is the client API for WatchService service.
+// WatchClient is the client API for Watch service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type WatchServiceClient interface {
-	CreateWatch(ctx context.Context, opts ...grpc.CallOption) (WatchService_CreateWatchClient, error)
+type WatchClient interface {
+	Subscribe(ctx context.Context, opts ...grpc.CallOption) (Watch_SubscribeClient, error)
 }
 
-type watchServiceClient struct {
+type watchClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewWatchServiceClient(cc grpc.ClientConnInterface) WatchServiceClient {
-	return &watchServiceClient{cc}
+func NewWatchClient(cc grpc.ClientConnInterface) WatchClient {
+	return &watchClient{cc}
 }
 
-func (c *watchServiceClient) CreateWatch(ctx context.Context, opts ...grpc.CallOption) (WatchService_CreateWatchClient, error) {
-	stream, err := c.cc.NewStream(ctx, &WatchService_ServiceDesc.Streams[0], "/apis.v1.WatchService/CreateWatch", opts...)
+func (c *watchClient) Subscribe(ctx context.Context, opts ...grpc.CallOption) (Watch_SubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Watch_ServiceDesc.Streams[0], "/central.events.v1.watch/subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &watchServiceCreateWatchClient{stream}
+	x := &watchSubscribeClient{stream}
 	return x, nil
 }
 
-type WatchService_CreateWatchClient interface {
+type Watch_SubscribeClient interface {
 	Send(*Request) error
 	Recv() (*Event, error)
 	grpc.ClientStream
 }
 
-type watchServiceCreateWatchClient struct {
+type watchSubscribeClient struct {
 	grpc.ClientStream
 }
 
-func (x *watchServiceCreateWatchClient) Send(m *Request) error {
+func (x *watchSubscribeClient) Send(m *Request) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *watchServiceCreateWatchClient) Recv() (*Event, error) {
+func (x *watchSubscribeClient) Recv() (*Event, error) {
 	m := new(Event)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -60,53 +60,53 @@ func (x *watchServiceCreateWatchClient) Recv() (*Event, error) {
 	return m, nil
 }
 
-// WatchServiceServer is the server API for WatchService service.
-// All implementations must embed UnimplementedWatchServiceServer
+// WatchServer is the server API for Watch service.
+// All implementations must embed UnimplementedWatchServer
 // for forward compatibility
-type WatchServiceServer interface {
-	CreateWatch(WatchService_CreateWatchServer) error
-	mustEmbedUnimplementedWatchServiceServer()
+type WatchServer interface {
+	Subscribe(Watch_SubscribeServer) error
+	mustEmbedUnimplementedWatchServer()
 }
 
-// UnimplementedWatchServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedWatchServiceServer struct {
+// UnimplementedWatchServer must be embedded to have forward compatible implementations.
+type UnimplementedWatchServer struct {
 }
 
-func (UnimplementedWatchServiceServer) CreateWatch(WatchService_CreateWatchServer) error {
-	return status.Errorf(codes.Unimplemented, "method CreateWatch not implemented")
+func (UnimplementedWatchServer) Subscribe(Watch_SubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
-func (UnimplementedWatchServiceServer) mustEmbedUnimplementedWatchServiceServer() {}
+func (UnimplementedWatchServer) mustEmbedUnimplementedWatchServer() {}
 
-// UnsafeWatchServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to WatchServiceServer will
+// UnsafeWatchServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to WatchServer will
 // result in compilation errors.
-type UnsafeWatchServiceServer interface {
-	mustEmbedUnimplementedWatchServiceServer()
+type UnsafeWatchServer interface {
+	mustEmbedUnimplementedWatchServer()
 }
 
-func RegisterWatchServiceServer(s grpc.ServiceRegistrar, srv WatchServiceServer) {
-	s.RegisterService(&WatchService_ServiceDesc, srv)
+func RegisterWatchServer(s grpc.ServiceRegistrar, srv WatchServer) {
+	s.RegisterService(&Watch_ServiceDesc, srv)
 }
 
-func _WatchService_CreateWatch_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(WatchServiceServer).CreateWatch(&watchServiceCreateWatchServer{stream})
+func _Watch_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(WatchServer).Subscribe(&watchSubscribeServer{stream})
 }
 
-type WatchService_CreateWatchServer interface {
+type Watch_SubscribeServer interface {
 	Send(*Event) error
 	Recv() (*Request, error)
 	grpc.ServerStream
 }
 
-type watchServiceCreateWatchServer struct {
+type watchSubscribeServer struct {
 	grpc.ServerStream
 }
 
-func (x *watchServiceCreateWatchServer) Send(m *Event) error {
+func (x *watchSubscribeServer) Send(m *Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *watchServiceCreateWatchServer) Recv() (*Request, error) {
+func (x *watchSubscribeServer) Recv() (*Request, error) {
 	m := new(Request)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -114,17 +114,17 @@ func (x *watchServiceCreateWatchServer) Recv() (*Request, error) {
 	return m, nil
 }
 
-// WatchService_ServiceDesc is the grpc.ServiceDesc for WatchService service.
+// Watch_ServiceDesc is the grpc.ServiceDesc for Watch service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var WatchService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "apis.v1.WatchService",
-	HandlerType: (*WatchServiceServer)(nil),
+var Watch_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "central.events.v1.watch",
+	HandlerType: (*WatchServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "CreateWatch",
-			Handler:       _WatchService_CreateWatch_Handler,
+			StreamName:    "subscribe",
+			Handler:       _Watch_Subscribe_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
