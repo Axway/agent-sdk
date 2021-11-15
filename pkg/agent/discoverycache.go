@@ -335,7 +335,8 @@ func addItemToAPICache(apiService apiV1.ResourceInstance) string {
 				agent.apiMap.Delete(externalAPIID)
 			}
 
-			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIName, apiService)
+			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
+			agent.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
 		} else {
 			agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
 		}
