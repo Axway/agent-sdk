@@ -21,16 +21,16 @@ type watchClientConfig struct {
 
 type watchClient struct {
 	cfg          watchClientConfig
-	stream       proto.WatchService_CreateWatchClient
+	stream       proto.Watch_SubscribeClient
 	cancelStream context.CancelFunc
 	timer        *time.Timer
 }
 
 func newWatchClient(cc grpc.ClientConnInterface, clientCfg watchClientConfig) (*watchClient, error) {
-	svcClient := proto.NewWatchServiceClient(cc)
+	svcClient := proto.NewWatchClient(cc)
 
 	streamCtx, streamCancel := context.WithCancel(context.Background())
-	stream, err := svcClient.CreateWatch(streamCtx)
+	stream, err := svcClient.Subscribe(streamCtx)
 	if err != nil {
 		streamCancel()
 		return nil, err
@@ -135,5 +135,6 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 		v, _ := exp.Int64()
 		tm = time.Unix(v, 0)
 	}
-	return time.Until(tm), nil
+	exp := time.Until(tm)
+	return time.Duration((exp * 4) / 5), nil
 }

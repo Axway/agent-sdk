@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package amplifycentral.datamodel;
+package central.events.v1.datamodel;
 
 option go_package = "github.com/Axway/agent-sdk/pkg/proto";
 
