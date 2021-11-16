@@ -281,7 +281,7 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 		Issuer:    fmt.Sprintf("urn:ietf:params:oauth:client-assertion-type:jwt-bearer:%s", clientID),
 		Subject:   clientID,
 		Audience:  aud,
-		ExpiresAt: now.Add(180*time.Second).UnixNano() / 1e9,
+		ExpiresAt: now.Add(60*time.Second).UnixNano() / 1e9,
 		IssuedAt:  now.UnixNano() / 1e9,
 		Id:        uuid.New().String(),
 	})
@@ -336,10 +336,9 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 
 	defer closeHelper(resp.Body)
 	if resp.StatusCode != 200 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Debugf("bad response from AxwayID: %s: %s", resp.Status, body)
-		}
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Debugf("bad response from AxwayID: %s: %s, request token :%s, request time : %s", resp.Status, body, requestToken, startTime.String())
+
 		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
 	}
 
