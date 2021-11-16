@@ -212,7 +212,7 @@ func startAPIServiceCache() {
 	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
 
 	c := stream.NewClient(
-		agent.cfg.GetAPIServerURL(),
+		agent.cfg.GetURL()+"/apis",
 		tenantID,
 		"/management/v1alpha1/watchtopics/mock-watch-topic",
 		agent.tokenRequester,

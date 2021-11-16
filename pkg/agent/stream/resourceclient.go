@@ -48,9 +48,9 @@ func (c *resourceClient) get(selfLink string) (*apiv1.ResourceInstance, error) {
 		Headers: make(map[string]string),
 	}
 
-	req.Headers["authorization"] = token
-	req.Headers["x-axway-tenant-id"] = c.tenantID
-
+	req.Headers["Authorization"] = "Bearer " + token
+	req.Headers["X-Axway-Tenant-Id"] = c.tenantID
+	req.Headers["Content-Type"] = "application/json"
 	res, err := c.client.Send(req)
 	if err != nil {
 		return nil, err
