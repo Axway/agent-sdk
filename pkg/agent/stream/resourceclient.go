@@ -12,22 +12,22 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ResourceGetter interface for retrieving a ResourceInstance
-type ResourceGetter interface {
-	Get(selfLink string) (*apiv1.ResourceInstance, error)
+// resourceGetter interface for retrieving a ResourceInstance
+type resourceGetter interface {
+	get(selfLink string) (*apiv1.ResourceInstance, error)
 }
 
-// ResourceClient client for getting a ResourceInstance
-type ResourceClient struct {
+// resourceClient client for getting a ResourceInstance
+type resourceClient struct {
 	auth     auth.TokenGetter
 	client   api.Client
 	tenantID string
 	url      string
 }
 
-// NewResourceClient creates a new ResourceClient
-func NewResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) *ResourceClient {
-	return &ResourceClient{
+// newResourceClient creates a new resourceClient
+func newResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) *resourceClient {
+	return &resourceClient{
 		auth:     getToken,
 		client:   client,
 		tenantID: tenantID,
@@ -35,8 +35,8 @@ func NewResourceClient(url, tenantID string, client api.Client, getToken auth.To
 	}
 }
 
-// Get retrieves a ResourceClient
-func (c *ResourceClient) Get(selfLink string) (*apiv1.ResourceInstance, error) {
+// get retrieves a resourceClient
+func (c *resourceClient) get(selfLink string) (*apiv1.ResourceInstance, error) {
 	token, err := c.auth.GetToken()
 	if err != nil {
 		return nil, err

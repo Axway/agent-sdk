@@ -43,7 +43,7 @@ func NewClient(
 }
 
 func (sc *Client) newStreamService() error {
-	ric := NewResourceClient(sc.apisHost, sc.tenantID, sc.apiClient, sc.tokenGetter)
+	ric := newResourceClient(sc.apisHost, sc.tenantID, sc.apiClient, sc.tokenGetter)
 
 	events, errors := make(chan *proto.Event), make(chan error)
 

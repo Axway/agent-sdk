@@ -19,7 +19,7 @@ func TestEventManager_start(t *testing.T) {
 		name     string
 		hasError bool
 		events   chan *proto.Event
-		ri       ResourceGetter
+		ri       resourceGetter
 		handler  Handler
 	}{
 		{
@@ -110,7 +110,7 @@ func TestEventManager_handleEvent(t *testing.T) {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		ri       ResourceGetter
+		ri       resourceGetter
 		handler  Handler
 	}{
 		{
@@ -179,7 +179,7 @@ type mockRI struct {
 	err error
 }
 
-func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
+func (m mockRI) get(_ string) (*apiv1.ResourceInstance, error) {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{},
 		Owner:        nil,

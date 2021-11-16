@@ -15,7 +15,7 @@ type Handler interface {
 	callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
-type eventManagerFunc func(source chan *proto.Event, ri ResourceGetter, cbs ...Handler) *EventManager
+type eventManagerFunc func(source chan *proto.Event, ri resourceGetter, cbs ...Handler) *EventManager
 
 // Starter starts the EventManager
 type Starter interface {
@@ -24,13 +24,13 @@ type Starter interface {
 
 // EventManager holds the various caches to save events into as they get written to the source channel.
 type EventManager struct {
-	getResource ResourceGetter
+	getResource resourceGetter
 	handlers    []Handler
 	source      chan *proto.Event
 }
 
 // NewEventManager creates a new EventManager to process events based on the provided Handlers.
-func NewEventManager(source chan *proto.Event, ri ResourceGetter, cbs ...Handler) *EventManager {
+func NewEventManager(source chan *proto.Event, ri resourceGetter, cbs ...Handler) *EventManager {
 	return &EventManager{
 		getResource: ri,
 		handlers:    cbs,
@@ -68,7 +68,7 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
 	if event.Type == proto.Event_CREATED || event.Type == proto.Event_UPDATED {
-		ri, err = em.getResource.Get(event.Payload.Metadata.SelfLink)
+		ri, err = em.getResource.get(event.Payload.Metadata.SelfLink)
 		if err != nil {
 			return err
 		}
