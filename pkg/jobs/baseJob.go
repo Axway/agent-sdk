@@ -110,6 +110,14 @@ func (b *baseJob) GetID() string {
 	return b.id
 }
 
+//GetName - returns the name for this job, returns the ID if name is blank
+func (b *baseJob) GetName() string {
+	if b.name == "" {
+		return b.id
+	}
+	return b.name
+}
+
 //GetJob - returns the Job interface
 func (b *baseJob) GetJob() JobExecution {
 	return b

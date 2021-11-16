@@ -77,5 +77,7 @@ func (b *intervalJob) start() {
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
 	b.stopLog()
+	log.Tracef("writing to %s stop channel", b.GetName())
 	b.stopChan <- true
+	log.Tracef("wrote to %s stop channel", b.GetName())
 }

@@ -16,6 +16,7 @@ type Job interface {
 type JobExecution interface {
 	GetStatus() JobStatus
 	GetID() string
+	GetName() string
 	Ready() bool
 	GetJob() JobExecution
 	Lock()

@@ -6,6 +6,7 @@ import (
 	"github.com/gorhill/cronexpr"
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type scheduleJobProps struct {
@@ -80,5 +81,7 @@ func (b *scheduleJob) start() {
 //stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
 	b.stopLog()
+	log.Tracef("writing to %s stop channel", b.GetName())
 	b.stopChan <- true
+	log.Tracef("wrote to %s stop channel", b.GetName())
 }

@@ -257,10 +257,12 @@ func (p *Pool) stopAll() {
 	}
 	p.cronJobsMapLock.Unlock()
 	for _, job := range mapCopy {
+		log.Tracef("starting to stop job %s", job.GetName())
 		job.stop()
 		if job.getConsecutiveFails() > maxErrors {
 			maxErrors = job.getConsecutiveFails()
 		}
+		log.Tracef("finished stopping job %s", job.GetName())
 	}
 	for i := 1; i < maxErrors; i++ {
 		p.backoffTimeout()
