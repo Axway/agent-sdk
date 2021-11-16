@@ -8,10 +8,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
-
-	"google.golang.org/grpc/metadata"
-
-	"google.golang.org/grpc"
 )
 
 func Test_watchClient_recv(t *testing.T) {
@@ -54,11 +50,6 @@ func Test_watchClient_recv(t *testing.T) {
 			go func() {
 				err := c.recv()
 				errCh <- err
-				// if tc.hasErr {
-				// 	assert.NotNil(t, err)
-				// } else {
-				// 	assert.Nil(t, err)
-				// }
 			}()
 
 			if !tc.hasErr {
@@ -232,79 +223,6 @@ func Test_getTokenExpirationTime(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-type mockConn struct {
-	stream *mockStream
-}
-
-func (m mockConn) Invoke(_ context.Context, _ string, _ interface{}, _ interface{}, _ ...grpc.CallOption) error {
-	return nil
-}
-
-func (m mockConn) NewStream(
-	_ context.Context,
-	_ *grpc.StreamDesc,
-	_ string,
-	_ ...grpc.CallOption,
-) (grpc.ClientStream, error) {
-	return m.stream, nil
-}
-
-type mockStream struct {
-	event   *proto.Event
-	err     error
-	context context.Context
-}
-
-func (m mockStream) Send(_ *proto.Request) error {
-	return m.err
-}
-
-func (m mockStream) Recv() (*proto.Event, error) {
-	return m.event, m.err
-}
-
-func (m mockStream) Header() (metadata.MD, error) {
-	return metadata.MD{}, nil
-}
-
-func (m mockStream) Trailer() metadata.MD {
-	return metadata.MD{}
-}
-
-func (m mockStream) CloseSend() error {
-	return nil
-}
-
-func (m mockStream) Context() context.Context {
-	return m.context
-}
-
-func (m mockStream) SendMsg(_ interface{}) error {
-	return nil
-}
-
-func (m mockStream) RecvMsg(_ interface{}) error {
-	return nil
-}
-
-func newMockWatchClient(stream *mockStream, err error) newWatchClientFunc {
-	return func(_ grpc.ClientConnInterface) proto.WatchClient {
-		return &mockWatchClient{
-			stream: stream,
-			err:    err,
-		}
-	}
-}
-
-type mockWatchClient struct {
-	stream *mockStream
-	err    error
-}
-
-func (m mockWatchClient) Subscribe(_ context.Context, _ ...grpc.CallOption) (proto.Watch_SubscribeClient, error) {
-	return m.stream, m.err
-}
-
 type mockTokenGetter struct {
 	err error
 }
@@ -313,7 +231,7 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 	return "testToken", m.err
 }
 
-func mockGetTokenExp(token string) (time.Duration, error) {
+func mockGetTokenExp(_ string) (time.Duration, error) {
 	return 30 * time.Second, nil
 }
 

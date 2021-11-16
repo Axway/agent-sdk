@@ -1,12 +1,15 @@
 package watchmanager
 
 import (
+	"context"
 	"testing"
+
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWatchmanager(t *testing.T) {
+func TestWatchManager_RegisterWatch(t *testing.T) {
 	cfg := &Config{
 		Host:     "localhost",
 		Port:     8080,
@@ -18,9 +21,43 @@ func TestWatchmanager(t *testing.T) {
 	wm, err := New(cfg, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, wm)
-	// ch := make(chan *proto.Event)
-	// errCh := make(chan error)
-	// subscriptionID, err := wm.RegisterWatch("selfLink", ch, errCh)
-	// assert.Nil(t, err)
-	// assert.NotNil(t, subscriptionID)
+
+	manager := wm.(*watchManager)
+	stream := &mockStream{
+		context: context.Background(),
+	}
+	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
+
+	events, errors := make(chan *proto.Event), make(chan error)
+	id, err := manager.RegisterWatch("/watch/topic", events, errors)
+	assert.Nil(t, err)
+
+	err = manager.CloseWatch(id)
+	assert.Nil(t, err)
+}
+
+func TestConfig(t *testing.T) {
+	cfg := Config{
+		Host:        "",
+		Port:        0,
+		TenantID:    "",
+		TokenGetter: nil,
+	}
+
+	err := cfg.validateCfg()
+	assert.NotNil(t, err)
+
+	cfg.Host = "abc.com"
+	err = cfg.validateCfg()
+	assert.NotNil(t, err)
+
+	cfg.TenantID = "123"
+	err = cfg.validateCfg()
+	assert.NotNil(t, err)
+
+	cfg.TokenGetter = func() (string, error) {
+		return "abc", nil
+	}
+	err = cfg.validateCfg()
+	assert.Nil(t, err)
 }
