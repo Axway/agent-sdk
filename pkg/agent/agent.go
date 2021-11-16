@@ -190,31 +190,40 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 func startAPIServiceCache() {
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false)
-
-	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		return
-	}
-
-	log.Tracef("registered API cache update job: %s", id)
-
 	if !agent.useGrpc {
+
+		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
+		if err != nil {
+			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
+			return
+		}
 		// Start the full update after the first interval
 		go startDiscoveryCache()
+		log.Tracef("registered API cache update job: %s", id)
 		return
 	}
+	// Load cache from API initially. Following updates to cache will be done using watch events
+	newDiscoveryCacheJob.Execute()
 
 	host := agent.cfg.GetURL()
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
 
 	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
+	if err != nil {
+		log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
+		return
+	}
 
+	watchTopic := os.Getenv("CENTRAL_WATCH_TOPIC")
+	if watchTopic == "" {
+		log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
+		return
+	}
 	c := stream.NewClient(
 		agent.cfg.GetURL()+"/apis",
 		tenantID,
-		"/management/v1alpha1/watchtopics/mock-watch-topic",
+		watchTopic,
 		agent.tokenRequester,
 		api.NewClient(agent.cfg.GetTLSConfig(), ""),
 		manager,

@@ -81,6 +81,12 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
 func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
+	log.Debugf("processing received watch event[action: %s, type: %s, name: %s, title: %s]",
+		proto.Event_Type_name[int32(action)],
+		resource.Kind,
+		resource.Name,
+		resource.Title,
+	)
 	for _, cb := range em.handlers {
 		err := cb.callback(action, resource)
 		if err != nil {
