@@ -3,6 +3,8 @@ package stream
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	"github.com/Axway/agent-sdk/pkg/api"
 
 	"github.com/stretchr/testify/assert"
@@ -21,11 +23,11 @@ func TestNewClient(t *testing.T) {
 		host,
 		id,
 		topic,
-		true,
 		&mockTokenGetter{
 			token: tk,
 		},
 		&api.MockHTTPClient{},
+		&mockManager{},
 		NewAPISvcHandler(cache.New()),
 		NewInstanceHandler(cache.New()),
 		NewCategoryHandler(cache.New()),
@@ -33,4 +35,18 @@ func TestNewClient(t *testing.T) {
 
 	err := c.Start()
 	assert.Nil(t, err)
+}
+
+type mockManager struct {
+}
+
+func (m mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
+	return "", nil
+}
+
+func (m mockManager) CloseWatch(_ string) error {
+	return nil
+}
+
+func (m mockManager) Close() {
 }

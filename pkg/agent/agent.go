@@ -3,11 +3,15 @@ package agent
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -204,13 +208,16 @@ func startAPIServiceCache() {
 	host := agent.cfg.GetURL()
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
+
+	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
+
 	c := stream.NewClient(
-		host,
+		agent.cfg.GetAPIServerURL(),
 		tenantID,
 		"/management/v1alpha1/watchtopics/mock-watch-topic",
-		insecure,
 		agent.tokenRequester,
 		api.NewClient(agent.cfg.GetTLSConfig(), ""),
+		manager,
 		stream.NewAPISvcHandler(agent.apiMap),
 		stream.NewInstanceHandler(cache.New()),
 		stream.NewCategoryHandler(agent.categoryMap),
@@ -472,4 +479,26 @@ func startDiscoveryCache() {
 		return
 	}
 	log.Tracef("registered API cache update all job: %s", id)
+}
+
+func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter) (wm.Manager, error) {
+	u, _ := url.Parse(host)
+
+	cfg := &wm.Config{
+		Host:        u.Host,
+		Port:        443,
+		TenantID:    tenantID,
+		TokenGetter: getToken.GetToken,
+	}
+	logger := logrus.NewEntry(logrus.New())
+	entry := logger.WithField("package", "client")
+
+	var watchOptions []wm.Option
+	watchOptions = append(watchOptions, wm.WithLogger(entry))
+
+	if isInsecure {
+		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
+	}
+
+	return wm.New(cfg, logger, watchOptions...)
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -239,4 +241,11 @@ func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 	assert.Equal(t, expectedRes.Name, res.Name)
 	assert.Equal(t, expectedRes.Metadata.ID, res.Metadata.ID)
 	assert.Equal(t, expectedRes.Spec, res.Spec)
+}
+
+func Test_newManager(t *testing.T) {
+	manager, err := newWatchManager("https://abc.com", "123", true, apic.MockTokenGetter)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, manager)
 }
