@@ -3,11 +3,20 @@ package agent
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net"
+	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
+	"github.com/sirupsen/logrus"
+
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	"github.com/Axway/agent-sdk/pkg/api"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -183,26 +192,55 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 func startAPIServiceCache() {
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false)
+	if !agent.useGrpc {
 
-	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
+		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
+		if err != nil {
+			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
+			return
+		}
+		// Start the full update after the first interval
+		go startDiscoveryCache()
+		log.Tracef("registered API cache update job: %s", id)
 		return
 	}
-	log.Tracef("registered API cache update job: %s", id)
-	if !agent.useGrpc {
-		// Start the full update after the first interval
-		go func() {
-			time.Sleep(time.Hour)
-			allDiscoveryCacheJob := newDiscoveryCache(true)
-			id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-			if err != nil {
-				log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-				return
-			}
-			log.Tracef("registered API cache update all job: %s", id)
-		}()
+	// Load cache from API initially. Following updates to cache will be done using watch events
+	newDiscoveryCacheJob.Execute()
+
+	host := agent.cfg.GetURL()
+	tenantID := agent.cfg.GetTenantID()
+	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
+
+	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
+	if err != nil {
+		log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
+		return
 	}
+
+	watchTopic := os.Getenv("CENTRAL_WATCH_TOPIC")
+	if watchTopic == "" {
+		log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
+		return
+	}
+	c := stream.NewClient(
+		host+"/apis",
+		tenantID,
+		watchTopic,
+		agent.tokenRequester,
+		api.NewClient(agent.cfg.GetTLSConfig(), ""),
+		manager,
+		stream.NewAPISvcHandler(agent.apiMap),
+		stream.NewInstanceHandler(cache.New()),
+		stream.NewCategoryHandler(agent.categoryMap),
+		// TODO: agents should be able to pass in their own handlers.
+	)
+
+	go func() {
+		err := c.Start()
+		if err != nil {
+			log.Errorf("failed to start the grpc client: %s", err)
+		}
+	}()
 }
 
 func isRunningInDockerContainer() bool {
@@ -441,4 +479,44 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	if cfg.TeamName == "" && resCfgTeamName != "" {
 		cfg.TeamName = resCfgTeamName
 	}
+}
+
+func startDiscoveryCache() {
+	time.Sleep(time.Hour)
+	allDiscoveryCacheJob := newDiscoveryCache(true)
+	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
+	if err != nil {
+		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
+		return
+	}
+	log.Tracef("registered API cache update all job: %s", id)
+}
+
+func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter) (wm.Manager, error) {
+	u, _ := url.Parse(host)
+	port := 443
+
+	if u.Port() == "" {
+		port, _ = net.LookupPort("tcp", u.Scheme)
+	} else {
+		port, _ = strconv.Atoi(u.Port())
+	}
+
+	cfg := &wm.Config{
+		Host:        u.Host,
+		Port:        uint32(port),
+		TenantID:    tenantID,
+		TokenGetter: getToken.GetToken,
+	}
+	logger := logrus.NewEntry(logrus.New())
+	entry := logger.WithField("package", "client")
+
+	var watchOptions []wm.Option
+	watchOptions = append(watchOptions, wm.WithLogger(entry))
+
+	if isInsecure {
+		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
+	}
+
+	return wm.New(cfg, logger, watchOptions...)
 }

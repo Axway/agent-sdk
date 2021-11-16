@@ -22,11 +22,12 @@ type Manager interface {
 type TokenGetter func() (string, error)
 
 type watchManager struct {
-	cfg        *Config
-	clientMap  map[string]*watchClient
-	connection *grpc.ClientConn
-	options    *watchOptions
-	logger     logrus.FieldLogger
+	cfg                *Config
+	clientMap          map[string]*watchClient
+	connection         *grpc.ClientConn
+	options            *watchOptions
+	logger             logrus.FieldLogger
+	newWatchClientFunc newWatchClientFunc
 }
 
 // New - Creates a new watch manager
@@ -40,10 +41,11 @@ func New(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error
 	}
 
 	manager := &watchManager{
-		cfg:       cfg,
-		logger:    logger.WithField("package", "watchmanager"),
-		clientMap: make(map[string]*watchClient),
-		options:   newWatchOptions(),
+		cfg:                cfg,
+		logger:             logger.WithField("package", "watchmanager"),
+		clientMap:          make(map[string]*watchClient),
+		options:            newWatchOptions(),
+		newWatchClientFunc: proto.NewWatchClient,
 	}
 
 	for _, opt := range opts {
@@ -79,12 +81,13 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
 	client, err := newWatchClient(
 		m.connection,
-		watchClientConfig{
+		clientConfig{
 			topicSelfLink: link,
 			tokenGetter:   m.cfg.TokenGetter,
-			eventChannel:  events,
-			errorChannel:  errors,
+			events:        events,
+			errors:        errors,
 		},
+		m.newWatchClientFunc,
 	)
 	if err != nil {
 		return "", err

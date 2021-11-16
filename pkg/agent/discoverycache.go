@@ -160,8 +160,10 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 
 	// When reloading all api service instances we can just write over the existing cache
 	if !j.refreshAll {
+		// TODO: load all instances into a map to be consistent with the stream event handler
 		serviceInstances = j.loadServiceInstancesFromCache(serviceInstances)
 	}
+	// TODO: this should be a cron job for both modes
 	serviceInstances = validateAPIOnDataplane(serviceInstances)
 	j.saveServiceInstancesToCache(serviceInstances)
 }

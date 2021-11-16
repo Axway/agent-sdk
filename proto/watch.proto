@@ -38,7 +38,7 @@ message Event {
 message EventMeta {
     string watchTopicID = 1;
     string watchTopicSelfLink = 2;
-    string sequenceID = 3;
+    int64 sequenceID = 3;
 }
 
 message Organization {
