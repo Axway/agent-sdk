@@ -6,7 +6,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -15,15 +14,13 @@ import (
 
 // Client a client for opening up a grpc stream, and handling the received events on the stream.
 type Client struct {
-	errors           chan error
-	events           chan *proto.Event
+	apiClient        api.Client
 	handlers         []Handler
 	host             string
 	insecure         bool
 	newClientManager wm.NewManagerFunc
 	newEventManager  eventManagerFunc
 	tenantID         string
-	tlsConfig        config.TLSConfig
 	tokenGetter      auth.TokenGetter
 	topic            string
 }
@@ -34,20 +31,18 @@ func NewClient(
 	tenantID string,
 	topic string,
 	insecure bool,
-	tlsConfig config.TLSConfig,
 	tokenGetter auth.TokenGetter,
+	apiClient api.Client,
 	handlers ...Handler,
 ) *Client {
 	return &Client{
-		errors:           make(chan error),
-		events:           make(chan *proto.Event),
+		apiClient:        apiClient,
 		handlers:         handlers,
 		host:             host,
 		insecure:         insecure,
 		newClientManager: wm.New,
 		newEventManager:  NewEventManager,
 		tenantID:         tenantID,
-		tlsConfig:        tlsConfig,
 		tokenGetter:      tokenGetter,
 		topic:            topic,
 	}
@@ -67,18 +62,16 @@ func (sc *Client) newWatchManager(cfg *wm.Config) (wm.Manager, error) {
 }
 
 func (sc *Client) newStreamService() error {
-	ta := &auth.TokenAuth{
-		TenantID:       sc.tenantID,
-		TokenRequester: sc.tokenGetter,
+	u, err := url.Parse(sc.host)
+	if err != nil {
+		return err
 	}
-
-	u, _ := url.Parse(sc.host)
 
 	cfg := &wm.Config{
 		Host:        u.Host,
 		Port:        443,
 		TenantID:    sc.tenantID,
-		TokenGetter: ta.GetToken,
+		TokenGetter: sc.tokenGetter.GetToken,
 	}
 
 	manager, err := sc.newWatchManager(cfg)
@@ -86,16 +79,17 @@ func (sc *Client) newStreamService() error {
 		return err
 	}
 
-	client := api.NewClient(sc.tlsConfig, "")
-	ric := NewResourceClient(fmt.Sprintf("%s/apis", sc.host), sc.tenantID, client, sc.tokenGetter)
+	ric := NewResourceClient(fmt.Sprintf("%s/apis", sc.host), sc.tenantID, sc.apiClient, sc.tokenGetter)
+
+	events, errors := make(chan *proto.Event), make(chan error)
 
 	em := sc.newEventManager(
-		sc.events,
+		events,
 		ric,
 		sc.handlers...,
 	)
 
-	id, err := manager.RegisterWatch(sc.topic, sc.events, sc.errors)
+	id, err := manager.RegisterWatch(sc.topic, events, errors)
 	if err != nil {
 		return err
 	}

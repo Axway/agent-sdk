@@ -3,6 +3,8 @@ package stream
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/api"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -20,10 +22,10 @@ func TestNewClient(t *testing.T) {
 		id,
 		topic,
 		true,
-		nil,
 		&mockTokenGetter{
 			token: tk,
 		},
+		&api.MockHTTPClient{},
 		NewAPISvcHandler(cache.New()),
 		NewInstanceHandler(cache.New()),
 		NewCategoryHandler(cache.New()),

@@ -529,10 +529,10 @@ func (ctg *channelTokenGetter) Close() error {
 	return nil
 }
 
-// TokenAuth -
-type TokenAuth struct {
-	TenantID       string
-	TokenRequester TokenGetter
+// tokenAuth -
+type tokenAuth struct {
+	tenantID       string
+	tokenRequester TokenGetter
 }
 
 // Config the auth config
@@ -547,11 +547,11 @@ type Config struct {
 }
 
 // NewTokenAuth Create a new auth token requester
-func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
-	instance := &TokenAuth{TenantID: tenantID}
+func NewTokenAuth(ac Config, tenantID string) TokenGetter {
+	instance := &tokenAuth{tenantID: tenantID}
 	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
 	aud := ac.URL + "/realms/Broker"
-	instance.TokenRequester = NewPlatformTokenGetter(
+	instance.tokenRequester = NewPlatformTokenGetter(
 		ac.PrivateKey,
 		ac.PublicKey,
 		ac.KeyPassword,
@@ -564,6 +564,6 @@ func NewTokenAuth(ac Config, tenantID string) *TokenAuth {
 }
 
 // GetToken gets a token
-func (t TokenAuth) GetToken() (string, error) {
-	return t.TokenRequester.GetToken()
+func (t tokenAuth) GetToken() (string, error) {
+	return t.tokenRequester.GetToken()
 }

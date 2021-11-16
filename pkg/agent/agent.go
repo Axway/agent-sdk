@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	"github.com/Axway/agent-sdk/pkg/api"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -208,8 +209,8 @@ func startAPIServiceCache() {
 		tenantID,
 		"/management/v1alpha1/watchtopics/mock-watch-topic",
 		insecure,
-		agent.cfg.GetTLSConfig(),
 		agent.tokenRequester,
+		api.NewClient(agent.cfg.GetTLSConfig(), ""),
 		stream.NewAPISvcHandler(agent.apiMap),
 		stream.NewInstanceHandler(cache.New()),
 		stream.NewCategoryHandler(agent.categoryMap),
