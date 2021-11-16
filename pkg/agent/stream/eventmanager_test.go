@@ -54,7 +54,8 @@ func TestEventManager_start(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			em := NewEventManager(tc.events, tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, tc.ri, tc.handler)
+			em := listener.(*EventManager)
 
 			errCh := make(chan error)
 			go func() {
@@ -85,7 +86,8 @@ func TestEventManager_start(t *testing.T) {
 	}
 
 	events := make(chan *proto.Event)
-	em := NewEventManager(events, &mockRI{}, &mockHandler{})
+	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
+	em := listener.(*EventManager)
 
 	errCh := make(chan error)
 	go func() {
@@ -154,7 +156,9 @@ func TestEventManager_handleEvent(t *testing.T) {
 				},
 			}
 
-			em := NewEventManager(make(chan *proto.Event), tc.ri, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
+			em := listener.(*EventManager)
+
 			err := em.handleEvent(event)
 
 			if tc.hasError == false {

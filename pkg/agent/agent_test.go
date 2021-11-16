@@ -244,7 +244,7 @@ func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 }
 
 func Test_newManager(t *testing.T) {
-	manager, err := newWatchManager("https://abc.com", "123", true, apic.MockTokenGetter)
+	manager, err := newWatchManager("https://abc.com:5443", "123", true, apic.MockTokenGetter)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, manager)

@@ -15,11 +15,12 @@ type Handler interface {
 	callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
-type eventManagerFunc func(source chan *proto.Event, ri resourceGetter, cbs ...Handler) *EventManager
+type eventManagerFunc func(source chan *proto.Event, ri resourceGetter, cbs ...Handler) EventListener
 
-// Starter starts the EventManager
-type Starter interface {
-	Start() error
+// EventListener starts the EventManager
+type EventListener interface {
+	// Listen starts listening for events
+	Listen() error
 }
 
 // EventManager holds the various caches to save events into as they get written to the source channel.
@@ -29,8 +30,8 @@ type EventManager struct {
 	source      chan *proto.Event
 }
 
-// NewEventManager creates a new EventManager to process events based on the provided Handlers.
-func NewEventManager(source chan *proto.Event, ri resourceGetter, cbs ...Handler) *EventManager {
+// NewEventListener creates a new EventManager to process events based on the provided Handlers.
+func NewEventListener(source chan *proto.Event, ri resourceGetter, cbs ...Handler) EventListener {
 	return &EventManager{
 		getResource: ri,
 		handlers:    cbs,
@@ -38,8 +39,8 @@ func NewEventManager(source chan *proto.Event, ri resourceGetter, cbs ...Handler
 	}
 }
 
-// Start starts a loop that will process events as they are sent on the channel
-func (em *EventManager) Start() error {
+// Listen starts a loop that will process events as they are sent on the channel
+func (em *EventManager) Listen() error {
 	for {
 		err := em.start()
 		if err != nil {

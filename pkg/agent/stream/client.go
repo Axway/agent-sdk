@@ -34,7 +34,7 @@ func NewClient(
 		apiClient:       apiClient,
 		handlers:        handlers,
 		apisHost:        host,
-		newEventManager: NewEventManager,
+		newEventManager: NewEventListener,
 		tenantID:        tenantID,
 		tokenGetter:     tokenGetter,
 		topic:           topic,
@@ -60,7 +60,7 @@ func (sc *Client) newStreamService() error {
 
 	log.Debugf("watch-controller subscription-id: %s", id)
 
-	return em.Start()
+	return em.Listen()
 }
 
 // Start starts the streaming client

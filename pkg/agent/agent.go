@@ -3,9 +3,11 @@ package agent
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -221,7 +223,7 @@ func startAPIServiceCache() {
 		return
 	}
 	c := stream.NewClient(
-		agent.cfg.GetURL()+"/apis",
+		host+"/apis",
 		tenantID,
 		watchTopic,
 		agent.tokenRequester,
@@ -492,10 +494,17 @@ func startDiscoveryCache() {
 
 func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter) (wm.Manager, error) {
 	u, _ := url.Parse(host)
+	port := 443
+
+	if u.Port() == "" {
+		port, _ = net.LookupPort("tcp", u.Scheme)
+	} else {
+		port, _ = strconv.Atoi(u.Port())
+	}
 
 	cfg := &wm.Config{
 		Host:        u.Host,
-		Port:        443,
+		Port:        uint32(port),
 		TenantID:    tenantID,
 		TokenGetter: getToken.GetToken,
 	}
