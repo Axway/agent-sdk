@@ -6,7 +6,6 @@ check_required_param() {
         return 1
     fi
 
-    # pat='refs/tags/v[0-9].[0-9].[0-9]'
     pat='v[0-9].[0-9].[0-9]'
     if [[ $1 =~ $pat ]]; then
         return 0
@@ -15,7 +14,6 @@ check_required_param() {
 }
 
 set_version_variables() {
-    # var1=$(echo $1 | cut -f3 -d/)
     version="${1:1}"
     export VERSION=$version
     export BASE_DIR=$(realpath $(dirname $0)/../..)
@@ -31,7 +29,7 @@ checkout_main() {
 }
 
 update_version_file() {
-    echo "Updating version file"
+    echo "Updating version file to version ${VERSION}"
     echo ${VERSION} > ${BASE_DIR}/version
 }
 
