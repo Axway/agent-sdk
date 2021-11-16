@@ -337,7 +337,7 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 	defer closeHelper(resp.Body)
 	if resp.StatusCode != 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		log.Debugf("bad response from AxwayID: %s: %s, request token :%s, request time : %s", resp.Status, body, requestToken, startTime.String())
+		log.Debugf("bad response from AxwayID: %s: %s, request time : %s", resp.Status, body, startTime.String())
 
 		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
 	}
