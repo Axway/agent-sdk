@@ -104,8 +104,8 @@ type mockClient struct {
 }
 
 func (c mockClient) Send(req api.Request) (*api.Response, error) {
-	assert.NotEmpty(c.t, req.Headers["authorization"])
-	assert.NotEmpty(c.t, req.Headers["x-axway-tenant-id"])
+	assert.NotEmpty(c.t, req.Headers["Authorization"])
+	assert.NotEmpty(c.t, req.Headers["X-Axway-Tenant-Id"])
 	return &api.Response{
 		Code: c.code,
 		Body: []byte("{}"),

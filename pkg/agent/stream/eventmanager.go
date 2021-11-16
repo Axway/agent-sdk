@@ -57,7 +57,7 @@ func (em *EventManager) start() error {
 
 	err := em.handleEvent(event)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("event manager error: %s", err)
 	}
 
 	return nil
@@ -67,6 +67,14 @@ func (em *EventManager) start() error {
 func (em *EventManager) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
+
+	log.Debugf(
+		"processing received watch event[action: %s, type: %s, name: %s]",
+		proto.Event_Type_name[int32(event.Type)],
+		event.Payload.Kind,
+		event.Payload.Name,
+	)
+
 	if event.Type == proto.Event_CREATED || event.Type == proto.Event_UPDATED {
 		ri, err = em.getResource.get(event.Payload.Metadata.SelfLink)
 		if err != nil {
@@ -81,12 +89,6 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
 func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
-	log.Debugf("processing received watch event[action: %s, type: %s, name: %s, title: %s]",
-		proto.Event_Type_name[int32(action)],
-		resource.Kind,
-		resource.Name,
-		resource.Title,
-	)
 	for _, cb := range em.handlers {
 		err := cb.callback(action, resource)
 		if err != nil {

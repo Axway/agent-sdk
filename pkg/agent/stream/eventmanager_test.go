@@ -181,9 +181,17 @@ type mockRI struct {
 
 func (m mockRI) get(_ string) (*apiv1.ResourceInstance, error) {
 	return &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{},
-		Owner:        nil,
-		Spec:         nil,
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Kind: "kind",
+				},
+			},
+			Name:  "name",
+			Title: "title",
+		},
+		Owner: nil,
+		Spec:  nil,
 	}, m.err
 }
 
