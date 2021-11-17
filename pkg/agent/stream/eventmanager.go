@@ -103,7 +103,7 @@ func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.
 }
 
 func (em *EventManager) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {
-	return &apiv1.ResourceInstance{
+	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
 				GroupKind: apiv1.GroupKind{
@@ -113,16 +113,19 @@ func (em *EventManager) convertEventPayload(event *proto.Event) *apiv1.ResourceI
 			},
 			Name: event.Payload.Name,
 			Metadata: apiv1.Metadata{
-				ID: event.Payload.Metadata.Id,
-				Scope: apiv1.MetadataScope{
-					ID:       event.Payload.Metadata.Scope.Id,
-					Kind:     event.Payload.Metadata.Scope.Kind,
-					Name:     event.Payload.Metadata.Scope.Name,
-					SelfLink: event.Payload.Metadata.Scope.SelfLink,
-				},
+				ID:       event.Payload.Metadata.Id,
 				SelfLink: event.Payload.Metadata.SelfLink,
 			},
 			Attributes: event.Payload.Attributes,
 		},
 	}
+	if event.Payload.Metadata.Scope != nil {
+		ri.Metadata.Scope = apiv1.MetadataScope{
+			ID:       event.Payload.Metadata.Scope.Id,
+			Kind:     event.Payload.Metadata.Scope.Kind,
+			Name:     event.Payload.Metadata.Scope.Name,
+			SelfLink: event.Payload.Metadata.Scope.SelfLink,
+		}
+	}
+	return ri
 }
