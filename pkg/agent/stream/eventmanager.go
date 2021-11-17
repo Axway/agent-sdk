@@ -83,6 +83,10 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 		}
 	}
 
+	if event.Type == proto.Event_DELETED {
+		ri = em.convertEventPayload(event)
+	}
+
 	em.handleResource(event.Type, ri)
 
 	return nil
@@ -96,4 +100,32 @@ func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.
 			log.Error(err)
 		}
 	}
+}
+
+func (em *EventManager) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Group: event.Payload.Group,
+					Kind:  event.Payload.Kind,
+				},
+			},
+			Name: event.Payload.Name,
+			Metadata: apiv1.Metadata{
+				ID:       event.Payload.Metadata.Id,
+				SelfLink: event.Payload.Metadata.SelfLink,
+			},
+			Attributes: event.Payload.Attributes,
+		},
+	}
+	if event.Payload.Metadata.Scope != nil {
+		ri.Metadata.Scope = apiv1.MetadataScope{
+			ID:       event.Payload.Metadata.Scope.Id,
+			Kind:     event.Payload.Metadata.Scope.Kind,
+			Name:     event.Payload.Metadata.Scope.Name,
+			SelfLink: event.Payload.Metadata.Scope.SelfLink,
+		}
+	}
+	return ri
 }
