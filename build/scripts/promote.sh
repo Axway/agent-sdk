@@ -6,7 +6,7 @@ check_required_param() {
         return 1
     fi
 
-    pat='v[0-9].[0-9].[0-9]'
+    pat='v[0-9]+\.[0-9]+\.[0-9]+'
     if [[ $1 =~ $pat ]]; then
         return 0
     fi
