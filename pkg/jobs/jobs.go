@@ -29,6 +29,16 @@ func RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string
 	return globalPool.RegisterIntervalJobWithName(newJob, interval, name)
 }
 
+//RegisterChannelJob - Runs a job with a specific interval between each run in the globalPool
+func RegisterChannelJob(newJob Job, stopChan chan interface{}) (string, error) {
+	return globalPool.RegisterChannelJob(newJob, stopChan)
+}
+
+//RegisterChannelJobWithName - Runs a job with a specific interval between each run in the globalPool
+func RegisterChannelJobWithName(newJob Job, stopChan chan interface{}, name string) (string, error) {
+	return globalPool.RegisterChannelJobWithName(newJob, stopChan, name)
+}
+
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run in the globalPool, detached from other jobs to always run
 func RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
 	return globalPool.RegisterDetachedIntervalJob(newJob, interval)
