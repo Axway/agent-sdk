@@ -338,7 +338,7 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 	if resp.StatusCode != 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
 		log.Debugf("bad response from AxwayID: %s: %s, request time : %s", resp.Status, body, startTime.String())
-
+		log.Debug("possibly a clock syncing issue. Please check NTP daemon, if being used, that is up and running correctly.")
 		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
 	}
 
