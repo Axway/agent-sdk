@@ -75,6 +75,10 @@ func (m mockManager) CloseWatch(_ string) error {
 func (m mockManager) Close() {
 }
 
+func (m mockManager) Status() bool {
+	return true
+}
+
 type mockEventManager struct{}
 
 func (m mockEventManager) Listen() error {

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/grpc/connectivity"
+
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/sirupsen/logrus"
 
@@ -16,6 +18,7 @@ type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
 	Close()
+	Status() bool
 }
 
 // TokenGetter - function to acquire token
@@ -128,4 +131,9 @@ func (m *watchManager) Close() {
 	for id := range m.clientMap {
 		delete(m.clientMap, id)
 	}
+}
+
+// Status returns a boolean to indicate if the clients connected to central are active.
+func (m *watchManager) Status() bool {
+	return m.connection.GetState() == connectivity.Ready
 }

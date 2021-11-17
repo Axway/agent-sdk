@@ -117,14 +117,10 @@ func Initialize(centralCfg config.CentralConfig) error {
 	if err != nil {
 		return err
 	}
-	// Init apic client
-	if agent.apicClient == nil {
-		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		agent.apicClient.AddCategoryCache(agent.categoryMap)
-	} else {
-		agent.apicClient.SetTokenGetter(agent.tokenRequester)
-		agent.apicClient.OnConfigChange(centralCfg)
-	}
+
+	// Init apic client when the agent starts, and on config change.
+	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
+	agent.apicClient.AddCategoryCache(agent.categoryMap)
 
 	agent.cfg = centralCfg
 	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
@@ -190,10 +186,12 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 }
 
 func startAPIServiceCache() {
+	var checkStatus hc.CheckStatus
+
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false)
 	if !agent.useGrpc {
-
+		checkStatus = agent.apicClient.Healthcheck
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
@@ -202,45 +200,49 @@ func startAPIServiceCache() {
 		// Start the full update after the first interval
 		go startDiscoveryCache()
 		log.Tracef("registered API cache update job: %s", id)
-		return
-	}
-	// Load cache from API initially. Following updates to cache will be done using watch events
-	newDiscoveryCacheJob.Execute()
+	} else {
+		// Load cache from API initially. Following updates to cache will be done using watch events
+		newDiscoveryCacheJob.Execute()
 
-	host := agent.cfg.GetURL()
-	tenantID := agent.cfg.GetTenantID()
-	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
+		host := agent.cfg.GetURL()
+		tenantID := agent.cfg.GetTenantID()
+		insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
 
-	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
-	if err != nil {
-		log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
-		return
-	}
-
-	watchTopic := os.Getenv("CENTRAL_WATCH_TOPIC")
-	if watchTopic == "" {
-		log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
-		return
-	}
-	c := stream.NewClient(
-		host+"/apis",
-		tenantID,
-		watchTopic,
-		agent.tokenRequester,
-		api.NewClient(agent.cfg.GetTLSConfig(), ""),
-		manager,
-		stream.NewAPISvcHandler(agent.apiMap),
-		stream.NewInstanceHandler(cache.New()),
-		stream.NewCategoryHandler(agent.categoryMap),
-		// TODO: agents should be able to pass in their own handlers.
-	)
-
-	go func() {
-		err := c.Start()
+		manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
 		if err != nil {
-			log.Errorf("failed to start the grpc client: %s", err)
+			log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
+			return
 		}
-	}()
+
+		checkStatus = stream.HealthCheck(manager)
+
+		watchTopic := os.Getenv("CENTRAL_WATCH_TOPIC")
+		if watchTopic == "" {
+			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
+			return
+		}
+		c := stream.NewClient(
+			host+"/apis",
+			tenantID,
+			watchTopic,
+			agent.tokenRequester,
+			api.NewClient(agent.cfg.GetTLSConfig(), ""),
+			manager,
+			stream.NewAPISvcHandler(agent.apiMap),
+			stream.NewInstanceHandler(cache.New()),
+			stream.NewCategoryHandler(agent.categoryMap),
+			// TODO: agents should be able to pass in their own handlers.
+		)
+
+		go func() {
+			err := c.Start()
+			if err != nil {
+				log.Errorf("failed to start the grpc client: %s", err)
+			}
+		}()
+	}
+
+	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)
 }
 
 func isRunningInDockerContainer() bool {

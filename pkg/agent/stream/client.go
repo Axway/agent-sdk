@@ -3,6 +3,7 @@ package stream
 import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -66,4 +67,22 @@ func (sc *Client) newStreamService() error {
 // Start starts the streaming client
 func (sc *Client) Start() error {
 	return sc.newStreamService()
+}
+
+// HealthCheck wraps a Watch Manager to provide a health check endpoint on the connection to central.
+func HealthCheck(manager wm.Manager) hc.CheckStatus {
+	ok := manager.Status()
+	status := &hc.Status{
+		Result: hc.OK,
+	}
+
+	if !ok {
+		status.Result = hc.FAIL
+		status.Details = "the stream to central is not open"
+	}
+
+	return func(_ string) *hc.Status {
+		log.Infof("Stream status: %s", status.Result)
+		return status
+	}
 }

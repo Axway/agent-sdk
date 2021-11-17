@@ -14,7 +14,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -30,7 +29,6 @@ const (
 
 // other consts
 const (
-	serverName = "Amplify Central"
 	TeamMapKey = "TeamMap"
 )
 
@@ -66,7 +64,6 @@ type Client interface {
 	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
-	OnConfigChange(cfg corecfg.CentralConfig)
 	Healthcheck(name string) *hc.Status
 	GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error)
 	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
@@ -81,15 +78,13 @@ type Client interface {
 	GetOrCreateCategory(category string) string
 }
 
-// New -
+// New creates a new Client
 func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
 	serviceClient := &ServiceClient{}
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
-	serviceClient.OnConfigChange(cfg)
-	if util.IsNotTest() {
-		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
-	}
+	serviceClient.initClient(cfg)
+
 	return serviceClient
 }
 
@@ -124,12 +119,21 @@ func (c *ServiceClient) GetOrCreateCategory(category string) string {
 	return ""
 }
 
-// OnConfigChange - config change handler
-func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
+// initClient - config change handler
+func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
 	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
-	c.checkAPIServerHealth() // Get the env ID and team ID
+
+	err := c.checkAPIServerHealth() // Get the env ID and team ID
+	if err != nil {
+		log.Error(err)
+	}
+
+	err = c.validateTeam()
+	if err != nil {
+		log.Error(err)
+	}
 
 	// set the default webhook if one has been configured
 	if cfg.GetSubscriptionConfig() != nil {
@@ -291,6 +295,7 @@ func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 }
 
 func (c *ServiceClient) checkPlatformHealth() error {
+	// this doesn't make a call to platform every time. Only when the token is close to expiring.
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
 		return errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -315,13 +320,17 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 	}
 
+	return nil
+}
+
+func (c *ServiceClient) validateTeam() error {
 	if c.cfg.GetTeamID() == "" {
 		// Validate if team exists
 		team, err := c.getCentralTeam(c.cfg.GetTeamName())
 		if err != nil {
 			return err
 		}
-		// Set the team Id
+		// Set the team ID
 		c.cfg.SetTeamID(team.ID)
 	}
 
@@ -389,7 +398,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
-
 }
 
 // GetPlatformUserInfo - request the platform user info
