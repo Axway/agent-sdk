@@ -4,7 +4,7 @@ name: Release SDK
 # run this action if there is a push of a new tag of the form v.n.n.n on main branch
 on:
   push:
-    branches: main
+    branches: APIGOV-12345
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
 
