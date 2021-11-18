@@ -134,7 +134,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		update = true
 	}
 
-	spec, err := c.prepareSubscriptionDefinitionSpec(subscriptionSchema)
+	spec, err := c.prepareSubscriptionDefinitionSpec(registeredSchema, subscriptionSchema)
 	if err != nil {
 		return err
 	}
@@ -253,22 +253,37 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 // UpdateSubscriptionSchema - Updates a subscription schema in Publish to environment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
-	spec, err := c.prepareSubscriptionDefinitionSpec(subscriptionSchema)
+	spec, err := c.prepareSubscriptionDefinitionSpec(nil, subscriptionSchema)
 	if err != nil {
 		return err
 	}
 	return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
 }
 
-func (c *ServiceClient) prepareSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.ConsumerSubscriptionDefinitionSpec, error) {
+func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1alpha1.ConsumerSubscriptionDefinition, subscriptionSchema SubscriptionSchema) (*v1alpha1.ConsumerSubscriptionDefinitionSpec, error) {
 	catalogSubscriptionSchema, err := subscriptionSchema.mapStringInterface()
 	if err != nil {
 		return nil, err
 	}
 
 	webhooks := make([]string, 0)
+	// use existing webhooks if present
+	if registeredSchema != nil {
+		webhooks = registeredSchema.Spec.Webhooks
+	}
+
 	if c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalMode() == corecfg.WebhookApproval {
-		webhooks = append(webhooks, DefaultSubscriptionWebhookName)
+		found := false
+		for _, webhook := range webhooks {
+			if webhook == DefaultSubscriptionWebhookName {
+				found = true
+				break
+			}
+		}
+		// Only add the default subscription webhook if it is not there
+		if !found {
+			webhooks = append(webhooks, DefaultSubscriptionWebhookName)
+		}
 	}
 
 	return &v1alpha1.ConsumerSubscriptionDefinitionSpec{
