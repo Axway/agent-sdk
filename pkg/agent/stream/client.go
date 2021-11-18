@@ -71,17 +71,16 @@ func (sc *Client) Start() error {
 
 // HealthCheck wraps a Watch Manager to provide a health check endpoint on the connection to central.
 func HealthCheck(manager wm.Manager) hc.CheckStatus {
-	ok := manager.Status()
-	status := &hc.Status{
-		Result: hc.OK,
-	}
-
-	if !ok {
-		status.Result = hc.FAIL
-		status.Details = "the stream to central is not open"
-	}
-
 	return func(_ string) *hc.Status {
+		ok := manager.Status()
+		status := &hc.Status{
+			Result: hc.OK,
+		}
+
+		if !ok {
+			status.Result = hc.FAIL
+			status.Details = "the stream to central is not open"
+		}
 		log.Infof("Stream status: %s", status.Result)
 		return status
 	}

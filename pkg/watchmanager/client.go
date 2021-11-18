@@ -25,6 +25,7 @@ type watchClient struct {
 	cancelStream           context.CancelFunc
 	timer                  *time.Timer
 	getTokenExpirationTime getTokenExpFunc
+	isRunning              bool
 }
 
 // newWatchClientFunc func signature to create a watch client
@@ -48,6 +49,7 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 		cancelStream:           streamCancel,
 		timer:                  time.NewTimer(0),
 		getTokenExpirationTime: getTokenExpirationTime,
+		isRunning:              true,
 	}
 
 	return client, nil
@@ -115,6 +117,7 @@ func (c *watchClient) send() (time.Duration, error) {
 
 // handleError stop the running timer, send to the error channel, and close the open stream.
 func (c *watchClient) handleError(err error) {
+	c.isRunning = false
 	c.timer.Stop()
 	c.cfg.errors <- err
 	close(c.cfg.events)

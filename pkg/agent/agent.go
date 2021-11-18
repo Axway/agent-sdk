@@ -510,8 +510,8 @@ func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.Token
 		TenantID:    tenantID,
 		TokenGetter: getToken.GetToken,
 	}
-	logger := logrus.NewEntry(logrus.New())
-	entry := logger.WithField("package", "client")
+
+	entry := logrus.NewEntry(log.Get())
 
 	var watchOptions []wm.Option
 	watchOptions = append(watchOptions, wm.WithLogger(entry))
@@ -520,5 +520,5 @@ func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.Token
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
 
-	return wm.New(cfg, logger, watchOptions...)
+	return wm.New(cfg, watchOptions...)
 }
