@@ -47,6 +47,9 @@ type Properties interface {
 	BoolFlagValue(name string) bool
 	StringSlicePropertyValue(name string) []string
 
+	// Methods to set a property
+	SetStringFlagValue(name string, value string)
+
 	// Log Properties
 	MaskValues(name string)
 	DebugLogProperties()
@@ -134,6 +137,12 @@ func (p *properties) AddStringPersistentFlag(flagName string, defaultVal string,
 func (p *properties) AddStringFlag(flagName string, description string) {
 	if p.rootCmd != nil {
 		p.rootCmd.Flags().String(flagName, "", description)
+	}
+}
+
+func (p *properties) SetStringFlagValue(flagName string, value string) {
+	if p.rootCmd != nil {
+		p.rootCmd.Flags().Set(flagName, value)
 	}
 }
 

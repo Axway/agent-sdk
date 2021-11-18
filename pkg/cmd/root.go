@@ -26,8 +26,8 @@ import (
 
 // Constants for cmd flags
 const (
-	PathConfigFlag        = "pathConfig"
-	BeatsPathConfigFlag   = "path.config"
+	pathConfigFlag        = "pathConfig"
+	beatsPathConfigFlag   = "path.config"
 	EnvFileFlag           = "envFile"
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
@@ -158,7 +158,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
-	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
+	c.props.AddStringPersistentFlag(pathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
@@ -169,13 +169,21 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(config.ErrEnvConfigOverride, err.Error())
 	}
 
-	_, configFilePath := c.props.StringFlagValue(PathConfigFlag)
-	if c.agentType == config.TraceabilityAgent && configFilePath == "" {
-		_, configFilePath = c.props.StringFlagValue(BeatsPathConfigFlag)
+	_, agentConfigFilePath := c.props.StringFlagValue(pathConfigFlag)
+	_, beatsConfigFilePath := c.props.StringFlagValue(beatsPathConfigFlag)
+
+	// If the Agent pathConfig value is set and the beats path.config is not then use the pathConfig value for both
+	if beatsConfigFilePath == "" && agentConfigFilePath != "" {
+		c.props.SetStringFlagValue(beatsPathConfigFlag, agentConfigFilePath)
+		_, beatsConfigFilePath = c.props.StringFlagValue(beatsPathConfigFlag)
 	}
+
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
-	viper.AddConfigPath(configFilePath)
+
+	// Add both the agent pathConfig and beats path.config paths to the config path array
+	viper.AddConfigPath(agentConfigFilePath)
+	viper.AddConfigPath(beatsConfigFilePath)
 	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
