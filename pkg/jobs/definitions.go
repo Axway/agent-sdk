@@ -86,6 +86,7 @@ const (
 	JobTypeSingleRun        = "single run"
 	JobTypeRetry            = "retry"
 	JobTypeInterval         = "interval"
+	JobTypeChannel          = "channel"
 	JobTypeDetachedInterval = "detached interval"
 	JobTypeScheduled        = "scheduled"
 )

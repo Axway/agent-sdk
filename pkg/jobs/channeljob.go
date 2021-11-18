@@ -21,7 +21,7 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 			id:       newUUID(),
 			name:     name,
 			job:      newJob,
-			jobType:  JobTypeInterval,
+			jobType:  JobTypeChannel,
 			status:   JobStatusInitializing,
 			failChan: failJobChan,
 		},
@@ -41,7 +41,7 @@ func (b *channelJob) handleExecution() {
 	if b.err != nil {
 		b.setExecutionError()
 		log.Error(b.err)
-		b.SetStatus(JobStatusStopped)
+		b.stop() // stop the job on error
 		b.consecutiveFails++
 	}
 	b.consecutiveFails = 0
@@ -51,18 +51,13 @@ func (b *channelJob) handleExecution() {
 func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
+	go b.handleExecution() // start a ingle execution in a go routine as it runs forever
 
-	for {
-		// Non-blocking channel read, if stopped then exit
-		select {
-		case <-b.stopChan:
-			b.SetStatus(JobStatusStopped)
-			b.signalStop <- nil
-			return
-		default:
-			b.handleExecution()
-		}
-	}
+	// Wait for a write on the stop channel
+	<-b.stopChan
+	b.signalStop <- nil // signal the execution to stop
+	b.SetStatus(JobStatusStopped)
+
 }
 
 //stop - write to the stop channel to stop the execution loop
