@@ -51,13 +51,12 @@ func (b *channelJob) handleExecution() {
 func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
-	go b.handleExecution() // start a ingle execution in a go routine as it runs forever
+	go b.handleExecution() // start a single execution in a go routine as it runs forever
 
 	// Wait for a write on the stop channel
 	<-b.stopChan
 	b.signalStop <- nil // signal the execution to stop
 	b.SetStatus(JobStatusStopped)
-
 }
 
 //stop - write to the stop channel to stop the execution loop
