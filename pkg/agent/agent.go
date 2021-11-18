@@ -232,7 +232,6 @@ func startAPIServiceCache() {
 
 	go func() {
 		err := c.Start()
-		log.Debug("starting the grpc client")
 		if err != nil {
 			log.Errorf("failed to start the grpc client: %s", err)
 		}
