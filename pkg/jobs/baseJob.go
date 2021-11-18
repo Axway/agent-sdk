@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -53,7 +54,20 @@ func (b *baseJob) executeCronJob() {
 	b.jobLock.Lock()
 	defer b.jobLock.Unlock()
 
-	b.err = b.job.Execute()
+	// start a go routine to execute the job
+	executed := make(chan error)
+	go func() {
+		executed <- b.job.Execute()
+	}()
+
+	// either hte job finishes or a timeout is hit
+	select {
+	case err := <-executed:
+		b.err = err
+	case <-time.After(20 * time.Second):
+		b.err = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
+	}
+
 	if b.err != nil {
 		if b.failChan != nil {
 			b.failChan <- b.id

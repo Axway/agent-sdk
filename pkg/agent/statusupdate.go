@@ -60,8 +60,12 @@ func (su *agentStatusUpdate) Status() error {
 
 func (su *agentStatusUpdate) Execute() error {
 	// only one status update should execute at a time
+	log.Tracef("get status update lock %s", su.typeOfStatusUpdate)
 	updateStatusMutex.Lock()
-	defer updateStatusMutex.Unlock()
+	defer func() {
+		log.Tracef("return status update lock %s", su.typeOfStatusUpdate)
+		updateStatusMutex.Unlock()
+	}()
 
 	// error out if the agent name does not exist
 	err := runStatusUpdateCheck()

@@ -37,7 +37,7 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 
 func (b *channelJob) handleExecution() {
 	// Execute the job
-	b.executeCronJob()
+	b.executeJob()
 	if b.err != nil {
 		b.setExecutionError()
 		log.Error(b.err)
@@ -52,6 +52,7 @@ func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
+	b.SetStatus(JobStatusRunning)
 
 	// Wait for a write on the stop channel
 	<-b.stopChan
