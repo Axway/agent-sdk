@@ -537,7 +537,7 @@ func (c *CentralConfiguration) validateConfig() {
 		c.validateDiscoveryAgentConfig()
 	}
 
-	if c.CentralConfig.IsUsingGRPC() && c.CentralConfig.GetWatchTopic() == "" {
+	if c.IsUsingGRPC() && c.GetWatchTopic() == "" {
 		exception.Throw(ErrBadConfig.FormatError("watch topic self link must be provided when using gRPC mode"))
 	}
 }
