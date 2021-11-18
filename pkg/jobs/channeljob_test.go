@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -10,16 +9,12 @@ import (
 
 type channelJobImpl struct {
 	Job
-	name        string
-	runTime     time.Duration
-	ready       bool
-	executions  int
-	failEvery   int
-	status      error
-	failTime    time.Duration
-	wasFailed   bool
-	wasRestored bool
-	stopChan    chan interface{}
+	name       string
+	runTime    time.Duration
+	ready      bool
+	executions int
+	status     error
+	stopChan   chan interface{}
 }
 
 func (j *channelJobImpl) Execute() error {
@@ -30,10 +25,6 @@ func (j *channelJobImpl) Execute() error {
 			return nil
 		default:
 			time.Sleep(j.runTime)
-			if j.failEvery > 0 && j.executions%j.failEvery == 0 {
-				j.status = fmt.Errorf("FAIL")
-				j.wasFailed = true
-			}
 		}
 	}
 }
@@ -68,4 +59,12 @@ func TestChannelJob(t *testing.T) {
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusStopped], status)
 	assert.LessOrEqual(t, 1, job.executions)
+
+	// restart the job
+	go globalPool.cronJobs[jobID].start()
+	time.Sleep(10 * time.Millisecond)
+	status = GetJobStatus(jobID)
+	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
+	globalPool.cronJobs[jobID].stop()
+	time.Sleep(10 * time.Millisecond)
 }
