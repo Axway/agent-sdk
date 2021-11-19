@@ -313,6 +313,7 @@ func (c *ServiceClient) setTeamCache() error {
 	return cache.GetCache().Set(TeamMapKey, teamMap)
 }
 
+// GetEnvironment get an environment
 func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	headers, err := c.createHeader()
 	if err != nil {
