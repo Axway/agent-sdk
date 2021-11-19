@@ -81,7 +81,6 @@ type agentData struct {
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	isInitialized              bool
-	useGrpc                    bool
 }
 
 var agent = agentData{}
@@ -130,10 +129,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 
 	if !agent.isInitialized {
-		useGrpcCfg := os.Getenv("CENTRAL_USE_GRPC")
-		if useGrpcCfg != "" {
-			agent.useGrpc = true
-		}
 		if getAgentResourceType() != "" {
 			fetchConfig()
 			updateAgentStatus(AgentRunning, "", "")
@@ -190,7 +185,7 @@ func startAPIServiceCache() {
 
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false)
-	if !agent.useGrpc {
+	if !agent.cfg.IsUsingGRPC() {
 		checkStatus = agent.apicClient.Healthcheck
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
@@ -216,7 +211,7 @@ func startAPIServiceCache() {
 
 		checkStatus = stream.HealthCheck(manager)
 
-		watchTopic := os.Getenv("CENTRAL_WATCH_TOPIC")
+		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
 			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
 			return

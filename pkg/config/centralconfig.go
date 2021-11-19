@@ -134,6 +134,8 @@ type CentralConfig interface {
 	GetUsageReportingConfig() UsageReportingConfig
 	GetUpdateFromAPIServer() bool
 	IsVersionCheckerEnabled() bool
+	IsUsingGRPC() bool
+	GetWatchTopic() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -164,6 +166,8 @@ type CentralConfiguration struct {
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
+	UseGRPC                   bool                 `config:"useGRPC"`
+	WatchTopic                string               `config:"watchTopic"`
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
@@ -439,6 +443,16 @@ func (c *CentralConfiguration) IsVersionCheckerEnabled() bool {
 	return c.VersionChecker
 }
 
+// IsUsingGRPC -
+func (c *CentralConfiguration) IsUsingGRPC() bool {
+	return c.UseGRPC
+}
+
+// GetWatchTopic -
+func (c *CentralConfiguration) GetWatchTopic() string {
+	return c.WatchTopic
+}
+
 // GetUsageReportingConfig -
 func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
@@ -476,6 +490,8 @@ const (
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
 	pathVersionChecker            = "central.versionChecker"
+	pathUseGRPC                   = "central.useGRPC"
+	pathWatchTopic                = "central.watchTopic"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -519,6 +535,10 @@ func (c *CentralConfiguration) validateConfig() {
 	} else {
 		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
+	}
+
+	if c.IsUsingGRPC() && c.GetWatchTopic() == "" {
+		exception.Throw(ErrBadConfig.FormatError("watch topic self link must be provided when using gRPC mode"))
 	}
 }
 
@@ -598,6 +618,8 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
 	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name")
+	props.AddBoolProperty(pathUseGRPC, false, "Controls whether an agent uses a gRPC connection")
+	props.AddStringProperty(pathWatchTopic, "", "The path of the watch topic self link")
 	props.AddStringSliceProperty(pathSSLCipherSuites, TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
 	props.AddStringProperty(pathSSLMinVersion, TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	props.AddStringProperty(pathSSLMaxVersion, "0", "Maximum acceptable SSL/TLS protocol version")
@@ -651,6 +673,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
+		UseGRPC:                   props.BoolPropertyValue(pathUseGRPC),
+		WatchTopic:                props.StringPropertyValue(pathWatchTopic),
 		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
