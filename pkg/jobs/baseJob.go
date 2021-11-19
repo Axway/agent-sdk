@@ -144,9 +144,11 @@ func (b *baseJob) Ready() bool {
 
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
+	log.Debugf("Waiting for %s (%s) to be ready", b.name, b.id)
 	for !b.job.Ready() { // Wait for the job to be ready before starting
 		time.Sleep(time.Millisecond)
 	}
+	log.Debugf("%s (%s) is ready", b.name, b.id)
 }
 
 //start - waits for Ready to return true then calls the Execute function from the Job definition
