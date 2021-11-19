@@ -23,6 +23,14 @@ type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 }
 
+func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetCentralTeamByName(_ string) (*apic.PlatformTeam, error) {
+	return nil, nil
+}
+
 func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
 	return nil, nil
 }
@@ -165,15 +173,43 @@ func TestDiscoveryCache(t *testing.T) {
 		},
 	}
 	var serverAPISvcResponse []v1.ResourceInstance
-	// var apiSvc *v1.ResourceInstance
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "test",
+			Title:    "test",
+		},
+	}
+	teams := []apic.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
+			return
 		}
+
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
 			buf, _ := json.Marshal(serverAPISvcResponse)
 			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 	defer s.Close()

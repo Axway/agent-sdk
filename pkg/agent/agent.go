@@ -121,6 +121,11 @@ func Initialize(centralCfg config.CentralConfig) error {
 	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
 	agent.apicClient.AddCategoryCache(agent.categoryMap)
 
+	err = initEnvResources(centralCfg, agent.apicClient)
+	if err != nil {
+		return err
+	}
+
 	agent.cfg = centralCfg
 	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
 
@@ -147,7 +152,32 @@ func Initialize(centralCfg config.CentralConfig) error {
 			startAPIServiceCache()
 		}
 	}
+
 	agent.isInitialized = true
+	return nil
+}
+
+func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
+	env, err := client.GetEnvironment()
+	if err != nil {
+		return err
+	}
+
+	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
+	if cfg.GetEnvironmentID() == "" {
+		// need to save this ID for the traceability agent for later
+		cfg.SetEnvironmentID(env.Metadata.ID)
+	}
+
+	if cfg.GetTeamID() == "" {
+		team, err := client.GetCentralTeamByName(cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+
+		cfg.SetTeamID(team.ID)
+	}
+
 	return nil
 }
 
@@ -382,9 +412,12 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	agent := apiV1.ResourceInstance{}
-	json.Unmarshal(response, &agent)
-	return &agent, nil
+	agent := &apiV1.ResourceInstance{}
+	err = json.Unmarshal(response, agent)
+	if err != nil {
+		return nil, err
+	}
+	return agent, nil
 }
 
 // updateAgentStatus - Updates the agent status in agent resource

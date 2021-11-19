@@ -76,6 +76,8 @@ type Client interface {
 	CreateCategory(categoryName string) (*catalog.Category, error)
 	AddCategoryCache(categoryCache cache.Cache)
 	GetOrCreateCategory(category string) string
+	GetEnvironment() (*v1alpha1.Environment, error)
+	GetCentralTeamByName(teamName string) (*PlatformTeam, error)
 }
 
 // New creates a new Client
@@ -125,12 +127,7 @@ func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
-	err := c.checkAPIServerHealth() // Get the env ID and team ID
-	if err != nil {
-		log.Error(err)
-	}
-
-	err = c.validateTeam()
+	err := c.setTeamCache()
 	if err != nil {
 		log.Error(err)
 	}
@@ -266,7 +263,7 @@ func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
 }
 
 // Healthcheck - verify connection to the platform
-func (c *ServiceClient) Healthcheck(name string) *hc.Status {
+func (c *ServiceClient) Healthcheck(_ string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
 		Result: hc.OK,
@@ -281,8 +278,7 @@ func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 		}
 	}
 
-	// Check that appropriate settings for the API server are set
-	err = c.checkAPIServerHealth()
+	_, err = c.GetEnvironment()
 	if err != nil {
 		s = hc.Status{
 			Result:  hc.FAIL,
@@ -303,41 +299,6 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) checkAPIServerHealth() error {
-	headers, err := c.createHeader()
-	if err != nil {
-		return errors.Wrap(ErrAuthenticationCall, err.Error())
-	}
-
-	apiEnvironment, err := c.getEnvironment(headers)
-	if err != nil || apiEnvironment == nil {
-		return err
-	}
-
-	c.cfg.SetAxwayManaged(apiEnvironment.Spec.AxwayManaged)
-	if c.cfg.GetEnvironmentID() == "" {
-		// need to save this ID for the traceability agent for later
-		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
-	}
-
-	return nil
-}
-
-func (c *ServiceClient) validateTeam() error {
-	if c.cfg.GetTeamID() == "" {
-		// Validate if team exists
-		team, err := c.getCentralTeam(c.cfg.GetTeamName())
-		if err != nil {
-			return err
-		}
-		// Set the team ID
-		c.cfg.SetTeamID(team.ID)
-	}
-
-	// reset the cache of team names
-	return c.setTeamCache()
-}
-
 func (c *ServiceClient) setTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
 	platformTeams, err := c.getTeam(make(map[string]string))
@@ -352,28 +313,33 @@ func (c *ServiceClient) setTeamCache() error {
 	return cache.GetCache().Set(TeamMapKey, teamMap)
 }
 
-func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {
+func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, errors.Wrap(ErrAuthenticationCall, err.Error())
+	}
+
 	queryParams := map[string]string{}
 
 	// do a request for the environment
-	apiEnvByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
+	bytes, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get env id from apiServerEnvByte
-	var apiEnvironment v1alpha1.Environment
-	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
+	env := &v1alpha1.Environment{}
+	err = json.Unmarshal(bytes, env)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
-	if apiEnvironment.Metadata.ID == "" {
+	if env.Metadata.ID == "" {
 		return nil, ErrEnvironmentQuery
 	}
 
-	return &apiEnvironment, nil
+	return env, nil
 }
 
 func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
@@ -443,7 +409,6 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 
 // GetUserName - request the user name
 func (c *ServiceClient) GetUserName(id string) (string, error) {
-
 	platformUserInfo, err := c.getPlatformUserInfo(id)
 	if err != nil {
 		return "", err
@@ -456,8 +421,8 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 	return userName, nil
 }
 
-// getCentralTeam - returns the team based on team name
-func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+// GetCentralTeamByName - returns the team based on team name
+func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 
