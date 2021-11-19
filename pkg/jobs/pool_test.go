@@ -8,7 +8,6 @@ import (
 )
 
 func TestPoolCoordination(t *testing.T) {
-	t.Skip()
 	testPool := newPool() // create a new pool for this test to not interfere with other tests
 	testPool.retryInterval = time.Second
 	failJob := &intervalJobImpl{
