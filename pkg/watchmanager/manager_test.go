@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// test register watch
 func TestWatchManager_RegisterWatch(t *testing.T) {
 	cfg := &Config{
 		Host:     "localhost",
