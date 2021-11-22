@@ -121,9 +121,11 @@ func Initialize(centralCfg config.CentralConfig) error {
 	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
 	agent.apicClient.AddCategoryCache(agent.categoryMap)
 
-	err = initEnvResources(centralCfg, agent.apicClient)
-	if err != nil {
-		return err
+	if util.IsNotTest() {
+		err = initEnvResources(centralCfg, agent.apicClient)
+		if err != nil {
+			return err
+		}
 	}
 
 	agent.cfg = centralCfg
