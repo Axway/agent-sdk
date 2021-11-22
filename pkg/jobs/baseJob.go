@@ -22,6 +22,8 @@ type baseJob struct {
 	jobLock          sync.Mutex   // lock used for signalling that the job is being executed
 	consecutiveFails int
 	backoff          *backoff
+	isReady          bool
+	stopReadyChan    chan interface{}
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
@@ -35,13 +37,15 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 //createBaseJob - creates a single run job and returns it
 func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
 	return baseJob{
-		id:       newUUID(),
-		name:     name,
-		job:      newJob,
-		jobType:  jobType,
-		status:   JobStatusInitializing,
-		failChan: failJobChan,
-		backoff:  newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
+		id:            newUUID(),
+		name:          name,
+		job:           newJob,
+		jobType:       jobType,
+		status:        JobStatusInitializing,
+		failChan:      failJobChan,
+		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
+		isReady:       false,
+		stopReadyChan: make(chan interface{}),
 	}
 }
 
@@ -153,14 +157,22 @@ func (b *baseJob) Ready() bool {
 func (b *baseJob) waitForReady() {
 	log.Debugf("Waiting for %s (%s) to be ready", b.name, b.id)
 	for {
-		if b.job.Ready() {
+		select {
+		case <-b.stopReadyChan:
 			b.backoff.reset()
-			log.Debugf("%s (%s) is ready", b.name, b.id)
+			b.isReady = false
 			return
+		default:
+			if b.job.Ready() {
+				b.backoff.reset()
+				log.Debugf("%s (%s) is ready", b.name, b.id)
+				b.isReady = true
+				return
+			}
+			log.Tracef("Job %s (%s) not ready, checking again in %v seconds", b.name, b.id, b.backoff.getCurrentTimeout())
+			b.backoff.sleep()
+			b.backoff.increaseTimeout()
 		}
-		log.Tracef("Job %s (%s) not ready, checking again in %v seconds", b.name, b.id, b.backoff.getCurrentTimeout())
-		b.backoff.sleep()
-		b.backoff.increaseTimeout()
 	}
 }
 
@@ -176,7 +188,6 @@ func (b *baseJob) start() {
 //stop - noop in base
 func (b *baseJob) stop() {
 	b.stopLog()
-	return
 }
 
 func (b *baseJob) startLog() {
