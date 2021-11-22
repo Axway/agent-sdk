@@ -28,14 +28,7 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 	}
 
 	thisJob := scheduleJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeScheduled,
-			status:   JobStatusInitializing,
-			failChan: failJobChan,
-		},
+		createBaseJob(newJob, failJobChan, name, JobTypeScheduled),
 		scheduleJobProps{
 			cronExp:  exp,
 			schedule: schedule,

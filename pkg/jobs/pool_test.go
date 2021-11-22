@@ -9,6 +9,7 @@ import (
 
 func TestPoolCoordination(t *testing.T) {
 	testPool := newPool() // create a new pool for this test to not interfere with other tests
+	testPool.backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
 	testPool.retryInterval = time.Second
 	failJob := &intervalJobImpl{
 		name:      "FailedIntervalJob",
@@ -72,7 +73,7 @@ func TestPoolCoordination(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	time.Sleep(time.Second) // give enough time for scheduled job to run at least once more
+	time.Sleep(2 * time.Second) // give enough time for scheduled job to run at least once more
 
 	assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once after failure")
 	assert.GreaterOrEqual(t, iJob.executions, 1, "The interval job did not run at least once after failure")

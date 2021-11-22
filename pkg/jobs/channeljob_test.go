@@ -46,6 +46,7 @@ func TestChannelJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterChannelJob(job, job.stopChan)
+	globalPool.jobs[jobID].(*channelJob).backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
 
 	status := GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)

@@ -35,6 +35,7 @@ func TestSingleRunJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterSingleRunJob(job)
+	globalPool.jobs[jobID].(*baseJob).backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
 
 	time.Sleep(10 * time.Millisecond)
 	status := GetJobStatus(jobID)

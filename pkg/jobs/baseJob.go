@@ -21,21 +21,28 @@ type baseJob struct {
 	failChan         chan string  // channel to send signal to pool of failure
 	jobLock          sync.Mutex   // lock used for signalling that the job is being executed
 	consecutiveFails int
+	backoff          *backoff
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
 func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution, error) {
-	thisJob := baseJob{
-		id:       newUUID(),
-		name:     name,
-		job:      newJob,
-		jobType:  JobTypeSingleRun,
-		status:   JobStatusInitializing,
-		failChan: failJobChan,
-	}
+	thisJob := createBaseJob(newJob, failJobChan, name, JobTypeSingleRun)
 
 	go thisJob.start()
 	return &thisJob, nil
+}
+
+//createBaseJob - creates a single run job and returns it
+func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
+	return baseJob{
+		id:       newUUID(),
+		name:     name,
+		job:      newJob,
+		jobType:  jobType,
+		status:   JobStatusInitializing,
+		failChan: failJobChan,
+		backoff:  newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
+	}
 }
 
 func (b *baseJob) executeJob() {
@@ -60,11 +67,11 @@ func (b *baseJob) executeCronJob() {
 		executed <- b.job.Execute()
 	}()
 
-	// either hte job finishes or a timeout is hit
+	// either the job finishes or a timeout is hit
 	select {
 	case err := <-executed:
 		b.err = err
-	case <-time.After(20 * time.Second):
+	case <-time.After(2 * time.Minute): // give a job 2 minutes to execute
 		b.err = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 	}
 
@@ -145,10 +152,16 @@ func (b *baseJob) Ready() bool {
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
 	log.Debugf("Waiting for %s (%s) to be ready", b.name, b.id)
-	for !b.job.Ready() { // Wait for the job to be ready before starting
-		time.Sleep(time.Millisecond)
+	for {
+		if b.job.Ready() {
+			b.backoff.reset()
+			log.Debugf("%s (%s) is ready", b.name, b.id)
+			return
+		}
+		log.Tracef("Job %s (%s) not ready, checking again in %v seconds", b.name, b.id, b.backoff.getCurrentTimeout())
+		b.backoff.sleep()
+		b.backoff.increaseTimeout()
 	}
-	log.Debugf("%s (%s) is ready", b.name, b.id)
 }
 
 //start - waits for Ready to return true then calls the Execute function from the Job definition

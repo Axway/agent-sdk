@@ -17,14 +17,7 @@ type channelJob struct {
 //newChannelJob - creates a channel run job
 func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := channelJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeChannel,
-			status:   JobStatusInitializing,
-			failChan: failJobChan,
-		},
+		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
 		channelJobProps{
 			signalStop: signalStop,
 			stopChan:   make(chan bool),

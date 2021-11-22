@@ -19,14 +19,7 @@ type intervalJob struct {
 //newIntervalJob - creates an interval run job
 func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := intervalJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeInterval,
-			status:   JobStatusInitializing,
-			failChan: failJobChan,
-		},
+		createBaseJob(newJob, failJobChan, name, JobTypeInterval),
 		intervalJobProps{
 			interval: interval,
 			stopChan: make(chan bool),

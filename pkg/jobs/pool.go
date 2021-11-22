@@ -23,6 +23,7 @@ type Pool struct {
 	poolStatusLock          sync.Mutex
 	failJobChan             chan string
 	stopJobsChan            chan bool
+	backoff                 *backoff
 	retryInterval           time.Duration
 	origRetryInterval       time.Duration
 }
@@ -34,14 +35,13 @@ func newPool() *Pool {
 	}
 
 	newPool := Pool{
-		jobs:              make(map[string]JobExecution),
-		cronJobs:          make(map[string]JobExecution),
-		detachedCronJobs:  make(map[string]JobExecution),
-		failedJob:         "",
-		failJobChan:       make(chan string),
-		stopJobsChan:      make(chan bool),
-		retryInterval:     interval,
-		origRetryInterval: interval,
+		jobs:             make(map[string]JobExecution),
+		cronJobs:         make(map[string]JobExecution),
+		detachedCronJobs: make(map[string]JobExecution),
+		failedJob:        "",
+		failJobChan:      make(chan string),
+		stopJobsChan:     make(chan bool),
+		backoff:          newBackoffTimeout(interval, 10*time.Minute, 2),
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
@@ -279,19 +279,8 @@ func (p *Pool) stopAll() {
 		log.Tracef("finished stopping job %s", job.GetName())
 	}
 	for i := 1; i < maxErrors; i++ {
-		p.backoffTimeout()
+		p.backoff.increaseTimeout()
 	}
-}
-
-func (p *Pool) backoffTimeout() {
-	p.retryInterval = p.retryInterval * 2
-	if p.retryInterval > 10*time.Minute {
-		p.retryInterval = 10 * time.Minute // max of 10 minute
-	}
-}
-
-func (p *Pool) resetTimeout() {
-	p.retryInterval = p.origRetryInterval
 }
 
 //catchFails - catches all writes to the failJobChan and only sends one stop signal
@@ -317,14 +306,14 @@ func (p *Pool) watchJobs() {
 			p.stopAll()
 		} else {
 			if p.failedJob != "" {
-				log.Debugf("Pool not running, start all jobs in %v seconds", p.retryInterval.Seconds())
-				time.Sleep(p.retryInterval)
+				log.Debugf("Pool not running, start all jobs in %v seconds", p.backoff.getCurrentTimeout())
+				p.backoff.sleep()
 			}
 			// attempt to restart all jobs
 			if p.startAll() {
-				p.resetTimeout()
+				p.backoff.reset()
 			} else {
-				p.backoffTimeout()
+				p.backoff.increaseTimeout()
 			}
 		}
 	}
