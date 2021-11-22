@@ -11,15 +11,16 @@ import (
 
 type baseJob struct {
 	JobExecution
-	id               string       // UUID generated for this job
-	name             string       // Name of the job
-	job              Job          // the job definition
-	jobType          string       // type of job
-	status           JobStatus    // current job status
-	err              error        // the error thrown
-	statusLock       sync.RWMutex // lock on preventing status write/read at the same time
-	failChan         chan string  // channel to send signal to pool of failure
-	jobLock          sync.Mutex   // lock used for signalling that the job is being executed
+	id               string        // UUID generated for this job
+	name             string        // Name of the job
+	job              Job           // the job definition
+	jobType          string        // type of job
+	status           JobStatus     // current job status
+	err              error         // the error thrown
+	statusLock       *sync.RWMutex // lock on preventing status write/read at the same time
+	isReadyLock      *sync.RWMutex // lock on preventing isReady write/read at the same time
+	failChan         chan string   // channel to send signal to pool of failure
+	jobLock          sync.Mutex    // lock used for signalling that the job is being executed
 	consecutiveFails int
 	backoff          *backoff
 	isReady          bool
@@ -43,6 +44,8 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		jobType:       jobType,
 		status:        JobStatusInitializing,
 		failChan:      failJobChan,
+		statusLock:    &sync.RWMutex{},
+		isReadyLock:   &sync.RWMutex{},
 		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
 		isReady:       false,
 		stopReadyChan: make(chan interface{}),
@@ -92,6 +95,27 @@ func (b *baseJob) SetStatus(status JobStatus) {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
 	b.status = status
+}
+
+//SetIsReady - set that the job is now ready
+func (b *baseJob) SetIsReady() {
+	b.isReadyLock.Lock()
+	defer b.isReadyLock.Unlock()
+	b.isReady = true
+}
+
+//UnsetIsReady - set that the job is now ready
+func (b *baseJob) UnsetIsReady() {
+	b.isReadyLock.Lock()
+	defer b.isReadyLock.Unlock()
+	b.isReady = false
+}
+
+//IsReady - set that the job is now ready
+func (b *baseJob) IsReady() bool {
+	b.isReadyLock.Lock()
+	defer b.isReadyLock.Unlock()
+	return b.isReady
 }
 
 //Lock - locks the job, execution can not take place until the Unlock func is called
@@ -160,13 +184,13 @@ func (b *baseJob) waitForReady() {
 		select {
 		case <-b.stopReadyChan:
 			b.backoff.reset()
-			b.isReady = false
+			b.UnsetIsReady()
 			return
 		default:
 			if b.job.Ready() {
 				b.backoff.reset()
 				log.Debugf("%s (%s) is ready", b.name, b.id)
-				b.isReady = true
+				b.SetIsReady()
 				return
 			}
 			log.Tracef("Job %s (%s) not ready, checking again in %v seconds", b.name, b.id, b.backoff.getCurrentTimeout())

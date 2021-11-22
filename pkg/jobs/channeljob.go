@@ -56,12 +56,12 @@ func (b *channelJob) start() {
 //stop - write to the stop channel to stop the execution loop
 func (b *channelJob) stop() {
 	b.stopLog()
-	if b.isReady {
+	if b.IsReady() {
 		log.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
 		log.Tracef("wrote to %s stop channel", b.GetName())
 	} else {
 		b.stopReadyChan <- nil
 	}
-	b.isReady = false
+	b.UnsetIsReady()
 }

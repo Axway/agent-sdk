@@ -47,4 +47,6 @@ func TestSingleRunJob(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusFinished], status)
+
+	UnregisterJob(jobID)
 }

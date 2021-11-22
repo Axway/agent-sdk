@@ -66,6 +66,6 @@ func TestChannelJob(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
-	globalPool.cronJobs[jobID].stop()
+	UnregisterJob(jobID)
 	time.Sleep(10 * time.Millisecond)
 }
