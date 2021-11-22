@@ -62,6 +62,7 @@ type agentRootCommand struct {
 	centralCfg        config.CentralConfig
 	agentCfg          interface{}
 	secretResolver    resolver.SecretResolver
+	initialized       bool
 }
 
 func init() {
@@ -89,6 +90,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
+		initialized:       false,
 	}
 
 	// use the description from the build if available
@@ -125,6 +127,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
+		initialized:       false,
 	}
 
 	// use the description from the build if available
@@ -275,10 +278,13 @@ func (c *agentRootCommand) initConfig() error {
 		}
 	}
 
-	// Start the initial and recurring version check jobs
-	startVersionCheckJobs(c.centralCfg)
-	// Init the healthcheck API
-	hc.HandleRequests()
+	if !c.initialized {
+		// Start the initial and recurring version check jobs
+		startVersionCheckJobs(c.centralCfg)
+		// Init the healthcheck API
+		hc.HandleRequests()
+	}
+	c.initialized = true
 	return nil
 }
 
