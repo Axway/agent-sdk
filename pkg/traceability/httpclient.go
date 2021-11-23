@@ -191,37 +191,37 @@ func (conn *Connection) request(body interface{}, headers map[string]string, eve
 	return conn.execRequest(urlStr, conn.encoder.Reader(), headers, eventTime)
 }
 
-// LogConnection
+// LogConnection - ...
 func LogConnection(hostPort string) {
 	log.Debugf("starting to create conn %s", hostPort)
 }
 
-// LogDNSStart
+// LogDNSStart - ...
 func LogDNSStart(info httptrace.DNSStartInfo) {
 	log.Debugf("starting to look up dns %+v", info)
 }
 
-// LogDNSDone
+// LogDNSDone - ...
 func LogDNSDone(info httptrace.DNSDoneInfo) {
 	log.Debugf("done looking up dns %+v", info)
 }
 
-// LogConnectStart
+// LogConnectStart - ...
 func LogConnectStart(network, addr string) {
 	log.Debugf("starting tcp connection %s, %s", network, addr)
 }
 
-// LogConnectDone
+// LogConnectDone - ...
 func LogConnectDone(network, addr string, err error) {
 	log.Debugf("tcp connection created %s, %s error %+v", network, addr, err)
 }
 
-// LogWroteHeaderField
+// LogWroteHeaderField - ...
 func LogWroteHeaderField(key string, value []string) {
 	log.Debugf("wrote header %s, %v", key, value)
 }
 
-// LogGotConn
+// LogGotConn - ...
 func LogGotConn(info httptrace.GotConnInfo) {
 	log.Debugf("connection established %+v", info)
 }
