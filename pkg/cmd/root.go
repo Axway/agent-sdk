@@ -278,7 +278,8 @@ func (c *agentRootCommand) initConfig() error {
 	// Start the initial and recurring version check jobs
 	startVersionCheckJobs(c.centralCfg)
 	// Init the healthcheck API
-	hc.HandleRequests()
+	healthCheckServer := &hc.Server{}
+	healthCheckServer.HandleRequests()
 	return nil
 }
 

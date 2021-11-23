@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/grpc/connectivity"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/sirupsen/logrus"
 
@@ -11,11 +14,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Manager - Interface to manage watch connection
+// Manager - Interface to manage watch connections
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
 	Close()
+	Status() bool
 }
 
 // TokenGetter - function to acquire token
@@ -31,18 +35,17 @@ type watchManager struct {
 }
 
 // New - Creates a new watch manager
-func New(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error) {
+func New(cfg *Config, opts ...Option) (Manager, error) {
 	err := cfg.validateCfg()
 	if err != nil {
 		return nil, err
 	}
-	if logger == nil {
-		logger = logrus.New()
-	}
+
+	entry := logrus.NewEntry(log.Get())
 
 	manager := &watchManager{
 		cfg:                cfg,
-		logger:             logger.WithField("package", "watchmanager"),
+		logger:             entry.WithField("package", "watchmanager"),
 		clientMap:          make(map[string]*watchClient),
 		options:            newWatchOptions(),
 		newWatchClientFunc: proto.NewWatchClient,
@@ -54,7 +57,7 @@ func New(cfg *Config, logger logrus.FieldLogger, opts ...Option) (Manager, error
 
 	manager.connection, err = manager.createConnection()
 	if err != nil {
-		logger.Errorf("failed to establish connection with watch service: %s", err.Error())
+		log.Errorf("failed to establish connection with watch service: %s", err.Error())
 	}
 	return manager, err
 }
@@ -70,9 +73,7 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	}
 
 	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
-	m.logger.WithField("host", m.cfg.Host).
-		WithField("port", m.cfg.Port).
-		Info("connecting to watch service")
+	log.Infof("connecting to watch service. host: %s. port: %d", m.cfg.Host, m.cfg.Port)
 
 	return grpc.Dial(address, grpcDialOptions...)
 }
@@ -101,16 +102,14 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	go client.processRequest()
 	go client.processEvents()
 
-	m.logger.WithField("watchtopic", link).
-		WithField("subscriptionId", subID).
-		Info("registered new watch client[subscription]")
+	log.Infof("registered watch client. id: %s. watchtopic: %s", subID, link)
 
 	return subID, nil
 }
 
 // CloseWatch closes the specified watch stream by id
 func (m *watchManager) CloseWatch(id string) error {
-	m.logger.WithField("subscriptionId", id).Info("closing watch")
+	log.Infof("closing watch for subscription: %s", id)
 	client, ok := m.clientMap[id]
 	if !ok {
 		return errors.New("invalid watch subscription ID")
@@ -122,10 +121,22 @@ func (m *watchManager) CloseWatch(id string) error {
 
 // Close - Close the watch service connection, and all open streams
 func (m *watchManager) Close() {
-	m.logger.Info("closing watch service connection")
+	log.Info("closing watch service connection")
 
 	m.connection.Close()
 	for id := range m.clientMap {
 		delete(m.clientMap, id)
 	}
+}
+
+// Status returns a boolean to indicate if the clients connected to central are active.
+func (m *watchManager) Status() bool {
+	for _, c := range m.clientMap {
+		if c.isRunning == false {
+			log.Debugf("watch client is not running")
+			return false
+		}
+	}
+
+	return m.connection.GetState() == connectivity.Ready
 }

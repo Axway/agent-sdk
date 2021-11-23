@@ -2,11 +2,12 @@ package agent
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 
@@ -97,24 +98,55 @@ func TestAgentInitialize(t *testing.T) {
 		daName = "discovery"
 		taName = "traceability"
 	)
-	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
+
+	teams := []apic.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "v7",
+			Title:    "v7",
+		},
+	}
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
+			return
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
-				buf, _ := json.Marshal(discoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
-				buf, _ := json.Marshal(traceabilityAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+			buf, err := json.Marshal(discoveryAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+			buf, err := json.Marshal(traceabilityAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 
@@ -135,9 +167,6 @@ func TestAgentInitialize(t *testing.T) {
 	assert.Nil(t, err)
 	da = GetAgentResource()
 	assert.Nil(t, da)
-
-	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
 	cfg.AgentType = config.DiscoveryAgent
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
@@ -187,33 +216,58 @@ func TestAgentConfigOverride(t *testing.T) {
 		daName = "discovery"
 		taName = "traceability"
 	)
-	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
+
+	teams := []apic.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "v7",
+			Title:    "v7",
+		},
+	}
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
-				buf, _ := json.Marshal(discoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
-				buf, _ := json.Marshal(traceabilityAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+			buf, _ := json.Marshal(discoveryAgentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+			buf, _ := json.Marshal(traceabilityAgentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 
 	defer s.Close()
 
 	cfg := createCentralCfg(s.URL, "v7")
-
-	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"

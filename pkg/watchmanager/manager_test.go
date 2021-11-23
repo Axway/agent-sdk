@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// test register watch
 func TestWatchManager_RegisterWatch(t *testing.T) {
 	cfg := &Config{
 		Host:     "localhost",
@@ -18,7 +19,7 @@ func TestWatchManager_RegisterWatch(t *testing.T) {
 			return "abc", nil
 		},
 	}
-	wm, err := New(cfg, nil)
+	wm, err := New(cfg)
 	assert.Nil(t, err)
 	assert.NotNil(t, wm)
 

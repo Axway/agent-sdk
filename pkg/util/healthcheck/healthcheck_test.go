@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -123,37 +122,20 @@ func TestRunChecks(t *testing.T) {
 	assert.True(t, isReady, "isReady should have been true")
 }
 
-var port int
-
-func startHealthCheckServerForTest() {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		panic(err)
-	}
-	port = listener.Addr().(*net.TCPAddr).Port
-	go http.Serve(listener, nil)
-}
-
-func resetStartHealthCheckServerFunc() {
-	startHealthCheckServerFunc = startHealthCheckServer
-}
-
 func TestStatusAPIDoesNotAllowPrefixMatches(t *testing.T) {
-	startHealthCheckServerFunc = startHealthCheckServerForTest
-	defer resetStartHealthCheckServerFunc()
-
 	resetGlobalHealthChecker()
 	cfg := &corecfg.StatusConfiguration{
-		Port:                8989,  // We don't use this actual port in this test
+		Port:                8989, // We don't use this actual port in this test
 		HealthCheckPeriod:   3 * time.Minute,
 		HealthCheckInterval: 30 * time.Second,
 	}
 	SetStatusConfig(cfg)
-	HandleRequests()
+	server := &Server{}
+	server.HandleRequests()
 	client := http.DefaultClient
 	getResponseCode := func(path string) int {
 		// Call the status endpoint
-		url := fmt.Sprintf("http://localhost:%d%s", port, path)
+		url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, path)
 		resp, err := client.Get(url)
 		assert.Nil(t, err)
 		return resp.StatusCode

@@ -38,7 +38,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		TokenGetter: ta.GetToken,
 	}
 
-	w, err := wm.New(cfg, logger, watchOptions...)
+	w, err := wm.New(cfg, watchOptions...)
 	if err != nil {
 		return nil, err
 	}

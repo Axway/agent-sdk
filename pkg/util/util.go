@@ -14,6 +14,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// AmplifyCentral amplify central
+	AmplifyCentral = "Amplify Central"
+)
+
 // ComputeHash - get the hash of the byte array sent in
 func ComputeHash(data interface{}) (uint64, error) {
 	dataB, err := json.Marshal(data)

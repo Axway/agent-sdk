@@ -12,6 +12,11 @@ const (
 	traceSelector = "apic-agents-trace"
 )
 
+// Get returns the global logger
+func Get() *logrus.Logger {
+	return log
+}
+
 var isLogP bool
 
 //SetIsLogP -
