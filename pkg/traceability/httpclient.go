@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strconv"
 	"strings"
@@ -190,8 +191,50 @@ func (conn *Connection) request(body interface{}, headers map[string]string, eve
 	return conn.execRequest(urlStr, conn.encoder.Reader(), headers, eventTime)
 }
 
+func LogConnection(hostPort string) {
+	log.Debugf("starting to create conn %s", hostPort)
+}
+
+func LogDNSStart(info httptrace.DNSStartInfo) {
+	log.Debugf("starting to look up dns %+v", info)
+}
+
+func LogDNSDone(info httptrace.DNSDoneInfo) {
+	log.Debugf("done looking up dns %+v", info)
+}
+
+func LogConnectStart(network, addr string) {
+	log.Debugf("starting tcp connection %s, %s", network, addr)
+}
+
+func LogConnectDone(network, addr string, err error) {
+	log.Debugf("tcp connection created %s, %s error %+v", network, addr, err)
+}
+
+func LogWroteHeaderField(key string, value []string) {
+	log.Debugf("wrote header %s, %v", key, value)
+}
+
+func LogGotConn(info httptrace.GotConnInfo) {
+	log.Debugf("connection established %+v", info)
+}
+
 func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
+	clientTrace := &httptrace.ClientTrace{
+		GetConn:          LogConnection,
+		DNSStart:         LogDNSStart,
+		DNSDone:          LogDNSDone,
+		ConnectStart:     LogConnectStart,
+		ConnectDone:      LogConnectDone,
+		GotConn:          LogGotConn,
+		WroteHeaderField: LogWroteHeaderField,
+	}
+
 	req, err := http.NewRequest("POST", url, body)
+
+	clientTraceCtx := httptrace.WithClientTrace(req.Context(), clientTrace)
+	req = req.WithContext(clientTraceCtx)
+
 	if err != nil {
 		return 0, nil, err
 	}
