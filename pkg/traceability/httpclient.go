@@ -193,7 +193,7 @@ func (conn *Connection) request(body interface{}, headers map[string]string, eve
 
 func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
 	req, err := http.NewRequest("POST", url, body)
-	if log.IsHttpLogTraceEnabled() {
+	if log.IsHTTPLogTraceEnabled() {
 		req = log.NewRequestWithTraceContext(uuid.New().String(), req)
 	}
 

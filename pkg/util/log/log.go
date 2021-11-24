@@ -21,11 +21,11 @@ var networkTraceIgnoreHeaders = map[string]interface{}{
 	"Authorization":     true,
 }
 var isLogP bool
-var logHttpTrace bool
+var logHTTPTrace bool
 
 func init() {
 	networkTrace := os.Getenv("LOG_HTTP_TRACE")
-	logHttpTrace = (networkTrace == "true")
+	logHTTPTrace = (networkTrace == "true")
 }
 
 //SetIsLogP -
@@ -157,14 +157,16 @@ func DeprecationWarningDoc(old string, docRef string) {
 //////////////////////////////
 // HTTP client trace logging
 //////////////////////////////
-func IsHttpLogTraceEnabled() bool {
-	return logHttpTrace && log.GetLevel() == logrus.TraceLevel
+// IsHTTPLogTraceEnabled - http client trace logging
+func IsHTTPLogTraceEnabled() bool {
+	return logHTTPTrace && log.GetLevel() == logrus.TraceLevel
 }
 
 type httpTrace struct {
 	reqID string
 }
 
+// NewRequestWithTraceContext - New request trace context
 func NewRequestWithTraceContext(id string, req *http.Request) *http.Request {
 	trace := &httpTrace{reqID: id}
 	clientTrace := &httptrace.ClientTrace{

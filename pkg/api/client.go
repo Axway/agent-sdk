@@ -210,7 +210,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	// Prevent reuse of the tcp connection to the same host
 	req.Close = true
 
-	if log.IsHttpLogTraceEnabled() {
+	if log.IsHTTPLogTraceEnabled() {
 		req = log.NewRequestWithTraceContext(reqID, req)
 	}
 	res, err := c.httpClient.Do(req)
