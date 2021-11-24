@@ -157,7 +157,8 @@ func DeprecationWarningDoc(old string, docRef string) {
 //////////////////////////////
 // HTTP client trace logging
 //////////////////////////////
-// IsHTTPLogTraceEnabled - http client trace logging
+
+// IsHTTPLogTraceEnabled - ...
 func IsHTTPLogTraceEnabled() bool {
 	return logHTTPTrace && log.GetLevel() == logrus.TraceLevel
 }
