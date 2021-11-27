@@ -302,7 +302,7 @@ func (p *Pool) watchJobs() {
 		if p.GetStatus() == PoolStatusRunning.String() {
 			// The pool is running, wait for any signal that a job went down
 			<-p.stopJobsChan
-			log.Debugf("Job with id %v failed, stop all jobs", p.failedJob)
+			log.Debugf("Job %s (%v) failed, stop all jobs", p.cronJobs[p.failedJob].GetName(), p.failedJob)
 			p.stopAll()
 		} else {
 			if p.failedJob != "" {
