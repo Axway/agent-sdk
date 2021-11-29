@@ -29,11 +29,6 @@ type Pool struct {
 }
 
 func newPool() *Pool {
-	interval := defaultRetryInterval
-	if GetStatusConfig() != nil {
-		interval = GetStatusConfig().GetHealthCheckInterval()
-	}
-
 	newPool := Pool{
 		jobs:             make(map[string]JobExecution),
 		cronJobs:         make(map[string]JobExecution),
@@ -41,7 +36,7 @@ func newPool() *Pool {
 		failedJob:        "",
 		failJobChan:      make(chan string),
 		stopJobsChan:     make(chan bool),
-		backoff:          newBackoffTimeout(interval, 10*time.Minute, 2),
+		backoff:          newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2),
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
@@ -51,16 +46,6 @@ func newPool() *Pool {
 	go newPool.watchJobs()
 
 	return &newPool
-}
-
-// SetStatusConfig - Set the status config globally
-func SetStatusConfig(statusCfg corecfg.StatusConfig) {
-	statusConfig = statusCfg
-}
-
-// GetStatusConfig - Set the status config globally
-func GetStatusConfig() corecfg.StatusConfig {
-	return statusConfig
 }
 
 //recordJob - Adds a job to the jobs map

@@ -68,18 +68,23 @@ func (b *baseJob) executeCronJob() {
 	b.jobLock.Lock()
 	defer b.jobLock.Unlock()
 
-	// start a go routine to execute the job
-	executed := make(chan error)
-	go func() {
-		executed <- b.job.Execute()
-	}()
+	// execution time limit is set
+	if executionTimeLimit > 0 {
+		// start a go routine to execute the job
+		executed := make(chan error)
+		go func() {
+			executed <- b.job.Execute()
+		}()
 
-	// either the job finishes or a timeout is hit
-	select {
-	case err := <-executed:
-		b.err = err
-	case <-time.After(2 * time.Minute): // give a job 2 minutes to execute
-		b.err = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
+		// either the job finishes or a timeout is hit
+		select {
+		case err := <-executed:
+			b.err = err
+		case <-time.After(executionTimeLimit): // execute the job with a time limit
+			b.err = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
+		}
+	} else {
+		b.err = b.job.Execute()
 	}
 
 	if b.err != nil {

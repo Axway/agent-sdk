@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -259,6 +260,9 @@ func (c *agentRootCommand) initConfig() error {
 	if err != nil {
 		return err
 	}
+
+	jobs.UpdateDurations(c.statusCfg.GetHealthCheckInterval(), c.centralCfg.GetJobExecutionTimeout())
+
 	// Initialize Agent Config
 	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
