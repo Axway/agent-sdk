@@ -11,8 +11,8 @@ import (
 
 // Handler interface used by the EventManager to process events.
 type Handler interface {
-	// callback receives the type of the event (add, update, delete), and the resource on API Server, if it exists.
-	callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error
+	// handle receives the type of the event (add, update, delete), and the resource on API Server, if it exists.
+	handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
 type eventManagerFunc func(source chan *proto.Event, ri resourceGetter, cbs ...Handler) EventListener
@@ -94,8 +94,8 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
 func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
-	for _, cb := range em.handlers {
-		err := cb.callback(action, resource)
+	for _, h := range em.handlers {
+		err := h.handle(action, resource)
 		if err != nil {
 			log.Error(err)
 		}

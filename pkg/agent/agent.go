@@ -241,8 +241,6 @@ func startAPIServiceCache() {
 			return
 		}
 
-		checkStatus = stream.HealthCheck(manager)
-
 		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
 			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
@@ -260,6 +258,8 @@ func startAPIServiceCache() {
 			stream.NewCategoryHandler(agent.categoryMap),
 			// TODO: agents should be able to pass in their own handlers.
 		)
+
+		checkStatus = c.HealthCheck()
 
 		go func() {
 			err := c.Start()

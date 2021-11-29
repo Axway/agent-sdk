@@ -110,7 +110,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewAPISvcHandler(&cache.MockCache{})
 
-			err := handler.callback(tc.action, tc.resource)
+			err := handler.handle(tc.action, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -198,7 +198,7 @@ func TestNewCategoryHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewCategoryHandler(&cache.MockCache{})
 
-			err := handler.callback(tc.action, tc.resource)
+			err := handler.handle(tc.action, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -298,7 +298,7 @@ func TestNewInstanceHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewInstanceHandler(&cache.MockCache{})
 
-			err := handler.callback(tc.action, tc.resource)
+			err := handler.handle(tc.action, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {

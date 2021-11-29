@@ -26,7 +26,7 @@ func NewAPISvcHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h apiSvcHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (h apiSvcHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
 	if resource.Kind != apiService {
 		return nil
 	}
@@ -64,7 +64,7 @@ func NewInstanceHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h instanceHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (h instanceHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
 	if resource.Kind != apiServiceInstance {
 		return nil
 	}
@@ -92,7 +92,7 @@ func NewCategoryHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (c categoryHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (c categoryHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
 	if resource.Kind != category {
 		return nil
 	}

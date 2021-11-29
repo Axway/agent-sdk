@@ -131,12 +131,22 @@ func (m *watchManager) Close() {
 
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
-	for _, c := range m.clientMap {
+	ok := true
+
+	if len(m.clientMap) == 0 {
+		ok = false
+	}
+
+	for k, c := range m.clientMap {
 		if c.isRunning == false {
-			log.Debugf("watch client is not running")
-			return false
+			log.Debugf("watchmanager: watch client is not running. Removing client.")
+			ok = false
+			delete(m.clientMap, k)
 		}
 	}
 
-	return m.connection.GetState() == connectivity.Ready
+	log.Debugf("watchmanager: grpc connection state: %s", m.connection.GetState())
+	log.Debugf("watchmanager: connected clients: %d", len(m.clientMap))
+
+	return ok && m.connection.GetState() == connectivity.Ready
 }

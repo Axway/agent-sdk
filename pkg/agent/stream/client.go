@@ -69,19 +69,31 @@ func (sc *Client) Start() error {
 	return sc.newStreamService()
 }
 
-// HealthCheck wraps a Watch Manager to provide a health check endpoint on the connection to central.
-func HealthCheck(manager wm.Manager) hc.CheckStatus {
+// HealthCheck a health check endpoint for the connection to central.
+func (sc *Client) HealthCheck() hc.CheckStatus {
 	return func(_ string) *hc.Status {
-		ok := manager.Status()
+		ok := sc.manager.Status()
 		status := &hc.Status{
 			Result: hc.OK,
 		}
 
 		if !ok {
 			status.Result = hc.FAIL
-			status.Details = "the stream to central is not open"
+			status.Details = "grpc client is not connected to central"
+
+			log.Error("grpc-healthcheck: grpc client is not connected to central")
+			log.Info("grpc-healthcheck: creating new grpc client")
+
+			go func() {
+				err := sc.newStreamService()
+				if err != nil {
+					log.Errorf("grpc-healthcheck: failed to start the grpc client: %s", err)
+				}
+			}()
 		}
-		log.Infof("Stream status: %s", status.Result)
+
+		log.Debugf("grpc status: %s", status.Result)
+
 		return status
 	}
 }
