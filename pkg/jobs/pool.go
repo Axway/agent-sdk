@@ -52,6 +52,7 @@ func newPool() *Pool {
 func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
 	defer p.jobsMapLock.Unlock()
+	log.Tracef("registered job %s (%s)", job.GetName(), job.GetID())
 	p.jobs[job.GetID()] = job
 	return job.GetID()
 }
@@ -61,6 +62,7 @@ func (p *Pool) recordCronJob(job JobExecution) string {
 	p.cronJobsMapLock.Lock()
 	defer p.cronJobsMapLock.Unlock()
 	p.cronJobs[job.GetID()] = job
+	log.Tracef("added new cron job, now running %s cron jobs", len(p.cronJobs))
 	return p.recordJob(job)
 }
 
@@ -69,6 +71,7 @@ func (p *Pool) recordDetachedCronJob(job JobExecution) string {
 	p.detachedCronJobsMapLock.Lock()
 	defer p.detachedCronJobsMapLock.Unlock()
 	p.detachedCronJobs[job.GetID()] = job
+	log.Tracef("added new cron job, now running %s detached cron jobs", len(p.detachedCronJobs))
 	return p.recordJob(job)
 }
 
