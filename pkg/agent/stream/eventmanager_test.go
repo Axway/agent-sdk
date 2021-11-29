@@ -203,6 +203,6 @@ type mockHandler struct {
 	err error
 }
 
-func (m mockHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (m mockHandler) handle(_ proto.Event_Type, _ *apiv1.ResourceInstance) error {
 	return m.err
 }
