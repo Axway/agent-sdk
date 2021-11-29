@@ -259,7 +259,7 @@ func startAPIServiceCache() {
 			// TODO: agents should be able to pass in their own handlers.
 		)
 
-		checkStatus = c.HealthCheck()
+		checkStatus = stream.RestartStream(c.HealthCheck(), c)
 
 		go func() {
 			err := c.Start()

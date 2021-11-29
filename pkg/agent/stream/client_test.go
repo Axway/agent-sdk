@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -58,6 +60,10 @@ func TestClient_Start(t *testing.T) {
 	c.newEventManager = mockNewEventManager
 	err := c.Start()
 	assert.NotNil(t, err)
+
+	hc := c.HealthCheck()("")
+
+	assert.Equal(t, healthcheck.OK, hc.Result)
 }
 
 type mockManager struct {
