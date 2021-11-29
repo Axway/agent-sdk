@@ -37,6 +37,7 @@ type subscriptionManager struct {
 	apicClient          *ServiceClient
 	locklist            map[string]string // subscription items to skip because they are locked
 	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
+	jobID               string
 }
 
 // newSubscriptionManager - Creates a new subscription manager
@@ -51,7 +52,8 @@ func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	}
 
 	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
-		_, err := jobs.RegisterIntervalJobWithName(subscriptionMgr, apicClient.cfg.GetPollInterval(), "Subscription Manager")
+		var err error
+		subscriptionMgr.jobID, err = jobs.RegisterIntervalJobWithName(subscriptionMgr, apicClient.cfg.GetPollInterval(), "Subscription Manager")
 		if err != nil {
 			log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
 		}
@@ -240,6 +242,7 @@ func (sm *subscriptionManager) Stop() {
 		sm.publisher.Stop()
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
+		jobs.UnregisterJob(sm.jobID)
 	}
 }
 

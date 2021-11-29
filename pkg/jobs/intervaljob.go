@@ -19,14 +19,7 @@ type intervalJob struct {
 //newIntervalJob - creates an interval run job
 func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := intervalJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeInterval,
-			status:   JobStatusInitializing,
-			failChan: failJobChan,
-		},
+		createBaseJob(newJob, failJobChan, name, JobTypeInterval),
 		intervalJobProps{
 			interval: interval,
 			stopChan: make(chan bool),
@@ -77,5 +70,12 @@ func (b *intervalJob) start() {
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
 	b.stopLog()
-	b.stopChan <- true
+	if b.IsReady() {
+		log.Tracef("writing to %s stop channel", b.GetName())
+		b.stopChan <- true
+		log.Tracef("wrote to %s stop channel", b.GetName())
+	} else {
+		b.stopReadyChan <- nil
+	}
+	b.UnsetIsReady()
 }

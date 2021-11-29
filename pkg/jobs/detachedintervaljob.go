@@ -7,14 +7,7 @@ import (
 //newDetachedIntervalJob - creates an interval run job, detached from other cron jobs
 func newDetachedIntervalJob(newJob Job, interval time.Duration, name string) (JobExecution, error) {
 	thisJob := intervalJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeDetachedInterval,
-			status:   JobStatusInitializing,
-			failChan: nil,
-		},
+		createBaseJob(newJob, nil, name, JobTypeDetachedInterval),
 		intervalJobProps{
 			interval: interval,
 			stopChan: make(chan bool),

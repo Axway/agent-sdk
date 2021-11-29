@@ -42,6 +42,7 @@ func TestRetryJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterRetryJob(job, 3)
+	globalPool.jobs[jobID].(*retryJob).backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
 
 	time.Sleep(10 * time.Millisecond)
 	status := GetJobStatus(jobID)

@@ -16,6 +16,7 @@ type Job interface {
 type JobExecution interface {
 	GetStatus() JobStatus
 	GetID() string
+	GetName() string
 	Ready() bool
 	GetJob() JobExecution
 	Lock()
@@ -85,6 +86,7 @@ const (
 	JobTypeSingleRun        = "single run"
 	JobTypeRetry            = "retry"
 	JobTypeInterval         = "interval"
+	JobTypeChannel          = "channel"
 	JobTypeDetachedInterval = "detached interval"
 	JobTypeScheduled        = "scheduled"
 )
