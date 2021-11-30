@@ -74,13 +74,13 @@ func TestClient(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			hc := c.HealthCheck()("")
+			status := c.HealthCheck()("")
 
 			if tc.status == true {
-				assert.Equal(t, healthcheck.OK, hc.Result)
+				assert.Equal(t, healthcheck.OK, status.Result)
 
 			} else {
-				assert.Equal(t, healthcheck.FAIL, hc.Result)
+				assert.Equal(t, healthcheck.FAIL, status.Result)
 			}
 		})
 	}
