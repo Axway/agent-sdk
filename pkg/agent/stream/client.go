@@ -92,8 +92,8 @@ func (sc *Client) HealthCheck() hc.CheckStatus {
 	}
 }
 
-// RestartStream wraps a CheckStatus function and restarts the service if there is an error
-func RestartStream(health hc.CheckStatus, starter Starter) hc.CheckStatus {
+// Restart wraps a CheckStatus function and restarts the service if there is an error
+func Restart(health hc.CheckStatus, starter Starter) hc.CheckStatus {
 	return func(name string) *hc.Status {
 		status := health(name)
 
