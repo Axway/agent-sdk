@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
@@ -83,6 +84,30 @@ func TestClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRestart(t *testing.T) {
+	f := func(s hc.StatusLevel) hc.CheckStatus {
+		return func(string) *hc.Status {
+			return &hc.Status{
+				Result: s,
+			}
+		}
+	}
+
+	status := Restart(f(hc.OK), mockStarter{err: nil})("")
+	assert.Equal(t, hc.OK, status.Result)
+
+	status = Restart(f(hc.FAIL), mockStarter{err: fmt.Errorf("fail")})("")
+	assert.Equal(t, hc.FAIL, status.Result)
+}
+
+type mockStarter struct {
+	err error
+}
+
+func (m mockStarter) Start() error {
+	return m.err
 }
 
 type mockManager struct {

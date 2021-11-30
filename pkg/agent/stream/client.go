@@ -9,11 +9,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-type Starter interface {
+// starter interface for starting a service
+type starter interface {
 	Start() error
 }
 
-// Client a client for opening up a grpc stream, and handling the received events on the stream.
+// Client a client for creating a grpc stream, and handling the received events.
 type Client struct {
 	apiClient       api.Client
 	apisHost        string
@@ -58,12 +59,10 @@ func (sc *Client) newStreamService() error {
 		sc.handlers...,
 	)
 
-	id, err := sc.manager.RegisterWatch(sc.topic, events, errors)
+	_, err := sc.manager.RegisterWatch(sc.topic, events, errors)
 	if err != nil {
 		return err
 	}
-
-	log.Debugf("watch-controller subscription-id: %s", id)
 
 	return em.Listen()
 }
@@ -86,14 +85,14 @@ func (sc *Client) HealthCheck() hc.CheckStatus {
 			status.Details = "grpc client is not connected to central"
 		}
 
-		log.Debugf("grpc status: %s", status.Result)
+		log.Tracef("grpc status: %s", status.Result)
 
 		return status
 	}
 }
 
 // Restart wraps a CheckStatus function and restarts the service if there is an error
-func Restart(health hc.CheckStatus, starter Starter) hc.CheckStatus {
+func Restart(health hc.CheckStatus, starter starter) hc.CheckStatus {
 	return func(name string) *hc.Status {
 		status := health(name)
 

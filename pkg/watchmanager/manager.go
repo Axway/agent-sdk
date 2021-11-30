@@ -134,6 +134,7 @@ func (m *watchManager) Status() bool {
 	ok := true
 
 	if len(m.clientMap) == 0 {
+		log.Debug("watchmanager: no running grpc clients")
 		ok = false
 	}
 
@@ -145,8 +146,7 @@ func (m *watchManager) Status() bool {
 		}
 	}
 
-	log.Debugf("watchmanager: grpc connection state: %s", m.connection.GetState())
-	log.Debugf("watchmanager: connected clients: %d", len(m.clientMap))
+	log.Tracef("watchmanager: grpc connection state: %s", m.connection.GetState())
 
 	return ok && m.connection.GetState() == connectivity.Ready
 }
