@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -26,8 +27,8 @@ import (
 
 // Constants for cmd flags
 const (
-	PathConfigFlag        = "pathConfig"
-	BeatsPathConfigFlag   = "path.config"
+	pathConfigFlag        = "pathConfig"
+	beatsPathConfigFlag   = "path.config"
 	EnvFileFlag           = "envFile"
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 )
@@ -62,6 +63,7 @@ type agentRootCommand struct {
 	centralCfg        config.CentralConfig
 	agentCfg          interface{}
 	secretResolver    resolver.SecretResolver
+	initialized       bool
 }
 
 func init() {
@@ -89,6 +91,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
+		initialized:       false,
 	}
 
 	// use the description from the build if available
@@ -125,6 +128,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		initConfigHandler: initConfigHandler,
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
+		initialized:       false,
 	}
 
 	// use the description from the build if available
@@ -158,7 +162,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 // Add the command line properties for the logger and path config
 func (c *agentRootCommand) addBaseProps() {
-	c.props.AddStringPersistentFlag(PathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
+	c.props.AddStringPersistentFlag(pathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
 }
 
@@ -169,13 +173,21 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(config.ErrEnvConfigOverride, err.Error())
 	}
 
-	_, configFilePath := c.props.StringFlagValue(PathConfigFlag)
-	if c.agentType == config.TraceabilityAgent && configFilePath == "" {
-		_, configFilePath = c.props.StringFlagValue(BeatsPathConfigFlag)
+	_, agentConfigFilePath := c.props.StringFlagValue(pathConfigFlag)
+	_, beatsConfigFilePath := c.props.StringFlagValue(beatsPathConfigFlag)
+
+	// If the Agent pathConfig value is set and the beats path.config is not then use the pathConfig value for both
+	if beatsConfigFilePath == "" && agentConfigFilePath != "" {
+		c.props.SetStringFlagValue(beatsPathConfigFlag, agentConfigFilePath)
+		_, beatsConfigFilePath = c.props.StringFlagValue(beatsPathConfigFlag)
 	}
+
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
-	viper.AddConfigPath(configFilePath)
+
+	// Add both the agent pathConfig and beats path.config paths to the config path array
+	viper.AddConfigPath(agentConfigFilePath)
+	viper.AddConfigPath(beatsConfigFilePath)
 	viper.AddConfigPath(".")
 	viper.SetTypeByDefaultValue(true)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -256,6 +268,9 @@ func (c *agentRootCommand) initConfig() error {
 	if err != nil {
 		return err
 	}
+
+	jobs.UpdateDurations(c.statusCfg.GetHealthCheckInterval(), c.centralCfg.GetJobExecutionTimeout())
+
 	// Initialize Agent Config
 	c.agentCfg, err = c.initConfigHandler(c.centralCfg)
 	if err != nil {
@@ -275,11 +290,14 @@ func (c *agentRootCommand) initConfig() error {
 		}
 	}
 
-	// Start the initial and recurring version check jobs
-	startVersionCheckJobs(c.centralCfg)
-	// Init the healthcheck API
-	healthCheckServer := &hc.Server{}
-	healthCheckServer.HandleRequests()
+	if !c.initialized {
+		// Start the initial and recurring version check jobs
+		startVersionCheckJobs(c.centralCfg)
+		// Init the healthcheck API
+		healthCheckServer := &hc.Server{}
+		healthCheckServer.HandleRequests()
+	}
+	c.initialized = true
 	return nil
 }
 

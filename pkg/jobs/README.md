@@ -54,6 +54,15 @@ func (j *MyJob) Execute() error {
 
 ## Job types
 
+The section covers the following job types
+
+- [Single run jobs](#single-run-jobs)
+- [Retry jobs](#retry-jobs)
+- [Interval jobs](#interval-jobs)
+- [Detached interval jobs](#detached-interval-jobs)
+- [Scheduled jobs](#scheduled-jobs)
+- [Channel jobs](#channel-jobs)
+
 ### Single run jobs
 
 Single run jobs are used to run a specific task exactly once, regardless of pass or fail.
@@ -73,7 +82,7 @@ import (
 
 func main() {
   myJob := MyJob{}
-  jobID, err := jobs.RegisterSingleRunJob(myJob)
+  jobID, err := jobs.RegisterSingleRunJobWithName(myJob, "My Job")
   if err != nil {
     panic(err) // error registering the job
   }
@@ -101,7 +110,7 @@ import (
 func main() {
   myJob := MyJob{}
   retries := 3
-  jobID, err := jobs.RegisterRetryJob(myJob, retries)
+  jobID, err := jobs.RegisterRetryJobWithName(myJob, retries, "My Job")
   if err != nil {
     panic(err) // error registering the job
   }
@@ -129,13 +138,17 @@ import (
 func main() {
   myJob := MyJob{}
   interval := 30 * time.Second
-  jobID, err := jobs.RegisterIntervalJob(myJob, interval)
+  jobID, err := jobs.RegisterIntervalJobWithName(myJob, interval, "My Job")
   if err != nil {
     panic(err) // error registering the job
   }
   fmt.Println(GetJobStatus(jobID))
 }
 ```
+
+### Detached interval jobs
+
+Detached interval jobs are just like Interval jobs except they are not stopped with other jobs fail, they run independent of the job pool
 
 ### Scheduled jobs
 
@@ -195,7 +208,37 @@ import (
 func main() {
   myJob := MyJob{}
   runHalfPastHour := "0 30 * * * * *"
-  jobID, err := jobs.RegisterScheduledJob(myJob, runHalfPastHour)
+  jobID, err := jobs.RegisterScheduledJobWithName(myJob, runHalfPastHour, "My Job")
+  if err != nil {
+    panic(err) // error registering the job
+  }
+  fmt.Println(GetJobStatus(jobID))
+}
+```
+
+### Channel jobs
+
+Channel jobs are executed a single time via a go routine.  It is expected that the channel job runs forever.  
+
+To allow this job to be stopped and started the implementer will provide a channel that the jobs pool can use to tell the job to stop.
+
+#### Register Channel job
+
+Register the job and get its status
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/Axway/agent-sdk/pkg/jobs"
+)
+
+func main() {
+  myJob := MyJob{}
+  stopChannel := make(chan interface{})
+  jobID, err := jobs.RegisterChannelJobWithName(myJob, stopChannel, "My Job")
   if err != nil {
     panic(err) // error registering the job
   }

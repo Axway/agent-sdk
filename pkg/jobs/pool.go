@@ -23,25 +23,20 @@ type Pool struct {
 	poolStatusLock          sync.Mutex
 	failJobChan             chan string
 	stopJobsChan            chan bool
+	backoff                 *backoff
 	retryInterval           time.Duration
 	origRetryInterval       time.Duration
 }
 
 func newPool() *Pool {
-	interval := defaultRetryInterval
-	if GetStatusConfig() != nil {
-		interval = GetStatusConfig().GetHealthCheckInterval()
-	}
-
 	newPool := Pool{
-		jobs:              make(map[string]JobExecution),
-		cronJobs:          make(map[string]JobExecution),
-		detachedCronJobs:  make(map[string]JobExecution),
-		failedJob:         "",
-		failJobChan:       make(chan string),
-		stopJobsChan:      make(chan bool),
-		retryInterval:     interval,
-		origRetryInterval: interval,
+		jobs:             make(map[string]JobExecution),
+		cronJobs:         make(map[string]JobExecution),
+		detachedCronJobs: make(map[string]JobExecution),
+		failedJob:        "",
+		failJobChan:      make(chan string),
+		stopJobsChan:     make(chan bool),
+		backoff:          newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2),
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
@@ -53,20 +48,11 @@ func newPool() *Pool {
 	return &newPool
 }
 
-// SetStatusConfig - Set the status config globally
-func SetStatusConfig(statusCfg corecfg.StatusConfig) {
-	statusConfig = statusCfg
-}
-
-// GetStatusConfig - Set the status config globally
-func GetStatusConfig() corecfg.StatusConfig {
-	return statusConfig
-}
-
 //recordJob - Adds a job to the jobs map
 func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
 	defer p.jobsMapLock.Unlock()
+	log.Tracef("registered job %s (%s)", job.GetName(), job.GetID())
 	p.jobs[job.GetID()] = job
 	return job.GetID()
 }
@@ -76,6 +62,7 @@ func (p *Pool) recordCronJob(job JobExecution) string {
 	p.cronJobsMapLock.Lock()
 	defer p.cronJobsMapLock.Unlock()
 	p.cronJobs[job.GetID()] = job
+	log.Tracef("added new cron job, now running %v cron jobs", len(p.cronJobs))
 	return p.recordJob(job)
 }
 
@@ -84,6 +71,7 @@ func (p *Pool) recordDetachedCronJob(job JobExecution) string {
 	p.detachedCronJobsMapLock.Lock()
 	defer p.detachedCronJobsMapLock.Unlock()
 	p.detachedCronJobs[job.GetID()] = job
+	log.Tracef("added new cron job, now running %v detached cron jobs", len(p.detachedCronJobs))
 	return p.recordJob(job)
 }
 
@@ -134,6 +122,20 @@ func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, 
 //RegisterIntervalJobWithName - Runs a job with a specific interval between each run
 func (p *Pool) RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
 	job, err := newIntervalJob(newJob, interval, name, p.failJobChan)
+	if err != nil {
+		return "", err
+	}
+	return p.recordCronJob(job), nil
+}
+
+//RegisterChannelJob - Runs a job with a specific interval between each run
+func (p *Pool) RegisterChannelJob(newJob Job, stopChan chan interface{}) (string, error) {
+	return p.RegisterChannelJobWithName(newJob, stopChan, "")
+}
+
+//RegisterChannelJobWithName - Runs a job with a specific interval between each run
+func (p *Pool) RegisterChannelJobWithName(newJob Job, stopChan chan interface{}, name string) (string, error) {
+	job, err := newChannelJob(newJob, stopChan, name, p.failJobChan)
 	if err != nil {
 		return "", err
 	}
@@ -257,25 +259,16 @@ func (p *Pool) stopAll() {
 	}
 	p.cronJobsMapLock.Unlock()
 	for _, job := range mapCopy {
+		log.Tracef("starting to stop job %s", job.GetName())
 		job.stop()
 		if job.getConsecutiveFails() > maxErrors {
 			maxErrors = job.getConsecutiveFails()
 		}
+		log.Tracef("finished stopping job %s", job.GetName())
 	}
 	for i := 1; i < maxErrors; i++ {
-		p.backoffTimeout()
+		p.backoff.increaseTimeout()
 	}
-}
-
-func (p *Pool) backoffTimeout() {
-	p.retryInterval = p.retryInterval * 2
-	if p.retryInterval > 10*time.Minute {
-		p.retryInterval = 10 * time.Minute // max of 10 minute
-	}
-}
-
-func (p *Pool) resetTimeout() {
-	p.retryInterval = p.origRetryInterval
 }
 
 //catchFails - catches all writes to the failJobChan and only sends one stop signal
@@ -297,18 +290,18 @@ func (p *Pool) watchJobs() {
 		if p.GetStatus() == PoolStatusRunning.String() {
 			// The pool is running, wait for any signal that a job went down
 			<-p.stopJobsChan
-			log.Debugf("Job with id %v failed, stop all jobs", p.failedJob)
+			log.Debugf("Job %s (%v) failed, stop all jobs", p.cronJobs[p.failedJob].GetName(), p.failedJob)
 			p.stopAll()
 		} else {
 			if p.failedJob != "" {
-				log.Debugf("Pool not running, start all jobs in %v seconds", p.retryInterval.Seconds())
-				time.Sleep(p.retryInterval)
+				log.Debugf("Pool not running, start all jobs in %v seconds", p.backoff.getCurrentTimeout())
+				p.backoff.sleep()
 			}
 			// attempt to restart all jobs
 			if p.startAll() {
-				p.resetTimeout()
+				p.backoff.reset()
 			} else {
-				p.backoffTimeout()
+				p.backoff.increaseTimeout()
 			}
 		}
 	}

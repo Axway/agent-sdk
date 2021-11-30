@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"crypto/rsa"
@@ -97,6 +98,7 @@ func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID str
 			password:  password,
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -117,6 +119,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			password:  centralCfg.GetAuthConfig().GetKeyPassword(),
 		},
 		&tokenHolder{},
+		&sync.Mutex{},
 	}
 }
 
@@ -333,10 +336,9 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 
 	defer closeHelper(resp.Body)
 	if resp.StatusCode != 200 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Debugf("bad response from AxwayID: %s: %s", resp.Status, body)
-		}
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Debugf("bad response from AxwayID: %s: %s, request time : %s", resp.Status, body, startTime.String())
+		log.Debug("possibly a clock syncing issue. Please check NTP daemon, if being used, that is up and running correctly.")
 		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
 	}
 
@@ -374,6 +376,7 @@ type platformTokenGetter struct {
 	*platformTokenGenerator
 	*keyReader
 	*tokenHolder
+	getTokenMutex *sync.Mutex
 }
 
 // Close a PlatformTokenGetter
@@ -431,6 +434,10 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 
 // GetToken returns a token from cache if not expired or fetches a new token
 func (ptp *platformTokenGetter) GetToken() (string, error) {
+	// only one GetToken should execute at a time
+	ptp.getTokenMutex.Lock()
+	defer ptp.getTokenMutex.Unlock()
+
 	if token := ptp.getCachedToken(); token != "" {
 		return token, nil
 	}

@@ -219,6 +219,9 @@ func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.Conditi
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
 			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
 			if strings.ToLower(output) == "file" || strings.ToLower(output) == "both" {
+				if strings.ToLower(output) == "both" {
+					log.Warn("Traceability agent can only log to one output type, setting to file output")
+				}
 				return true
 			}
 			return false

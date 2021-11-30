@@ -1,0 +1,21 @@
+
+name: Release SDK
+
+# run this action if there is a push of a new tag of the form v.n.n.n on main branch
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Release SDK
+    defaults:
+      run:
+        working-directory: .
+    steps:
+    - uses: actions/checkout@v2
+    - name: Update version file
+      working-directory: ./build/scripts
+      # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+      run: ./promote.sh ${GITHUB_REF}   

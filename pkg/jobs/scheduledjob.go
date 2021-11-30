@@ -6,6 +6,7 @@ import (
 	"github.com/gorhill/cronexpr"
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type scheduleJobProps struct {
@@ -27,14 +28,7 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 	}
 
 	thisJob := scheduleJob{
-		baseJob{
-			id:       newUUID(),
-			name:     name,
-			job:      newJob,
-			jobType:  JobTypeScheduled,
-			status:   JobStatusInitializing,
-			failChan: failJobChan,
-		},
+		createBaseJob(newJob, failJobChan, name, JobTypeScheduled),
 		scheduleJobProps{
 			cronExp:  exp,
 			schedule: schedule,
@@ -80,5 +74,12 @@ func (b *scheduleJob) start() {
 //stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
 	b.stopLog()
-	b.stopChan <- true
+	if b.IsReady() {
+		log.Tracef("writing to %s stop channel", b.GetName())
+		b.stopChan <- true
+		log.Tracef("wrote to %s stop channel", b.GetName())
+	} else {
+		b.stopReadyChan <- nil
+	}
+	b.UnsetIsReady()
 }
