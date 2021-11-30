@@ -1,6 +1,7 @@
 package log
 
 import (
+	"flag"
 	"io"
 	"io/ioutil"
 	"os"
@@ -70,7 +71,8 @@ func (b *LoggerConfig) Apply() error {
 			log.AddHook(rotateFileHook)
 			logrus.StandardLogger().AddHook(rotateFileHook)
 		}
-		b.initialized = true
+		// Set to initialized if this is not a test
+		b.initialized = flag.Lookup("test.v") == nil
 	}
 
 	return nil
