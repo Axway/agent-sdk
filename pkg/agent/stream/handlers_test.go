@@ -20,7 +20,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 		action   proto.Event_Type
 	}{
 		{
-			name:     "should save a resource that has an externalAPIID attribute, and no externalAPIPrimaryKey attribute",
+			name:     "should save a ResourceClient that has an externalAPIID attribute, and no externalAPIPrimaryKey attribute",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			resource: &apiv1.ResourceInstance{
@@ -38,7 +38,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should save a resource that has an externalAPIID attribute, and has the externalAPIPrimaryKey attribute",
+			name:     "should save a ResourceClient that has an externalAPIID attribute, and has the externalAPIPrimaryKey attribute",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &apiv1.ResourceInstance{
@@ -90,7 +90,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should return nil when the resource kind is not an APIService",
+			name:     "should return nil when the ResourceClient kind is not an APIService",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			resource: &apiv1.ResourceInstance{
@@ -129,7 +129,7 @@ func TestNewCategoryHandler(t *testing.T) {
 		action   proto.Event_Type
 	}{
 		{
-			name:     "should save a category resource",
+			name:     "should save a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			resource: &apiv1.ResourceInstance{
@@ -145,7 +145,7 @@ func TestNewCategoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should update a category resource",
+			name:     "should update a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &apiv1.ResourceInstance{
@@ -161,7 +161,7 @@ func TestNewCategoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should delete a category resource",
+			name:     "should delete a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_DELETED,
 			resource: &apiv1.ResourceInstance{

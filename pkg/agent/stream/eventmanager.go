@@ -11,11 +11,11 @@ import (
 
 // Handler interface used by the EventManager to process events.
 type Handler interface {
-	// handle receives the type of the event (add, update, delete), and the resource on API Server, if it exists.
+	// handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
 	handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
-type eventManagerFunc func(source chan *proto.Event, ri resourceGetter, cbs ...Handler) EventListener
+type eventManagerFunc func(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) EventListener
 
 // EventListener starts the EventManager
 type EventListener interface {
@@ -25,17 +25,19 @@ type EventListener interface {
 
 // EventManager holds the various caches to save events into as they get written to the source channel.
 type EventManager struct {
-	getResource resourceGetter
+	getResource ResourceClient
 	handlers    []Handler
 	source      chan *proto.Event
+	stop        chan interface{}
 }
 
 // NewEventListener creates a new EventManager to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri resourceGetter, cbs ...Handler) EventListener {
+func NewEventListener(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) EventListener {
 	return &EventManager{
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
+		stop:        stop,
 	}
 }
 
@@ -51,20 +53,24 @@ func (em *EventManager) Listen() error {
 
 // start waits for an event on the channel and then attempts to pass the item to the handlers.
 func (em *EventManager) start() error {
-	event, ok := <-em.source
-	if !ok {
-		return fmt.Errorf("event source has been closed")
-	}
+	select {
+	case event, ok := <-em.source:
+		if !ok {
+			return fmt.Errorf("event source has been closed")
+		}
 
-	err := em.handleEvent(event)
-	if err != nil {
-		log.Errorf("event manager error: %s", err)
-	}
+		err := em.handleEvent(event)
+		if err != nil {
+			log.Errorf("event manager error: %s", err)
+		}
 
-	return nil
+		return nil
+	case <-em.stop:
+		return fmt.Errorf("event manager has been stopped")
+	}
 }
 
-// handleEvent fetches the api server resource based on the event self link, and then tries to save it to the cache.
+// handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventManager) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
@@ -77,7 +83,7 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 	)
 
 	if event.Type == proto.Event_CREATED || event.Type == proto.Event_UPDATED {
-		ri, err = em.getResource.get(event.Payload.Metadata.SelfLink)
+		ri, err = em.getResource.Get(event.Payload.Metadata.SelfLink)
 		if err != nil {
 			return err
 		}

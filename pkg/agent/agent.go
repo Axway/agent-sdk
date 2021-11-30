@@ -241,32 +241,45 @@ func startAPIServiceCache() {
 			return
 		}
 
+		// wt, err := stream.GetWatchTopic(
+		// 	cache.New(),
+		// 	stream.WatchTopicName(agent.cfg.GetEnvironmentName(), getAgentResourceType()),
+		// )
+
 		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
 			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
 			return
 		}
-		c := stream.NewClient(
+		ric := stream.NewResourceClient(
 			host+"/apis",
 			tenantID,
-			watchTopic,
+			api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 			agent.tokenRequester,
-			api.NewClient(agent.cfg.GetTLSConfig(), ""),
+		)
+
+		stopCh := make(chan interface{})
+
+		c := stream.NewClient(
+			watchTopic,
 			manager,
+			ric,
+			stopCh,
 			stream.NewAPISvcHandler(agent.apiMap),
 			stream.NewInstanceHandler(cache.New()),
 			stream.NewCategoryHandler(agent.categoryMap),
 			// TODO: agents should be able to pass in their own handlers.
 		)
 
-		checkStatus = stream.Restart(c.HealthCheck(), c)
+		checkStatus = c.HealthCheck()
 
-		go func() {
-			err := c.Start()
-			if err != nil {
-				log.Errorf("failed to start the grpc client: %s", err)
-			}
-		}()
+		streamJob := stream.NewClientStreamJob(c, hc.GetStatus)
+		_, err = jobs.RegisterChannelJob(streamJob, stopCh)
+
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 
 	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)

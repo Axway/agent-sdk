@@ -1,10 +1,10 @@
 package stream
 
 import (
-	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"fmt"
+
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -16,46 +16,39 @@ type starter interface {
 
 // Client a client for creating a grpc stream, and handling the received events.
 type Client struct {
-	apiClient       api.Client
-	apisHost        string
 	handlers        []Handler
 	manager         wm.Manager
 	newEventManager eventManagerFunc
-	tenantID        string
-	tokenGetter     auth.TokenGetter
+	resourceClient  ResourceClient
 	topic           string
+	stopCh          chan interface{}
 }
 
 // NewClient creates a Client
 func NewClient(
-	host string,
-	tenantID string,
 	topic string,
-	tokenGetter auth.TokenGetter,
-	apiClient api.Client,
 	manager wm.Manager,
+	rc ResourceClient,
+	stopCh chan interface{},
 	handlers ...Handler,
 ) *Client {
 	return &Client{
-		apiClient:       apiClient,
 		handlers:        handlers,
-		apisHost:        host,
-		newEventManager: NewEventListener,
-		tenantID:        tenantID,
-		tokenGetter:     tokenGetter,
-		topic:           topic,
 		manager:         manager,
+		newEventManager: NewEventListener,
+		resourceClient:  rc,
+		stopCh:          stopCh,
+		topic:           topic,
 	}
 }
 
 func (sc *Client) newStreamService() error {
-	ric := newResourceClient(sc.apisHost, sc.tenantID, sc.apiClient, sc.tokenGetter)
-
 	events, errors := make(chan *proto.Event), make(chan error)
 
 	em := sc.newEventManager(
 		events,
-		ric,
+		sc.stopCh,
+		sc.resourceClient,
 		sc.handlers...,
 	)
 
@@ -85,27 +78,41 @@ func (sc *Client) HealthCheck() hc.CheckStatus {
 			status.Details = "grpc client is not connected to central"
 		}
 
-		log.Tracef("grpc status: %s", status.Result)
-
 		return status
 	}
 }
 
-// Restart wraps a CheckStatus function and restarts the service if there is an error
-func Restart(health hc.CheckStatus, starter starter) hc.CheckStatus {
-	return func(name string) *hc.Status {
-		status := health(name)
-
-		if status.Result != hc.OK {
-			go func() {
-				log.Info("grpc-healthcheck: creating new grpc client")
-				err := starter.Start()
-				if err != nil {
-					log.Errorf("grpc-healthcheck: failed to start the grpc client: %s", err)
-				}
-			}()
-		}
-
-		return status
+// NewClientStreamJob creates a job for the stream client
+func NewClientStreamJob(starter starter, getHealthStatus hc.GetStatusLevel) jobs.Job {
+	return &ClientStreamJob{
+		starter:         starter,
+		getHealthStatus: getHealthStatus,
 	}
+}
+
+// ClientStreamJob job wrapper for a client that starts a stream and an event manager.
+type ClientStreamJob struct {
+	starter         starter
+	getHealthStatus hc.GetStatusLevel
+}
+
+// Execute starts the stream
+func (j ClientStreamJob) Execute() error {
+	return j.starter.Start()
+}
+
+// Status gets the status
+func (j ClientStreamJob) Status() error {
+	status := j.getHealthStatus("central")
+
+	if status != hc.OK {
+		return fmt.Errorf("central is in %s state", status)
+	}
+
+	return nil
+}
+
+// Ready checks if the job to start the stream is ready
+func (j ClientStreamJob) Ready() bool {
+	return true
 }

@@ -11,15 +11,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-var apisHost = "https://tjohnson.dev.ampc.axwaytest.net/apis"
-var tenantID = "426937327920148"
-
 func TestEventManager_start(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
 		events   chan *proto.Event
-		ri       resourceGetter
+		ri       ResourceClient
 		handler  Handler
 	}{
 		{
@@ -37,7 +34,7 @@ func TestEventManager_start(t *testing.T) {
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should not return an error, even if the request for a resource fails",
+			name:     "should not return an error, even if the request for a ResourceClient fails",
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{err: fmt.Errorf("failed")},
@@ -54,7 +51,7 @@ func TestEventManager_start(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, make(chan interface{}), tc.ri, tc.handler)
 			em := listener.(*EventManager)
 
 			errCh := make(chan error)
@@ -86,7 +83,7 @@ func TestEventManager_start(t *testing.T) {
 	}
 
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
+	listener := NewEventListener(events, make(chan interface{}), &mockRI{}, &mockHandler{})
 	em := listener.(*EventManager)
 
 	errCh := make(chan error)
@@ -112,7 +109,7 @@ func TestEventManager_handleEvent(t *testing.T) {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		ri       resourceGetter
+		ri       ResourceClient
 		handler  Handler
 	}{
 		{
@@ -123,21 +120,21 @@ func TestEventManager_handleEvent(t *testing.T) {
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should return an error when the request to get a resource fails",
+			name:     "should return an error when the request to get a ResourceClient fails",
 			event:    proto.Event_CREATED,
 			hasError: true,
 			ri:       &mockRI{err: fmt.Errorf("err")},
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should get a resource, and process a create event",
+			name:     "should get a ResourceClient, and process a create event",
 			event:    proto.Event_CREATED,
 			hasError: false,
 			ri:       &mockRI{},
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should get a resource, and process an update event",
+			name:     "should get a ResourceClient, and process an update event",
 			event:    proto.Event_UPDATED,
 			hasError: false,
 			ri:       &mockRI{},
@@ -156,7 +153,7 @@ func TestEventManager_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), make(chan interface{}), tc.ri, tc.handler)
 			em := listener.(*EventManager)
 
 			err := em.handleEvent(event)
@@ -183,7 +180,7 @@ type mockRI struct {
 	err error
 }
 
-func (m mockRI) get(_ string) (*apiv1.ResourceInstance, error) {
+func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{

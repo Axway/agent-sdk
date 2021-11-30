@@ -33,7 +33,7 @@ func (h apiSvcHandler) handle(action proto.Event_Type, resource *apiv1.ResourceI
 
 	id, ok := resource.Attributes[apic.AttrExternalAPIID]
 	if !ok {
-		return fmt.Errorf("%s not found on resource api service %s", apic.AttrExternalAPIID, resource.Name)
+		return fmt.Errorf("%s not found on ResourceClient api service %s", apic.AttrExternalAPIID, resource.Name)
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {

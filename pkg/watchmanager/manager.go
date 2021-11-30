@@ -146,7 +146,8 @@ func (m *watchManager) Status() bool {
 		}
 	}
 
-	log.Tracef("watchmanager: grpc connection state: %s", m.connection.GetState())
+	log.Debugf("watchmanager: grpc connection state: %s", m.connection.GetState())
+	log.Debugf("Total clients: %d", len(m.clientMap))
 
 	return ok && m.connection.GetState() == connectivity.Ready
 }
