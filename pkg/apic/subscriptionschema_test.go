@@ -43,13 +43,18 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	schemaExists := false
 	schemaCreated := false
 	schemaUpdate := false
+	existingWebhook := "webhook1"
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		b := []byte("")
 
 		if strings.Contains(req.RequestURI, "/consumersubscriptiondefs/"+apiKeySchema.GetSubscriptionName()) {
+			existingSchema := v1alpha1.ConsumerSubscriptionDefinition{
+				Spec: v1alpha1.ConsumerSubscriptionDefinitionSpec{
+					Webhooks: []string{existingWebhook},
+				},
+			}
 			if req.Method == http.MethodGet {
 				if schemaExists {
-					existingSchema := v1alpha1.ConsumerSubscriptionDefinition{}
 					b, _ = json.Marshal(existingSchema)
 				} else {
 					rw.WriteHeader(http.StatusNotFound)
@@ -58,14 +63,14 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 				// PUT call
 				schemaUpdate = true
 				rw.WriteHeader(http.StatusOK)
-				spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(apiKeySchema)
+				spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(&existingSchema, apiKeySchema)
 				b, _ = serviceClient.marshalSubscriptionDefinition(apiKeySchema.GetSubscriptionName(), spec)
 			}
 		}
 		if req.Method == http.MethodPost && strings.Contains(req.RequestURI, "/consumersubscriptiondefs") {
 			schemaCreated = true
 			rw.WriteHeader(http.StatusCreated)
-			spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(apiKeySchema)
+			spec, _ := serviceClient.prepareSubscriptionDefinitionSpec(nil, apiKeySchema)
 			b, _ = serviceClient.marshalSubscriptionDefinition(apiKeySchema.GetSubscriptionName(), spec)
 		}
 		// Send response to be tested
@@ -80,6 +85,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	assert.Nil(t, err)
 	cachedSchema, err := serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
 	assert.NotNil(t, cachedSchema)
+	assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
 	assert.True(t, schemaCreated)
 	assert.False(t, schemaUpdate)
 
@@ -89,6 +95,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.Nil(t, err)
 	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
 	assert.NotNil(t, cachedSchema)
 	assert.False(t, schemaCreated)
 	assert.False(t, schemaUpdate)
@@ -96,6 +103,8 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, true)
 	assert.Nil(t, err)
 	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
+	assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
 	assert.NotNil(t, cachedSchema)
 	assert.False(t, schemaCreated)
 	assert.True(t, schemaUpdate)

@@ -34,9 +34,6 @@ var periodicStatusUpdate *agentStatusUpdate
 var immediateStatusUpdate *agentStatusUpdate
 
 func (su *agentStatusUpdate) Ready() bool {
-	if runStatusUpdateCheck() != nil {
-		return false
-	}
 	// Do not start until status will be running
 	status := su.getCombinedStatus()
 	if status != AgentRunning && su.immediateStatusChange {
@@ -51,24 +48,17 @@ func (su *agentStatusUpdate) Ready() bool {
 
 func (su *agentStatusUpdate) Status() error {
 	// error out if the agent name does not exist
-	err := runStatusUpdateCheck()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
 func (su *agentStatusUpdate) Execute() error {
 	// only one status update should execute at a time
+	log.Tracef("get status update lock %s", su.typeOfStatusUpdate)
 	updateStatusMutex.Lock()
-	defer updateStatusMutex.Unlock()
-
-	// error out if the agent name does not exist
-	err := runStatusUpdateCheck()
-	if err != nil {
-		log.Error(errors.ErrPeriodicCheck.FormatError("periodic status updater"))
-		return err
-	}
+	defer func() {
+		log.Tracef("return status update lock %s", su.typeOfStatusUpdate)
+		updateStatusMutex.Unlock()
+	}()
 
 	// get the status from the health check and jobs
 	status := su.getCombinedStatus()
@@ -92,6 +82,10 @@ func (su *agentStatusUpdate) Execute() error {
 
 // StartAgentStatusUpdate - starts 2 separate jobs that runs the periodic status updates and immediate status updates
 func StartAgentStatusUpdate() {
+	if err := runStatusUpdateCheck(); err != nil {
+		log.Errorf("not starting status update jobs: %s", err)
+		return
+	}
 	startPeriodicStatusUpdate()
 	startImmediateStatusUpdate()
 }

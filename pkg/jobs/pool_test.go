@@ -9,6 +9,7 @@ import (
 
 func TestPoolCoordination(t *testing.T) {
 	testPool := newPool() // create a new pool for this test to not interfere with other tests
+	testPool.backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
 	testPool.retryInterval = time.Second
 	failJob := &intervalJobImpl{
 		name:      "FailedIntervalJob",
@@ -33,6 +34,14 @@ func TestPoolCoordination(t *testing.T) {
 	}
 	testPool.RegisterIntervalJob(iJob, 10*time.Millisecond)
 
+	cJob := &channelJobImpl{
+		name:     "ChannelJob",
+		runTime:  time.Millisecond,
+		ready:    true,
+		stopChan: make(chan interface{}),
+	}
+	testPool.RegisterChannelJob(cJob, cJob.stopChan)
+
 	diJob := &intervalJobImpl{
 		name:    "DetachedIntervalJob",
 		runTime: time.Millisecond,
@@ -56,18 +65,21 @@ func TestPoolCoordination(t *testing.T) {
 			failJob.executions = 0
 			assert.GreaterOrEqual(t, diJob.executions, 1, "The detached interval job did not run at least once before other jobs were stopped")
 			diJob.executions = 0
+			assert.GreaterOrEqual(t, cJob.executions, 1, "The channel job did not run at least once before failure")
+			iJob.executions = 0
 		}
 		if wasStopped && testPool.GetStatus() == PoolStatusRunning.String() {
 			stoppedThenStarted = true
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	time.Sleep(time.Second) // give enough time for scheduled job to run at least once more
+	time.Sleep(2 * time.Second) // give enough time for scheduled job to run at least once more
 
 	assert.GreaterOrEqual(t, sJob.executions, 1, "The scheduled job did not run at least once after failure")
 	assert.GreaterOrEqual(t, iJob.executions, 1, "The interval job did not run at least once after failure")
 	assert.GreaterOrEqual(t, failJob.executions, 1, "The failing interval did not run at least once after failure")
 	assert.GreaterOrEqual(t, diJob.executions, 1, "The detached interval did not run at least once after failure")
+	assert.GreaterOrEqual(t, cJob.executions, 1, "The channel did not run at least once after failure")
 	assert.True(t, wasStopped, "The pool status never showed as stopped")
 	assert.True(t, stoppedThenStarted, "The pool status never restarted after it was stopped")
 	assert.True(t, failJob.wasFailed, "The fail job never reported as failed")
