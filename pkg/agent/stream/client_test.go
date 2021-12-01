@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/stretchr/testify/assert"
@@ -15,28 +13,39 @@ var topic = "/management/v1alpha1/watchtopics/mock-watch-topic"
 
 func TestClient(t *testing.T) {
 	tests := []struct {
-		name      string
-		statusErr bool
-		err       error
-		hasErr    bool
+		name        string
+		statusErr   bool
+		err         error
+		hasErr      bool
+		listenerErr error
 	}{
 		{
-			name:      "should return an OK status on the healthcheck",
-			statusErr: true,
-			err:       nil,
-			hasErr:    false,
+			name:        "should not return an error when calling HealthCheck",
+			statusErr:   true,
+			err:         nil,
+			hasErr:      false,
+			listenerErr: nil,
 		},
 		{
-			name:      "should return a FAIL status on the healthcheck",
-			statusErr: false,
-			err:       nil,
-			hasErr:    false,
+			name:        "should return an error when calling HealthCheck",
+			statusErr:   false,
+			err:         nil,
+			hasErr:      false,
+			listenerErr: nil,
 		},
 		{
-			name:      "should handle an error from the manager",
-			statusErr: true,
-			err:       fmt.Errorf("error"),
-			hasErr:    true,
+			name:        "should handle an error from the manager",
+			statusErr:   true,
+			err:         fmt.Errorf("error"),
+			hasErr:      true,
+			listenerErr: nil,
+		},
+		{
+			name:        "should handle an error from the listener",
+			statusErr:   true,
+			err:         nil,
+			hasErr:      true,
+			listenerErr: fmt.Errorf("error"),
 		},
 	}
 
@@ -48,7 +57,9 @@ func TestClient(t *testing.T) {
 					err:    tc.err,
 					status: tc.statusErr,
 				},
-				&mockListener{},
+				&mockListener{
+					err: tc.listenerErr,
+				},
 				make(chan *proto.Event),
 			)
 
@@ -68,6 +79,28 @@ func TestClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClientStreamJob(t *testing.T) {
+	s := &mockStreamer{}
+	j := NewClientStreamJob(s)
+
+	assert.Nil(t, j.Status())
+	assert.True(t, j.Ready())
+	assert.Nil(t, j.Execute())
+}
+
+type mockStreamer struct {
+	hcErr    error
+	startErr error
+}
+
+func (m mockStreamer) Start() error {
+	return m.startErr
+}
+
+func (m mockStreamer) HealthCheck() error {
+	return m.hcErr
 }
 
 type mockManager struct {
@@ -96,20 +129,10 @@ func (m mockEventManager) Listen() error {
 	return nil
 }
 
-func mockNewEventManager(_ chan *proto.Event, _ chan interface{}, _ ResourceClient, _ ...Handler) Listener {
-	return &mockEventManager{}
-}
-
-type mockResourceClient struct {
-}
-
-func (m mockResourceClient) Get(_ string) (*apiv1.ResourceInstance, error) {
-	return nil, nil
-}
-
 type mockListener struct {
+	err error
 }
 
 func (m mockListener) Listen() error {
-	return nil
+	return m.err
 }

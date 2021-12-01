@@ -134,7 +134,6 @@ func (m *watchManager) Status() bool {
 	ok := true
 
 	if len(m.clientMap) == 0 {
-		log.Debug("watchmanager: no running grpc clients")
 		ok = false
 	}
 

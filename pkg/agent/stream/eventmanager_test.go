@@ -13,11 +13,13 @@ import (
 
 func TestEventListener_start(t *testing.T) {
 	tests := []struct {
-		name     string
-		hasError bool
-		events   chan *proto.Event
-		ri       ResourceClient
-		handler  Handler
+		name      string
+		hasError  bool
+		events    chan *proto.Event
+		ri        ResourceClient
+		handler   Handler
+		stop      chan interface{}
+		writeStop bool
 	}{
 		{
 			name:     "should start without an error",
@@ -25,6 +27,7 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{},
+			stop:     make(chan interface{}),
 		},
 		{
 			name:     "should return an error when the event channel is closed",
@@ -32,6 +35,16 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{},
+			stop:     make(chan interface{}),
+		},
+		{
+			name:      "should return an error after receiving a stop signal",
+			hasError:  true,
+			events:    make(chan *proto.Event),
+			ri:        &mockRI{},
+			handler:   mockHandler{},
+			stop:      make(chan interface{}),
+			writeStop: true,
 		},
 		{
 			name:     "should not return an error, even if the request for a ResourceClient fails",
@@ -39,6 +52,7 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{err: fmt.Errorf("failed")},
 			handler:  mockHandler{},
+			stop:     make(chan interface{}),
 		},
 		{
 			name:     "should not return an error, even if a handler fails to process an event",
@@ -46,18 +60,23 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{err: fmt.Errorf("failed")},
+			stop:     make(chan interface{}),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, make(chan interface{}), tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, tc.stop, tc.ri, tc.handler)
 
 			errCh := make(chan error)
 			go func() {
 				err := listener.start()
 				errCh <- err
 			}()
+
+			if tc.writeStop {
+				tc.stop <- nil
+			}
 
 			if tc.hasError == false {
 				tc.events <- &proto.Event{
@@ -81,25 +100,6 @@ func TestEventListener_start(t *testing.T) {
 		})
 	}
 
-	events := make(chan *proto.Event)
-	listener := NewEventListener(events, make(chan interface{}), &mockRI{}, &mockHandler{})
-
-	errCh := make(chan error)
-	go func() {
-		err := listener.start()
-		errCh <- err
-	}()
-
-	events <- &proto.Event{
-		Type: proto.Event_CREATED,
-		Payload: &proto.ResourceInstance{
-			Metadata: &proto.Metadata{
-				SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
-			},
-		},
-	}
-	err := <-errCh
-	assert.Nil(t, err)
 }
 
 func TestEventListener_handleEvent(t *testing.T) {
