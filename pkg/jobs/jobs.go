@@ -5,16 +5,19 @@ import "time"
 //globalPool - the default job pool
 var globalPool *Pool
 var executionTimeLimit time.Duration
+var statusCheckInterval time.Duration
 
 func init() {
 	globalPool = newPool()
 	executionTimeLimit = 5 * time.Minute
+	statusCheckInterval = defaultRetryInterval
 }
 
 // UpdateDurations - updates settings int he jobs library
 func UpdateDurations(retryInterval time.Duration, executionTimeout time.Duration) {
 	executionTimeLimit = executionTimeout
 	globalPool.backoff = newBackoffTimeout(retryInterval, 10*time.Minute, 2)
+	statusCheckInterval = retryInterval
 }
 
 //RegisterSingleRunJob - Runs a single run job in the globalPool
