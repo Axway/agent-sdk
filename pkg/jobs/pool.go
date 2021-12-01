@@ -24,8 +24,6 @@ type Pool struct {
 	failJobChan             chan string
 	stopJobsChan            chan bool
 	backoff                 *backoff
-	retryInterval           time.Duration
-	origRetryInterval       time.Duration
 }
 
 func newPool() *Pool {
@@ -40,8 +38,8 @@ func newPool() *Pool {
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
-	// start routine that catches all failures whenever written and acts on first
-	go newPool.catchFails()
+	// start routine to check all job status funcs and catch any failures
+	go newPool.jobChecker()
 	// start the pool watcher
 	go newPool.watchJobs()
 
@@ -271,14 +269,23 @@ func (p *Pool) stopAll() {
 	}
 }
 
-//catchFails - catches all writes to the failJobChan and only sends one stop signal
-func (p *Pool) catchFails() {
+//jobChecker - regularly checks the status of cron jobs, stopping jobs if error returned
+func (p *Pool) jobChecker() {
+	ticker := time.NewTicker(statusCheckInterval)
+	defer ticker.Stop()
 	for {
-		// continue rading all failed jobs, only stop the first time
-		failedJob := <-p.failJobChan
-		if p.GetStatus() == PoolStatusRunning.String() {
-			p.failedJob = failedJob // this is the job for the current fail loop
-			p.stopJobsChan <- true
+		select {
+		case <-ticker.C:
+			go func() {
+				for _, job := range p.cronJobs {
+					job.updateStatus()
+				}
+			}()
+		case failedJob := <-p.failJobChan:
+			if p.GetStatus() == PoolStatusRunning.String() {
+				p.failedJob = failedJob // this is the job for the current fail loop
+				p.stopJobsChan <- true
+			}
 		}
 	}
 }

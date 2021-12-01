@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/sirupsen/logrus"
 
@@ -213,12 +215,11 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 }
 
 func startAPIServiceCache() {
-	var checkStatus hc.CheckStatus
-
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false)
 	if !agent.cfg.IsUsingGRPC() {
-		checkStatus = agent.apicClient.Healthcheck
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
+
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
@@ -248,7 +249,7 @@ func startAPIServiceCache() {
 
 		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
-			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
+			log.Errorf("watch topic not provided")
 			return
 		}
 		ric := stream.NewResourceClient(
@@ -258,23 +259,26 @@ func startAPIServiceCache() {
 			agent.tokenRequester,
 		)
 
-		stopCh := make(chan interface{})
+		stopCh, events := make(chan interface{}), make(chan *proto.Event)
 
-		c := stream.NewClient(
-			watchTopic,
-			manager,
-			ric,
+		eventListener := stream.NewEventListener(
+			events,
 			stopCh,
+			ric,
 			stream.NewAPISvcHandler(agent.apiMap),
 			stream.NewInstanceHandler(cache.New()),
 			stream.NewCategoryHandler(agent.categoryMap),
-			// TODO: agents should be able to pass in their own handlers.
 		)
 
-		checkStatus = c.HealthCheck()
+		streamClient := stream.NewClient(
+			watchTopic,
+			manager,
+			eventListener,
+			events,
+		)
 
-		streamJob := stream.NewClientStreamJob(c, hc.GetStatus)
-		_, err = jobs.RegisterChannelJob(streamJob, stopCh)
+		streamJob := stream.NewClientStreamJob(streamClient)
+		_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
 
 		if err != nil {
 			log.Error(err)
@@ -282,7 +286,6 @@ func startAPIServiceCache() {
 		}
 	}
 
-	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)
 }
 
 func isRunningInDockerContainer() bool {

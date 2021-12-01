@@ -83,12 +83,12 @@ func (sm *subscriptionManager) RegisterValidator(validator SubscriptionValidator
 }
 
 func (sm *subscriptionManager) Ready() bool {
-	return sm.isRunning
+	return true
 }
 
 func (sm *subscriptionManager) Status() error {
 	if !sm.isRunning {
-		return ErrSubscriptionManagerDown
+		return nil
 	}
 	return nil
 }

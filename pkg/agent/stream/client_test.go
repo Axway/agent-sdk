@@ -6,40 +6,37 @@ import (
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
 var topic = "/management/v1alpha1/watchtopics/mock-watch-topic"
 
 func TestClient(t *testing.T) {
 	tests := []struct {
-		name   string
-		status bool
-		err    error
-		hasErr bool
+		name      string
+		statusErr bool
+		err       error
+		hasErr    bool
 	}{
 		{
-			name:   "should return an OK status on the healthcheck",
-			status: true,
-			err:    nil,
-			hasErr: false,
+			name:      "should return an OK status on the healthcheck",
+			statusErr: true,
+			err:       nil,
+			hasErr:    false,
 		},
 		{
-			name:   "should return a FAIL status on the healthcheck",
-			status: false,
-			err:    nil,
-			hasErr: false,
+			name:      "should return a FAIL status on the healthcheck",
+			statusErr: false,
+			err:       nil,
+			hasErr:    false,
 		},
 		{
-			name:   "should handle an error from the manager",
-			status: true,
-			err:    fmt.Errorf("error"),
-			hasErr: true,
+			name:      "should handle an error from the manager",
+			statusErr: true,
+			err:       fmt.Errorf("error"),
+			hasErr:    true,
 		},
 	}
 
@@ -49,15 +46,12 @@ func TestClient(t *testing.T) {
 				topic,
 				&mockManager{
 					err:    tc.err,
-					status: tc.status,
+					status: tc.statusErr,
 				},
-				&mockResourceClient{},
-				make(chan interface{}),
-				NewAPISvcHandler(cache.New()),
-				NewInstanceHandler(cache.New()),
-				NewCategoryHandler(cache.New()),
+				&mockListener{},
+				make(chan *proto.Event),
 			)
-			c.newEventManager = mockNewEventManager
+
 			err := c.Start()
 			if tc.hasErr {
 				assert.NotNil(t, err)
@@ -65,12 +59,12 @@ func TestClient(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			status := c.HealthCheck()("")
+			statusErr := c.HealthCheck()
 
-			if tc.status == true {
-				assert.Equal(t, healthcheck.OK, status.Result)
+			if tc.statusErr {
+				assert.Nil(t, statusErr)
 			} else {
-				assert.Equal(t, healthcheck.FAIL, status.Result)
+				assert.NotNil(t, statusErr)
 			}
 		})
 	}
@@ -102,7 +96,7 @@ func (m mockEventManager) Listen() error {
 	return nil
 }
 
-func mockNewEventManager(_ chan *proto.Event, _ chan interface{}, _ ResourceClient, _ ...Handler) EventListener {
+func mockNewEventManager(_ chan *proto.Event, _ chan interface{}, _ ResourceClient, _ ...Handler) Listener {
 	return &mockEventManager{}
 }
 
@@ -111,4 +105,11 @@ type mockResourceClient struct {
 
 func (m mockResourceClient) Get(_ string) (*apiv1.ResourceInstance, error) {
 	return nil, nil
+}
+
+type mockListener struct {
+}
+
+func (m mockListener) Listen() error {
+	return nil
 }

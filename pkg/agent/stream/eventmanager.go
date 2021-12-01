@@ -9,31 +9,29 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-// Handler interface used by the EventManager to process events.
+// Handler interface used by the EventListener to process events.
 type Handler interface {
 	// handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
 	handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error
 }
 
-type eventManagerFunc func(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) EventListener
-
-// EventListener starts the EventManager
-type EventListener interface {
+// Listener starts the EventListener
+type Listener interface {
 	// Listen starts listening for events
 	Listen() error
 }
 
-// EventManager holds the various caches to save events into as they get written to the source channel.
-type EventManager struct {
+// EventListener holds the various caches to save events into as they get written to the source channel.
+type EventListener struct {
 	getResource ResourceClient
 	handlers    []Handler
 	source      chan *proto.Event
 	stop        chan interface{}
 }
 
-// NewEventListener creates a new EventManager to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) EventListener {
-	return &EventManager{
+// NewEventListener creates a new EventListener to process events based on the provided Handlers.
+func NewEventListener(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) *EventListener {
+	return &EventListener{
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
@@ -42,7 +40,7 @@ func NewEventListener(source chan *proto.Event, stop chan interface{}, ri Resour
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
-func (em *EventManager) Listen() error {
+func (em *EventListener) Listen() error {
 	for {
 		err := em.start()
 		if err != nil {
@@ -52,26 +50,26 @@ func (em *EventManager) Listen() error {
 }
 
 // start waits for an event on the channel and then attempts to pass the item to the handlers.
-func (em *EventManager) start() error {
+func (em *EventListener) start() error {
 	select {
 	case event, ok := <-em.source:
 		if !ok {
-			return fmt.Errorf("event source has been closed")
+			return fmt.Errorf("stream event source has been closed")
 		}
 
 		err := em.handleEvent(event)
 		if err != nil {
-			log.Errorf("event manager error: %s", err)
+			log.Errorf("stream event listener error: %s", err)
 		}
 
 		return nil
 	case <-em.stop:
-		return fmt.Errorf("event manager has been stopped")
+		return fmt.Errorf("stream event listener has been stopped")
 	}
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
-func (em *EventManager) handleEvent(event *proto.Event) error {
+func (em *EventListener) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
 
@@ -99,7 +97,7 @@ func (em *EventManager) handleEvent(event *proto.Event) error {
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
+func (em *EventListener) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
 	for _, h := range em.handlers {
 		err := h.handle(action, resource)
 		if err != nil {
@@ -108,7 +106,7 @@ func (em *EventManager) handleResource(action proto.Event_Type, resource *apiv1.
 	}
 }
 
-func (em *EventManager) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {
+func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {
 	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{

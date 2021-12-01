@@ -140,14 +140,11 @@ func (m *watchManager) Status() bool {
 
 	for k, c := range m.clientMap {
 		if c.isRunning == false {
-			log.Debugf("watchmanager: watch client is not running. Removing client.")
+			log.Debugf("watchmanager: watch client is not running.")
 			ok = false
 			delete(m.clientMap, k)
 		}
 	}
-
-	log.Debugf("watchmanager: grpc connection state: %s", m.connection.GetState())
-	log.Debugf("Total clients: %d", len(m.clientMap))
 
 	return ok && m.connection.GetState() == connectivity.Ready
 }

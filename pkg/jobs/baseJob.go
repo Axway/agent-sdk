@@ -61,9 +61,6 @@ func (b *baseJob) executeJob() {
 }
 
 func (b *baseJob) executeCronJob() {
-	// check status before execute
-	b.updateStatus()
-
 	// Lock the mutex for external syn with the job
 	b.jobLock.Lock()
 	defer b.jobLock.Unlock()

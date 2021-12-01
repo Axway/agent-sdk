@@ -11,7 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-func TestEventManager_start(t *testing.T) {
+func TestEventListener_start(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
@@ -52,11 +52,10 @@ func TestEventManager_start(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			listener := NewEventListener(tc.events, make(chan interface{}), tc.ri, tc.handler)
-			em := listener.(*EventManager)
 
 			errCh := make(chan error)
 			go func() {
-				err := em.start()
+				err := listener.start()
 				errCh <- err
 			}()
 
@@ -84,11 +83,10 @@ func TestEventManager_start(t *testing.T) {
 
 	events := make(chan *proto.Event)
 	listener := NewEventListener(events, make(chan interface{}), &mockRI{}, &mockHandler{})
-	em := listener.(*EventManager)
 
 	errCh := make(chan error)
 	go func() {
-		err := em.start()
+		err := listener.start()
 		errCh <- err
 	}()
 
@@ -104,7 +102,7 @@ func TestEventManager_start(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestEventManager_handleEvent(t *testing.T) {
+func TestEventListener_handleEvent(t *testing.T) {
 	tests := []struct {
 		name     string
 		event    proto.Event_Type
@@ -154,9 +152,8 @@ func TestEventManager_handleEvent(t *testing.T) {
 			}
 
 			listener := NewEventListener(make(chan *proto.Event), make(chan interface{}), tc.ri, tc.handler)
-			em := listener.(*EventManager)
 
-			err := em.handleEvent(event)
+			err := listener.handleEvent(event)
 
 			if tc.hasError == false {
 				assert.Nil(t, err)
