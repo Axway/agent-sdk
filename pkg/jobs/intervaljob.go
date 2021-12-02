@@ -75,9 +75,7 @@ func (b *intervalJob) stop() {
 		b.stopChan <- true
 		log.Tracef("wrote to %s stop channel", b.GetName())
 	} else {
-		if b.waitingForReady {
-			b.stopReadyChan <- nil
-		}
+		b.stopReadyChan <- nil
 	}
 	b.UnsetIsReady()
 }
