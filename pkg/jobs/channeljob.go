@@ -30,7 +30,7 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 
 func (b *channelJob) handleExecution() {
 	// Execute the job
-	b.executeJob()
+	b.err = b.job.Execute()
 	if b.err != nil {
 		b.setExecutionError()
 		log.Error(b.err)
