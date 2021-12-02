@@ -12,6 +12,6 @@ package v1alpha1
 // VirtualServiceSpecRules struct for VirtualServiceSpecRules
 type VirtualServiceSpecRules struct {
 	Cors    string                                                      `json:"cors,omitempty"`
-	Auth    OneOfmanagementV1alpha1VirtualServiceSpecAmplifyjwtauthrule `json:"auth,omitempty"`
+//	Auth    OneOfmanagementV1alpha1VirtualServiceSpecAmplifyjwtauthrule `json:"auth,omitempty"`
 	Lambdas []string                                                    `json:"lambdas,omitempty"`
 }
