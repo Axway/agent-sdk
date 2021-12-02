@@ -24,6 +24,7 @@ type JobExecution interface {
 	start()
 	stop()
 	getConsecutiveFails() int
+	updateStatus() JobStatus
 }
 
 //JobStatus - integer to represent the status of the job
