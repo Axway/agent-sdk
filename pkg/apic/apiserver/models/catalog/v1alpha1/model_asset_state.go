@@ -9,17 +9,17 @@
 
 package v1alpha1
 
-// ProductState the model 'ProductState'
-type ProductState string
+// AssetState the model 'AssetState'
+type AssetState string
 
-// List of ProductState
+// List of AssetState
 const (
 	// GENERATE: The following code has been modified after code generation
-	ProductStateDRAFT ProductState = "draft"
+	AssetStateDRAFT AssetState = "draft"
 	// GENERATE: The following code has been modified after code generation
-	ProductStateACTIVE ProductState = "active"
+	AssetStateACTIVE AssetState = "active"
 	// GENERATE: The following code has been modified after code generation
-	ProductStateDEPRECATED ProductState = "deprecated"
+	AssetStateDEPRECATED AssetState = "deprecated"
 	// GENERATE: The following code has been modified after code generation
-	ProductStateARCHIVED ProductState = "archived"
+	AssetStateARCHIVED AssetState = "archived"
 )

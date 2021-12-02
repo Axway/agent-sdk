@@ -11,7 +11,8 @@ package v1alpha1
 
 // VirtualServiceSpecRules struct for VirtualServiceSpecRules
 type VirtualServiceSpecRules struct {
-	Cors    string   `json:"cors,omitempty"`
-	Auth    string   `json:"auth,omitempty"`
-	Lambdas []string `json:"lambdas,omitempty"`
+	Cors string `json:"cors,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Auth    interface{} `json:"auth,omitempty"`
+	Lambdas []string    `json:"lambdas,omitempty"`
 }

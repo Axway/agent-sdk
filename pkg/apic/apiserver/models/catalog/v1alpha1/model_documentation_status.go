@@ -17,10 +17,7 @@ import (
 
 // DocumentationStatus struct for DocumentationStatus
 type DocumentationStatus struct {
-	Type  string `json:"type,omitempty"`
-	Level string `json:"level,omitempty"`
-	// A brief CamelCase message indicating details of the unexpected error while processing the AssetRelease update.
-	Title string `json:"title,omitempty"`
+	Type string `json:"type,omitempty"`
 	// Descriptive details of the error.
 	Detail string `json:"detail,omitempty"`
 	// Time when the update occurred.

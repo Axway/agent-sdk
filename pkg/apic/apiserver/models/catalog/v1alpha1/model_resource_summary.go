@@ -9,8 +9,10 @@
 
 package v1alpha1
 
-// ReleaseNotesSpec struct for ReleaseNotesSpec
-type ReleaseNotesSpec struct {
-	// Markdown for release notes.
-	Content string `json:"content,omitempty"`
+// ResourceSummary struct for ResourceSummary
+type ResourceSummary struct {
+	// Type of the Resource.
+	Type string `json:"type,omitempty"`
+	// The path where the Resource is defined.
+	Path string `json:"path,omitempty"`
 }

@@ -11,40 +11,42 @@ import (
 )
 
 var (
-	_TermsGVK = apiv1.GroupVersionKind{
+	_ResourceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Terms",
+			Kind:  "Resource",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	TermsScope = "Product"
+	ResourceScope = "Product"
 
-	TermsResourceName = "terms"
+	ResourceResourceName = "resources"
 )
 
-func TermsGVK() apiv1.GroupVersionKind {
-	return _TermsGVK
+func ResourceGVK() apiv1.GroupVersionKind {
+	return _ResourceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_TermsGVK, TermsScope, TermsResourceName)
+	apiv1.RegisterGVK(_ResourceGVK, ResourceScope, ResourceResourceName)
 }
 
-// Terms Resource
-type Terms struct {
+// Resource Resource
+type Resource struct {
 	apiv1.ResourceMeta
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec TermsSpec `json:"spec"`
+	Spec ResourceSpec `json:"spec"`
+
+	Summary ResourceSummary `json:"summary"`
 }
 
-// FromInstance converts a ResourceInstance to a Terms
-func (res *Terms) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Resource
+func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -63,14 +65,14 @@ func (res *Terms) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// TermsFromInstanceArray converts a []*ResourceInstance to a []*Terms
-func TermsFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Terms, error) {
-	newArray := make([]*Terms, 0)
+// ResourceFromInstanceArray converts a []*ResourceInstance to a []*Resource
+func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource, error) {
+	newArray := make([]*Resource, 0)
 	for _, item := range fromArray {
-		res := &Terms{}
+		res := &Resource{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Terms, 0), err
+			return make([]*Resource, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -78,10 +80,10 @@ func TermsFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Terms, erro
 	return newArray, nil
 }
 
-// AsInstance converts a Terms to a ResourceInstance
-func (res *Terms) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Resource to a ResourceInstance
+func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = TermsGVK()
+	meta.GroupVersionKind = ResourceGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
