@@ -14,8 +14,8 @@ type AssetState string
 
 // List of AssetState
 const (
-	DRAFT      AssetState = "draft"
-	ACTIVE     AssetState = "active"
-	DEPRECATED AssetState = "deprecated"
-	ARCHIVED   AssetState = "archived"
+	DRAFT      AssetState1 = "draft"
+	ACTIVE     AssetState2 = "active"
+	DEPRECATED AssetState3 = "deprecated"
+	ARCHIVED   AssetState4 = "archived"
 )
