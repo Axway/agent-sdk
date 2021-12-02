@@ -238,21 +238,17 @@ func startAPIServiceCache() {
 
 		manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
 		if err != nil {
-			log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
+			log.Errorf("could not start the watch manager: %s", err)
 			return
 		}
-
-		// wt, err := stream.GetWatchTopic(
-		// 	cache.New(),
-		// 	stream.WatchTopicName(agent.cfg.GetEnvironmentName(), getAgentResourceType()),
-		// )
 
 		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
 			log.Errorf("watch topic not provided")
 			return
 		}
-		ric := stream.NewResourceClient(
+
+		rc := stream.NewResourceClient(
 			host+"/apis",
 			tenantID,
 			api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
@@ -264,7 +260,7 @@ func startAPIServiceCache() {
 		eventListener := stream.NewEventListener(
 			events,
 			stopCh,
-			ric,
+			rc,
 			stream.NewAPISvcHandler(agent.apiMap),
 			stream.NewInstanceHandler(cache.New()),
 			stream.NewCategoryHandler(agent.categoryMap),
