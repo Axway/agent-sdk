@@ -60,33 +60,36 @@ func (b *baseJob) executeJob() {
 	}
 }
 
-func (b *baseJob) executeCronJob() {
-	// check status before execute
-	b.updateStatus()
-
-	// Lock the mutex for external syn with the job
-	b.jobLock.Lock()
-	defer b.jobLock.Unlock()
-
+func (b *baseJob) callWithTimeout(execution func() error) error {
+	var executionError error
 	// execution time limit is set
 	if executionTimeLimit > 0 {
 		// start a go routine to execute the job
 		executed := make(chan error)
 		go func() {
-			executed <- b.job.Execute()
+			executed <- execution()
 		}()
 
 		// either the job finishes or a timeout is hit
 		select {
 		case err := <-executed:
-			b.err = err
+			executionError = err
 		case <-time.After(executionTimeLimit): // execute the job with a time limit
-			b.err = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
+			executionError = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 		}
 	} else {
-		b.err = b.job.Execute()
+		executionError = execution()
 	}
 
+	return executionError
+}
+
+func (b *baseJob) executeCronJob() {
+	// Lock the mutex for external syn with the job
+	b.jobLock.Lock()
+	defer b.jobLock.Unlock()
+
+	b.err = b.callWithTimeout(b.job.Execute)
 	if b.err != nil {
 		if b.failChan != nil {
 			b.failChan <- b.id
@@ -140,8 +143,8 @@ func (b *baseJob) getConsecutiveFails() int {
 //GetStatusValue - returns the job status
 func (b *baseJob) updateStatus() JobStatus {
 	newStatus := JobStatusRunning // reset to running before checking
-	jobStatus := b.job.Status()   // get the current status
-	if jobStatus != nil {         // on error set the status to failed
+	jobStatus := b.callWithTimeout(b.job.Status)
+	if jobStatus != nil { // on error set the status to failed
 		b.failChan <- b.id
 		log.Errorf("job %s (%s) failed: %s", b.name, b.id, jobStatus.Error())
 		newStatus = JobStatusFailed

@@ -7,6 +7,7 @@ import (
 type channelJobProps struct {
 	signalStop chan interface{}
 	stopChan   chan bool
+	isStopped  bool
 }
 
 type channelJob struct {
@@ -30,7 +31,7 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 
 func (b *channelJob) handleExecution() {
 	// Execute the job
-	b.executeJob()
+	b.err = b.job.Execute()
 	if b.err != nil {
 		b.setExecutionError()
 		log.Error(b.err)
@@ -46,6 +47,7 @@ func (b *channelJob) start() {
 	b.waitForReady()
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
 	b.SetStatus(JobStatusRunning)
+	b.isStopped = false
 
 	// Wait for a write on the stop channel
 	<-b.stopChan
@@ -55,6 +57,10 @@ func (b *channelJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *channelJob) stop() {
+	if b.isStopped {
+		log.Tracef("job has already been stopped")
+		return
+	}
 	b.stopLog()
 	if b.IsReady() {
 		log.Tracef("writing to %s stop channel", b.GetName())
@@ -63,5 +69,6 @@ func (b *channelJob) stop() {
 	} else {
 		b.stopReadyChan <- nil
 	}
+	b.isStopped = true
 	b.UnsetIsReady()
 }

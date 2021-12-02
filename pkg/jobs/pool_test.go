@@ -10,7 +10,7 @@ import (
 func TestPoolCoordination(t *testing.T) {
 	testPool := newPool() // create a new pool for this test to not interfere with other tests
 	testPool.backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
-	testPool.retryInterval = time.Second
+	statusCheckInterval = time.Millisecond
 	failJob := &intervalJobImpl{
 		name:      "FailedIntervalJob",
 		runTime:   500 * time.Millisecond,
