@@ -66,7 +66,7 @@ func TestEventListener_start(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.stop, tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, tc.ri, tc.handler)
 
 			errCh := make(chan error)
 			go func() {
@@ -151,7 +151,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), make(chan interface{}), tc.ri, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
 
 			err := listener.handleEvent(event)
 

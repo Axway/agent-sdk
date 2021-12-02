@@ -4,8 +4,8 @@ import "time"
 
 //globalPool - the default job pool
 var globalPool *Pool
-var executionTimeLimit time.Duration
-var statusCheckInterval time.Duration
+var executionTimeLimit time.Duration = 5 * time.Minute
+var statusCheckInterval time.Duration = defaultRetryInterval
 
 func init() {
 	globalPool = newPool()

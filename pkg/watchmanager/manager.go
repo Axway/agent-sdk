@@ -18,7 +18,8 @@ import (
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
-	Close()
+	CloseAll()
+	CloseConn()
 	Status() bool
 }
 
@@ -109,23 +110,30 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 // CloseWatch closes the specified watch stream by id
 func (m *watchManager) CloseWatch(id string) error {
-	log.Infof("closing watch for subscription: %s", id)
 	client, ok := m.clientMap[id]
 	if !ok {
 		return errors.New("invalid watch subscription ID")
 	}
+	log.Infof("closing watch for subscription: %s", id)
 	client.cancelStream()
 	delete(m.clientMap, id)
 	return nil
 }
 
-// Close - Close the watch service connection, and all open streams
-func (m *watchManager) Close() {
+// CloseConn closes watch service connection, and all open streams
+func (m *watchManager) CloseConn() {
 	log.Info("closing watch service connection")
 
 	m.connection.Close()
 	for id := range m.clientMap {
 		delete(m.clientMap, id)
+	}
+}
+
+// CloseAll closes all streams, but leaves the connection open.
+func (m *watchManager) CloseAll() {
+	for id := range m.clientMap {
+		m.CloseWatch(id)
 	}
 }
 

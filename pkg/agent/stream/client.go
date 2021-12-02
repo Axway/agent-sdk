@@ -3,6 +3,8 @@ package stream
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
+
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -11,7 +13,8 @@ import (
 // streamer interface for starting a service
 type streamer interface {
 	Start() error
-	HealthCheck() error
+	Status() error
+	Stop()
 }
 
 // Client a client for creating a grpc stream, and handling the received events.
@@ -61,13 +64,19 @@ func (sc *Client) newStreamService() error {
 	}
 }
 
+// Stop stops the client
+func (sc *Client) Stop() {
+	sc.listener.Stop()
+	sc.manager.CloseAll()
+}
+
 // Start starts the streaming client
 func (sc *Client) Start() error {
 	return sc.newStreamService()
 }
 
-// HealthCheck a health check endpoint for the connection to central.
-func (sc *Client) HealthCheck() error {
+// Status a health check endpoint for the connection to central.
+func (sc *Client) Status() error {
 	ok := sc.manager.Status()
 
 	if !ok {
@@ -78,25 +87,32 @@ func (sc *Client) HealthCheck() error {
 }
 
 // NewClientStreamJob creates a job for the stream client
-func NewClientStreamJob(starter streamer) jobs.Job {
+func NewClientStreamJob(streamer streamer, stop chan interface{}) jobs.Job {
 	return &ClientStreamJob{
-		starter: starter,
+		streamer: streamer,
+		stop:     stop,
 	}
 }
 
 // ClientStreamJob job wrapper for a client that starts a stream and an event manager.
 type ClientStreamJob struct {
-	starter streamer
+	streamer streamer
+	stop     chan interface{}
 }
 
 // Execute starts the stream
 func (j ClientStreamJob) Execute() error {
-	return j.starter.Start()
+	go func() {
+		<-j.stop
+		log.Info("------------------- Closing Stream Client ------------------------")
+		j.streamer.Stop()
+	}()
+	return j.streamer.Start()
 }
 
 // Status gets the status
 func (j ClientStreamJob) Status() error {
-	return j.starter.HealthCheck()
+	return j.streamer.Status()
 }
 
 // Ready checks if the job to start the stream is ready

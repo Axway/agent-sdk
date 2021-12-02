@@ -259,7 +259,6 @@ func startAPIServiceCache() {
 
 		eventListener := stream.NewEventListener(
 			events,
-			stopCh,
 			rc,
 			stream.NewAPISvcHandler(agent.apiMap),
 			stream.NewInstanceHandler(cache.New()),
@@ -273,7 +272,7 @@ func startAPIServiceCache() {
 			events,
 		)
 
-		streamJob := stream.NewClientStreamJob(streamClient)
+		streamJob := stream.NewClientStreamJob(streamClient, stopCh)
 		_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
 
 		if err != nil {

@@ -17,8 +17,8 @@ type Handler interface {
 
 // Listener starts the EventListener
 type Listener interface {
-	// Listen starts listening for events
 	Listen() error
+	Stop()
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
@@ -30,31 +30,41 @@ type EventListener struct {
 }
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, stop chan interface{}, ri ResourceClient, cbs ...Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...Handler) *EventListener {
 	return &EventListener{
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
-		stop:        stop,
+		stop:        make(chan interface{}),
 	}
+}
+
+// Stop stops the listener
+func (em *EventListener) Stop() {
+	em.stop <- nil
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() error {
 	for {
-		err := em.start()
+		done, err := em.start()
 		if err != nil {
 			return err
+		}
+
+		if done == true {
+			return nil
 		}
 	}
 }
 
 // start waits for an event on the channel and then attempts to pass the item to the handlers.
-func (em *EventListener) start() error {
+// Return true if processing should end, and false for it to continue.
+func (em *EventListener) start() (done bool, err error) {
 	select {
 	case event, ok := <-em.source:
 		if !ok {
-			return fmt.Errorf("stream event source has been closed")
+			return true, fmt.Errorf("stream event source has been closed")
 		}
 
 		err := em.handleEvent(event)
@@ -62,9 +72,10 @@ func (em *EventListener) start() error {
 			log.Errorf("stream event listener error: %s", err)
 		}
 
-		return nil
+		return false, nil
 	case <-em.stop:
-		return fmt.Errorf("stream event listener has been stopped")
+		log.Debug("stream event listener has been stopped")
+		return true, nil
 	}
 }
 

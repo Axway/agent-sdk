@@ -70,7 +70,7 @@ func TestClient(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			statusErr := c.HealthCheck()
+			statusErr := c.Status()
 
 			if tc.statusErr {
 				assert.Nil(t, statusErr)
