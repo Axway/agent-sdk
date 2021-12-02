@@ -31,11 +31,12 @@ type SubscriptionNotification struct {
 	Email           string                 `json:"email,omitempty"`
 	Message         string                 `json:"message,omitempty"`
 	Key             string                 `json:"key,omitempty"`
-	KeyHeaderName   string                 `json:"keyHeaderName,omitempty"`
 	ClientID        string                 `json:"clientID,omitempty"`
 	ClientSecret    string                 `json:"clientSecret,omitempty"`
 	AuthTemplate    string                 `json:"authtemplate,omitempty"`
 	IsAPIKey        bool                   `json:"isAPIKey,omitempty"`
+	KeyName         string
+	KeyLocation     string
 	apiClient       coreapi.Client
 }
 
@@ -65,9 +66,16 @@ func (s *SubscriptionNotification) SetCatalogItemInfo(catalogID, catalogName, ca
 }
 
 // SetAPIKeyInfo - Set the key and header
-func (s *SubscriptionNotification) SetAPIKeyInfo(key, keyHeaderName string) {
+func (s *SubscriptionNotification) SetAPIKeyInfo(key, keyName string) {
 	s.Key = key
-	s.KeyHeaderName = keyHeaderName
+	s.KeyName = keyName
+}
+
+// SetAPIKeyInfoAndLocation - Set the key, name, and location
+func (s *SubscriptionNotification) SetAPIKeyInfoAndLocation(key, keyName, keyLocation string) {
+	s.Key = key
+	s.KeyName = keyName
+	s.KeyLocation = keyLocation
 }
 
 // SetOauthInfo - Set the id and secret info
@@ -216,7 +224,9 @@ func (s *SubscriptionNotification) BuildSMTPMessage(template *corecfg.EmailTempl
 		Email:           s.Email,
 		Message:         s.Message,
 		Key:             s.Key,
-		KeyHeaderName:   s.KeyHeaderName,
+		KeyHeaderName:   s.KeyName,
+		KeyName:         s.KeyName,
+		KeyLocation:     s.KeyLocation,
 		ClientID:        s.ClientID,
 		ClientSecret:    s.ClientSecret,
 		AuthTemplate:    s.AuthTemplate,

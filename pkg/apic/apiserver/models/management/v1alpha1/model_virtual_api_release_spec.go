@@ -17,4 +17,5 @@ type VirtualApiReleaseSpec struct {
 	// version of the virtual API release.
 	Version    string `json:"version"`
 	Virtualapi string `json:"virtualapi"`
+	ReleaseTag string `json:"releaseTag,omitempty"`
 }

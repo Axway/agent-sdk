@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ResourceHookScopes = []string{"Integration"}
 )
 
-const (
-	ResourceHookScope = "Integration"
-
-	ResourceHookResourceName = "resourcehooks"
-)
+const ResourceHookResourceName = "resourcehooks"
 
 func ResourceHookGVK() apiv1.GroupVersionKind {
 	return _ResourceHookGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceHookGVK, ResourceHookScope, ResourceHookResourceName)
+	apiv1.RegisterGVK(_ResourceHookGVK, ResourceHookScopes[0], ResourceHookResourceName)
 }
 
 // ResourceHook Resource

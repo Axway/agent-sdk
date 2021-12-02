@@ -24,8 +24,6 @@ type Pool struct {
 	failJobChan             chan string
 	stopJobsChan            chan bool
 	backoff                 *backoff
-	retryInterval           time.Duration
-	origRetryInterval       time.Duration
 }
 
 func newPool() *Pool {
@@ -40,8 +38,8 @@ func newPool() *Pool {
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
-	// start routine that catches all failures whenever written and acts on first
-	go newPool.catchFails()
+	// start routine to check all job status funcs and catch any failures
+	go newPool.jobChecker()
 	// start the pool watcher
 	go newPool.watchJobs()
 
@@ -102,7 +100,7 @@ func (p *Pool) removeJob(jobID string) {
 
 //RegisterSingleRunJob - Runs a single run job
 func (p *Pool) RegisterSingleRunJob(newJob Job) (string, error) {
-	return p.RegisterSingleRunJobWithName(newJob, "")
+	return p.RegisterSingleRunJobWithName(newJob, JobTypeSingleRun)
 }
 
 //RegisterSingleRunJobWithName - Runs a single run job
@@ -116,7 +114,7 @@ func (p *Pool) RegisterSingleRunJobWithName(newJob Job, name string) (string, er
 
 //RegisterIntervalJob - Runs a job with a specific interval between each run
 func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	return p.RegisterIntervalJobWithName(newJob, interval, "")
+	return p.RegisterIntervalJobWithName(newJob, interval, JobTypeInterval)
 }
 
 //RegisterIntervalJobWithName - Runs a job with a specific interval between each run
@@ -130,7 +128,7 @@ func (p *Pool) RegisterIntervalJobWithName(newJob Job, interval time.Duration, n
 
 //RegisterChannelJob - Runs a job with a specific interval between each run
 func (p *Pool) RegisterChannelJob(newJob Job, stopChan chan interface{}) (string, error) {
-	return p.RegisterChannelJobWithName(newJob, stopChan, "")
+	return p.RegisterChannelJobWithName(newJob, stopChan, JobTypeChannel)
 }
 
 //RegisterChannelJobWithName - Runs a job with a specific interval between each run
@@ -144,7 +142,7 @@ func (p *Pool) RegisterChannelJobWithName(newJob Job, stopChan chan interface{},
 
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run, detached from other jobs
 func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	return p.RegisterDetachedIntervalJobWithName(newJob, interval, "")
+	return p.RegisterDetachedIntervalJobWithName(newJob, interval, JobTypeDetachedInterval)
 }
 
 //RegisterDetachedIntervalJobWithName - Runs a job with a specific interval between each run, detached from other jobs
@@ -158,7 +156,7 @@ func (p *Pool) RegisterDetachedIntervalJobWithName(newJob Job, interval time.Dur
 
 //RegisterScheduledJob - Runs a job on a specific schedule
 func (p *Pool) RegisterScheduledJob(newJob Job, schedule string) (string, error) {
-	return p.RegisterScheduledJobWithName(newJob, schedule, "")
+	return p.RegisterScheduledJobWithName(newJob, schedule, JobTypeScheduled)
 }
 
 //RegisterScheduledJobWithName - Runs a job on a specific schedule
@@ -172,7 +170,7 @@ func (p *Pool) RegisterScheduledJobWithName(newJob Job, schedule, name string) (
 
 //RegisterRetryJob - Runs a job with a limited number of retries
 func (p *Pool) RegisterRetryJob(newJob Job, retries int) (string, error) {
-	return p.RegisterRetryJobWithName(newJob, retries, "")
+	return p.RegisterRetryJobWithName(newJob, retries, JobTypeRetry)
 }
 
 //RegisterRetryJobWithName  - Runs a job with a limited number of retries
@@ -271,14 +269,23 @@ func (p *Pool) stopAll() {
 	}
 }
 
-//catchFails - catches all writes to the failJobChan and only sends one stop signal
-func (p *Pool) catchFails() {
+//jobChecker - regularly checks the status of cron jobs, stopping jobs if error returned
+func (p *Pool) jobChecker() {
+	ticker := time.NewTicker(statusCheckInterval)
+	defer ticker.Stop()
 	for {
-		// continue rading all failed jobs, only stop the first time
-		failedJob := <-p.failJobChan
-		if p.GetStatus() == PoolStatusRunning.String() {
-			p.failedJob = failedJob // this is the job for the current fail loop
-			p.stopJobsChan <- true
+		select {
+		case <-ticker.C:
+			go func() {
+				for _, job := range p.cronJobs {
+					job.updateStatus()
+				}
+			}()
+		case failedJob := <-p.failJobChan:
+			if p.GetStatus() == PoolStatusRunning.String() {
+				p.failedJob = failedJob // this is the job for the current fail loop
+				p.stopJobsChan <- true
+			}
 		}
 	}
 }

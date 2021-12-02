@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	MeshServiceScopes = []string{"Mesh"}
 )
 
-const (
-	MeshServiceScope = "Mesh"
-
-	MeshServiceResourceName = "meshservices"
-)
+const MeshServiceResourceName = "meshservices"
 
 func MeshServiceGVK() apiv1.GroupVersionKind {
 	return _MeshServiceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshServiceGVK, MeshServiceScope, MeshServiceResourceName)
+	apiv1.RegisterGVK(_MeshServiceGVK, MeshServiceScopes[0], MeshServiceResourceName)
 }
 
 // MeshService Resource

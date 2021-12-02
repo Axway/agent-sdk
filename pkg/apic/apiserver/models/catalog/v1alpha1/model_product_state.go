@@ -14,8 +14,12 @@ type ProductState string
 
 // List of ProductState
 const (
-	DRAFT      ProductState = "draft"
-	ACTIVE     ProductState = "active"
-	DEPRECATED ProductState = "deprecated"
-	ARCHIVED   ProductState = "archived"
+	// GENERATE: The following code has been modified after code generation
+	ProductStateDRAFT ProductState = "draft"
+	// GENERATE: The following code has been modified after code generation
+	ProductStateACTIVE ProductState = "active"
+	// GENERATE: The following code has been modified after code generation
+	ProductStateDEPRECATED ProductState = "deprecated"
+	// GENERATE: The following code has been modified after code generation
+	ProductStateARCHIVED ProductState = "archived"
 )

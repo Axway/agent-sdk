@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ResourceDiscoveryScopes = []string{"K8SCluster"}
 )
 
-const (
-	ResourceDiscoveryScope = "K8SCluster"
-
-	ResourceDiscoveryResourceName = "resourcediscoveries"
-)
+const ResourceDiscoveryResourceName = "resourcediscoveries"
 
 func ResourceDiscoveryGVK() apiv1.GroupVersionKind {
 	return _ResourceDiscoveryGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceDiscoveryGVK, ResourceDiscoveryScope, ResourceDiscoveryResourceName)
+	apiv1.RegisterGVK(_ResourceDiscoveryGVK, ResourceDiscoveryScopes[0], ResourceDiscoveryResourceName)
 }
 
 // ResourceDiscovery Resource

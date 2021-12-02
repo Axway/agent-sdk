@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	VirtualServiceScopes = []string{"VirtualAPI", "VirtualAPIRelease"}
 )
 
-const (
-	VirtualServiceScope = "VirtualAPI"
-
-	VirtualServiceResourceName = "virtualservices"
-)
+const VirtualServiceResourceName = "virtualservices"
 
 func VirtualServiceGVK() apiv1.GroupVersionKind {
 	return _VirtualServiceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_VirtualServiceGVK, VirtualServiceScope, VirtualServiceResourceName)
+	apiv1.RegisterGVK(_VirtualServiceGVK, VirtualServiceScopes[0], VirtualServiceResourceName)
 }
 
 // VirtualService Resource

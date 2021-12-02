@@ -102,19 +102,22 @@ func newMockHTTPServer() *mockHTTPServer {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		case "/":
-			if req.Method == "POST" && mockServer.responseStatus != 0 {
-				resp.WriteHeader(mockServer.responseStatus)
-				return
+			if req.Method == "POST" {
+				if mockServer.responseStatus != 0 {
+					resp.WriteHeader(mockServer.responseStatus)
+					return
+				}
+				mockServer.ResetMessages()
+				var body []byte
+				contentEncoding := req.Header["Content-Encoding"]
+				if contentEncoding != nil && contentEncoding[0] == "gzip" {
+					body, _ = mockServer.decompressGzipContent(req.Body)
+				} else {
+					body, _ = ioutil.ReadAll(req.Body)
+				}
+				json.Unmarshal(body, &mockServer.serverMessages)
+				resp.Write([]byte("ok"))
 			}
-			mockServer.ResetMessages()
-			var body []byte
-			contentEncoding := req.Header["Content-Encoding"]
-			if contentEncoding != nil && contentEncoding[0] == "gzip" {
-				body, _ = mockServer.decompressGzipContent(req.Body)
-			} else {
-				body, _ = ioutil.ReadAll(req.Body)
-			}
-			json.Unmarshal(body, &mockServer.serverMessages)
 			resp.Write([]byte("ok"))
 		}
 	}))

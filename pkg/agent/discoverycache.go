@@ -287,7 +287,7 @@ func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) []*apiV1
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			deleteServiceInstanceOrService(serviceInstance, externalAPIID, externalAPIStage)
+			deleteServiceInstanceOrService(serviceInstance, externalAPIID)
 		} else {
 			cleanServiceInstances = append(cleanServiceInstances, serviceInstanceResource)
 		}
@@ -295,17 +295,18 @@ func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) []*apiV1
 	return cleanServiceInstances
 }
 
-func shouldDeleteService(apiID, stage string) bool {
-	// no agent-specific validator means to delete the service
-	if agent.deleteServiceValidator == nil {
-		return true
+func shouldDeleteService(apiID string) bool {
+	list, err := agent.apicClient.GetConsumerInstancesByExternalAPIID(apiID)
+	if err != nil {
+		return false
 	}
-	// let the agent decide if service should be deleted
-	return agent.deleteServiceValidator(apiID, stage)
+
+	// if there is only 1 consumer instance left, we can signal to delete the service too
+	return len(list) <= 1
 }
 
-func deleteServiceInstanceOrService(serviceInstance *v1alpha1.APIServiceInstance, externalAPIID, externalAPIStage string) {
-	if shouldDeleteService(externalAPIID, externalAPIStage) {
+func deleteServiceInstanceOrService(serviceInstance *v1alpha1.APIServiceInstance, externalAPIID string) {
+	if shouldDeleteService(externalAPIID) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", serviceInstance.Title)
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)

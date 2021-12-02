@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	StageScopes = []string{""}
 )
 
-const (
-	StageScope = ""
-
-	StageResourceName = "stages"
-)
+const StageResourceName = "stages"
 
 func StageGVK() apiv1.GroupVersionKind {
 	return _StageGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_StageGVK, StageScope, StageResourceName)
+	apiv1.RegisterGVK(_StageGVK, StageScopes[0], StageResourceName)
 }
 
 // Stage Resource

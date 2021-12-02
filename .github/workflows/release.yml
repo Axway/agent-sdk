@@ -2,9 +2,17 @@
 name: Release SDK
 
 # run this action if there is a push of a new tag of the form v.n.n.n on main branch
+# on:
+#   release:
+#     types: [published]
+# need to figure this out. The above should have worked but caused ONLY the release action to run
+# adding the below only to keep the action but to make it not ever run
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - APIGOV-DALE
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
 
 jobs:
   release:

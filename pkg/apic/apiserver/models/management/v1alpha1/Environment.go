@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	EnvironmentScopes = []string{""}
 )
 
-const (
-	EnvironmentScope = ""
-
-	EnvironmentResourceName = "environments"
-)
+const EnvironmentResourceName = "environments"
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
 	return _EnvironmentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScope, EnvironmentResourceName)
+	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScopes[0], EnvironmentResourceName)
 }
 
 // Environment Resource

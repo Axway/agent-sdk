@@ -21,6 +21,7 @@ import (
 
 type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
+	err    error
 }
 
 func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
@@ -55,7 +56,7 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 	return nil, nil
 }
 
-func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {
+func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {
 	return
 }
 
@@ -76,17 +77,24 @@ func (m *mockSvcClient) GetAPIServiceInstanceByName(instanceName string) (*v1alp
 }
 
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
+
 func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
-func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
+func (m *mockSvcClient) RegisterSubscriptionWebhook() error {
+	return m.err
+}
+
 func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
+
 func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
 	return nil
 }
+
 func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
+
 func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
@@ -126,7 +134,22 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
 
-func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {
+func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
+
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
 }
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID

@@ -19,6 +19,7 @@ type ServiceBuilder interface {
 	SetAPIName(apiName string) ServiceBuilder
 	SetURL(url string) ServiceBuilder
 	SetStage(stage string) ServiceBuilder
+	SetStageDescriptor(stageDescriptor string) ServiceBuilder
 	SetDescription(description string) ServiceBuilder
 	SetVersion(version string) ServiceBuilder
 	SetAuthPolicy(authPolicy string) ServiceBuilder
@@ -34,6 +35,8 @@ type ServiceBuilder interface {
 	SetState(state string) ServiceBuilder
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
+	SetInstanceAttribute(instanceAttribute map[string]string) ServiceBuilder
+	SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder
 	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 
@@ -56,15 +59,19 @@ type serviceBodyBuilder struct {
 func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
-			AuthPolicy:        Passthrough,
-			CreatedBy:         config.AgentTypeName,
-			State:             PublishedStatus,
-			Status:            PublishedStatus,
-			ServiceAttributes: make(map[string]string),
-			Endpoints:         make([]EndpointDefinition, 0),
-			UnstructuredProps: &UnstructuredProperties{},
-			categoryTitles:    make([]string, 0),
-			categoryNames:     make([]string, 0),
+			AuthPolicy:         Passthrough,
+			authPolicies:       make([]string, 0),
+			CreatedBy:          config.AgentTypeName,
+			State:              PublishedStatus,
+			Status:             PublishedStatus,
+			ServiceAttributes:  make(map[string]string),
+			RevisionAttributes: make(map[string]string),
+			InstanceAttributes: make(map[string]string),
+			StageDescriptor:    "Stage",
+			Endpoints:          make([]EndpointDefinition, 0),
+			UnstructuredProps:  &UnstructuredProperties{},
+			categoryTitles:     make([]string, 0),
+			categoryNames:      make([]string, 0),
 		},
 	}
 }
@@ -96,6 +103,11 @@ func (b *serviceBodyBuilder) SetURL(url string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetStage(stage string) ServiceBuilder {
 	b.serviceBody.Stage = stage
+	return b
+}
+
+func (b *serviceBodyBuilder) SetStageDescriptor(stageDescriptor string) ServiceBuilder {
+	b.serviceBody.StageDescriptor = stageDescriptor
 	return b
 }
 
@@ -172,6 +184,16 @@ func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]str
 	return b
 }
 
+func (b *serviceBodyBuilder) SetInstanceAttribute(instanceAttribute map[string]string) ServiceBuilder {
+	b.serviceBody.InstanceAttributes = instanceAttribute
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder {
+	b.serviceBody.RevisionAttributes = revisionAttribute
+	return b
+}
+
 func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder {
 	b.serviceBody.Endpoints = endpoints
 	return b
@@ -244,6 +266,17 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
 		}
 		b.serviceBody.Endpoints = endPoints
+	}
+
+	var i interface{} = specProcessor
+	if val, ok := i.(oasSpecProcessor); ok {
+		// get the auth policy from the spec
+		b.serviceBody.authPolicies, b.serviceBody.apiKeyInfo = val.getAuthInfo()
+
+		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
+		if len(b.serviceBody.authPolicies) > 0 {
+			b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
+		}
 	}
 
 	return b.serviceBody, nil

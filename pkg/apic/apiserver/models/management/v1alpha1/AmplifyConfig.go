@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AmplifyConfigScopes = []string{"Environment"}
 )
 
-const (
-	AmplifyConfigScope = "Environment"
-
-	AmplifyConfigResourceName = "ampconfigs"
-)
+const AmplifyConfigResourceName = "ampconfigs"
 
 func AmplifyConfigGVK() apiv1.GroupVersionKind {
 	return _AmplifyConfigGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AmplifyConfigGVK, AmplifyConfigScope, AmplifyConfigResourceName)
+	apiv1.RegisterGVK(_AmplifyConfigGVK, AmplifyConfigScopes[0], AmplifyConfigResourceName)
 }
 
 // AmplifyConfig Resource

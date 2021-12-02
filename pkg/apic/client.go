@@ -74,10 +74,14 @@ type Client interface {
 	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
 	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
 	CreateCategory(categoryName string) (*catalog.Category, error)
-	AddCategoryCache(categoryCache cache.Cache)
+	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
 	GetEnvironment() (*v1alpha1.Environment, error)
 	GetCentralTeamByName(teamName string) (*PlatformTeam, error)
+	GetTeam(queryParams map[string]string) ([]PlatformTeam, error)
+	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
+	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 }
 
 // New creates a new Client
@@ -90,9 +94,26 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	return serviceClient
 }
 
-// AddCategoryCache - add the pointer to the category cache that hte agent package will update
-func (c *ServiceClient) AddCategoryCache(categoryCache cache.Cache) {
+// AddCache - add the pointer to the category and team caches that the agent package will update
+func (c *ServiceClient) AddCache(categoryCache, teamCache cache.Cache) {
 	c.categoryCache = categoryCache
+	c.teamCache = teamCache
+}
+
+// getTeamFromCache -
+func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
+	if c.teamCache == nil {
+		return "", true
+	}
+	id, found := c.teamCache.Get(teamName)
+	if teamName == "" {
+		// get the default team
+		id, found = c.teamCache.GetBySecondaryKey(DefaultTeamKey)
+	}
+	if found != nil {
+		return "", false
+	}
+	return id.(string), true
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
@@ -301,7 +322,7 @@ func (c *ServiceClient) checkPlatformHealth() error {
 
 func (c *ServiceClient) setTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
-	platformTeams, err := c.getTeam(make(map[string]string))
+	platformTeams, err := c.GetTeam(make(map[string]string))
 	if err != nil {
 		return err
 	}
@@ -433,7 +454,7 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, er
 		}
 	}
 
-	platformTeams, err := c.getTeam(queryParams)
+	platformTeams, err := c.GetTeam(queryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -457,8 +478,8 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, er
 	return &team, nil
 }
 
-// getTeam - returns the team ID based on filter
-func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -480,6 +501,90 @@ func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	return platformTeams, nil
+}
+
+//GetAccessControlList -
+func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  http.MethodGet,
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), aclName),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var acl *v1alpha1.AccessControlList
+	err = json.Unmarshal(response.Body, &acl)
+	if err != nil {
+		return nil, err
+	}
+
+	return acl, err
+}
+
+//UpdateAccessControlList -
+func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return c.deployAccessControl(acl, http.MethodPut)
+}
+
+//CreateAccessControlList -
+func (c *ServiceClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return c.deployAccessControl(acl, http.MethodPost)
+}
+
+func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, method string) (*v1alpha1.AccessControlList, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := json.Marshal(*acl)
+	if err != nil {
+		return nil, err
+	}
+
+	url := c.cfg.GetEnvironmentACLsURL()
+	if method == http.MethodPut {
+		url = fmt.Sprintf("%s/%s", url, acl.Name)
+	}
+
+	request := coreapi.Request{
+		Method:  method,
+		URL:     url,
+		Headers: headers,
+		Body:    data,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	updatedACL := &v1alpha1.AccessControlList{}
+	err = json.Unmarshal(response.Body, updatedACL)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedACL, err
 }
 
 // ExecuteAPI - execute the api

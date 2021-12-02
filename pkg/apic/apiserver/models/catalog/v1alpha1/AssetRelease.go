@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AssetReleaseScopes = []string{""}
 )
 
-const (
-	AssetReleaseScope = ""
-
-	AssetReleaseResourceName = "assetreleases"
-)
+const AssetReleaseResourceName = "assetreleases"
 
 func AssetReleaseGVK() apiv1.GroupVersionKind {
 	return _AssetReleaseGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetReleaseGVK, AssetReleaseScope, AssetReleaseResourceName)
+	apiv1.RegisterGVK(_AssetReleaseGVK, AssetReleaseScopes[0], AssetReleaseResourceName)
 }
 
 // AssetRelease Resource
@@ -45,6 +43,8 @@ type AssetRelease struct {
 	References AssetReleaseReferences `json:"references"`
 
 	Spec AssetReleaseSpec `json:"spec"`
+
+	Status AssetReleaseStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a AssetRelease

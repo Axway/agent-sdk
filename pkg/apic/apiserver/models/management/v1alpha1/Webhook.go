@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	WebhookScopes = []string{"Environment", "Integration"}
 )
 
-const (
-	WebhookScope = "Environment"
-
-	WebhookResourceName = "webhooks"
-)
+const WebhookResourceName = "webhooks"
 
 func WebhookGVK() apiv1.GroupVersionKind {
 	return _WebhookGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_WebhookGVK, WebhookScope, WebhookResourceName)
+	apiv1.RegisterGVK(_WebhookGVK, WebhookScopes[0], WebhookResourceName)
 }
 
 // Webhook Resource

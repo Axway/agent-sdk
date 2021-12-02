@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	APISpecScopes = []string{"K8SCluster"}
 )
 
-const (
-	APISpecScope = "K8SCluster"
-
-	APISpecResourceName = "apispecs"
-)
+const APISpecResourceName = "apispecs"
 
 func APISpecGVK() apiv1.GroupVersionKind {
 	return _APISpecGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_APISpecGVK, APISpecScope, APISpecResourceName)
+	apiv1.RegisterGVK(_APISpecGVK, APISpecScopes[0], APISpecResourceName)
 }
 
 // APISpec Resource

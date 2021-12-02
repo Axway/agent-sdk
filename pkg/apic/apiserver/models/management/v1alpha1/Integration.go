@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	IntegrationScopes = []string{""}
 )
 
-const (
-	IntegrationScope = ""
-
-	IntegrationResourceName = "integrations"
-)
+const IntegrationResourceName = "integrations"
 
 func IntegrationGVK() apiv1.GroupVersionKind {
 	return _IntegrationGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_IntegrationGVK, IntegrationScope, IntegrationResourceName)
+	apiv1.RegisterGVK(_IntegrationGVK, IntegrationScopes[0], IntegrationResourceName)
 }
 
 // Integration Resource

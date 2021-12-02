@@ -1,6 +1,7 @@
 package log
 
 import (
+	"flag"
 	"io"
 	"io/ioutil"
 	"os"
@@ -23,15 +24,17 @@ func init() {
 			Level:     logrus.InfoLevel,
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339},
 		},
+		initialized: false,
 	}
 }
 
 // LoggerConfig - is a builder used to setup the logging for an agent
 type LoggerConfig struct {
-	err    error
-	output LoggingOutput
-	path   string
-	cfg    rotatefilehook.RotateFileConfig
+	err         error
+	output      LoggingOutput
+	path        string
+	cfg         rotatefilehook.RotateFileConfig
+	initialized bool
 }
 
 // Apply - applies the config changes to the logger
@@ -50,21 +53,26 @@ func (b *LoggerConfig) Apply() error {
 	logrus.SetLevel(b.cfg.Level)
 	logrus.SetOutput(ioutil.Discard)
 
-	// Set the stdout put put for the log ang logrus
+	// Set the stdout output for the log and logrus
 	if b.output == STDOUT || b.output == Both {
 		writer := io.Writer(os.Stdout)
 		log.SetOutput(writer)
 		logrus.SetOutput(writer)
 	}
 
-	// Add the rotate file hook for log and logrus
-	if b.output == File || b.output == Both {
-		if b.path != "" {
-			b.cfg.Filename = path.Join(b.path, b.cfg.Filename)
+	if !b.initialized || isLogP {
+		// Add the rotate file hook for log and logrus
+		if b.output == File || b.output == Both {
+			if b.path != "" {
+				b.cfg.Filename = path.Join(b.path, b.cfg.Filename)
+			}
+			rotateFileHook, _ := rotatefilehook.NewRotateFileHook(b.cfg)
+
+			log.AddHook(rotateFileHook)
+			logrus.StandardLogger().AddHook(rotateFileHook)
 		}
-		rotateFileHook, _ := rotatefilehook.NewRotateFileHook(b.cfg)
-		log.AddHook(rotateFileHook)
-		logrus.AddHook(rotateFileHook)
+		// Set to initialized if this is not a test
+		b.initialized = flag.Lookup("test.v") == nil
 	}
 
 	return nil

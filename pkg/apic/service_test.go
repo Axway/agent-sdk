@@ -10,33 +10,27 @@ import (
 
 var methods = [5]string{"get", "post", "put", "patch", "delete"} // RestAPI methods
 
-const (
-	apikey      = "verify-api-key"
-	passthrough = "pass-through"
-	oauth       = "verify-oauth-token"
-)
-
 func determineAuthPolicyFromSwagger(swagger *[]byte) string {
 	// Traverse the swagger looking for any route that has security set
 	// return the security of the first route, if none- found return passthrough
-	var authPolicy = passthrough
+	var authPolicy = Passthrough
 
 	gjson.GetBytes(*swagger, "paths").ForEach(func(_, pathObj gjson.Result) bool {
 		for _, method := range methods {
 			if pathObj.Get(fmt.Sprint(method, ".security.#.api_key")).Exists() {
-				authPolicy = apikey
+				authPolicy = Apikey
 				return false
 			}
 			if pathObj.Get(fmt.Sprint(method, ".securityDefinitions.OAuthImplicit")).Exists() {
-				authPolicy = oauth
+				authPolicy = Oauth
 				return false
 			}
 		}
-		return authPolicy == passthrough // Return from path loop anonymous func, true = go to next item
+		return authPolicy == Passthrough // Return from path loop anonymous func, true = go to next item
 	})
 
 	if gjson.GetBytes(*swagger, "securityDefinitions.OAuthImplicit").Exists() {
-		authPolicy = oauth
+		authPolicy = Oauth
 	}
 
 	return authPolicy

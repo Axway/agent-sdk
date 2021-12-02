@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	VirtualAPIScopes = []string{""}
 )
 
-const (
-	VirtualAPIScope = ""
-
-	VirtualAPIResourceName = "virtualapis"
-)
+const VirtualAPIResourceName = "virtualapis"
 
 func VirtualAPIGVK() apiv1.GroupVersionKind {
 	return _VirtualAPIGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_VirtualAPIGVK, VirtualAPIScope, VirtualAPIResourceName)
+	apiv1.RegisterGVK(_VirtualAPIGVK, VirtualAPIScopes[0], VirtualAPIResourceName)
 }
 
 // VirtualAPI Resource

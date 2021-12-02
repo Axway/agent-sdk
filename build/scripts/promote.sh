@@ -14,7 +14,9 @@ check_required_param() {
 }
 
 set_version_variables() {
-    version="${1:1}"
+    # remove refs/tags/v
+    incoming_version=$1
+    version="${incoming_version:11}"
 
     let MAJOR_VERSION=$(echo $version | cut -d. -f1)
     let MINOR_VERSION=$(echo $version | cut -d. -f2)

@@ -32,6 +32,7 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
+      - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
@@ -98,3 +99,26 @@ trigger-azure-discovery-agent:
   before_script:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
+
+####################
+# CSR - overridden from csrjobs.yml to effectively not see this job ever
+####################
+.dummy:
+  stage: security-scans
+  only:
+    refs:
+      - xxxx
+  script:
+    - ""
+
+fetch-iriusrisk:
+  extends: .dummy
+
+twistlock:
+  extends: .dummy
+
+twistlock:on-schedule:
+  extends: .dummy
+
+twistlock-master:
+  extends: .dummy

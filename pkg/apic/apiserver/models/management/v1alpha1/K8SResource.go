@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	K8SResourceScopes = []string{"K8SCluster"}
 )
 
-const (
-	K8SResourceScope = "K8SCluster"
-
-	K8SResourceResourceName = "k8sresources"
-)
+const K8SResourceResourceName = "k8sresources"
 
 func K8SResourceGVK() apiv1.GroupVersionKind {
 	return _K8SResourceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScope, K8SResourceResourceName)
+	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScopes[0], K8SResourceResourceName)
 }
 
 // K8SResource Resource

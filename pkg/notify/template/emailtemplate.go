@@ -45,6 +45,8 @@ type EmailNotificationTemplate struct {
 	Message         string `json:"message,omitempty"`
 	Key             string `json:"key,omitempty"`
 	KeyHeaderName   string `json:"keyHeaderName,omitempty"`
+	KeyName         string `json:"keyName,omitempty"`
+	KeyLocation     string `json:"keyLocation,omitempty"`
 	ClientID        string `json:"clientID,omitempty"`
 	ClientSecret    string `json:"clientSecret,omitempty"`
 	AuthTemplate    string `json:"authtemplate,omitempty"`

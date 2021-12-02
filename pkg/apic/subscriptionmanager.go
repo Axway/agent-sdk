@@ -38,25 +38,21 @@ type subscriptionManager struct {
 	locklist            map[string]string // subscription items to skip because they are locked
 	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
 	jobID               string
+	pollingEnabled      bool
+	pollInterval        time.Duration
 }
 
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:     false,
-		apicClient:    apicClient,
-		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
-		statesToQuery: make([]string, 0),
-		locklist:      make(map[string]string),
-		locklistLock:  &sync.RWMutex{},
-	}
-
-	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
-		var err error
-		subscriptionMgr.jobID, err = jobs.RegisterIntervalJobWithName(subscriptionMgr, apicClient.cfg.GetPollInterval(), "Subscription Manager")
-		if err != nil {
-			log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
-		}
+		isRunning:      false,
+		apicClient:     apicClient,
+		processorMap:   make(map[SubscriptionState][]SubscriptionProcessor),
+		statesToQuery:  make([]string, 0),
+		locklist:       make(map[string]string),
+		locklistLock:   &sync.RWMutex{},
+		pollingEnabled: apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:   apicClient.cfg.GetPollInterval(),
 	}
 
 	return subscriptionMgr
@@ -75,6 +71,7 @@ func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, proces
 	}
 	sm.statesToQuery = append(sm.statesToQuery, string(state))
 	sm.processorMap[state] = append(processorList, processor)
+
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
@@ -83,6 +80,8 @@ func (sm *subscriptionManager) RegisterValidator(validator SubscriptionValidator
 }
 
 func (sm *subscriptionManager) Ready() bool {
+	sm.locklistLock.Lock()
+	defer sm.locklistLock.Unlock()
 	return sm.isRunning
 }
 
@@ -217,23 +216,30 @@ func (sm *subscriptionManager) Start() {
 	// clean out the map each time start is called
 	sm.locklist = make(map[string]string)
 
-	// Add an polling interval delay prior to starting, but do not make calling function wait
-	go func() {
-		time.Sleep(sm.apicClient.cfg.GetPollInterval())
-		if !sm.isRunning {
-			sm.receiverQuitChannel = make(chan bool)
+	if !sm.isRunning {
+		sm.receiverQuitChannel = make(chan bool)
 
-			sm.publishChannel = make(chan interface{})
-			sm.receiveChannel = make(chan interface{})
+		sm.publishChannel = make(chan interface{})
+		sm.receiveChannel = make(chan interface{})
 
-			sm.publisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.publishChannel)
-			notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
+		sm.publisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.publishChannel)
+		notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
 
-			go sm.publisher.Start()
-			go sm.processSubscriptions()
-			sm.isRunning = true
+		go sm.publisher.Start()
+		go sm.processSubscriptions()
+
+		// Wait for at least one processor to register before registering the job
+		if len(sm.statesToQuery) > 0 && sm.pollingEnabled && sm.jobID == "" {
+			var err error
+			sm.jobID, err = jobs.RegisterIntervalJobWithName(sm, sm.pollInterval, "Subscription Manager")
+			if err != nil {
+				log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
+			}
 		}
-	}()
+		sm.locklistLock.Lock()
+		sm.isRunning = true
+		sm.locklistLock.Unlock()
+	}
 }
 
 // Stop - Stop processing subscriptions
@@ -243,6 +249,7 @@ func (sm *subscriptionManager) Stop() {
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 		jobs.UnregisterJob(sm.jobID)
+		sm.jobID = ""
 	}
 }
 

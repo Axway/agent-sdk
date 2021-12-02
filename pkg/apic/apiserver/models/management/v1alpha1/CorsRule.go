@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	CorsRuleScopes = []string{"VirtualAPI", "VirtualAPIRelease"}
 )
 
-const (
-	CorsRuleScope = "VirtualAPI"
-
-	CorsRuleResourceName = "corsrules"
-)
+const CorsRuleResourceName = "corsrules"
 
 func CorsRuleGVK() apiv1.GroupVersionKind {
 	return _CorsRuleGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_CorsRuleGVK, CorsRuleScope, CorsRuleResourceName)
+	apiv1.RegisterGVK(_CorsRuleGVK, CorsRuleScopes[0], CorsRuleResourceName)
 }
 
 // CorsRule Resource
