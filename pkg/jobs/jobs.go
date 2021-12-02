@@ -9,8 +9,6 @@ var statusCheckInterval time.Duration = defaultRetryInterval
 
 func init() {
 	globalPool = newPool()
-	executionTimeLimit = 5 * time.Minute
-	statusCheckInterval = defaultRetryInterval
 }
 
 // UpdateDurations - updates settings int he jobs library

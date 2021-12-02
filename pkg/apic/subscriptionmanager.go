@@ -249,6 +249,7 @@ func (sm *subscriptionManager) Stop() {
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 		jobs.UnregisterJob(sm.jobID)
+		sm.jobID = ""
 	}
 }
 

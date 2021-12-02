@@ -113,6 +113,7 @@ func (j ClientStreamJob) Execute() error {
 		<-j.stop
 		j.streamer.Stop()
 	}()
+
 	return j.streamer.Start()
 }
 

@@ -9,6 +9,7 @@ type channelJobProps struct {
 	stopChan   chan bool
 	isStopped  bool
 }
+
 type channelJob struct {
 	baseJob
 	channelJobProps
@@ -23,9 +24,11 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 			stopChan:   make(chan bool),
 		},
 	}
+
 	go thisJob.start()
 	return &thisJob, nil
 }
+
 func (b *channelJob) handleExecution() {
 	// Execute the job
 	b.err = b.job.Execute()
@@ -45,6 +48,7 @@ func (b *channelJob) start() {
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
 	b.SetStatus(JobStatusRunning)
 	b.isStopped = false
+
 	// Wait for a write on the stop channel
 	<-b.stopChan
 	b.signalStop <- nil // signal the execution to stop

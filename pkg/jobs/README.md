@@ -222,6 +222,50 @@ Channel jobs are executed a single time via a go routine.  It is expected that t
 
 To allow this job to be stopped and started the implementer will provide a channel that the jobs pool can use to tell the job to stop.
 
+#### Channel job implementation example
+
+```go
+package myjob
+
+import "github.com/Axway/agent-sdk/pkg/jobs"
+
+type MyJob struct {
+  jobs.Job
+  workChannel chan interface{}
+  stopChannel chan interface{}
+}
+
+func NewMyJob(stopChannel chan interface{}) *MyJob {
+  return &MyJob{
+    stopChannel: stopChannel,
+    workChannel: make(chan interface{}),
+  }
+}
+
+func (m *MyJob) Ready() bool {
+  // validate all dependencies are ready
+  return true
+}
+
+func (m *MyJob) Status() error {
+  // check that the job is still running without error
+  return nil
+}
+
+func (m *MyJob) Execute() error {
+  for {
+    select {
+    case <-m.stopChannel:
+      //stop the job
+      return nil
+    case msg := <-workChannel:
+      //do work on msg
+  }
+  }
+}
+
+```
+
 #### Register Channel job
 
 Register the job and get its status
@@ -236,8 +280,8 @@ import (
 )
 
 func main() {
-  myJob := MyJob{}
   stopChannel := make(chan interface{})
+  myJob := NewMyJob(stopChannel)
   jobID, err := jobs.RegisterChannelJobWithName(myJob, stopChannel, "My Job")
   if err != nil {
     panic(err) // error registering the job

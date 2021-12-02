@@ -25,7 +25,6 @@ type baseJob struct {
 	backoff          *backoff
 	isReady          bool
 	stopReadyChan    chan interface{}
-	waitingForReady  bool
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
@@ -39,18 +38,17 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 //createBaseJob - creates a single run job and returns it
 func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
 	return baseJob{
-		id:              newUUID(),
-		name:            name,
-		job:             newJob,
-		jobType:         jobType,
-		status:          JobStatusInitializing,
-		failChan:        failJobChan,
-		statusLock:      &sync.RWMutex{},
-		isReadyLock:     &sync.RWMutex{},
-		backoff:         newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
-		isReady:         false,
-		stopReadyChan:   make(chan interface{}),
-		waitingForReady: false,
+		id:            newUUID(),
+		name:          name,
+		job:           newJob,
+		jobType:       jobType,
+		status:        JobStatusInitializing,
+		failChan:      failJobChan,
+		statusLock:    &sync.RWMutex{},
+		isReadyLock:   &sync.RWMutex{},
+		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
+		isReady:       false,
+		stopReadyChan: make(chan interface{}),
 	}
 }
 
@@ -64,7 +62,6 @@ func (b *baseJob) executeJob() {
 
 func (b *baseJob) callWithTimeout(execution func() error) error {
 	var executionError error
-
 	// execution time limit is set
 	if executionTimeLimit > 0 {
 		// start a go routine to execute the job
@@ -191,8 +188,6 @@ func (b *baseJob) Ready() bool {
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
 	log.Debugf("Waiting for %s (%s) to be ready", b.name, b.id)
-	b.waitingForReady = true
-	defer func() { b.waitingForReady = false }()
 	for {
 		select {
 		case <-b.stopReadyChan:
