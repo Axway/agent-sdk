@@ -27,6 +27,7 @@ type EventListener struct {
 	handlers    []Handler
 	source      chan *proto.Event
 	stop        chan interface{}
+	isRunning   bool
 }
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
@@ -46,16 +47,28 @@ func (em *EventListener) Stop() {
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() error {
+	if em.isRunning {
+		return fmt.Errorf("event listener is already running")
+	}
+
+	var listenErr error
+	em.isRunning = true
+
 	for {
 		done, err := em.start()
 		if err != nil {
-			return err
+			listenErr = err
+			break
 		}
 
 		if done == true {
-			return nil
+			listenErr = nil
+			break
 		}
 	}
+
+	em.isRunning = false
+	return listenErr
 }
 
 // start waits for an event on the channel and then attempts to pass the item to the handlers.
@@ -74,7 +87,7 @@ func (em *EventListener) start() (done bool, err error) {
 
 		return false, nil
 	case <-em.stop:
-		log.Debug("stream event listener has been stopped")
+		log.Tracef("stream event listener has been gracefully stopped")
 		return true, nil
 	}
 }

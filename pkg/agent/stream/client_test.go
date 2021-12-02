@@ -83,7 +83,8 @@ func TestClient(t *testing.T) {
 
 func TestClientStreamJob(t *testing.T) {
 	s := &mockStreamer{}
-	j := NewClientStreamJob(s)
+	stopCh := make(chan interface{})
+	j := NewClientStreamJob(s, stopCh)
 
 	assert.Nil(t, j.Status())
 	assert.True(t, j.Ready())
@@ -99,8 +100,11 @@ func (m mockStreamer) Start() error {
 	return m.startErr
 }
 
-func (m mockStreamer) HealthCheck() error {
+func (m mockStreamer) Status() error {
 	return m.hcErr
+}
+
+func (m mockStreamer) Stop() {
 }
 
 type mockManager struct {
@@ -116,7 +120,10 @@ func (m mockManager) CloseWatch(_ string) error {
 	return nil
 }
 
-func (m mockManager) Close() {
+func (m mockManager) CloseAll() {
+}
+
+func (m mockManager) CloseConn() {
 }
 
 func (m mockManager) Status() bool {
@@ -135,4 +142,7 @@ type mockListener struct {
 
 func (m mockListener) Listen() error {
 	return m.err
+}
+
+func (m mockListener) Stop() {
 }

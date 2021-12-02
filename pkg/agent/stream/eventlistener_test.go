@@ -18,7 +18,6 @@ func TestEventListener_start(t *testing.T) {
 		events    chan *proto.Event
 		ri        ResourceClient
 		handler   Handler
-		stop      chan interface{}
 		writeStop bool
 	}{
 		{
@@ -27,7 +26,6 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{},
-			stop:     make(chan interface{}),
 		},
 		{
 			name:     "should return an error when the event channel is closed",
@@ -35,24 +33,14 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{},
-			stop:     make(chan interface{}),
 		},
-		{
-			name:      "should return an error after receiving a stop signal",
-			hasError:  true,
-			events:    make(chan *proto.Event),
-			ri:        &mockRI{},
-			handler:   mockHandler{},
-			stop:      make(chan interface{}),
-			writeStop: true,
-		},
+
 		{
 			name:     "should not return an error, even if the request for a ResourceClient fails",
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{err: fmt.Errorf("failed")},
 			handler:  mockHandler{},
-			stop:     make(chan interface{}),
 		},
 		{
 			name:     "should not return an error, even if a handler fails to process an event",
@@ -60,7 +48,6 @@ func TestEventListener_start(t *testing.T) {
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
 			handler:  mockHandler{err: fmt.Errorf("failed")},
-			stop:     make(chan interface{}),
 		},
 	}
 
@@ -70,13 +57,9 @@ func TestEventListener_start(t *testing.T) {
 
 			errCh := make(chan error)
 			go func() {
-				err := listener.start()
+				_, err := listener.start()
 				errCh <- err
 			}()
-
-			if tc.writeStop {
-				tc.stop <- nil
-			}
 
 			if tc.hasError == false {
 				tc.events <- &proto.Event{
@@ -100,6 +83,31 @@ func TestEventListener_start(t *testing.T) {
 		})
 	}
 
+}
+
+// Should call Listen and handle a graceful stop, and an error
+func TestEventListener_Listen(t *testing.T) {
+	events := make(chan *proto.Event)
+	listener := NewEventListener(events, &mockRI{}, mockHandler{})
+
+	errCh := make(chan error)
+	go func() {
+		err := listener.Listen()
+		errCh <- err
+	}()
+
+	go listener.Stop()
+	err := <-errCh
+	assert.Nil(t, err)
+
+	go func() {
+		err := listener.Listen()
+		errCh <- err
+	}()
+
+	close(events)
+	err = <-errCh
+	assert.NotNil(t, err)
 }
 
 func TestEventListener_handleEvent(t *testing.T) {

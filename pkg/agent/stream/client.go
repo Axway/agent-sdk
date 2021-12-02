@@ -41,9 +41,9 @@ func NewClient(
 }
 
 func (sc *Client) newStreamService() error {
-	errors := make(chan error)
+	streamErrCh := make(chan error)
 
-	id, err := sc.manager.RegisterWatch(sc.topic, sc.events, errors)
+	id, err := sc.manager.RegisterWatch(sc.topic, sc.events, streamErrCh)
 	if err != nil {
 		return err
 	}
@@ -52,14 +52,15 @@ func (sc *Client) newStreamService() error {
 
 	go func() {
 		err := sc.listener.Listen()
-		sc.manager.CloseWatch(id)
 		eventErrorCh <- err
 	}()
 
 	select {
-	case streamErr := <-errors:
+	case streamErr := <-streamErrCh:
+		sc.manager.CloseWatch(id)
 		return streamErr
 	case eventErr := <-eventErrorCh:
+		sc.manager.CloseWatch(id)
 		return eventErr
 	}
 }
