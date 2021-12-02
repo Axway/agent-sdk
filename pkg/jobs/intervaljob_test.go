@@ -64,5 +64,5 @@ func TestIntervalJob(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusStopped], status)
-	assert.LessOrEqual(t, 7, job.executions)
+	assert.LessOrEqual(t, 6, job.executions)
 }

@@ -51,7 +51,7 @@ func TestRetryJob(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusRetrying], status)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusFinished], status)
 }
