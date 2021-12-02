@@ -3,8 +3,6 @@ package stream
 import (
 	"fmt"
 
-	"github.com/Axway/agent-sdk/pkg/util/log"
-
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -23,6 +21,7 @@ type Client struct {
 	topic    string
 	listener Listener
 	events   chan *proto.Event
+	ids      []string
 }
 
 // NewClient creates a Client
@@ -48,6 +47,8 @@ func (sc *Client) newStreamService() error {
 		return err
 	}
 
+	sc.ids = append(sc.ids, id)
+
 	eventErrorCh := make(chan error)
 
 	go func() {
@@ -65,10 +66,15 @@ func (sc *Client) newStreamService() error {
 	}
 }
 
-// Stop stops the client
+// Stop stops all watch clients created by this stream client
 func (sc *Client) Stop() {
 	sc.listener.Stop()
-	sc.manager.CloseAll()
+
+	for _, id := range sc.ids {
+		sc.manager.CloseWatch(id)
+	}
+
+	sc.ids = make([]string, 0)
 }
 
 // Start starts the streaming client
@@ -105,7 +111,6 @@ type ClientStreamJob struct {
 func (j ClientStreamJob) Execute() error {
 	go func() {
 		<-j.stop
-		log.Info("------------------- Closing Stream Client ------------------------")
 		j.streamer.Stop()
 	}()
 	return j.streamer.Start()
