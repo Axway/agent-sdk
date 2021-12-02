@@ -2,6 +2,7 @@ package apic
 
 import (
 	"sync"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -37,25 +38,21 @@ type subscriptionManager struct {
 	locklist            map[string]string // subscription items to skip because they are locked
 	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
 	jobID               string
+	pollingEnabled      bool
+	pollInterval        time.Duration
 }
 
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:     false,
-		apicClient:    apicClient,
-		processorMap:  make(map[SubscriptionState][]SubscriptionProcessor),
-		statesToQuery: make([]string, 0),
-		locklist:      make(map[string]string),
-		locklistLock:  &sync.RWMutex{},
-	}
-
-	if apicClient.cfg.GetSubscriptionConfig().PollingEnabled() {
-		var err error
-		subscriptionMgr.jobID, err = jobs.RegisterIntervalJobWithName(subscriptionMgr, apicClient.cfg.GetPollInterval(), "Subscription Manager")
-		if err != nil {
-			log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
-		}
+		isRunning:      false,
+		apicClient:     apicClient,
+		processorMap:   make(map[SubscriptionState][]SubscriptionProcessor),
+		statesToQuery:  make([]string, 0),
+		locklist:       make(map[string]string),
+		locklistLock:   &sync.RWMutex{},
+		pollingEnabled: apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:   apicClient.cfg.GetPollInterval(),
 	}
 
 	return subscriptionMgr
@@ -74,6 +71,7 @@ func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, proces
 	}
 	sm.statesToQuery = append(sm.statesToQuery, string(state))
 	sm.processorMap[state] = append(processorList, processor)
+
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
@@ -227,6 +225,15 @@ func (sm *subscriptionManager) Start() {
 
 		go sm.publisher.Start()
 		go sm.processSubscriptions()
+
+		// Wait for at least one processor to register before registering the job
+		if len(sm.statesToQuery) > 0 && sm.pollingEnabled && sm.jobID == "" {
+			var err error
+			sm.jobID, err = jobs.RegisterIntervalJobWithName(sm, sm.pollInterval, "Subscription Manager")
+			if err != nil {
+				log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
+			}
+		}
 		sm.isRunning = true
 	}
 }
@@ -238,6 +245,7 @@ func (sm *subscriptionManager) Stop() {
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 		jobs.UnregisterJob(sm.jobID)
+		sm.jobID = ""
 	}
 }
 
