@@ -36,6 +36,7 @@ func NewClient(
 		topic:    topic,
 		listener: listener,
 		events:   events,
+		ids:      make([]string, 0),
 	}
 }
 
