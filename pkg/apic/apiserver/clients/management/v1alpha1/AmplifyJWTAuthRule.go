@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type TermsMergeFunc func(*v1alpha1.Terms, *v1alpha1.Terms) (*v1alpha1.Terms, error)
+type AmplifyJWTAuthRuleMergeFunc func(*v1alpha1.AmplifyJWTAuthRule, *v1alpha1.AmplifyJWTAuthRule) (*v1alpha1.AmplifyJWTAuthRule, error)
 
 // Merge builds a merge option for an update operation
-func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
+func AmplifyJWTAuthRuleMerge(f AmplifyJWTAuthRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Terms{}, &v1alpha1.Terms{}
+		p, n := &v1alpha1.AmplifyJWTAuthRule{}, &v1alpha1.AmplifyJWTAuthRule{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.AmplifyJWTAuthRule:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.AmplifyJWTAuthRule:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 	})
 }
 
-// TermsClient -
-type TermsClient struct {
+// AmplifyJWTAuthRuleClient -
+type AmplifyJWTAuthRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedTermsClient -
-type UnscopedTermsClient struct {
+// UnscopedAmplifyJWTAuthRuleClient -
+type UnscopedAmplifyJWTAuthRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewTermsClient -
-func NewTermsClient(c v1.Base) (*UnscopedTermsClient, error) {
+// NewAmplifyJWTAuthRuleClient -
+func NewAmplifyJWTAuthRuleClient(c v1.Base) (*UnscopedAmplifyJWTAuthRuleClient, error) {
 
-	client, err := c.ForKind(v1alpha1.TermsGVK())
+	client, err := c.ForKind(v1alpha1.AmplifyJWTAuthRuleGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedTermsClient{client}, nil
+	return &UnscopedAmplifyJWTAuthRuleClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedTermsClient) WithScope(scope string) *TermsClient {
-	return &TermsClient{
+func (c *UnscopedAmplifyJWTAuthRuleClient) WithScope(scope string) *AmplifyJWTAuthRuleClient {
+	return &AmplifyJWTAuthRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedTermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *UnscopedAmplifyJWTAuthRuleClient) Get(name string) (*v1alpha1.AmplifyJWTAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.AmplifyJWTAuthRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *UnscopedAmplifyJWTAuthRuleClient) Update(res *v1alpha1.AmplifyJWTAuthRule, opts ...v1.UpdateOption) (*v1alpha1.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.AmplifyJWTAuthRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 }
 
 // List -
-func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error) {
+func (c *AmplifyJWTAuthRuleClient) List(options ...v1.ListOptions) ([]*v1alpha1.AmplifyJWTAuthRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Terms, len(riList))
+	result := make([]*v1alpha1.AmplifyJWTAuthRule, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Terms{}
+		result[i] = &v1alpha1.AmplifyJWTAuthRule{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error)
 }
 
 // Get -
-func (c *TermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *AmplifyJWTAuthRuleClient) Get(name string) (*v1alpha1.AmplifyJWTAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.AmplifyJWTAuthRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
+func (c *AmplifyJWTAuthRuleClient) Delete(res *v1alpha1.AmplifyJWTAuthRule) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
 }
 
 // Create -
-func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1alpha1.Terms, error) {
+func (c *AmplifyJWTAuthRuleClient) Create(res *v1alpha1.AmplifyJWTAuthRule, opts ...v1.CreateOption) (*v1alpha1.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 		return nil, err
 	}
 
-	created := &v1alpha1.Terms{}
+	created := &v1alpha1.AmplifyJWTAuthRule{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 }
 
 // Update -
-func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *AmplifyJWTAuthRuleClient) Update(res *v1alpha1.AmplifyJWTAuthRule, opts ...v1.UpdateOption) (*v1alpha1.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1a
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.AmplifyJWTAuthRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// TermsSpec struct for TermsSpec
-type TermsSpec struct {
-	// Markdown representing the terms.
-	Content string `json:"content,omitempty"`
+// ResourceDefinitionSpecSubResources Describes the subresources that the current resource might have.
+type ResourceDefinitionSpecSubResources struct {
+	Names []string `json:"names,omitempty"`
 }

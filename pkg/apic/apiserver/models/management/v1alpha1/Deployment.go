@@ -44,7 +44,7 @@ type Deployment struct {
 
 	Spec DeploymentSpec `json:"spec"`
 
-	State DeploymentState `json:"state"`
+	Status DeploymentStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a Deployment

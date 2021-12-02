@@ -12,15 +12,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type ReleaseNotesMergeFunc func(*v1alpha1.ReleaseNotes, *v1alpha1.ReleaseNotes) (*v1alpha1.ReleaseNotes, error)
+type ResourceMergeFunc func(*v1alpha1.Resource, *v1alpha1.Resource) (*v1alpha1.Resource, error)
 
 // Merge builds a merge option for an update operation
-func ReleaseNotesMerge(f ReleaseNotesMergeFunc) v1.UpdateOption {
+func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ReleaseNotes{}, &v1alpha1.ReleaseNotes{}
+		p, n := &v1alpha1.Resource{}, &v1alpha1.Resource{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ReleaseNotes:
+		case *v1alpha1.Resource:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ReleaseNotesMerge(f ReleaseNotesMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ReleaseNotes:
+		case *v1alpha1.Resource:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func ReleaseNotesMerge(f ReleaseNotesMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ReleaseNotesClient -
-type ReleaseNotesClient struct {
+// ResourceClient -
+type ResourceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedReleaseNotesClient -
-type UnscopedReleaseNotesClient struct {
+// UnscopedResourceClient -
+type UnscopedResourceClient struct {
 	client v1.Unscoped
 }
 
-// NewReleaseNotesClient -
-func NewReleaseNotesClient(c v1.Base) (*UnscopedReleaseNotesClient, error) {
+// NewResourceClient -
+func NewResourceClient(c v1.Base) (*UnscopedResourceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ReleaseNotesGVK())
+	client, err := c.ForKind(v1alpha1.ResourceGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedReleaseNotesClient{client}, nil
+	return &UnscopedResourceClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedReleaseNotesClient) WithScope(scope string) *ReleaseNotesClient {
-	return &ReleaseNotesClient{
+func (c *UnscopedResourceClient) WithScope(scope string) *ResourceClient {
+	return &ResourceClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedReleaseNotesClient) Get(name string) (*v1alpha1.ReleaseNotes, error) {
+func (c *UnscopedResourceClient) Get(name string) (*v1alpha1.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ReleaseNotes{}
+	service := &v1alpha1.Resource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...v1.UpdateOption) (*v1alpha1.ReleaseNotes, error) {
+func (c *UnscopedResourceClient) Update(res *v1alpha1.Resource, opts ...v1.UpdateOption) (*v1alpha1.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.ReleaseNotes{}
+	updated := &v1alpha1.Resource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...
 }
 
 // List -
-func (c *ReleaseNotesClient) List(options ...v1.ListOptions) ([]*v1alpha1.ReleaseNotes, error) {
+func (c *ResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resource, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ReleaseNotes, len(riList))
+	result := make([]*v1alpha1.Resource, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ReleaseNotes{}
+		result[i] = &v1alpha1.Resource{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *ReleaseNotesClient) List(options ...v1.ListOptions) ([]*v1alpha1.Releas
 }
 
 // Get -
-func (c *ReleaseNotesClient) Get(name string) (*v1alpha1.ReleaseNotes, error) {
+func (c *ResourceClient) Get(name string) (*v1alpha1.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ReleaseNotes{}
+	service := &v1alpha1.Resource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ReleaseNotesClient) Delete(res *v1alpha1.ReleaseNotes) error {
+func (c *ResourceClient) Delete(res *v1alpha1.Resource) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *ReleaseNotesClient) Delete(res *v1alpha1.ReleaseNotes) error {
 }
 
 // Create -
-func (c *ReleaseNotesClient) Create(res *v1alpha1.ReleaseNotes, opts ...v1.CreateOption) (*v1alpha1.ReleaseNotes, error) {
+func (c *ResourceClient) Create(res *v1alpha1.Resource, opts ...v1.CreateOption) (*v1alpha1.Resource, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ReleaseNotesClient) Create(res *v1alpha1.ReleaseNotes, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.ReleaseNotes{}
+	created := &v1alpha1.Resource{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *ReleaseNotesClient) Create(res *v1alpha1.ReleaseNotes, opts ...v1.Creat
 }
 
 // Update -
-func (c *ReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...v1.UpdateOption) (*v1alpha1.ReleaseNotes, error) {
+func (c *ResourceClient) Update(res *v1alpha1.Resource, opts ...v1.UpdateOption) (*v1alpha1.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.ReleaseNotes{}
+	updated := &v1alpha1.Resource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

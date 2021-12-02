@@ -9,9 +9,9 @@
 
 package v1alpha1
 
-// ReleaseTagSpec struct for ReleaseTagSpec
-type ReleaseTagSpec struct {
-	// Description of the Release Tag.
-	Description string `json:"description,omitempty"`
-	ReleaseType string `json:"releaseType"`
+// ResourceSpec struct for ResourceSpec
+type ResourceSpec struct {
+	Type string `json:"type"`
+	// Parent folder of the Resource.
+	ParentFolder string `json:"parentFolder,omitempty"`
 }

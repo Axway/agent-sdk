@@ -15,8 +15,8 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ReleaseTagStatus struct for ReleaseTagStatus
-type ReleaseTagStatus struct {
+// AssetReleaseStatus struct for AssetReleaseStatus
+type AssetReleaseStatus struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`
