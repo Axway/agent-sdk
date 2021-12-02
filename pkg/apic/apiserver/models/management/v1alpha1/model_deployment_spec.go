@@ -13,6 +13,6 @@ package v1alpha1
 type DeploymentSpec struct {
 	// The name of an APIServiceInstance resource that specifies where the API is deployed.
 	VirtualAPIRelease string `json:"virtualAPIRelease"`
-	// The fully qualifield virtual host name as described in RFC 1035
+	// The name of an APIServiceInstance resource that specifies where the API is deployed.
 	VirtualHost string `json:"virtualHost"`
 }

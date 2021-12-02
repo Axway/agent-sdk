@@ -9,9 +9,11 @@
 
 package v1alpha1
 
-// DeploymentState struct for DeploymentState
-type DeploymentState struct {
+// AmplifyJwtAuthRuleSpecFrom struct for AmplifyJwtAuthRuleSpecFrom
+type AmplifyJwtAuthRuleSpecFrom struct {
+	// Where to look for the token.
+	In   string `json:"in,omitempty"`
 	Name string `json:"name"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
+	// The token prefix, e.g. \"Bearer \".
+	Prefix string `json:"prefix,omitempty"`
 }

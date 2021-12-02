@@ -9,9 +9,8 @@
 
 package v1alpha1
 
-// ReleaseTagSpec struct for ReleaseTagSpec
-type ReleaseTagSpec struct {
-	// Description of the Release Tag.
-	Description string `json:"description,omitempty"`
-	ReleaseType string `json:"releaseType"`
+// VirtualHostSpec struct for VirtualHostSpec
+type VirtualHostSpec struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 }

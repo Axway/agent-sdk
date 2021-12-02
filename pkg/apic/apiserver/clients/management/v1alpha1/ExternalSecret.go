@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type TermsMergeFunc func(*v1alpha1.Terms, *v1alpha1.Terms) (*v1alpha1.Terms, error)
+type ExternalSecretMergeFunc func(*v1alpha1.ExternalSecret, *v1alpha1.ExternalSecret) (*v1alpha1.ExternalSecret, error)
 
 // Merge builds a merge option for an update operation
-func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
+func ExternalSecretMerge(f ExternalSecretMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Terms{}, &v1alpha1.Terms{}
+		p, n := &v1alpha1.ExternalSecret{}, &v1alpha1.ExternalSecret{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.ExternalSecret:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.ExternalSecret:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 	})
 }
 
-// TermsClient -
-type TermsClient struct {
+// ExternalSecretClient -
+type ExternalSecretClient struct {
 	client v1.Scoped
 }
 
-// UnscopedTermsClient -
-type UnscopedTermsClient struct {
+// UnscopedExternalSecretClient -
+type UnscopedExternalSecretClient struct {
 	client v1.Unscoped
 }
 
-// NewTermsClient -
-func NewTermsClient(c v1.Base) (*UnscopedTermsClient, error) {
+// NewExternalSecretClient -
+func NewExternalSecretClient(c v1.Base) (*UnscopedExternalSecretClient, error) {
 
-	client, err := c.ForKind(v1alpha1.TermsGVK())
+	client, err := c.ForKind(v1alpha1.ExternalSecretGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedTermsClient{client}, nil
+	return &UnscopedExternalSecretClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedTermsClient) WithScope(scope string) *TermsClient {
-	return &TermsClient{
+func (c *UnscopedExternalSecretClient) WithScope(scope string) *ExternalSecretClient {
+	return &ExternalSecretClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedTermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *UnscopedExternalSecretClient) Get(name string) (*v1alpha1.ExternalSecret, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.ExternalSecret{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *UnscopedExternalSecretClient) Update(res *v1alpha1.ExternalSecret, opts ...v1.UpdateOption) (*v1alpha1.ExternalSecret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.ExternalSecret{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 }
 
 // List -
-func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error) {
+func (c *ExternalSecretClient) List(options ...v1.ListOptions) ([]*v1alpha1.ExternalSecret, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Terms, len(riList))
+	result := make([]*v1alpha1.ExternalSecret, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Terms{}
+		result[i] = &v1alpha1.ExternalSecret{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error)
 }
 
 // Get -
-func (c *TermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *ExternalSecretClient) Get(name string) (*v1alpha1.ExternalSecret, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.ExternalSecret{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
+func (c *ExternalSecretClient) Delete(res *v1alpha1.ExternalSecret) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
 }
 
 // Create -
-func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1alpha1.Terms, error) {
+func (c *ExternalSecretClient) Create(res *v1alpha1.ExternalSecret, opts ...v1.CreateOption) (*v1alpha1.ExternalSecret, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 		return nil, err
 	}
 
-	created := &v1alpha1.Terms{}
+	created := &v1alpha1.ExternalSecret{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 }
 
 // Update -
-func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *ExternalSecretClient) Update(res *v1alpha1.ExternalSecret, opts ...v1.UpdateOption) (*v1alpha1.ExternalSecret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1a
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.ExternalSecret{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

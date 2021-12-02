@@ -9,8 +9,13 @@
 
 package v1alpha1
 
-// ReleaseNotesSpec struct for ReleaseNotesSpec
-type ReleaseNotesSpec struct {
-	// Markdown for release notes.
-	Content string `json:"content,omitempty"`
-}
+// AssetState the model 'AssetState'
+type AssetState string
+
+// List of AssetState
+const (
+	DRAFT      AssetState = "draft"
+	ACTIVE     AssetState = "active"
+	DEPRECATED AssetState = "deprecated"
+	ARCHIVED   AssetState = "archived"
+)
