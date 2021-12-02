@@ -41,7 +41,7 @@
       "component": "apicauth\\.go",
       "version": "master",
       "ids": [
-        "Privacy Violation",
+        "Privacy Violation"
       ]
     }
   ]
