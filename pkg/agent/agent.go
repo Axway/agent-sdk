@@ -47,9 +47,6 @@ var AgentResourceType string
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
-// DeleteServiceValidator - Callback for validating if the service should be deleted along with the consumer instance
-type DeleteServiceValidator func(apiID, stageName string) bool
-
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
@@ -64,20 +61,21 @@ type agentData struct {
 	agentResource     *apiV1.ResourceInstance
 	prevAgentResource *apiV1.ResourceInstance
 
-	apicClient     apic.Client
-	cfg            config.CentralConfig
-	agentCfg       interface{}
-	tokenRequester auth.PlatformTokenGetter
-	loggerName     string
-	logLevel       string
-	logFormat      string
-	logOutput      string
-	logPath        string
+	apicClient       apic.Client
+	cfg              config.CentralConfig
+	agentFeaturesCfg config.AgentFeaturesConfig
+	agentCfg         interface{}
+	tokenRequester   auth.PlatformTokenGetter
+	loggerName       string
+	logLevel         string
+	logFormat        string
+	logOutput        string
+	logPath          string
 
 	apiMap                     cache.Cache
 	categoryMap                cache.Cache
+	teamMap                    cache.Cache
 	apiValidator               APIValidator
-	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	isInitialized              bool
@@ -87,6 +85,11 @@ var agent = agentData{}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
+	return InitializeWithAgentFeatures(centralCfg, config.NewAgentFeaturesConfiguration())
+}
+
+// InitializeWithAgentFeatures - Initializes the agent with agent features
+func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
 	// Only create the api map cache if it does not already exist
 	if agent.apiMap == nil {
 		agent.apiMap = cache.New()
@@ -94,16 +97,27 @@ func Initialize(centralCfg config.CentralConfig) error {
 	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
 	}
+	if agent.teamMap == nil {
+		agent.teamMap = cache.New()
+	}
 
 	err := checkRunningAgent()
 	if err != nil {
 		return err
 	}
 
-	// validate the central config
-	err = config.ValidateConfig(centralCfg)
+	err = config.ValidateConfig(agentFeaturesCfg)
 	if err != nil {
 		return err
+	}
+	agent.agentFeaturesCfg = agentFeaturesCfg
+
+	// validate the central config
+	if agentFeaturesCfg.ConnectionToCentralEnabled() {
+		err = config.ValidateConfig(centralCfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
@@ -112,19 +126,20 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return nil
 	}
 
-	err = initializeTokenRequester(centralCfg)
-	if err != nil {
-		return err
-	}
-
-	// Init apic client when the agent starts, and on config change.
-	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-	agent.apicClient.AddCategoryCache(agent.categoryMap)
-
-	if util.IsNotTest() {
-		err = initEnvResources(centralCfg, agent.apicClient)
+	if agentFeaturesCfg.ConnectionToCentralEnabled() {
+		err = initializeTokenRequester(centralCfg)
 		if err != nil {
 			return err
+		}
+		// Init apic client when the agent starts, and on config change.
+		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
+		agent.apicClient.AddCache(agent.categoryMap, agent.teamMap)
+
+		if util.IsNotTest() {
+			err = initEnvResources(centralCfg, agent.apicClient)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -139,7 +154,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if getAgentResourceType() != "" {
 			fetchConfig()
 			updateAgentStatus(AgentRunning, "", "")
-		} else if agent.cfg.GetAgentName() != "" {
+		} else if agent.agentFeaturesCfg.ConnectionToCentralEnabled() && agent.cfg.GetAgentName() != "" {
 			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 		}
 
@@ -149,9 +164,10 @@ func Initialize(centralCfg config.CentralConfig) error {
 			hc.StartPeriodicHealthCheck()
 		}
 
-		if util.IsNotTest() {
+		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
+			startTeamACLCache()
 		}
 	}
 
@@ -272,6 +288,19 @@ func startAPIServiceCache() {
 	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)
 }
 
+func startTeamACLCache() {
+	// register the team cache and acl update jobs
+	var teamChannel chan string
+
+	// Only discovery agents need to start the ACL handler
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		teamChannel = make(chan string)
+		registerAccessControlListHandler(teamChannel)
+	}
+
+	registerTeamMapCacheJob(teamChannel)
+}
+
 func isRunningInDockerContainer() bool {
 	// Within the cgroup file, if you are not in a docker container all entries are like this devices:/
 	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
@@ -383,6 +412,9 @@ func refreshResources() (bool, error) {
 }
 
 func setupSignalProcessor() {
+	if !agent.agentFeaturesCfg.ProcessSystemSignalsEnabled() {
+		return
+	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
@@ -424,6 +456,9 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 
 // updateAgentStatus - Updates the agent status in agent resource
 func updateAgentStatus(status, prevStatus, message string) error {
+	if agent.cfg == nil || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
+		return nil
+	}
 	// IMP - To be removed once the model is in production
 	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
 		return nil

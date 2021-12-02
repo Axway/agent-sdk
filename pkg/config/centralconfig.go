@@ -21,6 +21,8 @@ const (
 	TraceabilityAgent
 	// GovernanceAgent - Type definition for governance agent
 	GovernanceAgent
+	// GenericService - Type for a generic service
+	GenericService
 )
 
 // AgentMode - Defines the agent mode
@@ -105,6 +107,7 @@ type CentralConfig interface {
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
+	GetEnvironmentACLsURL() string
 	GetServicesURL() string
 	GetRevisionsURL() string
 	GetInstancesURL() string
@@ -134,7 +137,6 @@ type CentralConfig interface {
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
 	GetUpdateFromAPIServer() bool
-	IsVersionCheckerEnabled() bool
 	IsUsingGRPC() bool
 	GetWatchTopic() string
 }
@@ -156,7 +158,6 @@ type CentralConfiguration struct {
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
 	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
-	VersionChecker            bool                 `config:"versionChecker"`
 	UpdateFromAPIServer       bool                 `config:"updateFromAPIServer"`
 	Auth                      AuthConfig           `config:"auth"`
 	TLS                       TLSConfig            `config:"ssl"`
@@ -189,7 +190,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		UpdateFromAPIServer:       false,
-		VersionChecker:            true,
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
@@ -309,6 +309,11 @@ func (c *CentralConfiguration) GetAPIServerCatalogURL() string {
 // GetEnvironmentURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
+}
+
+// GetEnvironmentACLsURL - Returns the APIServer URL for ACLs in Environments
+func (c *CentralConfiguration) GetEnvironmentACLsURL() string {
+	return c.GetEnvironmentURL() + "/accesscontrollists"
 }
 
 // GetServicesURL - Returns the APIServer URL for services API
@@ -446,11 +451,6 @@ func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
 	return c.UpdateFromAPIServer
 }
 
-// IsVersionCheckerEnabled -
-func (c *CentralConfiguration) IsVersionCheckerEnabled() bool {
-	return c.VersionChecker
-}
-
 // IsUsingGRPC -
 func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.UseGRPC
@@ -497,7 +497,6 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
-	pathVersionChecker            = "central.versionChecker"
 	pathJobTimeout                = "central.jobTimeout"
 	pathUseGRPC                   = "central.useGRPC"
 	pathWatchTopic                = "central.watchTopic"
@@ -515,6 +514,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 			c.validateConfig()
 			c.Auth.validate()
+
 			if supportsTraceability(c.AgentType) {
 				c.UsageReporting.validate()
 			}
@@ -638,7 +638,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
-	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent version checker will be enabled or not")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
 
 	if supportsTraceability(agentType) {
@@ -702,7 +701,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		},
 		ProxyURL:            proxyURL,
 		UpdateFromAPIServer: props.BoolPropertyValue(pathUpdateFromAPIServer),
-		VersionChecker:      props.BoolPropertyValue(pathVersionChecker),
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)

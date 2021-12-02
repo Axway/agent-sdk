@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	SpecDiscoveryScopes = []string{"K8SCluster"}
 )
 
-const (
-	SpecDiscoveryScope = "K8SCluster"
-
-	SpecDiscoveryResourceName = "specdiscoveries"
-)
+const SpecDiscoveryResourceName = "specdiscoveries"
 
 func SpecDiscoveryGVK() apiv1.GroupVersionKind {
 	return _SpecDiscoveryGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_SpecDiscoveryGVK, SpecDiscoveryScope, SpecDiscoveryResourceName)
+	apiv1.RegisterGVK(_SpecDiscoveryGVK, SpecDiscoveryScopes[0], SpecDiscoveryResourceName)
 }
 
 // SpecDiscovery Resource

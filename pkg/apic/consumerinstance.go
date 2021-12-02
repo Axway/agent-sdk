@@ -11,7 +11,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -38,19 +37,15 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
 	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
 	if serviceBody.TeamName != "" {
-		obj, err := cache.GetCache().Get(TeamMapKey)
-		if err == nil {
-			teamMap := obj.(map[string]string)
-			if _, found := teamMap[serviceBody.TeamName]; found {
-				owningTeam = serviceBody.TeamName
-			} else {
-				teamForMsg := "the default team"
-				if owningTeam != "" {
-					teamForMsg = fmt.Sprintf("team %s", owningTeam)
-				}
-				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
-					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
+		if _, found := c.getTeamFromCache(serviceBody.TeamName); found {
+			owningTeam = serviceBody.TeamName
+		} else {
+			teamForMsg := "the default team"
+			if owningTeam != "" {
+				teamForMsg = fmt.Sprintf("team %s", owningTeam)
 			}
+			log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+				serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 		}
 	}
 
@@ -115,6 +110,9 @@ func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody
 }
 
 func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
+	if len(serviceBody.authPolicies) > 0 {
+		serviceBody.AuthPolicy = serviceBody.authPolicies[0] // use the first auth policy
+	}
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 	// if there isn't a registered subscription schema, do not enable subscriptions,
 	// or if the status is not PUBLISHED, do not enable subscriptions
@@ -130,22 +128,26 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName, doc string) *v1alpha1.ConsumerInstance {
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName string, instAttributes map[string]string, doc string) *v1alpha1.ConsumerInstance {
 	return &v1alpha1.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
 			Name:             consumerInstanceName,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, false),
+			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
+func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, instAttributes map[string]string, doc string) {
 	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
 	consumerInstance.Title = serviceBody.NameToPush
+	for k, v := range instAttributes {
+		consumerInstance.ResourceMeta.Attributes[k] = v
+	}
 	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
 	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	// use existing categories only if mappings have not been configured
@@ -155,6 +157,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 		categories = serviceBody.categoryNames
 	}
 	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
+	consumerInstance.Owner = c.getOwnerObject(serviceBody, false)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
@@ -184,6 +187,11 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
+	instAttributes := serviceBody.InstanceAttributes
+	if instAttributes == nil {
+		instAttributes = make(map[string]string)
+	}
+
 	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
 		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
@@ -204,9 +212,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	if consumerInstance != nil {
 		httpMethod = http.MethodPut
 		consumerInstanceURL += "/" + consumerInstanceName
-		c.updateConsumerInstanceResource(consumerInstance, serviceBody, doc)
+		c.updateConsumerInstanceResource(consumerInstance, serviceBody, instAttributes, doc)
 	} else {
-		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
+		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, instAttributes, doc)
 	}
 
 	buffer, err := json.Marshal(consumerInstance)
@@ -298,7 +306,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==%s", externalAPIID),
+		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==\"%s\"", externalAPIID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

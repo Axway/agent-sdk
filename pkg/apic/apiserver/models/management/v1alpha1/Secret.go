@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	SecretScopes = []string{"Environment", "Integration"}
 )
 
-const (
-	SecretScope = "Environment"
-
-	SecretResourceName = "secrets"
-)
+const SecretResourceName = "secrets"
 
 func SecretGVK() apiv1.GroupVersionKind {
 	return _SecretGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResourceName)
+	apiv1.RegisterGVK(_SecretGVK, SecretScopes[0], SecretResourceName)
 }
 
 // Secret Resource

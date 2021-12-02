@@ -47,7 +47,6 @@ func (su *agentStatusUpdate) Ready() bool {
 }
 
 func (su *agentStatusUpdate) Status() error {
-	// error out if the agent name does not exist
 	return nil
 }
 

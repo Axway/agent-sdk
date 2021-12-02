@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	MeshWorkloadScopes = []string{"Mesh"}
 )
 
-const (
-	MeshWorkloadScope = "Mesh"
-
-	MeshWorkloadResourceName = "meshworkloads"
-)
+const MeshWorkloadResourceName = "meshworkloads"
 
 func MeshWorkloadGVK() apiv1.GroupVersionKind {
 	return _MeshWorkloadGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshWorkloadGVK, MeshWorkloadScope, MeshWorkloadResourceName)
+	apiv1.RegisterGVK(_MeshWorkloadGVK, MeshWorkloadScopes[0], MeshWorkloadResourceName)
 }
 
 // MeshWorkload Resource

@@ -13,5 +13,4 @@ package v1alpha1
 type MarketplaceSpec struct {
 	// description of the Marketplace.
 	Description string `json:"description,omitempty"`
-	BasePath    string `json:"basePath"`
 }

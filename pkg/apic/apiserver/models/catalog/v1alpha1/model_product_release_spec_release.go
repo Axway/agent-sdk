@@ -12,6 +12,8 @@ package v1alpha1
 // ProductReleaseSpecRelease struct for ProductReleaseSpecRelease
 type ProductReleaseSpecRelease struct {
 	Name string `json:"name,omitempty"`
-	// The AssetRelease version
+	// The AssetRelease version.
 	Version string `json:"version,omitempty"`
+	// The AssetRelease state.
+	State string `json:"state,omitempty"`
 }

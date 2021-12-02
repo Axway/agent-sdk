@@ -31,6 +31,13 @@ const (
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+	// if the team is set in the config, use that team name and id for all services
+	if strings.ToLower(c.cfg.GetTeamName()) != "" {
+		if teamID, found := c.getTeamFromCache(c.cfg.GetTeamName()); found {
+			serviceBody.TeamName = c.cfg.GetTeamName()
+			serviceBody.teamID = teamID
+		}
+	}
 	apiSvc, err := c.processService(serviceBody)
 	if err != nil {
 		return nil, err
@@ -127,13 +134,13 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 // Update description and title after updating or creating APIService to include the stage name if it exists
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	if serviceBody.Stage != "" {
-		addDescription := fmt.Sprintf("StageName: %s", serviceBody.Stage)
+		addDescription := fmt.Sprintf("%s: %s", serviceBody.StageDescriptor, serviceBody.Stage)
 		if len(serviceBody.Description) > 0 {
 			serviceBody.Description = fmt.Sprintf("%s, %s", serviceBody.Description, addDescription)
 		} else {
 			serviceBody.Description = addDescription
 		}
-		serviceBody.NameToPush = fmt.Sprintf("%v (Stage: %v)", serviceBody.NameToPush, serviceBody.Stage)
+		serviceBody.NameToPush = fmt.Sprintf("%v (%s: %v)", serviceBody.NameToPush, serviceBody.StageDescriptor, serviceBody.Stage)
 	} else if c.cfg.GetAppendEnvironmentToTitle() {
 		// Append the environment name to the title, if set
 		serviceBody.NameToPush = fmt.Sprintf("%v (%v)", serviceBody.NameToPush, c.cfg.GetEnvironmentName())

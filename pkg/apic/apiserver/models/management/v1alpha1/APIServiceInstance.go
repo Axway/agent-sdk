@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	APIServiceInstanceScopes = []string{"Environment"}
 )
 
-const (
-	APIServiceInstanceScope = "Environment"
-
-	APIServiceInstanceResourceName = "apiserviceinstances"
-)
+const APIServiceInstanceResourceName = "apiserviceinstances"
 
 func APIServiceInstanceGVK() apiv1.GroupVersionKind {
 	return _APIServiceInstanceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_APIServiceInstanceGVK, APIServiceInstanceScope, APIServiceInstanceResourceName)
+	apiv1.RegisterGVK(_APIServiceInstanceGVK, APIServiceInstanceScopes[0], APIServiceInstanceResourceName)
 }
 
 // APIServiceInstance Resource

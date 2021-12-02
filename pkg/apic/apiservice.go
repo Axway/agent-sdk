@@ -9,6 +9,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 
@@ -36,8 +37,22 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, servic
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, true),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildAPIServiceSpec(serviceBody),
+		Spec:  c.buildAPIServiceSpec(serviceBody),
+		Owner: c.getOwnerObject(serviceBody, true),
 	}
+}
+
+func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *v1.Owner {
+	if id, found := c.getTeamFromCache(serviceBody.TeamName); found {
+		return &v1.Owner{
+			Type: v1.TeamOwner,
+			ID:   id,
+		}
+	} else if warning {
+		// warning is only true when creating service, revision and instance will not print it
+		log.Warnf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
+	}
+	return nil
 }
 
 func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, serviceBody *ServiceBody) {
@@ -46,6 +61,7 @@ func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, se
 	apiSvc.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, apiSvc.ResourceMeta.Attributes, true)
 	apiSvc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	apiSvc.Spec.Description = serviceBody.Description
+	apiSvc.Owner = c.getOwnerObject(serviceBody, true)
 	if serviceBody.Image != "" {
 		apiSvc.Spec.Icon = v1alpha1.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,

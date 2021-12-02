@@ -31,6 +31,11 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
   # copy over the fake example test file
   cp ./fake_example_test.tmpl ${OUTDIR}/clients/management/v1alpha1/fake_example_test.go
 
+  # replace the access control model files
+  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/catalog/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/definitions/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_control_list_spec.go
+
   chown -R ${USERID}:${GROUPID} ${OUTDIR}
 else
   echo "FAILED: generating resources"

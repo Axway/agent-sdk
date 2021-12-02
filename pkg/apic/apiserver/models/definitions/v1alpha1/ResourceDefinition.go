@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ResourceDefinitionScopes = []string{"ResourceGroup"}
 )
 
-const (
-	ResourceDefinitionScope = "ResourceGroup"
-
-	ResourceDefinitionResourceName = "resources"
-)
+const ResourceDefinitionResourceName = "resources"
 
 func ResourceDefinitionGVK() apiv1.GroupVersionKind {
 	return _ResourceDefinitionGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceDefinitionGVK, ResourceDefinitionScope, ResourceDefinitionResourceName)
+	apiv1.RegisterGVK(_ResourceDefinitionGVK, ResourceDefinitionScopes[0], ResourceDefinitionResourceName)
 }
 
 // ResourceDefinition Resource

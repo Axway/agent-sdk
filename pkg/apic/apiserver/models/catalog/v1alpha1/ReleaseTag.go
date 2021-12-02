@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ReleaseTagScopes = []string{"Asset", "Product"}
 )
 
-const (
-	ReleaseTagScope = "Asset"
-
-	ReleaseTagResourceName = "releasetags"
-)
+const ReleaseTagResourceName = "releasetags"
 
 func ReleaseTagGVK() apiv1.GroupVersionKind {
 	return _ReleaseTagGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ReleaseTagGVK, ReleaseTagScope, ReleaseTagResourceName)
+	apiv1.RegisterGVK(_ReleaseTagGVK, ReleaseTagScopes[0], ReleaseTagResourceName)
 }
 
 // ReleaseTag Resource

@@ -31,6 +31,8 @@ const (
 	QueryKey  = "query"
 
 	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
+
+	DefaultTeamKey = "DefaultTeam"
 )
 
 // Constants for attributes
@@ -90,39 +92,6 @@ type EndpointDefinition struct {
 	BasePath string
 }
 
-//ServiceBody -
-type ServiceBody struct {
-	NameToPush        string `json:",omitempty"`
-	APIName           string `json:",omitempty"`
-	RestAPIID         string `json:",omitempty"`
-	PrimaryKey        string `json:",omitempty"`
-	URL               string `json:",omitempty"`
-	Stage             string `json:",omitempty"`
-	Description       string `json:",omitempty"`
-	Version           string `json:",omitempty"`
-	AuthPolicy        string `json:",omitempty"`
-	SpecDefinition    []byte `json:",omitempty"`
-	Documentation     []byte `json:",omitempty"`
-	Tags              map[string]interface{}
-	AgentMode         corecfg.AgentMode `json:",omitempty"`
-	Image             string
-	ImageContentType  string
-	CreatedBy         string
-	ResourceType      string
-	AltRevisionPrefix string
-	SubscriptionName  string
-	APIUpdateSeverity string `json:",omitempty"`
-	State             string
-	Status            string
-	ServiceAttributes map[string]string
-	serviceContext    serviceContext
-	Endpoints         []EndpointDefinition
-	UnstructuredProps *UnstructuredProperties
-	TeamName          string
-	categoryTitles    []string //Titles will be set via the service body builder
-	categoryNames     []string //Names will be determined based the Title
-}
-
 // APIError - api response error
 type APIError struct {
 	Status int    `json:"status,omitempty"`
@@ -151,6 +120,7 @@ type ServiceClient struct {
 	DefaultSubscriptionSchema          SubscriptionSchema
 	subscriptionSchemaCache            cache.Cache
 	categoryCache                      cache.Cache
+	teamCache                          cache.Cache
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex

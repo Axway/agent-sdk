@@ -36,7 +36,7 @@ func (j *retryJobImpl) Ready() bool {
 func TestRetryJob(t *testing.T) {
 	job := &retryJobImpl{
 		name:    "RetryJob",
-		runTime: 50 * time.Millisecond,
+		runTime: 100 * time.Millisecond,
 		fails:   2,
 		ready:   false,
 	}
@@ -48,10 +48,10 @@ func TestRetryJob(t *testing.T) {
 	status := GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)
 	job.ready = true
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusRetrying], status)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 	status = GetJobStatus(jobID)
 	assert.Equal(t, jobStatusToString[JobStatusFinished], status)
 }

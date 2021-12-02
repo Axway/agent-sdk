@@ -64,6 +64,7 @@ type traceabilityAgentHealthChecker struct {
 	protocol string
 	host     string
 	proxyURL string
+	tlsCfg   *tlscommon.Config
 	timeout  time.Duration
 	// TBD. Remove in future when Jobs interface is complete
 	hcJob *condorHealthCheckJob
@@ -126,6 +127,7 @@ func makeTraceabilityAgent(
 	}
 
 	var transportGroup outputs.Group
+	log.Tracef("initialzing traceability client using config: %+v, host: %+v", traceCfg, hosts)
 	if traceCfg.Protocol == "https" || traceCfg.Protocol == "http" {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
 	} else {
@@ -316,6 +318,7 @@ func registerHealthCheckers(config *Config) error {
 	// register a unique healthchecker for each potential host
 	for i := range config.Hosts {
 		ta := &traceabilityAgentHealthChecker{
+			tlsCfg:   config.TLS,
 			protocol: config.Protocol,
 			host:     config.Hosts[i],
 			proxyURL: config.Proxy.URL,

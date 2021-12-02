@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ConsumerInstanceScopes = []string{"Environment"}
 )
 
-const (
-	ConsumerInstanceScope = "Environment"
-
-	ConsumerInstanceResourceName = "consumerinstances"
-)
+const ConsumerInstanceResourceName = "consumerinstances"
 
 func ConsumerInstanceGVK() apiv1.GroupVersionKind {
 	return _ConsumerInstanceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ConsumerInstanceGVK, ConsumerInstanceScope, ConsumerInstanceResourceName)
+	apiv1.RegisterGVK(_ConsumerInstanceGVK, ConsumerInstanceScopes[0], ConsumerInstanceResourceName)
 }
 
 // ConsumerInstance Resource

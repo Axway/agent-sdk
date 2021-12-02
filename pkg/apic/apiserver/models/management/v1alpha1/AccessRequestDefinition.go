@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AccessRequestDefinitionScopes = []string{"Environment"}
 )
 
-const (
-	AccessRequestDefinitionScope = "Environment"
-
-	AccessRequestDefinitionResourceName = "accessrequestdefinitions"
-)
+const AccessRequestDefinitionResourceName = "accessrequestdefinitions"
 
 func AccessRequestDefinitionGVK() apiv1.GroupVersionKind {
 	return _AccessRequestDefinitionGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessRequestDefinitionGVK, AccessRequestDefinitionScope, AccessRequestDefinitionResourceName)
+	apiv1.RegisterGVK(_AccessRequestDefinitionGVK, AccessRequestDefinitionScopes[0], AccessRequestDefinitionResourceName)
 }
 
 // AccessRequestDefinition Resource
