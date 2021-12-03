@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -170,7 +171,7 @@ func restoreCacheUpdateCalls() {
 
 func TestDiscoveryCache(t *testing.T) {
 	fakeCacheUpdateCalls()
-	dcj := newDiscoveryCache(true)
+	dcj := newDiscoveryCache(true, &sync.Mutex{})
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
