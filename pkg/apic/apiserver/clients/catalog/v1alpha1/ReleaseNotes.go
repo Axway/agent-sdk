@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type VirtualHostMergeFunc func(*v1alpha1.VirtualHost, *v1alpha1.VirtualHost) (*v1alpha1.VirtualHost, error)
+type ReleaseNotesMergeFunc func(*v1alpha1.ReleaseNotes, *v1alpha1.ReleaseNotes) (*v1alpha1.ReleaseNotes, error)
 
 // Merge builds a merge option for an update operation
-func VirtualHostMerge(f VirtualHostMergeFunc) v1.UpdateOption {
+func ReleaseNotesMerge(f ReleaseNotesMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.VirtualHost{}, &v1alpha1.VirtualHost{}
+		p, n := &v1alpha1.ReleaseNotes{}, &v1alpha1.ReleaseNotes{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.VirtualHost:
+		case *v1alpha1.ReleaseNotes:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func VirtualHostMerge(f VirtualHostMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.VirtualHost:
+		case *v1alpha1.ReleaseNotes:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func VirtualHostMerge(f VirtualHostMergeFunc) v1.UpdateOption {
 	})
 }
 
-// VirtualHostClient -
-type VirtualHostClient struct {
+// ReleaseNotesClient -
+type ReleaseNotesClient struct {
 	client v1.Scoped
 }
 
-// UnscopedVirtualHostClient -
-type UnscopedVirtualHostClient struct {
+// UnscopedReleaseNotesClient -
+type UnscopedReleaseNotesClient struct {
 	client v1.Unscoped
 }
 
-// NewVirtualHostClient -
-func NewVirtualHostClient(c v1.Base) (*UnscopedVirtualHostClient, error) {
+// NewReleaseNotesClient -
+func NewReleaseNotesClient(c v1.Base) (*UnscopedReleaseNotesClient, error) {
 
-	client, err := c.ForKind(v1alpha1.VirtualHostGVK())
+	client, err := c.ForKind(v1alpha1.ReleaseNotesGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedVirtualHostClient{client}, nil
+	return &UnscopedReleaseNotesClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedVirtualHostClient) WithScope(scope string) *VirtualHostClient {
-	return &VirtualHostClient{
+func (c *UnscopedReleaseNotesClient) WithScope(scope string) *ReleaseNotesClient {
+	return &ReleaseNotesClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedVirtualHostClient) Get(name string) (*v1alpha1.VirtualHost, error) {
+func (c *UnscopedReleaseNotesClient) Get(name string) (*v1alpha1.ReleaseNotes, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.VirtualHost{}
+	service := &v1alpha1.ReleaseNotes{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedVirtualHostClient) Update(res *v1alpha1.VirtualHost, opts ...v1.UpdateOption) (*v1alpha1.VirtualHost, error) {
+func (c *UnscopedReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...v1.UpdateOption) (*v1alpha1.ReleaseNotes, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedVirtualHostClient) Update(res *v1alpha1.VirtualHost, opts ...v1
 		return nil, err
 	}
 
-	updated := &v1alpha1.VirtualHost{}
+	updated := &v1alpha1.ReleaseNotes{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedVirtualHostClient) Update(res *v1alpha1.VirtualHost, opts ...v1
 }
 
 // List -
-func (c *VirtualHostClient) List(options ...v1.ListOptions) ([]*v1alpha1.VirtualHost, error) {
+func (c *ReleaseNotesClient) List(options ...v1.ListOptions) ([]*v1alpha1.ReleaseNotes, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.VirtualHost, len(riList))
+	result := make([]*v1alpha1.ReleaseNotes, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.VirtualHost{}
+		result[i] = &v1alpha1.ReleaseNotes{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *VirtualHostClient) List(options ...v1.ListOptions) ([]*v1alpha1.Virtual
 }
 
 // Get -
-func (c *VirtualHostClient) Get(name string) (*v1alpha1.VirtualHost, error) {
+func (c *ReleaseNotesClient) Get(name string) (*v1alpha1.ReleaseNotes, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.VirtualHost{}
+	service := &v1alpha1.ReleaseNotes{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *VirtualHostClient) Delete(res *v1alpha1.VirtualHost) error {
+func (c *ReleaseNotesClient) Delete(res *v1alpha1.ReleaseNotes) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *VirtualHostClient) Delete(res *v1alpha1.VirtualHost) error {
 }
 
 // Create -
-func (c *VirtualHostClient) Create(res *v1alpha1.VirtualHost, opts ...v1.CreateOption) (*v1alpha1.VirtualHost, error) {
+func (c *ReleaseNotesClient) Create(res *v1alpha1.ReleaseNotes, opts ...v1.CreateOption) (*v1alpha1.ReleaseNotes, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *VirtualHostClient) Create(res *v1alpha1.VirtualHost, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.VirtualHost{}
+	created := &v1alpha1.ReleaseNotes{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *VirtualHostClient) Create(res *v1alpha1.VirtualHost, opts ...v1.CreateO
 }
 
 // Update -
-func (c *VirtualHostClient) Update(res *v1alpha1.VirtualHost, opts ...v1.UpdateOption) (*v1alpha1.VirtualHost, error) {
+func (c *ReleaseNotesClient) Update(res *v1alpha1.ReleaseNotes, opts ...v1.UpdateOption) (*v1alpha1.ReleaseNotes, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *VirtualHostClient) Update(res *v1alpha1.VirtualHost, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.VirtualHost{}
+	updated := &v1alpha1.ReleaseNotes{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

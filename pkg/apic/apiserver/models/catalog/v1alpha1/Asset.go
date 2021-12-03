@@ -46,7 +46,7 @@ type Asset struct {
 
 	Spec AssetSpec `json:"spec"`
 
-	State AssetState `json:"state"`
+	State interface{} `json:"state"`
 }
 
 // FromInstance converts a ResourceInstance to a Asset

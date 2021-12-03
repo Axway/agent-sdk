@@ -11,40 +11,40 @@ import (
 )
 
 var (
-	_VirtualHostGVK = apiv1.GroupVersionKind{
+	_TermsGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
-			Group: "management",
-			Kind:  "VirtualHost",
+			Group: "catalog",
+			Kind:  "Terms",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	VirtualHostScope = "Environment"
+	TermsScope = "Product"
 
-	VirtualHostResourceName = "virtualhosts"
+	TermsResourceName = "terms"
 )
 
-func VirtualHostGVK() apiv1.GroupVersionKind {
-	return _VirtualHostGVK
+func TermsGVK() apiv1.GroupVersionKind {
+	return _TermsGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_VirtualHostGVK, VirtualHostScope, VirtualHostResourceName)
+	apiv1.RegisterGVK(_TermsGVK, TermsScope, TermsResourceName)
 }
 
-// VirtualHost Resource
-type VirtualHost struct {
+// Terms Resource
+type Terms struct {
 	apiv1.ResourceMeta
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec VirtualHostSpec `json:"spec"`
+	Spec TermsSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a VirtualHost
-func (res *VirtualHost) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Terms
+func (res *Terms) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -63,14 +63,14 @@ func (res *VirtualHost) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// VirtualHostFromInstanceArray converts a []*ResourceInstance to a []*VirtualHost
-func VirtualHostFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualHost, error) {
-	newArray := make([]*VirtualHost, 0)
+// TermsFromInstanceArray converts a []*ResourceInstance to a []*Terms
+func TermsFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Terms, error) {
+	newArray := make([]*Terms, 0)
 	for _, item := range fromArray {
-		res := &VirtualHost{}
+		res := &Terms{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*VirtualHost, 0), err
+			return make([]*Terms, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -78,10 +78,10 @@ func VirtualHostFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Virtu
 	return newArray, nil
 }
 
-// AsInstance converts a VirtualHost to a ResourceInstance
-func (res *VirtualHost) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Terms to a ResourceInstance
+func (res *Terms) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = VirtualHostGVK()
+	meta.GroupVersionKind = TermsGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)

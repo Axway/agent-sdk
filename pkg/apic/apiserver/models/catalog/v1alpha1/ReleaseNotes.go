@@ -11,42 +11,40 @@ import (
 )
 
 var (
-	_ResourceGVK = apiv1.GroupVersionKind{
+	_ReleaseNotesGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Resource",
+			Kind:  "ReleaseNotes",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	ResourceScope = "Product"
+	ReleaseNotesScope = "Product"
 
-	ResourceResourceName = "resources"
+	ReleaseNotesResourceName = "releasenotes"
 )
 
-func ResourceGVK() apiv1.GroupVersionKind {
-	return _ResourceGVK
+func ReleaseNotesGVK() apiv1.GroupVersionKind {
+	return _ReleaseNotesGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceGVK, ResourceScope, ResourceResourceName)
+	apiv1.RegisterGVK(_ReleaseNotesGVK, ReleaseNotesScope, ReleaseNotesResourceName)
 }
 
-// Resource Resource
-type Resource struct {
+// ReleaseNotes Resource
+type ReleaseNotes struct {
 	apiv1.ResourceMeta
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec ResourceSpec `json:"spec"`
-
-	Summary ResourceSummary `json:"summary"`
+	Spec ReleaseNotesSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a Resource
-func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a ReleaseNotes
+func (res *ReleaseNotes) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -65,14 +63,14 @@ func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// ResourceFromInstanceArray converts a []*ResourceInstance to a []*Resource
-func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource, error) {
-	newArray := make([]*Resource, 0)
+// ReleaseNotesFromInstanceArray converts a []*ResourceInstance to a []*ReleaseNotes
+func ReleaseNotesFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ReleaseNotes, error) {
+	newArray := make([]*ReleaseNotes, 0)
 	for _, item := range fromArray {
-		res := &Resource{}
+		res := &ReleaseNotes{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Resource, 0), err
+			return make([]*ReleaseNotes, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -80,10 +78,10 @@ func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource
 	return newArray, nil
 }
 
-// AsInstance converts a Resource to a ResourceInstance
-func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a ReleaseNotes to a ResourceInstance
+func (res *ReleaseNotes) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ResourceGVK()
+	meta.GroupVersionKind = ReleaseNotesGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)

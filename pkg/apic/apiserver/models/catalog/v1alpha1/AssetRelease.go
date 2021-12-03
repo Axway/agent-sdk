@@ -45,8 +45,6 @@ type AssetRelease struct {
 	References AssetReleaseReferences `json:"references"`
 
 	Spec AssetReleaseSpec `json:"spec"`
-
-	Status AssetReleaseStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a AssetRelease

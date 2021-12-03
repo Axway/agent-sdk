@@ -9,10 +9,8 @@
 
 package v1alpha1
 
-// ResourceSummary struct for ResourceSummary
-type ResourceSummary struct {
-	// Type of the Resource.
-	Type string `json:"type,omitempty"`
-	// The path where the Resource is defined.
-	Path string `json:"path,omitempty"`
+// ReleaseTagReferences struct for ReleaseTagReferences
+type ReleaseTagReferences struct {
+	// Reference to Release that got created from this tag.
+	VirtualAPIRelease string `json:"virtualAPIRelease,omitempty"`
 }

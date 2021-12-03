@@ -40,9 +40,9 @@ type ReleaseTag struct {
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec ReleaseTagSpec `json:"spec"`
+	References ReleaseTagReferences `json:"references"`
 
-	State interface{} `json:"state"`
+	Spec ReleaseTagSpec `json:"spec"`
 
 	Status ReleaseTagStatus `json:"status"`
 }
