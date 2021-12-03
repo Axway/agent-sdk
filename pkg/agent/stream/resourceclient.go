@@ -67,6 +67,7 @@ func (c *resourceClient) Get(selfLink string) (*apiv1.ResourceInstance, error) {
 	return ri, err
 }
 
+// Create creates a ResourceInstance
 func (c *resourceClient) Create(url string, bts []byte) (*apiv1.ResourceInstance, error) {
 	token, err := c.auth.GetToken()
 	if err != nil {

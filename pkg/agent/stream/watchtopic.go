@@ -14,6 +14,7 @@ func WatchTopicName(env, agent string) string {
 	return fmt.Sprintf("%s-%s", env, agent)
 }
 
+// GetOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
 func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTopic, error) {
 	ri, err := rc.Get(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
 	if err != nil {
@@ -26,6 +27,7 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTop
 	return wt, err
 }
 
+// CreateWatchTopic creates a WatchTopic
 func CreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTopic, error) {
 	tmplString := NewWatchTopic()
 	tmpl, err := template.New("watch-topic-tmpl").Parse(tmplString)
@@ -69,13 +71,14 @@ func GetCachedWatchTopic(c cache.Cache, key string) (*mv1.WatchTopic, error) {
 	return v, nil
 }
 
+// WatchTopicValues values to populate the watch topic template
 type WatchTopicValues struct {
 	Name  string
 	Title string
 	Scope string
 }
 
-// NewWatchTopic creates a WatchTopic ResourceClient
+// NewWatchTopic creates a WatchTopic template string
 func NewWatchTopic() string {
 	return `
 {
