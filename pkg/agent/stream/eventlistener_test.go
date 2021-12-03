@@ -185,6 +185,10 @@ type mockRI struct {
 	err error
 }
 
+func (m mockRI) Create(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	return nil, nil
+}
+
 func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
