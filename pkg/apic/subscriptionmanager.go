@@ -91,10 +91,6 @@ func (sm *subscriptionManager) Status() error {
 }
 
 func (sm *subscriptionManager) Execute() error {
-	if len(sm.statesToQuery) == 0 {
-		return nil
-	}
-
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
 	if err == nil {
 		for _, subscription := range subscriptions {

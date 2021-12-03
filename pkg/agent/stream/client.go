@@ -85,9 +85,7 @@ func (sc *Client) Start() error {
 
 // Status a health check endpoint for the connection to central.
 func (sc *Client) Status() error {
-	ok := sc.manager.Status()
-
-	if !ok {
+	if ok := sc.manager.Status(); !ok {
 		return fmt.Errorf("grpc client is not connected to central")
 	}
 
@@ -109,7 +107,7 @@ type ClientStreamJob struct {
 }
 
 // Execute starts the stream
-func (j ClientStreamJob) Execute() error {
+func (j *ClientStreamJob) Execute() error {
 	go func() {
 		<-j.stop
 		j.streamer.Stop()
@@ -119,11 +117,11 @@ func (j ClientStreamJob) Execute() error {
 }
 
 // Status gets the status
-func (j ClientStreamJob) Status() error {
+func (j *ClientStreamJob) Status() error {
 	return j.streamer.Status()
 }
 
 // Ready checks if the job to start the stream is ready
-func (j ClientStreamJob) Ready() bool {
+func (j *ClientStreamJob) Ready() bool {
 	return true
 }
