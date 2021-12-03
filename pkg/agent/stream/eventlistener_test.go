@@ -11,16 +11,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-var apisHost = "https://tjohnson.dev.ampc.axwaytest.net/apis"
-var tenantID = "426937327920148"
-
-func TestEventManager_start(t *testing.T) {
+func TestEventListener_start(t *testing.T) {
 	tests := []struct {
-		name     string
-		hasError bool
-		events   chan *proto.Event
-		ri       resourceGetter
-		handler  Handler
+		name      string
+		hasError  bool
+		events    chan *proto.Event
+		ri        ResourceClient
+		handler   Handler
+		writeStop bool
 	}{
 		{
 			name:     "should start without an error",
@@ -36,8 +34,9 @@ func TestEventManager_start(t *testing.T) {
 			ri:       &mockRI{},
 			handler:  mockHandler{},
 		},
+
 		{
-			name:     "should not return an error, even if the request for a resource fails",
+			name:     "should not return an error, even if the request for a ResourceClient fails",
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{err: fmt.Errorf("failed")},
@@ -55,11 +54,10 @@ func TestEventManager_start(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			listener := NewEventListener(tc.events, tc.ri, tc.handler)
-			em := listener.(*EventManager)
 
 			errCh := make(chan error)
 			go func() {
-				err := em.start()
+				_, err := listener.start()
 				errCh <- err
 			}()
 
@@ -85,34 +83,39 @@ func TestEventManager_start(t *testing.T) {
 		})
 	}
 
+}
+
+// Should call Listen and handle a graceful stop, and an error
+func TestEventListener_Listen(t *testing.T) {
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
-	em := listener.(*EventManager)
+	listener := NewEventListener(events, &mockRI{}, mockHandler{})
 
 	errCh := make(chan error)
 	go func() {
-		err := em.start()
+		err := listener.Listen()
 		errCh <- err
 	}()
 
-	events <- &proto.Event{
-		Type: proto.Event_CREATED,
-		Payload: &proto.ResourceInstance{
-			Metadata: &proto.Metadata{
-				SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
-			},
-		},
-	}
+	go listener.Stop()
 	err := <-errCh
 	assert.Nil(t, err)
+
+	go func() {
+		err := listener.Listen()
+		errCh <- err
+	}()
+
+	close(events)
+	err = <-errCh
+	assert.NotNil(t, err)
 }
 
-func TestEventManager_handleEvent(t *testing.T) {
+func TestEventListener_handleEvent(t *testing.T) {
 	tests := []struct {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		ri       resourceGetter
+		ri       ResourceClient
 		handler  Handler
 	}{
 		{
@@ -123,21 +126,21 @@ func TestEventManager_handleEvent(t *testing.T) {
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should return an error when the request to get a resource fails",
+			name:     "should return an error when the request to get a ResourceClient fails",
 			event:    proto.Event_CREATED,
 			hasError: true,
 			ri:       &mockRI{err: fmt.Errorf("err")},
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should get a resource, and process a create event",
+			name:     "should get a ResourceClient, and process a create event",
 			event:    proto.Event_CREATED,
 			hasError: false,
 			ri:       &mockRI{},
 			handler:  mockHandler{},
 		},
 		{
-			name:     "should get a resource, and process an update event",
+			name:     "should get a ResourceClient, and process an update event",
 			event:    proto.Event_UPDATED,
 			hasError: false,
 			ri:       &mockRI{},
@@ -157,9 +160,8 @@ func TestEventManager_handleEvent(t *testing.T) {
 			}
 
 			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
-			em := listener.(*EventManager)
 
-			err := em.handleEvent(event)
+			err := listener.handleEvent(event)
 
 			if tc.hasError == false {
 				assert.Nil(t, err)
@@ -183,7 +185,7 @@ type mockRI struct {
 	err error
 }
 
-func (m mockRI) get(_ string) (*apiv1.ResourceInstance, error) {
+func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
@@ -203,6 +205,6 @@ type mockHandler struct {
 	err error
 }
 
-func (m mockHandler) callback(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (m mockHandler) handle(_ proto.Event_Type, _ *apiv1.ResourceInstance) error {
 	return m.err
 }

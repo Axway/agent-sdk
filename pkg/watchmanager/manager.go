@@ -3,6 +3,7 @@ package watchmanager
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"google.golang.org/grpc/connectivity"
 
@@ -18,7 +19,8 @@ import (
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
-	Close()
+	CloseAll()
+	CloseConn()
 	Status() bool
 }
 
@@ -32,6 +34,7 @@ type watchManager struct {
 	options            *watchOptions
 	logger             logrus.FieldLogger
 	newWatchClientFunc newWatchClientFunc
+	mutex              sync.Mutex
 }
 
 // New - Creates a new watch manager
@@ -97,6 +100,8 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.clientMap[subID] = client
 
 	go client.processRequest()
@@ -109,18 +114,21 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 // CloseWatch closes the specified watch stream by id
 func (m *watchManager) CloseWatch(id string) error {
-	log.Infof("closing watch for subscription: %s", id)
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	client, ok := m.clientMap[id]
 	if !ok {
 		return errors.New("invalid watch subscription ID")
 	}
+	log.Infof("closing watch for subscription: %s", id)
 	client.cancelStream()
 	delete(m.clientMap, id)
 	return nil
 }
 
-// Close - Close the watch service connection, and all open streams
-func (m *watchManager) Close() {
+// CloseConn closes watch service connection, and all open streams
+func (m *watchManager) CloseConn() {
 	log.Info("closing watch service connection")
 
 	m.connection.Close()
@@ -129,14 +137,31 @@ func (m *watchManager) Close() {
 	}
 }
 
+// CloseAll closes all streams, but leaves the connection open.
+func (m *watchManager) CloseAll() {
+	for id := range m.clientMap {
+		m.CloseWatch(id)
+	}
+}
+
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
-	for _, c := range m.clientMap {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	ok := true
+
+	if len(m.clientMap) == 0 {
+		ok = false
+	}
+
+	for k, c := range m.clientMap {
 		if c.isRunning == false {
-			log.Debugf("watch client is not running")
-			return false
+			log.Debugf("watchmanager: watch client is not running.")
+			ok = false
+			delete(m.clientMap, k)
 		}
 	}
 
-	return m.connection.GetState() == connectivity.Ready
+	return ok && m.connection.GetState() == connectivity.Ready
 }
