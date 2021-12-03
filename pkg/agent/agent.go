@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -232,51 +233,13 @@ func startAPIServiceCache() {
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
-		newDiscoveryCacheJob.Execute()
-
-		host := agent.cfg.GetURL()
-		tenantID := agent.cfg.GetTenantID()
-		insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
-
-		manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
+		err := newDiscoveryCacheJob.Execute()
 		if err != nil {
-			log.Errorf("could not start the watch manager: %s", err)
+			log.Error(err)
 			return
 		}
 
-		watchTopic := agent.cfg.GetWatchTopic()
-		if watchTopic == "" {
-			log.Errorf("watch topic not provided")
-			return
-		}
-
-		rc := stream.NewResourceClient(
-			host+"/apis",
-			tenantID,
-			api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
-			agent.tokenRequester,
-		)
-
-		stopCh, events := make(chan interface{}), make(chan *proto.Event)
-
-		eventListener := stream.NewEventListener(
-			events,
-			rc,
-			stream.NewAPISvcHandler(agent.apiMap),
-			stream.NewInstanceHandler(agent.instanceMap),
-			stream.NewCategoryHandler(agent.categoryMap),
-		)
-
-		streamClient := stream.NewClient(
-			watchTopic,
-			manager,
-			eventListener,
-			events,
-		)
-
-		streamJob := stream.NewClientStreamJob(streamClient, stopCh)
-		_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
-
+		err = startStreamMode(agent)
 		if err != nil {
 			log.Error(err)
 			return
@@ -285,7 +248,11 @@ func startAPIServiceCache() {
 
 	if agent.apiValidator != nil {
 		instanceValidator := newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
-		jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+		_, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 }
 
@@ -568,4 +535,56 @@ func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.Token
 	}
 
 	return wm.New(cfg, watchOptions...)
+}
+
+func startStreamMode(agent agentData) error {
+	host := agent.cfg.GetURL()
+	tenantID := agent.cfg.GetTenantID()
+	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
+
+	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
+	if err != nil {
+		return fmt.Errorf("could not start the watch manager: %s", err)
+	}
+
+	rc := stream.NewResourceClient(
+		host+"/apis",
+		tenantID,
+		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.tokenRequester,
+	)
+
+	env := agent.cfg.GetEnvironmentName()
+	wtName := stream.WatchTopicName(env, "da-ta")
+	wt, err := stream.GetCachedWatchTopic(cache.New(), wtName)
+
+	if err != nil || wt == nil {
+		wt, err = stream.GetOrCreateWatchTopic(wtName, env, rc)
+		if err != nil {
+			return err
+		}
+		// cache the watch topic
+	}
+
+	stopCh, events := make(chan interface{}), make(chan *proto.Event)
+
+	eventListener := stream.NewEventListener(
+		events,
+		rc,
+		stream.NewAPISvcHandler(agent.apiMap),
+		stream.NewInstanceHandler(agent.instanceMap),
+		stream.NewCategoryHandler(agent.categoryMap),
+	)
+
+	streamClient := stream.NewClient(
+		wt.Metadata.SelfLink,
+		manager,
+		eventListener,
+		events,
+	)
+
+	streamJob := stream.NewClientStreamJob(streamClient, stopCh)
+	_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
+
+	return err
 }

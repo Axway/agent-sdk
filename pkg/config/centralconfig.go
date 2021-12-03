@@ -136,7 +136,6 @@ type CentralConfig interface {
 	GetUpdateFromAPIServer() bool
 	IsVersionCheckerEnabled() bool
 	IsUsingGRPC() bool
-	GetWatchTopic() string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -168,8 +167,7 @@ type CentralConfiguration struct {
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
 	JobExecutionTimeout       time.Duration
-	UseGRPC                   bool   `config:"useGRPC"`
-	WatchTopic                string `config:"watchTopic"`
+	UseGRPC                   bool `config:"useGRPC"`
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
@@ -456,11 +454,6 @@ func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.UseGRPC
 }
 
-// GetWatchTopic -
-func (c *CentralConfiguration) GetWatchTopic() string {
-	return c.WatchTopic
-}
-
 // GetUsageReportingConfig -
 func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
@@ -546,9 +539,6 @@ func (c *CentralConfiguration) validateConfig() {
 		c.validateDiscoveryAgentConfig()
 	}
 
-	if c.IsUsingGRPC() && c.GetWatchTopic() == "" {
-		exception.Throw(ErrBadConfig.FormatError("watch topic self link must be provided when using gRPC mode"))
-	}
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
@@ -682,7 +672,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		UseGRPC:                   props.BoolPropertyValue(pathUseGRPC),
-		WatchTopic:                props.StringPropertyValue(pathWatchTopic),
 		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),

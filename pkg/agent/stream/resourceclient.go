@@ -15,7 +15,7 @@ import (
 // ResourceClient interface for creating and retrieving a ResourceInstance
 type ResourceClient interface {
 	Get(selfLink string) (*apiv1.ResourceInstance, error)
-	// create(r *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Create(url string, bts []byte) (*apiv1.ResourceInstance, error)
 }
 
 // resourceClient client for getting a ResourceInstance
@@ -67,27 +67,34 @@ func (c *resourceClient) Get(selfLink string) (*apiv1.ResourceInstance, error) {
 	return ri, err
 }
 
-// func (c *resourceClient) create(r *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-// 	token, err := c.auth.GetToken()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	req := api.Request{
-// 		Method:  http.MethodPost,
-// 		URL:     fmt.Sprintf("%s/%s/%s/%s/%s", c.url, r.Group, r.APIVersion, r.Kind, r.Name),
-// 		Headers: make(map[string]string),
-// 	}
-//
-// 	req.Headers["Authorization"] = "Bearer " + token
-// 	req.Headers["X-Axway-Tenant-Id"] = c.tenantID
-// 	req.Headers["Content-Type"] = "application/json"
-// 	res, err := c.client.Send(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	err = r.UnmarshalJSON(res.Body)
-//
-// 	return r, err
-// }
+func (c *resourceClient) Create(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	token, err := c.auth.GetToken()
+	if err != nil {
+		return nil, err
+	}
+
+	req := api.Request{
+		Method:  http.MethodPost,
+		URL:     c.url + url,
+		Headers: make(map[string]string),
+		Body:    bts,
+	}
+
+	req.Headers["Authorization"] = "Bearer " + token
+	req.Headers["X-Axway-Tenant-Id"] = c.tenantID
+	req.Headers["Content-Type"] = "application/json"
+	res, err := c.client.Send(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Code != 201 {
+		return nil, fmt.Errorf("expected a 201 response but received %d", res.Code)
+	}
+
+	r := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(res.Body, r)
+
+	return r, err
+}
