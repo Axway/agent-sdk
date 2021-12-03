@@ -11,40 +11,40 @@ import (
 )
 
 var (
-	_SecretGVK = apiv1.GroupVersionKind{
+	_VirtualHostGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "Secret",
+			Kind:  "VirtualHost",
 		},
 		APIVersion: "v1alpha1",
 	}
 )
 
 const (
-	SecretScope = "Integration"
+	VirtualHostScope = "Environment"
 
-	SecretResourceName = "secrets"
+	VirtualHostResourceName = "virtualhosts"
 )
 
-func SecretGVK() apiv1.GroupVersionKind {
-	return _SecretGVK
+func VirtualHostGVK() apiv1.GroupVersionKind {
+	return _VirtualHostGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_SecretGVK, SecretScope, SecretResourceName)
+	apiv1.RegisterGVK(_VirtualHostGVK, VirtualHostScope, VirtualHostResourceName)
 }
 
-// Secret Resource
-type Secret struct {
+// VirtualHost Resource
+type VirtualHost struct {
 	apiv1.ResourceMeta
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	Spec SecretSpec `json:"spec"`
+	Spec VirtualHostSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a Secret
-func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a VirtualHost
+func (res *VirtualHost) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -63,14 +63,14 @@ func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
 	return err
 }
 
-// SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret
-func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, error) {
-	newArray := make([]*Secret, 0)
+// VirtualHostFromInstanceArray converts a []*ResourceInstance to a []*VirtualHost
+func VirtualHostFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualHost, error) {
+	newArray := make([]*VirtualHost, 0)
 	for _, item := range fromArray {
-		res := &Secret{}
+		res := &VirtualHost{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Secret, 0), err
+			return make([]*VirtualHost, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -78,10 +78,10 @@ func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, er
 	return newArray, nil
 }
 
-// AsInstance converts a Secret to a ResourceInstance
-func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a VirtualHost to a ResourceInstance
+func (res *VirtualHost) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = SecretGVK()
+	meta.GroupVersionKind = VirtualHostGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
