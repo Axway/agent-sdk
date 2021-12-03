@@ -10,8 +10,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -37,18 +35,20 @@ func init() {
 
 type discoveryCache struct {
 	jobs.Job
-	lastServiceTime  time.Time
-	lastInstanceTime time.Time
-	lastCategoryTime time.Time
-	refreshAll       bool
+	lastServiceTime   time.Time
+	lastInstanceTime  time.Time
+	lastCategoryTime  time.Time
+	refreshAll        bool
+	instanceCacheLock *sync.Mutex
 }
 
-func newDiscoveryCache(getAll bool) *discoveryCache {
+func newDiscoveryCache(getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
 	return &discoveryCache{
-		lastServiceTime:  time.Time{},
-		lastInstanceTime: time.Time{},
-		lastCategoryTime: time.Time{},
-		refreshAll:       getAll,
+		lastServiceTime:   time.Time{},
+		lastInstanceTime:  time.Time{},
+		lastCategoryTime:  time.Time{},
+		refreshAll:        getAll,
+		instanceCacheLock: instanceCacheLock,
 	}
 }
 
@@ -74,7 +74,7 @@ func (j *discoveryCache) Execute() error {
 	log.Trace("executing API cache update job")
 	j.updateAPICache()
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-		j.validateAPIServiceInstances()
+		j.updatePIServiceInstancesCache()
 		j.updateCategoryCache()
 	}
 	fetchConfig()
@@ -124,7 +124,7 @@ func (j *discoveryCache) updateAPICache() {
 	}
 }
 
-func (j *discoveryCache) validateAPIServiceInstances() {
+func (j *discoveryCache) updatePIServiceInstancesCache() {
 	if agent.apiValidator == nil {
 		return
 	}
@@ -144,28 +144,24 @@ func (j *discoveryCache) validateAPIServiceInstances() {
 		return
 	}
 
+	j.instanceCacheLock.Lock()
+	defer j.instanceCacheLock.Unlock()
+	if j.refreshAll {
+		agent.instanceMap.Flush()
+	}
 	for _, instance := range serviceInstances {
-		if j.refreshAll {
-			break // no need to do this loop when refreshing the entire cache
-		}
 		if _, valid := instance.Attributes[apic.AttrExternalAPIID]; !valid {
 			continue // skip instance without external api id
 		}
-		// Update the lastInstanceTime based on the newest instance found
-		thisTime := time.Time(instance.Metadata.Audit.CreateTimestamp)
-		if j.lastInstanceTime.Before(thisTime) {
-			j.lastInstanceTime = thisTime
+		agent.instanceMap.Set(instance.Metadata.ID, instance)
+		if !j.refreshAll {
+			// Update the lastInstanceTime based on the newest instance found
+			thisTime := time.Time(instance.Metadata.Audit.CreateTimestamp)
+			if j.lastInstanceTime.Before(thisTime) {
+				j.lastInstanceTime = thisTime
+			}
 		}
 	}
-
-	// When reloading all api service instances we can just write over the existing cache
-	if !j.refreshAll {
-		// TODO: load all instances into a map to be consistent with the stream event handler
-		serviceInstances = j.loadServiceInstancesFromCache(serviceInstances)
-	}
-	// TODO: this should be a cron job for both modes
-	serviceInstances = validateAPIOnDataplane(serviceInstances)
-	j.saveServiceInstancesToCache(serviceInstances)
 }
 
 func (j *discoveryCache) updateCategoryCache() {
@@ -204,37 +200,6 @@ func (j *discoveryCache) updateCategoryCache() {
 	}
 }
 
-func (j *discoveryCache) saveServiceInstancesToCache(serviceInstances []*apiV1.ResourceInstance) {
-	// Save all the instance names to make sure the map is unique
-	instanceNames := make(map[string]struct{})
-	for _, instance := range serviceInstances {
-		instanceNames[instance.Name] = struct{}{}
-	}
-	cache.GetCache().Set(serviceInstanceCache, serviceInstances)
-	cache.GetCache().Set(serviceInstanceNameCache, instanceNames)
-}
-
-func (j *discoveryCache) loadServiceInstancesFromCache(serviceInstances []*apiV1.ResourceInstance) []*apiV1.ResourceInstance {
-	cachedInstancesInterface, err := cache.GetCache().Get(serviceInstanceCache)
-	if err != nil {
-		return serviceInstances
-	}
-	cachedInstancesNames, err := cache.GetCache().Get(serviceInstanceNameCache)
-	if err != nil {
-		return serviceInstances
-	}
-	cachedInstances := cachedInstancesInterface.([]*apiV1.ResourceInstance)
-	for _, instance := range serviceInstances {
-		// validate that the instance is not already in the array
-		if _, found := cachedInstancesNames.(map[string]struct{})[instance.Name]; !found {
-			cachedInstances = append(cachedInstances, instance)
-		}
-	}
-
-	// return the full list
-	return cachedInstances
-}
-
 var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
 	query := map[string]string{
 		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
@@ -270,59 +235,6 @@ var updateCacheForExternalAPI = func(query map[string]string) (interface{}, erro
 	json.Unmarshal(response, &apiService)
 	addItemToAPICache(apiService)
 	return apiService, nil
-}
-
-func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) []*apiV1.ResourceInstance {
-	cleanServiceInstances := make([]*apiV1.ResourceInstance, 0)
-	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
-	for _, serviceInstanceResource := range serviceInstances {
-		if _, valid := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]; !valid {
-			continue // skip service instances without external api id
-		}
-		serviceInstance := &v1alpha1.APIServiceInstance{}
-		serviceInstance.FromInstance(serviceInstanceResource)
-		externalAPIID := serviceInstance.Attributes[apic.AttrExternalAPIID]
-		externalAPIStage := serviceInstance.Attributes[apic.AttrExternalAPIStage]
-		// Check if the consumer instance was published by agent, i.e. following attributes are set
-		// - externalAPIID should not be empty
-		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			deleteServiceInstanceOrService(serviceInstance, externalAPIID, externalAPIStage)
-		} else {
-			cleanServiceInstances = append(cleanServiceInstances, serviceInstanceResource)
-		}
-	}
-	return cleanServiceInstances
-}
-
-func shouldDeleteService(apiID, stage string) bool {
-	// no agent-specific validator means to delete the service
-	if agent.deleteServiceValidator == nil {
-		return true
-	}
-	// let the agent decide if service should be deleted
-	return agent.deleteServiceValidator(apiID, stage)
-}
-
-func deleteServiceInstanceOrService(serviceInstance *v1alpha1.APIServiceInstance, externalAPIID, externalAPIStage string) {
-	if shouldDeleteService(externalAPIID, externalAPIStage) {
-		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", serviceInstance.Title)
-		// deleting the service will delete all associated resources, including the consumerInstance
-		err := agent.apicClient.DeleteServiceByAPIID(externalAPIID)
-		if err != nil {
-			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(serviceInstance.Title))
-		} else {
-			log.Debugf("Deleted API Service for catalog item %s from Amplify Central", serviceInstance.Title)
-		}
-	} else {
-		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", serviceInstance.Title)
-		err := agent.apicClient.DeleteAPIServiceInstance(serviceInstance.Name)
-		if err != nil {
-			log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(serviceInstance.Title))
-		} else {
-			log.Debugf("Deleted catalog item %s from Amplify Central", serviceInstance.Title)
-		}
-	}
 }
 
 func addItemToAPICache(apiService apiV1.ResourceInstance) string {
