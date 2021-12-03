@@ -3,6 +3,7 @@ package watchmanager
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"google.golang.org/grpc/connectivity"
 
@@ -33,6 +34,7 @@ type watchManager struct {
 	options            *watchOptions
 	logger             logrus.FieldLogger
 	newWatchClientFunc newWatchClientFunc
+	mutex              sync.Mutex
 }
 
 // New - Creates a new watch manager
@@ -98,6 +100,8 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.clientMap[subID] = client
 
 	go client.processRequest()
@@ -110,6 +114,9 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 // CloseWatch closes the specified watch stream by id
 func (m *watchManager) CloseWatch(id string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	client, ok := m.clientMap[id]
 	if !ok {
 		return errors.New("invalid watch subscription ID")
@@ -139,6 +146,9 @@ func (m *watchManager) CloseAll() {
 
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	ok := true
 
 	if len(m.clientMap) == 0 {

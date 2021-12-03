@@ -7,4 +7,5 @@ var (
 	ErrPeriodicCheck             = Newf(1003, "%s failed.  Services are not ready")
 	ErrStartingAgentStatusUpdate = Newf(1004, "error starting %s update")
 	ErrStartingVersionChecker    = Newf(1005, "%s. No version to compare for upgrade")
+	ErrGrpcConnection            = Newf(1006, "grpc client is not connected to central")
 )

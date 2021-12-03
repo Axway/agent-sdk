@@ -1,7 +1,7 @@
 package stream
 
 import (
-	"fmt"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
@@ -86,7 +86,7 @@ func (sc *Client) Start() error {
 // Status a health check endpoint for the connection to central.
 func (sc *Client) Status() error {
 	if ok := sc.manager.Status(); !ok {
-		return fmt.Errorf("grpc client is not connected to central")
+		return errors.ErrGrpcConnection
 	}
 
 	return nil
