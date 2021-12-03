@@ -120,7 +120,6 @@ func (c *watchClient) handleError(err error) {
 	c.isRunning = false
 	c.timer.Stop()
 	c.cfg.errors <- err
-	close(c.cfg.events)
 	c.cancelStream()
 }
 

@@ -85,8 +85,8 @@ func TestNewResourceClient(t *testing.T) {
 				token: tc.token,
 				err:   tc.tokenErr,
 			}
-			rc := newResourceClient("abc.com", tc.tenantID, c, getToken)
-			ri, err := rc.get("/mock/self/link")
+			rc := NewResourceClient("abc.com", tc.tenantID, c, getToken)
+			ri, err := rc.Get("/mock/self/link")
 			if tc.hasError == false {
 				assert.Nil(t, err)
 				assert.NotNil(t, ri)
