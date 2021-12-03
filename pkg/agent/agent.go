@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/sirupsen/logrus"
 
@@ -213,13 +215,13 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 }
 
 func startAPIServiceCache() {
-	var checkStatus hc.CheckStatus
 	instanceCacheLock := &sync.Mutex{}
 
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(false, instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
-		checkStatus = agent.apicClient.Healthcheck
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
+
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
@@ -238,39 +240,49 @@ func startAPIServiceCache() {
 
 		manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
 		if err != nil {
-			log.Errorf("could not start event watch manager to update api cache: %v", err.Error())
+			log.Errorf("could not start the watch manager: %s", err)
 			return
 		}
-
-		checkStatus = stream.HealthCheck(manager)
 
 		watchTopic := agent.cfg.GetWatchTopic()
 		if watchTopic == "" {
-			log.Errorf("could not start event watch manager to update api cache: watch topic not configured")
+			log.Errorf("watch topic not provided")
 			return
 		}
-		c := stream.NewClient(
+
+		rc := stream.NewResourceClient(
 			host+"/apis",
 			tenantID,
-			watchTopic,
+			api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 			agent.tokenRequester,
-			api.NewClient(agent.cfg.GetTLSConfig(), ""),
-			manager,
+		)
+
+		stopCh, events := make(chan interface{}), make(chan *proto.Event)
+
+		eventListener := stream.NewEventListener(
+			events,
+			rc,
 			stream.NewAPISvcHandler(agent.apiMap),
 			stream.NewInstanceHandler(agent.instanceMap),
 			stream.NewCategoryHandler(agent.categoryMap),
-			// TODO: agents should be able to pass in their own handlers.
 		)
 
-		go func() {
-			err := c.Start()
-			if err != nil {
-				log.Errorf("failed to start the grpc client: %s", err)
-			}
-		}()
+		streamClient := stream.NewClient(
+			watchTopic,
+			manager,
+			eventListener,
+			events,
+		)
+
+		streamJob := stream.NewClientStreamJob(streamClient, stopCh)
+		_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
+
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 
-	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)
 	if agent.apiValidator != nil {
 		instanceValidator := newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
 		jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")

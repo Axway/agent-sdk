@@ -12,9 +12,10 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// resourceGetter interface for retrieving a ResourceInstance
-type resourceGetter interface {
-	get(selfLink string) (*apiv1.ResourceInstance, error)
+// ResourceClient interface for creating and retrieving a ResourceInstance
+type ResourceClient interface {
+	Get(selfLink string) (*apiv1.ResourceInstance, error)
+	// create(r *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
 // resourceClient client for getting a ResourceInstance
@@ -25,8 +26,8 @@ type resourceClient struct {
 	url      string
 }
 
-// newResourceClient creates a new resourceClient
-func newResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) *resourceClient {
+// NewResourceClient creates a new resourceClient
+func NewResourceClient(url, tenantID string, client api.Client, getToken auth.TokenGetter) ResourceClient {
 	return &resourceClient{
 		auth:     getToken,
 		client:   client,
@@ -35,8 +36,8 @@ func newResourceClient(url, tenantID string, client api.Client, getToken auth.To
 	}
 }
 
-// get retrieves a resourceClient
-func (c *resourceClient) get(selfLink string) (*apiv1.ResourceInstance, error) {
+// Get retrieves a resourceClient
+func (c *resourceClient) Get(selfLink string) (*apiv1.ResourceInstance, error) {
 	token, err := c.auth.GetToken()
 	if err != nil {
 		return nil, err
@@ -65,3 +66,28 @@ func (c *resourceClient) get(selfLink string) (*apiv1.ResourceInstance, error) {
 
 	return ri, err
 }
+
+// func (c *resourceClient) create(r *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+// 	token, err := c.auth.GetToken()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	req := api.Request{
+// 		Method:  http.MethodPost,
+// 		URL:     fmt.Sprintf("%s/%s/%s/%s/%s", c.url, r.Group, r.APIVersion, r.Kind, r.Name),
+// 		Headers: make(map[string]string),
+// 	}
+//
+// 	req.Headers["Authorization"] = "Bearer " + token
+// 	req.Headers["X-Axway-Tenant-Id"] = c.tenantID
+// 	req.Headers["Content-Type"] = "application/json"
+// 	res, err := c.client.Send(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	err = r.UnmarshalJSON(res.Body)
+//
+// 	return r, err
+// }
