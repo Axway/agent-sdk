@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -66,15 +67,11 @@ type agentData struct {
 
 	apicClient     apic.Client
 	cfg            config.CentralConfig
-	agentCfg       interface{}
 	tokenRequester auth.PlatformTokenGetter
-	loggerName     string
 	logLevel       string
-	logFormat      string
-	logOutput      string
-	logPath        string
 
 	apiMap                     cache.Cache
+	instanceMap                cache.Cache
 	categoryMap                cache.Cache
 	apiValidator               APIValidator
 	deleteServiceValidator     DeleteServiceValidator
@@ -90,6 +87,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Only create the api map cache if it does not already exist
 	if agent.apiMap == nil {
 		agent.apiMap = cache.New()
+	}
+	if agent.instanceMap == nil {
+		agent.instanceMap = cache.New()
 	}
 	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
@@ -214,9 +214,10 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 
 func startAPIServiceCache() {
 	var checkStatus hc.CheckStatus
+	instanceCacheLock := &sync.Mutex{}
 
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(false)
+	newDiscoveryCacheJob := newDiscoveryCache(false, instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
 		checkStatus = agent.apicClient.Healthcheck
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
@@ -225,7 +226,7 @@ func startAPIServiceCache() {
 			return
 		}
 		// Start the full update after the first interval
-		go startDiscoveryCache()
+		go startDiscoveryCache(instanceCacheLock)
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
@@ -256,7 +257,7 @@ func startAPIServiceCache() {
 			api.NewClient(agent.cfg.GetTLSConfig(), ""),
 			manager,
 			stream.NewAPISvcHandler(agent.apiMap),
-			stream.NewInstanceHandler(cache.New()),
+			stream.NewInstanceHandler(agent.instanceMap),
 			stream.NewCategoryHandler(agent.categoryMap),
 			// TODO: agents should be able to pass in their own handlers.
 		)
@@ -270,6 +271,10 @@ func startAPIServiceCache() {
 	}
 
 	hc.RegisterHealthcheck(util.AmplifyCentral, "central", checkStatus)
+	if agent.apiValidator != nil {
+		instanceValidator := newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+	}
 }
 
 func isRunningInDockerContainer() bool {
@@ -513,9 +518,9 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	}
 }
 
-func startDiscoveryCache() {
+func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(true)
+	allDiscoveryCacheJob := newDiscoveryCache(true, instanceCacheLock)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
