@@ -81,6 +81,23 @@ func TestClient(t *testing.T) {
 	}
 }
 
+func TestClientStop(t *testing.T) {
+	c := NewClient(
+		topic,
+		&mockManager{},
+		&mockListener{},
+		make(chan *proto.Event),
+	)
+
+	c.Start()
+
+	assert.Equal(t, 1, len(c.ids))
+
+	c.Stop()
+
+	assert.Equal(t, 0, len(c.ids))
+}
+
 func TestClientStreamJob(t *testing.T) {
 	s := &mockStreamer{}
 	stopCh := make(chan interface{})
