@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Axway/agent-sdk/pkg/config"
+
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
 // GetOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
-func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTopic, error) {
+func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType config.AgentType) (*mv1.WatchTopic, error) {
 	ri, err := rc.Get(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
 
 	if err == nil {
@@ -19,7 +21,14 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTop
 		return wt, err
 	}
 
-	bts, err := parseWatchTopicTemplate(name, scope)
+	var tmplFunc func() string
+	if agentType == config.DiscoveryAgent {
+		tmplFunc = NewDiscoveryWatchTopic
+	} else if agentType == config.TraceabilityAgent {
+		tmplFunc = NewTraceWatchTopic
+	}
+
+	bts, err := parseWatchTopicTemplate(name, scope, tmplFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -28,9 +37,8 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTop
 }
 
 // parseWatchTopicTemplate parses a WatchTopic from a template
-func parseWatchTopicTemplate(name, scope string) ([]byte, error) {
-	tmplString := NewWatchTopic()
-	tmpl, err := template.New("watch-topic-tmpl").Parse(tmplString)
+func parseWatchTopicTemplate(name, scope string, tmplFunc func() string) ([]byte, error) {
+	tmpl, err := template.New("watch-topic-tmpl").Parse(tmplFunc())
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +50,7 @@ func parseWatchTopicTemplate(name, scope string) ([]byte, error) {
 		Scope: scope,
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return buf.Bytes(), err
 }
 
 // CreateWatchTopic creates a WatchTopic
@@ -84,8 +88,8 @@ type WatchTopicValues struct {
 	Scope string
 }
 
-// NewWatchTopic creates a WatchTopic template string
-func NewWatchTopic() string {
+// NewDiscoveryWatchTopic creates a WatchTopic template string
+func NewDiscoveryWatchTopic() string {
 	return `
 {
   "group": "management",
@@ -134,7 +138,52 @@ func NewWatchTopic() string {
         ]
       }
     ],
-    "description": "Watch Topic for resources in the {{.Scope}} environment."
+    "description": "Watch Topic used by a discovery agent for resources in the {{.Scope}} environment."
+  }
+}`
+}
+
+// NewTraceWatchTopic creates a WatchTopic template string
+func NewTraceWatchTopic() string {
+	return `
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "WatchTopic",
+  "name": "{{.Name}}",
+  "title": "{{.Title}}",
+  "spec": {
+    "filters": [
+      {
+        "group": "management",
+        "kind": "APIService",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "APIServiceInstance",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      }
+    ],
+    "description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."
   }
 }`
 }

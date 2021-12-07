@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/config"
+
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	"github.com/stretchr/testify/assert"
@@ -114,7 +116,12 @@ func TestGetCachedWatchTopic(t *testing.T) {
 }
 
 func Test_parseWatchTopic(t *testing.T) {
-	bts, err := parseWatchTopicTemplate("name", "scope")
+	bts, err := parseWatchTopicTemplate("name", "scope", NewDiscoveryWatchTopic)
+	assert.Nil(t, err)
+
+	assert.True(t, len(bts) > 0)
+
+	bts, err = parseWatchTopicTemplate("name", "scope", NewTraceWatchTopic)
 	assert.Nil(t, err)
 
 	assert.True(t, len(bts) > 0)
@@ -122,13 +129,15 @@ func Test_parseWatchTopic(t *testing.T) {
 
 func TestGetOrCreateWatchTopic(t *testing.T) {
 	tests := []struct {
-		name   string
-		rc     *fakeRI
-		hasErr bool
+		name      string
+		rc        *fakeRI
+		hasErr    bool
+		agentType config.AgentType
 	}{
 		{
-			name:   "should retrieve a watch topic if it exists",
-			hasErr: false,
+			name:      "should retrieve a watch topic if it exists",
+			hasErr:    false,
+			agentType: config.DiscoveryAgent,
 			rc: &fakeRI{
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -138,8 +147,22 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			},
 		},
 		{
-			name:   "should create a watch topic if it does not exist",
-			hasErr: false,
+			name:      "should create a watch topic for a trace agent if it does not exist",
+			agentType: config.TraceabilityAgent,
+			hasErr:    false,
+			rc: &fakeRI{
+				getErr: fmt.Errorf("not found"),
+				ri: &apiv1.ResourceInstance{
+					ResourceMeta: apiv1.ResourceMeta{
+						Name: "wt-name",
+					},
+				},
+			},
+		},
+		{
+			name:      "should create a watch topic for a discovery agent if it does not exist",
+			agentType: config.DiscoveryAgent,
+			hasErr:    false,
 			rc: &fakeRI{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
@@ -155,7 +178,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
 
-			wt, err := GetOrCreateWatchTopic(name, "scope", tc.rc)
+			wt, err := GetOrCreateWatchTopic(name, "scope", tc.rc, tc.agentType)
 			if tc.hasErr == true {
 				assert.NotNil(t, err)
 			} else {
@@ -172,7 +195,7 @@ type fakeRI struct {
 	ri        *apiv1.ResourceInstance
 }
 
-func (m fakeRI) Create(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m fakeRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.createErr
 }
 
@@ -185,6 +208,6 @@ type mockCacheGet struct {
 	err  error
 }
 
-func (m mockCacheGet) Get(key string) (interface{}, error) {
+func (m mockCacheGet) Get(_ string) (interface{}, error) {
 	return m.item, m.err
 }

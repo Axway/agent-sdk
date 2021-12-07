@@ -563,7 +563,7 @@ func startStreamMode(agent agentData) error {
 	wt, err := stream.GetCachedWatchTopic(cache.New(), wtName)
 
 	if err != nil || wt == nil {
-		wt, err = stream.GetOrCreateWatchTopic(wtName, env, rc)
+		wt, err = stream.GetOrCreateWatchTopic(wtName, env, rc, agent.cfg.GetAgentType())
 		if err != nil {
 			return err
 		}
