@@ -9,11 +9,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
-// WatchTopicName naming pattern for creating watch topics
-func WatchTopicName(env, agent string) string {
-	return fmt.Sprintf("%s-%s", env, agent)
-}
-
 // GetOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
 func GetOrCreateWatchTopic(name, scope string, rc ResourceClient) (*mv1.WatchTopic, error) {
 	ri, err := rc.Get(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
