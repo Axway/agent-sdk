@@ -419,7 +419,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.True(t, batch.acked)
 	assert.Equal(t, 1, batch.retryCount)
 	publishedMessages := s.GetMessages()
-	assert.NotNil(t, publishedMessages)
+	assert.Nil(t, publishedMessages)
 
 	SetOutputEventProcessor(nil)
 }
