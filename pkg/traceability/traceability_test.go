@@ -102,19 +102,22 @@ func newMockHTTPServer() *mockHTTPServer {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		case "/":
-			if req.Method == "POST" && mockServer.responseStatus != 0 {
-				resp.WriteHeader(mockServer.responseStatus)
-				return
+			if req.Method == "POST" {
+				if mockServer.responseStatus != 0 {
+					resp.WriteHeader(mockServer.responseStatus)
+					return
+				}
+				mockServer.ResetMessages()
+				var body []byte
+				contentEncoding := req.Header["Content-Encoding"]
+				if contentEncoding != nil && contentEncoding[0] == "gzip" {
+					body, _ = mockServer.decompressGzipContent(req.Body)
+				} else {
+					body, _ = ioutil.ReadAll(req.Body)
+				}
+				json.Unmarshal(body, &mockServer.serverMessages)
+				resp.Write([]byte("ok"))
 			}
-			mockServer.ResetMessages()
-			var body []byte
-			contentEncoding := req.Header["Content-Encoding"]
-			if contentEncoding != nil && contentEncoding[0] == "gzip" {
-				body, _ = mockServer.decompressGzipContent(req.Body)
-			} else {
-				body, _ = ioutil.ReadAll(req.Body)
-			}
-			json.Unmarshal(body, &mockServer.serverMessages)
 			resp.Write([]byte("ok"))
 		}
 	}))
@@ -268,114 +271,114 @@ func TestCreateHTTPClientt(t *testing.T) {
 	assert.Equal(t, 3, GetMaxRetries())
 }
 
-// func TestHTTPTransportWithJSONEncoding(t *testing.T) {
-// 	s := newMockHTTPServer()
-// 	defer s.Close()
+func TestHTTPTransportWithJSONEncoding(t *testing.T) {
+	s := newMockHTTPServer()
+	defer s.Close()
 
-// 	cfg := createCentralCfg(s.server.URL, "v7")
-// 	agent.Initialize(cfg)
+	cfg := createCentralCfg(s.server.URL, "v7")
+	agent.Initialize(cfg)
 
-// 	url, _ := url.Parse(s.server.URL)
-// 	testConfig := DefaultConfig()
-// 	testConfig.Protocol = "http"
-// 	testConfig.CompressionLevel = 0
-// 	testConfig.Hosts = []string{url.Hostname() + ":" + url.Port()}
+	url, _ := url.Parse(s.server.URL)
+	testConfig := DefaultConfig()
+	testConfig.Protocol = "http"
+	testConfig.CompressionLevel = 0
+	testConfig.Hosts = []string{url.Hostname() + ":" + url.Port()}
 
-// 	group, err := createTransport(testConfig)
-// 	assert.Nil(t, err)
-// 	assert.NotNil(t, group)
-// 	traceabilityClient := group.Clients[0].(*Client)
-// 	batch := createBatch("{\"f1\":\"test\"}")
-// 	traceabilityClient.Connect()
-// 	agent.StartAgentStatusUpdate()
-// 	err = traceabilityClient.Publish(batch)
-// 	traceabilityClient.Close()
+	group, err := createTransport(testConfig)
+	assert.Nil(t, err)
+	assert.NotNil(t, group)
+	traceabilityClient := group.Clients[0].(*Client)
+	batch := createBatch("{\"f1\":\"test\"}")
+	traceabilityClient.Connect()
+	agent.StartAgentStatusUpdate()
+	err = traceabilityClient.Publish(batch)
+	traceabilityClient.Close()
 
-// 	assert.Nil(t, err)
-// 	publishedMessages := s.GetMessages()
-// 	assert.NotNil(t, publishedMessages)
-// 	assert.Equal(t, 1, len(publishedMessages))
-// 	event := publishedMessages[0]
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, "test", event["f1"])
-// 	assert.True(t, batch.acked)
-// }
+	assert.Nil(t, err)
+	publishedMessages := s.GetMessages()
+	assert.NotNil(t, publishedMessages)
+	assert.Equal(t, 1, len(publishedMessages))
+	event := publishedMessages[0]
+	assert.Nil(t, err)
+	assert.Equal(t, "test", event["f1"])
+	assert.True(t, batch.acked)
+}
 
-// func TestHTTPTransportWithOutputProcessor(t *testing.T) {
-// 	s := newMockHTTPServer()
-// 	defer s.Close()
+func TestHTTPTransportWithOutputProcessor(t *testing.T) {
+	s := newMockHTTPServer()
+	defer s.Close()
 
-// 	cfg := createCentralCfg(s.server.URL, "v7")
-// 	agent.Initialize(cfg)
+	cfg := createCentralCfg(s.server.URL, "v7")
+	agent.Initialize(cfg)
 
-// 	url, _ := url.Parse(s.server.URL)
-// 	testConfig := DefaultConfig()
-// 	testConfig.Protocol = "http"
-// 	testConfig.CompressionLevel = 0
-// 	testConfig.Hosts = []string{
-// 		url.Hostname() + ":" + url.Port(),
-// 	}
+	url, _ := url.Parse(s.server.URL)
+	testConfig := DefaultConfig()
+	testConfig.Protocol = "http"
+	testConfig.CompressionLevel = 0
+	testConfig.Hosts = []string{
+		url.Hostname() + ":" + url.Port(),
+	}
 
-// 	eventProcessor := &testEventProcessor{msgValue: "{\"f1\":\"test\"}"}
-// 	SetOutputEventProcessor(eventProcessor)
-// 	group, err := createTransport(testConfig)
-// 	assert.Nil(t, err)
-// 	traceabilityClient := group.Clients[0].(*Client)
-// 	batch := createBatch("{\"f0\":\"dummy\"}")
+	eventProcessor := &testEventProcessor{msgValue: "{\"f1\":\"test\"}"}
+	SetOutputEventProcessor(eventProcessor)
+	group, err := createTransport(testConfig)
+	assert.Nil(t, err)
+	traceabilityClient := group.Clients[0].(*Client)
+	batch := createBatch("{\"f0\":\"dummy\"}")
 
-// 	traceabilityClient.Connect()
-// 	agent.StartAgentStatusUpdate()
-// 	err = traceabilityClient.Publish(batch)
-// 	traceabilityClient.Close()
-// 	assert.Nil(t, err)
+	traceabilityClient.Connect()
+	agent.StartAgentStatusUpdate()
+	err = traceabilityClient.Publish(batch)
+	traceabilityClient.Close()
+	assert.Nil(t, err)
 
-// 	publishedMessages := s.GetMessages()
-// 	assert.NotNil(t, publishedMessages)
-// 	assert.Equal(t, 1, len(publishedMessages))
-// 	event := publishedMessages[0]
-// 	assert.Equal(t, "test", event["f1"])
-// 	assert.Nil(t, event["f0"])
-// 	assert.True(t, batch.acked)
+	publishedMessages := s.GetMessages()
+	assert.NotNil(t, publishedMessages)
+	assert.Equal(t, 1, len(publishedMessages))
+	event := publishedMessages[0]
+	assert.Equal(t, "test", event["f1"])
+	assert.Nil(t, event["f0"])
+	assert.True(t, batch.acked)
 
-// 	SetOutputEventProcessor(nil)
-// }
+	SetOutputEventProcessor(nil)
+}
 
-// func TestHTTPTransportWithGzipEncoding(t *testing.T) {
-// 	s := newMockHTTPServer()
-// 	defer s.Close()
+func TestHTTPTransportWithGzipEncoding(t *testing.T) {
+	s := newMockHTTPServer()
+	defer s.Close()
 
-// 	cfg := createCentralCfg(s.server.URL, "v7")
-// 	agent.Initialize(cfg)
+	cfg := createCentralCfg(s.server.URL, "v7")
+	agent.Initialize(cfg)
 
-// 	url, _ := url.Parse(s.server.URL)
-// 	testConfig := DefaultConfig()
-// 	testConfig.Protocol = "http"
-// 	testConfig.CompressionLevel = 3
-// 	testConfig.Hosts = []string{
-// 		url.Hostname() + ":" + url.Port(),
-// 	}
+	url, _ := url.Parse(s.server.URL)
+	testConfig := DefaultConfig()
+	testConfig.Protocol = "http"
+	testConfig.CompressionLevel = 3
+	testConfig.Hosts = []string{
+		url.Hostname() + ":" + url.Port(),
+	}
 
-// 	group, err := createTransport(testConfig)
-// 	assert.Nil(t, err)
-// 	assert.NotNil(t, group)
-// 	traceabilityClient := group.Clients[0].(*Client)
-// 	batch := createBatch("{\"f1\":\"test\"}")
+	group, err := createTransport(testConfig)
+	assert.Nil(t, err)
+	assert.NotNil(t, group)
+	traceabilityClient := group.Clients[0].(*Client)
+	batch := createBatch("{\"f1\":\"test\"}")
 
-// 	traceabilityClient.Connect()
-// 	err = traceabilityClient.Publish(batch)
-// 	assert.Nil(t, err)
-// 	traceabilityClient.Close()
+	traceabilityClient.Connect()
+	err = traceabilityClient.Publish(batch)
+	assert.Nil(t, err)
+	traceabilityClient.Close()
 
-// 	publishedMessages := s.GetMessages()
-// 	assert.NotNil(t, publishedMessages)
-// 	assert.Equal(t, 1, len(publishedMessages))
+	publishedMessages := s.GetMessages()
+	assert.NotNil(t, publishedMessages)
+	assert.Equal(t, 1, len(publishedMessages))
 
-// 	event := publishedMessages[0]
+	event := publishedMessages[0]
 
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, "test", event["f1"])
-// 	assert.True(t, batch.acked)
-// }
+	assert.Nil(t, err)
+	assert.Equal(t, "test", event["f1"])
+	assert.True(t, batch.acked)
+}
 
 func TestHTTPTransportRetries(t *testing.T) {
 	s := newMockHTTPServer()
@@ -416,7 +419,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.True(t, batch.acked)
 	assert.Equal(t, 1, batch.retryCount)
 	publishedMessages := s.GetMessages()
-	assert.NotNil(t, publishedMessages) //TODO needs to be 1 (needs fixing after BMW)
+	assert.NotNil(t, publishedMessages)
 
 	SetOutputEventProcessor(nil)
 }
