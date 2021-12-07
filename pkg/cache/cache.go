@@ -40,6 +40,11 @@ type Cache interface {
 	Load(path string) error
 }
 
+// GetItem interface for getting a single item from a cache.
+type GetItem interface {
+	Get(key string) (interface{}, error)
+}
+
 type action int
 
 const (
