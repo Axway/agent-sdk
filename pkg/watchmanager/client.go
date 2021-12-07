@@ -23,6 +23,7 @@ type watchClient struct {
 	cfg                    clientConfig
 	stream                 proto.Watch_SubscribeClient
 	cancelStream           context.CancelFunc
+	context                context.Context
 	timer                  *time.Timer
 	getTokenExpirationTime getTokenExpFunc
 	isRunning              bool
@@ -46,6 +47,7 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 	client := &watchClient{
 		cfg:                    clientCfg,
 		stream:                 stream,
+		context:                streamCtx,
 		cancelStream:           streamCancel,
 		timer:                  time.NewTimer(0),
 		getTokenExpirationTime: getTokenExpirationTime,
@@ -80,8 +82,8 @@ func (c *watchClient) recv() error {
 func (c *watchClient) processRequest() {
 	for {
 		select {
-		case <-c.stream.Context().Done():
-			c.handleError(c.stream.Context().Err())
+		case <-c.context.Done():
+			c.handleError(c.context.Err())
 			return
 		case <-c.timer.C:
 			exp, err := c.send()
