@@ -555,7 +555,12 @@ func startStreamMode(agent agentData) error {
 	)
 
 	env := agent.cfg.GetEnvironmentName()
-	wtName := stream.WatchTopicName(env, "da-ta")
+	wtName := agent.cfg.GetAgentName()
+	if wtName == "" {
+		wtName = env
+	}
+	log.Info("WT Name: ", wtName)
+
 	wt, err := stream.GetCachedWatchTopic(cache.New(), wtName)
 
 	if err != nil || wt == nil {
