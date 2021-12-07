@@ -15,6 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/google/uuid"
 )
 
 // HTTP const definitions
@@ -189,15 +190,15 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		log.Errorf("Error preparing api request: %s", err.Error())
 		return nil, err
 	}
-
+	reqID := uuid.New().String()
 	// Logging for the HTTP request
 	statusCode := 0
 	defer func() {
 		duration := time.Now().Sub(startTime)
 		if err != nil {
-			log.Tracef("%s [%dms] - ERR - %s - %s", req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
+			log.Tracef("[ID:%s] %s [%dms] - ERR - %s - %s", reqID, req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
 		} else {
-			log.Tracef("%s [%dms] - %d - %s", req.Method, duration.Milliseconds(), statusCode, req.URL.String())
+			log.Tracef("[ID:%s] %s [%dms] - %d - %s", reqID, req.Method, duration.Milliseconds(), statusCode, req.URL.String())
 		}
 	}()
 
@@ -209,6 +210,9 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	// Prevent reuse of the tcp connection to the same host
 	req.Close = true
 
+	if log.IsHTTPLogTraceEnabled() {
+		req = log.NewRequestWithTraceContext(reqID, req)
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
