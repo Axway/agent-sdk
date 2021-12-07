@@ -53,14 +53,14 @@ func (b *LoggerConfig) Apply() error {
 	logrus.SetLevel(b.cfg.Level)
 	logrus.SetOutput(ioutil.Discard)
 
-	if !b.initialized {
-		// Set the stdout output for the log and logrus
-		if b.output == STDOUT || b.output == Both {
-			writer := io.Writer(os.Stdout)
-			log.SetOutput(writer)
-			logrus.SetOutput(writer)
-		}
+	// Set the stdout output for the log and logrus
+	if b.output == STDOUT || b.output == Both {
+		writer := io.Writer(os.Stdout)
+		log.SetOutput(writer)
+		logrus.SetOutput(writer)
+	}
 
+	if !b.initialized || isLogP {
 		// Add the rotate file hook for log and logrus
 		if b.output == File || b.output == Both {
 			if b.path != "" {
