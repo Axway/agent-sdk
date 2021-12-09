@@ -19,6 +19,7 @@ type ServiceBuilder interface {
 	SetAPIName(apiName string) ServiceBuilder
 	SetURL(url string) ServiceBuilder
 	SetStage(stage string) ServiceBuilder
+	SetStageDescriptor(stageDescriptor string) ServiceBuilder
 	SetDescription(description string) ServiceBuilder
 	SetVersion(version string) ServiceBuilder
 	SetAuthPolicy(authPolicy string) ServiceBuilder
@@ -96,6 +97,11 @@ func (b *serviceBodyBuilder) SetURL(url string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetStage(stage string) ServiceBuilder {
 	b.serviceBody.Stage = stage
+	return b
+}
+
+func (b *serviceBodyBuilder) SetStageDescriptor(stageDescriptor string) ServiceBuilder {
+	b.serviceBody.StageDescriptor = stageDescriptor
 	return b
 }
 
@@ -244,6 +250,10 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
 		}
 		b.serviceBody.Endpoints = endPoints
+	}
+
+	if b.serviceBody.Stage != "" && b.serviceBody.StageDescriptor == "" {
+		b.serviceBody.StageDescriptor = "Stage"
 	}
 
 	return b.serviceBody, nil
