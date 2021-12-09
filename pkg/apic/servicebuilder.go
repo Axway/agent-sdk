@@ -35,6 +35,8 @@ type ServiceBuilder interface {
 	SetState(state string) ServiceBuilder
 	SetStatus(status string) ServiceBuilder
 	SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder
+	SetInstanceAttribute(instanceAttribute map[string]string) ServiceBuilder
+	SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder
 	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 
@@ -57,15 +59,18 @@ type serviceBodyBuilder struct {
 func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
-			AuthPolicy:        Passthrough,
-			CreatedBy:         config.AgentTypeName,
-			State:             PublishedStatus,
-			Status:            PublishedStatus,
-			ServiceAttributes: make(map[string]string),
-			Endpoints:         make([]EndpointDefinition, 0),
-			UnstructuredProps: &UnstructuredProperties{},
-			categoryTitles:    make([]string, 0),
-			categoryNames:     make([]string, 0),
+			AuthPolicy:         Passthrough,
+			CreatedBy:          config.AgentTypeName,
+			State:              PublishedStatus,
+			Status:             PublishedStatus,
+			ServiceAttributes:  make(map[string]string),
+			RevisionAttributes: make(map[string]string),
+			InstanceAttributes: make(map[string]string),
+			StageDescriptor:    "Stage",
+			Endpoints:          make([]EndpointDefinition, 0),
+			UnstructuredProps:  &UnstructuredProperties{},
+			categoryTitles:     make([]string, 0),
+			categoryNames:      make([]string, 0),
 		},
 	}
 }
@@ -178,6 +183,16 @@ func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]str
 	return b
 }
 
+func (b *serviceBodyBuilder) SetInstanceAttribute(instanceAttribute map[string]string) ServiceBuilder {
+	b.serviceBody.InstanceAttributes = instanceAttribute
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder {
+	b.serviceBody.RevisionAttributes = revisionAttribute
+	return b
+}
+
 func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder {
 	b.serviceBody.Endpoints = endpoints
 	return b
@@ -251,10 +266,5 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 		b.serviceBody.Endpoints = endPoints
 	}
-
-	if b.serviceBody.Stage != "" && b.serviceBody.StageDescriptor == "" {
-		b.serviceBody.StageDescriptor = "Stage"
-	}
-
 	return b.serviceBody, nil
 }
