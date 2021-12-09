@@ -511,10 +511,12 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 // Todo - To be updated after cache persistence story
 func getSequenceCache(watchTopicName string) cache.Cache {
 	seqCache := cache.New()
-	err := seqCache.Load(watchTopicName + ".sequence")
-	if err != nil {
-		seqCache.Set("watchSequenceID", int64(0))
-		seqCache.Save(watchTopicName + ".sequence")
+	if watchTopicName != "" {
+		err := seqCache.Load(watchTopicName + ".sequence")
+		if err != nil {
+			seqCache.Set("watchSequenceID", int64(0))
+			seqCache.Save(watchTopicName + ".sequence")
+		}
 	}
 	return seqCache
 }

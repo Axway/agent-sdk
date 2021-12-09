@@ -61,7 +61,7 @@ func (em *EventListener) Listen() error {
 			break
 		}
 
-		if done == true {
+		if done {
 			listenErr = nil
 			break
 		}
