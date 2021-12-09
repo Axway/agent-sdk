@@ -89,6 +89,9 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	var httpMethod string
 	revAttributes := serviceBody.RevisionAttributes
+	if revAttributes == nil {
+		revAttributes = make(map[string]string)
+	}
 	revisionPrefix := c.getRevisionPrefix(serviceBody)
 	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 	revisionURL := c.cfg.GetRevisionsURL()
