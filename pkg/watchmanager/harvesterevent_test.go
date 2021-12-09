@@ -9,11 +9,11 @@ import (
 
 func TestHarvesterEventConversion(t *testing.T) {
 	harvesterEvent := &resourceEntryExternalEvent{
-		Id:            "123",
+		ID:            "123",
 		Time:          "2021-11-30 11:59:25.01",
 		Version:       "v1",
 		Product:       "AmplifyCentral",
-		CorrelationId: "441c85fc-b4cd-46fe-aae2-5aaf6ef86b8e",
+		CorrelationID: "441c85fc-b4cd-46fe-aae2-5aaf6ef86b8e",
 		Organization: &proto.Organization{
 			Id: "224879455212557",
 		},
@@ -26,11 +26,11 @@ func TestHarvesterEventConversion(t *testing.T) {
 				"createdBy": "DiscoveryAgent",
 			},
 			Metadata: &harvesterResourceMetadata{
-				Id:       "12345",
+				ID:       "12345",
 				SelfLink: "/management/v1alpha1/environments/sample/apiserviceinstances/test",
 				References: []*harvesterResourceReference{
 					{
-						Id:        "8ac9934a7d6f94aa017d70b6bc2204dd",
+						ID:        "8ac9934a7d6f94aa017d70b6bc2204dd",
 						Kind:      "APIServiceRevision",
 						Name:      "test",
 						ScopeKind: "Environment",
@@ -56,11 +56,11 @@ func TestHarvesterEventConversion(t *testing.T) {
 
 	event := harvesterEvent.toProtoEvent()
 
-	assert.Equal(t, harvesterEvent.Id, event.Id)
+	assert.Equal(t, harvesterEvent.ID, event.Id)
 	assert.Equal(t, harvesterEvent.Time, event.Time)
 	assert.Equal(t, harvesterEvent.Version, event.Version)
 	assert.Equal(t, harvesterEvent.Product, event.Product)
-	assert.Equal(t, harvesterEvent.CorrelationId, event.CorrelationId)
+	assert.Equal(t, harvesterEvent.CorrelationID, event.CorrelationId)
 	assert.Equal(t, proto.Event_CREATED, event.Type)
 
 	assert.NotNil(t, event.Organization)
@@ -75,7 +75,7 @@ func TestHarvesterEventConversion(t *testing.T) {
 	assert.Equal(t, harvesterEvent.Payload.Attributes, event.Payload.Attributes)
 
 	assert.NotNil(t, event.Payload.Metadata)
-	assert.Equal(t, harvesterEvent.Payload.Metadata.Id, event.Payload.Metadata.Id)
+	assert.Equal(t, harvesterEvent.Payload.Metadata.ID, event.Payload.Metadata.Id)
 	assert.Equal(t, harvesterEvent.Payload.Metadata.SelfLink, event.Payload.Metadata.SelfLink)
 	assert.NotNil(t, harvesterEvent.Payload.Metadata.Scope)
 	assert.Equal(t, harvesterEvent.Payload.Metadata.Scope.Id, event.Payload.Metadata.Scope.Id)
@@ -85,7 +85,7 @@ func TestHarvesterEventConversion(t *testing.T) {
 
 	assert.NotNil(t, event.Payload.Metadata.References)
 	assert.Equal(t, len(harvesterEvent.Payload.Metadata.References), len(event.Payload.Metadata.References))
-	assert.Equal(t, harvesterEvent.Payload.Metadata.References[0].Id, event.Payload.Metadata.References[0].Id)
+	assert.Equal(t, harvesterEvent.Payload.Metadata.References[0].ID, event.Payload.Metadata.References[0].Id)
 	assert.Equal(t, harvesterEvent.Payload.Metadata.References[0].Kind, event.Payload.Metadata.References[0].Kind)
 	assert.Equal(t, harvesterEvent.Payload.Metadata.References[0].Name, event.Payload.Metadata.References[0].Name)
 	assert.Equal(t, harvesterEvent.Payload.Metadata.References[0].ScopeKind, event.Payload.Metadata.References[0].ScopeKind)

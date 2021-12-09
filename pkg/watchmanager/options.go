@@ -76,7 +76,7 @@ func WithLogger(loggerEntry *logrus.Entry) Option {
 	})
 }
 
-// WithSyncMissedEvents allows using the harvester client to sync events on watch registration
+// WithSyncEvents allows using the harvester client to sync events on watch registration
 func WithSyncEvents(sequenceCache cache.Cache) Option {
 	return funcOption(func(o *watchOptions) {
 		o.sequenceCache = sequenceCache

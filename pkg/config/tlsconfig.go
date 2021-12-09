@@ -228,7 +228,7 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 }
 
-// BuildTLSConfig takes the TLSConfiguration and transforms it into a `tls.Config`.
+// LoadFrom takes the `tls.Config` and transforms it into a TLSConfiguration.
 func (c *TLSConfiguration) LoadFrom(tlsCfg *tls.Config) {
 	if tlsCfg == nil {
 		c.InsecureSkipVerify = true
