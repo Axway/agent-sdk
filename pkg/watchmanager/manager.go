@@ -35,6 +35,7 @@ type watchManager struct {
 	logger             logrus.FieldLogger
 	newWatchClientFunc newWatchClientFunc
 	mutex              sync.Mutex
+	hClient            *harvesterClient
 }
 
 // New - Creates a new watch manager
@@ -62,6 +63,18 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 	if err != nil {
 		log.Errorf("failed to establish connection with watch service: %s", err.Error())
 	}
+
+	if manager.options.sequenceCache != nil {
+		harvesterConfig := &harvesterConfig{
+			host:        manager.cfg.Host,
+			port:        manager.cfg.Port,
+			tenantID:    manager.cfg.TenantID,
+			tokenGetter: manager.cfg.TokenGetter,
+			tlsCfg:      manager.options.tlsCfg,
+		}
+		manager.hClient = newHarvesterClient(harvesterConfig)
+	}
+
 	return manager, err
 }
 
@@ -79,6 +92,18 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	log.Infof("connecting to watch service. host: %s. port: %d", m.cfg.Host, m.cfg.Port)
 
 	return grpc.Dial(address, grpcDialOptions...)
+}
+
+func (m *watchManager) getSequenceIDFromCache() int64 {
+	if m.options.sequenceCache != nil {
+		cachedSeqID, err := m.options.sequenceCache.Get("watchSequenceID")
+		if err == nil {
+			if seqID, ok := cachedSeqID.(float64); ok {
+				return int64(seqID)
+			}
+		}
+	}
+	return 0
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic
@@ -104,8 +129,18 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	defer m.mutex.Unlock()
 	m.clientMap[subID] = client
 
-	go client.processRequest()
-	go client.processEvents()
+	client.processRequest()
+	go func() {
+		sequenceID := m.getSequenceIDFromCache()
+		if m.hClient != nil && sequenceID > 0 {
+			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+			if err != nil {
+				client.handleError(err)
+				return
+			}
+		}
+		client.processEvents()
+	}()
 
 	log.Infof("registered watch client. id: %s. watchtopic: %s", subID, link)
 

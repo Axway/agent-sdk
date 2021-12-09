@@ -3,21 +3,31 @@ package watchmanager
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func getMockToken() (string, error) {
+	claims := &jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+	}
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signKey := []byte("testsecret")
+	token, err := t.SignedString(signKey)
+	return token, err
+}
+
 // test register watch
 func TestWatchManager_RegisterWatch(t *testing.T) {
 	cfg := &Config{
-		Host:     "localhost",
-		Port:     8080,
-		TenantID: "tenantID",
-		TokenGetter: func() (string, error) {
-			return "abc", nil
-		},
+		Host:        "localhost",
+		Port:        8080,
+		TenantID:    "tenantID",
+		TokenGetter: getMockToken,
 	}
 	wm, err := New(cfg)
 	assert.Nil(t, err)

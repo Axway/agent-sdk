@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -35,9 +36,10 @@ type keepAliveOption struct {
 
 // watchOptions options to use when creating a stream
 type watchOptions struct {
-	tlsCfg      *tls.Config
-	keepAlive   keepAliveOption
-	loggerEntry *logrus.Entry
+	tlsCfg        *tls.Config
+	keepAlive     keepAliveOption
+	loggerEntry   *logrus.Entry
+	sequenceCache cache.Cache
 }
 
 // newWatchOptions returns the default watchOptions
@@ -71,6 +73,13 @@ func WithKeepAlive(time, timeout time.Duration) Option {
 func WithLogger(loggerEntry *logrus.Entry) Option {
 	return funcOption(func(o *watchOptions) {
 		o.loggerEntry = loggerEntry
+	})
+}
+
+// WithSyncMissedEvents allows using the harvester client to sync events on watch registration
+func WithSyncEvents(sequenceCache cache.Cache) Option {
+	return funcOption(func(o *watchOptions) {
+		o.sequenceCache = sequenceCache
 	})
 }
 

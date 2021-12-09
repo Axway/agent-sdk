@@ -228,6 +228,23 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 }
 
+// BuildTLSConfig takes the TLSConfiguration and transforms it into a `tls.Config`.
+func (c *TLSConfiguration) LoadFrom(tlsCfg *tls.Config) {
+	if tlsCfg == nil {
+		c.InsecureSkipVerify = true
+		return
+	}
+
+	c.InsecureSkipVerify = tlsCfg.InsecureSkipVerify
+	c.MaxVersion = TLSVersion(tlsCfg.MaxVersion)
+	c.MinVersion = TLSVersion(tlsCfg.MinVersion)
+
+	c.CipherSuites = make([]TLSCipherSuite, 0)
+	for _, cipher := range tlsCfg.CipherSuites {
+		c.CipherSuites = append(c.CipherSuites, TLSCipherSuite(cipher))
+	}
+}
+
 // buildUintArrayFromSuites -
 func (c *TLSConfiguration) buildUintArrayFromSuites() []uint16 {
 	var ciphers []uint16

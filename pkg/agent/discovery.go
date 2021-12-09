@@ -83,13 +83,23 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
 
+func getAttributeFromResource(apiResource interface{}, attrName string) string {
+	apiSvc, ok := apiResource.(apiV1.ResourceInstance)
+	if !ok {
+		apiSvc, ok := apiResource.(*apiV1.ResourceInstance)
+		if ok {
+			return apiSvc.ResourceMeta.Attributes[attrName]
+		}
+		return ""
+	}
+	return apiSvc.ResourceMeta.Attributes[attrName]
+}
+
 // GetAttributeOnPublishedAPIByID - Returns the value on published proxy
 func GetAttributeOnPublishedAPIByID(externalAPIID string, attrName string) string {
 	api := getAPIByID(externalAPIID)
 	if api != nil {
-		apiSvc := api.(apiV1.ResourceInstance)
-		attrVal := apiSvc.ResourceMeta.Attributes[attrName]
-		return attrVal
+		return getAttributeFromResource(api, attrName)
 	}
 	return ""
 }
@@ -98,9 +108,7 @@ func GetAttributeOnPublishedAPIByID(externalAPIID string, attrName string) strin
 func GetAttributeOnPublishedAPIByPrimaryKey(primaryKey string, attrName string) string {
 	api := getAPIByPrimaryKey(primaryKey)
 	if api != nil {
-		apiSvc := api.(apiV1.ResourceInstance)
-		attrVal := apiSvc.ResourceMeta.Attributes[attrName]
-		return attrVal
+		return getAttributeFromResource(api, attrName)
 	}
 	return ""
 }

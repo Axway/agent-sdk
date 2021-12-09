@@ -98,7 +98,8 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	var err error
 
 	log.Debugf(
-		"processing received watch event[action: %s, type: %s, name: %s]",
+		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
+		event.Metadata.SequenceID,
 		proto.Event_Type_name[int32(event.Type)],
 		event.Payload.Kind,
 		event.Payload.Name,
