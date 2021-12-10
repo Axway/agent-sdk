@@ -130,22 +130,25 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName, doc string) *v1alpha1.ConsumerInstance {
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName string, instAttributes map[string]string, doc string) *v1alpha1.ConsumerInstance {
 	return &v1alpha1.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
 			Name:             consumerInstanceName,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, false),
+			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 	}
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, doc string) {
+func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, instAttributes map[string]string, doc string) {
 	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
 	consumerInstance.Title = serviceBody.NameToPush
+	for k, v := range instAttributes {
+		consumerInstance.ResourceMeta.Attributes[k] = v
+	}
 	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
 	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	// use existing categories only if mappings have not been configured
@@ -184,6 +187,11 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
+	instAttributes := serviceBody.InstanceAttributes
+	if instAttributes == nil {
+		instAttributes = make(map[string]string)
+	}
+
 	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
 		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
@@ -204,9 +212,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	if consumerInstance != nil {
 		httpMethod = http.MethodPut
 		consumerInstanceURL += "/" + consumerInstanceName
-		c.updateConsumerInstanceResource(consumerInstance, serviceBody, doc)
+		c.updateConsumerInstanceResource(consumerInstance, serviceBody, instAttributes, doc)
 	} else {
-		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
+		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, instAttributes, doc)
 	}
 
 	buffer, err := json.Marshal(consumerInstance)
