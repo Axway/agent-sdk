@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -40,7 +39,7 @@ func newHarvesterClient(cfg *harvesterConfig) *harvesterClient {
 	if cfg.pageSize == 0 {
 		cfg.pageSize = defaultEventPageSize
 	}
-	tlsCfg := corecfg.NewTLSConfig().(*config.TLSConfiguration)
+	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
 	tlsCfg.LoadFrom(cfg.tlsCfg)
 	return &harvesterClient{
 		url: cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",

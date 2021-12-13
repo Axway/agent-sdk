@@ -183,7 +183,7 @@ func (m *watchManager) Status() bool {
 	}
 
 	for k, c := range m.clientMap {
-		if c.isRunning == false {
+		if !c.isRunning {
 			log.Debugf("watchmanager: watch client is not running.")
 			ok = false
 			delete(m.clientMap, k)
