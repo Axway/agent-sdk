@@ -24,6 +24,7 @@ type Manager interface {
 	Status() bool
 }
 
+// SequenceProvider - Interface to provide event sequence ID to harvester client to fetch events
 type SequenceProvider interface {
 	GetSequence() int64
 }
