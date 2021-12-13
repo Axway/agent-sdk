@@ -4,18 +4,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+type testSequenceProvider struct{}
+
+func (s *testSequenceProvider) GetSequence() int64 {
+	return 0
+}
 func TestWatchOptions(t *testing.T) {
 	entry := logrus.NewEntry(logrus.New())
 	opts := []Option{
 		WithTLSConfig(nil),
 		WithKeepAlive(1*time.Second, 1*time.Second),
 		WithLogger(entry),
-		WithSyncEvents(cache.New()),
+		WithSyncEvents(&testSequenceProvider{}),
 	}
 	options := newWatchOptions()
 
@@ -27,5 +31,5 @@ func TestWatchOptions(t *testing.T) {
 	assert.Equal(t, entry, options.loggerEntry)
 	assert.Equal(t, 1*time.Second, options.keepAlive.timeout)
 	assert.Equal(t, 1*time.Second, options.keepAlive.time)
-	assert.NotNil(t, options.sequenceCache)
+	assert.NotNil(t, options.sequenceGetter)
 }

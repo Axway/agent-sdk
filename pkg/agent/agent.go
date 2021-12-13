@@ -509,7 +509,23 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 // Todo - To be updated after cache persistence story
-func getSequenceCache(watchTopicName string) cache.Cache {
+type agentSequenceManager struct {
+	sequenceCache cache.Cache
+}
+
+func (s *agentSequenceManager) GetSequence() int64 {
+	if s.sequenceCache != nil {
+		cachedSeqID, err := s.sequenceCache.Get("watchSequenceID")
+		if err == nil {
+			if seqID, ok := cachedSeqID.(float64); ok {
+				return int64(seqID)
+			}
+		}
+	}
+	return 0
+}
+
+func getAgentSequenceManager(watchTopicName string) *agentSequenceManager {
 	seqCache := cache.New()
 	if watchTopicName != "" {
 		err := seqCache.Load(watchTopicName + ".sequence")
@@ -518,7 +534,7 @@ func getSequenceCache(watchTopicName string) cache.Cache {
 			seqCache.Save(watchTopicName + ".sequence")
 		}
 	}
-	return seqCache
+	return &agentSequenceManager{sequenceCache: seqCache}
 }
 
 func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter, wtName string) (wm.Manager, error) {
@@ -546,7 +562,7 @@ func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.Token
 	if isInsecure {
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
-	watchOptions = append(watchOptions, wm.WithSyncEvents(getSequenceCache(wtName)))
+	watchOptions = append(watchOptions, wm.WithSyncEvents(getAgentSequenceManager(wtName)))
 
 	return wm.New(cfg, watchOptions...)
 }

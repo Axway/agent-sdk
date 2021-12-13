@@ -24,6 +24,10 @@ type Manager interface {
 	Status() bool
 }
 
+type SequenceProvider interface {
+	GetSequence() int64
+}
+
 // TokenGetter - function to acquire token
 type TokenGetter func() (string, error)
 
@@ -64,7 +68,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 		log.Errorf("failed to establish connection with watch service: %s", err.Error())
 	}
 
-	if manager.options.sequenceCache != nil {
+	if manager.options.sequenceGetter != nil {
 		harvesterConfig := &harvesterConfig{
 			host:        manager.cfg.Host,
 			port:        manager.cfg.Port,
@@ -94,18 +98,6 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	return grpc.Dial(address, grpcDialOptions...)
 }
 
-func (m *watchManager) getSequenceIDFromCache() int64 {
-	if m.options.sequenceCache != nil {
-		cachedSeqID, err := m.options.sequenceCache.Get("watchSequenceID")
-		if err == nil {
-			if seqID, ok := cachedSeqID.(float64); ok {
-				return int64(seqID)
-			}
-		}
-	}
-	return 0
-}
-
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
 	client, err := newWatchClient(
@@ -131,8 +123,8 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 	client.processRequest()
 	go func() {
-		sequenceID := m.getSequenceIDFromCache()
-		if m.hClient != nil && sequenceID > 0 {
+		if m.hClient != nil && m.options.sequenceGetter != nil {
+			sequenceID := m.options.sequenceGetter.GetSequence()
 			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
 			if err != nil {
 				client.handleError(err)
