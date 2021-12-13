@@ -294,12 +294,13 @@ func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) []*apiV1
 }
 
 func shouldDeleteService(apiID, stage string) bool {
-	// no agent-specific validator means to delete the service
-	if agent.deleteServiceValidator == nil {
-		return true
+	list, err := agent.apicClient.GetConsumerInstancesByExternalAPIID(apiID)
+	if err != nil {
+		return false
 	}
-	// let the agent decide if service should be deleted
-	return agent.deleteServiceValidator(apiID, stage)
+
+	// if there is only 1 consumer instance left, we can signal to delete the service too
+	return len(list) <= 1
 }
 
 func deleteServiceInstanceOrService(serviceInstance *v1alpha1.APIServiceInstance, externalAPIID, externalAPIStage string) {
