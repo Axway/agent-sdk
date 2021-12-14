@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -87,7 +88,10 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	}
 
 	var httpMethod string
-	var revAttributes map[string]string
+	revAttributes := serviceBody.RevisionAttributes
+	if revAttributes == nil {
+		revAttributes = make(map[string]string)
+	}
 	revisionPrefix := c.getRevisionPrefix(serviceBody)
 	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 	revisionURL := c.cfg.GetRevisionsURL()
@@ -115,8 +119,6 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		if serviceBody.AltRevisionPrefix == "" {
 			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
 		}
-
-		revAttributes = make(map[string]string)
 		if serviceBody.serviceContext.previousRevision != nil {
 			revAttributes[AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
 		}

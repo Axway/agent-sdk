@@ -71,7 +71,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
-		instanceAttributes := make(map[string]string)
+		instanceAttributes := serviceBody.InstanceAttributes
+		if instanceAttributes == nil {
+			instanceAttributes = make(map[string]string)
+		}
 		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, instanceAttributes, instanceEndpoints)
 	}
 

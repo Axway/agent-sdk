@@ -128,6 +128,6 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 }
 
 // RegisterDeleteServiceValidator - Registers callback for validating if the service should be deleted
-func RegisterDeleteServiceValidator(validator DeleteServiceValidator) {
-	agent.deleteServiceValidator = validator
+func RegisterDeleteServiceValidator(validator interface{}) {
+	log.Warnf("the RegisterDeleteServiceValidator is no longer used, please remove the call to it")
 }

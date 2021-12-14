@@ -605,23 +605,6 @@ func (a *Agent) validateAPI(apiID, stageName string) bool {
 
 Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The Amplify Agents SDK will not remove the resource. Returning false will indicate to the Amplify Agents SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
 
-In addition to registering to valid the *ConsumerInstance* resources, the agent can register to decide if the *APIService* should be removed along with the *ConsumerInstance*. The Amplify Agents SDK provides a mechanism for the discovery agent to register an Delete Service validator for this purpose. The agent implementation can call *RegisterDeleteServiceValidator* method in the *agent* package and provide a callback method. After determining that the *ConsumerInstance* is no longer valid, the Amplify Agents SDK will call this method in the agent, thereby allowing the agent to determine whether or not to delete the APIService for the API. Note that if an agent does not register a Delete Service validator, the *APIService* be validated and will always be removed along with *ConsumerInstance* resource.
-
-Below is the example of registering the Delete Service validator callback and sample validator implementation
-
-```
-func run() error {
- agent.RegisterDeleteServiceValidator(azAgent.validateService)
-}
-
-func (a *Agent) validateService(apiID, stageName string) bool {
- // Add validation here if the service should be marked as deletable
- return true
-}
-```
-
-Returning true from the validator will indicate that the *APIService* should be removed. The Amplify Agents SDK will remove the resource. Returning false will indicate to the SDK that the *APIService* resource not should be removed.
-
 ## Building the Agent
 
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Amplify Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
