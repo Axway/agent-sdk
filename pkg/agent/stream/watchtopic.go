@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
 // GetOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
@@ -22,10 +23,15 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 	}
 
 	var tmplFunc func() string
-	if agentType == config.DiscoveryAgent {
+	switch agentType {
+	case config.DiscoveryAgent:
 		tmplFunc = NewDiscoveryWatchTopic
-	} else if agentType == config.TraceabilityAgent {
+	case config.TraceabilityAgent:
 		tmplFunc = NewTraceWatchTopic
+	case config.GovernanceAgent:
+		// TODO
+	default:
+		return nil, errors.New(1000, "unsupported agent type")
 	}
 
 	bts, err := parseWatchTopicTemplate(name, scope, tmplFunc)

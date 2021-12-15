@@ -128,12 +128,11 @@ func Test_watchClient_send(t *testing.T) {
 			assert.Nil(t, err)
 			assert.NotNil(t, c)
 
-			d, err := c.send()
+			err = c.send()
 			if tc.hasErr {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.NotEmpty(t, d)
 			}
 		})
 	}
