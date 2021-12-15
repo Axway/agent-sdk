@@ -556,7 +556,36 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	log.Tracef("registered API cache update all job: %s", id)
 }
 
-func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter) (wm.Manager, error) {
+// Todo - To be updated after cache persistence story
+type agentSequenceManager struct {
+	sequenceCache cache.Cache
+}
+
+func (s *agentSequenceManager) GetSequence() int64 {
+	if s.sequenceCache != nil {
+		cachedSeqID, err := s.sequenceCache.Get("watchSequenceID")
+		if err == nil {
+			if seqID, ok := cachedSeqID.(float64); ok {
+				return int64(seqID)
+			}
+		}
+	}
+	return 0
+}
+
+func getAgentSequenceManager(watchTopicName string) *agentSequenceManager {
+	seqCache := cache.New()
+	if watchTopicName != "" {
+		err := seqCache.Load(watchTopicName + ".sequence")
+		if err != nil {
+			seqCache.Set("watchSequenceID", int64(0))
+			seqCache.Save(watchTopicName + ".sequence")
+		}
+	}
+	return &agentSequenceManager{sequenceCache: seqCache}
+}
+
+func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.TokenGetter, wtName string) (wm.Manager, error) {
 	u, _ := url.Parse(host)
 	port := 443
 
@@ -581,6 +610,7 @@ func newWatchManager(host, tenantID string, isInsecure bool, getToken auth.Token
 	if isInsecure {
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
+	watchOptions = append(watchOptions, wm.WithSyncEvents(getAgentSequenceManager(wtName)))
 
 	return wm.New(cfg, watchOptions...)
 }
@@ -590,32 +620,20 @@ func startStreamMode(agent agentData) error {
 	tenantID := agent.cfg.GetTenantID()
 	insecure := agent.cfg.GetTLSConfig().IsInsecureSkipVerify()
 
-	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester)
-	if err != nil {
-		return fmt.Errorf("could not start the watch manager: %s", err)
-	}
-
 	rc := stream.NewResourceClient(
 		host+"/apis",
 		tenantID,
 		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 		agent.tokenRequester,
 	)
-
-	env := agent.cfg.GetEnvironmentName()
-	wtName := agent.cfg.GetAgentName()
-	if wtName == "" {
-		wtName = env
+	wt, err := getWatchTopic(rc)
+	if err != nil {
+		return err
 	}
 
-	wt, err := stream.GetCachedWatchTopic(cache.New(), wtName)
-
-	if err != nil || wt == nil {
-		wt, err = stream.GetOrCreateWatchTopic(wtName, env, rc, agent.cfg.GetAgentType())
-		if err != nil {
-			return err
-		}
-		// cache the watch topic
+	manager, err := newWatchManager(host, tenantID, insecure, agent.tokenRequester, wt.Name)
+	if err != nil {
+		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
 	stopCh, events := make(chan interface{}), make(chan *proto.Event)
@@ -639,4 +657,32 @@ func startStreamMode(agent agentData) error {
 	_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
 
 	return err
+}
+
+func getWatchTopic(rc stream.ResourceClient) (*v1alpha1.WatchTopic, error) {
+	env := agent.cfg.GetEnvironmentName()
+	agentName := agent.cfg.GetAgentName()
+
+	wtName := getWatchTopicName(env, agentName, agent.cfg.GetAgentType())
+	wt, err := stream.GetCachedWatchTopic(cache.New(), wtName)
+	if err != nil || wt == nil {
+		wt, err = stream.GetOrCreateWatchTopic(wtName, env, rc, agent.cfg.GetAgentType())
+		if err != nil {
+			return nil, err
+		}
+		// cache the watch topic
+	}
+	return wt, err
+}
+
+func getWatchTopicName(envName, agentName string, agentType config.AgentType) string {
+	wtName := agentName
+	if wtName == "" {
+		wtName = envName
+	}
+	return wtName + getWatchTopicNameSuffix(agentType)
+}
+
+func getWatchTopicNameSuffix(agentType config.AgentType) string {
+	return "-" + agentTypesMap[agentType]
 }

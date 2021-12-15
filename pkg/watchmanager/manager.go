@@ -24,6 +24,11 @@ type Manager interface {
 	Status() bool
 }
 
+// SequenceProvider - Interface to provide event sequence ID to harvester client to fetch events
+type SequenceProvider interface {
+	GetSequence() int64
+}
+
 // TokenGetter - function to acquire token
 type TokenGetter func() (string, error)
 
@@ -35,6 +40,7 @@ type watchManager struct {
 	logger             logrus.FieldLogger
 	newWatchClientFunc newWatchClientFunc
 	mutex              sync.Mutex
+	hClient            *harvesterClient
 }
 
 // New - Creates a new watch manager
@@ -62,6 +68,18 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 	if err != nil {
 		log.Errorf("failed to establish connection with watch service: %s", err.Error())
 	}
+
+	if manager.options.sequenceGetter != nil {
+		harvesterConfig := &harvesterConfig{
+			host:        manager.cfg.Host,
+			port:        manager.cfg.Port,
+			tenantID:    manager.cfg.TenantID,
+			tokenGetter: manager.cfg.TokenGetter,
+			tlsCfg:      manager.options.tlsCfg,
+		}
+		manager.hClient = newHarvesterClient(harvesterConfig)
+	}
+
 	return manager, err
 }
 
@@ -104,8 +122,18 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	defer m.mutex.Unlock()
 	m.clientMap[subID] = client
 
-	go client.processRequest()
-	go client.processEvents()
+	client.processRequest()
+	go func() {
+		if m.hClient != nil && m.options.sequenceGetter != nil {
+			sequenceID := m.options.sequenceGetter.GetSequence()
+			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+			if err != nil {
+				client.handleError(err)
+				return
+			}
+		}
+		client.processEvents()
+	}()
 
 	log.Infof("registered watch client. id: %s. watchtopic: %s", subID, link)
 
@@ -156,7 +184,7 @@ func (m *watchManager) Status() bool {
 	}
 
 	for k, c := range m.clientMap {
-		if c.isRunning == false {
+		if !c.isRunning {
 			log.Debugf("watchmanager: watch client is not running.")
 			ok = false
 			delete(m.clientMap, k)
