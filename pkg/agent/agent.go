@@ -99,19 +99,20 @@ func Initialize(centralCfg config.CentralConfig) error {
 		return nil
 	}
 
-	err = initializeTokenRequester(centralCfg)
-	if err != nil {
-		return err
+	if centralCfg.GetConnected() {
+		err = initializeTokenRequester(centralCfg)
+		if err != nil {
+			return err
+		}
+		// Init apic client
+		if agent.apicClient == nil {
+			agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
+			agent.apicClient.AddCategoryCache(agent.categoryMap)
+		} else {
+			agent.apicClient.SetTokenGetter(agent.tokenRequester)
+			agent.apicClient.OnConfigChange(centralCfg)
+		}
 	}
-	// Init apic client
-	if agent.apicClient == nil {
-		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		agent.apicClient.AddCategoryCache(agent.categoryMap)
-	} else {
-		agent.apicClient.SetTokenGetter(agent.tokenRequester)
-		agent.apicClient.OnConfigChange(centralCfg)
-	}
-
 	agent.cfg = centralCfg
 	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
 
@@ -123,7 +124,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if getAgentResourceType() != "" {
 			fetchConfig()
 			updateAgentStatus(AgentRunning, "", "")
-		} else if agent.cfg.GetAgentName() != "" {
+		} else if agent.cfg.GetConnected() && agent.cfg.GetAgentName() != "" {
 			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
 		}
 
@@ -133,7 +134,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 			hc.StartPeriodicHealthCheck()
 		}
 
-		if util.IsNotTest() {
+		if util.IsNotTest() && agent.cfg.GetConnected() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
 		}

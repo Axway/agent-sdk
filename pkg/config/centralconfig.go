@@ -21,6 +21,8 @@ const (
 	TraceabilityAgent
 	// GovernanceAgent - Type definition for governance agent
 	GovernanceAgent
+	// GenericService
+	GenericService
 )
 
 // AgentMode - Defines the agent mode
@@ -135,6 +137,7 @@ type CentralConfig interface {
 	GetUsageReportingConfig() UsageReportingConfig
 	GetUpdateFromAPIServer() bool
 	IsVersionCheckerEnabled() bool
+	GetConnected() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -169,6 +172,7 @@ type CentralConfiguration struct {
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
+	Connected                 bool `config:"connected"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -452,6 +456,11 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
+// GetReportActivityFrequency - Returns the interval between running periodic status updater
+func (c *CentralConfiguration) GetConnected() bool {
+	return c.Connected
+}
+
 const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
@@ -485,6 +494,7 @@ const (
 	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
 	pathVersionChecker            = "central.versionChecker"
 	pathJobTimeout                = "central.jobTimeout"
+	pathConnected                 = "central.connected"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -498,7 +508,9 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 				return
 			}
 			c.validateConfig()
-			c.Auth.validate()
+			if c.Connected {
+				c.Auth.validate()
+			}
 			if supportsTraceability(c.AgentType) {
 				c.UsageReporting.validate()
 			}
@@ -512,6 +524,11 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 }
 
 func (c *CentralConfiguration) validateConfig() {
+	if !c.Connected {
+		// We are not connected to Central so do not validate
+		return
+	}
+
 	if c.GetTenantID() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathTenantID))
 	}
@@ -629,6 +646,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 	}
+	props.AddBoolProperty(pathConnected, true, "Controls whether the agent connects to Central or not")
 }
 
 // ParseCentralConfig - Parses the Central Config values from the command line
@@ -679,6 +697,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		ProxyURL:            proxyURL,
 		UpdateFromAPIServer: props.BoolPropertyValue(pathUpdateFromAPIServer),
 		VersionChecker:      props.BoolPropertyValue(pathVersionChecker),
+		Connected:           props.BoolPropertyValue(pathConnected),
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)
