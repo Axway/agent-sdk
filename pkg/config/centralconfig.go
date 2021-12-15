@@ -21,7 +21,7 @@ const (
 	TraceabilityAgent
 	// GovernanceAgent - Type definition for governance agent
 	GovernanceAgent
-	// GenericService
+	// GenericService - Type for a generic service
 	GenericService
 )
 
@@ -456,7 +456,7 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
-// GetReportActivityFrequency - Returns the interval between running periodic status updater
+// GetConnected - Returns true if agent should connect to Amplify
 func (c *CentralConfiguration) GetConnected() bool {
 	return c.Connected
 }
