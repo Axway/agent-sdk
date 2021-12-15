@@ -80,41 +80,48 @@ func (c *watchClient) recv() error {
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
 func (c *watchClient) processRequest() {
-	for {
-		select {
-		case <-c.context.Done():
-			c.handleError(c.context.Err())
-			return
-		case <-c.timer.C:
-			exp, err := c.send()
-			if err != nil {
-				c.handleError(err)
-				return
-			}
-			c.timer.Reset(exp)
-		}
+	err := c.send()
+	if err != nil {
+		c.handleError(err)
+		return
 	}
+
+	go func() {
+		for {
+			select {
+			case <-c.stream.Context().Done():
+				c.handleError(c.stream.Context().Err())
+				return
+			case <-c.timer.C:
+				err := c.send()
+				if err != nil {
+					c.handleError(err)
+					return
+				}
+			}
+		}
+	}()
 }
 
 // send a message with a new token to the grpc server and returns the expiration time
-func (c *watchClient) send() (time.Duration, error) {
+func (c *watchClient) send() error {
 	token, err := c.cfg.tokenGetter()
 	if err != nil {
-		return time.Duration(0), err
+		return err
 	}
 
 	exp, err := c.getTokenExpirationTime(token)
 	if err != nil {
-		return exp, err
+		return err
 	}
 
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
 	err = c.stream.Send(req)
 	if err != nil {
-		return exp, err
+		return err
 	}
-
-	return exp, nil
+	c.timer.Reset(exp)
+	return nil
 }
 
 // handleError stop the running timer, send to the error channel, and close the open stream.

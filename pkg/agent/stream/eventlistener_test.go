@@ -69,6 +69,9 @@ func TestEventListener_start(t *testing.T) {
 							SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
 						},
 					},
+					Metadata: &proto.EventMeta{
+						SequenceID: 1,
+					},
 				}
 			} else {
 				close(tc.events)
@@ -156,6 +159,9 @@ func TestEventListener_handleEvent(t *testing.T) {
 					Metadata: &proto.Metadata{
 						SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
 					},
+				},
+				Metadata: &proto.EventMeta{
+					SequenceID: 1,
 				},
 			}
 

@@ -35,9 +35,10 @@ type keepAliveOption struct {
 
 // watchOptions options to use when creating a stream
 type watchOptions struct {
-	tlsCfg      *tls.Config
-	keepAlive   keepAliveOption
-	loggerEntry *logrus.Entry
+	tlsCfg         *tls.Config
+	keepAlive      keepAliveOption
+	loggerEntry    *logrus.Entry
+	sequenceGetter SequenceProvider
 }
 
 // newWatchOptions returns the default watchOptions
@@ -71,6 +72,13 @@ func WithKeepAlive(time, timeout time.Duration) Option {
 func WithLogger(loggerEntry *logrus.Entry) Option {
 	return funcOption(func(o *watchOptions) {
 		o.loggerEntry = loggerEntry
+	})
+}
+
+// WithSyncEvents allows using the harvester client to sync events on watch registration
+func WithSyncEvents(sequenceGetter SequenceProvider) Option {
+	return funcOption(func(o *watchOptions) {
+		o.sequenceGetter = sequenceGetter
 	})
 }
 

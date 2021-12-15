@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/cache"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,6 +20,32 @@ type WatchClient struct {
 	wm     wm.Manager
 }
 
+type sequenceManager struct {
+	seqCache cache.Cache
+}
+
+func (s *sequenceManager) GetSequence() int64 {
+	cachedSeqID, err := s.seqCache.Get("watchSequenceID")
+	if err == nil {
+		if seqID, ok := cachedSeqID.(float64); ok {
+			return int64(seqID)
+		}
+	}
+	return 0
+}
+
+// Todo - To be updated after cache persistence story
+func getSequenceManager() *sequenceManager {
+	seqCache := cache.New()
+	err := seqCache.Load("sample.sequence")
+	if err != nil {
+		seqCache.Set("watchSequenceID", int64(0))
+		seqCache.Save("sample.sequence")
+	}
+
+	return &sequenceManager{seqCache: seqCache}
+}
+
 // NewWatchClient creates a WatchClient
 func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, error) {
 	entry := logger.WithField("package", "client")
@@ -28,6 +55,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 	if config.Insecure {
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
+	watchOptions = append(watchOptions, wm.WithSyncEvents(getSequenceManager()))
 
 	ta := auth.NewTokenAuth(config.Auth, config.TenantID)
 
