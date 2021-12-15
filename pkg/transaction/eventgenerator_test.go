@@ -34,6 +34,7 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			UsageReporting:            corecfg.NewUsageReporting(),
 			ReportActivityFrequency:   2 * time.Minute,
 			ClientTimeout:             1 * time.Minute,
+			Connected:                 true,
 			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
 				ClientID:   "test",

@@ -24,8 +24,8 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg.URL = url
 	cfg.TenantID = "123456"
 	cfg.Environment = env
-	cfg.UpdateFromAPIServer = true
 	cfg.APICDeployment = "apic"
+	cfg.Connected = true
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
