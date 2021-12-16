@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -93,19 +92,14 @@ func (w WatchClient) Watch() {
 	log = log.WithField("subscriptionId", subscriptionID)
 	log.Infof("watch registered successfully")
 
-	wait := 30 * time.Minute
 	for {
 		select {
 		case err = <-errCh:
 			log.Error(err)
-			return
-		case <-time.After(wait):
-			log.Infof("initiating watch close")
-
 			w.wm.CloseWatch(subscriptionID)
+			return
 		case event := <-eventChannel:
 			bts, _ := json.MarshalIndent(event, "", "  ")
-
 			log.Info(string(bts))
 		}
 	}
