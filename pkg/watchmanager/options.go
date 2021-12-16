@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -44,7 +46,7 @@ type watchOptions struct {
 // newWatchOptions returns the default watchOptions
 func newWatchOptions() *watchOptions {
 	return &watchOptions{
-		loggerEntry: logrus.NewEntry(logrus.New()),
+		loggerEntry: logrus.NewEntry(log.Get()),
 		tlsCfg:      defaultTLSConfig(),
 		keepAlive: keepAliveOption{
 			time:    30 * time.Second,

@@ -42,7 +42,7 @@ func initFlags(cmd *cobra.Command) {
 	cmd.Flags().String("auth.private_key", "./private_key.pem", "The private key associated with service account(default : ./private_key.pem)")
 	cmd.Flags().String("auth.public_key", "./public_key.pem", "The public key associated with service account(default : ./public_key.pem)")
 	cmd.Flags().String("auth.key_password", "", "The password for private key")
-	cmd.Flags().String("auth.url", "https://login-preprod.axway.com/auth", "The AxwayID auth URL")
+	cmd.Flags().String("auth.url", "https://login.axwaytest.net/auth", "The AxwayID auth URL")
 	cmd.Flags().String("auth.client_id", "", "The service account client ID")
 	cmd.Flags().Duration("auth.timeout", 10*time.Second, "The connection timeout for AxwayID")
 	cmd.MarkFlagRequired("auth.client_id")
