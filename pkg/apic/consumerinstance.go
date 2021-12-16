@@ -306,7 +306,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==%s", externalAPIID),
+		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==\"%s\"", externalAPIID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
