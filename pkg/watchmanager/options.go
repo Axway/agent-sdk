@@ -49,7 +49,7 @@ func newWatchOptions() *watchOptions {
 		loggerEntry: logrus.NewEntry(log.Get()),
 		tlsCfg:      defaultTLSConfig(),
 		keepAlive: keepAliveOption{
-			time:    30 * time.Second,
+			time:    60 * time.Second,
 			timeout: 10 * time.Second,
 		},
 	}
