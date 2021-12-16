@@ -126,10 +126,12 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	go func() {
 		if m.hClient != nil && m.options.sequenceGetter != nil {
 			sequenceID := m.options.sequenceGetter.GetSequence()
-			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
-			if err != nil {
-				client.handleError(err)
-				return
+			if sequenceID > 0 {
+				err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+				if err != nil {
+					client.handleError(err)
+					return
+				}
 			}
 		}
 		client.processEvents()
