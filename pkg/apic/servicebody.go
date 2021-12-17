@@ -4,6 +4,7 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
+//APIKeyInfo -
 type APIKeyInfo struct {
 	Name     string
 	Location string
