@@ -60,6 +60,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
 			AuthPolicy:         Passthrough,
+			authPolicies:       make([]string, 0),
 			CreatedBy:          config.AgentTypeName,
 			State:              PublishedStatus,
 			Status:             PublishedStatus,
@@ -266,5 +267,17 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 		b.serviceBody.Endpoints = endPoints
 	}
+
+	var i interface{} = specProcessor
+	if val, ok := i.(oasSpecProcessor); ok {
+		// get the auth policy from the spec
+		b.serviceBody.authPolicies, b.serviceBody.apiKeyInfo = val.getAuthInfo()
+
+		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
+		if len(b.serviceBody.authPolicies) > 0 {
+			b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
+		}
+	}
+
 	return b.serviceBody, nil
 }

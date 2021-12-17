@@ -38,17 +38,19 @@ var subNotifTemplateMap = map[string]string{
 
 // EmailNotificationTemplate - (go) template for email notification
 type EmailNotificationTemplate struct {
-	CatalogItemID   string `json:"catalogItemId"`
-	CatalogItemURL  string `json:"catalogItemUrl"`
-	CatalogItemName string `json:"catalogItemName"`
-	Email           string `json:"email,omitempty"`
-	Message         string `json:"message,omitempty"`
-	Key             string `json:"key,omitempty"`
-	KeyHeaderName   string `json:"keyHeaderName,omitempty"`
-	ClientID        string `json:"clientID,omitempty"`
-	ClientSecret    string `json:"clientSecret,omitempty"`
-	AuthTemplate    string `json:"authtemplate,omitempty"`
-	IsAPIKey        bool   `json:"isAPIKey,omitempty"`
+	CatalogItemID   string
+	CatalogItemURL  string
+	CatalogItemName string
+	Email           string
+	Message         string
+	Key             string
+	KeyHeaderName   string
+	KeyName         string
+	KeyLocation     string
+	ClientID        string
+	ClientSecret    string
+	AuthTemplate    string
+	IsAPIKey        bool
 }
 
 // ValidateSubscriptionConfigOnStartup - validate body and auth template tags during startup (config)

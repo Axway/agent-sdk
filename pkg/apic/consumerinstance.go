@@ -115,6 +115,9 @@ func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody
 }
 
 func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
+	if len(serviceBody.authPolicies) > 0 {
+		serviceBody.AuthPolicy = serviceBody.authPolicies[0] // use the first auth policy
+	}
 	enableSubscription := serviceBody.AuthPolicy != Passthrough
 	// if there isn't a registered subscription schema, do not enable subscriptions,
 	// or if the status is not PUBLISHED, do not enable subscriptions

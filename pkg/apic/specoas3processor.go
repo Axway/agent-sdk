@@ -141,3 +141,21 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 
 	return endPoints, nil
 }
+
+func (p *oas3SpecProcessor) getAuthPolicies() ([]string, []APIKeyInfo) {
+	authPolicies := []string{}
+	keyInfo := []APIKeyInfo{}
+	for _, scheme := range p.spec.Components.SecuritySchemes {
+		switch scheme.Value.Type {
+		case apiKey:
+			authPolicies = append(authPolicies, Apikey)
+			keyInfo = append(keyInfo, APIKeyInfo{
+				Location: scheme.Value.In,
+				Name:     scheme.Value.Name,
+			})
+		case oauth:
+			authPolicies = append(authPolicies, Oauth)
+		}
+	}
+	return authPolicies, keyInfo
+}

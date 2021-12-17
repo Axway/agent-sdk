@@ -10,6 +10,11 @@ import (
 
 var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "wss": true}
 
+const (
+	apiKey = "apiKey"
+	oauth  = "oauth2"
+)
+
 // oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
 type oas2SpecProcessor struct {
 	spec *oas2Swagger
@@ -56,6 +61,24 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 		endPoints = append(endPoints, endPoint)
 	}
 	return endPoints, nil
+}
+
+func (p *oas2SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
+	authPolicies := []string{}
+	keyInfo := []APIKeyInfo{}
+	for _, scheme := range p.spec.SecurityDefinitions {
+		switch scheme.Type {
+		case apiKey:
+			authPolicies = append(authPolicies, Apikey)
+			keyInfo = append(keyInfo, APIKeyInfo{
+				Location: scheme.In,
+				Name:     scheme.Name,
+			})
+		case oauth:
+			authPolicies = append(authPolicies, Oauth)
+		}
+	}
+	return authPolicies, keyInfo
 }
 
 func createEndpointDefinition(scheme, host string, port int, basePath string) EndpointDefinition {

@@ -18,6 +18,10 @@ type specProcessor interface {
 	getResourceType() string
 }
 
+type oasSpecProcessor interface {
+	getAuthInfo() ([]string, []APIKeyInfo)
+}
+
 type specResourceParser struct {
 	resourceSpecType string
 	resourceSpec     []byte
