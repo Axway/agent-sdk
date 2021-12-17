@@ -147,7 +147,7 @@ func (p *oas3SpecProcessor) getAuthPolicies() ([]string, []APIKeyInfo) {
 	keyInfo := []APIKeyInfo{}
 	for _, scheme := range p.spec.Components.SecuritySchemes {
 		switch scheme.Value.Type {
-		case oasSecurityApiKey:
+		case oasSecurityAPIKey:
 			authPolicies = append(authPolicies, Apikey)
 			keyInfo = append(keyInfo, APIKeyInfo{
 				Location: scheme.Value.In,
