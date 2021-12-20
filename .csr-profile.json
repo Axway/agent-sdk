@@ -18,31 +18,5 @@
     "insightvm": false
   },
   "suppressions": [
-    {
-      "path": "util/healthcheck/healthchecker\\.go:*",
-      "scanner": "fortify",
-      "classification": "Deferred",
-      "until": "2022-01-07",
-      "justification": "APIGOV-21114",
-      "component": "healthchecker\\.go",
-      "version": "master",
-      "ids": [
-        "Insecure Transport",
-        "Privacy Violation",
-        "JSON Injection"
-      ]
-    },
-    {
-      "path": "apic/auth/apicauth\\.go:*",
-      "scanner": "fortify",
-      "classification": "Deferred",
-      "until": "2022-01-07",
-      "justification": "APIGOV-21114",
-      "component": "apicauth\\.go",
-      "version": "master",
-      "ids": [
-        "Privacy Violation"
-      ]
-    }
   ]
 }
