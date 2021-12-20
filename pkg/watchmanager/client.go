@@ -13,20 +13,20 @@ import (
 )
 
 type clientConfig struct {
-	topicSelfLink string
-	tokenGetter   TokenGetter
-	events        chan *proto.Event
 	errors        chan error
+	events        chan *proto.Event
+	tokenGetter   TokenGetter
+	topicSelfLink string
 }
 
 type watchClient struct {
-	cfg                    clientConfig
-	stream                 proto.Watch_SubscribeClient
 	cancelStreamCtx        context.CancelFunc
-	streamCtx              context.Context
-	timer                  *time.Timer
+	cfg                    clientConfig
 	getTokenExpirationTime getTokenExpFunc
 	isRunning              bool
+	stream                 proto.Watch_SubscribeClient
+	streamCtx              context.Context
+	timer                  *time.Timer
 }
 
 // newWatchClientFunc func signature to create a watch client

@@ -36,11 +36,11 @@ type watchManager struct {
 	cfg                *Config
 	clientMap          map[string]*watchClient
 	connection         *grpc.ClientConn
-	options            *watchOptions
-	logger             logrus.FieldLogger
-	newWatchClientFunc newWatchClientFunc
-	mutex              sync.Mutex
 	hClient            *harvesterClient
+	logger             logrus.FieldLogger
+	mutex              sync.Mutex
+	newWatchClientFunc newWatchClientFunc
+	options            *watchOptions
 }
 
 // New - Creates a new watch manager
@@ -104,10 +104,10 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
-			topicSelfLink: link,
-			tokenGetter:   m.cfg.TokenGetter,
-			events:        events,
 			errors:        errors,
+			events:        events,
+			tokenGetter:   m.cfg.TokenGetter,
+			topicSelfLink: link,
 		},
 		m.newWatchClientFunc,
 	)

@@ -24,20 +24,20 @@ type Listener interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
+	cancel      context.CancelFunc
+	ctx         context.Context
 	getResource ResourceClient
 	handlers    []Handler
-	source      chan *proto.Event
 	isRunning   bool
-	ctx         context.Context
-	cancel      context.CancelFunc
+	source      chan *proto.Event
 }
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
 func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
-		ctx:         ctx,
 		cancel:      cancel,
+		ctx:         ctx,
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
