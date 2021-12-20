@@ -152,7 +152,7 @@ func (m *watchManager) CloseWatch(id string) error {
 		return errors.New("invalid watch subscription ID")
 	}
 	log.Infof("closing watch for subscription: %s", id)
-	client.cancelStream()
+	client.cancelStreamCtx()
 	delete(m.clientMap, id)
 	return nil
 }

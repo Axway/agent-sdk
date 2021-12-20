@@ -92,25 +92,17 @@ func TestEventListener_start(t *testing.T) {
 func TestEventListener_Listen(t *testing.T) {
 	events := make(chan *proto.Event)
 	listener := NewEventListener(events, &mockRI{}, mockHandler{})
-
-	errCh := make(chan error)
-	go func() {
-		err := listener.Listen()
-		errCh <- err
-	}()
-
+	errCh := listener.Listen()
 	go listener.Stop()
 	err := <-errCh
 	assert.Nil(t, err)
 
-	go func() {
-		err := listener.Listen()
-		errCh <- err
-	}()
-
+	listener = NewEventListener(events, &mockRI{}, mockHandler{})
+	errCh = listener.Listen()
 	close(events)
 	err = <-errCh
 	assert.NotNil(t, err)
+
 }
 
 func TestEventListener_handleEvent(t *testing.T) {
@@ -191,7 +183,7 @@ type mockRI struct {
 	err error
 }
 
-func (m mockRI) Create(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m mockRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
 

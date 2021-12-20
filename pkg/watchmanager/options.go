@@ -103,7 +103,7 @@ func withTLSConfig(tlsCfg *tls.Config) grpc.DialOption {
 func withKeepaliveParams(time, timeout time.Duration) grpc.DialOption {
 	return grpc.WithKeepaliveParams(
 		keepalive.ClientParameters{
-			PermitWithoutStream: false,
+			PermitWithoutStream: true,
 			Time:                time,
 			Timeout:             timeout,
 		})

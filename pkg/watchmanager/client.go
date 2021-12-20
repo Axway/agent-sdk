@@ -22,8 +22,8 @@ type clientConfig struct {
 type watchClient struct {
 	cfg                    clientConfig
 	stream                 proto.Watch_SubscribeClient
-	cancelStream           context.CancelFunc
-	context                context.Context
+	cancelStreamCtx        context.CancelFunc
+	streamCtx              context.Context
 	timer                  *time.Timer
 	getTokenExpirationTime getTokenExpFunc
 	isRunning              bool
@@ -45,13 +45,13 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 	}
 
 	client := &watchClient{
+		cancelStreamCtx:        streamCancel,
 		cfg:                    clientCfg,
-		stream:                 stream,
-		context:                streamCtx,
-		cancelStream:           streamCancel,
-		timer:                  time.NewTimer(0),
 		getTokenExpirationTime: getTokenExpirationTime,
 		isRunning:              true,
+		stream:                 stream,
+		streamCtx:              streamCtx,
+		timer:                  time.NewTimer(0),
 	}
 
 	return client, nil
@@ -80,15 +80,12 @@ func (c *watchClient) recv() error {
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
 func (c *watchClient) processRequest() {
-	err := c.send()
-	if err != nil {
-		c.handleError(err)
-		return
-	}
-
 	go func() {
 		for {
 			select {
+			case <-c.streamCtx.Done():
+				c.handleError(c.stream.Context().Err())
+				return
 			case <-c.stream.Context().Done():
 				c.handleError(c.stream.Context().Err())
 				return
@@ -129,7 +126,7 @@ func (c *watchClient) handleError(err error) {
 	c.isRunning = false
 	c.timer.Stop()
 	c.cfg.errors <- err
-	c.cancelStream()
+	c.cancelStreamCtx()
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {

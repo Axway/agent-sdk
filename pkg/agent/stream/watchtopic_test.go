@@ -51,7 +51,7 @@ func TestCreateWatchTopic(t *testing.T) {
 			bts, err := tc.ri.MarshalJSON()
 			assert.Nil(t, err)
 
-			wt, err := CreateWatchTopic(bts, rc)
+			wt, err := createWatchTopic(bts, rc)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 			} else {
@@ -103,7 +103,7 @@ func TestGetCachedWatchTopic(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wt, err := GetCachedWatchTopic(tc.cache, tc.key)
+			wt, err := getCachedWatchTopic(tc.cache, tc.key)
 
 			if tc.hasErr {
 				assert.NotNil(t, err)
@@ -178,7 +178,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
 
-			wt, err := GetOrCreateWatchTopic(name, "scope", tc.rc, tc.agentType)
+			wt, err := getOrCreateWatchTopic(name, "scope", tc.rc, tc.agentType)
 			if tc.hasErr == true {
 				assert.NotNil(t, err)
 			} else {
