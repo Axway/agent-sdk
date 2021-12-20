@@ -6,7 +6,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -77,7 +76,7 @@ func (j *instanceValidator) shouldDeleteService(apiID, stage string) bool {
 func (j *instanceValidator) deleteServiceInstanceOrService(serviceInstance *apiV1.ResourceInstance, externalAPIID, externalAPIStage string) {
 	msg := ""
 	var err error
-	var agentError *errors.AgentError
+	var agentError *utilErrors.AgentError
 	if j.shouldDeleteService(externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", serviceInstance.Title)
 		agentError = ErrDeletingService

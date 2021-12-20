@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -35,20 +35,22 @@ func init() {
 
 type discoveryCache struct {
 	jobs.Job
-	lastServiceTime   time.Time
-	lastInstanceTime  time.Time
-	lastCategoryTime  time.Time
-	refreshAll        bool
-	instanceCacheLock *sync.Mutex
+	lastServiceTime      time.Time
+	lastInstanceTime     time.Time
+	lastCategoryTime     time.Time
+	refreshAll           bool
+	instanceCacheLock    *sync.Mutex
+	agentResourceManager resource.Manager
 }
 
-func newDiscoveryCache(getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
+func newDiscoveryCache(agentResourceManager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
 	return &discoveryCache{
-		lastServiceTime:   time.Time{},
-		lastInstanceTime:  time.Time{},
-		lastCategoryTime:  time.Time{},
-		refreshAll:        getAll,
-		instanceCacheLock: instanceCacheLock,
+		lastServiceTime:      time.Time{},
+		lastInstanceTime:     time.Time{},
+		lastCategoryTime:     time.Time{},
+		refreshAll:           getAll,
+		instanceCacheLock:    instanceCacheLock,
+		agentResourceManager: agentResourceManager,
 	}
 }
 
@@ -77,7 +79,9 @@ func (j *discoveryCache) Execute() error {
 		j.updatePIServiceInstancesCache()
 		j.updateCategoryCache()
 	}
-	fetchConfig()
+	if j.agentResourceManager != nil {
+		j.agentResourceManager.FetchAgentResource()
+	}
 	return nil
 }
 
@@ -91,7 +95,7 @@ func (j *discoveryCache) updateAPICache() {
 	}
 
 	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat))
 	}
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
@@ -134,7 +138,7 @@ func (j *discoveryCache) updatePIServiceInstancesCache() {
 	}
 
 	if !j.lastInstanceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat))
 	}
 
 	j.lastInstanceTime = time.Now()
@@ -174,7 +178,7 @@ func (j *discoveryCache) updateCategoryCache() {
 	}
 
 	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(v1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(apiV1.APIServerTimeFormat))
 	}
 	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetCategoriesURL(), apiServerPageSize)
 

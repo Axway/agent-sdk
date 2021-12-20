@@ -1,21 +1,21 @@
-package agent
+package resource
 
 import (
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
-func traceabilityAgent(res *apiV1.ResourceInstance) *v1alpha1.TraceabilityAgent {
+func traceabilityAgent(res *v1.ResourceInstance) *v1alpha1.TraceabilityAgent {
 	agentRes := &v1alpha1.TraceabilityAgent{}
 	agentRes.FromInstance(res)
 
 	return agentRes
 }
 
-func createTraceabilityAgentStatusResource(status, prevStatus, message string) *v1alpha1.TraceabilityAgent {
+func createTraceabilityAgentStatusResource(agentName, status, prevStatus, message string) *v1alpha1.TraceabilityAgent {
 	agentRes := v1alpha1.TraceabilityAgent{}
-	agentRes.Name = agent.cfg.GetAgentName()
+	agentRes.Name = agentName
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
 	agentRes.Status.State = status
@@ -27,8 +27,8 @@ func createTraceabilityAgentStatusResource(status, prevStatus, message string) *
 	return &agentRes
 }
 
-func mergeTraceabilityAgentWithConfig(cfg *config.CentralConfiguration) {
-	ta := traceabilityAgent(GetAgentResource())
+func mergeTraceabilityAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.CentralConfiguration) {
+	ta := traceabilityAgent(agentRes)
 	resCfgTeamName := ta.Spec.Config.OwningTeam
 	resCfgLogLevel := ta.Spec.Logging.Level
 	applyResConfigToCentralConfig(cfg, "", resCfgTeamName, resCfgLogLevel)

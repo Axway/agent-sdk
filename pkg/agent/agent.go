@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -19,20 +18,19 @@ import (
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	"github.com/Axway/agent-sdk/pkg/api"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -57,21 +55,12 @@ type DeleteServiceValidator func(apiID, stageName string) bool
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
-// agentTypesMap - Agent Types map
-var agentTypesMap = map[config.AgentType]string{
-	config.DiscoveryAgent:    "discoveryagents",
-	config.TraceabilityAgent: "traceabilityagents",
-	config.GovernanceAgent:   "governanceagents",
-}
-
 type agentData struct {
-	agentResource     *apiV1.ResourceInstance
-	prevAgentResource *apiV1.ResourceInstance
+	agentResourceManager resource.Manager
 
 	apicClient     apic.Client
 	cfg            config.CentralConfig
 	tokenRequester auth.PlatformTokenGetter
-	logLevel       string
 
 	apiMap                     cache.Cache
 	instanceMap                cache.Cache
@@ -134,17 +123,18 @@ func Initialize(centralCfg config.CentralConfig) error {
 	agent.cfg = centralCfg
 	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
 
-	if agent.isInitialized {
-		mergeResourceWithConfig()
+	if centralCfg.GetAgentName() != "" {
+		if agent.agentResourceManager == nil {
+			agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
+			if err != nil {
+				return err
+			}
+		} else {
+			agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
+		}
 	}
 
 	if !agent.isInitialized {
-		if getAgentResourceType() != "" {
-			fetchConfig()
-			updateAgentStatus(AgentRunning, "", "")
-		} else if agent.cfg.GetAgentName() != "" {
-			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
-		}
 
 		setupSignalProcessor()
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
@@ -155,6 +145,10 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if util.IsNotTest() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
+		}
+		// Set agent running
+		if agent.agentResourceManager != nil {
+			agent.agentResourceManager.UpdateAgentStatus(AgentRunning, "", "")
 		}
 	}
 
@@ -219,7 +213,7 @@ func startAPIServiceCache() {
 	instanceCacheLock := &sync.Mutex{}
 
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(false, instanceCacheLock)
+	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
@@ -309,61 +303,25 @@ func GetAPICache() cache.Cache {
 
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
-	return agent.agentResource
+	if agent.agentResourceManager == nil {
+		return nil
+	}
+	return agent.agentResourceManager.GetAgentResource()
 }
 
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	// send the current status as the previous
-	updateAgentStatus(status, status, description)
+	if agent.agentResourceManager != nil {
+		agent.agentResourceManager.UpdateAgentStatus(status, status, description)
+	}
 }
 
 // UpdateStatusWithPrevious - Updates the agent state providing a previous state
 func UpdateStatusWithPrevious(status, prevStatus, description string) {
-	updateAgentStatus(status, prevStatus, description)
-}
-
-func fetchConfig() error {
-	// Get Agent Resources
-	isChanged, err := refreshResources()
-	if err != nil {
-		return err
+	if agent.agentResourceManager != nil {
+		agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 	}
-
-	if isChanged {
-		// merge agent resource config with central config
-		mergeResourceWithConfig()
-		if agent.agentResourceChangeHandler != nil {
-			agent.agentResourceChangeHandler()
-		}
-	}
-	return nil
-}
-
-// refreshResources - Gets the agent and dataplane resources from API server
-func refreshResources() (bool, error) {
-	// IMP - To be removed once the model is in production
-	if agent.cfg.GetAgentName() == "" {
-		return false, nil
-	}
-	var err error
-	agent.agentResource, err = getAgentResource()
-	if err != nil {
-		return false, err
-	}
-
-	isChanged := agent.isInitialized
-	if agent.prevAgentResource != nil {
-		agentResHash, _ := util.ComputeHash(agent.agentResource)
-		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
-
-		if prevAgentResHash == agentResHash {
-			isChanged = false
-		}
-	}
-	agent.prevAgentResource = agent.agentResource
-
-	return isChanged, nil
 }
 
 func setupSignalProcessor() {
@@ -379,127 +337,14 @@ func setupSignalProcessor() {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	updateAgentStatus(AgentStopped, AgentRunning, "")
-}
-
-// GetAgentResourceType - Returns the Agent Resource path element
-func getAgentResourceType() string {
-	// Set resource for Agent Type
-	return agentTypesMap[agent.cfg.GetAgentType()]
-}
-
-// GetAgentResource - returns the agent resource
-func getAgentResource() (*apiV1.ResourceInstance, error) {
-	agentResourceType := getAgentResourceType()
-	agentResourceURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName()
-
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agentResourceURL, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	agent := &apiV1.ResourceInstance{}
-	err = json.Unmarshal(response, agent)
-	if err != nil {
-		return nil, err
-	}
-	return agent, nil
-}
-
-// updateAgentStatus - Updates the agent status in agent resource
-func updateAgentStatus(status, prevStatus, message string) error {
-	// IMP - To be removed once the model is in production
-	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
-		return nil
-	}
-
-	if agent.agentResource != nil {
-		agentResourceType := getAgentResourceType()
-		resource := createAgentStatusSubResource(agentResourceType, status, prevStatus, message)
-
-		err := updateAgentStatusAPI(resource, agentResourceType)
-		if err != nil {
-			log.Warn("Could not update the agent status reference")
-			return err
-		}
-	}
-	return nil
-}
-
-func updateAgentStatusAPI(resource interface{}, agentResourceType string) error {
-	buffer, err := json.Marshal(resource)
-	if err != nil {
-		return nil
-	}
-
-	subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
-	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) *v1.ResourceInstance {
-	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResourceName:
-		agentRes := createDiscoveryAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	case v1alpha1.TraceabilityAgentResourceName:
-		agentRes := createTraceabilityAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	case v1alpha1.GovernanceAgentResourceName:
-		agentRes := createGovernanceAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	default:
-		panic(ErrUnsupportedAgentType)
-	}
-}
-
-func mergeResourceWithConfig() {
-	// IMP - To be removed once the model is in production
-	if agent.cfg.GetAgentName() == "" {
-		return
-	}
-
-	switch getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResourceName:
-		mergeDiscoveryAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	case v1alpha1.TraceabilityAgentResourceName:
-		mergeTraceabilityAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	case v1alpha1.GovernanceAgentResourceName:
-		mergeGovernanceAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	default:
-		panic(ErrUnsupportedAgentType)
-	}
-}
-
-func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel string) {
-	if cfg.TagsToPublish == "" && resCfgAdditionalTags != "" {
-		cfg.TagsToPublish = resCfgAdditionalTags
-	}
-
-	logLevel := agent.logLevel
-	if strings.ToUpper(agent.logLevel) == "INFO" && strings.ToUpper(resCfgLogLevel) != "INFO" {
-		logLevel = resCfgLogLevel
-	}
-	agent.logLevel = logLevel
-	if logLevel != "" {
-		log.GlobalLoggerConfig.Level(logLevel).Apply()
-	}
-
-	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
-	if cfg.TeamName == "" && resCfgTeamName != "" {
-		cfg.TeamName = resCfgTeamName
+	if agent.agentResourceManager != nil {
+		agent.agentResourceManager.UpdateAgentStatus(AgentStopped, AgentRunning, "")
 	}
 }
 
 func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(true, instanceCacheLock)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
@@ -575,7 +420,7 @@ func startStreamMode(agent agentData) error {
 	rc := stream.NewResourceClient(
 		host+"/apis",
 		tenantID,
-		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		coreapi.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 		agent.tokenRequester,
 	)
 	wt, err := getWatchTopic(rc)
@@ -593,9 +438,10 @@ func startStreamMode(agent agentData) error {
 	eventListener := stream.NewEventListener(
 		events,
 		rc,
-		stream.NewAPISvcHandler(agent.apiMap),
-		stream.NewInstanceHandler(agent.instanceMap),
-		stream.NewCategoryHandler(agent.categoryMap),
+		handler.NewAPISvcHandler(agent.apiMap),
+		handler.NewInstanceHandler(agent.instanceMap),
+		handler.NewCategoryHandler(agent.categoryMap),
+		handler.NewAgentResourceHandler(agent.agentResourceManager),
 	)
 
 	streamClient := stream.NewClient(
@@ -636,5 +482,5 @@ func getWatchTopicName(envName, agentName string, agentType config.AgentType) st
 }
 
 func getWatchTopicNameSuffix(agentType config.AgentType) string {
-	return "-" + agentTypesMap[agentType]
+	return "-" + resource.AgentTypesMap[agentType]
 }

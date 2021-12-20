@@ -3,17 +3,12 @@ package stream
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
-
-// Handler interface used by the EventListener to process events.
-type Handler interface {
-	// handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
-	handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error
-}
 
 // Listener starts the EventListener
 type Listener interface {
@@ -24,14 +19,14 @@ type Listener interface {
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
 	getResource ResourceClient
-	handlers    []Handler
+	handlers    []handler.Handler
 	source      chan *proto.Event
 	stop        chan interface{}
 	isRunning   bool
 }
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener {
 	return &EventListener{
 		getResource: ri,
 		handlers:    cbs,
@@ -124,7 +119,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 // handleResource loops through all the handlers and passes the event to each one for processing.
 func (em *EventListener) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
 	for _, h := range em.handlers {
-		err := h.handle(action, resource)
+		err := h.Handle(action, resource)
 		if err != nil {
 			log.Error(err)
 		}

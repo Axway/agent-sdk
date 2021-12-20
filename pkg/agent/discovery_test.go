@@ -14,7 +14,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
@@ -125,7 +124,7 @@ func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
-func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+func (m *mockSvcClient) OnConfigChange(cfg corecfg.CentralConfig) {}
 
 func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {
 }
@@ -148,7 +147,7 @@ func restoreCacheUpdateCalls() {
 
 func TestDiscoveryCache(t *testing.T) {
 	fakeCacheUpdateCalls()
-	dcj := newDiscoveryCache(true, &sync.Mutex{})
+	dcj := newDiscoveryCache(nil, true, &sync.Mutex{})
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
