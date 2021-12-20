@@ -8,6 +8,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
@@ -29,7 +30,48 @@ var agentTypesMap = map[config.AgentType]string{
 	config.GovernanceAgent:   "governanceagents",
 }
 
-type CentralStreamer struct {
+// Streamer interface for starting a service
+type Streamer interface {
+	Start() error
+	Status() error
+	Stop()
+}
+
+// NewClientStreamJob creates a job for the stream client
+func NewClientStreamJob(streamer Streamer, stop chan interface{}) jobs.Job {
+	return &ClientStreamJob{
+		streamer: streamer,
+		stop:     stop,
+	}
+}
+
+// ClientStreamJob job wrapper for a client that starts a stream and an event manager.
+type ClientStreamJob struct {
+	streamer Streamer
+	stop     chan interface{}
+}
+
+// Execute starts the stream
+func (j *ClientStreamJob) Execute() error {
+	go func() {
+		<-j.stop
+		j.streamer.Stop()
+	}()
+
+	return j.streamer.Start()
+}
+
+// Status gets the status
+func (j *ClientStreamJob) Status() error {
+	return j.streamer.Status()
+}
+
+// Ready checks if the job to start the stream is ready
+func (j *ClientStreamJob) Ready() bool {
+	return true
+}
+
+type centralStreamer struct {
 	handlers      []Handler
 	listener      Listener
 	manager       wm.Manager
@@ -39,7 +81,7 @@ type CentralStreamer struct {
 	watchOpts     []wm.Option
 }
 
-func (c *CentralStreamer) Start() error {
+func (c *centralStreamer) Start() error {
 	events := make(chan *proto.Event)
 	eventErrorCh := make(chan error)
 
@@ -79,7 +121,7 @@ func (c *CentralStreamer) Start() error {
 	return clientError
 }
 
-func (c *CentralStreamer) Status() error {
+func (c *centralStreamer) Status() error {
 	if c.manager == nil || c.listener == nil {
 		return fmt.Errorf("waiting to start")
 	}
@@ -90,7 +132,7 @@ func (c *CentralStreamer) Status() error {
 	return nil
 }
 
-func (c *CentralStreamer) Stop() {
+func (c *centralStreamer) Stop() {
 	c.manager.CloseConn()
 	c.listener.Stop()
 }
@@ -141,7 +183,7 @@ func NewCentralStreamer(
 		watchOpts = append(watchOpts, wm.WithTLSConfig(nil))
 	}
 
-	return &CentralStreamer{
+	return &centralStreamer{
 		handlers:      handlers,
 		rc:            rc,
 		topicSelfLink: wt.Metadata.SelfLink,
