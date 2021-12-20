@@ -81,6 +81,7 @@ type centralStreamer struct {
 	watchOpts     []wm.Option
 }
 
+// Start creates and starts everything needed for a stream connection to central.
 func (c *centralStreamer) Start() error {
 	events := make(chan *proto.Event)
 	eventErrorCh := make(chan error)
@@ -121,6 +122,7 @@ func (c *centralStreamer) Start() error {
 	return clientError
 }
 
+// Status returns the health status
 func (c *centralStreamer) Status() error {
 	if c.manager == nil || c.listener == nil {
 		return fmt.Errorf("waiting to start")
@@ -132,11 +134,13 @@ func (c *centralStreamer) Status() error {
 	return nil
 }
 
+// Stop stops the streamer
 func (c *centralStreamer) Stop() {
 	c.manager.CloseConn()
 	c.listener.Stop()
 }
 
+// NewCentralStreamer creates a Streamer
 func NewCentralStreamer(
 	cfg config.CentralConfig,
 	getToken auth.PlatformTokenGetter,
