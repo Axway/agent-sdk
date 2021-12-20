@@ -34,7 +34,7 @@ import (
 
 func closeHelper(closer io.Closer) {
 	if err := closer.Close(); err != nil {
-		log.Warnf("Failed to close: %v", closer)
+		log.Warnf("Failed to close: %v", err)
 	}
 }
 
