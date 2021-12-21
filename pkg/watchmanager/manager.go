@@ -15,11 +15,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+// NewManagerFunc func signature to create a Manager
+type NewManagerFunc func(cfg *Config, opts ...Option) (Manager, error)
+
 // Manager - Interface to manage watch connections
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
-	CloseAll()
 	CloseConn()
 	Status() bool
 }
@@ -36,11 +38,11 @@ type watchManager struct {
 	cfg                *Config
 	clientMap          map[string]*watchClient
 	connection         *grpc.ClientConn
-	options            *watchOptions
-	logger             logrus.FieldLogger
-	newWatchClientFunc newWatchClientFunc
-	mutex              sync.Mutex
 	hClient            *harvesterClient
+	logger             logrus.FieldLogger
+	mutex              sync.Mutex
+	newWatchClientFunc newWatchClientFunc
+	options            *watchOptions
 }
 
 // New - Creates a new watch manager
@@ -104,10 +106,10 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
-			topicSelfLink: link,
-			tokenGetter:   m.cfg.TokenGetter,
-			events:        events,
 			errors:        errors,
+			events:        events,
+			tokenGetter:   m.cfg.TokenGetter,
+			topicSelfLink: link,
 		},
 		m.newWatchClientFunc,
 	)
@@ -152,7 +154,7 @@ func (m *watchManager) CloseWatch(id string) error {
 		return errors.New("invalid watch subscription ID")
 	}
 	log.Infof("closing watch for subscription: %s", id)
-	client.cancelStream()
+	client.cancelStreamCtx()
 	delete(m.clientMap, id)
 	return nil
 }
@@ -164,13 +166,6 @@ func (m *watchManager) CloseConn() {
 	m.connection.Close()
 	for id := range m.clientMap {
 		delete(m.clientMap, id)
-	}
-}
-
-// CloseAll closes all streams, but leaves the connection open.
-func (m *watchManager) CloseAll() {
-	for id := range m.clientMap {
-		m.CloseWatch(id)
 	}
 }
 
