@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
@@ -23,18 +23,22 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 	}
 
 	var tmplFunc func() string
+	agentResourceKind := ""
 	switch agentType {
 	case config.DiscoveryAgent:
+		agentResourceKind = "DiscoveryAgent"
 		tmplFunc = NewDiscoveryWatchTopic
 	case config.TraceabilityAgent:
+		agentResourceKind = "TraceabilityAgent"
 		tmplFunc = NewTraceWatchTopic
 	case config.GovernanceAgent:
+		agentResourceKind = "GovernanceAgent"
 		// TODO
 	default:
-		return nil, errors.New(1000, "unsupported agent type")
+		return nil, resource.ErrUnsupportedAgentType
 	}
 
-	bts, err := parseWatchTopicTemplate(name, scope, tmplFunc)
+	bts, err := parseWatchTopicTemplate(name, scope, agentResourceKind, tmplFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +47,7 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 }
 
 // parseWatchTopicTemplate parses a WatchTopic from a template
-func parseWatchTopicTemplate(name, scope string, tmplFunc func() string) ([]byte, error) {
+func parseWatchTopicTemplate(name, scope, agentResourceKind string, tmplFunc func() string) ([]byte, error) {
 	tmpl, err := template.New("watch-topic-tmpl").Parse(tmplFunc())
 	if err != nil {
 		return nil, err
@@ -51,9 +55,10 @@ func parseWatchTopicTemplate(name, scope string, tmplFunc func() string) ([]byte
 
 	buf := bytes.NewBuffer([]byte{})
 	err = tmpl.Execute(buf, WatchTopicValues{
-		Name:  name,
-		Title: name,
-		Scope: scope,
+		Name:              name,
+		Title:             name,
+		Scope:             scope,
+		AgentResourceKind: agentResourceKind,
 	})
 
 	return buf.Bytes(), err
@@ -89,9 +94,10 @@ func GetCachedWatchTopic(c cache.GetItem, key string) (*mv1.WatchTopic, error) {
 
 // WatchTopicValues values to populate the watch topic template
 type WatchTopicValues struct {
-	Name  string
-	Title string
-	Scope string
+	Name              string
+	Title             string
+	Scope             string
+	AgentResourceKind string
 }
 
 // NewDiscoveryWatchTopic creates a WatchTopic template string
@@ -105,6 +111,18 @@ func NewDiscoveryWatchTopic() string {
   "title": "{{.Title}}",
   "spec": {
     "filters": [
+      {
+        "group": "management",
+        "kind": "{{.AgentResourceKind}}",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "updated"
+        ]
+      },
       {
         "group": "management",
         "kind": "APIService",
@@ -160,6 +178,18 @@ func NewTraceWatchTopic() string {
   "title": "{{.Title}}",
   "spec": {
     "filters": [
+      {
+        "group": "management",
+        "kind": "{{.AgentResourceKind}}",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "updated"
+        ]
+      },
       {
         "group": "management",
         "kind": "APIService",

@@ -18,7 +18,7 @@ import (
 )
 
 func resetResources() {
-	agent.agentResource = nil
+	agent.agentResourceManager = nil
 	agent.isInitialized = false
 	agent.apicClient = nil
 }
@@ -181,7 +181,7 @@ func TestAgentInitialize(t *testing.T) {
 	cfg.AgentType = config.TraceabilityAgent
 	AgentResourceType = v1alpha1.TraceabilityAgentResourceName
 	cfg.AgentName = taName
-	agent.isInitialized = false
+	resetResources()
 	err = Initialize(cfg)
 	assert.Nil(t, err)
 

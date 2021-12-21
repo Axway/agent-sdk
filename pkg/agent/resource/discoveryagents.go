@@ -1,23 +1,23 @@
-package agent
+package resource
 
 import (
 	"strings"
 
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
-func discoveryAgent(res *apiV1.ResourceInstance) *v1alpha1.DiscoveryAgent {
+func discoveryAgent(res *v1.ResourceInstance) *v1alpha1.DiscoveryAgent {
 	agentRes := &v1alpha1.DiscoveryAgent{}
 	agentRes.FromInstance(res)
 
 	return agentRes
 }
 
-func createDiscoveryAgentStatusResource(status, prevStatus, message string) *v1alpha1.DiscoveryAgent {
+func createDiscoveryAgentStatusResource(agentName, status, prevStatus, message string) *v1alpha1.DiscoveryAgent {
 	agentRes := v1alpha1.DiscoveryAgent{}
-	agentRes.Name = agent.cfg.GetAgentName()
+	agentRes.Name = agentName
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
 	agentRes.Status.State = status
@@ -29,8 +29,8 @@ func createDiscoveryAgentStatusResource(status, prevStatus, message string) *v1a
 	return &agentRes
 }
 
-func mergeDiscoveryAgentWithConfig(cfg *config.CentralConfiguration) {
-	da := discoveryAgent(GetAgentResource())
+func mergeDiscoveryAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.CentralConfiguration) {
+	da := discoveryAgent(agentRes)
 	resCfgAdditionalTags := strings.Join(da.Spec.Config.AdditionalTags, ",")
 	resCfgTeamName := da.Spec.Config.OwningTeam
 	resCfgLogLevel := da.Spec.Logging.Level

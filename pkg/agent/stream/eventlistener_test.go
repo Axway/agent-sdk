@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -17,7 +18,7 @@ func TestEventListener_start(t *testing.T) {
 		hasError  bool
 		events    chan *proto.Event
 		ri        ResourceClient
-		handler   Handler
+		handler   handler.Handler
 		writeStop bool
 	}{
 		{
@@ -25,14 +26,14 @@ func TestEventListener_start(t *testing.T) {
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 		{
 			name:     "should return an error when the event channel is closed",
 			hasError: true,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 
 		{
@@ -40,14 +41,14 @@ func TestEventListener_start(t *testing.T) {
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{err: fmt.Errorf("failed")},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 		{
 			name:     "should not return an error, even if a handler fails to process an event",
 			hasError: false,
 			events:   make(chan *proto.Event),
 			ri:       &mockRI{},
-			handler:  mockHandler{err: fmt.Errorf("failed")},
+			handler:  &mockHandler{err: fmt.Errorf("failed")},
 		},
 	}
 
@@ -91,7 +92,7 @@ func TestEventListener_start(t *testing.T) {
 // Should call Listen and handle a graceful stop, and an error
 func TestEventListener_Listen(t *testing.T) {
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, mockHandler{})
+	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
 
 	errCh := make(chan error)
 	go func() {
@@ -119,35 +120,35 @@ func TestEventListener_handleEvent(t *testing.T) {
 		event    proto.Event_Type
 		hasError bool
 		ri       ResourceClient
-		handler  Handler
+		handler  handler.Handler
 	}{
 		{
 			name:     "should process a delete event with no error",
 			event:    proto.Event_DELETED,
 			hasError: false,
 			ri:       &mockRI{},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 		{
 			name:     "should return an error when the request to get a ResourceClient fails",
 			event:    proto.Event_CREATED,
 			hasError: true,
 			ri:       &mockRI{err: fmt.Errorf("err")},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 		{
 			name:     "should get a ResourceClient, and process a create event",
 			event:    proto.Event_CREATED,
 			hasError: false,
 			ri:       &mockRI{},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 		{
 			name:     "should get a ResourceClient, and process an update event",
 			event:    proto.Event_UPDATED,
 			hasError: false,
 			ri:       &mockRI{},
-			handler:  mockHandler{},
+			handler:  &mockHandler{},
 		},
 	}
 
@@ -215,6 +216,6 @@ type mockHandler struct {
 	err error
 }
 
-func (m mockHandler) handle(_ proto.Event_Type, _ *apiv1.ResourceInstance) error {
+func (m *mockHandler) Handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
 	return m.err
 }
