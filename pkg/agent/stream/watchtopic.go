@@ -12,8 +12,8 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// GetOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
-func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType config.AgentType) (*mv1.WatchTopic, error) {
+// getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
+func getOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType config.AgentType) (*mv1.WatchTopic, error) {
 	ri, err := rc.Get(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
 
 	if err == nil {
@@ -43,7 +43,7 @@ func GetOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 		return nil, err
 	}
 
-	return CreateWatchTopic(bts, rc)
+	return createWatchTopic(bts, rc)
 }
 
 // parseWatchTopicTemplate parses a WatchTopic from a template
@@ -64,8 +64,8 @@ func parseWatchTopicTemplate(name, scope, agentResourceKind string, tmplFunc fun
 	return buf.Bytes(), err
 }
 
-// CreateWatchTopic creates a WatchTopic
-func CreateWatchTopic(bts []byte, rc ResourceClient) (*mv1.WatchTopic, error) {
+// createWatchTopic creates a WatchTopic
+func createWatchTopic(bts []byte, rc ResourceClient) (*mv1.WatchTopic, error) {
 	ri, err := rc.Create("/management/v1alpha1/watchtopics", bts)
 	if err != nil {
 		return nil, err
@@ -77,8 +77,8 @@ func CreateWatchTopic(bts []byte, rc ResourceClient) (*mv1.WatchTopic, error) {
 	return wt, err
 }
 
-// GetCachedWatchTopic checks the cache for a saved WatchTopic ResourceClient
-func GetCachedWatchTopic(c cache.GetItem, key string) (*mv1.WatchTopic, error) {
+// getCachedWatchTopic checks the cache for a saved WatchTopic ResourceClient
+func getCachedWatchTopic(c cache.GetItem, key string) (*mv1.WatchTopic, error) {
 	item, err := c.Get(key)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,8 @@ type WatchTopicValues struct {
 	AgentResourceKind string
 }
 
-// NewDiscoveryWatchTopic creates a WatchTopic template string
+// NewDiscoveryWatchTopic creates a WatchTopic template string.
+// Using a template instead of unmarshalling into a struct to avoid sending a request with empty fields
 func NewDiscoveryWatchTopic() string {
 	return `
 {

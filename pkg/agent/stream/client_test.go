@@ -1,101 +1,95 @@
 package stream
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
+
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+
+	"github.com/Axway/agent-sdk/pkg/api"
+
+	"github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var topic = "/management/v1alpha1/watchtopics/mock-watch-topic"
 
-func TestClient(t *testing.T) {
-	tests := []struct {
-		name        string
-		statusErr   bool
-		err         error
-		hasErr      bool
-		listenerErr error
-	}{
-		{
-			name:        "should not return an error when calling HealthCheck",
-			statusErr:   true,
-			err:         nil,
-			hasErr:      false,
-			listenerErr: nil,
-		},
-		{
-			name:        "should return an error when calling HealthCheck",
-			statusErr:   false,
-			err:         nil,
-			hasErr:      false,
-			listenerErr: nil,
-		},
-		{
-			name:        "should handle an error from the manager",
-			statusErr:   true,
-			err:         fmt.Errorf("error"),
-			hasErr:      true,
-			listenerErr: nil,
-		},
-		{
-			name:        "should handle an error from the listener",
-			statusErr:   true,
-			err:         nil,
-			hasErr:      true,
-			listenerErr: fmt.Errorf("error"),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			c := NewClient(
-				topic,
-				&mockManager{
-					err:    tc.err,
-					status: tc.statusErr,
-				},
-				&mockListener{
-					err: tc.listenerErr,
-				},
-				make(chan *proto.Event),
-			)
-
-			err := c.Start()
-			if tc.hasErr {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-			}
-
-			statusErr := c.Status()
-
-			if tc.statusErr {
-				assert.Nil(t, statusErr)
-			} else {
-				assert.NotNil(t, statusErr)
-			}
-		})
-	}
+var cfg = &config.CentralConfiguration{
+	AgentType:     1,
+	TenantID:      "12345",
+	Environment:   "stream-test",
+	EnvironmentID: "123",
+	AgentName:     "discoveryagents",
+	URL:           "http://abc.com",
+	TLS:           &config.TLSConfiguration{},
 }
 
-func TestClientStop(t *testing.T) {
-	c := NewClient(
-		topic,
-		&mockManager{},
-		&mockListener{},
-		make(chan *proto.Event),
-	)
+// should create a new streamer and call Start
+func TestNewStreamer(t *testing.T) {
+	getToken := &mockTokenGetter{}
+	httpClient := &api.MockHTTPClient{}
+	wt := &mv1.WatchTopic{}
+	bts, _ := json.Marshal(wt)
+	httpClient.Response = &api.Response{
+		Code:    200,
+		Body:    bts,
+		Headers: nil,
+	}
+	c, err := NewStreamer(httpClient, cfg, getToken)
+	assert.NotNil(t, c)
+	assert.Nil(t, err)
 
-	c.Start()
+	streamer := c.(*streamer)
+	manager := &mockManager{status: true}
+	streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
+		return manager, nil
+	}
 
-	assert.Equal(t, 1, len(c.ids))
+	assert.NotNil(t, streamer.Status())
 
-	c.Stop()
+	errCh := make(chan error)
+	go func() {
+		err := streamer.Start()
+		errCh <- err
+	}()
 
-	assert.Equal(t, 0, len(c.ids))
+	for streamer.listener == nil {
+		continue
+	}
+	// should stop the listener and write nil to the listener's error channel
+	streamer.listener.Stop()
+
+	err = <-errCh
+	assert.Nil(t, err)
+
+	streamer.manager = nil
+	streamer.listener = nil
+
+	go func() {
+		err := streamer.Start()
+		errCh <- err
+	}()
+
+	for streamer.manager == nil {
+		continue
+	}
+
+	assert.Nil(t, streamer.Status())
+
+	// should stop the listener and write an error from the manager to the error channel
+	go streamer.Stop()
+	err = <-errCh
+	assert.NotNil(t, err)
+
+	manager.status = false
+
+	assert.NotNil(t, streamer.Status())
 }
 
 func TestClientStreamJob(t *testing.T) {
@@ -106,6 +100,25 @@ func TestClientStreamJob(t *testing.T) {
 	assert.Nil(t, j.Status())
 	assert.True(t, j.Ready())
 	assert.Nil(t, j.Execute())
+}
+
+func Test_getAgentSequenceManager(t *testing.T) {
+	wtName := "fake"
+	sm := getAgentSequenceManager(wtName)
+	assert.Equal(t, sm.GetSequence(), int64(0))
+
+	sm = getAgentSequenceManager("")
+	assert.Equal(t, sm.GetSequence(), int64(0))
+}
+
+func Test_getWatchTopic(t *testing.T) {
+	wt, err := getWatchTopic(cfg, &mockRI{})
+	assert.NotNil(t, wt)
+	assert.Nil(t, err)
+
+	wt, err = getWatchTopic(cfg, &mockRI{err: fmt.Errorf("error")})
+	assert.NotNil(t, wt)
+	assert.Nil(t, err)
 }
 
 type mockStreamer struct {
@@ -125,41 +138,35 @@ func (m mockStreamer) Stop() {
 }
 
 type mockManager struct {
-	err    error
 	status bool
+	errCh  chan error
 }
 
-func (m mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
-	return "", m.err
+func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, errCh chan error) (string, error) {
+	m.errCh = errCh
+	return "", nil
 }
 
-func (m mockManager) CloseWatch(_ string) error {
+func (m *mockManager) CloseWatch(_ string) error {
+	m.errCh <- fmt.Errorf("manager error")
 	return nil
 }
 
-func (m mockManager) CloseAll() {
+func (m *mockManager) CloseConn() {
+	m.errCh <- fmt.Errorf("manager error")
 }
 
-func (m mockManager) CloseConn() {
-}
-
-func (m mockManager) Status() bool {
+func (m *mockManager) Status() bool {
 	return m.status
 }
 
-type mockEventManager struct{}
-
-func (m mockEventManager) Listen() error {
-	return nil
-}
-
 type mockListener struct {
-	err error
+	errCh chan error
 }
 
-func (m mockListener) Listen() error {
-	return m.err
+func (m *mockListener) Listen() chan error {
+	return m.errCh
 }
 
-func (m mockListener) Stop() {
+func (m *mockListener) Stop() {
 }

@@ -37,7 +37,7 @@ func TestResourceClientGet(t *testing.T) {
 			tenantID:  "123",
 		},
 		{
-			name:      "should return an error when the client returns an error",
+			name:      "should return an error when the streamer returns an error",
 			code:      200,
 			hasError:  true,
 			token:     "Bearer token",
