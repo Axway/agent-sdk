@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -12,79 +13,81 @@ import (
 
 // Listener starts the EventListener
 type Listener interface {
-	Listen() error
+	Listen() chan error
 	Stop()
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
+	cancel      context.CancelFunc
+	ctx         context.Context
 	getResource ResourceClient
 	handlers    []handler.Handler
-	source      chan *proto.Event
-	stop        chan interface{}
 	isRunning   bool
+	source      chan *proto.Event
 }
+
+type newListenerFunc func(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
 func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
+		cancel:      cancel,
+		ctx:         ctx,
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
-		stop:        make(chan interface{}),
 	}
 }
 
 // Stop stops the listener
 func (em *EventListener) Stop() {
-	em.stop <- nil
+	em.cancel()
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
-func (em *EventListener) Listen() error {
-	if em.isRunning {
-		return fmt.Errorf("event listener is already running")
-	}
+func (em *EventListener) Listen() chan error {
+	errCh := make(chan error)
+	go func() {
+		for {
+			done, err := em.start()
+			if done && err == nil {
+				errCh <- nil
+				break
+			}
 
-	var listenErr error
-	em.isRunning = true
-
-	for {
-		done, err := em.start()
-		if err != nil {
-			listenErr = err
-			break
+			if err != nil {
+				errCh <- err
+				break
+			}
 		}
+	}()
 
-		if done {
-			listenErr = nil
-			break
-		}
-	}
-
-	em.isRunning = false
-	return listenErr
+	return errCh
 }
 
-// start waits for an event on the channel and then attempts to pass the item to the handlers.
-// Return true if processing should end, and false for it to continue.
 func (em *EventListener) start() (done bool, err error) {
 	select {
 	case event, ok := <-em.source:
 		if !ok {
-			return true, fmt.Errorf("stream event source has been closed")
+			done = true
+			err = fmt.Errorf("stream event source has been closed")
+			break
 		}
 
 		err := em.handleEvent(event)
 		if err != nil {
 			log.Errorf("stream event listener error: %s", err)
 		}
-
-		return false, nil
-	case <-em.stop:
+	case <-em.ctx.Done():
 		log.Tracef("stream event listener has been gracefully stopped")
-		return true, nil
+		done = true
+		err = nil
+		break
 	}
+
+	return done, err
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.

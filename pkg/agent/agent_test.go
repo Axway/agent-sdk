@@ -330,10 +330,3 @@ func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 	assert.Equal(t, expectedRes.Metadata.ID, res.Metadata.ID)
 	assert.Equal(t, expectedRes.Spec, res.Spec)
 }
-
-func Test_newManager(t *testing.T) {
-	manager, err := newWatchManager("https://abc.com:5443", "123", true, apic.MockTokenGetter, "")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, manager)
-}

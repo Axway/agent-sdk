@@ -21,7 +21,7 @@ const (
 
 // Handler interface used by the EventListener to process events.
 type Handler interface {
-	// handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
+	// Handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
 	Handle(action proto.Event_Type, resource *v1.ResourceInstance) error
 }
 

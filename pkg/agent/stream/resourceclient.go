@@ -18,7 +18,7 @@ type ResourceClient interface {
 	Create(url string, bts []byte) (*apiv1.ResourceInstance, error)
 }
 
-// resourceClient client for getting a ResourceInstance
+// resourceClient streamer for getting a ResourceInstance
 type resourceClient struct {
 	auth     auth.TokenGetter
 	client   api.Client
