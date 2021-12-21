@@ -102,11 +102,13 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 
 	if a.agentResource != nil {
 		agentResourceType := a.getAgentResourceType()
-		resource := a.createAgentStatusSubResource(agentResourceType, status, prevStatus, message)
-
-		err := a.updateAgentStatusAPI(resource, agentResourceType)
+		resource, err := a.createAgentStatusSubResource(agentResourceType, status, prevStatus, message)
 		if err != nil {
-			log.Warn("Could not update the agent status reference")
+			return err
+		}
+
+		err = a.updateAgentStatusAPI(resource, agentResourceType)
+		if err != nil {
 			return err
 		}
 	}
@@ -194,22 +196,22 @@ func (a *agentResourceManager) updateAgentStatusAPI(resource interface{}, agentR
 	return nil
 }
 
-func (a *agentResourceManager) createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) *v1.ResourceInstance {
+func (a *agentResourceManager) createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) (*v1.ResourceInstance, error) {
 	switch agentResourceType {
 	case v1alpha1.DiscoveryAgentResourceName:
 		agentRes := createDiscoveryAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
+		return resourceInstance, nil
 	case v1alpha1.TraceabilityAgentResourceName:
 		agentRes := createTraceabilityAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
+		return resourceInstance, nil
 	case v1alpha1.GovernanceAgentResourceName:
 		agentRes := createGovernanceAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
+		return resourceInstance, nil
 	default:
-		panic(ErrUnsupportedAgentType)
+		return nil, ErrUnsupportedAgentType
 	}
 }
 

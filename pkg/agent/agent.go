@@ -148,7 +148,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		}
 		// Set agent running
 		if agent.agentResourceManager != nil {
-			agent.agentResourceManager.UpdateAgentStatus(AgentRunning, "", "")
+			UpdateStatusWithPrevious(AgentRunning, "", "")
 		}
 	}
 
@@ -311,16 +311,16 @@ func GetAgentResource() *apiV1.ResourceInstance {
 
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
-	// send the current status as the previous
-	if agent.agentResourceManager != nil {
-		agent.agentResourceManager.UpdateAgentStatus(status, status, description)
-	}
+	UpdateStatusWithPrevious(status, status, description)
 }
 
 // UpdateStatusWithPrevious - Updates the agent state providing a previous state
 func UpdateStatusWithPrevious(status, prevStatus, description string) {
 	if agent.agentResourceManager != nil {
-		agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
+		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
+		if err != nil {
+			log.Warnf("could not update the agent status reference, %s", err.Error())
+		}
 	}
 }
 
@@ -337,9 +337,7 @@ func setupSignalProcessor() {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	if agent.agentResourceManager != nil {
-		agent.agentResourceManager.UpdateAgentStatus(AgentStopped, AgentRunning, "")
-	}
+	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
 func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
