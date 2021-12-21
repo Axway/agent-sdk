@@ -3,7 +3,6 @@ package log
 import (
 	"flag"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -46,12 +45,10 @@ func (b *LoggerConfig) Apply() error {
 	// update the log logger
 	log.SetFormatter(b.cfg.Formatter)
 	log.SetLevel(b.cfg.Level)
-	log.SetOutput(ioutil.Discard)
 
 	// update the logrus logger
 	logrus.SetFormatter(b.cfg.Formatter)
 	logrus.SetLevel(b.cfg.Level)
-	logrus.SetOutput(ioutil.Discard)
 
 	// Set the stdout output for the log and logrus
 	if b.output == STDOUT || b.output == Both {
@@ -88,6 +85,11 @@ func (b *LoggerConfig) Level(level string) *LoggerConfig {
 		b.cfg.Level = lvl
 	}
 	return b
+}
+
+// GetLevel - returns current log level
+func (b *LoggerConfig) GetLevel() string {
+	return b.cfg.Level.String()
 }
 
 // Format - sets the logger formatt

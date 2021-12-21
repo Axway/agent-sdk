@@ -2,19 +2,10 @@ package agent
 
 import (
 	"reflect"
-	"time"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
-
-// getTimestamp - Returns current timestamp formatted for API Server
-func getTimestamp() v1.Time {
-	activityTime := time.Now()
-	newV1Time := v1.Time(activityTime)
-	return newV1Time
-}
 
 // ApplyResourceToConfig - applies the resources to agent configs
 // Uses reflection to get the IResourceConfigCallback interface on the config struct or
