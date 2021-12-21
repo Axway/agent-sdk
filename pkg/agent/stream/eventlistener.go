@@ -27,6 +27,8 @@ type EventListener struct {
 	source      chan *proto.Event
 }
 
+type newListenerFunc func(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener
+
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
 func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())

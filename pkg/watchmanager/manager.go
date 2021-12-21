@@ -15,11 +15,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+// NewManagerFunc func signature to create a Manager
+type NewManagerFunc func(cfg *Config, opts ...Option) (Manager, error)
+
 // Manager - Interface to manage watch connections
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
 	CloseWatch(id string) error
-	CloseAll()
 	CloseConn()
 	Status() bool
 }
@@ -164,13 +166,6 @@ func (m *watchManager) CloseConn() {
 	m.connection.Close()
 	for id := range m.clientMap {
 		delete(m.clientMap, id)
-	}
-}
-
-// CloseAll closes all streams, but leaves the connection open.
-func (m *watchManager) CloseAll() {
-	for id := range m.clientMap {
-		m.CloseWatch(id)
 	}
 }
 

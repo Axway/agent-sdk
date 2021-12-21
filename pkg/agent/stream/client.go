@@ -6,6 +6,12 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -16,11 +22,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 
-	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/sirupsen/logrus"
-
-	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 )
@@ -39,7 +40,7 @@ type Streamer interface {
 	Stop()
 }
 
-// NewClientStreamJob creates a job for the stream client
+// NewClientStreamJob creates a job for the streamer
 func NewClientStreamJob(streamer Streamer, stop chan interface{}) jobs.Job {
 	return &ClientStreamJob{
 		streamer: streamer,
@@ -47,7 +48,7 @@ func NewClientStreamJob(streamer Streamer, stop chan interface{}) jobs.Job {
 	}
 }
 
-// ClientStreamJob job wrapper for a client that starts a stream and an event manager.
+// ClientStreamJob job wrapper for a streamer that starts a stream and an event manager.
 type ClientStreamJob struct {
 	streamer Streamer
 	stop     chan interface{}
@@ -73,7 +74,7 @@ func (j *ClientStreamJob) Ready() bool {
 	return true
 }
 
-type centralStreamer struct {
+type streamer struct {
 	handlers      []handler.Handler
 	listener      Listener
 	manager       wm.Manager
@@ -81,71 +82,15 @@ type centralStreamer struct {
 	topicSelfLink string
 	watchCfg      *wm.Config
 	watchOpts     []wm.Option
+	newManager    wm.NewManagerFunc
+	newListener   newListenerFunc
 }
 
-// Start creates and starts everything needed for a stream connection to central.
-func (c *centralStreamer) Start() error {
-	events := make(chan *proto.Event)
-	eventErrorCh := make(chan error)
-
-	c.listener = NewEventListener(
-		events,
-		c.rc,
-		c.handlers...,
-	)
-
-	manager, err := wm.New(c.watchCfg, c.watchOpts...)
-	if err != nil {
-		return err
-	}
-	c.manager = manager
-
-	errCh := make(chan error)
-
-	listenCh := c.listener.Listen()
-	go func() {
-		_, err := c.manager.RegisterWatch(c.topicSelfLink, events, eventErrorCh)
-		if err != nil {
-			errCh <- err
-		}
-	}()
-
-	var clientError error
-
-	select {
-	case err := <-listenCh:
-		clientError = err
-	case err := <-eventErrorCh:
-		clientError = err
-	case err := <-errCh:
-		clientError = err
-	}
-
-	return clientError
-}
-
-// Status returns the health status
-func (c *centralStreamer) Status() error {
-	if c.manager == nil || c.listener == nil {
-		return fmt.Errorf("waiting to start")
-	}
-	if ok := c.manager.Status(); !ok {
-		return errors.ErrGrpcConnection
-	}
-
-	return nil
-}
-
-// Stop stops the streamer
-func (c *centralStreamer) Stop() {
-	c.manager.CloseConn()
-	c.listener.Stop()
-}
-
-// NewCentralStreamer creates a Streamer
-func NewCentralStreamer(
+// NewStreamer creates a Streamer
+func NewStreamer(
+	apiClient api.Client,
 	cfg config.CentralConfig,
-	getToken auth.PlatformTokenGetter,
+	getToken auth.TokenGetter,
 	handlers ...handler.Handler,
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
@@ -155,7 +100,7 @@ func NewCentralStreamer(
 	rc := NewResourceClient(
 		apiServerHost,
 		tenant,
-		api.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL()),
+		apiClient,
 		getToken,
 	)
 
@@ -189,13 +134,64 @@ func NewCentralStreamer(
 		watchOpts = append(watchOpts, wm.WithTLSConfig(nil))
 	}
 
-	return &centralStreamer{
+	return &streamer{
 		handlers:      handlers,
 		rc:            rc,
 		topicSelfLink: wt.Metadata.SelfLink,
 		watchCfg:      watchCfg,
 		watchOpts:     watchOpts,
+		newManager:    wm.New,
+		newListener:   NewEventListener,
 	}, nil
+}
+
+// Start creates and starts everything needed for a stream connection to central.
+func (c *streamer) Start() error {
+	events, eventErrorCh := make(chan *proto.Event), make(chan error)
+
+	c.listener = c.newListener(
+		events,
+		c.rc,
+		c.handlers...,
+	)
+
+	manager, err := c.newManager(c.watchCfg, c.watchOpts...)
+	if err != nil {
+		return err
+	}
+
+	c.manager = manager
+
+	listenCh := c.listener.Listen()
+	_, err = c.manager.RegisterWatch(c.topicSelfLink, events, eventErrorCh)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case err := <-listenCh:
+		return err
+	case err := <-eventErrorCh:
+		return err
+	}
+}
+
+// Status returns the health status
+func (c *streamer) Status() error {
+	if c.manager == nil || c.listener == nil {
+		return fmt.Errorf("stream client is not ready")
+	}
+	if ok := c.manager.Status(); !ok {
+		return errors.ErrGrpcConnection
+	}
+
+	return nil
+}
+
+// Stop stops the streamer
+func (c *streamer) Stop() {
+	c.manager.CloseConn()
+	c.listener.Stop()
 }
 
 func getWatchTopic(cfg config.CentralConfig, rc ResourceClient) (*v1alpha1.WatchTopic, error) {
@@ -248,7 +244,9 @@ func getAgentSequenceManager(watchTopicName string) *agentSequenceManager {
 		err := seqCache.Load(watchTopicName + ".sequence")
 		if err != nil {
 			seqCache.Set("watchSequenceID", int64(0))
-			seqCache.Save(watchTopicName + ".sequence")
+			if util.IsNotTest() {
+				seqCache.Save(watchTopicName + ".sequence")
+			}
 		}
 	}
 	return &agentSequenceManager{sequenceCache: seqCache}

@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	"github.com/Axway/agent-sdk/pkg/api"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -343,7 +344,8 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 func startStreamMode(agent agentData) error {
-	cs, err := stream.NewCentralStreamer(
+	cs, err := stream.NewStreamer(
+		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 		agent.cfg,
 		agent.tokenRequester,
 		handler.NewAPISvcHandler(agent.apiMap),
