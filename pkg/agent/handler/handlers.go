@@ -1,10 +1,11 @@
-package stream
+package handler
 
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -13,7 +14,16 @@ const (
 	apiService         = "APIService"
 	apiServiceInstance = "APIServiceInstance"
 	category           = "Category"
+	discoveryAgent     = "DiscoveryAgent"
+	traceabilityAgent  = "TraceabilityAgent"
+	governanceAgent    = "GovernanceAgent"
 )
+
+// Handler interface used by the EventListener to process events.
+type Handler interface {
+	// handle receives the type of the event (add, update, delete), and the ResourceClient on API Server, if it exists.
+	Handle(action proto.Event_Type, resource *v1.ResourceInstance) error
+}
 
 type apiSvcHandler struct {
 	apis cache.Cache
@@ -26,7 +36,7 @@ func NewAPISvcHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h apiSvcHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (h *apiSvcHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
 	if resource.Kind != apiService {
 		return nil
 	}
@@ -64,7 +74,7 @@ func NewInstanceHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h instanceHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (h *instanceHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
 	if resource.Kind != apiServiceInstance {
 		return nil
 	}
@@ -92,7 +102,7 @@ func NewCategoryHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (c categoryHandler) handle(action proto.Event_Type, resource *apiv1.ResourceInstance) error {
+func (c *categoryHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
 	if resource.Kind != category {
 		return nil
 	}
@@ -105,5 +115,31 @@ func (c categoryHandler) handle(action proto.Event_Type, resource *apiv1.Resourc
 		return c.categories.Delete(resource.Name)
 	}
 
+	return nil
+}
+
+type agentResourceHandler struct {
+	agentResourceManager resource.Manager
+}
+
+// NewAgentResourceHandler - creates a Handler for Agent resources
+func NewAgentResourceHandler(agentResourceManager resource.Manager) Handler {
+	return &agentResourceHandler{
+		agentResourceManager: agentResourceManager,
+	}
+}
+
+func (h *agentResourceHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+	if h.agentResourceManager != nil && action == proto.Event_UPDATED {
+		kind := resource.Kind
+		switch kind {
+		case discoveryAgent:
+			fallthrough
+		case traceabilityAgent:
+			fallthrough
+		case governanceAgent:
+			h.agentResourceManager.SetAgentResource(resource)
+		}
+	}
 	return nil
 }

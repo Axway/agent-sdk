@@ -116,12 +116,12 @@ func TestGetCachedWatchTopic(t *testing.T) {
 }
 
 func Test_parseWatchTopic(t *testing.T) {
-	bts, err := parseWatchTopicTemplate("name", "scope", NewDiscoveryWatchTopic)
+	bts, err := parseWatchTopicTemplate("name", "scope", "DiscoveryAgent", NewDiscoveryWatchTopic)
 	assert.Nil(t, err)
 
 	assert.True(t, len(bts) > 0)
 
-	bts, err = parseWatchTopicTemplate("name", "scope", NewTraceWatchTopic)
+	bts, err = parseWatchTopicTemplate("name", "scope", "TraceabilityAgent", NewTraceWatchTopic)
 	assert.Nil(t, err)
 
 	assert.True(t, len(bts) > 0)
