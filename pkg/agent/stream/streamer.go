@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
+
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -72,7 +74,7 @@ func (j *ClientStreamJob) Ready() bool {
 }
 
 type centralStreamer struct {
-	handlers      []Handler
+	handlers      []handler.Handler
 	listener      Listener
 	manager       wm.Manager
 	rc            ResourceClient
@@ -144,7 +146,7 @@ func (c *centralStreamer) Stop() {
 func NewCentralStreamer(
 	cfg config.CentralConfig,
 	getToken auth.PlatformTokenGetter,
-	handlers ...Handler,
+	handlers ...handler.Handler,
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
 	tenant := cfg.GetTenantID()
