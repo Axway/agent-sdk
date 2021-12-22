@@ -306,6 +306,9 @@ func refreshResources() (bool, error) {
 }
 
 func setupSignalProcessor() {
+	if !agent.cfg.GetConnected() {
+		return
+	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
@@ -344,6 +347,9 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 
 // updateAgentStatus - Updates the agent status in agent resource
 func updateAgentStatus(status, prevStatus, message string) error {
+	if !agent.cfg.GetConnected() {
+		return nil
+	}
 	// IMP - To be removed once the model is in production
 	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
 		return nil
