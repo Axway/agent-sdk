@@ -347,7 +347,7 @@ func getAgentResource() (*apiV1.ResourceInstance, error) {
 
 // updateAgentStatus - Updates the agent status in agent resource
 func updateAgentStatus(status, prevStatus, message string) error {
-	if !agent.cfg.GetConnected() {
+	if agent.cfg == nil || !agent.cfg.GetConnected() {
 		return nil
 	}
 	// IMP - To be removed once the model is in production
