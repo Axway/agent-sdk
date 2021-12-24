@@ -141,10 +141,8 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 func (a *agentResourceManager) onResourceChange() {
 	isChanged := (a.prevAgentResHash != 0)
 	agentResHash, _ := util.ComputeHash(a.agentResource)
-	if a.prevAgentResHash != 0 {
-		if a.prevAgentResHash == agentResHash {
-			isChanged = false
-		}
+	if a.prevAgentResHash != 0 && a.prevAgentResHash == agentResHash {
+		isChanged = false
 	}
 	a.prevAgentResHash = agentResHash
 	if isChanged {
