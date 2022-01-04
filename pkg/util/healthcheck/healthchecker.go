@@ -64,6 +64,8 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 
 	http.HandleFunc(fmt.Sprintf("/status/%s", endpoint), checkHandler)
 
+	executeCheck(newChecker) // execute the healthcheck on registration
+
 	return newID.String(), nil
 }
 
