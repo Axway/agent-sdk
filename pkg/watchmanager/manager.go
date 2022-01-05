@@ -103,6 +103,9 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
@@ -120,8 +123,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	m.clientMap[subID] = client
 
 	client.processRequest()
