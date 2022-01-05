@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"google.golang.org/grpc"
@@ -84,7 +85,7 @@ func (c *watchClient) processRequest() {
 		for {
 			select {
 			case <-c.streamCtx.Done():
-				c.handleError(c.stream.Context().Err())
+				c.handleError(c.streamCtx.Err())
 				return
 			case <-c.stream.Context().Done():
 				c.handleError(c.stream.Context().Err())
@@ -108,6 +109,7 @@ func (c *watchClient) send() error {
 	}
 
 	exp, err := c.getTokenExpirationTime(token)
+
 	if err != nil {
 		return err
 	}
@@ -156,5 +158,10 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 	}
 
 	exp := time.Until(tm)
-	return (exp * 4) / 5, nil
+	// use big.NewInt to avoid an int overflow
+	i := big.NewInt(int64(exp))
+	i = i.Mul(i, big.NewInt(4))
+	i = i.Div(i, big.NewInt(5))
+
+	return time.Duration(i.Int64()), nil
 }
