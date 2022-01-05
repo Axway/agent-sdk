@@ -217,7 +217,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
-	assert.Equal(t, true, logEvent.TransactionSummary.IsIncludedInUsageMetricEvent)
+	assert.Equal(t, true, logEvent.TransactionSummary.IsInMetricEvent)
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetDuration(10).
@@ -292,5 +292,5 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
-	assert.Equal(t, false, logEvent.TransactionSummary.IsIncludedInUsageMetricEvent)
+	assert.Equal(t, false, logEvent.TransactionSummary.IsInMetricEvent)
 }

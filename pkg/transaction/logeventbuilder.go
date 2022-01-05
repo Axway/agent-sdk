@@ -142,7 +142,7 @@ func NewTransactionSummaryBuilder() SummaryBuilder {
 		txSummaryBuilder.logEvent.EnvironmentName = cfg.GetEnvironmentName()
 		txSummaryBuilder.logEvent.EnvironmentID = cfg.GetEnvironmentID()
 		txSummaryBuilder.logEvent.APICDeployment = cfg.GetAPICDeployment()
-		txSummaryBuilder.logEvent.TransactionSummary.IsIncludedInUsageMetricEvent =
+		txSummaryBuilder.logEvent.TransactionSummary.IsInMetricEvent =
 			cfg.GetUsageReportingConfig().CanPublishMetric()
 	}
 	return txSummaryBuilder
@@ -516,12 +516,12 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetIsIncludedInUsageMetricEvent(isIncludedInUsageMetricEvent bool) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetIsIncludedInUsageMetricEvent(isInMetricEvent bool) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
 
-	b.logEvent.TransactionSummary.IsIncludedInUsageMetricEvent = isIncludedInUsageMetricEvent
+	b.logEvent.TransactionSummary.IsInMetricEvent = isInMetricEvent
 
 	return b
 }
