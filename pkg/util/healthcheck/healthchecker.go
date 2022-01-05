@@ -13,6 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
@@ -63,6 +64,10 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 	globalHealthChecker.Checks[endpoint] = newChecker
 
 	http.HandleFunc(fmt.Sprintf("/status/%s", endpoint), checkHandler)
+
+	if util.IsNotTest() {
+		executeCheck(newChecker) // execute the healthcheck on registration
+	}
 
 	return newID.String(), nil
 }
