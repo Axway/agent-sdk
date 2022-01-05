@@ -84,7 +84,7 @@ type SummaryBuilder interface {
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
-	SetIsIncludedInUsageMetricEvent(isIncludedInUsageMetricEvent bool) SummaryBuilder
+	SetIsInMetricEvent(isIncludedInUsageMetricEvent bool) SummaryBuilder
 	Build() (*LogEvent, error)
 }
 
@@ -516,7 +516,7 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetIsIncludedInUsageMetricEvent(isInMetricEvent bool) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
