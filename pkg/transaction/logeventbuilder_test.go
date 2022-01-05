@@ -179,7 +179,7 @@ func TestSummaryBuilder(t *testing.T) {
 		SetTeam("1111").
 		SetProxy("", "proxy", 1).
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
-		SetIsIncludedInUsageMetricEvent(true).
+		SetIsInMetricEvent(true).
 		Build()
 
 	assert.Nil(t, err)
@@ -255,7 +255,7 @@ func TestSummaryBuilder(t *testing.T) {
 		SetProduct("2222", "1.0").
 		SetRunTime("1111", "runtime1").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
-		SetIsIncludedInUsageMetricEvent(false).
+		SetIsInMetricEvent(false).
 		Build()
 
 	assert.Nil(t, err)
