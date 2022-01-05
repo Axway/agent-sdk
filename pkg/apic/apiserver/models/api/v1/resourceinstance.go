@@ -23,7 +23,10 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 
 	// clean up any unnecessary chars from json byte array
 	byteBuf := bytes.Buffer{}
-	json.Compact(&byteBuf, data)
+	err := json.Compact(&byteBuf, data)
+	if err != nil {
+		return err
+	}
 
 	ri.rawResource = byteBuf.Bytes()
 	return nil
