@@ -84,7 +84,7 @@ type SummaryBuilder interface {
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
-	SetIsInMetricEvent(isIncludedInUsageMetricEvent bool) SummaryBuilder
+	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
 	Build() (*LogEvent, error)
 }
 
