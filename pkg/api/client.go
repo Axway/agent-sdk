@@ -82,24 +82,47 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 }
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
-func NewClientWithTimeout(cfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	httpCli := http.DefaultClient
-	if cfg != nil {
-		url, err := url.Parse(proxyURL)
-		if err != nil {
-			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
-		}
-		httpCli = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: cfg.BuildTLSConfig(),
-				Proxy:           util.GetProxyURL(url),
-			},
-		}
-	}
+func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
+	httpCli := createClient(tlsCfg, parseProxyURL(proxyURL))
 	httpCli.Timeout = timeout
 	return &httpClient{
 		timeout:    timeout,
 		httpClient: httpCli,
+	}
+}
+
+func parseProxyURL(proxyURL string) *url.URL {
+	if proxyURL != "" {
+		pURL, err := url.Parse(proxyURL)
+		if err == nil {
+			return pURL
+		}
+		log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
+	}
+	return nil
+}
+
+func createClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
+	if tlsCfg != nil {
+		return createHTTPSClient(tlsCfg, proxyURL)
+	}
+	return createHTTPClient(proxyURL)
+}
+
+func createHTTPClient(proxyURL *url.URL) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy: util.GetProxyURL(proxyURL),
+		},
+	}
+}
+
+func createHTTPSClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg.BuildTLSConfig(),
+			Proxy:           util.GetProxyURL(proxyURL),
+		},
 	}
 }
 

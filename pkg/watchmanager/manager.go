@@ -3,6 +3,7 @@ package watchmanager
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"google.golang.org/grpc/connectivity"
@@ -77,6 +78,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			port:        manager.cfg.Port,
 			tenantID:    manager.cfg.TenantID,
 			tokenGetter: manager.cfg.TokenGetter,
+			proxyURL:    manager.options.proxyURL,
 			tlsCfg:      manager.options.tlsCfg,
 		}
 		manager.hClient = newHarvesterClient(harvesterConfig)
@@ -86,10 +88,16 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 }
 
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
+	proxyDialer, err := m.getProxyDialer()
+	if err != nil {
+		return nil, err
+	}
+
 	grpcDialOptions := []grpc.DialOption{
 		withKeepaliveParams(m.options.keepAlive.time, m.options.keepAlive.timeout),
 		withRPCCredentials(m.cfg.TenantID, m.cfg.TokenGetter),
 		withTLSConfig(m.options.tlsCfg),
+		withProxyDialer(proxyDialer),
 		chainStreamClientInterceptor(
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
@@ -99,6 +107,17 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 	log.Infof("connecting to watch service. host: %s. port: %d", m.cfg.Host, m.cfg.Port)
 
 	return grpc.Dial(address, grpcDialOptions...)
+}
+
+func (m *watchManager) getProxyDialer() (proxyDialer, error) {
+	if m.options.proxyURL != "" {
+		proxyURL, err := url.Parse(m.options.proxyURL)
+		if err != nil {
+			return nil, err
+		}
+		return newGRPCProxyDialer(proxyURL), nil
+	}
+	return nil, nil
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic

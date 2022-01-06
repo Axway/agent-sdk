@@ -1,7 +1,9 @@
 package watchmanager
 
 import (
+	"context"
 	"crypto/tls"
+	"net"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -38,6 +40,7 @@ type keepAliveOption struct {
 // watchOptions options to use when creating a stream
 type watchOptions struct {
 	tlsCfg         *tls.Config
+	proxyURL       string
 	keepAlive      keepAliveOption
 	loggerEntry    *logrus.Entry
 	sequenceGetter SequenceProvider
@@ -59,6 +62,13 @@ func newWatchOptions() *watchOptions {
 func WithTLSConfig(tlsCfg *tls.Config) Option {
 	return funcOption(func(o *watchOptions) {
 		o.tlsCfg = tlsCfg
+	})
+}
+
+// WithProxy - sets up the proxy to be used
+func WithProxy(proxy string) Option {
+	return funcOption(func(o *watchOptions) {
+		o.proxyURL = proxy
 	})
 }
 
@@ -107,6 +117,17 @@ func withKeepaliveParams(time, timeout time.Duration) grpc.DialOption {
 			Time:                time,
 			Timeout:             timeout,
 		})
+}
+
+// withProxyDialer sets up the proxy dialer
+func withProxyDialer(dialer proxyDialer) grpc.DialOption {
+	if dialer == nil {
+		return &grpc.EmptyDialOption{}
+	}
+
+	return grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+		return dialer.dial(ctx, addr)
+	})
 }
 
 // logrusStreamClientInterceptor returns a new streaming client interceptor that optionally logs the execution of gRPC calls
