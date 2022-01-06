@@ -105,27 +105,20 @@ trigger-azure-discovery-agent:
 ####################
 .dummy:
   stage: security-scans
+  only:
+    refs:
+      - xxxx
+  script:
+    - ""
+
+fetch-iriusrisk:
+  extends: .dummy
 
 twistlock:
   extends: .dummy
-  only:
-    refs:
-      - xxxx
-  script:
-    - ""
 
 twistlock:on-schedule:
   extends: .dummy
-  only:
-    refs:
-      - xxxx
-  script:
-    - ""
 
 twistlock-master:
   extends: .dummy
-  only:
-    refs:
-      - xxxx
-  script:
-    - ""
