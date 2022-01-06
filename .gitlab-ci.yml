@@ -103,7 +103,11 @@ trigger-azure-discovery-agent:
 ####################
 # CSR - overridden from csrjobs.yml to effectively not see this job ever
 ####################
+.dummy:
+  stage: security-scans
+
 twistlock:
+  extends: .dummy
   only:
     refs:
       - xxxx
@@ -111,6 +115,7 @@ twistlock:
     - ""
 
 twistlock:on-schedule:
+  extends: .dummy
   only:
     refs:
       - xxxx
@@ -118,6 +123,7 @@ twistlock:on-schedule:
     - ""
 
 twistlock-master:
+  extends: .dummy
   only:
     refs:
       - xxxx
