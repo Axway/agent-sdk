@@ -23,6 +23,7 @@ type harvesterConfig struct {
 	tenantID    string
 	tokenGetter TokenGetter
 	tlsCfg      *tls.Config
+	proxyURL    string
 	pageSize    int
 }
 
@@ -42,10 +43,9 @@ func newHarvesterClient(cfg *harvesterConfig) *harvesterClient {
 	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
 	tlsCfg.LoadFrom(cfg.tlsCfg)
 	return &harvesterClient{
-		url: cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
-		cfg: cfg,
-		// TODO - connection via proxy
-		client: api.NewClient(tlsCfg, ""),
+		url:    cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
+		cfg:    cfg,
+		client: api.NewClient(tlsCfg, cfg.proxyURL),
 	}
 }
 
