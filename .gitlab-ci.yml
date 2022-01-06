@@ -32,6 +32,7 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
+      - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
