@@ -99,3 +99,27 @@ trigger-azure-discovery-agent:
   before_script:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
+
+####################
+# CSR - overridden from csrjobs.yml to effectively not see this job ever
+####################
+twistlock:
+  only:
+    refs:
+      - xxxx
+  script:
+    - ""
+
+twistlock:on-schedule:
+  only:
+    refs:
+      - xxxx
+  script:
+    - ""
+
+twistlock-master:
+  only:
+    refs:
+      - xxxx
+  script:
+    - ""
