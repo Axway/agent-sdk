@@ -61,10 +61,13 @@ type agentData struct {
 	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	proxyResourceHandler       handler.ProxyHandler
 	isInitialized              bool
 }
 
-var agent = agentData{}
+var agent = agentData{
+	proxyResourceHandler: handler.NewProxyHandler(),
+}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
@@ -199,6 +202,16 @@ func OnConfigChange(configChangeHandler ConfigChangeHandler) {
 // OnAgentResourceChange - Registers handler for resource change event
 func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 	agent.agentResourceChangeHandler = agentResourceChangeHandler
+}
+
+// RegisterResourceEventHandler - Registers handler for resource events
+func RegisterResourceEventHandler(name string, resourceEventHandler handler.Handler) {
+	agent.proxyResourceHandler.RegisterTargetHandler(name, resourceEventHandler)
+}
+
+// UnregisterResourceEventHandler - removes the specified resource event handler
+func UnregisterResourceEventHandler(name string) {
+	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
 func startAPIServiceCache() {
@@ -344,14 +357,20 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 func startStreamMode(agent agentData) error {
-	cs, err := stream.NewStreamer(
-		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
-		agent.cfg,
-		agent.tokenRequester,
+	proxyHandler := agent.proxyResourceHandler.(handler.Handler)
+	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.apiMap),
 		handler.NewInstanceHandler(agent.instanceMap),
 		handler.NewCategoryHandler(agent.categoryMap),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		proxyHandler,
+	}
+
+	cs, err := stream.NewStreamer(
+		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.cfg,
+		agent.tokenRequester,
+		handlers...,
 	)
 
 	if err != nil {

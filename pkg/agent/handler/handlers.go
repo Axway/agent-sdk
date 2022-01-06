@@ -143,3 +143,42 @@ func (h *agentResourceHandler) Handle(action proto.Event_Type, resource *v1.Reso
 	}
 	return nil
 }
+
+// ProxyHandler interface to represent the proxy resource handler.
+type ProxyHandler interface {
+	// RegisterTargetHandler adds the target handler
+	RegisterTargetHandler(name string, resourceHandler Handler)
+	// UnRegisterTargetHandler removes the specified handler
+	UnregisterTargetHandler(name string)
+}
+
+type proxyHandler struct {
+	targetResourceHandlerMap map[string]Handler
+}
+
+// NewProxyHandler - creates a Handler to proxy target resource handler
+func NewProxyHandler() ProxyHandler {
+	return &proxyHandler{
+		targetResourceHandlerMap: make(map[string]Handler),
+	}
+}
+
+func (h *proxyHandler) RegisterTargetHandler(name string, resourceHandler Handler) {
+	h.targetResourceHandlerMap[name] = resourceHandler
+}
+
+func (h *proxyHandler) UnregisterTargetHandler(name string) {
+	delete(h.targetResourceHandlerMap, name)
+}
+
+func (h *proxyHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+	if h.targetResourceHandlerMap != nil {
+		for _, handler := range h.targetResourceHandlerMap {
+			err := handler.Handle(action, resource)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

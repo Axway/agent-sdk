@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -412,6 +413,67 @@ func TestAgentResourceHandler(t *testing.T) {
 		})
 	}
 
+}
+
+type customHandler struct {
+	err    error
+	action proto.Event_Type
+	ri     *v1.ResourceInstance
+}
+
+func (c *customHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+	if c.err != nil {
+		return c.err
+	}
+	c.action = action
+	c.ri = resource
+	return nil
+}
+
+func TestProxyHandler(t *testing.T) {
+	testRes := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:  "name",
+			Title: "title",
+		},
+	}
+	handler := &customHandler{}
+	proxy := NewProxyHandler()
+	pHandler := proxy.(Handler)
+	pHandler.Handle(proto.Event_UPDATED, testRes)
+	assert.Nil(t, handler.ri)
+
+	proxy.RegisterTargetHandler("custom", handler)
+	pHandler.Handle(proto.Event_UPDATED, testRes)
+	assert.Equal(t, testRes, handler.ri)
+	assert.Equal(t, proto.Event_UPDATED, handler.action)
+	handler.ri = nil
+
+	handler2 := &customHandler{}
+	proxy.RegisterTargetHandler("custom2", handler2)
+	pHandler.Handle(proto.Event_UPDATED, testRes)
+	assert.Equal(t, testRes, handler.ri)
+	assert.Equal(t, proto.Event_UPDATED, handler.action)
+	assert.Equal(t, testRes, handler2.ri)
+	assert.Equal(t, proto.Event_UPDATED, handler2.action)
+
+	handler.ri = nil
+	handler2.ri = nil
+	handler.err = errors.New("test")
+	err := pHandler.Handle(proto.Event_UPDATED, testRes)
+	assert.NotNil(t, err)
+	assert.Equal(t, err, handler.err)
+	assert.Nil(t, handler.ri)
+	assert.Nil(t, handler2.ri)
+
+	handler.ri = nil
+	handler2.ri = nil
+	handler.err = nil
+	proxy.UnregisterTargetHandler("custom2")
+	err = pHandler.Handle(proto.Event_UPDATED, testRes)
+	assert.Nil(t, err)
+	assert.Nil(t, handler2.ri)
+	assert.Equal(t, testRes, handler.ri)
 }
 
 type mockResourceManager struct {
