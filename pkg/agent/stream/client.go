@@ -95,7 +95,6 @@ func NewStreamer(
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
 	tenant := cfg.GetTenantID()
-	isInsecure := cfg.GetTLSConfig().IsInsecureSkipVerify()
 
 	rc := NewResourceClient(
 		apiServerHost,
@@ -128,10 +127,8 @@ func NewStreamer(
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
 		wm.WithSyncEvents(getAgentSequenceManager(wt.Name)),
-	}
-
-	if isInsecure {
-		watchOpts = append(watchOpts, wm.WithTLSConfig(nil))
+		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
+		wm.WithProxy(cfg.GetProxyURL()),
 	}
 
 	return &streamer{
