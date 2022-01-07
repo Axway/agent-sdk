@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AssetScopes = []string{""}
 )
 
-const (
-	AssetScope = ""
-
-	AssetResourceName = "assets"
-)
+const AssetResourceName = "assets"
 
 func AssetGVK() apiv1.GroupVersionKind {
 	return _AssetGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetGVK, AssetScope, AssetResourceName)
+	apiv1.RegisterGVK(_AssetGVK, AssetScopes[0], AssetResourceName)
 }
 
 // Asset Resource
@@ -46,7 +44,7 @@ type Asset struct {
 
 	Spec AssetSpec `json:"spec"`
 
-	State interface{} `json:"state"`
+	State AssetState `json:"state"`
 }
 
 // FromInstance converts a ResourceInstance to a Asset

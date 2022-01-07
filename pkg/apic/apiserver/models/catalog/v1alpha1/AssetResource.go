@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AssetResourceScopes = []string{"Asset", "AssetRelease"}
 )
 
-const (
-	AssetResourceScope = "Asset"
-
-	AssetResourceResourceName = "assetresources"
-)
+const AssetResourceResourceName = "assetresources"
 
 func AssetResourceGVK() apiv1.GroupVersionKind {
 	return _AssetResourceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetResourceGVK, AssetResourceScope, AssetResourceResourceName)
+	apiv1.RegisterGVK(_AssetResourceGVK, AssetResourceScopes[0], AssetResourceResourceName)
 }
 
 // AssetResource Resource

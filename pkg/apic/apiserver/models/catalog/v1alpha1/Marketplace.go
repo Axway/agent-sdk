@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	MarketplaceScopes = []string{""}
 )
 
-const (
-	MarketplaceScope = ""
-
-	MarketplaceResourceName = "marketplaces"
-)
+const MarketplaceResourceName = "marketplaces"
 
 func MarketplaceGVK() apiv1.GroupVersionKind {
 	return _MarketplaceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_MarketplaceGVK, MarketplaceScope, MarketplaceResourceName)
+	apiv1.RegisterGVK(_MarketplaceGVK, MarketplaceScopes[0], MarketplaceResourceName)
 }
 
 // Marketplace Resource

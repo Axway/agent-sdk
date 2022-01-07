@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	GovernanceAgentScopes = []string{"Environment"}
 )
 
-const (
-	GovernanceAgentScope = "Environment"
-
-	GovernanceAgentResourceName = "governanceagents"
-)
+const GovernanceAgentResourceName = "governanceagents"
 
 func GovernanceAgentGVK() apiv1.GroupVersionKind {
 	return _GovernanceAgentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_GovernanceAgentGVK, GovernanceAgentScope, GovernanceAgentResourceName)
+	apiv1.RegisterGVK(_GovernanceAgentGVK, GovernanceAgentScopes[0], GovernanceAgentResourceName)
 }
 
 // GovernanceAgent Resource

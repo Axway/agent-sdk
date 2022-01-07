@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	CategoryScopes = []string{""}
 )
 
-const (
-	CategoryScope = ""
-
-	CategoryResourceName = "categories"
-)
+const CategoryResourceName = "categories"
 
 func CategoryGVK() apiv1.GroupVersionKind {
 	return _CategoryGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_CategoryGVK, CategoryScope, CategoryResourceName)
+	apiv1.RegisterGVK(_CategoryGVK, CategoryScopes[0], CategoryResourceName)
 }
 
 // Category Resource

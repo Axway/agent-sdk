@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	MeshDiscoveryScopes = []string{"Mesh"}
 )
 
-const (
-	MeshDiscoveryScope = "Mesh"
-
-	MeshDiscoveryResourceName = "meshdiscoveries"
-)
+const MeshDiscoveryResourceName = "meshdiscoveries"
 
 func MeshDiscoveryGVK() apiv1.GroupVersionKind {
 	return _MeshDiscoveryGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_MeshDiscoveryGVK, MeshDiscoveryScope, MeshDiscoveryResourceName)
+	apiv1.RegisterGVK(_MeshDiscoveryGVK, MeshDiscoveryScopes[0], MeshDiscoveryResourceName)
 }
 
 // MeshDiscovery Resource

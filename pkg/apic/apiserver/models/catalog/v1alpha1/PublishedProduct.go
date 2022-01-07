@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	PublishedProductScopes = []string{"Marketplace"}
 )
 
-const (
-	PublishedProductScope = "Marketplace"
-
-	PublishedProductResourceName = "publishedproducts"
-)
+const PublishedProductResourceName = "publishedproducts"
 
 func PublishedProductGVK() apiv1.GroupVersionKind {
 	return _PublishedProductGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_PublishedProductGVK, PublishedProductScope, PublishedProductResourceName)
+	apiv1.RegisterGVK(_PublishedProductGVK, PublishedProductScopes[0], PublishedProductResourceName)
 }
 
 // PublishedProduct Resource

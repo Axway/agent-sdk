@@ -1,3 +1,4 @@
+//go:build withapiserver
 // +build withapiserver
 
 // Tests in this file are not run by default

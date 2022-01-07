@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AccessRequestScopes = []string{"Environment"}
 )
 
-const (
-	AccessRequestScope = "Environment"
-
-	AccessRequestResourceName = "accessrequests"
-)
+const AccessRequestResourceName = "accessrequests"
 
 func AccessRequestGVK() apiv1.GroupVersionKind {
 	return _AccessRequestGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessRequestGVK, AccessRequestScope, AccessRequestResourceName)
+	apiv1.RegisterGVK(_AccessRequestGVK, AccessRequestScopes[0], AccessRequestResourceName)
 }
 
 // AccessRequest Resource

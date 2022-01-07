@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AssetMappingTemplateScopes = []string{"Environment"}
 )
 
-const (
-	AssetMappingTemplateScope = "Environment"
-
-	AssetMappingTemplateResourceName = "assetmappingtemplates"
-)
+const AssetMappingTemplateResourceName = "assetmappingtemplates"
 
 func AssetMappingTemplateGVK() apiv1.GroupVersionKind {
 	return _AssetMappingTemplateGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetMappingTemplateGVK, AssetMappingTemplateScope, AssetMappingTemplateResourceName)
+	apiv1.RegisterGVK(_AssetMappingTemplateGVK, AssetMappingTemplateScopes[0], AssetMappingTemplateResourceName)
 }
 
 // AssetMappingTemplate Resource

@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ReleaseTagScopes = []string{"VirtualAPI"}
 )
 
-const (
-	ReleaseTagScope = "VirtualAPI"
-
-	ReleaseTagResourceName = "releasetags"
-)
+const ReleaseTagResourceName = "releasetags"
 
 func ReleaseTagGVK() apiv1.GroupVersionKind {
 	return _ReleaseTagGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ReleaseTagGVK, ReleaseTagScope, ReleaseTagResourceName)
+	apiv1.RegisterGVK(_ReleaseTagGVK, ReleaseTagScopes[0], ReleaseTagResourceName)
 }
 
 // ReleaseTag Resource
@@ -40,9 +38,9 @@ type ReleaseTag struct {
 
 	Owner *apiv1.Owner `json:"owner"`
 
-	References ReleaseTagReferences `json:"references"`
-
 	Spec ReleaseTagSpec `json:"spec"`
+
+	State interface{} `json:"state"`
 
 	Status ReleaseTagStatus `json:"status"`
 }
