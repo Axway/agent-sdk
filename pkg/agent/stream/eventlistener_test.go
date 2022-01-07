@@ -8,6 +8,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -54,7 +55,7 @@ func TestEventListener_start(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, tc.ri, getMockWatchTopic(), tc.handler)
 
 			errCh := make(chan error)
 			go func() {
@@ -92,13 +93,13 @@ func TestEventListener_start(t *testing.T) {
 // Should call Listen and handle a graceful stop, and an error
 func TestEventListener_Listen(t *testing.T) {
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
+	listener := NewEventListener(events, &mockRI{}, getMockWatchTopic(), &mockHandler{})
 	errCh := listener.Listen()
 	go listener.Stop()
 	err := <-errCh
 	assert.Nil(t, err)
 
-	listener = NewEventListener(events, &mockRI{}, &mockHandler{})
+	listener = NewEventListener(events, &mockRI{}, getMockWatchTopic(), &mockHandler{})
 	errCh = listener.Listen()
 	close(events)
 	err = <-errCh
@@ -157,7 +158,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), tc.ri, getMockWatchTopic(), tc.handler)
 
 			err := listener.handleEvent(event)
 
@@ -209,4 +210,12 @@ type mockHandler struct {
 
 func (m *mockHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
 	return m.err
+}
+
+func getMockWatchTopic() *mv1.WatchTopic {
+	return &mv1.WatchTopic{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name: "wt-name",
+		},
+	}
 }

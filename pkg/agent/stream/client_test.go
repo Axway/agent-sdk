@@ -104,10 +104,10 @@ func TestClientStreamJob(t *testing.T) {
 
 func Test_getAgentSequenceManager(t *testing.T) {
 	wtName := "fake"
-	sm := getAgentSequenceManager(wtName)
+	sm := GetAgentSequenceManager(wtName)
 	assert.Equal(t, sm.GetSequence(), int64(0))
 
-	sm = getAgentSequenceManager("")
+	sm = GetAgentSequenceManager("")
 	assert.Equal(t, sm.GetSequence(), int64(0))
 }
 

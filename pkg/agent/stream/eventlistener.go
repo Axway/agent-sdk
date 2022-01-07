@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -25,12 +26,13 @@ type EventListener struct {
 	handlers    []handler.Handler
 	isRunning   bool
 	source      chan *proto.Event
+	watchTopic  *v1alpha1.WatchTopic
 }
 
-type newListenerFunc func(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener
+type newListenerFunc func(source chan *proto.Event, ri ResourceClient, wt *v1alpha1.WatchTopic, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri ResourceClient, wt *v1alpha1.WatchTopic, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
 		cancel:      cancel,
@@ -38,6 +40,7 @@ func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handle
 		getResource: ri,
 		handlers:    cbs,
 		source:      source,
+		watchTopic:  wt,
 	}
 }
 
@@ -94,6 +97,9 @@ func (em *EventListener) start() (done bool, err error) {
 func (em *EventListener) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
+
+	seqID := event.Metadata.SequenceID
+	em.saveSequenceID(seqID)
 
 	log.Debugf(
 		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
@@ -155,4 +161,15 @@ func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.Resource
 		}
 	}
 	return ri
+}
+
+// saveSequenceID saves the event Metadata SequenceID to a file.
+func (em *EventListener) saveSequenceID(sid int64) {
+	log.Debugf("Seq Id: %d", sid)
+
+	watchTopicName := em.watchTopic.GetName()
+	sm := GetAgentSequenceManager(watchTopicName)
+
+	_ = sm.GetCache().Set("watchSequenceID", sid)
+	_ = sm.GetCache().Save(watchTopicName + ".sequence")
 }

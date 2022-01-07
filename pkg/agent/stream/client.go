@@ -8,7 +8,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 
@@ -84,6 +83,7 @@ type streamer struct {
 	watchOpts     []wm.Option
 	newManager    wm.NewManagerFunc
 	newListener   newListenerFunc
+	centralCfg    config.CentralConfig
 }
 
 // NewStreamer creates a Streamer
@@ -126,12 +126,13 @@ func NewStreamer(
 
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
-		wm.WithSyncEvents(getAgentSequenceManager(wt.Name)),
+		wm.WithSyncEvents(GetAgentSequenceManager(wt.Name)),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
 	}
 
 	return &streamer{
+		centralCfg:    cfg,
 		handlers:      handlers,
 		rc:            rc,
 		topicSelfLink: wt.Metadata.SelfLink,
@@ -146,9 +147,15 @@ func NewStreamer(
 func (c *streamer) Start() error {
 	events, eventErrorCh := make(chan *proto.Event), make(chan error)
 
+	wt, err := getWatchTopic(c.centralCfg, c.rc)
+	if err != nil {
+		return err
+	}
+
 	c.listener = c.newListener(
 		events,
 		c.rc,
+		wt,
 		c.handlers...,
 	)
 
@@ -217,34 +224,4 @@ func getWatchTopicName(envName, agentName string, agentType config.AgentType) st
 
 func getWatchTopicNameSuffix(agentType config.AgentType) string {
 	return "-" + agentTypesMap[agentType]
-}
-
-type agentSequenceManager struct {
-	sequenceCache cache.Cache
-}
-
-func (s *agentSequenceManager) GetSequence() int64 {
-	if s.sequenceCache != nil {
-		cachedSeqID, err := s.sequenceCache.Get("watchSequenceID")
-		if err == nil {
-			if seqID, ok := cachedSeqID.(float64); ok {
-				return int64(seqID)
-			}
-		}
-	}
-	return 0
-}
-
-func getAgentSequenceManager(watchTopicName string) *agentSequenceManager {
-	seqCache := cache.New()
-	if watchTopicName != "" {
-		err := seqCache.Load(watchTopicName + ".sequence")
-		if err != nil {
-			seqCache.Set("watchSequenceID", int64(0))
-			if util.IsNotTest() {
-				seqCache.Save(watchTopicName + ".sequence")
-			}
-		}
-	}
-	return &agentSequenceManager{sequenceCache: seqCache}
 }
