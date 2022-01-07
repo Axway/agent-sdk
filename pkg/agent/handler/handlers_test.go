@@ -112,7 +112,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewAPISvcHandler(&cache.MockCache{})
 
-			err := handler.Handle(tc.action, tc.resource)
+			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -200,7 +200,7 @@ func TestNewCategoryHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewCategoryHandler(&cache.MockCache{})
 
-			err := handler.Handle(tc.action, tc.resource)
+			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -300,7 +300,7 @@ func TestNewInstanceHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewInstanceHandler(&cache.MockCache{})
 
-			err := handler.Handle(tc.action, tc.resource)
+			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -402,7 +402,7 @@ func TestAgentResourceHandler(t *testing.T) {
 
 			handler := NewAgentResourceHandler(resourceManager)
 
-			err := handler.Handle(tc.action, tc.resource)
+			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
 				assert.Nil(t, err)
 				assert.Nil(t, resourceManager.resource)
@@ -421,7 +421,7 @@ type customHandler struct {
 	ri     *v1.ResourceInstance
 }
 
-func (c *customHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if c.err != nil {
 		return c.err
 	}
@@ -439,18 +439,18 @@ func TestProxyHandler(t *testing.T) {
 	}
 	handler := &customHandler{}
 	proxy := NewStreamWatchProxyHandler()
-	proxy.Handle(proto.Event_UPDATED, testRes)
+	proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Nil(t, handler.ri)
 
 	proxy.RegisterTargetHandler("custom", handler)
-	proxy.Handle(proto.Event_UPDATED, testRes)
+	proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Equal(t, testRes, handler.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler.action)
 	handler.ri = nil
 
 	handler2 := &customHandler{}
 	proxy.RegisterTargetHandler("custom2", handler2)
-	proxy.Handle(proto.Event_UPDATED, testRes)
+	proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Equal(t, testRes, handler.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler.action)
 	assert.Equal(t, testRes, handler2.ri)
@@ -459,7 +459,7 @@ func TestProxyHandler(t *testing.T) {
 	handler.ri = nil
 	handler2.ri = nil
 	handler.err = errors.New("test")
-	err := proxy.Handle(proto.Event_UPDATED, testRes)
+	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, handler.err)
 	assert.Nil(t, handler.ri)
@@ -469,7 +469,7 @@ func TestProxyHandler(t *testing.T) {
 	handler2.ri = nil
 	handler.err = nil
 	proxy.UnregisterTargetHandler("custom2")
-	err = proxy.Handle(proto.Event_UPDATED, testRes)
+	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Nil(t, err)
 	assert.Nil(t, handler2.ri)
 	assert.Equal(t, testRes, handler.ri)

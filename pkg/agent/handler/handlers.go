@@ -21,8 +21,8 @@ const (
 
 // Handler interface used by the EventListener to process events.
 type Handler interface {
-	// Handle receives the type of the event (add, update, delete), and the API Server resource, if it exists.
-	Handle(action proto.Event_Type, resource *v1.ResourceInstance) error
+	// Handle receives the type of the event (add, update, delete), event metadata and the API Server resource, if it exists.
+	Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
 }
 
 type apiSvcHandler struct {
@@ -36,7 +36,7 @@ func NewAPISvcHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h *apiSvcHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != apiService {
 		return nil
 	}
@@ -74,7 +74,7 @@ func NewInstanceHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (h *instanceHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (h *instanceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != apiServiceInstance {
 		return nil
 	}
@@ -102,7 +102,7 @@ func NewCategoryHandler(cache cache.Cache) Handler {
 	}
 }
 
-func (c *categoryHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (c *categoryHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != category {
 		return nil
 	}
@@ -129,7 +129,7 @@ func NewAgentResourceHandler(agentResourceManager resource.Manager) Handler {
 	}
 }
 
-func (h *agentResourceHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (h *agentResourceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if h.agentResourceManager != nil && action == proto.Event_UPDATED {
 		kind := resource.Kind
 		switch kind {
@@ -174,11 +174,11 @@ func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
-// Handle receives the type of the event (add, update, delete) and updated API Server resource
-func (h *StreamWatchProxyHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+// Handle receives the type of the event (add, update, delete), event metadata and updated API Server resource
+func (h *StreamWatchProxyHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if h.targetResourceHandlerMap != nil {
 		for _, handler := range h.targetResourceHandlerMap {
-			err := handler.Handle(action, resource)
+			err := handler.Handle(action, eventMetadata, resource)
 			if err != nil {
 				return err
 			}
