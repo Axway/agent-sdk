@@ -152,26 +152,27 @@ type ProxyHandler interface {
 	UnregisterTargetHandler(name string)
 }
 
-type proxyHandler struct {
+// StreamWatchProxyHandler - proxy handler for stream watch
+type StreamWatchProxyHandler struct {
 	targetResourceHandlerMap map[string]Handler
 }
 
 // NewProxyHandler - creates a Handler to proxy target resource handler
-func NewProxyHandler() ProxyHandler {
-	return &proxyHandler{
+func NewStreamWatchProxyHandler() *StreamWatchProxyHandler {
+	return &StreamWatchProxyHandler{
 		targetResourceHandlerMap: make(map[string]Handler),
 	}
 }
 
-func (h *proxyHandler) RegisterTargetHandler(name string, resourceHandler Handler) {
+func (h *StreamWatchProxyHandler) RegisterTargetHandler(name string, resourceHandler Handler) {
 	h.targetResourceHandlerMap[name] = resourceHandler
 }
 
-func (h *proxyHandler) UnregisterTargetHandler(name string) {
+func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
-func (h *proxyHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
+func (h *StreamWatchProxyHandler) Handle(action proto.Event_Type, resource *v1.ResourceInstance) error {
 	if h.targetResourceHandlerMap != nil {
 		for _, handler := range h.targetResourceHandlerMap {
 			err := handler.Handle(action, resource)

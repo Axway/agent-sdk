@@ -438,20 +438,19 @@ func TestProxyHandler(t *testing.T) {
 		},
 	}
 	handler := &customHandler{}
-	proxy := NewProxyHandler()
-	pHandler := proxy.(Handler)
-	pHandler.Handle(proto.Event_UPDATED, testRes)
+	proxy := NewStreamWatchProxyHandler()
+	proxy.Handle(proto.Event_UPDATED, testRes)
 	assert.Nil(t, handler.ri)
 
 	proxy.RegisterTargetHandler("custom", handler)
-	pHandler.Handle(proto.Event_UPDATED, testRes)
+	proxy.Handle(proto.Event_UPDATED, testRes)
 	assert.Equal(t, testRes, handler.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler.action)
 	handler.ri = nil
 
 	handler2 := &customHandler{}
 	proxy.RegisterTargetHandler("custom2", handler2)
-	pHandler.Handle(proto.Event_UPDATED, testRes)
+	proxy.Handle(proto.Event_UPDATED, testRes)
 	assert.Equal(t, testRes, handler.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler.action)
 	assert.Equal(t, testRes, handler2.ri)
@@ -460,7 +459,7 @@ func TestProxyHandler(t *testing.T) {
 	handler.ri = nil
 	handler2.ri = nil
 	handler.err = errors.New("test")
-	err := pHandler.Handle(proto.Event_UPDATED, testRes)
+	err := proxy.Handle(proto.Event_UPDATED, testRes)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, handler.err)
 	assert.Nil(t, handler.ri)
@@ -470,7 +469,7 @@ func TestProxyHandler(t *testing.T) {
 	handler2.ri = nil
 	handler.err = nil
 	proxy.UnregisterTargetHandler("custom2")
-	err = pHandler.Handle(proto.Event_UPDATED, testRes)
+	err = proxy.Handle(proto.Event_UPDATED, testRes)
 	assert.Nil(t, err)
 	assert.Nil(t, handler2.ri)
 	assert.Equal(t, testRes, handler.ri)

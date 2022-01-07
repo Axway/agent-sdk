@@ -61,12 +61,12 @@ type agentData struct {
 	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
-	proxyResourceHandler       handler.ProxyHandler
+	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 }
 
 var agent = agentData{
-	proxyResourceHandler: handler.NewProxyHandler(),
+	proxyResourceHandler: handler.NewStreamWatchProxyHandler(),
 }
 
 // Initialize - Initializes the agent
@@ -357,13 +357,12 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 func startStreamMode(agent agentData) error {
-	proxyHandler := agent.proxyResourceHandler.(handler.Handler)
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.apiMap),
 		handler.NewInstanceHandler(agent.instanceMap),
 		handler.NewCategoryHandler(agent.categoryMap),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
-		proxyHandler,
+		agent.proxyResourceHandler,
 	}
 
 	cs, err := stream.NewStreamer(
