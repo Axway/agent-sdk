@@ -29,10 +29,7 @@ const (
 )
 
 // other consts
-const (
-	serverName = "Amplify Central"
-	TeamMapKey = "TeamMap"
-)
+const serverName = "Amplify Central"
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
@@ -87,6 +84,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.OnConfigChange(cfg)
+	registerTeamMapCacheJob(serviceClient)
 	if util.IsNotTest() {
 		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
 	}
@@ -326,21 +324,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 	}
 
 	// reset the cache of team names
-	return c.setTeamCache()
-}
-
-func (c *ServiceClient) setTeamCache() error {
-	// passing nil to getTeam will return the full list of teams
-	platformTeams, err := c.getTeam(make(map[string]string))
-	if err != nil {
-		return err
-	}
-
-	teamMap := make(map[string]string)
-	for _, team := range platformTeams {
-		teamMap[team.Name] = team.ID
-	}
-	return cache.GetCache().Set(TeamMapKey, teamMap)
+	return nil
 }
 
 func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {

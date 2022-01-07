@@ -44,6 +44,7 @@ type ServiceBody struct {
 	Endpoints          []EndpointDefinition
 	UnstructuredProps  *UnstructuredProperties
 	TeamName           string
+	teamID             string
 	categoryTitles     []string //Titles will be set via the service body builder
 	categoryNames      []string //Names will be determined based the Title
 }

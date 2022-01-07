@@ -38,7 +38,8 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, instanceAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Owner: c.getOwnerObject(serviceBody),
 	}
 }
 

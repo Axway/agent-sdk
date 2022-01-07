@@ -11,7 +11,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -38,19 +37,15 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
 	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
 	if serviceBody.TeamName != "" {
-		obj, err := cache.GetCache().Get(TeamMapKey)
-		if err == nil {
-			teamMap := obj.(map[string]string)
-			if _, found := teamMap[serviceBody.TeamName]; found {
-				owningTeam = serviceBody.TeamName
-			} else {
-				teamForMsg := "the default team"
-				if owningTeam != "" {
-					teamForMsg = fmt.Sprintf("team %s", owningTeam)
-				}
-				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
-					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
+		if serviceBody.teamID != "" {
+			owningTeam = serviceBody.TeamName
+		} else {
+			teamForMsg := "the default team"
+			if owningTeam != "" {
+				teamForMsg = fmt.Sprintf("team %s", owningTeam)
 			}
+			log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+				serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 		}
 	}
 

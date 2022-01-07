@@ -36,8 +36,19 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, servic
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, true),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildAPIServiceSpec(serviceBody),
+		Spec:  c.buildAPIServiceSpec(serviceBody),
+		Owner: c.getOwnerObject(serviceBody),
 	}
+}
+
+func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody) *v1.Owner {
+	if serviceBody.teamID != "" {
+		return &v1.Owner{
+			Type: v1.TeamOwner,
+			ID:   serviceBody.teamID,
+		}
+	}
+	return nil
 }
 
 func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, serviceBody *ServiceBody) {
