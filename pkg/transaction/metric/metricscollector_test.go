@@ -124,7 +124,7 @@ func TestMetricCollector(t *testing.T) {
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
@@ -255,7 +255,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 			cfg.SetAxwayManaged(test.trackVolume)
 			cmd.BuildDataPlaneType = "Azure"
-			agent.Initialize(cfg)
+			agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 			paths.Paths.Data = "."
 			myCollector := createMetricCollector()
@@ -325,7 +325,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 	cmd.BuildDataPlaneType = "Azure"
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
 	usgCfg.Offline = true
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	testCases := []struct {
 		name                string

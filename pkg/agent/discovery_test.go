@@ -180,7 +180,7 @@ func TestDiscoveryCache(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "test")
 	resetResources()
-	err := Initialize(cfg)
+	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 
 	serverAPISvcResponse = emptyAPISvc

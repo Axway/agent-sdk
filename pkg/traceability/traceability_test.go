@@ -179,7 +179,7 @@ func TestCreateLogstashClient(t *testing.T) {
 	defer s.Close()
 
 	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	group, err := createTransport(nil)
 
@@ -276,7 +276,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	defer s.Close()
 
 	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	url, _ := url.Parse(s.server.URL)
 	testConfig := DefaultConfig()
@@ -309,7 +309,7 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 	defer s.Close()
 
 	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	url, _ := url.Parse(s.server.URL)
 	testConfig := DefaultConfig()
@@ -348,7 +348,7 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	defer s.Close()
 
 	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	url, _ := url.Parse(s.server.URL)
 	testConfig := DefaultConfig()
@@ -385,7 +385,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	defer s.Close()
 
 	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	agent.Initialize(cfg, config.NewAgentFeaturesConfiguration())
 
 	url, _ := url.Parse(s.server.URL)
 	testConfig := DefaultConfig()

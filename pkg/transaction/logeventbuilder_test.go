@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"github.com/Axway/agent-sdk/pkg/config"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,7 +19,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
-	agent.Initialize(cfg.Central)
+	agent.Initialize(cfg.Central, config.NewAgentFeaturesConfiguration())
 	timeStamp := time.Now().Unix()
 
 	logEvent, err := NewTransactionEventBuilder().
@@ -165,7 +166,7 @@ func TestSummaryBuilder(t *testing.T) {
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	// authCfg := cfg.Central.GetAuthConfig()
-	agent.Initialize(cfg.Central)
+	agent.Initialize(cfg.Central, config.NewAgentFeaturesConfiguration())
 	timeStamp := time.Now().Unix()
 
 	logEvent, err := NewTransactionSummaryBuilder().

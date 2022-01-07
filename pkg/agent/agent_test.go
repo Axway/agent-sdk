@@ -25,7 +25,6 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg.TenantID = "123456"
 	cfg.Environment = env
 	cfg.APICDeployment = "apic"
-	cfg.Connected = true
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
@@ -121,7 +120,7 @@ func TestAgentInitialize(t *testing.T) {
 	cfg := createOfflineCentralCfg(s.URL, "v7")
 	// Test with offline mode
 	resetResources()
-	err := Initialize(cfg)
+	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 	da := GetAgentResource()
 	assert.Nil(t, da)
@@ -129,7 +128,7 @@ func TestAgentInitialize(t *testing.T) {
 	cfg = createCentralCfg(s.URL, "v7")
 	// Test with no agent name - config to be validate successfully as no calls made to get agent and dataplane resource
 	resetResources()
-	err = Initialize(cfg)
+	err = Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 	da = GetAgentResource()
 	assert.Nil(t, da)
@@ -141,7 +140,7 @@ func TestAgentInitialize(t *testing.T) {
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = daName
 	resetResources()
-	err = Initialize(cfg)
+	err = Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
@@ -151,7 +150,7 @@ func TestAgentInitialize(t *testing.T) {
 	AgentResourceType = v1alpha1.TraceabilityAgentResourceName
 	cfg.AgentName = taName
 	agent.isInitialized = false
-	err = Initialize(cfg)
+	err = Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
@@ -172,7 +171,7 @@ func TestAgentInitialize(t *testing.T) {
 	agentResChangeHandlerCall := 0
 	OnAgentResourceChange(func() { agentResChangeHandlerCall++ })
 
-	err = Initialize(cfg)
+	err = Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 
 	da = GetAgentResource()
@@ -216,7 +215,7 @@ func TestAgentConfigOverride(t *testing.T) {
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"
 	resetResources()
-	err := Initialize(cfg)
+	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
 	assert.Nil(t, err)
 
 	da := GetAgentResource()

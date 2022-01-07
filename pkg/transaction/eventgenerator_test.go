@@ -34,7 +34,6 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			UsageReporting:            corecfg.NewUsageReporting(),
 			ReportActivityFrequency:   2 * time.Minute,
 			ClientTimeout:             1 * time.Minute,
-			Connected:                 true,
 			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
 				ClientID:   "test",
@@ -72,7 +71,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	// authCfg := cfg.Central.GetAuthConfig()
-	agent.Initialize(cfg.Central)
+	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
 
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
@@ -111,7 +110,7 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
-	agent.Initialize(cfg.Central)
+	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
 		TenantID:      cfg.Central.GetTenantID(),
@@ -131,7 +130,7 @@ func TestCreateEventsInOfflineMode(t *testing.T) {
 	defer s.Close()
 
 	cfg := createOfflineMapperTestConfig("1111")
-	agent.Initialize(cfg.Central)
+	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
 	eventGenerator := NewEventGenerator()
 	eventGenerator.SetUseTrafficForAggregation(false)
 	dummySummaryEvent := LogEvent{
