@@ -61,7 +61,7 @@ func Test_GetSequence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.sequenceCache.Set(tt.key, tt.setVal)
-			s := &agentSequenceManager{
+			s := &AgentSequenceManager{
 				sequenceCache: tt.sequenceCache,
 			}
 

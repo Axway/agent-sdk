@@ -5,14 +5,16 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
+// SequenceIDKey - the cache key name for watch sequence IDs
 const SequenceIDKey = "watchSequenceID"
 
-type agentSequenceManager struct {
+// AgentSequenceManager - represents the sequence manager for an agent
+type AgentSequenceManager struct {
 	sequenceCache cache.Cache
 }
 
 // GetSequence - return the watch sequenceID
-func (s *agentSequenceManager) GetSequence() int64 {
+func (s *AgentSequenceManager) GetSequence() int64 {
 	if s.sequenceCache != nil {
 		cachedSeqID, err := s.sequenceCache.Get(SequenceIDKey)
 		if err == nil {
@@ -25,7 +27,7 @@ func (s *agentSequenceManager) GetSequence() int64 {
 }
 
 //GetAgentSequenceManager -
-func GetAgentSequenceManager(watchTopicName string) *agentSequenceManager {
+func GetAgentSequenceManager(watchTopicName string) *AgentSequenceManager {
 	seqCache := cache.New()
 	if watchTopicName != "" {
 		err := seqCache.Load(watchTopicName + ".sequence")
@@ -36,10 +38,10 @@ func GetAgentSequenceManager(watchTopicName string) *agentSequenceManager {
 			}
 		}
 	}
-	return &agentSequenceManager{sequenceCache: seqCache}
+	return &AgentSequenceManager{sequenceCache: seqCache}
 }
 
 // GetCache - return sequence cache
-func (s *agentSequenceManager) GetCache() cache.Cache {
+func (s *AgentSequenceManager) GetCache() cache.Cache {
 	return s.sequenceCache
 }
