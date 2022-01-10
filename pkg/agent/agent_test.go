@@ -233,7 +233,7 @@ func TestAgentAgentFeaturesOnByDefault(t *testing.T) {
 	// Assert the agent features are on by default
 	assert.True(t, agent.agentFeaturesCfg.ConnectionToCentralEnabled())
 	assert.True(t, agent.agentFeaturesCfg.ProcessSystemSignalsEnabled())
-	assert.True(t, agent.agentFeaturesCfg.AgentVersionCheckerEnabled())
+	assert.True(t, agent.agentFeaturesCfg.VersionCheckerEnabled())
 
 	assert.NotNil(t, agent.apicClient)
 }
@@ -245,14 +245,14 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 	agentFeatures := &config.AgentFeaturesConfiguration{
 		ConnectToCentral:     false,
 		ProcessSystemSignals: false,
-		AgentVersionChecker:  false,
+		VersionChecker:       false,
 	}
 	err := InitializeWithAgentFeatures(cfg, agentFeatures)
 	assert.NoError(t, err) // This asserts central config is not being validated as ConnectToCentral is false
 
 	assert.False(t, agent.agentFeaturesCfg.ConnectionToCentralEnabled())
 	assert.False(t, agent.agentFeaturesCfg.ProcessSystemSignalsEnabled())
-	assert.False(t, agent.agentFeaturesCfg.AgentVersionCheckerEnabled())
+	assert.False(t, agent.agentFeaturesCfg.VersionCheckerEnabled())
 
 	// Assert no api client
 	assert.Nil(t, agent.apicClient)

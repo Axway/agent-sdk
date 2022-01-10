@@ -10,7 +10,7 @@ func TestDefaultAgentFeaturesConfig(t *testing.T) {
 	agentFeaturesConfig := cfg.(*AgentFeaturesConfiguration)
 	assert.True(t, agentFeaturesConfig.ConnectionToCentralEnabled())
 	assert.True(t, agentFeaturesConfig.ProcessSystemSignalsEnabled())
-	assert.True(t, agentFeaturesConfig.AgentVersionCheckerEnabled())
+	assert.True(t, agentFeaturesConfig.VersionCheckerEnabled())
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.NotNil(t, cfgValidator)

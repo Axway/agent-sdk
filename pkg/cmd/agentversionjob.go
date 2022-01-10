@@ -253,7 +253,7 @@ func copyVersionStruct(v1 *version, v2 version) {
 
 // startVersionCheckJobs - starts both a single run and continuous checks
 func startVersionCheckJobs(cfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) {
-	if !util.IsNotTest() || !cfg.IsVersionCheckerEnabled() || !agentFeaturesCfg.AgentVersionCheckerEnabled() {
+	if !util.IsNotTest() || !agentFeaturesCfg.VersionCheckerEnabled() {
 		return
 	}
 	// register the agent version checker single run job

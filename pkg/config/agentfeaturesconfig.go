@@ -8,7 +8,7 @@ import (
 type AgentFeaturesConfig interface {
 	ConnectionToCentralEnabled() bool
 	ProcessSystemSignalsEnabled() bool
-	AgentVersionCheckerEnabled() bool
+	VersionCheckerEnabled() bool
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -17,7 +17,7 @@ type AgentFeaturesConfiguration struct {
 	IConfigValidator
 	ConnectToCentral     bool `config:"connectToCentral"`
 	ProcessSystemSignals bool `config:"processSystemSignals"`
-	AgentVersionChecker  bool `config:"agentVersionChecker"`
+	VersionChecker       bool `config:"versionChecker"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -25,7 +25,7 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 	return &AgentFeaturesConfiguration{
 		ConnectToCentral:     true,
 		ProcessSystemSignals: true,
-		AgentVersionChecker:  true,
+		VersionChecker:       true,
 	}
 }
 
@@ -39,16 +39,15 @@ func (c *AgentFeaturesConfiguration) ProcessSystemSignalsEnabled() bool {
 	return c.ProcessSystemSignals
 }
 
-// AgentVersionCheckerEnabled - True if the agent SDK should check for newer versions of the agent.
-// See also central.versionChecker.
-func (c *AgentFeaturesConfiguration) AgentVersionCheckerEnabled() bool {
-	return c.AgentVersionChecker
+// VersionCheckerEnabled - True if the agent SDK should check for newer versions of the agent.
+func (c *AgentFeaturesConfiguration) VersionCheckerEnabled() bool {
+	return c.VersionChecker
 }
 
 const (
 	pathConnectToCentral     = "agentFeatures.connectToCentral"
 	pathProcessSystemSignals = "agentFeatures.processSystemSignals"
-	pathAgentVersionChecker  = "agentFeatures.agentVersionChecker"
+	pathVersionChecker       = "agentFeatures.versionChecker"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -61,7 +60,7 @@ func (c *AgentFeaturesConfiguration) ValidateCfg() (err error) {
 func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathConnectToCentral, true, "Controls whether the agent SDK connects to Central or not")
 	props.AddBoolProperty(pathProcessSystemSignals, true, "Controls whether the agent SDK processes system signals or not")
-	props.AddBoolProperty(pathAgentVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
+	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 }
 
 // ParseAgentFeaturesConfig - Parses the AgentFeatures Config values from the command line
@@ -69,7 +68,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 	cfg := &AgentFeaturesConfiguration{
 		ConnectToCentral:     props.BoolPropertyValue(pathConnectToCentral),
 		ProcessSystemSignals: props.BoolPropertyValue(pathProcessSystemSignals),
-		AgentVersionChecker:  props.BoolPropertyValue(pathAgentVersionChecker),
+		VersionChecker:       props.BoolPropertyValue(pathVersionChecker),
 	}
 
 	return cfg, nil
