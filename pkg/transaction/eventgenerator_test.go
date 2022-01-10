@@ -71,7 +71,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	// authCfg := cfg.Central.GetAuthConfig()
-	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
+	agent.Initialize(cfg.Central)
 
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
@@ -110,7 +110,7 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
-	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
+	agent.Initialize(cfg.Central)
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
 		TenantID:      cfg.Central.GetTenantID(),
@@ -130,7 +130,7 @@ func TestCreateEventsInOfflineMode(t *testing.T) {
 	defer s.Close()
 
 	cfg := createOfflineMapperTestConfig("1111")
-	agent.Initialize(cfg.Central, corecfg.NewAgentFeaturesConfiguration())
+	agent.Initialize(cfg.Central)
 	eventGenerator := NewEventGenerator()
 	eventGenerator.SetUseTrafficForAggregation(false)
 	dummySummaryEvent := LogEvent{

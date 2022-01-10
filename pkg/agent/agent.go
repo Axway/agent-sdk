@@ -74,7 +74,12 @@ type agentData struct {
 var agent = agentData{}
 
 // Initialize - Initializes the agent
-func Initialize(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
+func Initialize(centralCfg config.CentralConfig) error {
+	return InitializeWithAgentFeatures(centralCfg, config.NewAgentFeaturesConfiguration())
+}
+
+// InitializeWithAgentFeatures - Initializes the agent with agent features
+func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
 	// Only create the api map cache if it does not already exist
 	if agent.apiMap == nil {
 		agent.apiMap = cache.New()

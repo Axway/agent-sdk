@@ -2,7 +2,6 @@ package agent
 
 import (
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,7 +27,7 @@ func TestUpdateCacheForExternalAPIName(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "test")
 	resetResources()
-	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
+	err := Initialize(cfg)
 	assert.Nil(t, err)
 
 	testName := "testexternalname"
@@ -56,7 +55,7 @@ func TestUpdateCacheForExternalAPIID(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "test")
 	resetResources()
-	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
+	err := Initialize(cfg)
 	assert.Nil(t, err)
 
 	testID := "testexternalid"
@@ -84,7 +83,7 @@ func TestUpdateCacheForExternalAPIPrimaryKey(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "test")
 	resetResources()
-	err := Initialize(cfg, config.NewAgentFeaturesConfiguration())
+	err := Initialize(cfg)
 	assert.Nil(t, err)
 
 	testKey := "testprimarykey"
