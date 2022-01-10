@@ -5,12 +5,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
+// AgentFeaturesConfig - Interface to get agent features Config
 type AgentFeaturesConfig interface {
 	ConnectionToCentralEnabled() bool
 	ProcessSystemSignalsEnabled() bool
 	AgentVersionCheckerEnabled() bool
 }
 
+// AgentFeaturesConfiguration - Structure to hold the agent features config
 type AgentFeaturesConfiguration struct {
 	AgentFeaturesConfig
 	IConfigValidator
@@ -19,7 +21,7 @@ type AgentFeaturesConfiguration struct {
 	AgentVersionChecker  bool `config:"agentVersionChecker"`
 }
 
-// NewCentralConfig - Creates the default central config
+// NewAgentFeaturesConfiguration - Creates the default agent features config
 func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 	return &AgentFeaturesConfiguration{
 		ConnectToCentral:     true,
@@ -28,17 +30,18 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 	}
 }
 
-// ConnectionToCentralEnabled -
+// ConnectionToCentralEnabled - True if the agent is a standard agent that connects to Central
 func (c *AgentFeaturesConfiguration) ConnectionToCentralEnabled() bool {
 	return c.ConnectToCentral
 }
 
-// ProcessSystemSignalsEnabled -
+// ProcessSystemSignalsEnabled - True if the agent SDK listens for system signals and manages shutdown
 func (c *AgentFeaturesConfiguration) ProcessSystemSignalsEnabled() bool {
 	return c.ProcessSystemSignals
 }
 
-// VersionCheckerEnabled -
+// VersionCheckerEnabled - True if the agent SDK should check for newer versions of the agent.
+// See also central.versionChecker.
 func (c *AgentFeaturesConfiguration) AgentVersionCheckerEnabled() bool {
 	return c.AgentVersionChecker
 }
