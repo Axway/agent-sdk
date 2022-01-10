@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
-	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
 // AgentFeaturesConfig - Interface to get agent features Config
@@ -54,19 +53,8 @@ const (
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
 func (c *AgentFeaturesConfiguration) ValidateCfg() (err error) {
-	exception.Block{
-		Try: func() {
-			c.validateConfig()
-		},
-		Catch: func(e error) {
-			err = e
-		},
-	}.Do()
-
+	// No validation required
 	return
-}
-
-func (c *AgentFeaturesConfiguration) validateConfig() {
 }
 
 // AddAgentFeaturesConfigProperties - Adds the command properties needed for Agent Features Config

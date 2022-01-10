@@ -17,6 +17,7 @@ import (
 func resetResources() {
 	agent.agentResource = nil
 	agent.isInitialized = false
+	agent.apicClient = nil
 }
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
@@ -221,6 +222,40 @@ func TestAgentConfigOverride(t *testing.T) {
 	da := GetAgentResource()
 	assertResource(t, da, discoveryAgentRes)
 
+}
+
+func TestAgentAgentFeaturesOnByDefault(t *testing.T) {
+	cfg := createCentralCfg("http://test", "v7")
+	resetResources()
+	err := Initialize(cfg)
+	assert.NoError(t, err)
+
+	// Assert the agent features are on by default
+	assert.True(t, agent.agentFeaturesCfg.ConnectionToCentralEnabled())
+	assert.True(t, agent.agentFeaturesCfg.ProcessSystemSignalsEnabled())
+	assert.True(t, agent.agentFeaturesCfg.AgentVersionCheckerEnabled())
+
+	assert.NotNil(t, agent.apicClient)
+}
+
+func TestAgentAgentFeaturesDisabled(t *testing.T) {
+	// Create invalid Central config
+	cfg := config.NewCentralConfig(config.GenericService).(*config.CentralConfiguration)
+	resetResources()
+	agentFeatures := &config.AgentFeaturesConfiguration{
+		ConnectToCentral:     false,
+		ProcessSystemSignals: false,
+		AgentVersionChecker:  false,
+	}
+	err := InitializeWithAgentFeatures(cfg, agentFeatures)
+	assert.NoError(t, err) // This asserts central config is not being validated as ConnectToCentral is false
+
+	assert.False(t, agent.agentFeaturesCfg.ConnectionToCentralEnabled())
+	assert.False(t, agent.agentFeaturesCfg.ProcessSystemSignalsEnabled())
+	assert.False(t, agent.agentFeaturesCfg.AgentVersionCheckerEnabled())
+
+	// Assert no api client
+	assert.Nil(t, agent.apicClient)
 }
 
 func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
