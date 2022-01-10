@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Category", "Marketplace", "ProductPlan", "AssetRelease", "Stage", "ProductPlanUnit", "Asset", "Product", "ProductRelease"}
+	AccessControlListScopes = []string{"Asset", "AssetRelease", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage"}
 )
 
 const AccessControlListResourceName = "accesscontrollists"

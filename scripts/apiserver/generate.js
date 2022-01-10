@@ -250,17 +250,19 @@ const createOasSchema = (openapi, schemas) => {
 
 // The main API Server resources get passed into here, like APISpec, Environment, etc. Used to format the object before parsing it with the resources.tmpl file.
 const createGomplateResource = (resource) => {
+	let scopes = resource["x-axway-scopes"]
+		? resource["x-axway-scopes"].map((scope) => scope.kind)
+		: null;
+	if (scopes) {
+		scopes.sort();
+	}
 	return {
 		group: resource["x-axway-group"],
 		kind: resource["x-axway-kind"],
 		version: resource["x-axway-version"],
 		scoped: resource["x-axway-scoped"],
-		scope: resource["x-axway-scopes"]
-			? resource["x-axway-scopes"][0].kind
-			: null, // temporarily pass the first scope in until the template can handle multiple scopes.
-		scopes: resource["x-axway-scopes"]
-			? resource["x-axway-scopes"].map((scope) => scope.kind)
-			: null,
+		scope: scopes ? scopes[0] : null, // temporarily pass the first scope in until the template can handle multiple scopes.
+		scopes: scopes,
 		resource: resource["x-axway-plural"],
 		fields: filterFields(resource),
 	};
