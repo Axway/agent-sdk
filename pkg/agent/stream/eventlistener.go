@@ -114,15 +114,15 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		ri = em.convertEventPayload(event)
 	}
 
-	em.handleResource(event.Type, ri)
+	em.handleResource(event.Type, event.Metadata, ri)
 
 	return nil
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(action proto.Event_Type, resource *apiv1.ResourceInstance) {
+func (em *EventListener) handleResource(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
 	for _, h := range em.handlers {
-		err := h.Handle(action, resource)
+		err := h.Handle(action, eventMetadata, resource)
 		if err != nil {
 			log.Error(err)
 		}

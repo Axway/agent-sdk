@@ -33,7 +33,7 @@ func getOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 		tmplFunc = NewTraceWatchTopic
 	case config.GovernanceAgent:
 		agentResourceKind = "GovernanceAgent"
-		// TODO
+		tmplFunc = NewGovernanceAgentWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
 	}
@@ -221,6 +221,91 @@ func NewTraceWatchTopic() string {
       }
     ],
     "description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."
+  }
+}`
+}
+
+// NewGovernanceAgentWatchTopic creates a WatchTopic template string
+func NewGovernanceAgentWatchTopic() string {
+	return `
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "WatchTopic",
+  "name": "{{.Name}}",
+  "title": "{{.Title}}",
+  "spec": {
+    "filters": [
+      {
+        "group": "management",
+        "kind": "{{.AgentResourceKind}}",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "updated"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "AmplifyRuntimeConfig",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "AccessRequest",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "APIService",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "APIServiceInstance",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      }
+    ],
+    "description": "Watch Topic used by a governance agent for resources in the {{.Scope}} environment."
   }
 }`
 }
