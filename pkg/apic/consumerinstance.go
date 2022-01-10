@@ -157,6 +157,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 		categories = serviceBody.categoryNames
 	}
 	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
+	consumerInstance.Owner = c.getOwnerObject(serviceBody, false)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance

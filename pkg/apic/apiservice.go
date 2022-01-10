@@ -61,6 +61,7 @@ func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, se
 	apiSvc.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, apiSvc.ResourceMeta.Attributes, true)
 	apiSvc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	apiSvc.Spec.Description = serviceBody.Description
+	apiSvc.Owner = c.getOwnerObject(serviceBody, true)
 	if serviceBody.Image != "" {
 		apiSvc.Spec.Icon = v1alpha1.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,

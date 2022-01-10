@@ -77,6 +77,7 @@ func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevi
 	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
 	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
+	revision.Owner = c.getOwnerObject(serviceBody, false)
 	return revision
 }
 

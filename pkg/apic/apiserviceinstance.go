@@ -53,6 +53,7 @@ func (c *ServiceClient) updateInstanceResource(
 	instance.Attributes = c.buildAPIResourceAttributes(serviceBody, instance.Attributes, false)
 	instance.Tags = c.mapToTagsArray(serviceBody.Tags)
 	instance.Spec = c.buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	instance.Owner = c.getOwnerObject(serviceBody, false)
 	return instance
 }
 
