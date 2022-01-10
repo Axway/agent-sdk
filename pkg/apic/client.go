@@ -74,8 +74,9 @@ type Client interface {
 	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
 	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
 	CreateCategory(categoryName string) (*catalog.Category, error)
-	AddCategoryCache(categoryCache cache.Cache)
+	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
+	GetTeam(queryParams map[string]string) ([]PlatformTeam, error)
 }
 
 // New -
@@ -84,16 +85,25 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.OnConfigChange(cfg)
-	registerTeamMapCacheJob(serviceClient)
 	if util.IsNotTest() {
 		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
 	}
 	return serviceClient
 }
 
-// AddCategoryCache - add the pointer to the category cache that hte agent package will update
-func (c *ServiceClient) AddCategoryCache(categoryCache cache.Cache) {
+// AddCache - add the pointer to the category and team caches that the agent package will update
+func (c *ServiceClient) AddCache(categoryCache, teamCache cache.Cache) {
 	c.categoryCache = categoryCache
+	c.teamCache = teamCache
+}
+
+// getTeamFromCache -
+func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
+	id, found := c.teamCache.Get(teamName)
+	if found != nil {
+		return "", false
+	}
+	return id.(string), true
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
@@ -313,6 +323,7 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 	}
 
+	// TODO update this to get team id from cache
 	if c.cfg.GetTeamID() == "" {
 		// Validate if team exists
 		team, err := c.getCentralTeam(c.cfg.GetTeamName())
@@ -443,7 +454,7 @@ func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
 		}
 	}
 
-	platformTeams, err := c.getTeam(queryParams)
+	platformTeams, err := c.GetTeam(queryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -467,8 +478,8 @@ func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
 	return &team, nil
 }
 
-// getTeam - returns the team ID based on filter
-func (c *ServiceClient) getTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err

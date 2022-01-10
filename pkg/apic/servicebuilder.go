@@ -279,10 +279,5 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 	}
 
-	// get the team id from the cache and add it to te service body
-	if id, found := GetTeamFromCache(b.serviceBody.TeamName); found && b.serviceBody.TeamName != "" {
-		b.serviceBody.teamID = id
-	}
-
 	return b.serviceBody, nil
 }

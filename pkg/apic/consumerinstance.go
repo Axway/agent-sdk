@@ -37,7 +37,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
 	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
 	if serviceBody.TeamName != "" {
-		if serviceBody.teamID != "" {
+		if _, found := c.getTeamFromCache(serviceBody.TeamName); found {
 			owningTeam = serviceBody.TeamName
 		} else {
 			teamForMsg := "the default team"
@@ -137,7 +137,8 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 

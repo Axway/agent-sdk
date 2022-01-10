@@ -63,6 +63,7 @@ func TestCreateService(t *testing.T) {
 
 	// Setup category cache
 	categoryCache := cache.New()
+	teamCache := cache.New()
 	for _, category := range testCategories {
 		newID := uuid.New().String()
 		categoryInstance := &v1.ResourceInstance{
@@ -74,7 +75,7 @@ func TestCreateService(t *testing.T) {
 		}
 		categoryCache.SetWithSecondaryKey(newID, category, categoryInstance)
 	}
-	client.AddCategoryCache(categoryCache)
+	client.AddCache(categoryCache, teamCache)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2

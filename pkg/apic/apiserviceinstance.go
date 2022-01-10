@@ -39,7 +39,7 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
-		Owner: c.getOwnerObject(serviceBody),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 

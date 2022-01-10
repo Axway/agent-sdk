@@ -67,7 +67,7 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildAPIServiceRevisionSpec(serviceBody),
-		Owner: c.getOwnerObject(serviceBody),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 

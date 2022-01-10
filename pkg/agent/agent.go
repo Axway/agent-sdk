@@ -64,6 +64,7 @@ type agentData struct {
 
 	apiMap                     cache.Cache
 	categoryMap                cache.Cache
+	teamMap                    cache.Cache
 	apiValidator               APIValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
@@ -80,6 +81,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
+	}
+	if agent.teamMap == nil {
+		agent.teamMap = cache.New()
 	}
 
 	err := checkRunningAgent()
@@ -106,7 +110,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Init apic client
 	if agent.apicClient == nil {
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		agent.apicClient.AddCategoryCache(agent.categoryMap)
+		agent.apicClient.AddCache(agent.categoryMap, agent.teamMap)
 	} else {
 		agent.apicClient.SetTokenGetter(agent.tokenRequester)
 		agent.apicClient.OnConfigChange(centralCfg)
@@ -136,6 +140,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if util.IsNotTest() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
+			registerTeamMapCacheJob()
 		}
 	}
 	agent.isInitialized = true

@@ -1,10 +1,9 @@
-package apic
+package agent
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 )
 
@@ -12,7 +11,6 @@ const teamMapKey = "TeamMap"
 
 type centralTeamsCache struct {
 	jobs.Job
-	serviceClient *ServiceClient
 }
 
 func (j *centralTeamsCache) Ready() bool {
@@ -24,7 +22,7 @@ func (j *centralTeamsCache) Status() error {
 }
 
 func (j *centralTeamsCache) Execute() error {
-	platformTeams, err := j.serviceClient.getTeam(map[string]string{})
+	platformTeams, err := agent.apicClient.GetTeam(map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -33,33 +31,28 @@ func (j *centralTeamsCache) Execute() error {
 		return fmt.Errorf("error: no teams returned from central")
 	}
 
-	teamMap := make(map[string]string)
 	for _, team := range platformTeams {
-		teamMap[team.Name] = team.ID
+		err = agent.teamMap.Set(team.Name, team.ID)
+		if err != nil {
+			return err
+		}
 	}
 
-	// cache all the teams
-	return cache.GetCache().Set(teamMapKey, teamMap)
+	return nil
 }
 
 // registerTeamMapCacheJob -
-func registerTeamMapCacheJob(serviceClient *ServiceClient) {
-	job := &centralTeamsCache{
-		serviceClient: serviceClient,
-	}
-	job.Execute()
+func registerTeamMapCacheJob() {
+	job := &centralTeamsCache{}
 
 	jobs.RegisterIntervalJobWithName(job, time.Hour, "Team Cache")
 }
 
 // GetTeamFromCache -
 func GetTeamFromCache(teamName string) (string, bool) {
-	obj, err := cache.GetCache().Get(teamMapKey)
-	if err == nil {
-		teamMap := obj.(map[string]string)
-		if id, found := teamMap[teamName]; found {
-			return id, found
-		}
+	id, found := agent.teamMap.Get(teamName)
+	if found != nil {
+		return "", false
 	}
-	return "", false
+	return id.(string), true
 }

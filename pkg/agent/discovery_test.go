@@ -47,7 +47,7 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 	return nil, nil
 }
 
-func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {
+func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {
 	return
 }
 
@@ -118,7 +118,10 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
 
-func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {
+func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
+
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+	return nil, nil
 }
 
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
