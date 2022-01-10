@@ -40,7 +40,7 @@ func (c *AgentFeaturesConfiguration) ProcessSystemSignalsEnabled() bool {
 	return c.ProcessSystemSignals
 }
 
-// VersionCheckerEnabled - True if the agent SDK should check for newer versions of the agent.
+// AgentVersionCheckerEnabled - True if the agent SDK should check for newer versions of the agent.
 // See also central.versionChecker.
 func (c *AgentFeaturesConfiguration) AgentVersionCheckerEnabled() bool {
 	return c.AgentVersionChecker
