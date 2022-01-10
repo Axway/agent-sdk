@@ -207,6 +207,6 @@ type mockHandler struct {
 	err error
 }
 
-func (m *mockHandler) Handle(_ proto.Event_Type, _ *apiv1.ResourceInstance) error {
+func (m *mockHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
 	return m.err
 }
