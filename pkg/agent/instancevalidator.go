@@ -42,24 +42,22 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 
 	log.Info("validating api service instance on dataplane")
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
-	for _, key := range agent.instanceMap.GetKeys() {
-		value, err := agent.instanceMap.Get(key)
+	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
+		serviceInstanceResource, err := agent.cacheManager.GetAPIServiceInstanceByID(key)
 		if err != nil {
 			continue
 		}
-		if serviceInstanceResource, ok := value.(*apiV1.ResourceInstance); ok {
-			if _, valid := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]; !valid {
-				continue // skip service instances without external api id
-			}
-			externalAPIID := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]
-			externalAPIStage := serviceInstanceResource.Attributes[apic.AttrExternalAPIStage]
-			// Check if the consumer instance was published by agent, i.e. following attributes are set
-			// - externalAPIID should not be empty
-			// - externalAPIStage could be empty for dataplanes that do not support it
-			if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-				j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID, externalAPIStage)
-			}
 
+		if _, valid := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]; !valid {
+			continue // skip service instances without external api id
+		}
+		externalAPIID := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]
+		externalAPIStage := serviceInstanceResource.Attributes[apic.AttrExternalAPIStage]
+		// Check if the consumer instance was published by agent, i.e. following attributes are set
+		// - externalAPIID should not be empty
+		// - externalAPIStage could be empty for dataplanes that do not support it
+		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+			j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID, externalAPIStage)
 		}
 	}
 }
@@ -86,10 +84,7 @@ func (j *instanceValidator) deleteServiceInstanceOrService(serviceInstance *apiV
 		err = agent.apicClient.DeleteServiceByAPIID(externalAPIID)
 		// Todo clean up other cached apiserviceinstances related to apiservice
 		if j.isAgentPollMode {
-			err := agent.apiMap.Delete(externalAPIID)
-			if err != nil {
-				agent.apiMap.DeleteBySecondaryKey(externalAPIID)
-			}
+			agent.cacheManager.DeleteAPIService(externalAPIID)
 		}
 	} else {
 		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", serviceInstance.Title)
@@ -105,7 +100,7 @@ func (j *instanceValidator) deleteServiceInstanceOrService(serviceInstance *apiV
 	}
 	if j.isAgentPollMode {
 		// In GRPC mode the delete is done on receiving delete event from serice
-		agent.instanceMap.Delete(serviceInstance.Metadata.ID)
+		agent.cacheManager.DeleteAPIServiceInstance(serviceInstance.Metadata.ID)
 	}
 	log.Debugf(msg, serviceInstance.Title)
 }

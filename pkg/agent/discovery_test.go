@@ -43,10 +43,6 @@ func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	return nil, nil
 }
 
-func (m *mockSvcClient) GetCachesCache() cache.Cache {
-	return nil
-}
-
 func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
 	return nil, nil
 }
@@ -60,10 +56,6 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 }
 
 func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {
-	return
-}
-
-func (m *mockSvcClient) AddCachesCache(cachesCache cache.Cache) {
 	return
 }
 
@@ -142,9 +134,9 @@ var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName
 var oldUpdateCacheForExternalAPI = updateCacheForExternalAPI
 
 func fakeCacheUpdateCalls() {
-	updateCacheForExternalAPIID = func(string) (interface{}, error) { return nil, nil }
-	updateCacheForExternalAPIName = func(string) (interface{}, error) { return nil, nil }
-	updateCacheForExternalAPI = func(map[string]string) (interface{}, error) { return nil, nil }
+	updateCacheForExternalAPIID = func(string) (*v1.ResourceInstance, error) { return nil, nil }
+	updateCacheForExternalAPIName = func(string) (*v1.ResourceInstance, error) { return nil, nil }
+	updateCacheForExternalAPI = func(map[string]string) (*v1.ResourceInstance, error) { return nil, nil }
 }
 
 func restoreCacheUpdateCalls() {
@@ -229,13 +221,13 @@ func TestDiscoveryCache(t *testing.T) {
 
 	serverAPISvcResponse = emptyAPISvc
 	dcj.updateAPICache()
-	assert.Equal(t, 0, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 0, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.False(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	dcj.updateAPICache()
-	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
@@ -250,13 +242,13 @@ func TestDiscoveryCache(t *testing.T) {
 	StartAgentStatusUpdate()
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
-	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 2, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	dcj.updateAPICache()
-	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
 	assert.False(t, IsAPIPublishedByID("2222"))

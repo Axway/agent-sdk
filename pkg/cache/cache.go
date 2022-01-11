@@ -133,6 +133,20 @@ func Load(path string) Cache {
 	return newCache
 }
 
+// LoadFromBuffer - create a new cache object and loads the data from buffer
+func LoadFromBuffer(buffer []byte) Cache {
+	newCache := &itemCache{
+		Items:   make(map[string]*Item),
+		SecKeys: make(map[string]string),
+	}
+	json.Unmarshal(buffer, &newCache)
+
+	newCache.actionChannel = make(chan cacheAction)
+	newCache.replyChannel = make(chan cacheReply)
+	go newCache.handleAction()
+	return newCache
+}
+
 // handleAction - handles all calls to the cache to prevent locking issues
 func (c *itemCache) handleAction() {
 	actionMap := map[action]func(cacheAction) cacheReply{

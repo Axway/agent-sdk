@@ -11,6 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -74,16 +75,16 @@ func (j *ClientStreamJob) Ready() bool {
 }
 
 type streamer struct {
-	handlers      []handler.Handler
-	listener      Listener
-	manager       wm.Manager
-	rc            ResourceClient
-	topicSelfLink string
-	watchCfg      *wm.Config
-	watchOpts     []wm.Option
-	newManager    wm.NewManagerFunc
-	newListener   newListenerFunc
-	centralCfg    config.CentralConfig
+	handlers        []handler.Handler
+	listener        Listener
+	manager         wm.Manager
+	rc              ResourceClient
+	topicSelfLink   string
+	watchCfg        *wm.Config
+	watchOpts       []wm.Option
+	newManager      wm.NewManagerFunc
+	newListener     newListenerFunc
+	sequenceManager *agentSequenceManager
 }
 
 // NewStreamer creates a Streamer
@@ -91,6 +92,7 @@ func NewStreamer(
 	apiClient api.Client,
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
+	cacheManager agentcache.Manager,
 	handlers ...handler.Handler,
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
@@ -123,23 +125,23 @@ func NewStreamer(
 		TenantID:    tenant,
 		TokenGetter: getToken.GetToken,
 	}
-
+	sequenceManager := newAgentSequenceManager(cacheManager, wt.Name)
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
-		wm.WithSyncEvents(GetAgentSequenceManager(wt.Name)),
+		wm.WithSyncEvents(sequenceManager),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
 	}
 
 	return &streamer{
-		centralCfg:    cfg,
-		handlers:      handlers,
-		rc:            rc,
-		topicSelfLink: wt.Metadata.SelfLink,
-		watchCfg:      watchCfg,
-		watchOpts:     watchOpts,
-		newManager:    wm.New,
-		newListener:   NewEventListener,
+		handlers:        handlers,
+		rc:              rc,
+		topicSelfLink:   wt.Metadata.SelfLink,
+		watchCfg:        watchCfg,
+		watchOpts:       watchOpts,
+		newManager:      wm.New,
+		newListener:     NewEventListener,
+		sequenceManager: sequenceManager,
 	}, nil
 }
 
@@ -147,15 +149,10 @@ func NewStreamer(
 func (c *streamer) Start() error {
 	events, eventErrorCh := make(chan *proto.Event), make(chan error)
 
-	wt, err := getWatchTopic(c.centralCfg, c.rc)
-	if err != nil {
-		return err
-	}
-
 	c.listener = c.newListener(
 		events,
 		c.rc,
-		wt,
+		c.sequenceManager,
 		c.handlers...,
 	)
 

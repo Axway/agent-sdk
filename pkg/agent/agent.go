@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
@@ -54,10 +55,7 @@ type agentData struct {
 	cfg            config.CentralConfig
 	tokenRequester auth.PlatformTokenGetter
 
-	apiMap                     cache.Cache
-	instanceMap                cache.Cache
-	categoryMap                cache.Cache
-	cacheMap                   cache.Cache
+	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
 	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
@@ -72,49 +70,6 @@ var agent = agentData{
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
-	// Only create the api map cache if it does not already exist
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
-	}
-	if agent.instanceMap == nil {
-		agent.instanceMap = cache.New()
-	}
-	if agent.categoryMap == nil {
-		agent.categoryMap = cache.New()
-	}
-	if agent.cacheMap == nil {
-		agent.cacheMap = cache.New()
-
-		err := agent.cacheMap.Load("offlineCache" + ".cache")
-		if err != nil {
-			agent.cacheMap.SetWithSecondaryKey("cachesCache", "apiServiceInstancesKey", &agent.apiMap)
-			agent.cacheMap.SetWithSecondaryKey("cachesCache", "apiServicesKey", &agent.instanceMap)
-			agent.cacheMap.SetWithSecondaryKey("cachesCache", "categoriesKey", &agent.categoryMap)
-
-			if util.IsNotTest() {
-				agent.cacheMap.Save("offlineCache" + ".cache")
-			}
-		}
-		//
-		//
-		// else {
-		// 	fmt.Println("TODO: load caches into offlineCache")
-
-		// 	apiCache, err := agent.cacheMap.GetBySecondaryKey("apiServiceInstancesKey")
-		// 	if err != nil {
-		// 		agent.apiMap = apiCache
-		// 	}
-		// 	fmt.Println("err: ", err)
-		// 	fmt.Println("apiCache: ", apiCache)
-
-		// 	instanceCache, err := agent.cacheMap.GetBySecondaryKey("apiServicesKey")
-		// 	fmt.Println("err: ", err)
-		// 	fmt.Println("instanceCache: ", instanceCache)
-		// 	categoriesCache, err := agent.cacheMap.GetBySecondaryKey("categoriesKey")
-		// 	fmt.Println("err: ", err)
-		// 	fmt.Println("categoriesCache: ", categoriesCache)
-	}
-
 	err := checkRunningAgent()
 	if err != nil {
 		return err
@@ -124,6 +79,11 @@ func Initialize(centralCfg config.CentralConfig) error {
 	err = config.ValidateConfig(centralCfg)
 	if err != nil {
 		return err
+	}
+
+	// Only create the api map cache if it does not already exist
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg)
 	}
 
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
@@ -139,8 +99,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 	// Init apic client when the agent starts, and on config change.
 	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-	agent.apicClient.AddCategoryCache(agent.categoryMap)
-	agent.apicClient.AddCachesCache(agent.cacheMap)
+	agent.apicClient.AddCategoryCache(agent.cacheManager.GetCategoryCache())
 
 	if util.IsNotTest() {
 		err = initEnvResources(centralCfg, agent.apicClient)
@@ -219,7 +178,7 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.apiMap = cache.New()
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
 	agent.apicClient = apicClient
 }
 
@@ -266,13 +225,15 @@ func startAPIServiceCache() {
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
-		err := newDiscoveryCacheJob.Execute()
-		if err != nil {
-			log.Error(err)
-			return
+		if !agent.cacheManager.HasLoadedPersistedCache() {
+			err := newDiscoveryCacheJob.Execute()
+			if err != nil {
+				log.Error(err)
+				return
+			}
 		}
 
-		err = startStreamMode(agent)
+		err := startStreamMode(agent)
 		if err != nil {
 			log.Error(err)
 			return
@@ -334,18 +295,10 @@ func GetCentralConfig() config.CentralConfig {
 
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
 	}
-	return agent.apiMap
-}
-
-// GetCachesCache - Returns the cache of caches
-func GetCachesCache() cache.Cache {
-	if agent.cacheMap == nil {
-		agent.cacheMap = cache.New()
-	}
-	return agent.cacheMap
+	return agent.cacheManager.GetAPIServiceCache()
 }
 
 // GetAgentResource - Returns Agent resource
@@ -400,10 +353,9 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 
 func startStreamMode(agent agentData) error {
 	handlers := []handler.Handler{
-		handler.NewAPISvcHandler(agent.apiMap),
-		handler.NewInstanceHandler(agent.instanceMap),
-		handler.NewCategoryHandler(agent.categoryMap),
-		handler.NewCacheHandler(agent.cacheMap),
+		handler.NewAPISvcHandler(agent.cacheManager),
+		handler.NewInstanceHandler(agent.cacheManager),
+		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		agent.proxyResourceHandler,
 	}
@@ -412,6 +364,7 @@ func startStreamMode(agent agentData) error {
 		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 		agent.cfg,
 		agent.tokenRequester,
+		agent.cacheManager,
 		handlers...,
 	)
 

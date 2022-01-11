@@ -8,7 +8,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -20,27 +19,26 @@ type Listener interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
-	cancel      context.CancelFunc
-	ctx         context.Context
-	getResource ResourceClient
-	handlers    []handler.Handler
-	isRunning   bool
-	source      chan *proto.Event
-	watchTopic  *v1alpha1.WatchTopic
+	cancel          context.CancelFunc
+	ctx             context.Context
+	getResource     ResourceClient
+	handlers        []handler.Handler
+	source          chan *proto.Event
+	sequenceManager *agentSequenceManager
 }
 
-type newListenerFunc func(source chan *proto.Event, ri ResourceClient, wt *v1alpha1.WatchTopic, cbs ...handler.Handler) *EventListener
+type newListenerFunc func(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri ResourceClient, wt *v1alpha1.WatchTopic, cbs ...handler.Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
-		cancel:      cancel,
-		ctx:         ctx,
-		getResource: ri,
-		handlers:    cbs,
-		source:      source,
-		watchTopic:  wt,
+		cancel:          cancel,
+		ctx:             ctx,
+		getResource:     ri,
+		handlers:        cbs,
+		source:          source,
+		sequenceManager: sequenceManager,
 	}
 }
 
@@ -98,11 +96,9 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
 
-	sequenceID := event.Metadata.SequenceID
-
 	log.Debugf(
 		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
-		sequenceID,
+		event.Metadata.SequenceID,
 		proto.Event_Type_name[int32(event.Type)],
 		event.Payload.Kind,
 		event.Payload.Name,
@@ -120,12 +116,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	}
 
 	em.handleResource(event.Type, event.Metadata, ri)
-
-	err = em.saveSequenceID(sequenceID)
-	if err != nil {
-		return err
-	}
-
+	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
 
@@ -165,18 +156,4 @@ func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.Resource
 		}
 	}
 	return ri
-}
-
-// saveSequenceID saves the event Metadata SequenceID to a file.
-func (em *EventListener) saveSequenceID(sid int64) error {
-	log.Debugf("Seqeunce Id: %d", sid)
-
-	watchTopicName := em.watchTopic.GetName()
-	sm := GetAgentSequenceManager(watchTopicName)
-
-	err := sm.GetCache().Set(SequenceIDKey, sid)
-	if err != nil {
-		return err
-	}
-	return sm.GetCache().Save(watchTopicName + SequenceFileExtension)
 }
