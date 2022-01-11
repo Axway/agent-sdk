@@ -99,7 +99,14 @@ func (c *ServiceClient) AddCache(categoryCache, teamCache cache.Cache) {
 
 // getTeamFromCache -
 func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
+	if c.teamCache == nil {
+		return "", true
+	}
 	id, found := c.teamCache.Get(teamName)
+	if teamName == "" {
+		// get the default team
+		id, found = c.teamCache.GetBySecondaryKey(DefaultTeamKey)
+	}
 	if found != nil {
 		return "", false
 	}
@@ -323,18 +330,9 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 	}
 
-	// TODO update this to get team id from cache
-	if c.cfg.GetTeamID() == "" {
-		// Validate if team exists
-		team, err := c.getCentralTeam(c.cfg.GetTeamName())
-		if err != nil {
-			return err
-		}
-		// Set the team Id
-		c.cfg.SetTeamID(team.ID)
+	if _, found := c.getTeamFromCache(c.cfg.GetTeamName()); !found {
+		return ErrTeamNotFound.FormatError(c.cfg.GetTeamName())
 	}
-
-	// reset the cache of team names
 	return nil
 }
 
@@ -441,41 +439,6 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 	log.Tracef("Platform user %s", userName)
 
 	return userName, nil
-}
-
-// getCentralTeam - returns the team based on team name
-func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
-	// Query for the default, if no teamName is given
-	queryParams := map[string]string{}
-
-	if teamName != "" {
-		queryParams = map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", teamName),
-		}
-	}
-
-	platformTeams, err := c.GetTeam(queryParams)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(platformTeams) == 0 {
-		return nil, ErrTeamNotFound.FormatError(teamName)
-	}
-
-	team := platformTeams[0]
-	if teamName == "" {
-		// Loop through to find the default team
-		for i, platformTeam := range platformTeams {
-			if platformTeam.Default {
-				// Found the default, set as the team var and break
-				team = platformTeams[i]
-				break
-			}
-		}
-	}
-
-	return &team, nil
 }
 
 // GetTeam - returns the team ID based on filter

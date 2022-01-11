@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 )
-
-const teamMapKey = "TeamMap"
 
 type centralTeamsCache struct {
 	jobs.Job
@@ -33,6 +32,14 @@ func (j *centralTeamsCache) Execute() error {
 
 	for _, team := range platformTeams {
 		err = agent.teamMap.Set(team.Name, team.ID)
+
+		if team.Default {
+			if _, err := agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey); err != nil {
+				// remove the secondary key from an existing cache item before adding it to a new one
+				agent.teamMap.DeleteSecondaryKey(apic.DefaultTeamKey)
+			}
+			agent.teamMap.SetSecondaryKey(team.Name, apic.DefaultTeamKey)
+		}
 		if err != nil {
 			return err
 		}
@@ -46,13 +53,4 @@ func registerTeamMapCacheJob() {
 	job := &centralTeamsCache{}
 
 	jobs.RegisterIntervalJobWithName(job, time.Hour, "Team Cache")
-}
-
-// GetTeamFromCache -
-func GetTeamFromCache(teamName string) (string, bool) {
-	id, found := agent.teamMap.Get(teamName)
-	if found != nil {
-		return "", false
-	}
-	return id.(string), true
 }

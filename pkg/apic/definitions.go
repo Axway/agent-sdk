@@ -31,6 +31,8 @@ const (
 	QueryKey  = "query"
 
 	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
+
+	DefaultTeamKey = "DefaultTeam"
 )
 
 // Constants for attributes
