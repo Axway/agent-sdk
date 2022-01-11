@@ -84,7 +84,7 @@ type SummaryBuilder interface {
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
-	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
+
 	Build() (*LogEvent, error)
 }
 
@@ -142,8 +142,6 @@ func NewTransactionSummaryBuilder() SummaryBuilder {
 		txSummaryBuilder.logEvent.EnvironmentName = cfg.GetEnvironmentName()
 		txSummaryBuilder.logEvent.EnvironmentID = cfg.GetEnvironmentID()
 		txSummaryBuilder.logEvent.APICDeployment = cfg.GetAPICDeployment()
-		txSummaryBuilder.logEvent.TransactionSummary.IsInMetricEvent =
-			cfg.GetUsageReportingConfig().CanPublishMetric()
 	}
 	return txSummaryBuilder
 }
@@ -513,16 +511,6 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 		Path:   redactedPath,
 		Host:   host,
 	}
-	return b
-}
-
-func (b *transactionSummaryBuilder) SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder {
-	if b.err != nil {
-		return b
-	}
-
-	b.logEvent.TransactionSummary.IsInMetricEvent = isInMetricEvent
-
 	return b
 }
 

@@ -20,7 +20,7 @@ type Sampling struct {
 //DefaultConfig - returns a default sampling config where all transactions are sent
 func DefaultConfig() Sampling {
 	return Sampling{
-		Percentage:      defaultSamplingRate,
+		Percentage:      countMax,
 		PerAPI:          true,
 		ReportAllErrors: true,
 	}
