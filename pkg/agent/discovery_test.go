@@ -43,6 +43,10 @@ func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	return nil, nil
 }
 
+func (m *mockSvcClient) GetCachesCache() cache.Cache {
+	return nil
+}
+
 func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
 	return nil, nil
 }
@@ -56,6 +60,10 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 }
 
 func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {
+	return
+}
+
+func (m *mockSvcClient) AddCachesCache(cachesCache cache.Cache) {
 	return
 }
 

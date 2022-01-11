@@ -57,6 +57,7 @@ type agentData struct {
 	apiMap                     cache.Cache
 	instanceMap                cache.Cache
 	categoryMap                cache.Cache
+	cacheMap                   cache.Cache
 	apiValidator               APIValidator
 	deleteServiceValidator     DeleteServiceValidator
 	configChangeHandler        ConfigChangeHandler
@@ -80,6 +81,38 @@ func Initialize(centralCfg config.CentralConfig) error {
 	}
 	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
+	}
+	if agent.cacheMap == nil {
+		agent.cacheMap = cache.New()
+
+		err := agent.cacheMap.Load("offlineCache" + ".cache")
+		if err != nil {
+			agent.cacheMap.SetWithSecondaryKey("cachesCache", "apiServiceInstancesKey", &agent.apiMap)
+			agent.cacheMap.SetWithSecondaryKey("cachesCache", "apiServicesKey", &agent.instanceMap)
+			agent.cacheMap.SetWithSecondaryKey("cachesCache", "categoriesKey", &agent.categoryMap)
+
+			if util.IsNotTest() {
+				agent.cacheMap.Save("offlineCache" + ".cache")
+			}
+		}
+		//
+		//
+		// else {
+		// 	fmt.Println("TODO: load caches into offlineCache")
+
+		// 	apiCache, err := agent.cacheMap.GetBySecondaryKey("apiServiceInstancesKey")
+		// 	if err != nil {
+		// 		agent.apiMap = apiCache
+		// 	}
+		// 	fmt.Println("err: ", err)
+		// 	fmt.Println("apiCache: ", apiCache)
+
+		// 	instanceCache, err := agent.cacheMap.GetBySecondaryKey("apiServicesKey")
+		// 	fmt.Println("err: ", err)
+		// 	fmt.Println("instanceCache: ", instanceCache)
+		// 	categoriesCache, err := agent.cacheMap.GetBySecondaryKey("categoriesKey")
+		// 	fmt.Println("err: ", err)
+		// 	fmt.Println("categoriesCache: ", categoriesCache)
 	}
 
 	err := checkRunningAgent()
@@ -107,6 +140,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 	// Init apic client when the agent starts, and on config change.
 	agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
 	agent.apicClient.AddCategoryCache(agent.categoryMap)
+	agent.apicClient.AddCachesCache(agent.cacheMap)
 
 	if util.IsNotTest() {
 		err = initEnvResources(centralCfg, agent.apicClient)
@@ -306,6 +340,14 @@ func GetAPICache() cache.Cache {
 	return agent.apiMap
 }
 
+// GetCachesCache - Returns the cache of caches
+func GetCachesCache() cache.Cache {
+	if agent.cacheMap == nil {
+		agent.cacheMap = cache.New()
+	}
+	return agent.cacheMap
+}
+
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
 	if agent.agentResourceManager == nil {
@@ -361,6 +403,7 @@ func startStreamMode(agent agentData) error {
 		handler.NewAPISvcHandler(agent.apiMap),
 		handler.NewInstanceHandler(agent.instanceMap),
 		handler.NewCategoryHandler(agent.categoryMap),
+		handler.NewCacheHandler(agent.cacheMap),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		agent.proxyResourceHandler,
 	}

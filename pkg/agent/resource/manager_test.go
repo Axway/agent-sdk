@@ -48,11 +48,17 @@ func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 	return nil, nil
 }
 
+func (m *mockSvcClient) GetCachesCache() cache.Cache {
+	return nil
+}
+
 func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, error) {
 	return nil, nil
 }
 
 func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {}
+
+func (m *mockSvcClient) AddCachesCache(cachesCache cache.Cache) {}
 
 func (m *mockSvcClient) GetOrCreateCategory(category string) string { return "" }
 

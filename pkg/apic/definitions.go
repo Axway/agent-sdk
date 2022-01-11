@@ -151,6 +151,7 @@ type ServiceClient struct {
 	DefaultSubscriptionSchema          SubscriptionSchema
 	subscriptionSchemaCache            cache.Cache
 	categoryCache                      cache.Cache
+	cachesCache                        cache.Cache
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex

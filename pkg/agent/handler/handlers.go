@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -184,5 +185,21 @@ func (h *StreamWatchProxyHandler) Handle(action proto.Event_Type, eventMetadata 
 			}
 		}
 	}
+}
+
+type cacheHandler struct {
+	caches cache.Cache
+}
+
+// NewCacheHandler creates a Handler for API Service Instances.
+func NewCacheHandler(cache cache.Cache) Handler {
+	return &cacheHandler{
+		caches: cache,
+	}
+}
+
+func (h *cacheHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
+	//TODO: import cycle
+	// apic.StartCacheJob(h.caches, action, resource)
 	return nil
 }

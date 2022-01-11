@@ -6,7 +6,10 @@ import (
 )
 
 // SequenceIDKey - the cache key name for watch sequence IDs
-const SequenceIDKey = "watchSequenceID"
+const (
+	SequenceIDKey         = "watchSequenceID"
+	SequenceFileExtension = ".sequence"
+)
 
 // AgentSequenceManager - represents the sequence manager for an agent
 type AgentSequenceManager struct {
@@ -28,13 +31,13 @@ func (s *AgentSequenceManager) GetSequence() int64 {
 
 //GetAgentSequenceManager -
 func GetAgentSequenceManager(watchTopicName string) *AgentSequenceManager {
-	seqCache := cache.New()
+	seqCache := cache.New() //TODO: new each mgr?
 	if watchTopicName != "" {
-		err := seqCache.Load(watchTopicName + ".sequence")
+		err := seqCache.Load(watchTopicName + SequenceFileExtension)
 		if err != nil {
 			seqCache.Set(SequenceIDKey, int64(0))
 			if util.IsNotTest() {
-				seqCache.Save(watchTopicName + ".sequence")
+				seqCache.Save(watchTopicName + SequenceFileExtension)
 			}
 		}
 	}

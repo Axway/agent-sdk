@@ -69,12 +69,14 @@ type Client interface {
 	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
 	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error)
 	GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
+	GetCachesCache() cache.Cache
 	GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
 	GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error)
 	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
 	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
 	CreateCategory(categoryName string) (*catalog.Category, error)
 	AddCategoryCache(categoryCache cache.Cache)
+	AddCachesCache(cacheCache cache.Cache)
 	GetOrCreateCategory(category string) string
 	GetEnvironment() (*v1alpha1.Environment, error)
 	GetCentralTeamByName(teamName string) (*PlatformTeam, error)
@@ -93,6 +95,16 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 // AddCategoryCache - add the pointer to the category cache that hte agent package will update
 func (c *ServiceClient) AddCategoryCache(categoryCache cache.Cache) {
 	c.categoryCache = categoryCache
+}
+
+// AddCachesCache - add the pointer to the caches cache that the agent package will update
+func (c *ServiceClient) AddCachesCache(cachesCache cache.Cache) {
+	c.cachesCache = cachesCache
+}
+
+// GetCaches - gets the caches from the cache
+func (c *ServiceClient) GetCaches() cache.Cache {
+	return c.cachesCache
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
@@ -511,4 +523,9 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
+}
+
+// GetCachesCache - Returns the cache of caches
+func (c *ServiceClient) GetCachesCache() cache.Cache {
+	return c.cachesCache
 }

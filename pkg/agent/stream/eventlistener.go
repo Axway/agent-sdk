@@ -98,12 +98,11 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	var ri *apiv1.ResourceInstance
 	var err error
 
-	seqID := event.Metadata.SequenceID
-	em.saveSequenceID(seqID)
+	sequenceID := event.Metadata.SequenceID
 
 	log.Debugf(
 		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
-		event.Metadata.SequenceID,
+		sequenceID,
 		proto.Event_Type_name[int32(event.Type)],
 		event.Payload.Kind,
 		event.Payload.Name,
@@ -121,6 +120,11 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	}
 
 	em.handleResource(event.Type, event.Metadata, ri)
+
+	err = em.saveSequenceID(sequenceID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -164,12 +168,15 @@ func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.Resource
 }
 
 // saveSequenceID saves the event Metadata SequenceID to a file.
-func (em *EventListener) saveSequenceID(sid int64) {
-	log.Debugf("Seq Id: %d", sid)
+func (em *EventListener) saveSequenceID(sid int64) error {
+	log.Debugf("Seqeunce Id: %d", sid)
 
 	watchTopicName := em.watchTopic.GetName()
 	sm := GetAgentSequenceManager(watchTopicName)
 
-	_ = sm.GetCache().Set("watchSequenceID", sid)
-	_ = sm.GetCache().Save(watchTopicName + ".sequence")
+	err := sm.GetCache().Set(SequenceIDKey, sid)
+	if err != nil {
+		return err
+	}
+	return sm.GetCache().Save(watchTopicName + SequenceFileExtension)
 }
