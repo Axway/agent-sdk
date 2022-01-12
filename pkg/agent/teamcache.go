@@ -10,6 +10,7 @@ import (
 
 type centralTeamsCache struct {
 	jobs.Job
+	teamChannel chan string
 }
 
 func (j *centralTeamsCache) Ready() bool {
@@ -31,7 +32,10 @@ func (j *centralTeamsCache) Execute() error {
 	}
 
 	for _, team := range platformTeams {
-		err = agent.teamMap.Set(team.Name, team.ID)
+		if id, err := agent.teamMap.Get(team.Name); err != nil || id != team.ID {
+			err = agent.teamMap.Set(team.Name, team.ID)
+			j.teamChannel <- team.ID
+		}
 
 		if team.Default {
 			if _, err := agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey); err != nil {
@@ -49,8 +53,10 @@ func (j *centralTeamsCache) Execute() error {
 }
 
 // registerTeamMapCacheJob -
-func registerTeamMapCacheJob() {
-	job := &centralTeamsCache{}
+func registerTeamMapCacheJob(teamChannel chan string) {
+	job := &centralTeamsCache{
+		teamChannel: teamChannel,
+	}
 
 	jobs.RegisterIntervalJobWithName(job, time.Hour, "Team Cache")
 }

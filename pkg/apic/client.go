@@ -77,6 +77,9 @@ type Client interface {
 	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
 	GetTeam(queryParams map[string]string) ([]PlatformTeam, error)
+	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
+	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 }
 
 // New -
@@ -330,9 +333,16 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 	}
 
-	if _, found := c.getTeamFromCache(c.cfg.GetTeamName()); !found {
-		return ErrTeamNotFound.FormatError(c.cfg.GetTeamName())
+	if c.cfg.GetTeamID() == "" {
+		// Validate if team exists
+		team, err := c.getCentralTeam(c.cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+		// Set the team Id
+		c.cfg.SetTeamID(team.ID)
 	}
+
 	return nil
 }
 
@@ -441,6 +451,41 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 	return userName, nil
 }
 
+// getCentralTeam - returns the team based on team name
+func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+	// Query for the default, if no teamName is given
+	queryParams := map[string]string{}
+
+	if teamName != "" {
+		queryParams = map[string]string{
+			"query": fmt.Sprintf("name==\"%s\"", teamName),
+		}
+	}
+
+	platformTeams, err := c.GetTeam(queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(platformTeams) == 0 {
+		return nil, ErrTeamNotFound.FormatError(teamName)
+	}
+
+	team := platformTeams[0]
+	if teamName == "" {
+		// Loop through to find the default team
+		for i, platformTeam := range platformTeams {
+			if platformTeam.Default {
+				// Found the default, set as the team var and break
+				team = platformTeams[i]
+				break
+			}
+		}
+	}
+
+	return &team, nil
+}
+
 // GetTeam - returns the team ID based on filter
 func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
 	headers, err := c.createHeader()
@@ -464,6 +509,90 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]Platform
 	}
 
 	return platformTeams, nil
+}
+
+//GetAccessControlList -
+func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  http.MethodGet,
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), aclName),
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var acl *v1alpha1.AccessControlList
+	err = json.Unmarshal(response.Body, &acl)
+	if err != nil {
+		return nil, err
+	}
+
+	return acl, err
+}
+
+//UpdateAccessControlList -
+func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return c.deployAccessControl(acl, http.MethodPut)
+}
+
+//CreateAccessControlList -
+func (c *ServiceClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return c.deployAccessControl(acl, http.MethodPost)
+}
+
+func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, method string) (*v1alpha1.AccessControlList, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := json.Marshal(*acl)
+	if err != nil {
+		return nil, err
+	}
+
+	url := c.cfg.GetEnvironmentACLsURL()
+	if method == http.MethodPut {
+		url = fmt.Sprintf("%s/%s", url, acl.Name)
+	}
+
+	request := coreapi.Request{
+		Method:  method,
+		URL:     url,
+		Headers: headers,
+		Body:    data,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var updatedACL *v1alpha1.AccessControlList
+	err = json.Unmarshal(response.Body, updatedACL)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedACL, err
 }
 
 // ExecuteAPI - execute the api

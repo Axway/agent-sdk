@@ -124,6 +124,18 @@ func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformT
 	return nil, nil
 }
 
+func (c *mockSvcClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (c *mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (c *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
 var oldUpdateCacheForExternalAPIID = updateCacheForExternalAPIID
 var oldUpdateCacheForExternalAPIName = updateCacheForExternalAPIName
 var oldUpdateCacheForExternalAPI = updateCacheForExternalAPI

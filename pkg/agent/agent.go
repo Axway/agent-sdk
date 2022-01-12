@@ -140,7 +140,9 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if util.IsNotTest() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			registerTeamMapCacheJob()
+			teamChannel := make(chan string)
+			registerTeamMapCacheJob(teamChannel)
+			registerAccessControlListHandler(teamChannel)
 		}
 	}
 	agent.isInitialized = true

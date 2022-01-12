@@ -9,10 +9,9 @@
 
 package v1alpha1
 
-// DocumentSpec struct for DocumentSpec
-type DocumentSpec struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-	// Title for the article.
-	Title string `json:"title"`
+// AmplifyOAuth2AuthRuleSpec struct for AmplifyOAuth2AuthRuleSpec
+type AmplifyOAuth2AuthRuleSpec struct {
+	AuthorizationUrl string `json:"authorizationUrl"`
+	TokenUrl         string `json:"tokenUrl"`
+	RefreshUrl       string `json:"refreshUrl,omitempty"`
 }

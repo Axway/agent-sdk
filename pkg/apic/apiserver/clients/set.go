@@ -45,6 +45,7 @@ type Set struct {
 	VirtualAPIReleaseManagementV1alpha1              *management_v1alpha1.VirtualAPIReleaseClient
 	CorsRuleManagementV1alpha1                       *management_v1alpha1.UnscopedCorsRuleClient
 	AmplifyJWTAuthRuleManagementV1alpha1             *management_v1alpha1.UnscopedAmplifyJWTAuthRuleClient
+	AmplifyOAuth2AuthRuleManagementV1alpha1          *management_v1alpha1.UnscopedAmplifyOAuth2AuthRuleClient
 	APIKeyAuthRuleManagementV1alpha1                 *management_v1alpha1.UnscopedAPIKeyAuthRuleClient
 	VirtualServiceManagementV1alpha1                 *management_v1alpha1.UnscopedVirtualServiceClient
 	OAS3DocumentManagementV1alpha1                   *management_v1alpha1.UnscopedOAS3DocumentClient
@@ -205,6 +206,10 @@ func New(b cAPIV1.Base) *Set {
 	s.AmplifyJWTAuthRuleManagementV1alpha1, err = management_v1alpha1.NewAmplifyJWTAuthRuleClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyJWTAuthRule: %s", err))
+	}
+	s.AmplifyOAuth2AuthRuleManagementV1alpha1, err = management_v1alpha1.NewAmplifyOAuth2AuthRuleClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyOAuth2AuthRule: %s", err))
 	}
 	s.APIKeyAuthRuleManagementV1alpha1, err = management_v1alpha1.NewAPIKeyAuthRuleClient(b)
 	if err != nil {
