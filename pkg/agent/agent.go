@@ -140,12 +140,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if util.IsNotTest() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			var teamChannel chan string
-			if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-				teamChannel = make(chan string)
-				registerAccessControlListHandler(teamChannel)
-			}
-			registerTeamMapCacheJob(teamChannel)
+			startTeamACLCache()
 		}
 	}
 	agent.isInitialized = true
@@ -202,6 +197,19 @@ func startAPIServiceCache() {
 		}
 		log.Tracef("registered API cache update all job: %s", id)
 	}()
+}
+
+func startTeamACLCache() {
+	// register the team cache and acl update jobs
+	var teamChannel chan string
+
+	// Only discovery agents need to start the ACL handler
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		teamChannel = make(chan string)
+		registerAccessControlListHandler(teamChannel)
+	}
+
+	registerTeamMapCacheJob(teamChannel)
 }
 
 func isRunningInDockerContainer() bool {
