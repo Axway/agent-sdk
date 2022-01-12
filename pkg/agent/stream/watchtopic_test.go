@@ -172,6 +172,19 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "should create a watch topic for a governance agent if it does not exist",
+			agentType: config.GovernanceAgent,
+			hasErr:    false,
+			rc: &fakeRI{
+				getErr: fmt.Errorf("not found"),
+				ri: &apiv1.ResourceInstance{
+					ResourceMeta: apiv1.ResourceMeta{
+						Name: "wt-name",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

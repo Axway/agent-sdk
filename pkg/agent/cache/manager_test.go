@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"os"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -175,4 +176,77 @@ func TestCategoryCache(t *testing.T) {
 
 	err = m.DeleteCategory("c1")
 	assert.NotNil(t, err)
+}
+
+// add sequence
+// get sequence
+// delete category
+func TestSequenceCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{})
+	assert.NotNil(t, m)
+
+	m.AddSequence("watch1", 1)
+	assert.Equal(t, int64(1), m.GetSequence("watch1"))
+	assert.Equal(t, int64(0), m.GetSequence("invalidwatch"))
+	m.AddSequence("watch1", 2)
+	assert.Equal(t, int64(2), m.GetSequence("watch1"))
+}
+
+// create manager
+// add items to cache
+// save cache
+// create manager intialized with persisted cache
+// vallidate all original cached items exists
+func TestCachePersistenc(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}})
+	assert.NotNil(t, m)
+
+	api1 := createAPIService("id1", "api1", "")
+	m.AddAPIService(api1)
+
+	instance1 := createAPIServiceInstance("id1")
+	m.AddAPIServiceInstance(instance1)
+
+	category1 := createCategory("c1", "category 1")
+	m.AddCategory(category1)
+
+	m.AddSequence("watch1", 1)
+
+	defer func() {
+		// Remove file if it exists
+		_, err := os.Stat("./data")
+		if !os.IsExist(err) {
+			os.RemoveAll("./data")
+		}
+	}()
+
+	m.SaveCache()
+
+	m2 := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}})
+
+	persistedAPI := m2.GetAPIServiceWithAPIID("id1")
+	assert.ElementsMatch(t, m.GetAPIServiceKeys(), m2.GetAPIServiceKeys())
+	assertResourceInstance(t, api1, persistedAPI)
+
+	persistedInstance, err := m2.GetAPIServiceInstanceByID("id1")
+	assert.Nil(t, err)
+	assert.ElementsMatch(t, m.GetAPIServiceInstanceKeys(), m2.GetAPIServiceInstanceKeys())
+	assertResourceInstance(t, instance1, persistedInstance)
+
+	persistedCategory := m2.GetCategory("c1")
+	assert.ElementsMatch(t, m.GetCategoryKeys(), m2.GetCategoryKeys())
+	assertResourceInstance(t, category1, persistedCategory)
+
+	persistedSeq := m2.GetSequence("watch1")
+	assert.Equal(t, int64(1), persistedSeq)
+}
+
+func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual *v1.ResourceInstance) {
+	assert.Equal(t, expected.Name, actual.Name)
+	assert.Equal(t, expected.Title, actual.Title)
+	assert.Equal(t, expected.Group, actual.Group)
+	assert.Equal(t, expected.Kind, actual.Kind)
+	assert.Equal(t, expected.Metadata.ID, actual.Metadata.ID)
+	assert.Equal(t, expected.Attributes, actual.Attributes)
+	assert.Equal(t, expected.Spec, actual.Spec)
 }

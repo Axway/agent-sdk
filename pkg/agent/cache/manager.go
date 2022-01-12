@@ -3,7 +3,6 @@ package cache
 import (
 	"encoding/json"
 	"sync"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -14,11 +13,16 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+const (
+	defaultCacheStoragePath = "./data/cache"
+)
+
 // Manager - interface to manage agent resource
 type Manager interface {
 
 	// Cache management related methods
 	HasLoadedPersistedCache() bool
+	SaveCache()
 
 	//API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) string
@@ -59,16 +63,18 @@ type cacheManager struct {
 	persistedCache          cache.Cache
 	cacheFilename           string
 	hasLoadedPersistedCache bool
+	isCacheUpdated          bool
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig) Manager {
 	// todo - make path configurable
 	m := &cacheManager{
-		apiMap:        cache.New(),
-		instanceMap:   cache.New(),
-		categoryMap:   cache.New(),
-		sequenceCache: cache.New(),
+		apiMap:         cache.New(),
+		instanceMap:    cache.New(),
+		categoryMap:    cache.New(),
+		sequenceCache:  cache.New(),
+		isCacheUpdated: false,
 	}
 
 	if cfg.IsUsingGRPC() {
@@ -89,6 +95,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		c.categoryMap = c.loadPersistedResourceInstanceCache(cacheMap, "categories")
 		c.sequenceCache = c.loadPersistedCache(cacheMap, "watchSequence")
 		c.hasLoadedPersistedCache = true
+		c.isCacheUpdated = false
 	}
 
 	cacheMap.Set("apiServices", c.apiMap)
@@ -97,16 +104,20 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	cacheMap.Set("watchSequence", c.sequenceCache)
 	c.persistedCache = cacheMap
 	if util.IsNotTest() {
-		// todo - cache persistence interval
-		jobs.RegisterIntervalJobWithName(c, 60*time.Second, "Agent cache persistence")
+		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
 	}
 }
 
 func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
-	if cfg.GetAgentName() != "" {
-		return cfg.GetAgentName() + ".cache"
+	cacheStoragePath := cfg.GetCacheStoragePath()
+	if cacheStoragePath == "" {
+		cacheStoragePath = defaultCacheStoragePath
 	}
-	return cfg.GetEnvironmentName() + ".cache"
+	util.CreateDirIfNotExist(cacheStoragePath)
+	if cfg.GetAgentName() != "" {
+		return cacheStoragePath + "/" + cfg.GetAgentName() + ".cache"
+	}
+	return cacheStoragePath + "/" + cfg.GetEnvironmentName() + ".cache"
 }
 
 func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, cacheKey string) cache.Cache {
@@ -131,12 +142,8 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 	return riCache
 }
 
-func (c *cacheManager) saveCache() {
-	if util.IsNotTest() && c.persistedCache != nil {
-		c.cacheLock.Lock()
-		defer c.cacheLock.Unlock()
-		c.persistedCache.Save(c.cacheFilename)
-	}
+func (c *cacheManager) setCacheUpdated(updated bool) {
+	c.isCacheUpdated = updated
 }
 
 // Cache persistence job
@@ -152,10 +159,10 @@ func (c *cacheManager) Status() error {
 
 // Execute - persists the cache to file
 func (c *cacheManager) Execute() error {
-
-	log.Trace("executing cache persistence job")
-
-	c.saveCache()
+	if util.IsNotTest() && c.isCacheUpdated {
+		log.Trace("executing cache persistence job")
+		c.SaveCache()
+	}
 	return nil
 }
 
@@ -165,12 +172,21 @@ func (c *cacheManager) HasLoadedPersistedCache() bool {
 	return c.hasLoadedPersistedCache
 }
 
+func (c *cacheManager) SaveCache() {
+	if c.persistedCache != nil {
+		c.cacheLock.Lock()
+		defer c.cacheLock.Unlock()
+		c.persistedCache.Save(c.cacheFilename)
+		c.setCacheUpdated(false)
+	}
+}
+
 // API service cache management
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
-	defer c.saveCache()
 	externalAPIID, ok := apiService.Attributes[apic.AttrExternalAPIID]
 	if ok {
+		defer c.setCacheUpdated(true)
 		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
 		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
@@ -240,6 +256,8 @@ func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstanc
 
 // DeleteAPIService - remove APIService resource from cache based on externalAPIID or externalAPIPrimaryKey
 func (c *cacheManager) DeleteAPIService(key string) error {
+	defer c.setCacheUpdated(true)
+
 	err := c.apiMap.Delete(key)
 	if err != nil {
 		err = c.apiMap.DeleteBySecondaryKey(key)
@@ -250,7 +268,8 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 // API service instance management
 // AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
-	defer c.saveCache()
+	defer c.setCacheUpdated(true)
+
 	c.instanceMap.Set(resource.Metadata.ID, resource)
 }
 
@@ -273,18 +292,23 @@ func (c *cacheManager) GetAPIServiceInstanceByID(instanceID string) (*v1.Resourc
 
 // DeleteAPIServiceInstance - remove APIServiceInstance resource from cache based on instance ID
 func (c *cacheManager) DeleteAPIServiceInstance(instanceID string) error {
+	defer c.setCacheUpdated(true)
+
 	return c.instanceMap.Delete(instanceID)
 }
 
 // DeleteAllAPIServiceInstance - remove all APIServiceInstance resource from cache
 func (c *cacheManager) DeleteAllAPIServiceInstance() {
+	defer c.setCacheUpdated(true)
+
 	c.instanceMap.Flush()
 }
 
 // Category cache management
 // AddCategory - add/update Category resource in cache
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
-	defer c.saveCache()
+	defer c.setCacheUpdated(true)
+
 	c.categoryMap.SetWithSecondaryKey(resource.Name, resource.Title, resource)
 }
 
@@ -324,12 +348,16 @@ func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
 
 // DeleteCategory - remove Category resource from cache based on name
 func (c *cacheManager) DeleteCategory(categoryName string) error {
+	defer c.setCacheUpdated(true)
+
 	return c.categoryMap.Delete(categoryName)
 }
 
 // Watch Sequence cache
 // AddSequence - add/updates the sequenceID for the watch topic in cache
 func (c *cacheManager) AddSequence(watchTopicName string, sequenceID int64) {
+	defer c.setCacheUpdated(true)
+
 	c.sequenceCache.Set(watchTopicName, sequenceID)
 }
 

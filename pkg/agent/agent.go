@@ -231,6 +231,8 @@ func startAPIServiceCache() {
 				log.Error(err)
 				return
 			}
+			// trigger early saving for the initialized cache, following save will be done by interval job
+			agent.cacheManager.SaveCache()
 		}
 
 		err := startStreamMode(agent)

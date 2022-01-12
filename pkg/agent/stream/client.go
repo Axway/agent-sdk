@@ -110,17 +110,10 @@ func NewStreamer(
 		return nil, err
 	}
 
-	u, _ := url.Parse(cfg.GetURL())
-	port := 443
-
-	if u.Port() == "" {
-		port, _ = net.LookupPort("tcp", u.Scheme)
-	} else {
-		port, _ = strconv.Atoi(u.Port())
-	}
+	host, port := getWatchServiceHostPort(cfg)
 
 	watchCfg := &wm.Config{
-		Host:        u.Host,
+		Host:        host,
 		Port:        uint32(port),
 		TenantID:    tenant,
 		TokenGetter: getToken.GetToken,
@@ -143,6 +136,25 @@ func NewStreamer(
 		newListener:     NewEventListener,
 		sequenceManager: sequenceManager,
 	}, nil
+}
+
+func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
+	u, _ := url.Parse(cfg.GetURL())
+	host := cfg.GetGRPCHost()
+	port := cfg.GetGRPCPort()
+	if host == "" {
+		host = u.Host
+	}
+
+	if port == 0 {
+		if u.Port() == "" {
+			port, _ = net.LookupPort("tcp", u.Scheme)
+		} else {
+			port, _ = strconv.Atoi(u.Port())
+		}
+	}
+
+	return host, port
 }
 
 // Start creates and starts everything needed for a stream connection to central.
