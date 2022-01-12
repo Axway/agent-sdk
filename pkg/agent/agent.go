@@ -140,9 +140,12 @@ func Initialize(centralCfg config.CentralConfig) error {
 		if util.IsNotTest() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			teamChannel := make(chan string)
+			var teamChannel chan string
+			if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+				teamChannel = make(chan string)
+				registerAccessControlListHandler(teamChannel)
+			}
 			registerTeamMapCacheJob(teamChannel)
-			registerAccessControlListHandler(teamChannel)
 		}
 	}
 	agent.isInitialized = true

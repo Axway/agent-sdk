@@ -34,7 +34,9 @@ func (j *centralTeamsCache) Execute() error {
 	for _, team := range platformTeams {
 		if id, err := agent.teamMap.Get(team.Name); err != nil || id != team.ID {
 			err = agent.teamMap.Set(team.Name, team.ID)
-			j.teamChannel <- team.ID
+			if j.teamChannel != nil {
+				j.teamChannel <- team.ID
+			}
 		}
 
 		if team.Default {
