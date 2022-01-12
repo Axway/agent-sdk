@@ -27,6 +27,7 @@ type aclUpdateHandlerJob struct {
 	isRunning        bool
 	countdownStarted bool // signal that the countdown to push updated teams has started
 	newTeamMutex     sync.Mutex
+	countdownMutex   sync.Mutex
 }
 
 func newACLUpdateHandlerJob(teamChanel chan string) *aclUpdateHandlerJob {
@@ -38,6 +39,7 @@ func newACLUpdateHandlerJob(teamChanel chan string) *aclUpdateHandlerJob {
 		runningChan:     make(chan bool),
 		isRunning:       false,
 		newTeamMutex:    sync.Mutex{},
+		countdownMutex:  sync.Mutex{},
 	}
 	go job.statusUpdate()
 	return job
@@ -130,10 +132,7 @@ func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
 	defer j.newTeamMutex.Unlock()
 
 	j.newTeamIDs = append(j.newTeamIDs, teamID)
-	if !j.countdownStarted {
-		// start the update countdown
-		go j.updateACL()
-	}
+	go j.updateACL()
 }
 
 func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
@@ -155,12 +154,12 @@ func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.Acce
 						},
 					},
 				},
-				Subjects: []v1.Owner{},
 			},
 		}
 	}
 
 	// Add all the teams
+	acl.Spec.Subjects = make([]v1.Owner, 0)
 	for _, id := range teamIDs {
 		acl.Spec.Subjects = append(acl.Spec.Subjects, v1.Owner{
 			Type: v1.TeamOwner,
@@ -172,14 +171,24 @@ func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.Acce
 }
 
 func (j *aclUpdateHandlerJob) updateACL() {
-	time.Sleep(time.Second) // configurable?
+	j.countdownMutex.Lock()
+	if j.countdownStarted {
+		j.countdownMutex.Unlock()
+		return
+	}
+
+	j.countdownStarted = true
+	j.countdownMutex.Unlock()
+	time.Sleep(time.Minute)
 
 	// lock so teams are not added to the array until the update is done
 	j.newTeamMutex.Lock()
 	defer func() {
+		j.countdownMutex.Lock()
 		// reset this signal once function completes
 		j.countdownStarted = false
 		j.newTeamMutex.Unlock()
+		j.countdownMutex.Unlock()
 	}()
 
 	var err error
@@ -192,6 +201,7 @@ func (j *aclUpdateHandlerJob) updateACL() {
 
 	if err == nil {
 		j.existingTeamIDs = append(j.existingTeamIDs, j.newTeamIDs...)
+		sort.Strings(j.existingTeamIDs)
 		j.currentACL = acl
 	}
 }

@@ -60,5 +60,8 @@ func registerTeamMapCacheJob(teamChannel chan string) {
 		teamChannel: teamChannel,
 	}
 
+	// execute the job on startup to populate the team cache
+	job.Execute()
+
 	jobs.RegisterIntervalJobWithName(job, time.Hour, "Team Cache")
 }

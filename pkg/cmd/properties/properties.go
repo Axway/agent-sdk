@@ -44,6 +44,7 @@ type Properties interface {
 	DurationPropertyValue(name string) time.Duration
 	IntPropertyValue(name string) int
 	BoolPropertyValue(name string) bool
+	BoolPropertyValueOrTrue(name string) bool // Use this method when the default value, no config given, is true
 	BoolFlagValue(name string) bool
 	StringSlicePropertyValue(name string) []string
 
@@ -303,7 +304,18 @@ func (p *properties) IntPropertyValue(name string) int {
 }
 
 func (p *properties) BoolPropertyValue(name string) bool {
+	return p.boolPropertyValue(name, false)
+}
+
+func (p *properties) BoolPropertyValueOrTrue(name string) bool {
+	return p.boolPropertyValue(name, true)
+}
+
+func (p *properties) boolPropertyValue(name string, defVal bool) bool {
 	s := p.parseStringValue(name)
+	if s == "" {
+		return defVal
+	}
 	b, _ := strconv.ParseBool(s)
 
 	p.addPropertyToFlatMap(name, s)
