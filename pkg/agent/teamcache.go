@@ -65,3 +65,16 @@ func registerTeamMapCacheJob(teamChannel chan string) {
 
 	jobs.RegisterIntervalJobWithName(job, time.Hour, "Team Cache")
 }
+
+// GetTeamFromCache -
+func GetTeamFromCache(teamName string) (string, bool) {
+	id, found := agent.teamMap.Get(teamName)
+	if teamName == "" {
+		// get the default team
+		id, found = agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey)
+	}
+	if found != nil {
+		return "", false
+	}
+	return id.(string), true
+}
