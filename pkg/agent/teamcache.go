@@ -38,13 +38,20 @@ func (j *centralTeamsCache) Execute() error {
 				j.teamChannel <- team.ID
 			}
 		}
-
 		if team.Default {
 			if _, err := agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey); err != nil {
 				// remove the secondary key from an existing cache item before adding it to a new one
 				agent.teamMap.DeleteSecondaryKey(apic.DefaultTeamKey)
+				if agent.cfg.GetTeamName() == "" {
+					agent.cfg.SetTeamID(team.ID)
+				}
 			}
+
 			agent.teamMap.SetSecondaryKey(team.Name, apic.DefaultTeamKey)
+
+			if agent.cfg.GetTeamName() == team.Name {
+				agent.cfg.SetTeamID(team.ID)
+			}
 		}
 		if err != nil {
 			return err

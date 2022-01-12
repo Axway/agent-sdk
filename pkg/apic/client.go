@@ -333,10 +333,6 @@ func (c *ServiceClient) checkAPIServerHealth() error {
 		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
 	}
 
-	if _, found := c.getTeamFromCache(c.cfg.GetTeamName()); !found {
-		return ErrTeamNotFound.FormatError(c.cfg.GetTeamName())
-	}
-
 	return nil
 }
 
