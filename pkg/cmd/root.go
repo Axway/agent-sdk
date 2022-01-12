@@ -60,6 +60,7 @@ type agentRootCommand struct {
 	agentType         config.AgentType
 	props             properties.Properties
 	statusCfg         config.StatusConfig
+	agentFeaturesCfg  config.AgentFeaturesConfig
 	centralCfg        config.CentralConfig
 	agentCfg          interface{}
 	secretResolver    resolver.SecretResolver
@@ -153,6 +154,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)
+	config.AddAgentFeaturesConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
@@ -255,6 +257,12 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
+	// Init Agent Features Config
+	c.agentFeaturesCfg, err = config.ParseAgentFeaturesConfig(c.GetProperties())
+	if err != nil {
+		return err
+	}
+
 	// Init Central Config
 	c.centralCfg, err = config.ParseCentralConfig(c.GetProperties(), c.GetAgentType())
 	if err != nil {
@@ -264,7 +272,7 @@ func (c *agentRootCommand) initConfig() error {
 	// must set the hc config now, because the healthchecker loop starts in agent.Initialize
 	hc.SetStatusConfig(c.statusCfg)
 
-	err = agent.Initialize(c.centralCfg)
+	err = agent.InitializeWithAgentFeatures(c.centralCfg, c.agentFeaturesCfg)
 	if err != nil {
 		return err
 	}
@@ -292,7 +300,7 @@ func (c *agentRootCommand) initConfig() error {
 
 	if !c.initialized {
 		// Start the initial and recurring version check jobs
-		startVersionCheckJobs(c.centralCfg)
+		startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 		// Init the healthcheck API
 		hc.HandleRequests()
 	}

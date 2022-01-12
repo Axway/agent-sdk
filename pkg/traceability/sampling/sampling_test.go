@@ -23,7 +23,7 @@ func TestSamplingConfig(t *testing.T) {
 			errExpected: false,
 			config:      DefaultConfig(),
 			expectedConfig: Sampling{
-				Percentage: 100,
+				Percentage: 10,
 			},
 		},
 		{
