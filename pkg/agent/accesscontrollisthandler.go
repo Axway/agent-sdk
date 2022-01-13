@@ -15,6 +15,8 @@ import (
 
 const envACLFormat = "%s-agent-acl"
 
+var waitForTime = time.Minute
+
 //aclUpdateHandler - job that handles updates to the ACL in the environment
 type aclUpdateHandlerJob struct {
 	jobs.Job
@@ -131,6 +133,17 @@ func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
 	j.newTeamMutex.Lock()
 	defer j.newTeamMutex.Unlock()
 
+	for _, alreadyReceived := range j.newTeamIDs {
+		if alreadyReceived == teamID {
+			return
+		}
+	}
+	for _, knownID := range j.existingTeamIDs {
+		if knownID == teamID {
+			return
+		}
+	}
+
 	j.newTeamIDs = append(j.newTeamIDs, teamID)
 	go j.updateACL()
 }
@@ -179,7 +192,7 @@ func (j *aclUpdateHandlerJob) updateACL() {
 
 	j.countdownStarted = true
 	j.countdownMutex.Unlock()
-	time.Sleep(time.Minute)
+	time.Sleep(waitForTime)
 
 	// lock so teams are not added to the array until the update is done
 	j.newTeamMutex.Lock()
@@ -201,8 +214,11 @@ func (j *aclUpdateHandlerJob) updateACL() {
 
 	if err == nil {
 		j.existingTeamIDs = append(j.existingTeamIDs, j.newTeamIDs...)
+		j.newTeamIDs = make([]string, 0)
 		sort.Strings(j.existingTeamIDs)
 		j.currentACL = acl
+	} else {
+		log.Errorf("error in acl handler: %s", err)
 	}
 }
 
