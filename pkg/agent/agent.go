@@ -16,7 +16,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -52,7 +51,6 @@ type agentData struct {
 	apicClient       apic.Client
 	cfg              config.CentralConfig
 	agentFeaturesCfg config.AgentFeaturesConfig
-	agentCfg         interface{}
 	tokenRequester   auth.PlatformTokenGetter
 
 	teamMap                    cache.Cache
@@ -64,8 +62,10 @@ type agentData struct {
 	isInitialized              bool
 }
 
-var agent = agentData{
-	proxyResourceHandler: handler.NewStreamWatchProxyHandler(),
+var agent agentData
+
+func init() {
+	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 }
 
 // Initialize - Initializes the agent
@@ -110,7 +110,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	agent.cfg = centralCfg
-	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
+	api.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
