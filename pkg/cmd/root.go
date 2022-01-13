@@ -114,6 +114,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)
+	config.AddAgentFeaturesConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
