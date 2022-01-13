@@ -55,9 +55,7 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 	return nil, nil
 }
 
-func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {
-	return
-}
+func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {}
 
 func (m *mockSvcClient) GetOrCreateCategory(category string) string {
 	return ""

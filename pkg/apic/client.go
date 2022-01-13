@@ -335,31 +335,6 @@ func (c *ServiceClient) setTeamCache() error {
 	return cache.GetCache().Set(TeamMapKey, teamMap)
 }
 
-func (c *ServiceClient) checkAPIServerHealth() error {
-	apiEnvironment, err := c.GetEnvironment()
-	if err != nil || apiEnvironment == nil {
-		return err
-	}
-
-	c.cfg.SetAxwayManaged(apiEnvironment.Spec.AxwayManaged)
-	if c.cfg.GetEnvironmentID() == "" {
-		// need to save this ID for the traceability agent for later
-		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
-	}
-
-	if c.cfg.GetTeamID() == "" {
-		// Validate if team exists
-		team, err := c.GetCentralTeamByName(c.cfg.GetTeamName())
-		if err != nil {
-			return err
-		}
-		// Set the team Id
-		c.cfg.SetTeamID(team.ID)
-	}
-
-	return nil
-}
-
 // GetEnvironment get an environment
 func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	headers, err := c.createHeader()
