@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	ConsumerSubscriptionDefinitionScopes = []string{"Environment"}
 )
 
-const (
-	ConsumerSubscriptionDefinitionScope = "Environment"
-
-	ConsumerSubscriptionDefinitionResourceName = "consumersubscriptiondefs"
-)
+const ConsumerSubscriptionDefinitionResourceName = "consumersubscriptiondefs"
 
 func ConsumerSubscriptionDefinitionGVK() apiv1.GroupVersionKind {
 	return _ConsumerSubscriptionDefinitionGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ConsumerSubscriptionDefinitionGVK, ConsumerSubscriptionDefinitionScope, ConsumerSubscriptionDefinitionResourceName)
+	apiv1.RegisterGVK(_ConsumerSubscriptionDefinitionGVK, ConsumerSubscriptionDefinitionScopes[0], ConsumerSubscriptionDefinitionResourceName)
 }
 
 // ConsumerSubscriptionDefinition Resource

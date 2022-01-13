@@ -15,4 +15,6 @@ type ProductReferencesRelease struct {
 	Name string `json:"name,omitempty"`
 	// The AssetRelease version that the Product currently points to.
 	Version string `json:"version,omitempty"`
+	// The AssetRelease state.
+	State string `json:"state,omitempty"`
 }

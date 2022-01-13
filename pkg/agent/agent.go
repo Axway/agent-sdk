@@ -65,6 +65,7 @@ type agentData struct {
 
 	apiMap                     cache.Cache
 	categoryMap                cache.Cache
+	teamMap                    cache.Cache
 	apiValidator               APIValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
@@ -86,6 +87,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 	if agent.categoryMap == nil {
 		agent.categoryMap = cache.New()
+	}
+	if agent.teamMap == nil {
+		agent.teamMap = cache.New()
 	}
 
 	err := checkRunningAgent()
@@ -121,7 +125,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		// Init apic client
 		if agent.apicClient == nil {
 			agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-			agent.apicClient.AddCategoryCache(agent.categoryMap)
+			agent.apicClient.AddCache(agent.categoryMap, agent.teamMap)
 		} else {
 			agent.apicClient.SetTokenGetter(agent.tokenRequester)
 			agent.apicClient.OnConfigChange(centralCfg)
@@ -151,6 +155,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
+			startTeamACLCache()
 		}
 	}
 	agent.isInitialized = true
@@ -207,6 +212,19 @@ func startAPIServiceCache() {
 		}
 		log.Tracef("registered API cache update all job: %s", id)
 	}()
+}
+
+func startTeamACLCache() {
+	// register the team cache and acl update jobs
+	var teamChannel chan string
+
+	// Only discovery agents need to start the ACL handler
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		teamChannel = make(chan string)
+		registerAccessControlListHandler(teamChannel)
+	}
+
+	registerTeamMapCacheJob(teamChannel)
 }
 
 func isRunningInDockerContainer() bool {

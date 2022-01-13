@@ -9,12 +9,8 @@
 
 package v1alpha1
 
-// DocumentationSpec struct for DocumentationSpec
-type DocumentationSpec struct {
+// AddOnSpec struct for AddOnSpec
+type AddOnSpec struct {
 	Kind string `json:"kind"`
-	// The component title
-	Title string `json:"title,omitempty"`
-	// Custom documentation provided as Markdown.
-	Content      string `json:"content"`
-	Downloadable bool   `json:"downloadable,omitempty"`
+	Name string `json:"name,omitempty"`
 }

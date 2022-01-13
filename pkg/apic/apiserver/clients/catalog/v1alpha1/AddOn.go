@@ -12,15 +12,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type TermsMergeFunc func(*v1alpha1.Terms, *v1alpha1.Terms) (*v1alpha1.Terms, error)
+type AddOnMergeFunc func(*v1alpha1.AddOn, *v1alpha1.AddOn) (*v1alpha1.AddOn, error)
 
 // Merge builds a merge option for an update operation
-func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
+func AddOnMerge(f AddOnMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Terms{}, &v1alpha1.Terms{}
+		p, n := &v1alpha1.AddOn{}, &v1alpha1.AddOn{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.AddOn:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Terms:
+		case *v1alpha1.AddOn:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func TermsMerge(f TermsMergeFunc) v1.UpdateOption {
 	})
 }
 
-// TermsClient -
-type TermsClient struct {
+// AddOnClient -
+type AddOnClient struct {
 	client v1.Scoped
 }
 
-// UnscopedTermsClient -
-type UnscopedTermsClient struct {
+// UnscopedAddOnClient -
+type UnscopedAddOnClient struct {
 	client v1.Unscoped
 }
 
-// NewTermsClient -
-func NewTermsClient(c v1.Base) (*UnscopedTermsClient, error) {
+// NewAddOnClient -
+func NewAddOnClient(c v1.Base) (*UnscopedAddOnClient, error) {
 
-	client, err := c.ForKind(v1alpha1.TermsGVK())
+	client, err := c.ForKind(v1alpha1.AddOnGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedTermsClient{client}, nil
+	return &UnscopedAddOnClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedTermsClient) WithScope(scope string) *TermsClient {
-	return &TermsClient{
+func (c *UnscopedAddOnClient) WithScope(scope string) *AddOnClient {
+	return &AddOnClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedTermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *UnscopedAddOnClient) Get(name string) (*v1alpha1.AddOn, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.AddOn{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *UnscopedAddOnClient) Update(res *v1alpha1.AddOn, opts ...v1.UpdateOption) (*v1alpha1.AddOn, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.AddOn{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedTermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOptio
 }
 
 // List -
-func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error) {
+func (c *AddOnClient) List(options ...v1.ListOptions) ([]*v1alpha1.AddOn, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Terms, len(riList))
+	result := make([]*v1alpha1.AddOn, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Terms{}
+		result[i] = &v1alpha1.AddOn{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *TermsClient) List(options ...v1.ListOptions) ([]*v1alpha1.Terms, error)
 }
 
 // Get -
-func (c *TermsClient) Get(name string) (*v1alpha1.Terms, error) {
+func (c *AddOnClient) Get(name string) (*v1alpha1.AddOn, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Terms{}
+	service := &v1alpha1.AddOn{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
+func (c *AddOnClient) Delete(res *v1alpha1.AddOn) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *TermsClient) Delete(res *v1alpha1.Terms) error {
 }
 
 // Create -
-func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1alpha1.Terms, error) {
+func (c *AddOnClient) Create(res *v1alpha1.AddOn, opts ...v1.CreateOption) (*v1alpha1.AddOn, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 		return nil, err
 	}
 
-	created := &v1alpha1.Terms{}
+	created := &v1alpha1.AddOn{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *TermsClient) Create(res *v1alpha1.Terms, opts ...v1.CreateOption) (*v1a
 }
 
 // Update -
-func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1alpha1.Terms, error) {
+func (c *AddOnClient) Update(res *v1alpha1.AddOn, opts ...v1.UpdateOption) (*v1alpha1.AddOn, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *TermsClient) Update(res *v1alpha1.Terms, opts ...v1.UpdateOption) (*v1a
 		return nil, err
 	}
 
-	updated := &v1alpha1.Terms{}
+	updated := &v1alpha1.AddOn{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// ReleaseTagReferences struct for ReleaseTagReferences
-type ReleaseTagReferences struct {
-	// Reference to Release that got created from this tag.
-	VirtualAPIRelease string `json:"virtualAPIRelease,omitempty"`
+// ProductPlanReferences struct for ProductPlanReferences
+type ProductPlanReferences struct {
+	Product ProductPlanReferencesProduct `json:"product,omitempty"`
 }

@@ -9,9 +9,18 @@
 
 package v1alpha1
 
+import (
+	// GENERATE: The following code has been modified after code generation
+	// 	"time"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
+
 // ReleaseTagStatus struct for ReleaseTagStatus
 type ReleaseTagStatus struct {
-	Level string `json:"level,omitempty"`
-	// Message to reflect the status of Virutal API Release.
-	Message string `json:"message,omitempty"`
+	Type string `json:"type"`
+	// Details of the error.
+	Detail string `json:"detail"`
+	// Time when the update occurred.
+	Timestamp time.Time                         `json:"timestamp"`
+	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

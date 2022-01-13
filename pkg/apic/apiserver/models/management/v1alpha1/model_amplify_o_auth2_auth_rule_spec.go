@@ -9,9 +9,9 @@
 
 package v1alpha1
 
-// DeploymentState struct for DeploymentState
-type DeploymentState struct {
-	Name string `json:"name"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
+// AmplifyOAuth2AuthRuleSpec struct for AmplifyOAuth2AuthRuleSpec
+type AmplifyOAuth2AuthRuleSpec struct {
+	AuthorizationUrl string `json:"authorizationUrl"`
+	TokenUrl         string `json:"tokenUrl"`
+	RefreshUrl       string `json:"refreshUrl,omitempty"`
 }

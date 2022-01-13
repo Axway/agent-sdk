@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	CommandLineInterfaceScopes = []string{"ResourceGroup"}
 )
 
-const (
-	CommandLineInterfaceScope = "ResourceGroup"
-
-	CommandLineInterfaceResourceName = "commandlines"
-)
+const CommandLineInterfaceResourceName = "commandlines"
 
 func CommandLineInterfaceGVK() apiv1.GroupVersionKind {
 	return _CommandLineInterfaceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_CommandLineInterfaceGVK, CommandLineInterfaceScope, CommandLineInterfaceResourceName)
+	apiv1.RegisterGVK(_CommandLineInterfaceGVK, CommandLineInterfaceScopes[0], CommandLineInterfaceResourceName)
 }
 
 // CommandLineInterface Resource

@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type DocumentationMergeFunc func(*v1alpha1.Documentation, *v1alpha1.Documentation) (*v1alpha1.Documentation, error)
+type APIKeyAuthRuleMergeFunc func(*v1alpha1.APIKeyAuthRule, *v1alpha1.APIKeyAuthRule) (*v1alpha1.APIKeyAuthRule, error)
 
 // Merge builds a merge option for an update operation
-func DocumentationMerge(f DocumentationMergeFunc) v1.UpdateOption {
+func APIKeyAuthRuleMerge(f APIKeyAuthRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Documentation{}, &v1alpha1.Documentation{}
+		p, n := &v1alpha1.APIKeyAuthRule{}, &v1alpha1.APIKeyAuthRule{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Documentation:
+		case *v1alpha1.APIKeyAuthRule:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func DocumentationMerge(f DocumentationMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Documentation:
+		case *v1alpha1.APIKeyAuthRule:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,50 +47,50 @@ func DocumentationMerge(f DocumentationMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DocumentationClient -
-type DocumentationClient struct {
+// APIKeyAuthRuleClient -
+type APIKeyAuthRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDocumentationClient -
-type UnscopedDocumentationClient struct {
+// UnscopedAPIKeyAuthRuleClient -
+type UnscopedAPIKeyAuthRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewDocumentationClient -
-func NewDocumentationClient(c v1.Base) (*UnscopedDocumentationClient, error) {
+// NewAPIKeyAuthRuleClient -
+func NewAPIKeyAuthRuleClient(c v1.Base) (*UnscopedAPIKeyAuthRuleClient, error) {
 
-	client, err := c.ForKind(v1alpha1.DocumentationGVK())
+	client, err := c.ForKind(v1alpha1.APIKeyAuthRuleGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedDocumentationClient{client}, nil
+	return &UnscopedAPIKeyAuthRuleClient{client}, nil
 
 }
 
 // WithScope -
-func (c *UnscopedDocumentationClient) WithScope(scope string) *DocumentationClient {
-	return &DocumentationClient{
+func (c *UnscopedAPIKeyAuthRuleClient) WithScope(scope string) *APIKeyAuthRuleClient {
+	return &APIKeyAuthRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
 // Get -
-func (c *UnscopedDocumentationClient) Get(name string) (*v1alpha1.Documentation, error) {
+func (c *UnscopedAPIKeyAuthRuleClient) Get(name string) (*v1alpha1.APIKeyAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Documentation{}
+	service := &v1alpha1.APIKeyAuthRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedDocumentationClient) Update(res *v1alpha1.Documentation, opts ...v1.UpdateOption) (*v1alpha1.Documentation, error) {
+func (c *UnscopedAPIKeyAuthRuleClient) Update(res *v1alpha1.APIKeyAuthRule, opts ...v1.UpdateOption) (*v1alpha1.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedDocumentationClient) Update(res *v1alpha1.Documentation, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.Documentation{}
+	updated := &v1alpha1.APIKeyAuthRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedDocumentationClient) Update(res *v1alpha1.Documentation, opts .
 }
 
 // List -
-func (c *DocumentationClient) List(options ...v1.ListOptions) ([]*v1alpha1.Documentation, error) {
+func (c *APIKeyAuthRuleClient) List(options ...v1.ListOptions) ([]*v1alpha1.APIKeyAuthRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Documentation, len(riList))
+	result := make([]*v1alpha1.APIKeyAuthRule, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Documentation{}
+		result[i] = &v1alpha1.APIKeyAuthRule{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *DocumentationClient) List(options ...v1.ListOptions) ([]*v1alpha1.Docum
 }
 
 // Get -
-func (c *DocumentationClient) Get(name string) (*v1alpha1.Documentation, error) {
+func (c *APIKeyAuthRuleClient) Get(name string) (*v1alpha1.APIKeyAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Documentation{}
+	service := &v1alpha1.APIKeyAuthRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *DocumentationClient) Delete(res *v1alpha1.Documentation) error {
+func (c *APIKeyAuthRuleClient) Delete(res *v1alpha1.APIKeyAuthRule) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *DocumentationClient) Delete(res *v1alpha1.Documentation) error {
 }
 
 // Create -
-func (c *DocumentationClient) Create(res *v1alpha1.Documentation, opts ...v1.CreateOption) (*v1alpha1.Documentation, error) {
+func (c *APIKeyAuthRuleClient) Create(res *v1alpha1.APIKeyAuthRule, opts ...v1.CreateOption) (*v1alpha1.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *DocumentationClient) Create(res *v1alpha1.Documentation, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.Documentation{}
+	created := &v1alpha1.APIKeyAuthRule{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *DocumentationClient) Create(res *v1alpha1.Documentation, opts ...v1.Cre
 }
 
 // Update -
-func (c *DocumentationClient) Update(res *v1alpha1.Documentation, opts ...v1.UpdateOption) (*v1alpha1.Documentation, error) {
+func (c *APIKeyAuthRuleClient) Update(res *v1alpha1.APIKeyAuthRule, opts ...v1.UpdateOption) (*v1alpha1.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *DocumentationClient) Update(res *v1alpha1.Documentation, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.Documentation{}
+	updated := &v1alpha1.APIKeyAuthRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

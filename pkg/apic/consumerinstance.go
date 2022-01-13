@@ -11,7 +11,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -38,19 +37,15 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	// If there is an organizationName in the serviceBody, try to find a match in the map of Central teams.
 	// If found, use that as the owningTeam for the service. Otherwise, use the configured default team.
 	if serviceBody.TeamName != "" {
-		obj, err := cache.GetCache().Get(TeamMapKey)
-		if err == nil {
-			teamMap := obj.(map[string]string)
-			if _, found := teamMap[serviceBody.TeamName]; found {
-				owningTeam = serviceBody.TeamName
-			} else {
-				teamForMsg := "the default team"
-				if owningTeam != "" {
-					teamForMsg = fmt.Sprintf("team %s", owningTeam)
-				}
-				log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
-					serviceBody.TeamName, serviceBody.APIName, teamForMsg)
+		if _, found := c.getTeamFromCache(serviceBody.TeamName); found {
+			owningTeam = serviceBody.TeamName
+		} else {
+			teamForMsg := "the default team"
+			if owningTeam != "" {
+				teamForMsg = fmt.Sprintf("team %s", owningTeam)
 			}
+			log.Infof("Amplify Central does not contain a team named %s for API %s. The Catalog Item will be assigned to %s.",
+				serviceBody.TeamName, serviceBody.APIName, teamForMsg)
 		}
 	}
 
@@ -142,7 +137,8 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumer
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 
@@ -161,6 +157,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha
 		categories = serviceBody.categoryNames
 	}
 	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
+	consumerInstance.Owner = c.getOwnerObject(serviceBody, false)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance

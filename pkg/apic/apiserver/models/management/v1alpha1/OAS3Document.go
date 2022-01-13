@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	OAS3DocumentScopes = []string{"VirtualAPI", "VirtualAPIRelease"}
 )
 
-const (
-	OAS3DocumentScope = "VirtualAPI"
-
-	OAS3DocumentResourceName = "oas3documents"
-)
+const OAS3DocumentResourceName = "oas3documents"
 
 func OAS3DocumentGVK() apiv1.GroupVersionKind {
 	return _OAS3DocumentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_OAS3DocumentGVK, OAS3DocumentScope, OAS3DocumentResourceName)
+	apiv1.RegisterGVK(_OAS3DocumentGVK, OAS3DocumentScopes[0], OAS3DocumentResourceName)
 }
 
 // OAS3Document Resource

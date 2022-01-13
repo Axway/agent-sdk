@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	TraceabilityAgentScopes = []string{"Environment"}
 )
 
-const (
-	TraceabilityAgentScope = "Environment"
-
-	TraceabilityAgentResourceName = "traceabilityagents"
-)
+const TraceabilityAgentResourceName = "traceabilityagents"
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
 	return _TraceabilityAgentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_TraceabilityAgentGVK, TraceabilityAgentScope, TraceabilityAgentResourceName)
+	apiv1.RegisterGVK(_TraceabilityAgentGVK, TraceabilityAgentScopes[0], TraceabilityAgentResourceName)
 }
 
 // TraceabilityAgent Resource

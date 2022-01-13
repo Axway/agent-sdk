@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	DeploymentScopes = []string{"Environment"}
 )
 
-const (
-	DeploymentScope = "Environment"
-
-	DeploymentResourceName = "deployments"
-)
+const DeploymentResourceName = "deployments"
 
 func DeploymentGVK() apiv1.GroupVersionKind {
 	return _DeploymentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_DeploymentGVK, DeploymentScope, DeploymentResourceName)
+	apiv1.RegisterGVK(_DeploymentGVK, DeploymentScopes[0], DeploymentResourceName)
 }
 
 // Deployment Resource
@@ -44,7 +42,7 @@ type Deployment struct {
 
 	Spec DeploymentSpec `json:"spec"`
 
-	State DeploymentState `json:"state"`
+	Status DeploymentStatus `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a Deployment

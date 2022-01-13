@@ -69,3 +69,41 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
+######################
+# Update any OneOf types to be interface{}
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="OneOf.*\s"
+REPLACE="interface{} "
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # replace the Oneof type
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
+# Update the following STATES to include the type infront of the constant
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*_state.go"`
+STATES="DRAFT ACTIVE DEPRECATED ARCHIVED"
+
+for file in ${MODELS}; do
+    stateType=`grep "List of" ${file} | awk '{print $4}'`
+    for state in ${STATES}; do
+        if grep -e ${state} ${file} >> /dev/null; then
+            # add a comment to the code
+            $SED -i -e "/${state}/i ${COMMENT}" ${file}
+            # replace the Oneof type
+            $SED -i -e "s/${state}/${stateType}${state}/g" ${file}
+            # reformat the code
+            go fmt ${file}
+        fi
+    done
+done

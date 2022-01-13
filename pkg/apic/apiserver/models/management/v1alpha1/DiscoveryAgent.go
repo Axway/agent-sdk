@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	DiscoveryAgentScopes = []string{"Environment"}
 )
 
-const (
-	DiscoveryAgentScope = "Environment"
-
-	DiscoveryAgentResourceName = "discoveryagents"
-)
+const DiscoveryAgentResourceName = "discoveryagents"
 
 func DiscoveryAgentGVK() apiv1.GroupVersionKind {
 	return _DiscoveryAgentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_DiscoveryAgentGVK, DiscoveryAgentScope, DiscoveryAgentResourceName)
+	apiv1.RegisterGVK(_DiscoveryAgentGVK, DiscoveryAgentScopes[0], DiscoveryAgentResourceName)
 }
 
 // DiscoveryAgent Resource

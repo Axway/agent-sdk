@@ -18,20 +18,18 @@ var (
 		},
 		APIVersion: "v1alpha1",
 	}
+
+	AssetMappingScopes = []string{"Environment"}
 )
 
-const (
-	AssetMappingScope = "Environment"
-
-	AssetMappingResourceName = "assetmappings"
-)
+const AssetMappingResourceName = "assetmappings"
 
 func AssetMappingGVK() apiv1.GroupVersionKind {
 	return _AssetMappingGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetMappingGVK, AssetMappingScope, AssetMappingResourceName)
+	apiv1.RegisterGVK(_AssetMappingGVK, AssetMappingScopes[0], AssetMappingResourceName)
 }
 
 // AssetMapping Resource

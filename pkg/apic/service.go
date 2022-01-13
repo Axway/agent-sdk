@@ -31,6 +31,13 @@ const (
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+	// if the team is set in the config, use that team name and id for all services
+	if strings.ToLower(c.cfg.GetTeamName()) != "" {
+		if teamID, found := c.getTeamFromCache(c.cfg.GetTeamName()); found {
+			serviceBody.TeamName = c.cfg.GetTeamName()
+			serviceBody.teamID = teamID
+		}
+	}
 	apiSvc, err := c.processService(serviceBody)
 	if err != nil {
 		return nil, err

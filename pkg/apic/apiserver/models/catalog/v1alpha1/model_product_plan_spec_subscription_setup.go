@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// TermsSpec struct for TermsSpec
-type TermsSpec struct {
-	// Markdown representing the terms.
-	Content string `json:"content,omitempty"`
+// ProductPlanSpecSubscriptionSetup Subscription set up details.
+type ProductPlanSpecSubscriptionSetup struct {
+	// JSON Schema draft \\#7 for defining the information requested from the consumer.
+	Form map[string]interface{} `json:"form,omitempty"`
 }

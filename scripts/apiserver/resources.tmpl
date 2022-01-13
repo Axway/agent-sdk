@@ -17,23 +17,23 @@ var (
 		},
 		APIVersion: "{{.res.version}}",
 	}
+{{if .res.scopes }}
+  {{.res.kind}}Scopes = []string{"{{ join $.res.scopes "\", \""}}",}
+{{else}}
+  {{.res.kind}}Scopes = []string{""}
+{{end}}
 )
 
-const (
-	{{if .res.scope }}
-	{{.res.kind}}Scope    = "{{.res.scope}}"
-	{{else}}
-	{{.res.kind}}Scope    = ""
-	{{end}}
-	{{.res.kind}}ResourceName = "{{.res.resource}}"
-)
+const {{.res.kind}}ResourceName = "{{.res.resource}}"
+
+
 
 func {{.res.kind}}GVK() apiv1.GroupVersionKind {
 	return _{{.res.kind}}GVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scope, {{.res.kind}}ResourceName)
+	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scopes[0], {{.res.kind}}ResourceName)
 }
 
 // {{.res.kind}} Resource

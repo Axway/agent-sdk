@@ -38,7 +38,8 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, instanceAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
-		Spec: c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Owner: c.getOwnerObject(serviceBody, false),
 	}
 }
 
@@ -52,6 +53,7 @@ func (c *ServiceClient) updateInstanceResource(
 	instance.Attributes = c.buildAPIResourceAttributes(serviceBody, instance.Attributes, false)
 	instance.Tags = c.mapToTagsArray(serviceBody.Tags)
 	instance.Spec = c.buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	instance.Owner = c.getOwnerObject(serviceBody, false)
 	return instance
 }
 

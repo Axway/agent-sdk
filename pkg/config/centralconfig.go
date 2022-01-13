@@ -107,6 +107,7 @@ type CentralConfig interface {
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
+	GetEnvironmentACLsURL() string
 	GetServicesURL() string
 	GetRevisionsURL() string
 	GetInstancesURL() string
@@ -304,6 +305,11 @@ func (c *CentralConfiguration) GetAPIServerCatalogURL() string {
 // GetEnvironmentURL - Returns the APIServer URL for services API
 func (c *CentralConfiguration) GetEnvironmentURL() string {
 	return c.GetAPIServerURL() + c.Environment
+}
+
+// GetEnvironmentACLsURL - Returns the APIServer URL for ACLs in Environments
+func (c *CentralConfiguration) GetEnvironmentACLsURL() string {
+	return c.GetEnvironmentURL() + "/accesscontrollists"
 }
 
 // GetServicesURL - Returns the APIServer URL for services API

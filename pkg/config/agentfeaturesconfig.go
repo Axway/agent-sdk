@@ -66,9 +66,9 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 // ParseAgentFeaturesConfig - Parses the AgentFeatures Config values from the command line
 func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig, error) {
 	cfg := &AgentFeaturesConfiguration{
-		ConnectToCentral:     props.BoolPropertyValue(pathConnectToCentral),
-		ProcessSystemSignals: props.BoolPropertyValue(pathProcessSystemSignals),
-		VersionChecker:       props.BoolPropertyValue(pathVersionChecker),
+		ConnectToCentral:     props.BoolPropertyValueOrTrue(pathConnectToCentral),
+		ProcessSystemSignals: props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
+		VersionChecker:       props.BoolPropertyValueOrTrue(pathVersionChecker),
 	}
 
 	return cfg, nil
