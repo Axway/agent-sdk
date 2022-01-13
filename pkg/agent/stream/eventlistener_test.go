@@ -6,8 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -52,9 +54,11 @@ func TestEventListener_start(t *testing.T) {
 		},
 	}
 
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.ri, tc.handler)
+			listener := NewEventListener(tc.events, tc.ri, sequenceManager, tc.handler)
 
 			errCh := make(chan error)
 			go func() {
@@ -91,14 +95,16 @@ func TestEventListener_start(t *testing.T) {
 
 // Should call Listen and handle a graceful stop, and an error
 func TestEventListener_Listen(t *testing.T) {
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, &mockHandler{})
+	listener := NewEventListener(events, &mockRI{}, sequenceManager, &mockHandler{})
 	errCh := listener.Listen()
 	go listener.Stop()
 	err := <-errCh
 	assert.Nil(t, err)
 
-	listener = NewEventListener(events, &mockRI{}, &mockHandler{})
+	listener = NewEventListener(events, &mockRI{}, sequenceManager, &mockHandler{})
 	errCh = listener.Listen()
 	close(events)
 	err = <-errCh
@@ -142,7 +148,8 @@ func TestEventListener_handleEvent(t *testing.T) {
 			handler:  &mockHandler{},
 		},
 	}
-
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			event := &proto.Event{
@@ -157,7 +164,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), tc.ri, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), tc.ri, sequenceManager, tc.handler)
 
 			err := listener.handleEvent(event)
 

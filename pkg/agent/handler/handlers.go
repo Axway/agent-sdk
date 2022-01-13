@@ -3,10 +3,10 @@ package handler
 import (
 	"fmt"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -26,13 +26,13 @@ type Handler interface {
 }
 
 type apiSvcHandler struct {
-	apis cache.Cache
+	agentCacheManager agentcache.Manager
 }
 
 // NewAPISvcHandler creates a Handler for API Services.
-func NewAPISvcHandler(cache cache.Cache) Handler {
+func NewAPISvcHandler(agentCacheManager agentcache.Manager) Handler {
 	return &apiSvcHandler{
-		apis: cache,
+		agentCacheManager: agentCacheManager,
 	}
 }
 
@@ -47,30 +47,24 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		externalAPIName := resource.Attributes[apic.AttrExternalAPIName]
-		primaryKey, ok := resource.Attributes[apic.AttrExternalAPIPrimaryKey]
-		if !ok {
-			return h.apis.SetWithSecondaryKey(id, externalAPIName, resource)
-		}
-
-		return h.apis.SetWithSecondaryKey(primaryKey, externalAPIName, resource)
+		h.agentCacheManager.AddAPIService(resource)
 	}
 
 	if action == proto.Event_DELETED {
-		return h.apis.Delete(id)
+		return h.agentCacheManager.DeleteAPIService(id)
 	}
 
 	return nil
 }
 
 type instanceHandler struct {
-	instances cache.Cache
+	agentCacheManager agentcache.Manager
 }
 
 // NewInstanceHandler creates a Handler for API Service Instances.
-func NewInstanceHandler(cache cache.Cache) Handler {
+func NewInstanceHandler(agentCacheManager agentcache.Manager) Handler {
 	return &instanceHandler{
-		instances: cache,
+		agentCacheManager: agentCacheManager,
 	}
 }
 
@@ -79,26 +73,26 @@ func (h *instanceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, re
 		return nil
 	}
 
-	key := resource.Metadata.ID
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		return h.instances.Set(key, resource)
+		h.agentCacheManager.AddAPIServiceInstance(resource)
 	}
 
 	if action == proto.Event_DELETED {
-		return h.instances.Delete(key)
+		key := resource.Metadata.ID
+		return h.agentCacheManager.DeleteAPIServiceInstance(key)
 	}
 
 	return nil
 }
 
 type categoryHandler struct {
-	categories cache.Cache
+	agentCacheManager agentcache.Manager
 }
 
 // NewCategoryHandler creates a Handler for Categories.
-func NewCategoryHandler(cache cache.Cache) Handler {
+func NewCategoryHandler(agentCacheManager agentcache.Manager) Handler {
 	return &categoryHandler{
-		categories: cache,
+		agentCacheManager: agentCacheManager,
 	}
 }
 
@@ -108,11 +102,11 @@ func (c *categoryHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, re
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		return c.categories.SetWithSecondaryKey(resource.Name, resource.Title, resource)
+		c.agentCacheManager.AddCategory(resource)
 	}
 
 	if action == proto.Event_DELETED {
-		return c.categories.Delete(resource.Name)
+		return c.agentCacheManager.DeleteCategory(resource.Name)
 	}
 
 	return nil

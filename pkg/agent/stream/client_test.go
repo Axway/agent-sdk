@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -17,8 +18,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-var topic = "/management/v1alpha1/watchtopics/mock-watch-topic"
 
 var cfg = &config.CentralConfiguration{
 	AgentType:     1,
@@ -41,7 +40,8 @@ func TestNewStreamer(t *testing.T) {
 		Body:    bts,
 		Headers: nil,
 	}
-	c, err := NewStreamer(httpClient, cfg, getToken)
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager)
 	assert.NotNil(t, c)
 	assert.Nil(t, err)
 
@@ -104,10 +104,11 @@ func TestClientStreamJob(t *testing.T) {
 
 func Test_getAgentSequenceManager(t *testing.T) {
 	wtName := "fake"
-	sm := getAgentSequenceManager(wtName)
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	sm := newAgentSequenceManager(cacheManager, wtName)
 	assert.Equal(t, sm.GetSequence(), int64(0))
 
-	sm = getAgentSequenceManager("")
+	sm = newAgentSequenceManager(cacheManager, "")
 	assert.Equal(t, sm.GetSequence(), int64(0))
 }
 
@@ -158,15 +159,4 @@ func (m *mockManager) CloseConn() {
 
 func (m *mockManager) Status() bool {
 	return m.status
-}
-
-type mockListener struct {
-	errCh chan error
-}
-
-func (m *mockListener) Listen() chan error {
-	return m.errCh
-}
-
-func (m *mockListener) Stop() {
 }

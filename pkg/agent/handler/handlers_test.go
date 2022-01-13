@@ -6,12 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-
-	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
 func TestNewAPISvcHandler(t *testing.T) {
@@ -107,10 +106,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 			},
 		},
 	}
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewAPISvcHandler(&cache.MockCache{})
+			handler := NewAPISvcHandler(cacheManager)
 
 			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
@@ -196,9 +196,10 @@ func TestNewCategoryHandler(t *testing.T) {
 		},
 	}
 
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewCategoryHandler(&cache.MockCache{})
+			handler := NewCategoryHandler(cacheManager)
 
 			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {
@@ -296,9 +297,10 @@ func TestNewInstanceHandler(t *testing.T) {
 		},
 	}
 
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewInstanceHandler(&cache.MockCache{})
+			handler := NewInstanceHandler(cacheManager)
 
 			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {

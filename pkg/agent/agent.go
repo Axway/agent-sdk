@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
@@ -53,10 +54,8 @@ type agentData struct {
 	agentCfg         interface{}
 	tokenRequester   auth.PlatformTokenGetter
 
-	apiMap                     cache.Cache
-	instanceMap                cache.Cache
-	categoryMap                cache.Cache
 	teamMap                    cache.Cache
+	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
@@ -75,16 +74,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 // InitializeWithAgentFeatures - Initializes the agent with agent features
 func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
-	// Only create the api map cache if it does not already exist
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
-	}
-	if agent.instanceMap == nil {
-		agent.instanceMap = cache.New()
-	}
-	if agent.categoryMap == nil {
-		agent.categoryMap = cache.New()
-	}
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
@@ -108,6 +97,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	// Only create the api map cache if it does not already exist
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg)
+	}
+
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
 		agent.cfg = centralCfg
@@ -121,7 +115,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 		// Init apic client when the agent starts, and on config change.
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		agent.apicClient.AddCache(agent.categoryMap, agent.teamMap)
+		agent.apicClient.AddCache(agent.cacheManager.GetCategoryCache(), agent.teamMap)
 
 		if util.IsNotTest() {
 			err = initEnvResources(centralCfg, agent.apicClient)
@@ -201,7 +195,7 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.apiMap = cache.New()
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
 	agent.apicClient = apicClient
 }
 
@@ -248,13 +242,17 @@ func startAPIServiceCache() {
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
-		err := newDiscoveryCacheJob.Execute()
-		if err != nil {
-			log.Error(err)
-			return
+		if !agent.cacheManager.HasLoadedPersistedCache() {
+			err := newDiscoveryCacheJob.Execute()
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			// trigger early saving for the initialized cache, following save will be done by interval job
+			agent.cacheManager.SaveCache()
 		}
 
-		err = startStreamMode(agent)
+		err := startStreamMode(agent)
 		if err != nil {
 			log.Error(err)
 			return
@@ -329,10 +327,10 @@ func GetCentralConfig() config.CentralConfig {
 
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
 	}
-	return agent.apiMap
+	return agent.cacheManager.GetAPIServiceCache()
 }
 
 // GetAgentResource - Returns Agent resource
@@ -390,9 +388,9 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 
 func startStreamMode(agent agentData) error {
 	handlers := []handler.Handler{
-		handler.NewAPISvcHandler(agent.apiMap),
-		handler.NewInstanceHandler(agent.instanceMap),
-		handler.NewCategoryHandler(agent.categoryMap),
+		handler.NewAPISvcHandler(agent.cacheManager),
+		handler.NewInstanceHandler(agent.cacheManager),
+		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		agent.proxyResourceHandler,
 	}
@@ -401,6 +399,7 @@ func startStreamMode(agent agentData) error {
 		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
 		agent.cfg,
 		agent.tokenRequester,
+		agent.cacheManager,
 		handlers...,
 	)
 

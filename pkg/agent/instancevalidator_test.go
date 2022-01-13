@@ -5,10 +5,11 @@ import (
 	"sync"
 	"testing"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,10 +38,9 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 		},
 	}
 
-	agent.instanceMap = cache.New()
-	agent.apiMap = cache.New()
-	agent.instanceMap.Set(instance.Metadata.ID, instance)
-	agent.apiMap.SetWithSecondaryKey("primaryKey-"+externalAPIID, externalAPIID, svc)
+	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	agent.cacheManager.AddAPIServiceInstance(instance)
+	agent.cacheManager.AddAPIService(svc)
 	return svc, instance
 }
 
@@ -62,12 +62,11 @@ func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 	setupCache("12345", "test")
 	setupAPIValidator(true)
 	instanceValidator.Execute()
-	i, err := agent.instanceMap.Get("instance-12345")
+	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.Nil(t, err)
 	assert.NotNil(t, i)
 
-	s, err := agent.apiMap.Get("primaryKey-12345")
-	assert.Nil(t, err)
+	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
 	assert.NotNil(t, s)
 }
 
@@ -90,12 +89,11 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	})
 	setupAPIValidator(false)
 	instanceValidator.Execute()
-	i, err := agent.instanceMap.Get("instance-12345")
+	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)
 	assert.Nil(t, i)
 
-	s, err := agent.apiMap.Get("primaryKey-12345")
-	assert.NotNil(t, err)
+	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
 	assert.Nil(t, s)
 }
 
@@ -114,11 +112,10 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 	setupAPIValidator(false)
 
 	instanceValidator.Execute()
-	i, err := agent.instanceMap.Get("instance-12345")
+	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)
 	assert.Nil(t, i)
 
-	s, err := agent.apiMap.Get("primaryKey-12345")
-	assert.Nil(t, err)
+	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
 	assert.NotNil(t, s)
 }
