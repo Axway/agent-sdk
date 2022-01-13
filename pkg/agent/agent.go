@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -108,6 +109,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return nil
 	}
 
+	agent.cfg = centralCfg
+	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
+
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
@@ -124,19 +128,16 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 				return err
 			}
 		}
-	}
 
-	agent.cfg = centralCfg
-	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
-
-	if centralCfg.GetAgentName() != "" {
-		if agent.agentResourceManager == nil {
-			agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
-			if err != nil {
-				return err
+		if centralCfg.GetAgentName() != "" {
+			if agent.agentResourceManager == nil {
+				agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
+				if err != nil {
+					return err
+				}
+			} else {
+				agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
 			}
-		} else {
-			agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
 		}
 	}
 
@@ -151,15 +152,18 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
 			startTeamACLCache()
+
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
 				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 			}
+
+			// Set agent running
+			if agent.agentResourceManager != nil {
+				UpdateStatusWithPrevious(AgentRunning, "", "")
+			}
 		}
-		// Set agent running
-		if agent.agentResourceManager != nil {
-			UpdateStatusWithPrevious(AgentRunning, "", "")
-		}
+
 	}
 
 	agent.isInitialized = true
