@@ -20,6 +20,7 @@ import (
 
 func resetResources() {
 	agent.agentResourceManager = nil
+	agent.cacheManager = nil
 	agent.isInitialized = false
 	agent.apicClient = nil
 }

@@ -10,10 +10,10 @@ import (
 type PublishAPIFunc func(serviceBody apic.ServiceBody) error
 
 // getAPIByPrimaryKey - finds the api by the Primary Key from cache or API Server query
-func getAPIByPrimaryKey(primaryKey string) interface{} {
-	var api interface{}
-	if agent.apiMap != nil {
-		api, _ = agent.apiMap.Get(primaryKey)
+func getAPIByPrimaryKey(primaryKey string) *apiV1.ResourceInstance {
+	var api *apiV1.ResourceInstance
+	if agent.cacheManager != nil {
+		api = agent.cacheManager.GetAPIServiceWithPrimaryKey(primaryKey)
 		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
 			api, _ = updateCacheForExternalAPIPrimaryKey(primaryKey)
 		}
@@ -22,25 +22,22 @@ func getAPIByPrimaryKey(primaryKey string) interface{} {
 }
 
 // getAPIByID - finds the api by the ID from cache or API Server query
-func getAPIByID(externalAPIID string) interface{} {
-	var api interface{}
-	if agent.apiMap != nil {
-		api, _ = agent.apiMap.Get(externalAPIID)
-		if api == nil {
-			api, _ = agent.apiMap.GetBySecondaryKey(externalAPIID) // try to get the API by a secondary key
-			if api == nil && agent.cfg.GetUpdateFromAPIServer() {
-				api, _ = updateCacheForExternalAPIID(externalAPIID)
-			}
+func getAPIByID(externalAPIID string) *apiV1.ResourceInstance {
+	var api *apiV1.ResourceInstance
+	if agent.cacheManager != nil {
+		api = agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
+		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
+			api, _ = updateCacheForExternalAPIID(externalAPIID)
 		}
 	}
 	return api
 }
 
 // getAPIByName - finds the api by the Name from cache or API Server query
-func getAPIByName(apiName string) interface{} {
-	var api interface{}
-	if agent.apiMap != nil {
-		api, _ = agent.apiMap.GetBySecondaryKey(apiName)
+func getAPIByName(apiName string) *apiV1.ResourceInstance {
+	var api *apiV1.ResourceInstance
+	if agent.cacheManager != nil {
+		api = agent.cacheManager.GetAPIServiceWithName(apiName)
 		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
 			api, _ = updateCacheForExternalAPIName(apiName)
 		}
@@ -68,12 +65,7 @@ func IsAPIPublishedByPrimaryKey(primaryKey string) bool {
 // GetAttributeOnPublishedAPIByName - Returns the value on published proxy
 func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 	api := getAPIByName(apiName)
-	if api != nil {
-		apiSvc := api.(apiV1.ResourceInstance)
-		attrVal := apiSvc.ResourceMeta.Attributes[attrName]
-		return attrVal
-	}
-	return ""
+	return getAttributeFromResource(api, attrName)
 }
 
 // GetAttributeOnPublishedAPI - Returns the value on published proxy
@@ -83,34 +75,23 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
 
-func getAttributeFromResource(apiResource interface{}, attrName string) string {
-	apiSvc, ok := apiResource.(apiV1.ResourceInstance)
-	if !ok {
-		apiSvc, ok := apiResource.(*apiV1.ResourceInstance)
-		if ok {
-			return apiSvc.ResourceMeta.Attributes[attrName]
-		}
-		return ""
+func getAttributeFromResource(apiResource *apiV1.ResourceInstance, attrName string) string {
+	if apiResource != nil && apiResource.Attributes != nil {
+		return apiResource.Attributes[attrName]
 	}
-	return apiSvc.ResourceMeta.Attributes[attrName]
+	return ""
 }
 
 // GetAttributeOnPublishedAPIByID - Returns the value on published proxy
 func GetAttributeOnPublishedAPIByID(externalAPIID string, attrName string) string {
 	api := getAPIByID(externalAPIID)
-	if api != nil {
-		return getAttributeFromResource(api, attrName)
-	}
-	return ""
+	return getAttributeFromResource(api, attrName)
 }
 
 // GetAttributeOnPublishedAPIByPrimaryKey - Returns the value on published proxy
 func GetAttributeOnPublishedAPIByPrimaryKey(primaryKey string, attrName string) string {
 	api := getAPIByPrimaryKey(primaryKey)
-	if api != nil {
-		return getAttributeFromResource(api, attrName)
-	}
-	return ""
+	return getAttributeFromResource(api, attrName)
 }
 
 // PublishAPI - Publishes the API
@@ -121,7 +102,7 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 			apiSvc, e := ret.AsInstance()
 			if e == nil {
-				addItemToAPICache(*apiSvc)
+				agent.cacheManager.AddAPIService(apiSvc)
 			}
 		} else {
 			return err

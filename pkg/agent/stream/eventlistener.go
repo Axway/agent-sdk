@@ -19,25 +19,26 @@ type Listener interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
-	cancel      context.CancelFunc
-	ctx         context.Context
-	getResource ResourceClient
-	handlers    []handler.Handler
-	isRunning   bool
-	source      chan *proto.Event
+	cancel          context.CancelFunc
+	ctx             context.Context
+	getResource     ResourceClient
+	handlers        []handler.Handler
+	source          chan *proto.Event
+	sequenceManager *agentSequenceManager
 }
 
-type newListenerFunc func(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener
+type newListenerFunc func(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri ResourceClient, cbs ...handler.Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
-		cancel:      cancel,
-		ctx:         ctx,
-		getResource: ri,
-		handlers:    cbs,
-		source:      source,
+		cancel:          cancel,
+		ctx:             ctx,
+		getResource:     ri,
+		handlers:        cbs,
+		source:          source,
+		sequenceManager: sequenceManager,
 	}
 }
 
@@ -115,7 +116,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	}
 
 	em.handleResource(event.Type, event.Metadata, ri)
-
+	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
 

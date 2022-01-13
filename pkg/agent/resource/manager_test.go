@@ -52,7 +52,7 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 	return nil, nil
 }
 
-func (m *mockSvcClient) AddCategoryCache(categoryCache cache.Cache) {}
+func (m *mockSvcClient) AddCache(categoryCache cache.Cache, teamCache cache.Cache) {}
 
 func (m *mockSvcClient) GetOrCreateCategory(category string) string { return "" }
 
@@ -115,6 +115,22 @@ func (m *mockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "", nil }
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig)      {}
 func (m *mockSvcClient) SetConfig(cfg config.CentralConfig)           {}
+
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
 
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	if method == api.PUT {

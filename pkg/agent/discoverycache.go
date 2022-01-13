@@ -109,7 +109,7 @@ func (j *discoveryCache) updateAPICache() {
 			j.lastServiceTime = thisTime
 		}
 
-		externalAPIID := addItemToAPICache(*apiService)
+		externalAPIID := agent.cacheManager.AddAPIService(apiService)
 		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
 			existingAPIs[externalAPIPrimaryKey] = true
 		} else {
@@ -119,10 +119,10 @@ func (j *discoveryCache) updateAPICache() {
 
 	if j.refreshAll {
 		// Remove items that are not published as Resources
-		cacheKeys := agent.apiMap.GetKeys()
+		cacheKeys := agent.cacheManager.GetAPIServiceKeys()
 		for _, key := range cacheKeys {
 			if _, ok := existingAPIs[key]; !ok {
-				agent.apiMap.Delete(key)
+				agent.cacheManager.DeleteAPIService(key)
 			}
 		}
 	}
@@ -151,13 +151,13 @@ func (j *discoveryCache) updatePIServiceInstancesCache() {
 	j.instanceCacheLock.Lock()
 	defer j.instanceCacheLock.Unlock()
 	if j.refreshAll {
-		agent.instanceMap.Flush()
+		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
 	for _, instance := range serviceInstances {
 		if _, valid := instance.Attributes[apic.AttrExternalAPIID]; !valid {
 			continue // skip instance without external api id
 		}
-		agent.instanceMap.Set(instance.Metadata.ID, instance)
+		agent.cacheManager.AddAPIServiceInstance(instance)
 		if !j.refreshAll {
 			// Update the lastInstanceTime based on the newest instance found
 			thisTime := time.Time(instance.Metadata.Audit.CreateTimestamp)
@@ -189,22 +189,22 @@ func (j *discoveryCache) updateCategoryCache() {
 			j.lastCategoryTime = thisTime
 		}
 
-		agent.categoryMap.SetWithSecondaryKey(category.Name, category.Title, category)
+		agent.cacheManager.AddCategory(category)
 		existingCategories[category.Name] = true
 	}
 
 	if j.refreshAll {
 		// Remove categories that no longer exist
-		cacheKeys := agent.categoryMap.GetKeys()
+		cacheKeys := agent.cacheManager.GetCategoryKeys()
 		for _, key := range cacheKeys {
 			if _, ok := existingCategories[key]; !ok {
-				agent.categoryMap.Delete(key)
+				agent.cacheManager.DeleteCategory(key)
 			}
 		}
 	}
 }
 
-var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
+var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (*apiV1.ResourceInstance, error) {
 	query := map[string]string{
 		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
 	}
@@ -212,7 +212,7 @@ var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (in
 	return updateCacheForExternalAPI(query)
 }
 
-var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
+var updateCacheForExternalAPIID = func(externalAPIID string) (*apiV1.ResourceInstance, error) {
 	query := map[string]string{
 		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
 	}
@@ -220,7 +220,7 @@ var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error
 	return updateCacheForExternalAPI(query)
 }
 
-var updateCacheForExternalAPIName = func(externalAPIName string) (interface{}, error) {
+var updateCacheForExternalAPIName = func(externalAPIName string) (*apiV1.ResourceInstance, error) {
 	query := map[string]string{
 		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
 	}
@@ -228,35 +228,15 @@ var updateCacheForExternalAPIName = func(externalAPIName string) (interface{}, e
 	return updateCacheForExternalAPI(query)
 }
 
-var updateCacheForExternalAPI = func(query map[string]string) (interface{}, error) {
+var updateCacheForExternalAPI = func(query map[string]string) (*apiV1.ResourceInstance, error) {
 	apiServerURL := agent.cfg.GetServicesURL()
 
 	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
 	if err != nil {
 		return nil, err
 	}
-	apiService := apiV1.ResourceInstance{}
-	json.Unmarshal(response, &apiService)
-	addItemToAPICache(apiService)
+	apiService := &apiV1.ResourceInstance{}
+	json.Unmarshal(response, apiService)
+	agent.cacheManager.AddAPIService(apiService)
 	return apiService, nil
-}
-
-func addItemToAPICache(apiService apiV1.ResourceInstance) string {
-	externalAPIID, ok := apiService.Attributes[apic.AttrExternalAPIID]
-	if ok {
-		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
-		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
-			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
-			if _, err := agent.apiMap.Get(externalAPIID); err != nil {
-				agent.apiMap.Delete(externalAPIID)
-			}
-
-			agent.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
-			agent.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
-		} else {
-			agent.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
-		}
-		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
-	}
-	return externalAPIID
 }
