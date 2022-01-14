@@ -99,23 +99,6 @@ func (j *aclUpdateHandlerJob) statusUpdate() {
 	}
 }
 
-func isItemInArray(searchArray []string, item string) bool {
-	if len(searchArray) == 0 {
-		return false
-	}
-	if len(searchArray) == 1 {
-		return searchArray[0] == item
-	}
-	midPoint := len(searchArray) / 2
-	if item == searchArray[midPoint] {
-		return true
-	}
-	if item < searchArray[midPoint] {
-		return isItemInArray(searchArray[:midPoint], item)
-	}
-	return isItemInArray(searchArray[midPoint:], item)
-}
-
 func (j *aclUpdateHandlerJob) initializeACLJob() {
 	acl, err := agent.apicClient.GetAccessControlList(j.getACLName())
 	if err != nil {
@@ -152,11 +135,11 @@ func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
 	j.newTeamMutex.Lock()
 	defer j.newTeamMutex.Unlock()
 
-	if isItemInArray(j.existingTeamIDs, teamID) {
+	if util.IsItemInSlice(j.existingTeamIDs, teamID) {
 		return
 	}
 
-	if isItemInArray(j.newTeamIDs, teamID) {
+	if util.IsItemInSlice(j.newTeamIDs, teamID) {
 		return
 	}
 
