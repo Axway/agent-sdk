@@ -42,6 +42,7 @@ type APIDetails struct {
 type APIMetric struct {
 	API         APIDetails         `json:"api"`
 	StatusCode  string             `json:"statusCode"`
+	Status      string             `json:"status"`
 	Count       int64              `json:"count"`
 	Response    ResponseMetrics    `json:"response"`
 	Observation ObservationDetails `json:"observation"`
