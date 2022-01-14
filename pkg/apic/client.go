@@ -586,7 +586,7 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var updatedACL *v1alpha1.AccessControlList
+	updatedACL := &v1alpha1.AccessControlList{}
 	err = json.Unmarshal(response.Body, updatedACL)
 	if err != nil {
 		return nil, err
