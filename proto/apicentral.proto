@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package central.events.v1.datamodel;
 
-option go_package = "github.com/Axway/agent-sdk/pkg/proto";
+option go_package = "github.com/Axway/agent-sdk/pkg/watchmanager/proto";
 
 // API Server generic resource structure.
 message ResourceInstance {

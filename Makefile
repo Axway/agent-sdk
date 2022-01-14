@@ -9,6 +9,8 @@ GO_PKG_LIST := $(shell go list ./... | grep -v /mock | grep -v ./pkg/apic/apiser
 
 export GOFLAGS := -mod=mod
 
+PROTO_OUT_PATH := $(shell go env GOPATH)/src
+
 all : clean
 
 clean:
@@ -53,7 +55,7 @@ PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
 
 %.pb.go : %.proto
 	@echo $<
-	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=. --go_out=. $<
+	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=${PROTO_OUT_PATH} --go_out=${PROTO_OUT_PATH} $<
 
 # generate protobufs
 protoc: $(PROTOTARGETS)

@@ -4,7 +4,7 @@ package central.events.v1;
 
 import "apicentral.proto";
 
-option go_package = "github.com/Axway/agent-sdk/pkg/proto";
+option go_package = "github.com/Axway/agent-sdk/pkg/watchmanager/proto";
 
 service watch {
     rpc subscribe(stream Request) returns (stream Event) {
