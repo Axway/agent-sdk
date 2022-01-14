@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,18 +46,6 @@ func generateTestACL(name string, teams []string) *v1alpha1.AccessControlList {
 		})
 	}
 	return acl
-}
-
-func unique(teams []string) []string {
-	keys := make(map[string]bool)
-	list := []string{}
-	for _, team := range teams {
-		if _, value := keys[team]; !value {
-			keys[team] = true
-			list = append(list, team)
-		}
-	}
-	return list
 }
 
 func TestACLUpdateHandlerJob(t *testing.T) {
@@ -160,12 +150,12 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 			aclFromEnv := generateTestACL(test.envName, test.aclTeams)
 
 			// acl post, when no init or put when init
-			allTeams := unique(append(test.aclTeams, test.initTeams...))
+			allTeams := util.RemoveDuplicateValuesFromStringSlice(append(test.aclTeams, test.initTeams...))
 			sort.Strings(allTeams)
 			aclAfterInit := generateTestACL(test.envName, allTeams)
 
 			// acl put when new teams added
-			finalTeams := unique(append(allTeams, test.newTeams...))
+			finalTeams := util.RemoveDuplicateValuesFromStringSlice(append(allTeams, test.newTeams...))
 			sort.Strings(finalTeams)
 			aclFinal := generateTestACL(test.envName, finalTeams)
 
@@ -177,11 +167,12 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 				}
 				if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+test.envName+"/accesscontrollists") {
 					numCalls[req.Method]++
-					var aclReturn *v1alpha1.AccessControlList
+					aclReturn := make([]byte, 0)
+					aclReturn, _ = ioutil.ReadAll(req.Body)
 					switch {
 					case req.Method == http.MethodGet && test.aclExists:
 						resp.WriteHeader(http.StatusOK)
-						aclReturn = aclFromEnv
+						aclReturn, _ = json.Marshal(aclFromEnv)
 					case req.Method == http.MethodGet && !test.aclExists:
 						resp.WriteHeader(http.StatusNotFound)
 						data, _ := json.Marshal(&apic.ResponseError{
@@ -197,17 +188,13 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 						return
 					case req.Method == http.MethodPost:
 						resp.WriteHeader(http.StatusCreated)
-						aclReturn = aclAfterInit
 					case req.Method == http.MethodPut && test.aclExists && numCalls[http.MethodPut] == 1:
 						resp.WriteHeader(http.StatusOK)
-						aclReturn = aclAfterInit
 					case req.Method == http.MethodPut:
 						resp.WriteHeader(http.StatusOK)
-						aclReturn = aclFinal
 					}
 
-					data, _ := json.Marshal(aclReturn)
-					resp.Write(data)
+					resp.Write(aclReturn)
 				}
 			}))
 			defer s.Close()

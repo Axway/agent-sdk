@@ -9,6 +9,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -98,6 +99,23 @@ func (j *aclUpdateHandlerJob) statusUpdate() {
 	}
 }
 
+func isItemInArray(searchArray []string, item string) bool {
+	if len(searchArray) == 0 {
+		return false
+	}
+	if len(searchArray) == 1 {
+		return searchArray[0] == item
+	}
+	midPoint := len(searchArray) / 2
+	if item == searchArray[midPoint] {
+		return true
+	}
+	if item < searchArray[midPoint] {
+		return isItemInArray(searchArray[:midPoint], item)
+	}
+	return isItemInArray(searchArray[midPoint:], item)
+}
+
 func (j *aclUpdateHandlerJob) initializeACLJob() {
 	acl, err := agent.apicClient.GetAccessControlList(j.getACLName())
 	if err != nil {
@@ -111,6 +129,13 @@ func (j *aclUpdateHandlerJob) initializeACLJob() {
 			j.existingTeamIDs = append(j.existingTeamIDs, subject.ID)
 		}
 	}
+
+	numTeamsOnEnv := len(j.existingTeamIDs)
+	j.existingTeamIDs = util.RemoveDuplicateValuesFromStringSlice(j.existingTeamIDs)
+	if len(j.existingTeamIDs) != numTeamsOnEnv {
+		go j.updateACL()
+		return
+	}
 	sort.Strings(j.existingTeamIDs)
 }
 
@@ -123,25 +148,16 @@ func (j *aclUpdateHandlerJob) stopped() {
 }
 
 func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
-	for _, knownID := range j.existingTeamIDs {
-		if knownID == teamID {
-			return
-		}
-	}
-
 	// lock so an update does not happen until the team is added to the array
 	j.newTeamMutex.Lock()
 	defer j.newTeamMutex.Unlock()
 
-	for _, alreadyReceived := range j.newTeamIDs {
-		if alreadyReceived == teamID {
-			return
-		}
+	if isItemInArray(j.existingTeamIDs, teamID) {
+		return
 	}
-	for _, knownID := range j.existingTeamIDs {
-		if knownID == teamID {
-			return
-		}
+
+	if isItemInArray(j.newTeamIDs, teamID) {
+		return
 	}
 
 	j.newTeamIDs = append(j.newTeamIDs, teamID)
