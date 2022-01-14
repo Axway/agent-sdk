@@ -71,7 +71,7 @@ func registerTeamMapCacheJob(teamChannel chan string) {
 	interval := time.Hour
 	// chgeck for QA env vars
 	if val := os.Getenv(qaTeamCacheInterval); val != "" {
-		if duration, err := time.ParseDuration(val); err != nil {
+		if duration, err := time.ParseDuration(val); err == nil {
 			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaTeamCacheInterval, val, time.Hour)
 			interval = duration
 		} else {
