@@ -40,6 +40,7 @@ func (j *centralTeamsCache) Execute() error {
 		if id, err := agent.teamMap.Get(team.Name); err != nil || id != team.ID {
 			err = agent.teamMap.Set(team.Name, team.ID)
 			if j.teamChannel != nil {
+				log.Tracef("sending %s (%) team to acl", team.Name, team.ID)
 				j.teamChannel <- team.ID
 			}
 		}
