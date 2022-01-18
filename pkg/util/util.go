@@ -102,6 +102,24 @@ func RemoveDuplicateValuesFromStringSlice(strSlice []string) []string {
 	return list
 }
 
+// IsItemInSlice - Returns true if the given item is in the string slice, strSlice should be sorted
+func IsItemInSlice(strSlice []string, item string) bool {
+	if len(strSlice) == 0 {
+		return false
+	}
+	if len(strSlice) == 1 {
+		return strSlice[0] == item
+	}
+	midPoint := len(strSlice) / 2
+	if item == strSlice[midPoint] {
+		return true
+	}
+	if item < strSlice[midPoint] {
+		return IsItemInSlice(strSlice[:midPoint], item)
+	}
+	return IsItemInSlice(strSlice[midPoint:], item)
+}
+
 // ConvertTimeToMillis - convert to milliseconds
 func ConvertTimeToMillis(tm time.Time) int64 {
 	return tm.UnixNano() / 1e6
