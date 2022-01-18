@@ -131,15 +131,18 @@ func (j *aclUpdateHandlerJob) stopped() {
 }
 
 func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
+	log.Tracef("acl update job received team id %s", teamID)
 	// lock so an update does not happen until the team is added to the array
 	j.newTeamMutex.Lock()
 	defer j.newTeamMutex.Unlock()
 
 	if util.IsItemInSlice(j.existingTeamIDs, teamID) {
+		log.Tracef("team id %s already in acl", teamID)
 		return
 	}
 
 	if util.IsItemInSlice(j.newTeamIDs, teamID) {
+		log.Tracef("team id %s already in acl update process", teamID)
 		return
 	}
 
@@ -191,6 +194,7 @@ func (j *aclUpdateHandlerJob) updateACL() {
 
 	j.countdownStarted = true
 	j.countdownMutex.Unlock()
+	log.Tracef("waiting %s, for more teams, before updating acl", waitForTime)
 	time.Sleep(waitForTime)
 
 	// lock so teams are not added to the array until the update is done
@@ -205,6 +209,7 @@ func (j *aclUpdateHandlerJob) updateACL() {
 
 	var err error
 	var acl *v1alpha1.AccessControlList
+	log.Tracef("acl about to be updated")
 	if j.currentACL != nil {
 		acl, err = agent.apicClient.UpdateAccessControlList(j.createACLResource(append(j.existingTeamIDs, j.newTeamIDs...)))
 	} else {
@@ -212,6 +217,7 @@ func (j *aclUpdateHandlerJob) updateACL() {
 	}
 
 	if err == nil {
+		log.Tracef("acl has been updated")
 		j.existingTeamIDs = append(j.existingTeamIDs, j.newTeamIDs...)
 		j.newTeamIDs = make([]string, 0)
 		sort.Strings(j.existingTeamIDs)
