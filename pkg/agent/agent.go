@@ -156,6 +156,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
 			startTeamACLCache()
+			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+			if err != nil {
+				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
+			}
 		}
 	}
 	agent.isInitialized = true
@@ -212,6 +216,13 @@ func startAPIServiceCache() {
 		}
 		log.Tracef("registered API cache update all job: %s", id)
 	}()
+}
+
+func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
+	if at == config.DiscoveryAgent {
+		return client.RegisterSubscriptionWebhook()
+	}
+	return nil
 }
 
 func startTeamACLCache() {
