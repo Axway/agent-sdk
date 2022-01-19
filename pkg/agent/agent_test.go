@@ -258,6 +258,17 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 	assert.Nil(t, agent.apicClient)
 }
 
+func Test_registerSubscriptionWebhook(t *testing.T) {
+	err := registerSubscriptionWebhook(config.DiscoveryAgent, &mockSvcClient{})
+	assert.Nil(t, err)
+
+	err = registerSubscriptionWebhook(config.DiscoveryAgent, &mockSvcClient{err: fmt.Errorf("error")})
+	assert.NotNil(t, err)
+
+	err = registerSubscriptionWebhook(config.TraceabilityAgent, &mockSvcClient{})
+	assert.Nil(t, err)
+}
+
 func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 	assert.Equal(t, expectedRes.Group, res.Group)
 	assert.Equal(t, expectedRes.Kind, res.Kind)
