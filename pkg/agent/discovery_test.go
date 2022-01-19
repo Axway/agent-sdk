@@ -21,6 +21,7 @@ import (
 
 type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
+	err    error
 }
 
 func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
@@ -68,17 +69,24 @@ func (m *mockSvcClient) GetAPIServiceInstanceByName(instanceName string) (*v1alp
 }
 
 func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
+
 func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
-func (m *mockSvcClient) RegisterSubscriptionWebhook() error { return nil }
+func (m *mockSvcClient) RegisterSubscriptionWebhook() error {
+	return m.err
+}
+
 func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
+
 func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
 	return nil
 }
+
 func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
+
 func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }

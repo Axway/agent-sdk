@@ -79,7 +79,6 @@ func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 	err := c.createSecret()
 	if err != nil {
 		return utilerrors.Wrap(ErrCreateSecret, err.Error())
-
 	}
 
 	err = c.createWebhook()
