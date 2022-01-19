@@ -18,5 +18,113 @@
     "insightvm": false
   },
   "suppressions": [
+    {
+      "path": "apic/apiserver/models/catalog/v1alpha1/AddOn\\.go:58",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AddOn\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/catalog/v1alpha1/AccessControlList\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AccessControlList\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/catalog/v1alpha1/Document\\.go:58",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "Document\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/management/v1alpha1/AmplifyJWTAuthRule\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AmplifyJWTAuthRule\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/definitions/v1alpha1/AccessControlList\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AccessControlList\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/management/v1alpha1/APIKeyAuthRule\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "APIKeyAuthRule\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/management/v1alpha1/AmplifyOAuth2AuthRule\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AmplifyOAuth2AuthRule\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/management/v1alpha1/AccessControlList\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "AccessControlList\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    },
+    {
+      "path": "apic/apiserver/models/catalog/v1alpha1/Resource\\.go:54",
+      "scanner": "fortify",
+      "classification": "Deferred",
+      "justification": "APIGOV-21423",
+      "until": "2022-02-02",
+      "component": "Resource\\.go",
+      "version": "master",
+      "ids": [
+          "JSON Injection"
+      ]
+    }
   ]
 }
