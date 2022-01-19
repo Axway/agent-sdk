@@ -80,6 +80,8 @@ func (sm *subscriptionManager) RegisterValidator(validator SubscriptionValidator
 }
 
 func (sm *subscriptionManager) Ready() bool {
+	sm.locklistLock.Lock()
+	defer sm.locklistLock.Unlock()
 	return sm.isRunning
 }
 
@@ -234,7 +236,9 @@ func (sm *subscriptionManager) Start() {
 				log.Errorf("Error registering interval job to poll for subscriptions: %s", err.Error())
 			}
 		}
+		sm.locklistLock.Lock()
 		sm.isRunning = true
+		sm.locklistLock.Unlock()
 	}
 }
 
@@ -264,8 +268,6 @@ func (sm *subscriptionManager) addLocklistItem(id string) {
 }
 
 func (sm *subscriptionManager) removeLocklistItem(id string) {
-	sm.locklistLock.RLock()
-	defer sm.locklistLock.RUnlock()
 	delete(sm.locklist, id)
 }
 
