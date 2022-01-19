@@ -268,6 +268,8 @@ func (sm *subscriptionManager) addLocklistItem(id string) {
 }
 
 func (sm *subscriptionManager) removeLocklistItem(id string) {
+	sm.locklistLock.RLock()
+	defer sm.locklistLock.RUnlock()
 	delete(sm.locklist, id)
 }
 
