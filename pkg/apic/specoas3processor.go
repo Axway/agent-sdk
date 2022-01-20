@@ -3,9 +3,11 @@ package apic
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -157,5 +159,7 @@ func (p *oas3SpecProcessor) getAuthPolicies() ([]string, []APIKeyInfo) {
 			authPolicies = append(authPolicies, Oauth)
 		}
 	}
+	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
+	sort.Strings(authPolicies)
 	return authPolicies, keyInfo
 }

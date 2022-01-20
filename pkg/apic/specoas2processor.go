@@ -2,9 +2,11 @@ package apic
 
 import (
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
@@ -78,6 +80,8 @@ func (p *oas2SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
 			authPolicies = append(authPolicies, Oauth)
 		}
 	}
+	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
+	sort.Strings(authPolicies)
 	return authPolicies, keyInfo
 }
 
