@@ -93,9 +93,6 @@ func (em *EventListener) start() (done bool, err error) {
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
-	var ri *apiv1.ResourceInstance
-	var err error
-
 	log.Debugf(
 		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
 		event.Metadata.SequenceID,
@@ -104,20 +101,21 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		event.Payload.Name,
 	)
 
-	if event.Type == proto.Event_CREATED || event.Type == proto.Event_UPDATED {
-		ri, err = em.getResource.Get(event.Payload.Metadata.SelfLink)
-		if err != nil {
-			return err
-		}
-	}
-
-	if event.Type == proto.Event_DELETED {
-		ri = em.convertEventPayload(event)
+	ri, err := em.getEventResource(event)
+	if err != nil {
+		return err
 	}
 
 	em.handleResource(event.Type, event.Metadata, ri)
 	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
+}
+
+func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceInstance, error) {
+	if event.Type == proto.Event_DELETED {
+		return em.convertEventPayload(event), nil
+	}
+	return em.getResource.Get(event.Payload.Metadata.SelfLink)
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
