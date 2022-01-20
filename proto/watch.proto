@@ -27,6 +27,7 @@ message Event {
         CREATED = 0;
         UPDATED = 1;
         DELETED = 2;
+        SUBRESOURCEUPDATED = 3;
     }
     Type type = 7;
 
@@ -39,6 +40,7 @@ message EventMeta {
     string watchTopicID = 1;
     string watchTopicSelfLink = 2;
     int64 sequenceID = 3;
+    string subresource = 4;
 }
 
 message Organization {

@@ -64,6 +64,7 @@ func (r *resourceEntryExternalEvent) convertEventMetadata() *proto.EventMeta {
 			WatchTopicID:       r.Metadata.WatchTopicID,
 			WatchTopicSelfLink: r.Metadata.WatchTopicSelfLink,
 			SequenceID:         r.Metadata.SequenceID,
+			Subresource:        r.Metadata.Subresource,
 		}
 	}
 	return nil
