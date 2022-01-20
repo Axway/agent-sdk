@@ -144,7 +144,7 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 	return endPoints, nil
 }
 
-func (p *oas3SpecProcessor) getAuthPolicies() ([]string, []APIKeyInfo) {
+func (p *oas3SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
 	for _, scheme := range p.spec.Components.SecuritySchemes {
