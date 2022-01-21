@@ -87,7 +87,6 @@ func createTraceabilityAgentRes(id, name, dataplane string, processHeaders bool)
 
 type TestConfig struct {
 	resourceChanged bool
-	childCfg        config.IResourceConfigCallback
 }
 
 func (a *TestConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
@@ -325,15 +324,6 @@ func Test_registerSubscriptionWebhook(t *testing.T) {
 
 	err = registerSubscriptionWebhook(config.TraceabilityAgent, &mockSvcClient{})
 	assert.Nil(t, err)
-}
-
-func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
-	assert.Equal(t, expectedRes.Group, res.Group)
-	assert.Equal(t, expectedRes.Kind, res.Kind)
-	assert.Equal(t, expectedRes.Name, res.Name)
-	assert.Equal(t, expectedRes.Metadata.ID, res.Metadata.ID)
-	assert.Equal(t, expectedRes.Spec["dataplane"], res.Spec["dataplane"])
-	assert.Equal(t, expectedRes.Spec["config"], res.Spec["config"])
 }
 
 func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
