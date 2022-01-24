@@ -179,7 +179,6 @@ func TestSummaryBuilder(t *testing.T) {
 		SetTeam("1111").
 		SetProxy("", "proxy", 1).
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
-		SetIsInMetricEvent(true).
 		Build()
 
 	assert.Nil(t, err)
@@ -217,7 +216,6 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
-	assert.Equal(t, true, logEvent.TransactionSummary.IsInMetricEvent)
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetDuration(10).
@@ -255,7 +253,6 @@ func TestSummaryBuilder(t *testing.T) {
 		SetProduct("2222", "1.0").
 		SetRunTime("1111", "runtime1").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
-		SetIsInMetricEvent(false).
 		Build()
 
 	assert.Nil(t, err)
@@ -292,5 +289,4 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
 	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
-	assert.Equal(t, false, logEvent.TransactionSummary.IsInMetricEvent)
 }

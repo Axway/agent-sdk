@@ -39,7 +39,7 @@ type expected struct {
 var defaultExpected = expected{
 	url:            "https://lighthouse.admin.axway.com",
 	publish:        true,
-	metric:         true,
+	metric:         false,
 	interval:       15 * time.Minute,
 	offline:        false,
 	schedule:       "@hourly",

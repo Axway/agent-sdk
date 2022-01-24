@@ -34,16 +34,14 @@ type ObservationDetails struct {
 
 // APIDetails - Holds the api details
 type APIDetails struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Revision int    `json:"revision"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions
 type APIMetric struct {
 	API         APIDetails         `json:"api"`
 	StatusCode  string             `json:"statusCode"`
-	Status      string             `json:"status"`
 	Count       int64              `json:"count"`
 	Response    ResponseMetrics    `json:"response"`
 	Observation ObservationDetails `json:"observation"`

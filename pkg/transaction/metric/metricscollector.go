@@ -3,7 +3,6 @@ package metric
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -213,20 +212,7 @@ func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, durat
 		apiStatusMap[statusCode] = &APIMetric{
 			API:        apiDetails,
 			StatusCode: statusCode,
-			Status: func() string {
-				httpStatusCode, _ := strconv.Atoi(statusCode)
-				transSummaryStatus := "Unknown"
-				switch {
-				case httpStatusCode >= 200 && httpStatusCode < 400:
-					transSummaryStatus = "Success"
-				case httpStatusCode >= 400 && httpStatusCode < 500:
-					transSummaryStatus = "Failure"
-				case httpStatusCode >= 500 && httpStatusCode < 511:
-					transSummaryStatus = "Exception"
-				}
-				return transSummaryStatus
-			}(),
-			StartTime: now(),
+			StartTime:  now(),
 		}
 	}
 
