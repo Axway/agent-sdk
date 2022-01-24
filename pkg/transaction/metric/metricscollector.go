@@ -351,7 +351,7 @@ func (c *collector) processTransactionMetric(metricName string, metric interface
 				statusMetric := (metric.(metrics.Histogram))
 				c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
 				c.generateAPIStatusMetricEvent(statusMetric, statusCodeDetail, apiID)
-				c.registry.Unregister(metricName) // cleanup this metric after generating the event
+				// c.registry.Unregister(metricName) // cleanup this metric after generating the event
 			}
 		}
 	}
