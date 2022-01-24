@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -68,6 +69,10 @@ func TestNewStreamer(t *testing.T) {
 	err = <-errCh
 	assert.Nil(t, err)
 
+	hcStatus := streamer.healthcheck("")
+	assert.NotNil(t, hcStatus)
+	assert.Equal(t, hc.OK, hcStatus.Result)
+
 	streamer.manager = nil
 	streamer.listener = nil
 
@@ -90,12 +95,15 @@ func TestNewStreamer(t *testing.T) {
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
+
+	hcStatus = streamer.healthcheck("")
+	assert.NotNil(t, hcStatus)
+	assert.Equal(t, hc.FAIL, hcStatus.Result)
 }
 
 func TestClientStreamJob(t *testing.T) {
 	s := &mockStreamer{}
-	stopCh := make(chan interface{})
-	j := NewClientStreamJob(s, stopCh)
+	j := NewClientStreamJob(s)
 
 	assert.Nil(t, j.Status())
 	assert.True(t, j.Ready())

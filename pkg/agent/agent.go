@@ -239,6 +239,7 @@ func startAPIServiceCache() {
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
+		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
@@ -423,9 +424,7 @@ func startStreamMode(agent agentData) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	stopCh := make(chan interface{})
-	streamJob := stream.NewClientStreamJob(cs, stopCh)
-	_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
+	stream.NewClientStreamJob(cs)
 
 	return err
 }
