@@ -441,7 +441,8 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, event V4Ev
 		} else {
 			delete(c.metricMap, apiID)
 		}
+		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+		c.startTime = c.endTime
 		histogram.Clear()
 	}
-	log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
 }
