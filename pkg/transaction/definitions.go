@@ -62,16 +62,16 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	Status       string       `json:"status,omitempty"`
-	StatusDetail string       `json:"statusDetail,omitempty"`
-	Duration     int          `json:"duration"`
-	Application  *Application `json:"application,omitempty"`
-	Product      *Product     `json:"product,omitempty"`
-	Team         *Team        `json:"team,omitempty"`
-
-	Proxy      *Proxy      `json:"proxy,omitempty"`
-	Runtime    *Runtime    `json:"runtime,omitempty"`
-	EntryPoint *EntryPoint `json:"entryPoint,omitempty"`
+	Status          string       `json:"status,omitempty"`
+	StatusDetail    string       `json:"statusDetail,omitempty"`
+	Duration        int          `json:"duration"`
+	Application     *Application `json:"application,omitempty"`
+	Product         *Product     `json:"product,omitempty"`
+	Team            *Team        `json:"team,omitempty"`
+	Proxy           *Proxy       `json:"proxy,omitempty"`
+	Runtime         *Runtime     `json:"runtime,omitempty"`
+	EntryPoint      *EntryPoint  `json:"entryPoint,omitempty"`
+	IsInMetricEvent bool         `json:"isInMetricEvent,omitempty"`
 }
 
 // Application  - Represents the application used in transaction summary event
