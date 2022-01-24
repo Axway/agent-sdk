@@ -69,7 +69,7 @@ func NewUsageReporting() UsageReportingConfig {
 	return &UsageReportingConfiguration{
 		URL:               "https://lighthouse.admin.axway.com",
 		Publish:           true,
-		PublishMetric:     false,
+		PublishMetric:     true,
 		Interval:          15 * time.Minute,
 		Offline:           false,
 		Schedule:          "@hourly",
@@ -248,7 +248,7 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 func AddUsageReportingProperties(props properties.Properties) {
 	props.AddStringProperty(pathUsageReportingURL, "https://lighthouse.admin.axway.com", "The URL to publish usage events to in the Amplify platform. Default https://lighthouse.admin.axway.com")
 	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
-	props.AddBoolProperty(pathUsageReportingPublishMetric, false, "Indicates if the agent can publish metric events to Amplify platform. Default to false")
+	props.AddBoolProperty(pathUsageReportingPublishMetric, true, "Indicates if the agent can publish metric events to Amplify platform. Default to false")
 	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric events will be generated")
 	props.AddBoolProperty(pathUsageReportingOffline, false, "Turn this on to save the usage events to disk for manual upload")
 	props.AddStringProperty(pathUsageReportingSchedule, "@hourly", "The schedule at which usage events are generated, for offline mode only")
