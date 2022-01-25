@@ -1,12 +1,10 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -22,7 +20,6 @@ import (
 const (
 	apiServerPageSize        = 100
 	healthcheckEndpoint      = "central"
-	attributesQueryParam     = "attributes."
 	apiServerFields          = "name,title,attributes"
 	serviceInstanceCache     = "ServiceInstances"
 	serviceInstanceNameCache = "ServiceInstanceNames"
@@ -41,6 +38,7 @@ type discoveryCache struct {
 	lastInstanceTime time.Time
 	lastCategoryTime time.Time
 	refreshAll       bool
+	getHCStatus      hc.GetStatusLevel
 }
 
 func newDiscoveryCache(getAll bool) *discoveryCache {
@@ -49,18 +47,19 @@ func newDiscoveryCache(getAll bool) *discoveryCache {
 		lastInstanceTime: time.Time{},
 		lastCategoryTime: time.Time{},
 		refreshAll:       getAll,
+		getHCStatus:      hc.GetStatus,
 	}
 }
 
 //Ready -
 func (j *discoveryCache) Ready() bool {
-	status := hc.GetStatus(healthcheckEndpoint)
+	status := j.getHCStatus(healthcheckEndpoint)
 	return status == hc.OK
 }
 
 //Status -
 func (j *discoveryCache) Status() error {
-	status := hc.GetStatus(healthcheckEndpoint)
+	status := j.getHCStatus(healthcheckEndpoint)
 	if status == hc.OK {
 		return nil
 	}
@@ -231,43 +230,6 @@ func (j *discoveryCache) loadServiceInstancesFromCache(serviceInstances []*apiV1
 
 	// return the full list
 	return cachedInstances
-}
-
-var updateCacheForExternalAPIPrimaryKey = func(externalAPIPrimaryKey string) (interface{}, error) {
-	query := map[string]string{
-		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIPrimaryKey + "==\"" + externalAPIPrimaryKey + "\"",
-	}
-
-	return updateCacheForExternalAPI(query)
-}
-
-var updateCacheForExternalAPIID = func(externalAPIID string) (interface{}, error) {
-	query := map[string]string{
-		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIID + "==\"" + externalAPIID + "\"",
-	}
-
-	return updateCacheForExternalAPI(query)
-}
-
-var updateCacheForExternalAPIName = func(externalAPIName string) (interface{}, error) {
-	query := map[string]string{
-		apic.QueryKey: attributesQueryParam + apic.AttrExternalAPIName + "==\"" + externalAPIName + "\"",
-	}
-
-	return updateCacheForExternalAPI(query)
-}
-
-var updateCacheForExternalAPI = func(query map[string]string) (interface{}, error) {
-	apiServerURL := agent.cfg.GetServicesURL()
-
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, apiServerURL, query, nil)
-	if err != nil {
-		return nil, err
-	}
-	apiService := apiV1.ResourceInstance{}
-	json.Unmarshal(response, &apiService)
-	addItemToAPICache(apiService)
-	return apiService, nil
 }
 
 func validateAPIOnDataplane(serviceInstances []*apiV1.ResourceInstance) []*apiV1.ResourceInstance {
