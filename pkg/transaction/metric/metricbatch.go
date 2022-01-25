@@ -86,6 +86,7 @@ func (b *EventBatch) ACK() {
 			b.collector.cleanupMetricCounter(b.histograms[eventID], v4Event)
 		}
 	}
+	b.collector.metricStartTime = b.collector.metricEndTime
 	b.batchUnlock()
 }
 

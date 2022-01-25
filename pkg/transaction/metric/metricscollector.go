@@ -29,8 +29,10 @@ type Collector interface {
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	startTime        time.Time
-	endTime          time.Time
+	usageStartTime   time.Time
+	usageEndTime     time.Time
+	metricStartTime  time.Time
+	metricEndTime    time.Time
 	orgGUID          string
 	eventChannel     chan interface{}
 	lock             *sync.Mutex
@@ -108,7 +110,8 @@ func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		startTime:        now().Add(-1 * time.Minute),
+		usageStartTime:   now().Add(-1 * time.Minute),
+		metricStartTime:  now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
@@ -157,9 +160,11 @@ func (c *collector) Execute() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.endTime = now()
+	c.usageEndTime = now()
+	c.metricEndTime = now()
 	c.orgGUID = c.getOrgGUID()
-	log.Debugf("Generating usage/metric event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	log.Debugf("Generating usage event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+	log.Debugf("Generating metric event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.metricStartTime), util.ConvertTimeToMillis(c.metricEndTime))
 	defer func() {
 		c.cleanup()
 	}()
@@ -262,7 +267,8 @@ func (c *collector) generateEvents() {
 	}
 
 	if len(c.publishItemQueue) == 0 {
-		log.Infof("No usage/metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+		log.Infof("No usage event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+		log.Infof("No metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.metricStartTime), util.ConvertTimeToMillis(c.metricEndTime))
 	}
 
 	c.metricBatch = NewEventBatch(c)
@@ -300,24 +306,24 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	usage := map[string]int64{
 		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
-	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionCountMetric).Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionCountMetric).Count(), util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 
 	if agent.GetCentralConfig().IsAxwayManaged() {
 		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
-		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionVolumeMetric).Count(), util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionVolumeMetric).Count(), util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 	}
 
-	granularity := int(c.endTime.Sub(c.startTime).Milliseconds())
-	reportTime := c.startTime.Format(ISO8601)
+	granularity := int(c.usageEndTime.Sub(c.usageStartTime).Milliseconds())
+	reportTime := c.usageStartTime.Format(ISO8601)
 	if c.usageConfig.IsOfflineMode() {
 		granularity = c.usageConfig.GetReportGranularity()
-		reportTime = c.endTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
+		reportTime = c.usageEndTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
 	lightHouseUsageEvent := LighthouseUsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
-		Timestamp:   ISO8601Time(c.endTime),
+		Timestamp:   ISO8601Time(c.usageEndTime),
 		SchemaID:    c.usageConfig.GetURL() + schemaPath,
 		Granularity: granularity,
 		Report: map[string]LighthouseUsageReport{
@@ -368,12 +374,12 @@ func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, ap
 		return
 	}
 
-	apiStatusMetric.Observation.Start = util.ConvertTimeToMillis(apiStatusMetric.StartTime)
-	apiStatusMetric.Observation.End = util.ConvertTimeToMillis(c.endTime)
+	apiStatusMetric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
+	apiStatusMetric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
 	apiStatusMetricEventID, _ := uuid.NewRandom()
 	apiStatusMetricEvent := V4Event{
 		ID:        apiStatusMetricEventID.String(),
-		Timestamp: apiStatusMetric.StartTime.UnixNano() / 1e6,
+		Timestamp: c.metricStartTime.UnixNano() / 1e6,
 		Event:     metricEvent,
 		App:       c.orgGUID,
 		Version:   "4",
@@ -414,9 +420,9 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval.", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime), err.Error())
+				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval.", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime), err.Error())
 			} else {
-				log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
+				log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 				c.cleanupCounters(eventQueueItem)
 			}
 		}
@@ -439,7 +445,7 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 		if volume, ok := itemVolumeMetric.(metrics.Counter); ok {
 			volume.Clear()
 		}
-		c.startTime = c.endTime
+		c.usageStartTime = c.usageEndTime
 		c.storage.updateUsage(0)
 		c.storage.updateVolume(0)
 	}
@@ -455,8 +461,7 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, event V4Ev
 		} else {
 			delete(c.metricMap, apiID)
 		}
-		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.startTime), util.ConvertTimeToMillis(c.endTime))
-		c.startTime = c.endTime
 		histogram.Clear()
 	}
+	log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", event.Data.API.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 }

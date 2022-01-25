@@ -17,11 +17,12 @@ import (
 )
 
 const (
-	cacheFileName     = "agent-usagemetric.json"
-	usageStartTimeKey = "usage_start_time"
-	usageCountKey     = "usage_count"
-	volumeKey         = "usage_volume"
-	metricKeyPrefix   = "metric."
+	cacheFileName      = "agent-usagemetric.json"
+	usageStartTimeKey  = "usage_start_time"
+	metricStartTimeKey = "metric_start_time"
+	usageCountKey      = "usage_count"
+	volumeKey          = "usage_volume"
+	metricKeyPrefix    = "metric."
 )
 
 type storageCache interface {
@@ -80,11 +81,17 @@ func (c *cacheStorage) initialize() {
 }
 
 func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
-	// update the collector start time
+	// update the collector usage start time
 	usageStartTime, err := c.parseTimeFromCache(storageCache, usageStartTimeKey)
 	if err == nil && !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// do not load this start time when offline
-		c.collector.startTime = usageStartTime
+		c.collector.usageStartTime = usageStartTime
+	}
+	// update the collector metric start time
+	metricStartTime, err := c.parseTimeFromCache(storageCache, metricStartTimeKey)
+	if err == nil && !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		// do not load this start time when offline
+		c.collector.metricStartTime = metricStartTime
 	}
 
 	// update transaction counter in registry.
@@ -109,7 +116,8 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
-	c.storage.Set(usageStartTimeKey, c.collector.startTime)
+	c.storage.Set(usageStartTimeKey, c.collector.usageStartTime)
+	c.storage.Set(metricStartTimeKey, c.collector.metricStartTime)
 	c.storage.Set(usageCountKey, usageCount)
 }
 
