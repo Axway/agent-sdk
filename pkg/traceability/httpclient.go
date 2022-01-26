@@ -23,8 +23,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// TransactionFlow - the transaction flow used for events
-const TransactionFlow = "api-central-v8"
+const (
+	// TransactionFlow - the transaction flow used for events
+	TransactionFlow = "api-central-v8"
+	// FlowHeader - the header key for the flow value
+	FlowHeader = "axway-target-flow"
+)
 
 // HTTPClient struct
 type HTTPClient struct {
@@ -167,13 +171,13 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 			timeStamp = event.Content.Timestamp
 			allFields, err := event.Content.Fields.GetValue("fields")
 			if err != nil {
-				client.headers["axway-target-flow"] = TransactionFlow
+				client.headers[FlowHeader] = TransactionFlow
 				continue
 			}
-			if flow, ok := allFields.(map[string]interface{})["axway-target-flow"]; !ok {
-				client.headers["axway-target-flow"] = TransactionFlow
+			if flow, ok := allFields.(map[string]interface{})[FlowHeader]; !ok {
+				client.headers[FlowHeader] = TransactionFlow
 			} else {
-				client.headers["axway-target-flow"] = flow.(string)
+				client.headers[FlowHeader] = flow.(string)
 			}
 		}
 	}
