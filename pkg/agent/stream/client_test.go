@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
@@ -42,7 +43,10 @@ func TestNewStreamer(t *testing.T) {
 		Headers: nil,
 	}
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
-	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager)
+	onStreamConnection := func(s Streamer) {
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+	}
+	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager, onStreamConnection)
 	assert.NotNil(t, c)
 	assert.Nil(t, err)
 
@@ -69,10 +73,7 @@ func TestNewStreamer(t *testing.T) {
 	err = <-errCh
 	assert.Nil(t, err)
 
-	hcStatus := streamer.healthcheck("")
-	assert.NotNil(t, hcStatus)
-	assert.Equal(t, hc.OK, hcStatus.Result)
-
+	assert.Equal(t, hc.OK, hc.RunChecks())
 	streamer.manager = nil
 	streamer.listener = nil
 
@@ -95,10 +96,7 @@ func TestNewStreamer(t *testing.T) {
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
-
-	hcStatus = streamer.healthcheck("")
-	assert.NotNil(t, hcStatus)
-	assert.Equal(t, hc.FAIL, hcStatus.Result)
+	assert.Equal(t, hc.FAIL, hc.RunChecks())
 }
 
 func TestClientStreamJob(t *testing.T) {
@@ -144,6 +142,12 @@ func (m mockStreamer) Status() error {
 }
 
 func (m mockStreamer) Stop() {
+}
+
+func (m mockStreamer) Healthcheck(_ string) *hc.Status {
+	return &hc.Status{
+		Result: hc.OK,
+	}
 }
 
 type mockManager struct {

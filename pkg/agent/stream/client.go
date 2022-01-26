@@ -9,7 +9,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 
@@ -48,6 +47,7 @@ type Streamer interface {
 	Start() error
 	Status() error
 	Stop()
+	Healthcheck(_ string) *hc.Status
 }
 
 // NewClientStreamJob creates a job for the streamer
@@ -112,17 +112,21 @@ func (j *ClientStreamJob) renewRegistration() {
 	}
 }
 
+// OnStreamConnection - callback streamer will invoke after stream connection is established
+type OnStreamConnection func(Streamer)
+
 type streamer struct {
-	handlers        []handler.Handler
-	listener        Listener
-	manager         wm.Manager
-	rc              ResourceClient
-	topicSelfLink   string
-	watchCfg        *wm.Config
-	watchOpts       []wm.Option
-	newManager      wm.NewManagerFunc
-	newListener     newListenerFunc
-	sequenceManager *agentSequenceManager
+	handlers           []handler.Handler
+	listener           Listener
+	manager            wm.Manager
+	rc                 ResourceClient
+	topicSelfLink      string
+	watchCfg           *wm.Config
+	watchOpts          []wm.Option
+	newManager         wm.NewManagerFunc
+	newListener        newListenerFunc
+	sequenceManager    *agentSequenceManager
+	onStreamConnection OnStreamConnection
 }
 
 // NewStreamer creates a Streamer
@@ -131,6 +135,7 @@ func NewStreamer(
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
+	onStreamConnection OnStreamConnection,
 	handlers ...handler.Handler,
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
@@ -165,14 +170,15 @@ func NewStreamer(
 	}
 
 	return &streamer{
-		handlers:        handlers,
-		rc:              rc,
-		topicSelfLink:   wt.Metadata.SelfLink,
-		watchCfg:        watchCfg,
-		watchOpts:       watchOpts,
-		newManager:      wm.New,
-		newListener:     NewEventListener,
-		sequenceManager: sequenceManager,
+		handlers:           handlers,
+		rc:                 rc,
+		topicSelfLink:      wt.Metadata.SelfLink,
+		watchCfg:           watchCfg,
+		watchOpts:          watchOpts,
+		newManager:         wm.New,
+		newListener:        NewEventListener,
+		sequenceManager:    sequenceManager,
+		onStreamConnection: onStreamConnection,
 	}, nil
 }
 
@@ -218,7 +224,10 @@ func (c *streamer) Start() error {
 	if err != nil {
 		return err
 	}
-	hc.RegisterHealthcheck(util.AmplifyCentral, "central", c.healthcheck)
+
+	if c.onStreamConnection != nil {
+		c.onStreamConnection(c)
+	}
 
 	select {
 	case err := <-listenCh:
@@ -246,8 +255,8 @@ func (c *streamer) Stop() {
 	c.listener.Stop()
 }
 
-// healthcheck - healthchecker for stream client
-func (c *streamer) healthcheck(_ string) *hc.Status {
+// Healthcheck - healthchecker for stream client
+func (c *streamer) Healthcheck(_ string) *hc.Status {
 	err := c.Status()
 	if err != nil {
 		return &hc.Status{

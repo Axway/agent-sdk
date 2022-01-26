@@ -126,6 +126,20 @@ func NewDiscoveryWatchTopic() string {
       },
       {
         "group": "management",
+        "kind": "AccessRequest",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
+        ]
+      },
+      {
+        "group": "management",
         "kind": "APIService",
         "name": "*",
         "scope": {
@@ -189,6 +203,20 @@ func NewTraceWatchTopic() string {
         },
         "type": [
           "updated"
+        ]
+      },
+      {
+        "group": "management",
+        "kind": "AccessRequest",
+        "name": "*",
+        "scope": {
+          "kind": "Environment",
+          "name": "{{.Scope}}"
+        },
+        "type": [
+          "created",
+          "updated",
+          "deleted"
         ]
       },
       {

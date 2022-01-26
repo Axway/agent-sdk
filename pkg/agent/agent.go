@@ -417,6 +417,9 @@ func startStreamMode(agent agentData) error {
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
+		func(s stream.Streamer) {
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+		},
 		handlers...,
 	)
 
