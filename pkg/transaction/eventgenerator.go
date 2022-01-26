@@ -69,8 +69,9 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 	if e.shouldUseTrafficForAggregation {
 		apiDetails := metric.APIDetails{
-			ID:   summaryEvent.TransactionSummary.Proxy.ID,
-			Name: summaryEvent.TransactionSummary.Proxy.Name,
+			ID:       summaryEvent.TransactionSummary.Proxy.ID,
+			Name:     summaryEvent.TransactionSummary.Proxy.Name,
+			Revision: summaryEvent.TransactionSummary.Proxy.Revision,
 		}
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
