@@ -23,6 +23,13 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// TransactionFlow - the transaction flow used for events
+	TransactionFlow = "api-central-v8"
+	// FlowHeader - the header key for the flow value
+	FlowHeader = "axway-target-flow"
+)
+
 // HTTPClient struct
 type HTTPClient struct {
 	Connection
@@ -152,12 +159,26 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 		return data, ErrHTTPNotConnected
 	}
 
+	if client.headers == nil {
+		client.headers = make(map[string]string)
+	}
+
 	var events = make([]json.RawMessage, len(data))
 	timeStamp := time.Now()
 	for i, event := range data {
 		events[i] = client.makeHTTPEvent(&event.Content)
 		if i == 0 {
 			timeStamp = event.Content.Timestamp
+			allFields, err := event.Content.Fields.GetValue("fields")
+			if err != nil {
+				client.headers[FlowHeader] = TransactionFlow
+				continue
+			}
+			if flow, ok := allFields.(map[string]interface{})[FlowHeader]; !ok {
+				client.headers[FlowHeader] = TransactionFlow
+			} else {
+				client.headers[FlowHeader] = flow.(string)
+			}
 		}
 	}
 	status, _, err := client.request(events, client.headers, timeStamp)
@@ -216,7 +237,6 @@ func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTim
 	}
 
 	header.Add("Authorization", "Bearer "+token)
-	header.Add("axway-target-flow", "api-central-v8")
 	header.Add("Capture-Org-ID", agent.GetCentralConfig().GetTenantID())
 	header.Add("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
 	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().Unix(), 10))

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
@@ -100,7 +101,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	json.Unmarshal([]byte(msg), &logEvent)
 	assert.Equal(t, dummyLogEvent, logEvent)
 	assert.Equal(t, "somevalue", fields["token"])
-	assert.Equal(t, "api-central-v8", fields["axway-target-flow"])
+	assert.Equal(t, traceability.TransactionFlow, fields[traceability.FlowHeader])
 }
 
 func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
