@@ -284,6 +284,6 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 		return
 	}
 	fields["token"] = token
-	fields["axway-target-flow"] = "api-central-v8"
+	fields["axway-target-flow"] = traceability.TransactionFlow
 	return
 }
