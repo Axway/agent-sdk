@@ -100,7 +100,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg)
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
@@ -204,7 +204,7 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	agent.apicClient = apicClient
 }
 
@@ -345,7 +345,7 @@ func GetCentralConfig() config.CentralConfig {
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
 	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
 	}
 	return agent.cacheManager.GetAPIServiceCache()
 }

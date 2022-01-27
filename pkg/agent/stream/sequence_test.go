@@ -38,7 +38,7 @@ func Test_GetSequence(t *testing.T) {
 			want:   0,
 		},
 	}
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	cacheManager.AddSequence("watchTopicName_0", 0)
 	cacheManager.AddSequence("watchTopicName_200", 200)
 	for _, tt := range tests {

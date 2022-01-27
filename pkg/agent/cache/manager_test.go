@@ -57,7 +57,7 @@ func createCategory(name, title string) *v1.ResourceInstance {
 // delete api service with APIID added by externalAPIID
 // delete api service with APIID added by externalAPIPrimaryKey
 func TestAPIServiceCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{})
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
 
 	apiCache := m.GetAPIServiceCache()
@@ -112,7 +112,7 @@ func TestAPIServiceCache(t *testing.T) {
 // delete api service instance by ID
 // delete all api service instance
 func TestAPIServiceInstanceCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{})
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
 	assert.Equal(t, []string{}, m.GetAPIServiceKeys())
 
@@ -145,7 +145,7 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 // get category with invalid name
 // delete category
 func TestCategoryCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{})
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
 
 	categoryCache := m.GetCategoryCache()
@@ -182,7 +182,7 @@ func TestCategoryCache(t *testing.T) {
 // get sequence
 // delete category
 func TestSequenceCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{})
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
 
 	m.AddSequence("watch1", 1)
@@ -198,7 +198,7 @@ func TestSequenceCache(t *testing.T) {
 // create manager intialized with persisted cache
 // vallidate all original cached items exists
 func TestCachePersistenc(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}})
+	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 	assert.NotNil(t, m)
 
 	api1 := createAPIService("id1", "api1", "")
@@ -222,7 +222,7 @@ func TestCachePersistenc(t *testing.T) {
 
 	m.SaveCache()
 
-	m2 := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}})
+	m2 := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 
 	persistedAPI := m2.GetAPIServiceWithAPIID("id1")
 	assert.ElementsMatch(t, m.GetAPIServiceKeys(), m2.GetAPIServiceKeys())

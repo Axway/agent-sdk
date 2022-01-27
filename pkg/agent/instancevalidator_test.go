@@ -38,7 +38,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 		},
 	}
 
-	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	agent.cacheManager.AddAPIServiceInstance(instance)
 	agent.cacheManager.AddAPIService(svc)
 	return svc, instance

@@ -42,7 +42,7 @@ func TestNewStreamer(t *testing.T) {
 		Body:    bts,
 		Headers: nil,
 	}
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	onStreamConnection := func(s Streamer) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}
@@ -110,7 +110,7 @@ func TestClientStreamJob(t *testing.T) {
 
 func Test_getAgentSequenceManager(t *testing.T) {
 	wtName := "fake"
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sm := newAgentSequenceManager(cacheManager, wtName)
 	assert.Equal(t, sm.GetSequence(), int64(0))
 
