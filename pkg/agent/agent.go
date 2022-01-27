@@ -100,7 +100,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg)
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
@@ -204,7 +204,7 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	agent.apicClient = apicClient
 }
 
@@ -239,6 +239,7 @@ func startAPIServiceCache() {
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
+		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
 		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
@@ -344,7 +345,7 @@ func GetCentralConfig() config.CentralConfig {
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
 	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg)
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
 	}
 	return agent.cacheManager.GetAPIServiceCache()
 }
@@ -416,6 +417,9 @@ func startStreamMode(agent agentData) error {
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
+		func(s stream.Streamer) {
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+		},
 		handlers...,
 	)
 
@@ -423,9 +427,7 @@ func startStreamMode(agent agentData) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	stopCh := make(chan interface{})
-	streamJob := stream.NewClientStreamJob(cs, stopCh)
-	_, err = jobs.RegisterChannelJobWithName(streamJob, stopCh, "Stream Client")
+	stream.NewClientStreamJob(cs)
 
 	return err
 }

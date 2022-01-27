@@ -67,7 +67,7 @@ type cacheManager struct {
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
-func NewAgentCacheManager(cfg config.CentralConfig) Manager {
+func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	// todo - make path configurable
 	m := &cacheManager{
 		apiMap:         cache.New(),
@@ -77,7 +77,7 @@ func NewAgentCacheManager(cfg config.CentralConfig) Manager {
 		isCacheUpdated: false,
 	}
 
-	if cfg.IsUsingGRPC() {
+	if cfg.IsUsingGRPC() && persistCache {
 		m.initializePersistedCache(cfg)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -23,7 +24,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 
 	"github.com/Axway/agent-sdk/pkg/config"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
+)
+
+// constants for retry interval for stream job
+const (
+	defaultRetryInterval = 100 * time.Millisecond
+	maxRetryInterval     = 5 * time.Minute
+	clientStreamJobName  = "Stream Client"
 )
 
 // agentTypesMap - Agent Types map
@@ -38,20 +47,27 @@ type Streamer interface {
 	Start() error
 	Status() error
 	Stop()
+	Healthcheck(_ string) *hc.Status
 }
 
 // NewClientStreamJob creates a job for the streamer
-func NewClientStreamJob(streamer Streamer, stop chan interface{}) jobs.Job {
-	return &ClientStreamJob{
-		streamer: streamer,
-		stop:     stop,
+func NewClientStreamJob(streamer Streamer) jobs.Job {
+	streamJob := &ClientStreamJob{
+		streamer:      streamer,
+		stop:          make(chan interface{}),
+		retryInterval: defaultRetryInterval,
 	}
+	streamJob.jobID, _ = jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, clientStreamJobName)
+
+	return streamJob
 }
 
 // ClientStreamJob job wrapper for a streamer that starts a stream and an event manager.
 type ClientStreamJob struct {
-	streamer Streamer
-	stop     chan interface{}
+	streamer      Streamer
+	stop          chan interface{}
+	jobID         string
+	retryInterval time.Duration
 }
 
 // Execute starts the stream
@@ -59,6 +75,7 @@ func (j *ClientStreamJob) Execute() error {
 	go func() {
 		<-j.stop
 		j.streamer.Stop()
+		j.renewRegistration()
 	}()
 
 	return j.streamer.Start()
@@ -66,7 +83,11 @@ func (j *ClientStreamJob) Execute() error {
 
 // Status gets the status
 func (j *ClientStreamJob) Status() error {
-	return j.streamer.Status()
+	status := j.streamer.Status()
+	if status == nil {
+		j.retryInterval = defaultRetryInterval
+	}
+	return status
 }
 
 // Ready checks if the job to start the stream is ready
@@ -74,17 +95,38 @@ func (j *ClientStreamJob) Ready() bool {
 	return true
 }
 
+func (j *ClientStreamJob) renewRegistration() {
+	if j.jobID != "" {
+		jobs.UnregisterJob(j.jobID)
+		j.jobID = ""
+
+		j.retryInterval = j.retryInterval * 2
+		if j.retryInterval > maxRetryInterval {
+			j.retryInterval = defaultRetryInterval
+		}
+
+		time.AfterFunc(j.retryInterval, func() {
+			j.jobID, _ = jobs.RegisterDetachedChannelJobWithName(j, j.stop, clientStreamJobName)
+		})
+		return
+	}
+}
+
+// OnStreamConnection - callback streamer will invoke after stream connection is established
+type OnStreamConnection func(Streamer)
+
 type streamer struct {
-	handlers        []handler.Handler
-	listener        Listener
-	manager         wm.Manager
-	rc              ResourceClient
-	topicSelfLink   string
-	watchCfg        *wm.Config
-	watchOpts       []wm.Option
-	newManager      wm.NewManagerFunc
-	newListener     newListenerFunc
-	sequenceManager *agentSequenceManager
+	handlers           []handler.Handler
+	listener           Listener
+	manager            wm.Manager
+	rc                 ResourceClient
+	topicSelfLink      string
+	watchCfg           *wm.Config
+	watchOpts          []wm.Option
+	newManager         wm.NewManagerFunc
+	newListener        newListenerFunc
+	sequenceManager    *agentSequenceManager
+	onStreamConnection OnStreamConnection
 }
 
 // NewStreamer creates a Streamer
@@ -93,6 +135,7 @@ func NewStreamer(
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
+	onStreamConnection OnStreamConnection,
 	handlers ...handler.Handler,
 ) (Streamer, error) {
 	apiServerHost := cfg.GetURL() + "/apis"
@@ -127,14 +170,15 @@ func NewStreamer(
 	}
 
 	return &streamer{
-		handlers:        handlers,
-		rc:              rc,
-		topicSelfLink:   wt.Metadata.SelfLink,
-		watchCfg:        watchCfg,
-		watchOpts:       watchOpts,
-		newManager:      wm.New,
-		newListener:     NewEventListener,
-		sequenceManager: sequenceManager,
+		handlers:           handlers,
+		rc:                 rc,
+		topicSelfLink:      wt.Metadata.SelfLink,
+		watchCfg:           watchCfg,
+		watchOpts:          watchOpts,
+		newManager:         wm.New,
+		newListener:        NewEventListener,
+		sequenceManager:    sequenceManager,
+		onStreamConnection: onStreamConnection,
 	}, nil
 }
 
@@ -181,6 +225,10 @@ func (c *streamer) Start() error {
 		return err
 	}
 
+	if c.onStreamConnection != nil {
+		c.onStreamConnection(c)
+	}
+
 	select {
 	case err := <-listenCh:
 		return err
@@ -205,6 +253,20 @@ func (c *streamer) Status() error {
 func (c *streamer) Stop() {
 	c.manager.CloseConn()
 	c.listener.Stop()
+}
+
+// Healthcheck - healthchecker for stream client
+func (c *streamer) Healthcheck(_ string) *hc.Status {
+	err := c.Status()
+	if err != nil {
+		return &hc.Status{
+			Result:  hc.FAIL,
+			Details: err.Error(),
+		}
+	}
+	return &hc.Status{
+		Result: hc.OK,
+	}
 }
 
 func getWatchTopic(cfg config.CentralConfig, rc ResourceClient) (*v1alpha1.WatchTopic, error) {

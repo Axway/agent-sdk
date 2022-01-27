@@ -15,6 +15,20 @@ type channelJob struct {
 	channelJobProps
 }
 
+//newDetachedChannelJob - creates a channel job, detached from other cron jobs
+func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string, failJobChan chan string) (JobExecution, error) {
+	thisJob := channelJob{
+		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
+		channelJobProps{
+			signalStop: signalStop,
+			stopChan:   make(chan bool),
+		},
+	}
+
+	go thisJob.start()
+	return &thisJob, nil
+}
+
 //newChannelJob - creates a channel run job
 func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := channelJob{

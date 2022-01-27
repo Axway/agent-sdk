@@ -54,7 +54,7 @@ func TestEventListener_start(t *testing.T) {
 		},
 	}
 
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestEventListener_start(t *testing.T) {
 
 // Should call Listen and handle a graceful stop, and an error
 func TestEventListener_Listen(t *testing.T) {
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
 	listener := NewEventListener(events, &mockRI{}, sequenceManager, &mockHandler{})
@@ -148,7 +148,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 			handler:  &mockHandler{},
 		},
 	}
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

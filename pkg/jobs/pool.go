@@ -140,6 +140,20 @@ func (p *Pool) RegisterChannelJobWithName(newJob Job, stopChan chan interface{},
 	return p.recordCronJob(job), nil
 }
 
+//RegisterDetachedChannelJob - Runs a job with a stop channel, detached from other jobs
+func (p *Pool) RegisterDetachedChannelJob(newJob Job, stopChan chan interface{}) (string, error) {
+	return p.RegisterDetachedChannelJobWithName(newJob, stopChan, JobTypeDetachedChannel)
+}
+
+//RegisterDetachedChannelJobWithName - Runs a named job with a stop channel, detached from other jobs
+func (p *Pool) RegisterDetachedChannelJobWithName(newJob Job, stopChan chan interface{}, name string) (string, error) {
+	job, err := newDetachedChannelJob(newJob, stopChan, name, p.failJobChan)
+	if err != nil {
+		return "", err
+	}
+	return p.recordDetachedCronJob(job), nil
+}
+
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run, detached from other jobs
 func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
 	return p.RegisterDetachedIntervalJobWithName(newJob, interval, JobTypeDetachedInterval)

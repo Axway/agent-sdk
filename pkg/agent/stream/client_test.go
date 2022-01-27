@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/util"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -40,8 +42,11 @@ func TestNewStreamer(t *testing.T) {
 		Body:    bts,
 		Headers: nil,
 	}
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
-	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager)
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	onStreamConnection := func(s Streamer) {
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+	}
+	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager, onStreamConnection)
 	assert.NotNil(t, c)
 	assert.Nil(t, err)
 
@@ -68,6 +73,7 @@ func TestNewStreamer(t *testing.T) {
 	err = <-errCh
 	assert.Nil(t, err)
 
+	assert.Equal(t, hc.OK, hc.RunChecks())
 	streamer.manager = nil
 	streamer.listener = nil
 
@@ -90,12 +96,12 @@ func TestNewStreamer(t *testing.T) {
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
+	assert.Equal(t, hc.FAIL, hc.RunChecks())
 }
 
 func TestClientStreamJob(t *testing.T) {
 	s := &mockStreamer{}
-	stopCh := make(chan interface{})
-	j := NewClientStreamJob(s, stopCh)
+	j := NewClientStreamJob(s)
 
 	assert.Nil(t, j.Status())
 	assert.True(t, j.Ready())
@@ -104,7 +110,7 @@ func TestClientStreamJob(t *testing.T) {
 
 func Test_getAgentSequenceManager(t *testing.T) {
 	wtName := "fake"
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{})
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sm := newAgentSequenceManager(cacheManager, wtName)
 	assert.Equal(t, sm.GetSequence(), int64(0))
 
@@ -136,6 +142,12 @@ func (m mockStreamer) Status() error {
 }
 
 func (m mockStreamer) Stop() {
+}
+
+func (m mockStreamer) Healthcheck(_ string) *hc.Status {
+	return &hc.Status{
+		Result: hc.OK,
+	}
 }
 
 type mockManager struct {
