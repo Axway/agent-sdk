@@ -604,7 +604,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
-	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}", "The naming pattern for APIServiceRevision Title")
+	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
 
