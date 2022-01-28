@@ -39,6 +39,13 @@ func (j *centralTeamsCache) Execute() error {
 	for _, team := range platformTeams {
 		if id, err := agent.teamMap.Get(team.Name); err != nil || id != team.ID {
 			err = agent.teamMap.Set(team.Name, team.ID)
+			if err != nil {
+				return err
+			}
+			err = agent.teamMap.Set(team.ID, team.Name)
+			if err != nil {
+				return err
+			}
 			if j.teamChannel != nil {
 				log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
 				j.teamChannel <- team.ID
@@ -56,7 +63,6 @@ func (j *centralTeamsCache) Execute() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -94,4 +100,13 @@ func GetTeamFromCache(teamName string) (string, bool) {
 		return "", false
 	}
 	return id.(string), true
+}
+
+// GetTeamNameFromCache -
+func GetTeamNameFromCache(teamID string) (string, bool) {
+	name, found := agent.teamMap.Get(teamID)
+	if found != nil {
+		return "", false
+	}
+	return name.(string), true
 }
