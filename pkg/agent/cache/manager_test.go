@@ -4,7 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -12,11 +13,11 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	attributes := map[string]string{
-		apic.AttrExternalAPIID:   apiID,
-		apic.AttrExternalAPIName: apiName,
+		definitions.AttrExternalAPIID:   apiID,
+		definitions.AttrExternalAPIName: apiName,
 	}
 	if primaryKey != "" {
-		attributes[apic.AttrExternalAPIPrimaryKey] = primaryKey
+		attributes[definitions.AttrExternalAPIPrimaryKey] = primaryKey
 	}
 
 	return &v1.ResourceInstance{

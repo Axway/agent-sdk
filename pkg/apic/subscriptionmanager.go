@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -184,8 +186,8 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
 	if apiServerResource != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
-		subscription.RemoteAPIID = apiServerResource.Attributes[AttrExternalAPIID]
-		subscription.RemoteAPIStage = apiServerResource.Attributes[AttrExternalAPIStage]
+		subscription.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
+		subscription.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
 		subscription.RemoteAPIAttributes = apiServerResource.Attributes
 		if subscription.RemoteAPIStage != "" {
 			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
