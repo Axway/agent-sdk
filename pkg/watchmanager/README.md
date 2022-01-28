@@ -104,9 +104,52 @@ The watch manager library provides following set of options that the implementat
     ```
 
 ### Registration
+To create a new watch manager, use the following method from watchmanager package with the watch configuration and set of options
+```golang
+func New(cfg *Config, opts ...Option) (Manager, error)
+```
+
+The method create a new watch manager client and returns the following interface to allow implementation to manage the gRPC watch
+```golang
+type Manager interface {
+	RegisterWatch(topicSelfLink string, eventChan chan *proto.Event, errChan chan error) (string, error)
+	CloseWatch(id string) error
+	CloseConn()
+	Status() bool
+}
+```
+
+The client can call the *RegisterWatch* method with the topic self link and a set of channels to receive event and error.
+
 When the client initiates the subscription request, it call the sequence getter if configured to get the last known sequence identifier of the resource event that the implementation received. On successful subscription request, the client places an API call to Amplify Central watch service to fetch the events that were missed while the gRPC watch stream connection was not active.
 
 The client on receiving event from the gRPC stream (or fetched by API call) hands over the events to implementation by writing them to event channel configured while registering the watch subscription. In case the client receives any error on gRPC stream connection, the error is written to an error channel configured while registering the watch subscription.
+
+Below is the structure of the event that is received by the Amplify Central watch service(refer [./proto/watch.pb.go](#./proto/watch.pb.go) for more detail)
+```golang
+
+type Event struct {
+    // Event ID
+    Id            string
+    // Event Time
+    Time          string
+    // Event Version
+    Version       string
+    // Product raising the event
+    Product       string
+    // Event correlation ID 
+    CorrelationId string
+    // Organization associated to the event
+    Organization  *Organization
+    // Event Type
+    Type          Event_Type
+    // Event payload representing the API server resource instance
+    Payload       *ResourceInstance
+    // Event metadata holding watch topic id, self link, event sequence ID and sub resource name (if event raised for sub resource) 
+    Metadata      *EventMeta
+}
+
+```
 
 ## Client Example
 ```golang
