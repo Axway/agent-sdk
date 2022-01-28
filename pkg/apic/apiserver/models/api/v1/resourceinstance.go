@@ -8,15 +8,13 @@ import (
 // ResourceInstance API Server generic resource structure.
 type ResourceInstance struct {
 	ResourceMeta
-
 	Owner *Owner `json:"owner"`
 	// Resource instance specs.
-	Spec map[string]interface{} `json:"spec"`
-
+	Spec        map[string]interface{} `json:"spec"`
 	rawResource json.RawMessage
 }
 
-//UnmarshalJSON - custom unmarshaler for ResourceInstance struct to additionally use a custom subscriptionField
+// UnmarshalJSON - custom unmarshaler for ResourceInstance struct to additionally use a custom subscriptionField
 func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 	type Alias ResourceInstance // Create an intermediate type to unmarshal the base attributes
 	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(ri)}); err != nil {
@@ -25,13 +23,16 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 
 	// clean up any unnecessary chars from json byte array
 	byteBuf := bytes.Buffer{}
-	json.Compact(&byteBuf, data)
+	err := json.Compact(&byteBuf, data)
+	if err != nil {
+		return err
+	}
 
 	ri.rawResource = byteBuf.Bytes()
 	return nil
 }
 
-//MarshalJSON - custom marshaler for ResourceInstance to save the rawResource json to unmarshal specific types
+// MarshalJSON - custom marshaller for ResourceInstance to save the rawResource json to unmarshal specific types
 func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	// unmarshal the rawResource to map[string]interface{}
 	rawStruct := map[string]interface{}{}
@@ -61,24 +62,24 @@ func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rawStruct)
 }
 
-// AsInstance -
+// AsInstance returns the ResourceInstance
 func (ri *ResourceInstance) AsInstance() (*ResourceInstance, error) {
 	return ri, nil
 }
 
-// FromInstance -
+// FromInstance sets the underlying ResourceInstance
 func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 	*ri = *from
 
 	return nil
 }
 
-// GetRawResource -
+// GetRawResource gets the resource as bytes
 func (ri *ResourceInstance) GetRawResource() json.RawMessage {
 	return ri.rawResource
 }
 
-//Interface -
+// Interface describes API Server & catalog resources
 type Interface interface {
 	Meta
 	AsInstance() (*ResourceInstance, error)

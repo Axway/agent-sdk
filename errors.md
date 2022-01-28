@@ -12,6 +12,7 @@
 | 1004 | error starting periodic or immediate status update                                                          | pkg/util/ErrStartingAgentStatusUpdate               |
 | 1005 | error starting agent                                                                                        | pkg/util/ErrStartingVersionChecker                  |
 | 1006 | error registering subscription webhook                                                                      | pkg/util/ErrRegisterSubscriptionWebhook             |
+| 1007 | error indicating failure to connect to Amplify Central over gRPC                                            | pkg/util/ErrGrpcConnection                          |
 |      | 1100-1299 - for apic package errors                                                                         |                                                     |
 | 1100 | general configuration error in CENTRAL                                                                      | pkg/apic/ErrCentralConfig                           |
 | 1101 | error attempting to query for ENVIRONMENT, check CENTRAL_ENVIRONMENT                                        | pkg/apic/ErrEnvironmentQuery                        |

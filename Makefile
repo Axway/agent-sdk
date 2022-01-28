@@ -9,6 +9,8 @@ GO_PKG_LIST := $(shell go list ./... | grep -v /mock | grep -v ./pkg/apic/apiser
 
 export GOFLAGS := -mod=mod
 
+PROTO_OUT_PATH := $(shell go env GOPATH)/src
+
 all : clean
 
 clean:
@@ -46,3 +48,14 @@ apiserver-generate: # generate api server resources, prod by default. ex: make a
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
+
+
+PROTOFILES := $(shell find $(WORKSPACE)/proto -type f -name '*.proto')
+PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
+
+%.pb.go : %.proto
+	@echo $<
+	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=${PROTO_OUT_PATH} --go_out=${PROTO_OUT_PATH} $<
+
+# generate protobufs
+protoc: $(PROTOTARGETS)

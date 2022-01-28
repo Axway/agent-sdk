@@ -11,9 +11,9 @@ require (
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/getkin/kin-openapi v0.67.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
@@ -32,11 +32,14 @@ require (
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	google.golang.org/grpc v1.39.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
+	k8s.io/apimachinery v0.0.0-20190719140911-bfcf53abc9f8
 )
 
 replace (

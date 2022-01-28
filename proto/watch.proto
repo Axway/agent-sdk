@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package central.events.v1;
+
+import "apicentral.proto";
+
+option go_package = "github.com/Axway/agent-sdk/pkg/watchmanager/proto";
+
+service watch {
+    rpc subscribe(stream Request) returns (stream Event) {
+    }
+}
+
+message Request {
+    string selfLink = 1;
+    string token = 2;
+}
+
+message Event {
+    string id = 1;
+    string time = 2;
+    string version = 3;
+    string product = 4;
+    string correlationId = 5;
+    Organization organization = 6;
+    enum Type {
+        CREATED = 0;
+        UPDATED = 1;
+        DELETED = 2;
+        SUBRESOURCEUPDATED = 3;
+    }
+    Type type = 7;
+
+    .central.events.v1.datamodel.ResourceInstance payload = 8;
+
+    EventMeta metadata = 9;
+}
+
+message EventMeta {
+    string watchTopicID = 1;
+    string watchTopicSelfLink = 2;
+    int64 sequenceID = 3;
+    string subresource = 4;
+}
+
+message Organization {
+    string id = 1;
+}

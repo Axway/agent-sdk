@@ -8,6 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
+
+	"github.com/Axway/agent-sdk/pkg/apic"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -15,7 +19,8 @@ import (
 )
 
 func resetResources() {
-	agent.agentResource = nil
+	agent.agentResourceManager = nil
+	agent.cacheManager = nil
 	agent.isInitialized = false
 	agent.apicClient = nil
 }
@@ -82,7 +87,6 @@ func createTraceabilityAgentRes(id, name, dataplane string, processHeaders bool)
 
 type TestConfig struct {
 	resourceChanged bool
-	childCfg        config.IResourceConfigCallback
 }
 
 func (a *TestConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
@@ -95,24 +99,55 @@ func TestAgentInitialize(t *testing.T) {
 		daName = "discovery"
 		taName = "traceability"
 	)
-	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
+
+	teams := []apic.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "v7",
+			Title:    "v7",
+		},
+	}
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
+			return
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
-				buf, _ := json.Marshal(discoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
-				buf, _ := json.Marshal(traceabilityAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+			buf, err := json.Marshal(discoveryAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+			buf, err := json.Marshal(traceabilityAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 
@@ -134,9 +169,6 @@ func TestAgentInitialize(t *testing.T) {
 	da = GetAgentResource()
 	assert.Nil(t, da)
 
-	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
-
 	cfg.AgentType = config.DiscoveryAgent
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = daName
@@ -150,7 +182,7 @@ func TestAgentInitialize(t *testing.T) {
 	cfg.AgentType = config.TraceabilityAgent
 	AgentResourceType = v1alpha1.TraceabilityAgentResourceName
 	cfg.AgentName = taName
-	agent.isInitialized = false
+	resetResources()
 	err = Initialize(cfg)
 	assert.Nil(t, err)
 
@@ -185,33 +217,58 @@ func TestAgentConfigOverride(t *testing.T) {
 		daName = "discovery"
 		taName = "traceability"
 	)
-	var discoveryAgentRes, traceabilityAgentRes *v1.ResourceInstance
+
+	teams := []apic.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "v7",
+			Title:    "v7",
+		},
+	}
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		fmt.Println(req.RequestURI)
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments") {
-			if strings.Contains(req.RequestURI, "/v7/discoveryagents/"+daName) {
-				buf, _ := json.Marshal(discoveryAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
-			if strings.Contains(req.RequestURI, "v7/traceabilityagents/"+taName) {
-				buf, _ := json.Marshal(traceabilityAgentRes)
-				fmt.Println("Res:" + string(buf))
-				resp.Write(buf)
-			}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+			buf, _ := json.Marshal(discoveryAgentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+			buf, _ := json.Marshal(traceabilityAgentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 
 	defer s.Close()
 
 	cfg := createCentralCfg(s.URL, "v7")
-
-	discoveryAgentRes = createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
 
 	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"
@@ -267,15 +324,6 @@ func Test_registerSubscriptionWebhook(t *testing.T) {
 
 	err = registerSubscriptionWebhook(config.TraceabilityAgent, &mockSvcClient{})
 	assert.Nil(t, err)
-}
-
-func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
-	assert.Equal(t, expectedRes.Group, res.Group)
-	assert.Equal(t, expectedRes.Kind, res.Kind)
-	assert.Equal(t, expectedRes.Name, res.Name)
-	assert.Equal(t, expectedRes.Metadata.ID, res.Metadata.ID)
-	assert.Equal(t, expectedRes.Spec["dataplane"], res.Spec["dataplane"])
-	assert.Equal(t, expectedRes.Spec["config"], res.Spec["config"])
 }
 
 func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {

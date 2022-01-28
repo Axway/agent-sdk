@@ -14,7 +14,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -29,7 +28,9 @@ const (
 )
 
 // other consts
-const serverName = "Amplify Central"
+const (
+	TeamMapKey = "TeamMap"
+)
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth}
@@ -63,7 +64,6 @@ type Client interface {
 	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
-	OnConfigChange(cfg corecfg.CentralConfig)
 	Healthcheck(name string) *hc.Status
 	GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error)
 	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
@@ -76,21 +76,21 @@ type Client interface {
 	CreateCategory(categoryName string) (*catalog.Category, error)
 	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
+	GetEnvironment() (*v1alpha1.Environment, error)
+	GetCentralTeamByName(teamName string) (*PlatformTeam, error)
 	GetTeam(queryParams map[string]string) ([]PlatformTeam, error)
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 }
 
-// New -
+// New creates a new Client
 func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
 	serviceClient := &ServiceClient{}
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
-	serviceClient.OnConfigChange(cfg)
-	if util.IsNotTest() {
-		hc.RegisterHealthcheck(serverName, "central", serviceClient.Healthcheck)
-	}
+	serviceClient.initClient(cfg)
+
 	return serviceClient
 }
 
@@ -142,12 +142,16 @@ func (c *ServiceClient) GetOrCreateCategory(category string) string {
 	return ""
 }
 
-// OnConfigChange - config change handler
-func (c *ServiceClient) OnConfigChange(cfg corecfg.CentralConfig) {
+// initClient - config change handler
+func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
 	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
-	c.checkAPIServerHealth() // Get the env ID and team ID
+
+	err := c.setTeamCache()
+	if err != nil {
+		log.Error(err)
+	}
 
 	// set the default webhook if one has been configured
 	if cfg.GetSubscriptionConfig() != nil {
@@ -280,7 +284,7 @@ func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
 }
 
 // Healthcheck - verify connection to the platform
-func (c *ServiceClient) Healthcheck(name string) *hc.Status {
+func (c *ServiceClient) Healthcheck(_ string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
 		Result: hc.OK,
@@ -295,8 +299,7 @@ func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 		}
 	}
 
-	// Check that appropriate settings for the API server are set
-	err = c.checkAPIServerHealth()
+	_, err = c.GetEnvironment()
 	if err != nil {
 		s = hc.Status{
 			Result:  hc.FAIL,
@@ -309,6 +312,7 @@ func (c *ServiceClient) Healthcheck(name string) *hc.Status {
 }
 
 func (c *ServiceClient) checkPlatformHealth() error {
+	// this doesn't make a call to platform every time. Only when the token is close to expiring.
 	_, err := c.tokenRequester.GetToken()
 	if err != nil {
 		return errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -316,58 +320,48 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) checkAPIServerHealth() error {
-	headers, err := c.createHeader()
+func (c *ServiceClient) setTeamCache() error {
+	// passing nil to getTeam will return the full list of teams
+	platformTeams, err := c.GetTeam(make(map[string]string))
 	if err != nil {
-		return errors.Wrap(ErrAuthenticationCall, err.Error())
-	}
-
-	apiEnvironment, err := c.getEnvironment(headers)
-	if err != nil || apiEnvironment == nil {
 		return err
 	}
 
-	c.cfg.SetAxwayManaged(apiEnvironment.Spec.AxwayManaged)
-	if c.cfg.GetEnvironmentID() == "" {
-		// need to save this ID for the traceability agent for later
-		c.cfg.SetEnvironmentID(apiEnvironment.Metadata.ID)
+	teamMap := make(map[string]string)
+	for _, team := range platformTeams {
+		teamMap[team.Name] = team.ID
 	}
-
-	if c.cfg.GetTeamID() == "" {
-		// Validate if team exists
-		team, err := c.getCentralTeam(c.cfg.GetTeamName())
-		if err != nil {
-			return err
-		}
-		// Set the team Id
-		c.cfg.SetTeamID(team.ID)
-	}
-
-	return nil
+	return cache.GetCache().Set(TeamMapKey, teamMap)
 }
 
-func (c *ServiceClient) getEnvironment(headers map[string]string) (*v1alpha1.Environment, error) {
+// GetEnvironment get an environment
+func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, errors.Wrap(ErrAuthenticationCall, err.Error())
+	}
+
 	queryParams := map[string]string{}
 
 	// do a request for the environment
-	apiEnvByte, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
+	bytes, err := c.sendServerRequest(c.cfg.GetEnvironmentURL(), headers, queryParams)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get env id from apiServerEnvByte
-	var apiEnvironment v1alpha1.Environment
-	err = json.Unmarshal(apiEnvByte, &apiEnvironment)
+	env := &v1alpha1.Environment{}
+	err = json.Unmarshal(bytes, env)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
 	}
 
 	// Validate that we actually get an environment ID back within the Metadata
-	if apiEnvironment.Metadata.ID == "" {
+	if env.Metadata.ID == "" {
 		return nil, ErrEnvironmentQuery
 	}
 
-	return &apiEnvironment, nil
+	return env, nil
 }
 
 func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]string) ([]byte, error) {
@@ -392,7 +386,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
-
 }
 
 // GetPlatformUserInfo - request the platform user info
@@ -438,7 +431,6 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 
 // GetUserName - request the user name
 func (c *ServiceClient) GetUserName(id string) (string, error) {
-
 	platformUserInfo, err := c.getPlatformUserInfo(id)
 	if err != nil {
 		return "", err
@@ -451,8 +443,8 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 	return userName, nil
 }
 
-// getCentralTeam - returns the team based on team name
-func (c *ServiceClient) getCentralTeam(teamName string) (*PlatformTeam, error) {
+// GetCentralTeamByName - returns the team based on team name
+func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 

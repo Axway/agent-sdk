@@ -16,7 +16,7 @@ import (
 )
 
 // HTTPClient allows you to replace the default client for different use cases
-func HTTPClient(client *http.Client) Options {
+func HTTPClient(client requestDoer) Options {
 	return func(c *ClientBase) {
 		c.client = client
 	}

@@ -12,6 +12,7 @@ The Amplify Central Discovery Agents can be used for discovering APIs managed by
 - [Publishing changes to Central](#Publishing-changes-to-Central)
 - [Subscriptions](./subscriptions.md)
 - [Validating ConsumerInstance](#Validating-ConsumerInstance)
+- [Registering handler for API Server events](#Registering-handler-for-API-Server-events)
 - [Building the Agent](#Building-the-Agent)
 - [Executing Discovery Agent](#Executing-Discovery-Agent)
 
@@ -21,25 +22,31 @@ The Amplify Agents SDK provides a predefined configuration that can be set up ba
 
 Below is the list of Central configuration properties in YAML and their corresponding environment variables that can be set to override the config in YAML.
 
-| YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                               |
-|--------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)                                                                                                                                                          |
-| central.url                    | CENTRAL_URL                    | The URL to the Amplify Central instance being used for Agents (default value: US =  `<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                            |
-| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                  |
-| central.team                   | CENTRAL_TEAM                   | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to `Default Team`)                                                                                                                                                                |
-| central.environment            | CENTRAL_ENVIRONMENT            | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                         |
-| central.additionalTags         | CENTRAL_ADDITIONALTAGS         | Additional tag names to publish while publishing the API. Helpful to identify the API source. It is a comma separated list.                                                                                                                                                                                               |
-| central.auth.url               | CENTRAL_AUTH_URL               | The Amplify login URL: `<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
-| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                               |
-| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                      |
-| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                       |
-| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                          |
-| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                 |
-| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                       |
-| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See [Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
-| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
-| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
-| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central `<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
+
+| YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                              |
+| -------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)                                                                                                                                                         |
+| central.url                    | CENTRAL_URL                    | The URL to the Amplify Central instance being used for Agents (default value: US =`<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                             |
+| central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                 |
+| central.team                   | CENTRAL_TEAM                   | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to`Default Team`)                                                                                                                                                                |
+| central.environment            | CENTRAL_ENVIRONMENT            | Name of the Amplify Central environment where API will be hosted.                                                                                                                                                                                                                                                        |
+| central.additionalTags         | CENTRAL_ADDITIONALTAGS         | Additional tag names to publish while publishing the API. Helpful to identify the API source. It is a comma separated list.                                                                                                                                                                                              |
+| central.auth.url               | CENTRAL_AUTH_URL               | The Amplify login URL:`<https://login.axway.com/auth>`                                                                                                                                                                                                                                                                   |
+| central.auth.clientID          | CENTRAL_AUTH_CLIENTID          | The client identifier associated to the Service Account created in Amplify Central. Locate this at Amplify Central > Access > Service Accounts > client Id.                                                                                                                                                              |
+| central.auth.privateKey        | CENTRAL_AUTH_PRIVATEKEY        | The private key associated with the Service Account.                                                                                                                                                                                                                                                                     |
+| central.auth.publicKey         | CENTRAL_AUTH_PUBLICKEY         | The public key associated with the Service Account.                                                                                                                                                                                                                                                                      |
+| central.auth.keyPassword       | CENTRAL_AUTH_KEYPASSWORD       | The password for the private key, if applicable.                                                                                                                                                                                                                                                                         |
+| central.auth.timeout           | CENTRAL_AUTH_TIMEOUT           | The timeout to wait for the authentication server to respond (ns - default, us, ms, s, m, h). Set to 10s.                                                                                                                                                                                                                |
+| central.ssl.insecureSkipVerify | CENTRAL_SSL_INSECURESKIPVERIFY | Controls whether a client verifies the server's certificate chain and host name. If true, TLS accepts any certificate presented by the server and any host name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.                                                                      |
+| central.ssl.cipherSuites       | CENTRAL_SSL_CIPHERSUITES       | An array of strings. It is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites is nil, a default list of secure cipher suites is used, with a preference order based on hardware performance. See[Supported Cipher Suites](/docs/central/connect-api-manager/agent-security-api-manager/). |
+| central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                     |
+| central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                   |
+| central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
+| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
+| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
+| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
+| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
+| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)          |
 
 The following is a sample of Central configuration in YAML
 
@@ -103,7 +110,13 @@ type CentralConfig interface {
  GetTagsToPublish() string
 
  GetProxyURL() string
- GetPollInterval() time.Duration 
+ GetPollInterval() time.Duration
+
+ IsUsingGRPC() bool
+ GetGRPCHost() string
+ GetGRPCPort() int
+ GetCacheStoragePath() string
+ GetCacheStorageInterval() time.Duration
 }
 ```
 
@@ -362,8 +375,9 @@ tag.MatchRegEx("(some){1}")
 
 The agent can discover APIs in external API Gateway based on the capability it provides. This could be event based mechanism where config change from API gateway can be received or agent can query/poll for the API specification using the dataplane specific SDK. To process the discovery and publishing the definitions to Amplify Central the following properties are needed.
 
+
 | API Service property | Description                                                                                                                                |
-|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | ID                   | ID of the API.                                                                                                                             |
 | PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                                |
 | Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                         |
@@ -389,8 +403,9 @@ In case where the *SetResourceType* method is not explicitly invoked, the builde
 
 Along with the above properties the following properties are on the ServiceBodyBuilder for unstructured data only.
 
+
 | API Service property    | Description                              | Default (not set)   |
-|-------------------------|------------------------------------------|---------------------|
+| ------------------------- | ------------------------------------------ | --------------------- |
 | UnstructuredAssetType   | Type of asset for the unstructured data. | Asset               |
 | UnstructuredContentType | Content type for this data.              | parse based on spec |
 | UnstructuredLabel       | Label to display int he catalog item.    | Asset               |
@@ -605,6 +620,71 @@ func (a *Agent) validateAPI(apiID, stageName string) bool {
 
 Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The Amplify Agents SDK will not remove the resource. Returning false will indicate to the Amplify Agents SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
 
+## Registering handler for API Server events
+The Agent SDK maintains a cache of API server resources for its internal processing. These caches are populated by fetching the API server resource using an API call. The API call is performed at a regular interval. With the support for streaming API server resource events over gRPC, the Agent SDK does not require periodic API calls. The SDK will instead use the gRPC based watch service to receive events on API server resources. The Agent SDK creates a gRPC connection with the service and subscribes to the service based on a WatchTopic resource in the API server. The Agent SDK initialization creates the WatchTopic resource which defines the filters based on the type of agent, and the type of API server resources it needs for its internal processing.
+
+When running in gRPC mode to watch for API server resource events, the agent specific implementation can choose to register an event handler to receive the API server resource event based on a watch topic filter that the Agent SDK registers.
+
+The registration requires clients to implement the following interface as the event handler
+```
+type Handler interface {
+	// Handle receives the type of the event (add, update, delete), event metadata and the API Server resource.
+	Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
+}
+```
+
+The handler receives the following as parameters to the callback 
+- Event type:  specifies the type of operation on the API server resource("CREATED", "UPDATED", "DELETED" and "SUBRESOURCEUPDATED")
+- Event Metadata: holds the following metadata associated with the event
+  - WatchTopicID: ID of the subscribed watch topic resource
+  - WatchTopicSelfLink: Self link to the subscribed WatchTopic API server resource
+  - SequenceID: Sequence identifier for the event
+  - Subresource: Holds the name of the sub resource updated when the event type is "SUBRESOURCEUPDATED"
+- Resource Instance: The API server resource
+
+
+The agent specific implementation can use the following method in the agent package to register an event handler
+```
+RegisterResourceEventHandler(name string, resourceEventHandler handler.Handler)
+```
+
+### Example
+```
+type ResourceClient struct {
+  ...
+}
+
+func (r *ResourceClient) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
+  if resource.Kind == v1alpha1.AccessRequestGVK().Kind {
+    fmt.Printf("Event Type : %s\n", action.String())
+    ...
+    ...
+  }
+
+  return nil
+}
+
+
+func init() {
+  // agent command initialization and agent config setup code
+  ...
+}
+
+// Callback to process the agent execution
+func run() error {
+  resClient := &ResourceClient{}
+  agent.RegisterResourceEventHandler("resource-event-handler", resClient)
+
+  // Code for discovering API and publish
+  return nil
+}
+
+// Callback to initialize the agent config.
+func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
+  ...
+}
+```
+
 ## Building the Agent
 
 The agents are applications built using [Go programming language](https://golang.org/). Go is open source programming language that gets statically compiled and comes with a rich toolset to obtain packages and building executables. The Amplify Agents SDK uses the Go module as the dependency management which was introduced in Go 1.11. Go modules is collection of packages with go.mod file in its root directory which defines the modules source paths used in the packages as imports.
@@ -648,7 +728,6 @@ go build -tags static_all \
 ### Pre-requisites for executing the agent
 
 - An Axway Amplify Central subscription in the Amplify™ platform. See [Get started with Amplify Central](https://axway-open-docs.netlify.app/docs/central/quickstart).
-
 - An Amplify Central Service Account. See [Create a service account](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_install/#22-create-a-service-account-using-the-amplify-central-ui).
 - An Amplify Central environment. See [Create environment](https://axway-open-docs.netlify.app/docs/central/cli_central/cli_environments/#create-an-environment).
 

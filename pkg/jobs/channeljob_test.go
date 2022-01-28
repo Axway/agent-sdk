@@ -69,3 +69,21 @@ func TestChannelJob(t *testing.T) {
 	UnregisterJob(jobID)
 	time.Sleep(10 * time.Millisecond)
 }
+
+func TestDetachedChannelJob(t *testing.T) {
+	job := &channelJobImpl{
+		name:     "DetachedChannelJob",
+		runTime:  5 * time.Millisecond,
+		ready:    false,
+		stopChan: make(chan interface{}),
+	}
+
+	jobID, _ := RegisterDetachedChannelJob(job, job.stopChan)
+	assert.NotEmpty(t, jobID)
+	j := globalPool.detachedCronJobs[jobID]
+	assert.NotNil(t, j)
+
+	j = globalPool.cronJobs[jobID]
+	assert.Nil(t, j)
+
+}

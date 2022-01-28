@@ -48,6 +48,16 @@ func RegisterChannelJobWithName(newJob Job, stopChan chan interface{}, name stri
 	return globalPool.RegisterChannelJobWithName(newJob, stopChan, name)
 }
 
+//RegisterDetachedChannelJob -  Runs a job with a stop channel, detached from other jobs in the globalPool
+func RegisterDetachedChannelJob(newJob Job, stopChan chan interface{}) (string, error) {
+	return globalPool.RegisterDetachedChannelJob(newJob, stopChan)
+}
+
+//RegisterDetachedChannelJobWithName - Runs a named job with a stop channel, detached from other jobs in the globalPool
+func RegisterDetachedChannelJobWithName(newJob Job, stopChan chan interface{}, name string) (string, error) {
+	return globalPool.RegisterDetachedChannelJobWithName(newJob, stopChan, name)
+}
+
 //RegisterDetachedIntervalJob - Runs a job with a specific interval between each run in the globalPool, detached from other jobs to always run
 func RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
 	return globalPool.RegisterDetachedIntervalJob(newJob, interval)

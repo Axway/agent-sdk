@@ -136,6 +136,11 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
+	IsUsingGRPC() bool
+	GetGRPCHost() string
+	GetGRPCPort() int
+	GetCacheStoragePath() string
+	GetCacheStorageInterval() time.Duration
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -164,10 +169,20 @@ type CentralConfiguration struct {
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
-	JobExecutionTimeout       time.Duration        `config:"jobTimeout"`
+	GRPCCfg                   GRPCConfig           `config:"grpc"`
+	CacheStoragePath          string               `config:"cacheStoragePath"`
+	CacheStorageInterval      time.Duration        `config:"cacheStorageInterval"`
+	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
+}
+
+// GRPCConfig - Represents the grpc config
+type GRPCConfig struct {
+	Enabled bool   `config:"enabled"`
+	Host    string `config:"host"`
+	Port    int    `config:"port"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -186,6 +201,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
+		CacheStorageInterval:      60 * time.Second,
 	}
 }
 
@@ -444,6 +460,31 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
+// IsUsingGRPC -
+func (c *CentralConfiguration) IsUsingGRPC() bool {
+	return c.GRPCCfg.Enabled
+}
+
+// GetGRPCHost -
+func (c *CentralConfiguration) GetGRPCHost() string {
+	return c.GRPCCfg.Host
+}
+
+// GetGRPCPort -
+func (c *CentralConfiguration) GetGRPCPort() int {
+	return c.GRPCCfg.Port
+}
+
+// GetCacheStoragePath -
+func (c *CentralConfiguration) GetCacheStoragePath() string {
+	return c.CacheStoragePath
+}
+
+// GetCacheStorageInterval -
+func (c *CentralConfiguration) GetCacheStorageInterval() time.Duration {
+	return c.CacheStorageInterval
+}
+
 const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
@@ -475,6 +516,11 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathJobTimeout                = "central.jobTimeout"
+	pathGRPCEnabled               = "central.grpc.enabled"
+	pathGRPCHost                  = "central.grpc.host"
+	pathGRPCPort                  = "central.grpc.port"
+	pathCacheStoragePath          = "central.cacheStoragePath"
+	pathCacheStorageInterval      = "central.cacheStorageInterval"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -520,6 +566,7 @@ func (c *CentralConfiguration) validateConfig() {
 		c.validatePublishToEnvironmentModeConfig()
 		c.validateDiscoveryAgentConfig()
 	}
+
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
@@ -607,6 +654,12 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
+	// Watch stream config
+	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
+	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
+	props.AddIntProperty(pathGRPCPort, 0, "Port for Amplify Central gRPC connection")
+	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
+	props.AddDurationProperty(pathCacheStorageInterval, 30*time.Second, "The interval to persist agent caches to file")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
@@ -666,6 +719,13 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
 		ProxyURL: proxyURL,
+		GRPCCfg: GRPCConfig{
+			Enabled: props.BoolPropertyValue(pathGRPCEnabled),
+			Host:    props.StringPropertyValue(pathGRPCHost),
+			Port:    props.IntPropertyValue(pathGRPCPort),
+		},
+		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
+		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)

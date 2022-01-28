@@ -16,10 +16,16 @@ const (
 	traceSelector = "apic-agents-trace"
 )
 
+// Get returns the global logger
+func Get() *logrus.Logger {
+	return log
+}
+
 var networkTraceIgnoreHeaders = map[string]interface{}{
 	"X-Axway-Tenant-Id": true,
 	"Authorization":     true,
 }
+
 var isLogP bool
 var logHTTPTrace bool
 
