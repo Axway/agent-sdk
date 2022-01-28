@@ -12,6 +12,7 @@ The Amplify Central Discovery Agents can be used for discovering APIs managed by
 - [Publishing changes to Central](#Publishing-changes-to-Central)
 - [Subscriptions](./subscriptions.md)
 - [Validating ConsumerInstance](#Validating-ConsumerInstance)
+- [Registering handler for API Server events](#Registering-handler-for-API-Server-events)
 - [Building the Agent](#Building-the-Agent)
 - [Executing Discovery Agent](#Executing-Discovery-Agent)
 
@@ -41,8 +42,11 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                     |
 | central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                   |
 | central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
-| central.useGRPC                | CENTRAL_USEGRPC                | Controls whether an agent uses a gRPC connection. (Default value = false)                                                                                                                                                                                                                                                |
-| central.watchTopic             | CENTRAL_WATCHTOPIC             | The path of the watch topic self link. If empty, no watch topic self link is defined. *Must not be empty if using gRPC is enabled.                                                                                                                                                                                       |
+| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
+| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
+| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
+| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
+| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)          |
 
 The following is a sample of Central configuration in YAML
 
@@ -109,7 +113,10 @@ type CentralConfig interface {
  GetPollInterval() time.Duration
 
  IsUsingGRPC() bool
- GetWatchTopic() string 
+ GetGRPCHost() string
+ GetGRPCPort() int
+ GetCacheStoragePath() string
+ GetCacheStorageInterval() time.Duration
 }
 ```
 
@@ -612,6 +619,71 @@ func (a *Agent) validateAPI(apiID, stageName string) bool {
 ```
 
 Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The Amplify Agents SDK will not remove the resource. Returning false will indicate to the Amplify Agents SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
+
+## Registering handler for API Server events
+The Agent SDK maintains a cache of API server resources for its internal processing. These caches are populated by fetching the API server resource using an API call. The API call is performed at a regular interval. With the support for streaming API server resource events over gRPC, the Agent SDK does not require periodic API calls. The SDK will instead use the gRPC based watch service to receive events on API server resources. The Agent SDK creates a gRPC connection with the service and subscribes to the service based on a WatchTopic resource in the API server. The Agent SDK initialization creates the WatchTopic resource which defines the filters based on the type of agent, and the type of API server resources it needs for its internal processing.
+
+When running in gRPC mode to watch for API server resource events, the agent specific implementation can choose to register an event handler to receive the API server resource event based on a watch topic filter that the Agent SDK registers.
+
+The registration requires clients to implement the following interface as the event handler
+```
+type Handler interface {
+	// Handle receives the type of the event (add, update, delete), event metadata and the API Server resource.
+	Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
+}
+```
+
+The handler receives the following as parameters to the callback 
+- Event type:  specifies the type of operation on the API server resource("CREATED", "UPDATED", "DELETED" and "SUBRESOURCEUPDATED")
+- Event Metadata: holds the following metadata associated with the event
+  - WatchTopicID: ID of the subscribed watch topic resource
+  - WatchTopicSelfLink: Self link to the subscribed WatchTopic API server resource
+  - SequenceID: Sequence identifier for the event
+  - Subresource: Holds the name of the sub resource updated when the event type is "SUBRESOURCEUPDATED"
+- Resource Instance: The API server resource
+
+
+The agent specific implementation can use the following method in the agent package to register an event handler
+```
+RegisterResourceEventHandler(name string, resourceEventHandler handler.Handler)
+```
+
+### Example
+```
+type ResourceClient struct {
+  ...
+}
+
+func (r *ResourceClient) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
+  if resource.Kind == v1alpha1.AccessRequestGVK().Kind {
+    fmt.Printf("Event Type : %s\n", action.String())
+    ...
+    ...
+  }
+
+  return nil
+}
+
+
+func init() {
+  // agent command initialization and agent config setup code
+  ...
+}
+
+// Callback to process the agent execution
+func run() error {
+  resClient := &ResourceClient{}
+  agent.RegisterResourceEventHandler("resource-event-handler", resClient)
+
+  // Code for discovering API and publish
+  return nil
+}
+
+// Callback to initialize the agent config.
+func initConfig(centralConfig corecfg.CentralConfig) (interface{}, error) {
+  ...
+}
+```
 
 ## Building the Agent
 

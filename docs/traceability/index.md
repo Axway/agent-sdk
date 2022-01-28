@@ -15,6 +15,20 @@ The Amplify ingestion service authenticates the publish request using the token 
 
 The Amplify Agents SDK provides a component for generating beat event from the mapped log event. This component take care of setting up the beat event with fields required by Amplify Central Observer service.
 
+## Table of Contents
+
+- [Central Configuration](#Central-Configuration)
+- [Agent Specific Configuration](#Agent-Specific-Configuration)
+- [Amplify Ingestion output configuration](#Amplify-Ingestion-output-configuration)
+- [Setting up command line parser and binding agent config](#Setting-up-command-line-parser-and-binding-agent-config)
+- [Initializing Agent/Custom elastic beat](#Initializing-Agent-Custom-elastic=beat)
+- [Transaction Event processing and Event Generation](#Transaction-Event-processing-and-Event-Generation)
+- [Traceability redaction](#Traceability-redaction)
+- [Traceability sampling](./Traceability-sampling)
+- [Traceability usage reporting](#Traceability-usage-reporting)
+- [Building the Agent](#Building-the-Agent)
+- [Executing Traceability Agent](#Executing-Traceability-Agent)
+
 ### Central Configuration
 
 The Amplify Agents SDK provides a predefined configuration that can be setup based on yaml file, using environment variables or passed as command line option. This configuration is used for setting up parameter that will be used for communicating with Amplify Central.
@@ -49,6 +63,12 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.usageReporting.interval        | CENTRAL_USAGEREPORTING_INTERVAL        | The frequency in which the agent published activity to Amplify Central (default: `15m`)                                                                                                                                                                                                                                   |
 | central.usageReporting.offline         | CENTRAL_USAGEREPORTING_OFFLINE         | Enables/disables the sending of usage events to lighthouse or saving to disk (default: `false`)                                                                                                                                                                                                                           |
 | central.usageReporting.offlineschedule | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE | The frequency schedule that the agent collects activity for the offline reports (default: `@hourly`)                                                                                                                                                                                                                      |
+| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
+| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
+| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
+| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
+| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)          |
+
 
 The following is a sample of Central configuration in YAML
 
@@ -114,6 +134,12 @@ type CentralConfig interface {
 
  GetProxyURL() string
  GetPollInterval() time.Duration
+
+ IsUsingGRPC() bool
+ GetGRPCHost() string
+ GetGRPCPort() int
+ GetCacheStoragePath() string
+ GetCacheStorageInterval() time.Duration
 }
 ```
 
