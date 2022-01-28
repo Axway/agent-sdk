@@ -190,6 +190,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
 		AgentType:                 agentType,
 		Mode:                      PublishToEnvironmentAndCatalog,
+		TeamName:                  "",
 		APIServerVersion:          "v1alpha1",
 		Auth:                      newAuthConfig(),
 		TLS:                       NewTLSConfig(),
@@ -203,6 +204,16 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		JobExecutionTimeout:       5 * time.Minute,
 		CacheStorageInterval:      60 * time.Second,
 	}
+}
+
+// NewTestCentralConfig - Creates the default central config
+func NewTestCentralConfig(agentType AgentType) CentralConfig {
+	config := NewCentralConfig(agentType).(*CentralConfiguration)
+	config.TenantID = "1234567890"
+	config.URL = "https://central.com"
+	config.Environment = "environment"
+	config.Auth = newTestAuthConfig()
+	return config
 }
 
 // GetPlatformURL - Returns the central base URL
