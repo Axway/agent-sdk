@@ -22,18 +22,28 @@ type SubscriptionSchema interface {
 	rawJSON() (json.RawMessage, error)
 }
 
+type AnyOfSubscriptionSchemaPropertyDefinitions struct {
+	AnyOf []SubscriptionSchemaPropertyDefinition `json:"anyOf,omitempty"`
+}
+
 // SubscriptionSchemaPropertyDefinition -
 type SubscriptionSchemaPropertyDefinition struct {
-	Type          string   `json:"type"`
-	Description   string   `json:"description"`
-	Enum          []string `json:"enum,omitempty"`
-	ReadOnly      bool     `json:"readOnly,omitempty"`
-	Format        string   `json:"format,omitempty"`
-	APICRef       string   `json:"x-axway-ref-apic,omitempty"`
-	Name          string   `json:"-"`
-	Required      bool     `json:"-"`
-	SortEnums     bool     `json:"-"`
-	FirstEnumItem string   `json:"-"`
+	Type               string                                          `json:"type"`
+	Title              string                                          `json:"title"`
+	Description        string                                          `json:"description"`
+	Enum               []string                                        `json:"enum,omitempty"`
+	ReadOnly           bool                                            `json:"readOnly,omitempty"`
+	Format             string                                          `json:"format,omitempty"`
+	Properties         map[string]SubscriptionSchemaPropertyDefinition `json:"properties,omitempty"`
+	RequiredProperties []string                                        `json:"required,omitempty"`
+	Items              *AnyOfSubscriptionSchemaPropertyDefinitions     `json:"items,omitempty"`    // We use a pointer to avoid generating an empty struct if not set
+	MinItems           *uint                                           `json:"minItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	MaxItems           *uint                                           `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Minimum            *float64                                        `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Maximum            *float64                                        `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 max value
+	APICRef            string                                          `json:"x-axway-ref-apic,omitempty"`
+	Name               string                                          `json:"-"`
+	Required           bool                                            `json:"-"`
 }
 
 type subscriptionSchema struct {
@@ -62,6 +72,7 @@ func NewSubscriptionSchema(name string) SubscriptionSchema {
 func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string) {
 	newProp := SubscriptionSchemaPropertyDefinition{
 		Type:        dataType,
+		Title:       name,
 		Description: description,
 		APICRef:     apicRefField,
 	}

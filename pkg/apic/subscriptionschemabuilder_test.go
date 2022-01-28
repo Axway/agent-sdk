@@ -37,8 +37,8 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		AddUniqueKey("key").
 		AddProperty(NewSubscriptionSchemaPropertyBuilder().
 			SetName("name").
-			IsString().
 			SetRequired().
+			IsString().
 			SetEnumValues([]string{"a", "b", "c"})).
 		Register()
 

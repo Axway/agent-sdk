@@ -4,7 +4,7 @@ package apic
 type SubscriptionSchemaBuilder interface {
 	Update(update bool) SubscriptionSchemaBuilder
 	SetName(name string) SubscriptionSchemaBuilder
-	AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder
+	AddProperty(property PropertyBuilder) SubscriptionSchemaBuilder
 	AddUniqueKey(keyName string) SubscriptionSchemaBuilder
 
 	Register() error
@@ -43,7 +43,7 @@ func (s *schemaBuilder) SetName(name string) SubscriptionSchemaBuilder {
 }
 
 // AddProperty - adds a new subscription schema property to the schema
-func (s *schemaBuilder) AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder {
+func (s *schemaBuilder) AddProperty(property PropertyBuilder) SubscriptionSchemaBuilder {
 	prop, err := property.Build()
 	if err == nil {
 		s.properties[prop.Name] = *prop
