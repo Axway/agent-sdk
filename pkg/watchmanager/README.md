@@ -125,7 +125,7 @@ When the client initiates the subscription request, it call the sequence getter 
 
 The client on receiving event from the gRPC stream (or fetched by API call) hands over the events to implementation by writing them to event channel configured while registering the watch subscription. In case the client receives any error on gRPC stream connection, the error is written to an error channel configured while registering the watch subscription.
 
-Below is the structure of the event that is received by the Amplify Central watch service(refer [./proto/watch.pb.go](#./proto/watch.pb.go) for more detail)
+Below is the structure of the event that is received by the Amplify Central watch service(refer [./proto/watch.pb.go](./proto/watch.pb.go) for more detail)
 ```golang
 
 type Event struct {
