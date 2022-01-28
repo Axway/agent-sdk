@@ -10,7 +10,7 @@
 | 1002 | timeout error checking for dependencies to respond, possibly network or settings                            | pkg/util/errors/ErrTimeoutServicesNotReady          |
 | 1003 | periodic health checker or status updater failed.  Services are not ready                                   | pkg/util/ErrPeriodicCheck                           |
 | 1004 | error starting periodic or immediate status update                                                          | pkg/util/ErrStartingAgentStatusUpdate               |
-| 1005 | error indicating failure in version check for upgrade                                                       | pkg/util/ErrStartingVersionChecker                  |
+| 1005 | error starting agent                                                                                        | pkg/util/ErrStartingVersionChecker                  |
 | 1006 | error registering subscription webhook                                                                      | pkg/util/ErrRegisterSubscriptionWebhook             |
 | 1007 | error indicating failure to connect to Amplify Central over gRPC                                            | pkg/util/ErrGrpcConnection                          |
 |      | 1100-1299 - for apic package errors                                                                         |                                                     |

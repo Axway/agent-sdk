@@ -14,9 +14,6 @@ func getAPIByPrimaryKey(primaryKey string) *apiV1.ResourceInstance {
 	var api *apiV1.ResourceInstance
 	if agent.cacheManager != nil {
 		api = agent.cacheManager.GetAPIServiceWithPrimaryKey(primaryKey)
-		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
-			api, _ = updateCacheForExternalAPIPrimaryKey(primaryKey)
-		}
 	}
 	return api
 }
@@ -26,9 +23,6 @@ func getAPIByID(externalAPIID string) *apiV1.ResourceInstance {
 	var api *apiV1.ResourceInstance
 	if agent.cacheManager != nil {
 		api = agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
-		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
-			api, _ = updateCacheForExternalAPIID(externalAPIID)
-		}
 	}
 	return api
 }
@@ -38,14 +32,11 @@ func getAPIByName(apiName string) *apiV1.ResourceInstance {
 	var api *apiV1.ResourceInstance
 	if agent.cacheManager != nil {
 		api = agent.cacheManager.GetAPIServiceWithName(apiName)
-		if api == nil && agent.cfg.GetUpdateFromAPIServer() {
-			api, _ = updateCacheForExternalAPIName(apiName)
-		}
 	}
 	return api
 }
 
-// IsAPIPublished  - Returns true if the API Service is already published
+// IsAPIPublished  - DEPRECATED Returns true if the API Service is already published
 func IsAPIPublished(externalAPIID string) bool {
 	// DEPRECATED
 	log.DeprecationWarningReplace("IsAPIPublished", "IsAPIPublishedByID")
@@ -68,7 +59,7 @@ func GetAttributeOnPublishedAPIByName(apiName string, attrName string) string {
 	return getAttributeFromResource(api, attrName)
 }
 
-// GetAttributeOnPublishedAPI - Returns the value on published proxy
+// GetAttributeOnPublishedAPI - DEPRECATED Returns the value on published proxy
 func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	// DEPRECATED
 	log.DeprecationWarningReplace("GetAttributeOnPublishedAPI", "GetAttributeOnPublishedAPIByID")
@@ -116,7 +107,7 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 }
 
-// RegisterDeleteServiceValidator - Registers callback for validating if the service should be deleted
+// RegisterDeleteServiceValidator - DEPRECATED Registers callback for validating if the service should be deleted
 func RegisterDeleteServiceValidator(validator interface{}) {
 	log.Warnf("the RegisterDeleteServiceValidator is no longer used, please remove the call to it")
 }

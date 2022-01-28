@@ -136,7 +136,6 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
-	GetUpdateFromAPIServer() bool
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -161,7 +160,6 @@ type CentralConfiguration struct {
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
 	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
-	UpdateFromAPIServer       bool                 `config:"updateFromAPIServer"`
 	Auth                      AuthConfig           `config:"auth"`
 	TLS                       TLSConfig            `config:"ssl"`
 	PollInterval              time.Duration        `config:"pollInterval"`
@@ -200,7 +198,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PlatformURL:               "https://platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
-		UpdateFromAPIServer:       false,
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
@@ -458,11 +455,6 @@ func (c *CentralConfiguration) GetAppendEnvironmentToTitle() bool {
 	return c.AppendEnvironmentToTitle
 }
 
-// GetUpdateFromAPIServer -
-func (c *CentralConfiguration) GetUpdateFromAPIServer() bool {
-	return c.UpdateFromAPIServer
-}
-
 // GetUsageReportingConfig -
 func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
@@ -523,7 +515,6 @@ const (
 	pathAPIServerVersion          = "central.apiServerVersion"
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
-	pathUpdateFromAPIServer       = "central.updateFromAPIServer"
 	pathJobTimeout                = "central.jobTimeout"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
@@ -660,9 +651,8 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
-	props.AddStringProperty(pathAPIServiceRevisionPattern, "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}", "The naming pattern for APIServiceRevision Title")
+	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
-	props.AddBoolProperty(pathUpdateFromAPIServer, false, "Controls whether to call API Server if the API is not in the local cache")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
 	// Watch stream config
 	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
@@ -728,8 +718,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			MinVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMinVersion)),
 			MaxVersion:         TLSVersionAsValue(props.StringPropertyValue(pathSSLMaxVersion)),
 		},
-		ProxyURL:            proxyURL,
-		UpdateFromAPIServer: props.BoolPropertyValue(pathUpdateFromAPIServer),
+		ProxyURL: proxyURL,
 		GRPCCfg: GRPCConfig{
 			Enabled: props.BoolPropertyValue(pathGRPCEnabled),
 			Host:    props.StringPropertyValue(pathGRPCHost),

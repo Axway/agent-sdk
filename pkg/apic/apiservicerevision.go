@@ -28,7 +28,7 @@ import (
 */
 
 const (
-	apiSvcRevTemplate = "{{.APIServiceName}} - {{.Date}} - r {{.Revision}}"
+	apiSvcRevTemplate = "{{.APIServiceName}}{{if ne .Stage \"\"}} ({{.StageLabel}}: {{.Stage}}){{end}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
 	defaultDateFormat = "2006/01/02"
 )
 
@@ -37,6 +37,8 @@ type APIServiceRevisionTitle struct {
 	APIServiceName string
 	Date           string
 	Revision       string
+	StageLabel     string
+	Stage          string
 }
 
 // apiSvcRevTitleDateMap - map of date formats for apiservicerevision title
@@ -208,20 +210,23 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 //DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
 // updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
 func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
-	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern() // "{{.APIServiceName}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
-	dateRegEx := regexp.MustCompile(`{{.Date:.*?}}`)
+	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern()
+	if apiSvcRevPattern == "" {
+		apiSvcRevPattern = apiSvcRevTemplate
+	}
+	dateRegEx := regexp.MustCompile(`\{\{.Date:.*?\}\}`)
 
 	var dateFormat = ""
 
 	if dateRegEx.MatchString(apiSvcRevPattern) {
-		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              //{{date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
+		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              //{{.Date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
 		index := strings.Index(datePattern, ":")                                           // get index of ":" (colon)
-		date := datePattern[index+1 : index+11]                                            // sub out "{{date:" and "}}" to get the format of the date only
+		date := datePattern[index+1 : index+11]                                            // sub out "{{.Date:" and "}}" to get the format of the date only
 		dateFormat = apiSvcRevTitleDateMap[date]                                           // make sure dateFormat is a valid date format
-		apiSvcRevPattern = strings.Replace(apiSvcRevPattern, datePattern, "{{.Date}}", -1) // Once we have the date format, change template to correct {{.Date}} tag
+		apiSvcRevPattern = strings.Replace(apiSvcRevPattern, datePattern, "{{.Date}}", -1) // Once we have the date format, set to {{.Date}} only
 		if dateFormat == "" {
 			// Customer is entered an incorrect date format.  Set template and pattern to defaults.
-			log.Warnf("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{date:*}} format. Setting format to YYYY-MM-DD")
+			log.Warnf("CENTRAL_APISERVICEREVISIONPATTERN is returning an invalid {{.Date:*}} format. Setting format to YYYY-MM-DD")
 			apiSvcRevPattern = apiSvcRevTemplate
 			dateFormat = defaultDateFormat
 		}
@@ -242,9 +247,11 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 
 	// create apiservicerevision template
 	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
-		serviceBody.APIName,
-		time.Now().Format(dateFormat),
-		strconv.Itoa(serviceBody.serviceContext.revisionCount),
+		APIServiceName: serviceBody.APIName,
+		Date:           time.Now().Format(dateFormat),
+		Revision:       strconv.Itoa(serviceBody.serviceContext.revisionCount),
+		StageLabel:     serviceBody.StageDescriptor,
+		Stage:          serviceBody.Stage,
 	}
 
 	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevPattern)

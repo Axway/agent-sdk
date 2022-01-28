@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -46,7 +47,7 @@ func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
 		return beatPub.Event{}, err
 	}
 	c.Fields["token"] = token
-	c.Fields["axway-target-flow"] = metricFlow
+	c.Fields[traceability.FlowHeader] = metricFlow
 
 	// convert the CondorMetricEvent to json then to map[string]interface{}
 	cmeJSON, err := json.Marshal(c)
