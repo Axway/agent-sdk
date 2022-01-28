@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/stretchr/testify/assert"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -32,8 +34,8 @@ func TestNewAPISvcHandler(t *testing.T) {
 						},
 					},
 					Attributes: map[string]string{
-						apic.AttrExternalAPIID:   "123",
-						apic.AttrExternalAPIName: "name",
+						definitions.AttrExternalAPIID:   "123",
+						definitions.AttrExternalAPIName: "name",
 					},
 				},
 			},
@@ -50,9 +52,9 @@ func TestNewAPISvcHandler(t *testing.T) {
 						},
 					},
 					Attributes: map[string]string{
-						apic.AttrExternalAPIID:         "123",
-						apic.AttrExternalAPIPrimaryKey: "abc",
-						apic.AttrExternalAPIName:       "name",
+						definitions.AttrExternalAPIID:         "123",
+						definitions.AttrExternalAPIPrimaryKey: "abc",
+						definitions.AttrExternalAPIName:       "name",
 					},
 				},
 			},
@@ -84,8 +86,8 @@ func TestNewAPISvcHandler(t *testing.T) {
 						},
 					},
 					Attributes: map[string]string{
-						apic.AttrExternalAPIID:   "123",
-						apic.AttrExternalAPIName: "name",
+						definitions.AttrExternalAPIID:   "123",
+						definitions.AttrExternalAPIName: "name",
 					},
 				},
 			},

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
@@ -28,7 +30,7 @@ func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	return nil, nil
 }
 
-func (m *mockSvcClient) GetCentralTeamByName(_ string) (*apic.PlatformTeam, error) {
+func (m *mockSvcClient) GetCentralTeamByName(_ string) (*definitions.PlatformTeam, error) {
 	return nil, nil
 }
 
@@ -134,7 +136,7 @@ func (m *mockSvcClient) OnConfigChange(cfg corecfg.CentralConfig) {}
 
 func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
 
-func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error) {
 	return nil, nil
 }
 
@@ -163,10 +165,10 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService1",
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID:         "1111",
-				apic.AttrExternalAPIPrimaryKey: "1234",
-				apic.AttrExternalAPIName:       "NAME",
-				attributeKey:                   attributeValue,
+				definitions.AttrExternalAPIID:         "1111",
+				definitions.AttrExternalAPIPrimaryKey: "1234",
+				definitions.AttrExternalAPIName:       "NAME",
+				attributeKey:                          attributeValue,
 			},
 		},
 	}
@@ -175,7 +177,7 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService2",
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID: "2222",
+				definitions.AttrExternalAPIID: "2222",
 			},
 		},
 	}
@@ -187,7 +189,7 @@ func TestDiscoveryCache(t *testing.T) {
 			Title:    "test",
 		},
 	}
-	teams := []apic.PlatformTeam{
+	teams := []definitions.PlatformTeam{
 		{
 			ID:      "123",
 			Name:    "name",
@@ -240,8 +242,8 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
-	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
-	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", apic.AttrExternalAPIID))
+	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", definitions.AttrExternalAPIID))
+	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", definitions.AttrExternalAPIID))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByName("NAME", attributeKey))
 

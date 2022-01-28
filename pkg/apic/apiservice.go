@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -144,9 +146,9 @@ func (c *ServiceClient) getAPIServiceByAttribute(externalAPIID, primaryKey strin
 	}
 	query := map[string]string{}
 	if primaryKey != "" {
-		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + primaryKey + "\""
+		query["query"] = "attributes." + definitions.AttrExternalAPIPrimaryKey + "==\"" + primaryKey + "\""
 	} else {
-		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + externalAPIID + "\""
+		query["query"] = "attributes." + definitions.AttrExternalAPIID + "==\"" + externalAPIID + "\""
 	}
 
 	request := coreapi.Request{

@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,9 +54,9 @@ func TestTeamCache(t *testing.T) {
 					resp.Write([]byte(token))
 				case strings.Contains(req.RequestURI, "platformTeams"):
 					// add teams to reply
-					reply := make([]*apic.PlatformTeam, 0)
+					reply := make([]*definitions.PlatformTeam, 0)
 					for i, team := range test.queries[request].teams {
-						reply = append(reply, &apic.PlatformTeam{
+						reply = append(reply, &definitions.PlatformTeam{
 							ID:      team,
 							Name:    team,
 							Default: i == 0,

@@ -3,6 +3,8 @@ package resource
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -24,7 +26,7 @@ func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	return nil, nil
 }
 
-func (m *mockSvcClient) GetCentralTeamByName(_ string) (*apic.PlatformTeam, error) {
+func (m *mockSvcClient) GetCentralTeamByName(_ string) (*definitions.PlatformTeam, error) {
 	return nil, nil
 }
 
@@ -116,7 +118,7 @@ func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "
 func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig)      {}
 func (m *mockSvcClient) SetConfig(cfg config.CentralConfig)           {}
 
-func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error) {
 	return nil, nil
 }
 

@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -184,11 +185,11 @@ func (c *cacheManager) SaveCache() {
 // API service cache management
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
-	externalAPIID, ok := apiService.Attributes[apic.AttrExternalAPIID]
+	externalAPIID, ok := apiService.Attributes[definitions.AttrExternalAPIID]
 	if ok {
 		defer c.setCacheUpdated(true)
-		externalAPIName := apiService.Attributes[apic.AttrExternalAPIName]
-		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+		externalAPIName := apiService.Attributes[definitions.AttrExternalAPIName]
+		if externalAPIPrimaryKey, found := apiService.Attributes[definitions.AttrExternalAPIPrimaryKey]; found {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(externalAPIID); err != nil {
 				c.apiMap.Delete(externalAPIID)

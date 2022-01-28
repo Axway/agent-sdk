@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -164,15 +166,15 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 	externalAPIID := serviceBody.RestAPIID
 	// check to see if its an APIService
 	if !isAPIService && serviceBody.Stage != "" {
-		attributes[AttrExternalAPIStage] = serviceBody.Stage
+		attributes[definitions.AttrExternalAPIStage] = serviceBody.Stage
 	}
 	if serviceBody.PrimaryKey != "" {
-		attributes[AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
+		attributes[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
 	}
 
-	attributes[AttrExternalAPIID] = externalAPIID
-	attributes[AttrExternalAPIName] = serviceBody.APIName
-	attributes[AttrCreatedBy] = serviceBody.CreatedBy
+	attributes[definitions.AttrExternalAPIID] = externalAPIID
+	attributes[definitions.AttrExternalAPIName] = serviceBody.APIName
+	attributes[definitions.AttrCreatedBy] = serviceBody.CreatedBy
 
 	return attributes
 }

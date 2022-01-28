@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
@@ -77,8 +79,8 @@ type Client interface {
 	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
 	GetEnvironment() (*v1alpha1.Environment, error)
-	GetCentralTeamByName(teamName string) (*PlatformTeam, error)
-	GetTeam(queryParams map[string]string) ([]PlatformTeam, error)
+	GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error)
+	GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error)
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
@@ -389,7 +391,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 }
 
 // GetPlatformUserInfo - request the platform user info
-func (c *ServiceClient) getPlatformUserInfo(id string) (*PlatformUserInfo, error) {
+func (c *ServiceClient) getPlatformUserInfo(id string) (*definitions.PlatformUserInfo, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -406,7 +408,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*PlatformUserInfo, error
 		return nil, reqErr
 	}
 
-	var platformUserInfo PlatformUserInfo
+	var platformUserInfo definitions.PlatformUserInfo
 	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
 	if err != nil {
 		return nil, err
@@ -444,7 +446,7 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 }
 
 // GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, error) {
+func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 
@@ -479,7 +481,7 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*PlatformTeam, er
 }
 
 // GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]PlatformTeam, error) {
+func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definitions.PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -494,7 +496,7 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]Platform
 		return nil, reqErr
 	}
 
-	var platformTeams []PlatformTeam
+	var platformTeams []definitions.PlatformTeam
 	err = json.Unmarshal(response, &platformTeams)
 	if err != nil {
 		return nil, err

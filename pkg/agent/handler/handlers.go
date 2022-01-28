@@ -3,9 +3,10 @@ package handler
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
-	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -41,9 +42,9 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 		return nil
 	}
 
-	id, ok := resource.Attributes[apic.AttrExternalAPIID]
+	id, ok := resource.Attributes[definitions.AttrExternalAPIID]
 	if !ok {
-		return fmt.Errorf("%s not found on ResourceClient api service %s", apic.AttrExternalAPIID, resource.Name)
+		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.AttrExternalAPIID, resource.Name)
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {

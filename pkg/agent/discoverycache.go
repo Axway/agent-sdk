@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -97,7 +99,7 @@ func (j *discoveryCache) updateAPICache() {
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
 	for _, apiService := range apiServices {
-		if _, valid := apiService.Attributes[apic.AttrExternalAPIID]; !valid {
+		if _, valid := apiService.Attributes[definitions.AttrExternalAPIID]; !valid {
 			continue // skip service without external api id
 		}
 		// Update the lastServiceTime based on the newest service found
@@ -107,7 +109,7 @@ func (j *discoveryCache) updateAPICache() {
 		}
 
 		externalAPIID := agent.cacheManager.AddAPIService(apiService)
-		if externalAPIPrimaryKey, found := apiService.Attributes[apic.AttrExternalAPIPrimaryKey]; found {
+		if externalAPIPrimaryKey, found := apiService.Attributes[definitions.AttrExternalAPIPrimaryKey]; found {
 			existingAPIs[externalAPIPrimaryKey] = true
 		} else {
 			existingAPIs[externalAPIID] = true
@@ -151,7 +153,7 @@ func (j *discoveryCache) updatePIServiceInstancesCache() {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
 	for _, instance := range serviceInstances {
-		if _, valid := instance.Attributes[apic.AttrExternalAPIID]; !valid {
+		if _, valid := instance.Attributes[definitions.AttrExternalAPIID]; !valid {
 			continue // skip instance without external api id
 		}
 		agent.cacheManager.AddAPIServiceInstance(instance)

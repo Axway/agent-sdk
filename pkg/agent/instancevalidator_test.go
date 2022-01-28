@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -20,9 +22,9 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 				ID: "svc-" + externalAPIID,
 			},
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID:         externalAPIID,
-				apic.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
-				apic.AttrExternalAPIName:       externalAPIName,
+				definitions.AttrExternalAPIID:         externalAPIID,
+				definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
+				definitions.AttrExternalAPIName:       externalAPIName,
 			},
 		},
 	}
@@ -32,8 +34,8 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 				ID: "instance-" + externalAPIID,
 			},
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID:   externalAPIID,
-				apic.AttrExternalAPIName: externalAPIName,
+				definitions.AttrExternalAPIID:   externalAPIID,
+				definitions.AttrExternalAPIName: externalAPIName,
 			},
 		},
 	}

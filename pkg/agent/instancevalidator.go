@@ -3,7 +3,8 @@ package agent
 import (
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -48,11 +49,11 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 			continue
 		}
 
-		if _, valid := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]; !valid {
+		if _, valid := serviceInstanceResource.Attributes[definitions.AttrExternalAPIID]; !valid {
 			continue // skip service instances without external api id
 		}
-		externalAPIID := serviceInstanceResource.Attributes[apic.AttrExternalAPIID]
-		externalAPIStage := serviceInstanceResource.Attributes[apic.AttrExternalAPIStage]
+		externalAPIID := serviceInstanceResource.Attributes[definitions.AttrExternalAPIID]
+		externalAPIStage := serviceInstanceResource.Attributes[definitions.AttrExternalAPIStage]
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it

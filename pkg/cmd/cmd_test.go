@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
@@ -626,7 +626,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 		},
 	}
 
-	teams := []apic.PlatformTeam{
+	teams := []definitions.PlatformTeam{
 		{
 			ID:      "123",
 			Name:    "name",
@@ -786,7 +786,7 @@ func noOpCmdHandler() error {
 }
 
 func newTestServer() *httptest.Server {
-	teams := []apic.PlatformTeam{
+	teams := []definitions.PlatformTeam{
 		{
 			ID:      "123",
 			Name:    "name",

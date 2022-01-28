@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -100,7 +100,7 @@ func TestAgentInitialize(t *testing.T) {
 		taName = "traceability"
 	)
 
-	teams := []apic.PlatformTeam{
+	teams := []definitions.PlatformTeam{
 		{
 			ID:      "123",
 			Name:    "name",
@@ -218,7 +218,7 @@ func TestAgentConfigOverride(t *testing.T) {
 		taName = "traceability"
 	)
 
-	teams := []apic.PlatformTeam{
+	teams := []definitions.PlatformTeam{
 		{
 			ID:      "123",
 			Name:    "name",
