@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -53,7 +55,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		cfg:                                cfg,
 		tokenRequester:                     MockTokenGetter,
 		subscriptionSchemaCache:            cache.New(),
-		teamCache:                          cache.New(),
+		caches:                             cache2.NewAgentCacheManager(cfg, false),
 		apiClient:                          apiClient,
 		DefaultSubscriptionApprovalWebhook: webhook,
 		DefaultSubscriptionSchema:          NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),

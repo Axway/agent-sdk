@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -16,7 +18,7 @@ import (
 
 func TestNewClient(t *testing.T) {
 	cfg := corecfg.NewCentralConfig(corecfg.DiscoveryAgent)
-	client := New(cfg, MockTokenGetter)
+	client := New(cfg, MockTokenGetter, cache2.NewAgentCacheManager(cfg, false))
 	assert.NotNil(t, client)
 }
 
