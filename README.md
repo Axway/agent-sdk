@@ -31,6 +31,7 @@ go get github.com/Axway/agent-sdk/
 | transaction  | This package holds definitions of event and interfaces to process them for traceability                                                              |
 | traceability | This package provides the transport lumberjack/HTTP clients that can be used for building traceability agent                                         |
 | util         | This package has SDK utility packages for use by all agents                                                                                          |
+| watchmanager | This package provides tooling to subscribe for API server resource events over gRPC [Watch manager](./pkg/watchmanager/README.md)                    |
 
 [Getting started to build discovery agent](./docs/discovery/index.md)
 
