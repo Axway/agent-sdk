@@ -72,7 +72,8 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 
 	var t OwnerType
 	var ok bool
-	if t, ok = ownerTypeFromString[aux.Type]; !ok {
+	ownerString := ownerTypeToString[aux.Alias.Type]
+	if t, ok = ownerTypeFromString[ownerString]; !ok {
 		return fmt.Errorf("unknown owner type %d", o.Type)
 	}
 	o.Type = t

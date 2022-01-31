@@ -156,7 +156,7 @@ func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rawMeta)
 }
 
-// UnmarshalJSON unmarshals the ResourceMeta to properly set the SubResources
+// UnmarshalJSON unmarshal the ResourceMeta to properly set the SubResources
 func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 	type Alias ResourceMeta
 	v := &struct{ *Alias }{
@@ -174,6 +174,8 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	delete(raw, "spec")
+	delete(raw, "owner")
 	delete(raw, "apiVersion")
 	delete(raw, "attributes")
 	delete(raw, "finalizers")
