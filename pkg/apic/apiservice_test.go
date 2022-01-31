@@ -8,10 +8,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,9 +42,6 @@ func TestCreateService(t *testing.T) {
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			RespCode: http.StatusNotFound,
-		},
-		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusCreated,
 		},
@@ -62,8 +60,6 @@ func TestCreateService(t *testing.T) {
 	})
 
 	// Setup category cache
-	categoryCache := cache.New()
-	teamCache := cache.New()
 	for _, category := range testCategories {
 		newID := uuid.New().String()
 		categoryInstance := &v1.ResourceInstance{
@@ -73,9 +69,8 @@ func TestCreateService(t *testing.T) {
 			},
 			Spec: map[string]interface{}{},
 		}
-		categoryCache.SetWithSecondaryKey(newID, category, categoryInstance)
+		client.caches.GetCategoryCache().SetWithSecondaryKey(newID, category, categoryInstance)
 	}
-	client.AddCache(categoryCache, teamCache)
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
@@ -184,35 +179,52 @@ func TestCreateService(t *testing.T) {
 	assert.Nil(t, apiSvc)
 }
 
-func TestGetAPIServiceByExternalAPIID(t *testing.T) {
+func Test_getAPIServiceFromCache(t *testing.T) {
 	cloneServiceBody := serviceBody
-	cloneServiceBody.PrimaryKey = "1234"
-	client, httpClient := GetTestServiceClient()
+	cloneServiceBody.APIName = "fake-name"
+	cloneServiceBody.RestAPIID = "123"
+	client, _ := GetTestServiceClient()
 
-	// bad
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // this for call to get the service
-			RespCode: http.StatusBadRequest,
-		},
-	})
-	svc, err := client.getAPIServiceByExternalAPIID(&cloneServiceBody)
-	assert.NotNil(t, err)
+	// Should return nil for the service and error when the api is not in the cache
+	svc, err := client.getAPIServiceFromCache(&cloneServiceBody)
+	assert.Nil(t, err)
 	assert.Nil(t, svc)
 
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // this for call to get the service
-			RespCode: http.StatusNotFound,
+	// Should return the service and no error
+	apiSvc := &v1alpha1.APIService{
+		ResourceMeta: v1.ResourceMeta{
+			Name:  "abc",
+			Title: "abc",
+			Attributes: map[string]string{
+				definitions.AttrExternalAPIID:   cloneServiceBody.RestAPIID,
+				definitions.AttrExternalAPIName: serviceBody.APIName,
+			},
 		},
-		{
-			FileName: "./testdata/apiservice-list.json", // this for call to get the services
-			RespCode: http.StatusOK,
-		},
-	})
-	svc, err = client.getAPIServiceByExternalAPIID(&cloneServiceBody)
+		Spec: v1alpha1.ApiServiceSpec{},
+	}
+	// should return the resource when found by the external api id
+	ri, _ := apiSvc.AsInstance()
+	client.caches.AddAPIService(ri)
+	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, svc)
+
+	// should return the resource when found by the primary key
+	cloneServiceBody.PrimaryKey = "555"
+	apiSvc.Attributes[definitions.AttrExternalAPIPrimaryKey] = cloneServiceBody.PrimaryKey
+	ri, _ = apiSvc.AsInstance()
+	client.caches.AddAPIService(ri)
+	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, svc)
+
+	// should return the nil for the error and resource when finding by the primary key
+	cloneServiceBody.PrimaryKey = "4563"
+	ri, _ = apiSvc.AsInstance()
+	client.caches.AddAPIService(ri)
+	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
+	assert.Nil(t, err)
+	assert.Nil(t, svc)
 }
 
 func TestUpdateService(t *testing.T) {
@@ -376,30 +388,28 @@ func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
 func TestDeleteServiceByAPIID(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 	httpClient.ResponseCode = http.StatusRequestTimeout
-	err := client.DeleteServiceByAPIID("12345")
-	assert.NotNil(t, err)
-
-	// empty list - not ok
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/empty-list.json", // for call to get the service
-			RespCode: http.StatusOK,
-		},
-	})
-	err = client.DeleteServiceByAPIID("12345")
+	err := client.DeleteServiceByName("12345")
 	assert.NotNil(t, err)
 
 	// list - ok
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice-list.json", // for call to get the service
-			RespCode: http.StatusOK,
-		},
-		{
 			RespCode: http.StatusNoContent, // delete OK
 		},
 	})
-	err = client.DeleteServiceByAPIID("12345")
+	svc := &v1alpha1.APIService{
+		ResourceMeta: v1.ResourceMeta{
+			Name:  "abc",
+			Title: "abc",
+			Attributes: map[string]string{
+				definitions.AttrExternalAPIID: "12345",
+			},
+		},
+		Spec: v1alpha1.ApiServiceSpec{},
+	}
+	ri, _ := svc.AsInstance()
+	client.caches.AddAPIService(ri)
+	err = client.DeleteServiceByName("12345")
 	assert.Nil(t, err)
 }
 
@@ -497,9 +507,6 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			RespCode: http.StatusNotFound,
-		},
-		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusCreated,
 		},
@@ -551,9 +558,6 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
-		{
-			RespCode: http.StatusNotFound,
-		},
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusCreated,

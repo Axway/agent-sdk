@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -58,12 +59,12 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID, externalAPIStage)
+			j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID)
 		}
 	}
 }
 
-func (j *instanceValidator) shouldDeleteService(apiID, stage string) bool {
+func (j *instanceValidator) shouldDeleteService(apiID string) bool {
 	list, err := agent.apicClient.GetConsumerInstancesByExternalAPIID(apiID)
 	if err != nil {
 		return false
@@ -73,36 +74,46 @@ func (j *instanceValidator) shouldDeleteService(apiID, stage string) bool {
 	return len(list) <= 1
 }
 
-func (j *instanceValidator) deleteServiceInstanceOrService(serviceInstance *apiV1.ResourceInstance, externalAPIID, externalAPIStage string) {
+func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIID string) {
 	msg := ""
 	var err error
 	var agentError *utilErrors.AgentError
-	if j.shouldDeleteService(externalAPIID, externalAPIStage) {
-		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", serviceInstance.Title)
+
+	// delete if it is an api service
+	if j.shouldDeleteService(externalAPIID) {
+		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
 		agentError = ErrDeletingService
 		msg = "Deleted API Service for catalog item %s from Amplify Central"
 
+		svc := agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
+		if svc == nil {
+			err = fmt.Errorf("api service %s not found in cache. unable to delete it from central", externalAPIID)
+			return
+		}
+
 		// deleting the service will delete all associated resources, including the consumerInstance
-		err = agent.apicClient.DeleteServiceByAPIID(externalAPIID)
-		// Todo clean up other cached apiserviceinstances related to apiservice
+		err = agent.apicClient.DeleteServiceByName(svc.Name)
 		if j.isAgentPollMode {
 			agent.cacheManager.DeleteAPIService(externalAPIID)
 		}
 	} else {
-		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", serviceInstance.Title)
+		// delete if it is an api service instance
+		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", resource.Title)
 		agentError = ErrDeletingCatalogItem
 		msg = "Deleted catalog item %s from Amplify Central"
 
-		err = agent.apicClient.DeleteAPIServiceInstance(serviceInstance.Name)
+		err = agent.apicClient.DeleteAPIServiceInstance(resource.Name)
 	}
 
 	if err != nil {
-		log.Error(utilErrors.Wrap(agentError, err.Error()).FormatError(serviceInstance.Title))
+		log.Error(utilErrors.Wrap(agentError, err.Error()).FormatError(resource.Title))
 		return
 	}
+
+	// remove the api service instance from the cache for both scenarios
 	if j.isAgentPollMode {
-		// In GRPC mode the delete is done on receiving delete event from serice
-		agent.cacheManager.DeleteAPIServiceInstance(serviceInstance.Metadata.ID)
+		// In GRPC mode delete is done on receiving delete event from service
+		agent.cacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
 	}
-	log.Debugf(msg, serviceInstance.Title)
+	log.Debugf(msg, resource.Title)
 }

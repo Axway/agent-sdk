@@ -52,6 +52,12 @@ type Manager interface {
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
 	GetSequence(watchTopicName string) int64
+
+	GetTeamCache() cache.Cache
+	AddTeam(team *definitions.PlatformTeam)
+	GetTeamByName(name string) *definitions.PlatformTeam
+	GetTeamByID(id string) *definitions.PlatformTeam
+	GetDefaultTeam() *definitions.PlatformTeam
 }
 
 type cacheManager struct {
@@ -62,6 +68,7 @@ type cacheManager struct {
 	sequenceCache           cache.Cache
 	cacheLock               sync.Mutex
 	persistedCache          cache.Cache
+	teams                   cache.Cache
 	cacheFilename           string
 	hasLoadedPersistedCache bool
 	isCacheUpdated          bool
@@ -75,6 +82,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 		instanceMap:    cache.New(),
 		categoryMap:    cache.New(),
 		sequenceCache:  cache.New(),
+		teams:          cache.New(),
 		isCacheUpdated: false,
 	}
 
@@ -95,6 +103,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		c.instanceMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServiceInstances")
 		c.categoryMap = c.loadPersistedResourceInstanceCache(cacheMap, "categories")
 		c.sequenceCache = c.loadPersistedCache(cacheMap, "watchSequence")
+		c.teams = c.loadPersistedCache(cacheMap, "teamCache")
 		c.hasLoadedPersistedCache = true
 		c.isCacheUpdated = false
 	}
@@ -103,6 +112,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	cacheMap.Set("apiServiceInstances", c.instanceMap)
 	cacheMap.Set("categories", c.categoryMap)
 	cacheMap.Set("watchSequence", c.sequenceCache)
+	cacheMap.Set("teams", c.teams)
 	c.persistedCache = cacheMap
 	if util.IsNotTest() {
 		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
@@ -148,6 +158,7 @@ func (c *cacheManager) setCacheUpdated(updated bool) {
 }
 
 // Cache persistence job
+
 // Ready -
 func (c *cacheManager) Ready() bool {
 	return true
@@ -168,6 +179,7 @@ func (c *cacheManager) Execute() error {
 }
 
 // Cache manager
+
 // HasLoadedPersistedCache - returns true if the caches are loaded from file
 func (c *cacheManager) HasLoadedPersistedCache() bool {
 	return c.hasLoadedPersistedCache
@@ -183,6 +195,7 @@ func (c *cacheManager) SaveCache() {
 }
 
 // API service cache management
+
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
 	externalAPIID, ok := apiService.Attributes[definitions.AttrExternalAPIID]
@@ -267,6 +280,7 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 }
 
 // API service instance management
+
 // AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
@@ -281,11 +295,11 @@ func (c *cacheManager) GetAPIServiceInstanceKeys() []string {
 
 // GetAPIServiceInstanceByID - returns resource from APIServiceInstance cache based on instance ID
 func (c *cacheManager) GetAPIServiceInstanceByID(instanceID string) (*v1.ResourceInstance, error) {
-	api, err := c.instanceMap.Get(instanceID)
-	if api != nil {
-		apiSvc, ok := api.(*v1.ResourceInstance)
+	item, err := c.instanceMap.Get(instanceID)
+	if item != nil {
+		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			return apiSvc, nil
+			return instance, nil
 		}
 	}
 	return nil, err
@@ -306,6 +320,7 @@ func (c *cacheManager) DeleteAllAPIServiceInstance() {
 }
 
 // Category cache management
+
 // AddCategory - add/update Category resource in cache
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
@@ -355,6 +370,7 @@ func (c *cacheManager) DeleteCategory(categoryName string) error {
 }
 
 // Watch Sequence cache
+
 // AddSequence - add/updates the sequenceID for the watch topic in cache
 func (c *cacheManager) AddSequence(watchTopicName string, sequenceID int64) {
 	defer c.setCacheUpdated(true)
@@ -373,4 +389,64 @@ func (c *cacheManager) GetSequence(watchTopicName string) int64 {
 		}
 	}
 	return 0
+}
+
+// GetTeamCache - returns the team cache
+func (c *cacheManager) GetTeamCache() cache.Cache {
+	return c.teams
+}
+
+// AddTeam saves a team to the cache
+func (c *cacheManager) AddTeam(team *definitions.PlatformTeam) {
+	defer c.setCacheUpdated(true)
+	c.teams.SetWithSecondaryKey(team.Name, team.ID, team)
+}
+
+// GetTeamByName gets a team by name
+func (c *cacheManager) GetTeamByName(name string) *definitions.PlatformTeam {
+	item, err := c.teams.Get(name)
+	if err != nil {
+		return nil
+	}
+	team, ok := item.(*definitions.PlatformTeam)
+	if !ok {
+		return nil
+	}
+	return team
+}
+
+// GetDefaultTeam gets the default team
+func (c *cacheManager) GetDefaultTeam() *definitions.PlatformTeam {
+	names := c.teams.GetKeys()
+
+	var defaultTeam *definitions.PlatformTeam
+	for _, name := range names {
+		item, _ := c.teams.Get(name)
+		team, ok := item.(*definitions.PlatformTeam)
+		if !ok {
+			continue
+		}
+
+		if team.Default {
+			defaultTeam = team
+			break
+		}
+
+		continue
+	}
+
+	return defaultTeam
+}
+
+// GetTeamByID gets a team by id
+func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
+	item, err := c.teams.GetBySecondaryKey(id)
+	if err != nil {
+		return nil
+	}
+	team, ok := item.(*definitions.PlatformTeam)
+	if !ok {
+		return nil
+	}
+	return team
 }
