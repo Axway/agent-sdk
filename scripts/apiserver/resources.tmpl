@@ -164,8 +164,6 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
 
 	// unmarshall the spec field
 	if raw["spec"] != nil {
-        {{ $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" }}
-		res.Spec = {{ $varName }}
 		bts, err := json.Marshal(raw["spec"])
 		if err != nil {
 			return err
