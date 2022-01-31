@@ -1,16 +1,5 @@
 package definitions
 
-// Constants for attributes
-const (
-	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
-	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
-	AttrExternalAPIID                = "externalAPIID"
-	AttrExternalAPIPrimaryKey        = "externalAPIPrimaryKey"
-	AttrExternalAPIName              = "externalAPIName"
-	AttrExternalAPIStage             = "externalAPIStage"
-	AttrCreatedBy                    = "createdBy"
-)
-
 // PlatformUserInfo - Represents user resource from platform
 type PlatformUserInfo struct {
 	Success bool `json:"success"`
@@ -31,3 +20,14 @@ type PlatformTeam struct {
 	Name    string `json:"name"`
 	Default bool   `json:"default"`
 }
+
+// Constants for attributes
+const (
+	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
+	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
+	AttrExternalAPIID                = "externalAPIID"
+	AttrExternalAPIPrimaryKey        = "externalAPIPrimaryKey"
+	AttrExternalAPIName              = "externalAPIName"
+	AttrExternalAPIStage             = "externalAPIStage"
+	AttrCreatedBy                    = "createdBy"
+)

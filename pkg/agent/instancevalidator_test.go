@@ -78,11 +78,7 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	setupCache("12345", "test")
 	setupAPICClient([]api.MockResponse{
 		{
-			FileName: "../apic/testdata/apiservice-list.json", // for call to get the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "../apic/testdata/apiservice-list.json", // for call to get the consumer instances
+			FileName: "../apic/testdata/consumerinstancelist.json", // for call to get the consumer instances
 			RespCode: http.StatusOK,
 		},
 		{

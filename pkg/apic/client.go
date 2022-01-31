@@ -9,6 +9,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
@@ -53,9 +55,9 @@ type Client interface {
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
-	DeleteAPIServiceInstance(instanceName string) error
-	DeleteConsumerInstance(instanceName string) error
-	DeleteServiceByAPIID(externalAPIID string) error
+	DeleteAPIServiceInstance(name string) error
+	DeleteConsumerInstance(name string) error
+	DeleteServiceByName(name string) error
 	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
 	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
@@ -76,7 +78,6 @@ type Client interface {
 	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
 	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
 	CreateCategory(categoryName string) (*catalog.Category, error)
-	AddCache(categoryCache, teamCache cache.Cache)
 	GetOrCreateCategory(category string) string
 	GetEnvironment() (*v1alpha1.Environment, error)
 	GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error)
@@ -87,8 +88,10 @@ type Client interface {
 }
 
 // New creates a new Client
-func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Client {
-	serviceClient := &ServiceClient{}
+func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, caches cache2.Manager) Client {
+	serviceClient := &ServiceClient{
+		caches: caches,
+	}
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.initClient(cfg)
@@ -96,52 +99,57 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter) Cli
 	return serviceClient
 }
 
-// AddCache - add the pointer to the category and team caches that the agent package will update
-func (c *ServiceClient) AddCache(categoryCache, teamCache cache.Cache) {
-	c.categoryCache = categoryCache
-	c.teamCache = teamCache
-}
-
 // getTeamFromCache -
 func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
-	if c.teamCache == nil {
-		return "", true
-	}
-	id, found := c.teamCache.Get(teamName)
+	var team *definitions.PlatformTeam
 	if teamName == "" {
-		// get the default team
-		id, found = c.teamCache.GetBySecondaryKey(DefaultTeamKey)
+		team = c.caches.GetDefaultTeam()
+		if team == nil {
+			return "", false
+		}
+		return team.ID, true
 	}
-	if found != nil {
+
+	team = c.caches.GetTeamByName(teamName)
+	if team == nil {
 		return "", false
 	}
-	return id.(string), true
+
+	return team.ID, true
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
 func (c *ServiceClient) GetOrCreateCategory(category string) string {
-	if c.categoryCache != nil {
-		categoryInterface, _ := c.categoryCache.GetBySecondaryKey(category)
-		if categoryInterface == nil {
-			if !corecfg.IsCategoryAutocreationEnabled() {
-				log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
-				return ""
-			}
-			// create the category and add it to the cache
-			newCategory, err := c.CreateCategory(category)
-			if err != nil {
-				log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
-				return ""
-			}
-			categoryInterface, _ = newCategory.AsInstance()
-			log.Infof("Created new category %s (%s)", newCategory.Title, newCategory.Name)
-			c.categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
-		}
-		cat := categoryInterface.(*apiv1.ResourceInstance)
-		return cat.Name
+	categoryCache := c.caches.GetCategoryCache()
+	if categoryCache == nil {
+		log.Errorf("category cache has not been initialized")
+		return ""
 	}
-	log.Errorf("Category cache has not been initialized")
-	return ""
+
+	categoryInterface, _ := categoryCache.GetBySecondaryKey(category)
+	if categoryInterface == nil {
+		if !corecfg.IsCategoryAutocreationEnabled() {
+			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
+			return ""
+		}
+
+		// create the category and add it to the cache
+		newCategory, err := c.CreateCategory(category)
+		if err != nil {
+			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
+			return ""
+		}
+		categoryInterface, _ = newCategory.AsInstance()
+		log.Infof("Created new category %s (%s)", newCategory.Title, newCategory.Name)
+		categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
+	}
+
+	cat, ok := categoryInterface.(*apiv1.ResourceInstance)
+	if !ok {
+		return ""
+	}
+
+	return cat.Name
 }
 
 // initClient - config change handler

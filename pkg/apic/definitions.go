@@ -3,6 +3,8 @@ package apic
 import (
 	"sync"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -34,8 +36,6 @@ const (
 
 	DefaultTeamKey = "DefaultTeam"
 )
-
-type apiErrorResponse map[string][]apiError
 
 type apiError struct {
 	Code    int    `json:"code"`
@@ -107,9 +107,8 @@ type ServiceClient struct {
 	cfg                                corecfg.CentralConfig
 	apiClient                          coreapi.Client
 	DefaultSubscriptionSchema          SubscriptionSchema
+	caches                             cache2.Manager
 	subscriptionSchemaCache            cache.Cache
-	categoryCache                      cache.Cache
-	teamCache                          cache.Cache
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex

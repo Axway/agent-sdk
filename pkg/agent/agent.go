@@ -119,8 +119,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 
 		// Init apic client when the agent starts, and on config change.
-		agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-		agent.apicClient.AddCache(agent.cacheManager.GetCategoryCache(), agent.teamMap)
+		agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
 
 		if util.IsNotTest() {
 			err = initEnvResources(centralCfg, agent.apicClient)
@@ -151,7 +150,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			startTeamACLCache()
+			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
 
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
@@ -163,7 +162,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 				UpdateStatusWithPrevious(AgentRunning, "", "")
 			}
 		}
-
 	}
 
 	agent.isInitialized = true
@@ -286,17 +284,17 @@ func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error 
 	return nil
 }
 
-func startTeamACLCache() {
+func startTeamACLCache(cfg config.CentralConfig, client apic.Client, caches agentcache.Manager) {
 	// register the team cache and acl update jobs
 	var teamChannel chan string
 
 	// Only discovery agents need to start the ACL handler
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+	if cfg.GetAgentType() == config.DiscoveryAgent {
 		teamChannel = make(chan string)
 		registerAccessControlListHandler(teamChannel)
 	}
 
-	registerTeamMapCacheJob(teamChannel)
+	registerTeamMapCacheJob(teamChannel, caches, client)
 }
 
 func isRunningInDockerContainer() bool {
