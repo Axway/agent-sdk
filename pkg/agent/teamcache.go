@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -76,4 +77,20 @@ func getJobInterval() time.Duration {
 	}
 
 	return interval
+}
+
+// GetTeamByName - Returns the PlatformTeam associated with the name
+func GetTeamByName(name string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByName(name)
+	}
+	return nil
+}
+
+// GetTeamByID - Returns the PlatformTeam associated with the id
+func GetTeamByID(id string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByID(id)
+	}
+	return nil
 }
