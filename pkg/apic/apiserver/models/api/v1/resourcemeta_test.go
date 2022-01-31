@@ -12,9 +12,15 @@ func TestResourceMetaMarshal(t *testing.T) {
 	primaryKey := "4321"
 
 	meta1 := &ResourceMeta{
-		GroupVersionKind: GroupVersionKind{},
-		Name:             "meta1",
-		Title:            "meta1",
+		GroupVersionKind: GroupVersionKind{
+			GroupKind: GroupKind{
+				Group: "group",
+				Kind:  "kind",
+			},
+			APIVersion: "v1",
+		},
+		Name:  "meta1",
+		Title: "meta1",
 		Metadata: Metadata{
 			ID: "123",
 		},
