@@ -44,6 +44,19 @@ func newAuthConfig() AuthConfig {
 	}
 }
 
+func newTestAuthConfig() AuthConfig {
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY_DATA", "1")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY_DATA", "1")
+	return &AuthConfiguration{
+		Timeout:    30 * time.Second,
+		URL:        "https://auth.com",
+		Realm:      "realm",
+		ClientID:   "clientid",
+		PrivateKey: "file",
+		PublicKey:  "file",
+	}
+}
+
 func (a *AuthConfiguration) validate() {
 	if a.URL == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
