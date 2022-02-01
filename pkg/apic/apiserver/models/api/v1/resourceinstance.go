@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 )
 
+// Interface describes API Server & catalog resources
+type Interface interface {
+	Meta
+	AsInstance() (*ResourceInstance, error)
+	FromInstance(from *ResourceInstance) error
+}
+
 // ResourceInstance API Server generic resource structure.
 type ResourceInstance struct {
 	ResourceMeta
@@ -16,6 +23,7 @@ type ResourceInstance struct {
 
 // UnmarshalJSON - custom unmarshaler for ResourceInstance struct to additionally use a custom subscriptionField
 func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
+	// TODO: find out how this works
 	type Alias ResourceInstance // Create an intermediate type to unmarshal the base attributes
 	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(ri)}); err != nil {
 		return err
@@ -33,8 +41,13 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 	}
 
 	if out["owner"] != nil {
+		var err error
 		ri.Owner = &Owner{}
-		err = json.Unmarshal(data, ri.Owner)
+		bts, err := json.Marshal(out["owner"])
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(bts, ri.Owner)
 		if err != nil {
 			return err
 		}
@@ -67,10 +80,14 @@ func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	rawInstance := map[string]interface{}{}
 	if err := json.Unmarshal(riAlias, &rawInstance); err != nil {
 		return []byte{}, err
 	}
+
+	rawInstance["spec"] = ri.Spec
+	rawInstance["owner"] = ri.Owner
 
 	// override the rawStruct map with the values from the rawInstance map
 	for key, value := range rawInstance {
@@ -96,11 +113,4 @@ func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 // GetRawResource gets the resource as bytes
 func (ri *ResourceInstance) GetRawResource() json.RawMessage {
 	return ri.rawResource
-}
-
-// Interface describes API Server & catalog resources
-type Interface interface {
-	Meta
-	AsInstance() (*ResourceInstance, error)
-	FromInstance(from *ResourceInstance) error
 }

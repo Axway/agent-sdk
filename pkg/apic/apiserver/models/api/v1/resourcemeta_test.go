@@ -67,14 +67,43 @@ func TestResourceMetaMarshal(t *testing.T) {
 	err = json.Unmarshal(bts, meta2)
 	assert.Nil(t, err)
 
-	assert.Equal(t, meta1.Name, meta2.Name)
-	assert.Equal(t, meta1.Title, meta2.Title)
-	assert.Equal(t, meta1.Metadata.ID, meta2.Metadata.ID)
-	assert.Equal(t, meta1.SubResources, meta2.SubResources)
-	assert.Equal(t, meta1.Tags, meta2.Tags)
-	assert.Equal(t, meta1.Attributes, meta2.Attributes)
+	meta1.Metadata.Audit = AuditMetadata{}
+	meta2.Metadata.Audit = AuditMetadata{}
+	assert.Equal(t, meta1, meta2)
 
-	// expect to only find the x-agent-details key on the MetaResource.SubResource field
+	// expect to the sub resources to be equal
 	assert.True(t, len(meta2.SubResources) == 1)
-	assert.NotEmpty(t, meta2.SubResources["x-agent-details"])
+	assert.Equal(t, xAgentDetailsSub, meta2.SubResources["x-agent-details"])
+}
+
+func TestResourceMeta(t *testing.T) {
+	meta := &ResourceMeta{
+		GroupVersionKind: GroupVersionKind{
+			GroupKind: GroupKind{
+				Group: "group",
+				Kind:  "kind",
+			},
+			APIVersion: "v1",
+		},
+		Title: "title",
+		Metadata: Metadata{
+			ID: "333",
+		},
+	}
+
+	assert.Equal(t, meta.Metadata, meta.GetMetadata())
+	assert.Equal(t, meta.GroupVersionKind, meta.GetGroupVersionKind())
+
+	meta.SetName("name")
+	assert.Equal(t, meta.Name, meta.GetName())
+
+	assert.Equal(t, 0, len(meta.GetAttributes()))
+	meta.SetAttributes(map[string]string{
+		"abc": "123",
+	})
+	assert.Equal(t, meta.Attributes, meta.GetAttributes())
+
+	assert.Equal(t, 0, len(meta.GetTags()))
+	meta.SetTags([]string{"tag1", "tag2"})
+	assert.Equal(t, meta.Tags, meta.GetTags())
 }
