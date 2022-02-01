@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type MeshServiceMergeFunc func(*v1alpha1.MeshService, *v1alpha1.MeshService) (*v1alpha1.MeshService, error)
+type MeshServiceMergeFunc func(*m.MeshService, *m.MeshService) (*m.MeshService, error)
 
 // Merge builds a merge option for an update operation
 func MeshServiceMerge(f MeshServiceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.MeshService{}, &v1alpha1.MeshService{}
+		p, n := &m.MeshService{}, &m.MeshService{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.MeshService:
+		case *m.MeshService:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func MeshServiceMerge(f MeshServiceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.MeshService:
+		case *m.MeshService:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedMeshServiceClient struct {
 // NewMeshServiceClient -
 func NewMeshServiceClient(c v1.Base) (*UnscopedMeshServiceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.MeshServiceGVK())
+	client, err := c.ForKind(m.MeshServiceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedMeshServiceClient) WithScope(scope string) *MeshServiceClient {
 }
 
 // Get -
-func (c *UnscopedMeshServiceClient) Get(name string) (*v1alpha1.MeshService, error) {
+func (c *UnscopedMeshServiceClient) Get(name string) (*m.MeshService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshService{}
+	service := &m.MeshService{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedMeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1.UpdateOption) (*v1alpha1.MeshService, error) {
+func (c *UnscopedMeshServiceClient) Update(res *m.MeshService, opts ...v1.UpdateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedMeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshService{}
+	updated := &m.MeshService{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedMeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1
 }
 
 // List -
-func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshService, error) {
+func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*m.MeshService, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.MeshService, len(riList))
+	result := make([]*m.MeshService, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.MeshService{}
+		result[i] = &m.MeshService{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshSer
 }
 
 // Get -
-func (c *MeshServiceClient) Get(name string) (*v1alpha1.MeshService, error) {
+func (c *MeshServiceClient) Get(name string) (*m.MeshService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshService{}
+	service := &m.MeshService{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *MeshServiceClient) Delete(res *v1alpha1.MeshService) error {
+func (c *MeshServiceClient) Delete(res *m.MeshService) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *MeshServiceClient) Delete(res *v1alpha1.MeshService) error {
 }
 
 // Create -
-func (c *MeshServiceClient) Create(res *v1alpha1.MeshService, opts ...v1.CreateOption) (*v1alpha1.MeshService, error) {
+func (c *MeshServiceClient) Create(res *m.MeshService, opts ...v1.CreateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *MeshServiceClient) Create(res *v1alpha1.MeshService, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.MeshService{}
+	created := &m.MeshService{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *MeshServiceClient) Create(res *v1alpha1.MeshService, opts ...v1.CreateO
 }
 
 // Update -
-func (c *MeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1.UpdateOption) (*v1alpha1.MeshService, error) {
+func (c *MeshServiceClient) Update(res *m.MeshService, opts ...v1.UpdateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *MeshServiceClient) Update(res *v1alpha1.MeshService, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshService{}
+	updated := &m.MeshService{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

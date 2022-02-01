@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type ResourceHookMergeFunc func(*v1alpha1.ResourceHook, *v1alpha1.ResourceHook) (*v1alpha1.ResourceHook, error)
+type ResourceHookMergeFunc func(*m.ResourceHook, *m.ResourceHook) (*m.ResourceHook, error)
 
 // Merge builds a merge option for an update operation
 func ResourceHookMerge(f ResourceHookMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ResourceHook{}, &v1alpha1.ResourceHook{}
+		p, n := &m.ResourceHook{}, &m.ResourceHook{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ResourceHook:
+		case *m.ResourceHook:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ResourceHookMerge(f ResourceHookMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ResourceHook:
+		case *m.ResourceHook:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedResourceHookClient struct {
 // NewResourceHookClient -
 func NewResourceHookClient(c v1.Base) (*UnscopedResourceHookClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ResourceHookGVK())
+	client, err := c.ForKind(m.ResourceHookGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedResourceHookClient) WithScope(scope string) *ResourceHookClient
 }
 
 // Get -
-func (c *UnscopedResourceHookClient) Get(name string) (*v1alpha1.ResourceHook, error) {
+func (c *UnscopedResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ResourceHook{}
+	service := &m.ResourceHook{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedResourceHookClient) Update(res *v1alpha1.ResourceHook, opts ...v1.UpdateOption) (*v1alpha1.ResourceHook, error) {
+func (c *UnscopedResourceHookClient) Update(res *m.ResourceHook, opts ...v1.UpdateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedResourceHookClient) Update(res *v1alpha1.ResourceHook, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.ResourceHook{}
+	updated := &m.ResourceHook{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedResourceHookClient) Update(res *v1alpha1.ResourceHook, opts ...
 }
 
 // List -
-func (c *ResourceHookClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceHook, error) {
+func (c *ResourceHookClient) List(options ...v1.ListOptions) ([]*m.ResourceHook, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ResourceHook, len(riList))
+	result := make([]*m.ResourceHook, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ResourceHook{}
+		result[i] = &m.ResourceHook{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *ResourceHookClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resour
 }
 
 // Get -
-func (c *ResourceHookClient) Get(name string) (*v1alpha1.ResourceHook, error) {
+func (c *ResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ResourceHook{}
+	service := &m.ResourceHook{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ResourceHookClient) Delete(res *v1alpha1.ResourceHook) error {
+func (c *ResourceHookClient) Delete(res *m.ResourceHook) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *ResourceHookClient) Delete(res *v1alpha1.ResourceHook) error {
 }
 
 // Create -
-func (c *ResourceHookClient) Create(res *v1alpha1.ResourceHook, opts ...v1.CreateOption) (*v1alpha1.ResourceHook, error) {
+func (c *ResourceHookClient) Create(res *m.ResourceHook, opts ...v1.CreateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ResourceHookClient) Create(res *v1alpha1.ResourceHook, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.ResourceHook{}
+	created := &m.ResourceHook{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *ResourceHookClient) Create(res *v1alpha1.ResourceHook, opts ...v1.Creat
 }
 
 // Update -
-func (c *ResourceHookClient) Update(res *v1alpha1.ResourceHook, opts ...v1.UpdateOption) (*v1alpha1.ResourceHook, error) {
+func (c *ResourceHookClient) Update(res *m.ResourceHook, opts ...v1.UpdateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ResourceHookClient) Update(res *v1alpha1.ResourceHook, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.ResourceHook{}
+	updated := &m.ResourceHook{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

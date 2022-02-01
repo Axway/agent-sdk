@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type CorsRuleMergeFunc func(*v1alpha1.CorsRule, *v1alpha1.CorsRule) (*v1alpha1.CorsRule, error)
+type CorsRuleMergeFunc func(*m.CorsRule, *m.CorsRule) (*m.CorsRule, error)
 
 // Merge builds a merge option for an update operation
 func CorsRuleMerge(f CorsRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.CorsRule{}, &v1alpha1.CorsRule{}
+		p, n := &m.CorsRule{}, &m.CorsRule{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.CorsRule:
+		case *m.CorsRule:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func CorsRuleMerge(f CorsRuleMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.CorsRule:
+		case *m.CorsRule:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedCorsRuleClient struct {
 // NewCorsRuleClient -
 func NewCorsRuleClient(c v1.Base) (*UnscopedCorsRuleClient, error) {
 
-	client, err := c.ForKind(v1alpha1.CorsRuleGVK())
+	client, err := c.ForKind(m.CorsRuleGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedCorsRuleClient) WithScope(scope string) *CorsRuleClient {
 }
 
 // Get -
-func (c *UnscopedCorsRuleClient) Get(name string) (*v1alpha1.CorsRule, error) {
+func (c *UnscopedCorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.CorsRule{}
+	service := &m.CorsRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedCorsRuleClient) Update(res *v1alpha1.CorsRule, opts ...v1.UpdateOption) (*v1alpha1.CorsRule, error) {
+func (c *UnscopedCorsRuleClient) Update(res *m.CorsRule, opts ...v1.UpdateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedCorsRuleClient) Update(res *v1alpha1.CorsRule, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.CorsRule{}
+	updated := &m.CorsRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedCorsRuleClient) Update(res *v1alpha1.CorsRule, opts ...v1.Updat
 }
 
 // List -
-func (c *CorsRuleClient) List(options ...v1.ListOptions) ([]*v1alpha1.CorsRule, error) {
+func (c *CorsRuleClient) List(options ...v1.ListOptions) ([]*m.CorsRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.CorsRule, len(riList))
+	result := make([]*m.CorsRule, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.CorsRule{}
+		result[i] = &m.CorsRule{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *CorsRuleClient) List(options ...v1.ListOptions) ([]*v1alpha1.CorsRule, 
 }
 
 // Get -
-func (c *CorsRuleClient) Get(name string) (*v1alpha1.CorsRule, error) {
+func (c *CorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.CorsRule{}
+	service := &m.CorsRule{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *CorsRuleClient) Delete(res *v1alpha1.CorsRule) error {
+func (c *CorsRuleClient) Delete(res *m.CorsRule) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *CorsRuleClient) Delete(res *v1alpha1.CorsRule) error {
 }
 
 // Create -
-func (c *CorsRuleClient) Create(res *v1alpha1.CorsRule, opts ...v1.CreateOption) (*v1alpha1.CorsRule, error) {
+func (c *CorsRuleClient) Create(res *m.CorsRule, opts ...v1.CreateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *CorsRuleClient) Create(res *v1alpha1.CorsRule, opts ...v1.CreateOption)
 		return nil, err
 	}
 
-	created := &v1alpha1.CorsRule{}
+	created := &m.CorsRule{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *CorsRuleClient) Create(res *v1alpha1.CorsRule, opts ...v1.CreateOption)
 }
 
 // Update -
-func (c *CorsRuleClient) Update(res *v1alpha1.CorsRule, opts ...v1.UpdateOption) (*v1alpha1.CorsRule, error) {
+func (c *CorsRuleClient) Update(res *m.CorsRule, opts ...v1.UpdateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *CorsRuleClient) Update(res *v1alpha1.CorsRule, opts ...v1.UpdateOption)
 		return nil, err
 	}
 
-	updated := &v1alpha1.CorsRule{}
+	updated := &m.CorsRule{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

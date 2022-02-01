@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type ProductPlanUnitMergeFunc func(*v1alpha1.ProductPlanUnit, *v1alpha1.ProductPlanUnit) (*v1alpha1.ProductPlanUnit, error)
+type ProductPlanUnitMergeFunc func(*m.ProductPlanUnit, *m.ProductPlanUnit) (*m.ProductPlanUnit, error)
 
 // Merge builds a merge option for an update operation
 func ProductPlanUnitMerge(f ProductPlanUnitMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ProductPlanUnit{}, &v1alpha1.ProductPlanUnit{}
+		p, n := &m.ProductPlanUnit{}, &m.ProductPlanUnit{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ProductPlanUnit:
+		case *m.ProductPlanUnit:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ProductPlanUnitMerge(f ProductPlanUnitMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ProductPlanUnit:
+		case *m.ProductPlanUnit:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type ProductPlanUnitClient struct {
 // NewProductPlanUnitClient -
 func NewProductPlanUnitClient(c v1.Base) (*ProductPlanUnitClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ProductPlanUnitGVK())
+	client, err := c.ForKind(m.ProductPlanUnitGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewProductPlanUnitClient(c v1.Base) (*ProductPlanUnitClient, error) {
 }
 
 // List -
-func (c *ProductPlanUnitClient) List(options ...v1.ListOptions) ([]*v1alpha1.ProductPlanUnit, error) {
+func (c *ProductPlanUnitClient) List(options ...v1.ListOptions) ([]*m.ProductPlanUnit, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ProductPlanUnit, len(riList))
+	result := make([]*m.ProductPlanUnit, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ProductPlanUnit{}
+		result[i] = &m.ProductPlanUnit{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *ProductPlanUnitClient) List(options ...v1.ListOptions) ([]*v1alpha1.Pro
 }
 
 // Get -
-func (c *ProductPlanUnitClient) Get(name string) (*v1alpha1.ProductPlanUnit, error) {
+func (c *ProductPlanUnitClient) Get(name string) (*m.ProductPlanUnit, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ProductPlanUnit{}
+	service := &m.ProductPlanUnit{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ProductPlanUnitClient) Delete(res *v1alpha1.ProductPlanUnit) error {
+func (c *ProductPlanUnitClient) Delete(res *m.ProductPlanUnit) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *ProductPlanUnitClient) Delete(res *v1alpha1.ProductPlanUnit) error {
 }
 
 // Create -
-func (c *ProductPlanUnitClient) Create(res *v1alpha1.ProductPlanUnit, opts ...v1.CreateOption) (*v1alpha1.ProductPlanUnit, error) {
+func (c *ProductPlanUnitClient) Create(res *m.ProductPlanUnit, opts ...v1.CreateOption) (*m.ProductPlanUnit, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *ProductPlanUnitClient) Create(res *v1alpha1.ProductPlanUnit, opts ...v1
 		return nil, err
 	}
 
-	created := &v1alpha1.ProductPlanUnit{}
+	created := &m.ProductPlanUnit{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *ProductPlanUnitClient) Create(res *v1alpha1.ProductPlanUnit, opts ...v1
 }
 
 // Update -
-func (c *ProductPlanUnitClient) Update(res *v1alpha1.ProductPlanUnit, opts ...v1.UpdateOption) (*v1alpha1.ProductPlanUnit, error) {
+func (c *ProductPlanUnitClient) Update(res *m.ProductPlanUnit, opts ...v1.UpdateOption) (*m.ProductPlanUnit, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *ProductPlanUnitClient) Update(res *v1alpha1.ProductPlanUnit, opts ...v1
 		return nil, err
 	}
 
-	updated := &v1alpha1.ProductPlanUnit{}
+	updated := &m.ProductPlanUnit{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

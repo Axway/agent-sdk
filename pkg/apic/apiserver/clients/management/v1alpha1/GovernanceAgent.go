@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type GovernanceAgentMergeFunc func(*v1alpha1.GovernanceAgent, *v1alpha1.GovernanceAgent) (*v1alpha1.GovernanceAgent, error)
+type GovernanceAgentMergeFunc func(*m.GovernanceAgent, *m.GovernanceAgent) (*m.GovernanceAgent, error)
 
 // Merge builds a merge option for an update operation
 func GovernanceAgentMerge(f GovernanceAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.GovernanceAgent{}, &v1alpha1.GovernanceAgent{}
+		p, n := &m.GovernanceAgent{}, &m.GovernanceAgent{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.GovernanceAgent:
+		case *m.GovernanceAgent:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func GovernanceAgentMerge(f GovernanceAgentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.GovernanceAgent:
+		case *m.GovernanceAgent:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedGovernanceAgentClient struct {
 // NewGovernanceAgentClient -
 func NewGovernanceAgentClient(c v1.Base) (*UnscopedGovernanceAgentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.GovernanceAgentGVK())
+	client, err := c.ForKind(m.GovernanceAgentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedGovernanceAgentClient) WithScope(scope string) *GovernanceAgent
 }
 
 // Get -
-func (c *UnscopedGovernanceAgentClient) Get(name string) (*v1alpha1.GovernanceAgent, error) {
+func (c *UnscopedGovernanceAgentClient) Get(name string) (*m.GovernanceAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.GovernanceAgent{}
+	service := &m.GovernanceAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedGovernanceAgentClient) Update(res *v1alpha1.GovernanceAgent, opts ...v1.UpdateOption) (*v1alpha1.GovernanceAgent, error) {
+func (c *UnscopedGovernanceAgentClient) Update(res *m.GovernanceAgent, opts ...v1.UpdateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedGovernanceAgentClient) Update(res *v1alpha1.GovernanceAgent, op
 		return nil, err
 	}
 
-	updated := &v1alpha1.GovernanceAgent{}
+	updated := &m.GovernanceAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedGovernanceAgentClient) Update(res *v1alpha1.GovernanceAgent, op
 }
 
 // List -
-func (c *GovernanceAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.GovernanceAgent, error) {
+func (c *GovernanceAgentClient) List(options ...v1.ListOptions) ([]*m.GovernanceAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.GovernanceAgent, len(riList))
+	result := make([]*m.GovernanceAgent, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.GovernanceAgent{}
+		result[i] = &m.GovernanceAgent{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *GovernanceAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Gov
 }
 
 // Get -
-func (c *GovernanceAgentClient) Get(name string) (*v1alpha1.GovernanceAgent, error) {
+func (c *GovernanceAgentClient) Get(name string) (*m.GovernanceAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.GovernanceAgent{}
+	service := &m.GovernanceAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *GovernanceAgentClient) Delete(res *v1alpha1.GovernanceAgent) error {
+func (c *GovernanceAgentClient) Delete(res *m.GovernanceAgent) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *GovernanceAgentClient) Delete(res *v1alpha1.GovernanceAgent) error {
 }
 
 // Create -
-func (c *GovernanceAgentClient) Create(res *v1alpha1.GovernanceAgent, opts ...v1.CreateOption) (*v1alpha1.GovernanceAgent, error) {
+func (c *GovernanceAgentClient) Create(res *m.GovernanceAgent, opts ...v1.CreateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *GovernanceAgentClient) Create(res *v1alpha1.GovernanceAgent, opts ...v1
 		return nil, err
 	}
 
-	created := &v1alpha1.GovernanceAgent{}
+	created := &m.GovernanceAgent{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *GovernanceAgentClient) Create(res *v1alpha1.GovernanceAgent, opts ...v1
 }
 
 // Update -
-func (c *GovernanceAgentClient) Update(res *v1alpha1.GovernanceAgent, opts ...v1.UpdateOption) (*v1alpha1.GovernanceAgent, error) {
+func (c *GovernanceAgentClient) Update(res *m.GovernanceAgent, opts ...v1.UpdateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *GovernanceAgentClient) Update(res *v1alpha1.GovernanceAgent, opts ...v1
 		return nil, err
 	}
 
-	updated := &v1alpha1.GovernanceAgent{}
+	updated := &m.GovernanceAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

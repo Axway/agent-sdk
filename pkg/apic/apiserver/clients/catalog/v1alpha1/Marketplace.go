@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type MarketplaceMergeFunc func(*v1alpha1.Marketplace, *v1alpha1.Marketplace) (*v1alpha1.Marketplace, error)
+type MarketplaceMergeFunc func(*m.Marketplace, *m.Marketplace) (*m.Marketplace, error)
 
 // Merge builds a merge option for an update operation
 func MarketplaceMerge(f MarketplaceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Marketplace{}, &v1alpha1.Marketplace{}
+		p, n := &m.Marketplace{}, &m.Marketplace{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Marketplace:
+		case *m.Marketplace:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func MarketplaceMerge(f MarketplaceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Marketplace:
+		case *m.Marketplace:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type MarketplaceClient struct {
 // NewMarketplaceClient -
 func NewMarketplaceClient(c v1.Base) (*MarketplaceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.MarketplaceGVK())
+	client, err := c.ForKind(m.MarketplaceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewMarketplaceClient(c v1.Base) (*MarketplaceClient, error) {
 }
 
 // List -
-func (c *MarketplaceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Marketplace, error) {
+func (c *MarketplaceClient) List(options ...v1.ListOptions) ([]*m.Marketplace, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Marketplace, len(riList))
+	result := make([]*m.Marketplace, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Marketplace{}
+		result[i] = &m.Marketplace{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *MarketplaceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Marketp
 }
 
 // Get -
-func (c *MarketplaceClient) Get(name string) (*v1alpha1.Marketplace, error) {
+func (c *MarketplaceClient) Get(name string) (*m.Marketplace, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Marketplace{}
+	service := &m.Marketplace{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *MarketplaceClient) Delete(res *v1alpha1.Marketplace) error {
+func (c *MarketplaceClient) Delete(res *m.Marketplace) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *MarketplaceClient) Delete(res *v1alpha1.Marketplace) error {
 }
 
 // Create -
-func (c *MarketplaceClient) Create(res *v1alpha1.Marketplace, opts ...v1.CreateOption) (*v1alpha1.Marketplace, error) {
+func (c *MarketplaceClient) Create(res *m.Marketplace, opts ...v1.CreateOption) (*m.Marketplace, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *MarketplaceClient) Create(res *v1alpha1.Marketplace, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.Marketplace{}
+	created := &m.Marketplace{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *MarketplaceClient) Create(res *v1alpha1.Marketplace, opts ...v1.CreateO
 }
 
 // Update -
-func (c *MarketplaceClient) Update(res *v1alpha1.Marketplace, opts ...v1.UpdateOption) (*v1alpha1.Marketplace, error) {
+func (c *MarketplaceClient) Update(res *m.Marketplace, opts ...v1.UpdateOption) (*m.Marketplace, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *MarketplaceClient) Update(res *v1alpha1.Marketplace, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.Marketplace{}
+	updated := &m.Marketplace{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

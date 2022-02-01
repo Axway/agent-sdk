@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type AccessRequestDefinitionMergeFunc func(*v1alpha1.AccessRequestDefinition, *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
+type AccessRequestDefinitionMergeFunc func(*m.AccessRequestDefinition, *m.AccessRequestDefinition) (*m.AccessRequestDefinition, error)
 
 // Merge builds a merge option for an update operation
 func AccessRequestDefinitionMerge(f AccessRequestDefinitionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AccessRequestDefinition{}, &v1alpha1.AccessRequestDefinition{}
+		p, n := &m.AccessRequestDefinition{}, &m.AccessRequestDefinition{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AccessRequestDefinition:
+		case *m.AccessRequestDefinition:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AccessRequestDefinitionMerge(f AccessRequestDefinitionMergeFunc) v1.UpdateO
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AccessRequestDefinition:
+		case *m.AccessRequestDefinition:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAccessRequestDefinitionClient struct {
 // NewAccessRequestDefinitionClient -
 func NewAccessRequestDefinitionClient(c v1.Base) (*UnscopedAccessRequestDefinitionClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AccessRequestDefinitionGVK())
+	client, err := c.ForKind(m.AccessRequestDefinitionGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAccessRequestDefinitionClient) WithScope(scope string) *AccessR
 }
 
 // Get -
-func (c *UnscopedAccessRequestDefinitionClient) Get(name string) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *UnscopedAccessRequestDefinitionClient) Get(name string) (*m.AccessRequestDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AccessRequestDefinition{}
+	service := &m.AccessRequestDefinition{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAccessRequestDefinitionClient) Update(res *v1alpha1.AccessRequestDefinition, opts ...v1.UpdateOption) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *UnscopedAccessRequestDefinitionClient) Update(res *m.AccessRequestDefinition, opts ...v1.UpdateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAccessRequestDefinitionClient) Update(res *v1alpha1.AccessReque
 		return nil, err
 	}
 
-	updated := &v1alpha1.AccessRequestDefinition{}
+	updated := &m.AccessRequestDefinition{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAccessRequestDefinitionClient) Update(res *v1alpha1.AccessReque
 }
 
 // List -
-func (c *AccessRequestDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.AccessRequestDefinition, error) {
+func (c *AccessRequestDefinitionClient) List(options ...v1.ListOptions) ([]*m.AccessRequestDefinition, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AccessRequestDefinition, len(riList))
+	result := make([]*m.AccessRequestDefinition, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AccessRequestDefinition{}
+		result[i] = &m.AccessRequestDefinition{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *AccessRequestDefinitionClient) List(options ...v1.ListOptions) ([]*v1al
 }
 
 // Get -
-func (c *AccessRequestDefinitionClient) Get(name string) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *AccessRequestDefinitionClient) Get(name string) (*m.AccessRequestDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AccessRequestDefinition{}
+	service := &m.AccessRequestDefinition{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AccessRequestDefinitionClient) Delete(res *v1alpha1.AccessRequestDefinition) error {
+func (c *AccessRequestDefinitionClient) Delete(res *m.AccessRequestDefinition) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *AccessRequestDefinitionClient) Delete(res *v1alpha1.AccessRequestDefini
 }
 
 // Create -
-func (c *AccessRequestDefinitionClient) Create(res *v1alpha1.AccessRequestDefinition, opts ...v1.CreateOption) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *AccessRequestDefinitionClient) Create(res *m.AccessRequestDefinition, opts ...v1.CreateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *AccessRequestDefinitionClient) Create(res *v1alpha1.AccessRequestDefini
 		return nil, err
 	}
 
-	created := &v1alpha1.AccessRequestDefinition{}
+	created := &m.AccessRequestDefinition{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *AccessRequestDefinitionClient) Create(res *v1alpha1.AccessRequestDefini
 }
 
 // Update -
-func (c *AccessRequestDefinitionClient) Update(res *v1alpha1.AccessRequestDefinition, opts ...v1.UpdateOption) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *AccessRequestDefinitionClient) Update(res *m.AccessRequestDefinition, opts ...v1.UpdateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *AccessRequestDefinitionClient) Update(res *v1alpha1.AccessRequestDefini
 		return nil, err
 	}
 
-	updated := &v1alpha1.AccessRequestDefinition{}
+	updated := &m.AccessRequestDefinition{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

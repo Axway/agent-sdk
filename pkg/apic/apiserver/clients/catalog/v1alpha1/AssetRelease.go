@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type AssetReleaseMergeFunc func(*v1alpha1.AssetRelease, *v1alpha1.AssetRelease) (*v1alpha1.AssetRelease, error)
+type AssetReleaseMergeFunc func(*m.AssetRelease, *m.AssetRelease) (*m.AssetRelease, error)
 
 // Merge builds a merge option for an update operation
 func AssetReleaseMerge(f AssetReleaseMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AssetRelease{}, &v1alpha1.AssetRelease{}
+		p, n := &m.AssetRelease{}, &m.AssetRelease{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AssetRelease:
+		case *m.AssetRelease:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AssetReleaseMerge(f AssetReleaseMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AssetRelease:
+		case *m.AssetRelease:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type AssetReleaseClient struct {
 // NewAssetReleaseClient -
 func NewAssetReleaseClient(c v1.Base) (*AssetReleaseClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AssetReleaseGVK())
+	client, err := c.ForKind(m.AssetReleaseGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewAssetReleaseClient(c v1.Base) (*AssetReleaseClient, error) {
 }
 
 // List -
-func (c *AssetReleaseClient) List(options ...v1.ListOptions) ([]*v1alpha1.AssetRelease, error) {
+func (c *AssetReleaseClient) List(options ...v1.ListOptions) ([]*m.AssetRelease, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AssetRelease, len(riList))
+	result := make([]*m.AssetRelease, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AssetRelease{}
+		result[i] = &m.AssetRelease{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *AssetReleaseClient) List(options ...v1.ListOptions) ([]*v1alpha1.AssetR
 }
 
 // Get -
-func (c *AssetReleaseClient) Get(name string) (*v1alpha1.AssetRelease, error) {
+func (c *AssetReleaseClient) Get(name string) (*m.AssetRelease, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AssetRelease{}
+	service := &m.AssetRelease{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AssetReleaseClient) Delete(res *v1alpha1.AssetRelease) error {
+func (c *AssetReleaseClient) Delete(res *m.AssetRelease) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *AssetReleaseClient) Delete(res *v1alpha1.AssetRelease) error {
 }
 
 // Create -
-func (c *AssetReleaseClient) Create(res *v1alpha1.AssetRelease, opts ...v1.CreateOption) (*v1alpha1.AssetRelease, error) {
+func (c *AssetReleaseClient) Create(res *m.AssetRelease, opts ...v1.CreateOption) (*m.AssetRelease, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *AssetReleaseClient) Create(res *v1alpha1.AssetRelease, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.AssetRelease{}
+	created := &m.AssetRelease{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *AssetReleaseClient) Create(res *v1alpha1.AssetRelease, opts ...v1.Creat
 }
 
 // Update -
-func (c *AssetReleaseClient) Update(res *v1alpha1.AssetRelease, opts ...v1.UpdateOption) (*v1alpha1.AssetRelease, error) {
+func (c *AssetReleaseClient) Update(res *m.AssetRelease, opts ...v1.UpdateOption) (*m.AssetRelease, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *AssetReleaseClient) Update(res *v1alpha1.AssetRelease, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.AssetRelease{}
+	updated := &m.AssetRelease{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

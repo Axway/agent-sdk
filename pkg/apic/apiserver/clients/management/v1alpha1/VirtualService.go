@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type VirtualServiceMergeFunc func(*v1alpha1.VirtualService, *v1alpha1.VirtualService) (*v1alpha1.VirtualService, error)
+type VirtualServiceMergeFunc func(*m.VirtualService, *m.VirtualService) (*m.VirtualService, error)
 
 // Merge builds a merge option for an update operation
 func VirtualServiceMerge(f VirtualServiceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.VirtualService{}, &v1alpha1.VirtualService{}
+		p, n := &m.VirtualService{}, &m.VirtualService{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.VirtualService:
+		case *m.VirtualService:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func VirtualServiceMerge(f VirtualServiceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.VirtualService:
+		case *m.VirtualService:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedVirtualServiceClient struct {
 // NewVirtualServiceClient -
 func NewVirtualServiceClient(c v1.Base) (*UnscopedVirtualServiceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.VirtualServiceGVK())
+	client, err := c.ForKind(m.VirtualServiceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedVirtualServiceClient) WithScope(scope string) *VirtualServiceCl
 }
 
 // Get -
-func (c *UnscopedVirtualServiceClient) Get(name string) (*v1alpha1.VirtualService, error) {
+func (c *UnscopedVirtualServiceClient) Get(name string) (*m.VirtualService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.VirtualService{}
+	service := &m.VirtualService{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedVirtualServiceClient) Update(res *v1alpha1.VirtualService, opts ...v1.UpdateOption) (*v1alpha1.VirtualService, error) {
+func (c *UnscopedVirtualServiceClient) Update(res *m.VirtualService, opts ...v1.UpdateOption) (*m.VirtualService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedVirtualServiceClient) Update(res *v1alpha1.VirtualService, opts
 		return nil, err
 	}
 
-	updated := &v1alpha1.VirtualService{}
+	updated := &m.VirtualService{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedVirtualServiceClient) Update(res *v1alpha1.VirtualService, opts
 }
 
 // List -
-func (c *VirtualServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.VirtualService, error) {
+func (c *VirtualServiceClient) List(options ...v1.ListOptions) ([]*m.VirtualService, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.VirtualService, len(riList))
+	result := make([]*m.VirtualService, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.VirtualService{}
+		result[i] = &m.VirtualService{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *VirtualServiceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Virt
 }
 
 // Get -
-func (c *VirtualServiceClient) Get(name string) (*v1alpha1.VirtualService, error) {
+func (c *VirtualServiceClient) Get(name string) (*m.VirtualService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.VirtualService{}
+	service := &m.VirtualService{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *VirtualServiceClient) Delete(res *v1alpha1.VirtualService) error {
+func (c *VirtualServiceClient) Delete(res *m.VirtualService) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *VirtualServiceClient) Delete(res *v1alpha1.VirtualService) error {
 }
 
 // Create -
-func (c *VirtualServiceClient) Create(res *v1alpha1.VirtualService, opts ...v1.CreateOption) (*v1alpha1.VirtualService, error) {
+func (c *VirtualServiceClient) Create(res *m.VirtualService, opts ...v1.CreateOption) (*m.VirtualService, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *VirtualServiceClient) Create(res *v1alpha1.VirtualService, opts ...v1.C
 		return nil, err
 	}
 
-	created := &v1alpha1.VirtualService{}
+	created := &m.VirtualService{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *VirtualServiceClient) Create(res *v1alpha1.VirtualService, opts ...v1.C
 }
 
 // Update -
-func (c *VirtualServiceClient) Update(res *v1alpha1.VirtualService, opts ...v1.UpdateOption) (*v1alpha1.VirtualService, error) {
+func (c *VirtualServiceClient) Update(res *m.VirtualService, opts ...v1.UpdateOption) (*m.VirtualService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *VirtualServiceClient) Update(res *v1alpha1.VirtualService, opts ...v1.U
 		return nil, err
 	}
 
-	updated := &v1alpha1.VirtualService{}
+	updated := &m.VirtualService{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

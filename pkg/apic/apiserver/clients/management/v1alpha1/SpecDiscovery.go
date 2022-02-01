@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type SpecDiscoveryMergeFunc func(*v1alpha1.SpecDiscovery, *v1alpha1.SpecDiscovery) (*v1alpha1.SpecDiscovery, error)
+type SpecDiscoveryMergeFunc func(*m.SpecDiscovery, *m.SpecDiscovery) (*m.SpecDiscovery, error)
 
 // Merge builds a merge option for an update operation
 func SpecDiscoveryMerge(f SpecDiscoveryMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.SpecDiscovery{}, &v1alpha1.SpecDiscovery{}
+		p, n := &m.SpecDiscovery{}, &m.SpecDiscovery{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.SpecDiscovery:
+		case *m.SpecDiscovery:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func SpecDiscoveryMerge(f SpecDiscoveryMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.SpecDiscovery:
+		case *m.SpecDiscovery:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedSpecDiscoveryClient struct {
 // NewSpecDiscoveryClient -
 func NewSpecDiscoveryClient(c v1.Base) (*UnscopedSpecDiscoveryClient, error) {
 
-	client, err := c.ForKind(v1alpha1.SpecDiscoveryGVK())
+	client, err := c.ForKind(m.SpecDiscoveryGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedSpecDiscoveryClient) WithScope(scope string) *SpecDiscoveryClie
 }
 
 // Get -
-func (c *UnscopedSpecDiscoveryClient) Get(name string) (*v1alpha1.SpecDiscovery, error) {
+func (c *UnscopedSpecDiscoveryClient) Get(name string) (*m.SpecDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.SpecDiscovery{}
+	service := &m.SpecDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedSpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts ...v1.UpdateOption) (*v1alpha1.SpecDiscovery, error) {
+func (c *UnscopedSpecDiscoveryClient) Update(res *m.SpecDiscovery, opts ...v1.UpdateOption) (*m.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedSpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.SpecDiscovery{}
+	updated := &m.SpecDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedSpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts .
 }
 
 // List -
-func (c *SpecDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) List(options ...v1.ListOptions) ([]*m.SpecDiscovery, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.SpecDiscovery, len(riList))
+	result := make([]*m.SpecDiscovery, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.SpecDiscovery{}
+		result[i] = &m.SpecDiscovery{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *SpecDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.SpecD
 }
 
 // Get -
-func (c *SpecDiscoveryClient) Get(name string) (*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) Get(name string) (*m.SpecDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.SpecDiscovery{}
+	service := &m.SpecDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *SpecDiscoveryClient) Delete(res *v1alpha1.SpecDiscovery) error {
+func (c *SpecDiscoveryClient) Delete(res *m.SpecDiscovery) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *SpecDiscoveryClient) Delete(res *v1alpha1.SpecDiscovery) error {
 }
 
 // Create -
-func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery, opts ...v1.CreateOption) (*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) Create(res *m.SpecDiscovery, opts ...v1.CreateOption) (*m.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.SpecDiscovery{}
+	created := &m.SpecDiscovery{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *SpecDiscoveryClient) Create(res *v1alpha1.SpecDiscovery, opts ...v1.Cre
 }
 
 // Update -
-func (c *SpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts ...v1.UpdateOption) (*v1alpha1.SpecDiscovery, error) {
+func (c *SpecDiscoveryClient) Update(res *m.SpecDiscovery, opts ...v1.UpdateOption) (*m.SpecDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *SpecDiscoveryClient) Update(res *v1alpha1.SpecDiscovery, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.SpecDiscovery{}
+	updated := &m.SpecDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

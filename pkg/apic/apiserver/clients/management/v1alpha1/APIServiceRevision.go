@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type APIServiceRevisionMergeFunc func(*v1alpha1.APIServiceRevision, *v1alpha1.APIServiceRevision) (*v1alpha1.APIServiceRevision, error)
+type APIServiceRevisionMergeFunc func(*m.APIServiceRevision, *m.APIServiceRevision) (*m.APIServiceRevision, error)
 
 // Merge builds a merge option for an update operation
 func APIServiceRevisionMerge(f APIServiceRevisionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.APIServiceRevision{}, &v1alpha1.APIServiceRevision{}
+		p, n := &m.APIServiceRevision{}, &m.APIServiceRevision{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.APIServiceRevision:
+		case *m.APIServiceRevision:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func APIServiceRevisionMerge(f APIServiceRevisionMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.APIServiceRevision:
+		case *m.APIServiceRevision:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAPIServiceRevisionClient struct {
 // NewAPIServiceRevisionClient -
 func NewAPIServiceRevisionClient(c v1.Base) (*UnscopedAPIServiceRevisionClient, error) {
 
-	client, err := c.ForKind(v1alpha1.APIServiceRevisionGVK())
+	client, err := c.ForKind(m.APIServiceRevisionGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAPIServiceRevisionClient) WithScope(scope string) *APIServiceRe
 }
 
 // Get -
-func (c *UnscopedAPIServiceRevisionClient) Get(name string) (*v1alpha1.APIServiceRevision, error) {
+func (c *UnscopedAPIServiceRevisionClient) Get(name string) (*m.APIServiceRevision, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.APIServiceRevision{}
+	service := &m.APIServiceRevision{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAPIServiceRevisionClient) Update(res *v1alpha1.APIServiceRevision, opts ...v1.UpdateOption) (*v1alpha1.APIServiceRevision, error) {
+func (c *UnscopedAPIServiceRevisionClient) Update(res *m.APIServiceRevision, opts ...v1.UpdateOption) (*m.APIServiceRevision, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAPIServiceRevisionClient) Update(res *v1alpha1.APIServiceRevisi
 		return nil, err
 	}
 
-	updated := &v1alpha1.APIServiceRevision{}
+	updated := &m.APIServiceRevision{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAPIServiceRevisionClient) Update(res *v1alpha1.APIServiceRevisi
 }
 
 // List -
-func (c *APIServiceRevisionClient) List(options ...v1.ListOptions) ([]*v1alpha1.APIServiceRevision, error) {
+func (c *APIServiceRevisionClient) List(options ...v1.ListOptions) ([]*m.APIServiceRevision, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.APIServiceRevision, len(riList))
+	result := make([]*m.APIServiceRevision, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.APIServiceRevision{}
+		result[i] = &m.APIServiceRevision{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *APIServiceRevisionClient) List(options ...v1.ListOptions) ([]*v1alpha1.
 }
 
 // Get -
-func (c *APIServiceRevisionClient) Get(name string) (*v1alpha1.APIServiceRevision, error) {
+func (c *APIServiceRevisionClient) Get(name string) (*m.APIServiceRevision, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.APIServiceRevision{}
+	service := &m.APIServiceRevision{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *APIServiceRevisionClient) Delete(res *v1alpha1.APIServiceRevision) error {
+func (c *APIServiceRevisionClient) Delete(res *m.APIServiceRevision) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *APIServiceRevisionClient) Delete(res *v1alpha1.APIServiceRevision) erro
 }
 
 // Create -
-func (c *APIServiceRevisionClient) Create(res *v1alpha1.APIServiceRevision, opts ...v1.CreateOption) (*v1alpha1.APIServiceRevision, error) {
+func (c *APIServiceRevisionClient) Create(res *m.APIServiceRevision, opts ...v1.CreateOption) (*m.APIServiceRevision, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *APIServiceRevisionClient) Create(res *v1alpha1.APIServiceRevision, opts
 		return nil, err
 	}
 
-	created := &v1alpha1.APIServiceRevision{}
+	created := &m.APIServiceRevision{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *APIServiceRevisionClient) Create(res *v1alpha1.APIServiceRevision, opts
 }
 
 // Update -
-func (c *APIServiceRevisionClient) Update(res *v1alpha1.APIServiceRevision, opts ...v1.UpdateOption) (*v1alpha1.APIServiceRevision, error) {
+func (c *APIServiceRevisionClient) Update(res *m.APIServiceRevision, opts ...v1.UpdateOption) (*m.APIServiceRevision, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *APIServiceRevisionClient) Update(res *v1alpha1.APIServiceRevision, opts
 		return nil, err
 	}
 
-	updated := &v1alpha1.APIServiceRevision{}
+	updated := &m.APIServiceRevision{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

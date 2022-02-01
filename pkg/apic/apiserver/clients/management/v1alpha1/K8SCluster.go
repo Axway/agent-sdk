@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type K8SClusterMergeFunc func(*v1alpha1.K8SCluster, *v1alpha1.K8SCluster) (*v1alpha1.K8SCluster, error)
+type K8SClusterMergeFunc func(*m.K8SCluster, *m.K8SCluster) (*m.K8SCluster, error)
 
 // Merge builds a merge option for an update operation
 func K8SClusterMerge(f K8SClusterMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.K8SCluster{}, &v1alpha1.K8SCluster{}
+		p, n := &m.K8SCluster{}, &m.K8SCluster{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.K8SCluster:
+		case *m.K8SCluster:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func K8SClusterMerge(f K8SClusterMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.K8SCluster:
+		case *m.K8SCluster:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type K8SClusterClient struct {
 // NewK8SClusterClient -
 func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
 
-	client, err := c.ForKind(v1alpha1.K8SClusterGVK())
+	client, err := c.ForKind(m.K8SClusterGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
 }
 
 // List -
-func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*m.K8SCluster, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.K8SCluster, len(riList))
+	result := make([]*m.K8SCluster, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.K8SCluster{}
+		result[i] = &m.K8SCluster{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*v1alpha1.K8SClust
 }
 
 // Get -
-func (c *K8SClusterClient) Get(name string) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Get(name string) (*m.K8SCluster, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.K8SCluster{}
+	service := &m.K8SCluster{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *K8SClusterClient) Delete(res *v1alpha1.K8SCluster) error {
+func (c *K8SClusterClient) Delete(res *m.K8SCluster) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *K8SClusterClient) Delete(res *v1alpha1.K8SCluster) error {
 }
 
 // Create -
-func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster, opts ...v1.CreateOption) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Create(res *m.K8SCluster, opts ...v1.CreateOption) (*m.K8SCluster, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster, opts ...v1.CreateOpt
 		return nil, err
 	}
 
-	created := &v1alpha1.K8SCluster{}
+	created := &m.K8SCluster{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *K8SClusterClient) Create(res *v1alpha1.K8SCluster, opts ...v1.CreateOpt
 }
 
 // Update -
-func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster, opts ...v1.UpdateOption) (*v1alpha1.K8SCluster, error) {
+func (c *K8SClusterClient) Update(res *m.K8SCluster, opts ...v1.UpdateOption) (*m.K8SCluster, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *K8SClusterClient) Update(res *v1alpha1.K8SCluster, opts ...v1.UpdateOpt
 		return nil, err
 	}
 
-	updated := &v1alpha1.K8SCluster{}
+	updated := &m.K8SCluster{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

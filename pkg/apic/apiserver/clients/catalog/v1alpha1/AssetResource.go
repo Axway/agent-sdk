@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type AssetResourceMergeFunc func(*v1alpha1.AssetResource, *v1alpha1.AssetResource) (*v1alpha1.AssetResource, error)
+type AssetResourceMergeFunc func(*m.AssetResource, *m.AssetResource) (*m.AssetResource, error)
 
 // Merge builds a merge option for an update operation
 func AssetResourceMerge(f AssetResourceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AssetResource{}, &v1alpha1.AssetResource{}
+		p, n := &m.AssetResource{}, &m.AssetResource{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AssetResource:
+		case *m.AssetResource:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AssetResourceMerge(f AssetResourceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AssetResource:
+		case *m.AssetResource:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAssetResourceClient struct {
 // NewAssetResourceClient -
 func NewAssetResourceClient(c v1.Base) (*UnscopedAssetResourceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AssetResourceGVK())
+	client, err := c.ForKind(m.AssetResourceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAssetResourceClient) WithScope(scope string) *AssetResourceClie
 }
 
 // Get -
-func (c *UnscopedAssetResourceClient) Get(name string) (*v1alpha1.AssetResource, error) {
+func (c *UnscopedAssetResourceClient) Get(name string) (*m.AssetResource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AssetResource{}
+	service := &m.AssetResource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAssetResourceClient) Update(res *v1alpha1.AssetResource, opts ...v1.UpdateOption) (*v1alpha1.AssetResource, error) {
+func (c *UnscopedAssetResourceClient) Update(res *m.AssetResource, opts ...v1.UpdateOption) (*m.AssetResource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAssetResourceClient) Update(res *v1alpha1.AssetResource, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.AssetResource{}
+	updated := &m.AssetResource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAssetResourceClient) Update(res *v1alpha1.AssetResource, opts .
 }
 
 // List -
-func (c *AssetResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.AssetResource, error) {
+func (c *AssetResourceClient) List(options ...v1.ListOptions) ([]*m.AssetResource, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AssetResource, len(riList))
+	result := make([]*m.AssetResource, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AssetResource{}
+		result[i] = &m.AssetResource{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *AssetResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Asset
 }
 
 // Get -
-func (c *AssetResourceClient) Get(name string) (*v1alpha1.AssetResource, error) {
+func (c *AssetResourceClient) Get(name string) (*m.AssetResource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AssetResource{}
+	service := &m.AssetResource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AssetResourceClient) Delete(res *v1alpha1.AssetResource) error {
+func (c *AssetResourceClient) Delete(res *m.AssetResource) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *AssetResourceClient) Delete(res *v1alpha1.AssetResource) error {
 }
 
 // Create -
-func (c *AssetResourceClient) Create(res *v1alpha1.AssetResource, opts ...v1.CreateOption) (*v1alpha1.AssetResource, error) {
+func (c *AssetResourceClient) Create(res *m.AssetResource, opts ...v1.CreateOption) (*m.AssetResource, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *AssetResourceClient) Create(res *v1alpha1.AssetResource, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.AssetResource{}
+	created := &m.AssetResource{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *AssetResourceClient) Create(res *v1alpha1.AssetResource, opts ...v1.Cre
 }
 
 // Update -
-func (c *AssetResourceClient) Update(res *v1alpha1.AssetResource, opts ...v1.UpdateOption) (*v1alpha1.AssetResource, error) {
+func (c *AssetResourceClient) Update(res *m.AssetResource, opts ...v1.UpdateOption) (*m.AssetResource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *AssetResourceClient) Update(res *v1alpha1.AssetResource, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.AssetResource{}
+	updated := &m.AssetResource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

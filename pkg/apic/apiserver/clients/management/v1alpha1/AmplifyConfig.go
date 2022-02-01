@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type AmplifyConfigMergeFunc func(*v1alpha1.AmplifyConfig, *v1alpha1.AmplifyConfig) (*v1alpha1.AmplifyConfig, error)
+type AmplifyConfigMergeFunc func(*m.AmplifyConfig, *m.AmplifyConfig) (*m.AmplifyConfig, error)
 
 // Merge builds a merge option for an update operation
 func AmplifyConfigMerge(f AmplifyConfigMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AmplifyConfig{}, &v1alpha1.AmplifyConfig{}
+		p, n := &m.AmplifyConfig{}, &m.AmplifyConfig{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AmplifyConfig:
+		case *m.AmplifyConfig:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AmplifyConfigMerge(f AmplifyConfigMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AmplifyConfig:
+		case *m.AmplifyConfig:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAmplifyConfigClient struct {
 // NewAmplifyConfigClient -
 func NewAmplifyConfigClient(c v1.Base) (*UnscopedAmplifyConfigClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AmplifyConfigGVK())
+	client, err := c.ForKind(m.AmplifyConfigGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAmplifyConfigClient) WithScope(scope string) *AmplifyConfigClie
 }
 
 // Get -
-func (c *UnscopedAmplifyConfigClient) Get(name string) (*v1alpha1.AmplifyConfig, error) {
+func (c *UnscopedAmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AmplifyConfig{}
+	service := &m.AmplifyConfig{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAmplifyConfigClient) Update(res *v1alpha1.AmplifyConfig, opts ...v1.UpdateOption) (*v1alpha1.AmplifyConfig, error) {
+func (c *UnscopedAmplifyConfigClient) Update(res *m.AmplifyConfig, opts ...v1.UpdateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAmplifyConfigClient) Update(res *v1alpha1.AmplifyConfig, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.AmplifyConfig{}
+	updated := &m.AmplifyConfig{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAmplifyConfigClient) Update(res *v1alpha1.AmplifyConfig, opts .
 }
 
 // List -
-func (c *AmplifyConfigClient) List(options ...v1.ListOptions) ([]*v1alpha1.AmplifyConfig, error) {
+func (c *AmplifyConfigClient) List(options ...v1.ListOptions) ([]*m.AmplifyConfig, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AmplifyConfig, len(riList))
+	result := make([]*m.AmplifyConfig, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AmplifyConfig{}
+		result[i] = &m.AmplifyConfig{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *AmplifyConfigClient) List(options ...v1.ListOptions) ([]*v1alpha1.Ampli
 }
 
 // Get -
-func (c *AmplifyConfigClient) Get(name string) (*v1alpha1.AmplifyConfig, error) {
+func (c *AmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AmplifyConfig{}
+	service := &m.AmplifyConfig{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AmplifyConfigClient) Delete(res *v1alpha1.AmplifyConfig) error {
+func (c *AmplifyConfigClient) Delete(res *m.AmplifyConfig) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *AmplifyConfigClient) Delete(res *v1alpha1.AmplifyConfig) error {
 }
 
 // Create -
-func (c *AmplifyConfigClient) Create(res *v1alpha1.AmplifyConfig, opts ...v1.CreateOption) (*v1alpha1.AmplifyConfig, error) {
+func (c *AmplifyConfigClient) Create(res *m.AmplifyConfig, opts ...v1.CreateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *AmplifyConfigClient) Create(res *v1alpha1.AmplifyConfig, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.AmplifyConfig{}
+	created := &m.AmplifyConfig{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *AmplifyConfigClient) Create(res *v1alpha1.AmplifyConfig, opts ...v1.Cre
 }
 
 // Update -
-func (c *AmplifyConfigClient) Update(res *v1alpha1.AmplifyConfig, opts ...v1.UpdateOption) (*v1alpha1.AmplifyConfig, error) {
+func (c *AmplifyConfigClient) Update(res *m.AmplifyConfig, opts ...v1.UpdateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *AmplifyConfigClient) Update(res *v1alpha1.AmplifyConfig, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.AmplifyConfig{}
+	updated := &m.AmplifyConfig{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

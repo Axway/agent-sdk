@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type IntegrationMergeFunc func(*v1alpha1.Integration, *v1alpha1.Integration) (*v1alpha1.Integration, error)
+type IntegrationMergeFunc func(*m.Integration, *m.Integration) (*m.Integration, error)
 
 // Merge builds a merge option for an update operation
 func IntegrationMerge(f IntegrationMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Integration{}, &v1alpha1.Integration{}
+		p, n := &m.Integration{}, &m.Integration{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Integration:
+		case *m.Integration:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func IntegrationMerge(f IntegrationMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Integration:
+		case *m.Integration:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type IntegrationClient struct {
 // NewIntegrationClient -
 func NewIntegrationClient(c v1.Base) (*IntegrationClient, error) {
 
-	client, err := c.ForKind(v1alpha1.IntegrationGVK())
+	client, err := c.ForKind(m.IntegrationGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewIntegrationClient(c v1.Base) (*IntegrationClient, error) {
 }
 
 // List -
-func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*v1alpha1.Integration, error) {
+func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*m.Integration, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Integration, len(riList))
+	result := make([]*m.Integration, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Integration{}
+		result[i] = &m.Integration{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*v1alpha1.Integra
 }
 
 // Get -
-func (c *IntegrationClient) Get(name string) (*v1alpha1.Integration, error) {
+func (c *IntegrationClient) Get(name string) (*m.Integration, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Integration{}
+	service := &m.Integration{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *IntegrationClient) Delete(res *v1alpha1.Integration) error {
+func (c *IntegrationClient) Delete(res *m.Integration) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *IntegrationClient) Delete(res *v1alpha1.Integration) error {
 }
 
 // Create -
-func (c *IntegrationClient) Create(res *v1alpha1.Integration, opts ...v1.CreateOption) (*v1alpha1.Integration, error) {
+func (c *IntegrationClient) Create(res *m.Integration, opts ...v1.CreateOption) (*m.Integration, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *IntegrationClient) Create(res *v1alpha1.Integration, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.Integration{}
+	created := &m.Integration{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *IntegrationClient) Create(res *v1alpha1.Integration, opts ...v1.CreateO
 }
 
 // Update -
-func (c *IntegrationClient) Update(res *v1alpha1.Integration, opts ...v1.UpdateOption) (*v1alpha1.Integration, error) {
+func (c *IntegrationClient) Update(res *m.Integration, opts ...v1.UpdateOption) (*m.Integration, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *IntegrationClient) Update(res *v1alpha1.Integration, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.Integration{}
+	updated := &m.Integration{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

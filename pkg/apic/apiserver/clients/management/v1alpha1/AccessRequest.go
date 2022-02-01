@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type AccessRequestMergeFunc func(*v1alpha1.AccessRequest, *v1alpha1.AccessRequest) (*v1alpha1.AccessRequest, error)
+type AccessRequestMergeFunc func(*m.AccessRequest, *m.AccessRequest) (*m.AccessRequest, error)
 
 // Merge builds a merge option for an update operation
 func AccessRequestMerge(f AccessRequestMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AccessRequest{}, &v1alpha1.AccessRequest{}
+		p, n := &m.AccessRequest{}, &m.AccessRequest{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AccessRequest:
+		case *m.AccessRequest:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AccessRequestMerge(f AccessRequestMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AccessRequest:
+		case *m.AccessRequest:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAccessRequestClient struct {
 // NewAccessRequestClient -
 func NewAccessRequestClient(c v1.Base) (*UnscopedAccessRequestClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AccessRequestGVK())
+	client, err := c.ForKind(m.AccessRequestGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAccessRequestClient) WithScope(scope string) *AccessRequestClie
 }
 
 // Get -
-func (c *UnscopedAccessRequestClient) Get(name string) (*v1alpha1.AccessRequest, error) {
+func (c *UnscopedAccessRequestClient) Get(name string) (*m.AccessRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AccessRequest{}
+	service := &m.AccessRequest{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAccessRequestClient) Update(res *v1alpha1.AccessRequest, opts ...v1.UpdateOption) (*v1alpha1.AccessRequest, error) {
+func (c *UnscopedAccessRequestClient) Update(res *m.AccessRequest, opts ...v1.UpdateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAccessRequestClient) Update(res *v1alpha1.AccessRequest, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.AccessRequest{}
+	updated := &m.AccessRequest{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAccessRequestClient) Update(res *v1alpha1.AccessRequest, opts .
 }
 
 // List -
-func (c *AccessRequestClient) List(options ...v1.ListOptions) ([]*v1alpha1.AccessRequest, error) {
+func (c *AccessRequestClient) List(options ...v1.ListOptions) ([]*m.AccessRequest, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AccessRequest, len(riList))
+	result := make([]*m.AccessRequest, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AccessRequest{}
+		result[i] = &m.AccessRequest{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *AccessRequestClient) List(options ...v1.ListOptions) ([]*v1alpha1.Acces
 }
 
 // Get -
-func (c *AccessRequestClient) Get(name string) (*v1alpha1.AccessRequest, error) {
+func (c *AccessRequestClient) Get(name string) (*m.AccessRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AccessRequest{}
+	service := &m.AccessRequest{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AccessRequestClient) Delete(res *v1alpha1.AccessRequest) error {
+func (c *AccessRequestClient) Delete(res *m.AccessRequest) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *AccessRequestClient) Delete(res *v1alpha1.AccessRequest) error {
 }
 
 // Create -
-func (c *AccessRequestClient) Create(res *v1alpha1.AccessRequest, opts ...v1.CreateOption) (*v1alpha1.AccessRequest, error) {
+func (c *AccessRequestClient) Create(res *m.AccessRequest, opts ...v1.CreateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *AccessRequestClient) Create(res *v1alpha1.AccessRequest, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.AccessRequest{}
+	created := &m.AccessRequest{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *AccessRequestClient) Create(res *v1alpha1.AccessRequest, opts ...v1.Cre
 }
 
 // Update -
-func (c *AccessRequestClient) Update(res *v1alpha1.AccessRequest, opts ...v1.UpdateOption) (*v1alpha1.AccessRequest, error) {
+func (c *AccessRequestClient) Update(res *m.AccessRequest, opts ...v1.UpdateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *AccessRequestClient) Update(res *v1alpha1.AccessRequest, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.AccessRequest{}
+	updated := &m.AccessRequest{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

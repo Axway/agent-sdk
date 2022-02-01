@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type ConsumerSubscriptionDefinitionMergeFunc func(*v1alpha1.ConsumerSubscriptionDefinition, *v1alpha1.ConsumerSubscriptionDefinition) (*v1alpha1.ConsumerSubscriptionDefinition, error)
+type ConsumerSubscriptionDefinitionMergeFunc func(*m.ConsumerSubscriptionDefinition, *m.ConsumerSubscriptionDefinition) (*m.ConsumerSubscriptionDefinition, error)
 
 // Merge builds a merge option for an update operation
 func ConsumerSubscriptionDefinitionMerge(f ConsumerSubscriptionDefinitionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ConsumerSubscriptionDefinition{}, &v1alpha1.ConsumerSubscriptionDefinition{}
+		p, n := &m.ConsumerSubscriptionDefinition{}, &m.ConsumerSubscriptionDefinition{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ConsumerSubscriptionDefinition:
+		case *m.ConsumerSubscriptionDefinition:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ConsumerSubscriptionDefinitionMerge(f ConsumerSubscriptionDefinitionMergeFu
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ConsumerSubscriptionDefinition:
+		case *m.ConsumerSubscriptionDefinition:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedConsumerSubscriptionDefinitionClient struct {
 // NewConsumerSubscriptionDefinitionClient -
 func NewConsumerSubscriptionDefinitionClient(c v1.Base) (*UnscopedConsumerSubscriptionDefinitionClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ConsumerSubscriptionDefinitionGVK())
+	client, err := c.ForKind(m.ConsumerSubscriptionDefinitionGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *
 }
 
 // Get -
-func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ConsumerSubscriptionDefinition{}
+	service := &m.ConsumerSubscriptionDefinition{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *m.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.Cons
 		return nil, err
 	}
 
-	updated := &v1alpha1.ConsumerSubscriptionDefinition{}
+	updated := &m.ConsumerSubscriptionDefinition{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.Cons
 }
 
 // List -
-func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*m.ConsumerSubscriptionDefinition, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ConsumerSubscriptionDefinition, len(riList))
+	result := make([]*m.ConsumerSubscriptionDefinition, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ConsumerSubscriptionDefinition{}
+		result[i] = &m.ConsumerSubscriptionDefinition{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) (
 }
 
 // Get -
-func (c *ConsumerSubscriptionDefinitionClient) Get(name string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) Get(name string) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ConsumerSubscriptionDefinition{}
+	service := &m.ConsumerSubscriptionDefinition{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ConsumerSubscriptionDefinitionClient) Delete(res *v1alpha1.ConsumerSubscriptionDefinition) error {
+func (c *ConsumerSubscriptionDefinitionClient) Delete(res *m.ConsumerSubscriptionDefinition) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Delete(res *v1alpha1.ConsumerSubs
 }
 
 // Create -
-func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.CreateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) Create(res *m.ConsumerSubscriptionDefinition, opts ...v1.CreateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubs
 		return nil, err
 	}
 
-	created := &v1alpha1.ConsumerSubscriptionDefinition{}
+	created := &m.ConsumerSubscriptionDefinition{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Create(res *v1alpha1.ConsumerSubs
 }
 
 // Update -
-func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
+func (c *ConsumerSubscriptionDefinitionClient) Update(res *m.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Update(res *v1alpha1.ConsumerSubs
 		return nil, err
 	}
 
-	updated := &v1alpha1.ConsumerSubscriptionDefinition{}
+	updated := &m.ConsumerSubscriptionDefinition{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

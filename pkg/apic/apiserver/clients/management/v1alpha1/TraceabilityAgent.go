@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type TraceabilityAgentMergeFunc func(*v1alpha1.TraceabilityAgent, *v1alpha1.TraceabilityAgent) (*v1alpha1.TraceabilityAgent, error)
+type TraceabilityAgentMergeFunc func(*m.TraceabilityAgent, *m.TraceabilityAgent) (*m.TraceabilityAgent, error)
 
 // Merge builds a merge option for an update operation
 func TraceabilityAgentMerge(f TraceabilityAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.TraceabilityAgent{}, &v1alpha1.TraceabilityAgent{}
+		p, n := &m.TraceabilityAgent{}, &m.TraceabilityAgent{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.TraceabilityAgent:
+		case *m.TraceabilityAgent:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func TraceabilityAgentMerge(f TraceabilityAgentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.TraceabilityAgent:
+		case *m.TraceabilityAgent:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedTraceabilityAgentClient struct {
 // NewTraceabilityAgentClient -
 func NewTraceabilityAgentClient(c v1.Base) (*UnscopedTraceabilityAgentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.TraceabilityAgentGVK())
+	client, err := c.ForKind(m.TraceabilityAgentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedTraceabilityAgentClient) WithScope(scope string) *TraceabilityA
 }
 
 // Get -
-func (c *UnscopedTraceabilityAgentClient) Get(name string) (*v1alpha1.TraceabilityAgent, error) {
+func (c *UnscopedTraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.TraceabilityAgent{}
+	service := &m.TraceabilityAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedTraceabilityAgentClient) Update(res *v1alpha1.TraceabilityAgent, opts ...v1.UpdateOption) (*v1alpha1.TraceabilityAgent, error) {
+func (c *UnscopedTraceabilityAgentClient) Update(res *m.TraceabilityAgent, opts ...v1.UpdateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedTraceabilityAgentClient) Update(res *v1alpha1.TraceabilityAgent
 		return nil, err
 	}
 
-	updated := &v1alpha1.TraceabilityAgent{}
+	updated := &m.TraceabilityAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedTraceabilityAgentClient) Update(res *v1alpha1.TraceabilityAgent
 }
 
 // List -
-func (c *TraceabilityAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.TraceabilityAgent, error) {
+func (c *TraceabilityAgentClient) List(options ...v1.ListOptions) ([]*m.TraceabilityAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.TraceabilityAgent, len(riList))
+	result := make([]*m.TraceabilityAgent, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.TraceabilityAgent{}
+		result[i] = &m.TraceabilityAgent{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *TraceabilityAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.T
 }
 
 // Get -
-func (c *TraceabilityAgentClient) Get(name string) (*v1alpha1.TraceabilityAgent, error) {
+func (c *TraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.TraceabilityAgent{}
+	service := &m.TraceabilityAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *TraceabilityAgentClient) Delete(res *v1alpha1.TraceabilityAgent) error {
+func (c *TraceabilityAgentClient) Delete(res *m.TraceabilityAgent) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *TraceabilityAgentClient) Delete(res *v1alpha1.TraceabilityAgent) error 
 }
 
 // Create -
-func (c *TraceabilityAgentClient) Create(res *v1alpha1.TraceabilityAgent, opts ...v1.CreateOption) (*v1alpha1.TraceabilityAgent, error) {
+func (c *TraceabilityAgentClient) Create(res *m.TraceabilityAgent, opts ...v1.CreateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *TraceabilityAgentClient) Create(res *v1alpha1.TraceabilityAgent, opts .
 		return nil, err
 	}
 
-	created := &v1alpha1.TraceabilityAgent{}
+	created := &m.TraceabilityAgent{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *TraceabilityAgentClient) Create(res *v1alpha1.TraceabilityAgent, opts .
 }
 
 // Update -
-func (c *TraceabilityAgentClient) Update(res *v1alpha1.TraceabilityAgent, opts ...v1.UpdateOption) (*v1alpha1.TraceabilityAgent, error) {
+func (c *TraceabilityAgentClient) Update(res *m.TraceabilityAgent, opts ...v1.UpdateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *TraceabilityAgentClient) Update(res *v1alpha1.TraceabilityAgent, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.TraceabilityAgent{}
+	updated := &m.TraceabilityAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

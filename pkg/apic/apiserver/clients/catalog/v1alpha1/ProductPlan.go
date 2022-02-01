@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type ProductPlanMergeFunc func(*v1alpha1.ProductPlan, *v1alpha1.ProductPlan) (*v1alpha1.ProductPlan, error)
+type ProductPlanMergeFunc func(*m.ProductPlan, *m.ProductPlan) (*m.ProductPlan, error)
 
 // Merge builds a merge option for an update operation
 func ProductPlanMerge(f ProductPlanMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ProductPlan{}, &v1alpha1.ProductPlan{}
+		p, n := &m.ProductPlan{}, &m.ProductPlan{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ProductPlan:
+		case *m.ProductPlan:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ProductPlanMerge(f ProductPlanMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ProductPlan:
+		case *m.ProductPlan:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type ProductPlanClient struct {
 // NewProductPlanClient -
 func NewProductPlanClient(c v1.Base) (*ProductPlanClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ProductPlanGVK())
+	client, err := c.ForKind(m.ProductPlanGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewProductPlanClient(c v1.Base) (*ProductPlanClient, error) {
 }
 
 // List -
-func (c *ProductPlanClient) List(options ...v1.ListOptions) ([]*v1alpha1.ProductPlan, error) {
+func (c *ProductPlanClient) List(options ...v1.ListOptions) ([]*m.ProductPlan, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ProductPlan, len(riList))
+	result := make([]*m.ProductPlan, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ProductPlan{}
+		result[i] = &m.ProductPlan{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *ProductPlanClient) List(options ...v1.ListOptions) ([]*v1alpha1.Product
 }
 
 // Get -
-func (c *ProductPlanClient) Get(name string) (*v1alpha1.ProductPlan, error) {
+func (c *ProductPlanClient) Get(name string) (*m.ProductPlan, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ProductPlan{}
+	service := &m.ProductPlan{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ProductPlanClient) Delete(res *v1alpha1.ProductPlan) error {
+func (c *ProductPlanClient) Delete(res *m.ProductPlan) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *ProductPlanClient) Delete(res *v1alpha1.ProductPlan) error {
 }
 
 // Create -
-func (c *ProductPlanClient) Create(res *v1alpha1.ProductPlan, opts ...v1.CreateOption) (*v1alpha1.ProductPlan, error) {
+func (c *ProductPlanClient) Create(res *m.ProductPlan, opts ...v1.CreateOption) (*m.ProductPlan, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *ProductPlanClient) Create(res *v1alpha1.ProductPlan, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.ProductPlan{}
+	created := &m.ProductPlan{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *ProductPlanClient) Create(res *v1alpha1.ProductPlan, opts ...v1.CreateO
 }
 
 // Update -
-func (c *ProductPlanClient) Update(res *v1alpha1.ProductPlan, opts ...v1.UpdateOption) (*v1alpha1.ProductPlan, error) {
+func (c *ProductPlanClient) Update(res *m.ProductPlan, opts ...v1.UpdateOption) (*m.ProductPlan, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *ProductPlanClient) Update(res *v1alpha1.ProductPlan, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.ProductPlan{}
+	updated := &m.ProductPlan{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

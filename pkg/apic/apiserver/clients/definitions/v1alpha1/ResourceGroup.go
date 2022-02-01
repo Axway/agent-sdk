@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
 
-type ResourceGroupMergeFunc func(*v1alpha1.ResourceGroup, *v1alpha1.ResourceGroup) (*v1alpha1.ResourceGroup, error)
+type ResourceGroupMergeFunc func(*m.ResourceGroup, *m.ResourceGroup) (*m.ResourceGroup, error)
 
 // Merge builds a merge option for an update operation
 func ResourceGroupMerge(f ResourceGroupMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ResourceGroup{}, &v1alpha1.ResourceGroup{}
+		p, n := &m.ResourceGroup{}, &m.ResourceGroup{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ResourceGroup:
+		case *m.ResourceGroup:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ResourceGroupMerge(f ResourceGroupMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ResourceGroup:
+		case *m.ResourceGroup:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type ResourceGroupClient struct {
 // NewResourceGroupClient -
 func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ResourceGroupGVK())
+	client, err := c.ForKind(m.ResourceGroupGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
 }
 
 // List -
-func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*m.ResourceGroup, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ResourceGroup, len(riList))
+	result := make([]*m.ResourceGroup, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ResourceGroup{}
+		result[i] = &m.ResourceGroup{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resou
 }
 
 // Get -
-func (c *ResourceGroupClient) Get(name string) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Get(name string) (*m.ResourceGroup, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ResourceGroup{}
+	service := &m.ResourceGroup{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *ResourceGroupClient) Delete(res *v1alpha1.ResourceGroup) error {
+func (c *ResourceGroupClient) Delete(res *m.ResourceGroup) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *ResourceGroupClient) Delete(res *v1alpha1.ResourceGroup) error {
 }
 
 // Create -
-func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup, opts ...v1.CreateOption) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Create(res *m.ResourceGroup, opts ...v1.CreateOption) (*m.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.ResourceGroup{}
+	created := &m.ResourceGroup{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *ResourceGroupClient) Create(res *v1alpha1.ResourceGroup, opts ...v1.Cre
 }
 
 // Update -
-func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup, opts ...v1.UpdateOption) (*v1alpha1.ResourceGroup, error) {
+func (c *ResourceGroupClient) Update(res *m.ResourceGroup, opts ...v1.UpdateOption) (*m.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *ResourceGroupClient) Update(res *v1alpha1.ResourceGroup, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.ResourceGroup{}
+	updated := &m.ResourceGroup{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type MeshDiscoveryMergeFunc func(*v1alpha1.MeshDiscovery, *v1alpha1.MeshDiscovery) (*v1alpha1.MeshDiscovery, error)
+type MeshDiscoveryMergeFunc func(*m.MeshDiscovery, *m.MeshDiscovery) (*m.MeshDiscovery, error)
 
 // Merge builds a merge option for an update operation
 func MeshDiscoveryMerge(f MeshDiscoveryMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.MeshDiscovery{}, &v1alpha1.MeshDiscovery{}
+		p, n := &m.MeshDiscovery{}, &m.MeshDiscovery{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.MeshDiscovery:
+		case *m.MeshDiscovery:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func MeshDiscoveryMerge(f MeshDiscoveryMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.MeshDiscovery:
+		case *m.MeshDiscovery:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedMeshDiscoveryClient struct {
 // NewMeshDiscoveryClient -
 func NewMeshDiscoveryClient(c v1.Base) (*UnscopedMeshDiscoveryClient, error) {
 
-	client, err := c.ForKind(v1alpha1.MeshDiscoveryGVK())
+	client, err := c.ForKind(m.MeshDiscoveryGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedMeshDiscoveryClient) WithScope(scope string) *MeshDiscoveryClie
 }
 
 // Get -
-func (c *UnscopedMeshDiscoveryClient) Get(name string) (*v1alpha1.MeshDiscovery, error) {
+func (c *UnscopedMeshDiscoveryClient) Get(name string) (*m.MeshDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshDiscovery{}
+	service := &m.MeshDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedMeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts ...v1.UpdateOption) (*v1alpha1.MeshDiscovery, error) {
+func (c *UnscopedMeshDiscoveryClient) Update(res *m.MeshDiscovery, opts ...v1.UpdateOption) (*m.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedMeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshDiscovery{}
+	updated := &m.MeshDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedMeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts .
 }
 
 // List -
-func (c *MeshDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) List(options ...v1.ListOptions) ([]*m.MeshDiscovery, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.MeshDiscovery, len(riList))
+	result := make([]*m.MeshDiscovery, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.MeshDiscovery{}
+		result[i] = &m.MeshDiscovery{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *MeshDiscoveryClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshD
 }
 
 // Get -
-func (c *MeshDiscoveryClient) Get(name string) (*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) Get(name string) (*m.MeshDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshDiscovery{}
+	service := &m.MeshDiscovery{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *MeshDiscoveryClient) Delete(res *v1alpha1.MeshDiscovery) error {
+func (c *MeshDiscoveryClient) Delete(res *m.MeshDiscovery) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *MeshDiscoveryClient) Delete(res *v1alpha1.MeshDiscovery) error {
 }
 
 // Create -
-func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery, opts ...v1.CreateOption) (*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) Create(res *m.MeshDiscovery, opts ...v1.CreateOption) (*m.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery, opts ...v1.Cre
 		return nil, err
 	}
 
-	created := &v1alpha1.MeshDiscovery{}
+	created := &m.MeshDiscovery{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *MeshDiscoveryClient) Create(res *v1alpha1.MeshDiscovery, opts ...v1.Cre
 }
 
 // Update -
-func (c *MeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts ...v1.UpdateOption) (*v1alpha1.MeshDiscovery, error) {
+func (c *MeshDiscoveryClient) Update(res *m.MeshDiscovery, opts ...v1.UpdateOption) (*m.MeshDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *MeshDiscoveryClient) Update(res *v1alpha1.MeshDiscovery, opts ...v1.Upd
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshDiscovery{}
+	updated := &m.MeshDiscovery{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

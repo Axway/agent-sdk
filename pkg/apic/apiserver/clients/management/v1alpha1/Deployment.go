@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type DeploymentMergeFunc func(*v1alpha1.Deployment, *v1alpha1.Deployment) (*v1alpha1.Deployment, error)
+type DeploymentMergeFunc func(*m.Deployment, *m.Deployment) (*m.Deployment, error)
 
 // Merge builds a merge option for an update operation
 func DeploymentMerge(f DeploymentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Deployment{}, &v1alpha1.Deployment{}
+		p, n := &m.Deployment{}, &m.Deployment{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Deployment:
+		case *m.Deployment:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func DeploymentMerge(f DeploymentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Deployment:
+		case *m.Deployment:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedDeploymentClient struct {
 // NewDeploymentClient -
 func NewDeploymentClient(c v1.Base) (*UnscopedDeploymentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.DeploymentGVK())
+	client, err := c.ForKind(m.DeploymentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedDeploymentClient) WithScope(scope string) *DeploymentClient {
 }
 
 // Get -
-func (c *UnscopedDeploymentClient) Get(name string) (*v1alpha1.Deployment, error) {
+func (c *UnscopedDeploymentClient) Get(name string) (*m.Deployment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Deployment{}
+	service := &m.Deployment{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedDeploymentClient) Update(res *v1alpha1.Deployment, opts ...v1.UpdateOption) (*v1alpha1.Deployment, error) {
+func (c *UnscopedDeploymentClient) Update(res *m.Deployment, opts ...v1.UpdateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedDeploymentClient) Update(res *v1alpha1.Deployment, opts ...v1.U
 		return nil, err
 	}
 
-	updated := &v1alpha1.Deployment{}
+	updated := &m.Deployment{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedDeploymentClient) Update(res *v1alpha1.Deployment, opts ...v1.U
 }
 
 // List -
-func (c *DeploymentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Deployment, error) {
+func (c *DeploymentClient) List(options ...v1.ListOptions) ([]*m.Deployment, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Deployment, len(riList))
+	result := make([]*m.Deployment, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Deployment{}
+		result[i] = &m.Deployment{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *DeploymentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Deployme
 }
 
 // Get -
-func (c *DeploymentClient) Get(name string) (*v1alpha1.Deployment, error) {
+func (c *DeploymentClient) Get(name string) (*m.Deployment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Deployment{}
+	service := &m.Deployment{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *DeploymentClient) Delete(res *v1alpha1.Deployment) error {
+func (c *DeploymentClient) Delete(res *m.Deployment) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *DeploymentClient) Delete(res *v1alpha1.Deployment) error {
 }
 
 // Create -
-func (c *DeploymentClient) Create(res *v1alpha1.Deployment, opts ...v1.CreateOption) (*v1alpha1.Deployment, error) {
+func (c *DeploymentClient) Create(res *m.Deployment, opts ...v1.CreateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *DeploymentClient) Create(res *v1alpha1.Deployment, opts ...v1.CreateOpt
 		return nil, err
 	}
 
-	created := &v1alpha1.Deployment{}
+	created := &m.Deployment{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *DeploymentClient) Create(res *v1alpha1.Deployment, opts ...v1.CreateOpt
 }
 
 // Update -
-func (c *DeploymentClient) Update(res *v1alpha1.Deployment, opts ...v1.UpdateOption) (*v1alpha1.Deployment, error) {
+func (c *DeploymentClient) Update(res *m.Deployment, opts ...v1.UpdateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *DeploymentClient) Update(res *v1alpha1.Deployment, opts ...v1.UpdateOpt
 		return nil, err
 	}
 
-	updated := &v1alpha1.Deployment{}
+	updated := &m.Deployment{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type WatchTopicMergeFunc func(*v1alpha1.WatchTopic, *v1alpha1.WatchTopic) (*v1alpha1.WatchTopic, error)
+type WatchTopicMergeFunc func(*m.WatchTopic, *m.WatchTopic) (*m.WatchTopic, error)
 
 // Merge builds a merge option for an update operation
 func WatchTopicMerge(f WatchTopicMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.WatchTopic{}, &v1alpha1.WatchTopic{}
+		p, n := &m.WatchTopic{}, &m.WatchTopic{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.WatchTopic:
+		case *m.WatchTopic:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func WatchTopicMerge(f WatchTopicMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.WatchTopic:
+		case *m.WatchTopic:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type WatchTopicClient struct {
 // NewWatchTopicClient -
 func NewWatchTopicClient(c v1.Base) (*WatchTopicClient, error) {
 
-	client, err := c.ForKind(v1alpha1.WatchTopicGVK())
+	client, err := c.ForKind(m.WatchTopicGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewWatchTopicClient(c v1.Base) (*WatchTopicClient, error) {
 }
 
 // List -
-func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*v1alpha1.WatchTopic, error) {
+func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*m.WatchTopic, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.WatchTopic, len(riList))
+	result := make([]*m.WatchTopic, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.WatchTopic{}
+		result[i] = &m.WatchTopic{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*v1alpha1.WatchTop
 }
 
 // Get -
-func (c *WatchTopicClient) Get(name string) (*v1alpha1.WatchTopic, error) {
+func (c *WatchTopicClient) Get(name string) (*m.WatchTopic, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.WatchTopic{}
+	service := &m.WatchTopic{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *WatchTopicClient) Delete(res *v1alpha1.WatchTopic) error {
+func (c *WatchTopicClient) Delete(res *m.WatchTopic) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *WatchTopicClient) Delete(res *v1alpha1.WatchTopic) error {
 }
 
 // Create -
-func (c *WatchTopicClient) Create(res *v1alpha1.WatchTopic, opts ...v1.CreateOption) (*v1alpha1.WatchTopic, error) {
+func (c *WatchTopicClient) Create(res *m.WatchTopic, opts ...v1.CreateOption) (*m.WatchTopic, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *WatchTopicClient) Create(res *v1alpha1.WatchTopic, opts ...v1.CreateOpt
 		return nil, err
 	}
 
-	created := &v1alpha1.WatchTopic{}
+	created := &m.WatchTopic{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *WatchTopicClient) Create(res *v1alpha1.WatchTopic, opts ...v1.CreateOpt
 }
 
 // Update -
-func (c *WatchTopicClient) Update(res *v1alpha1.WatchTopic, opts ...v1.UpdateOption) (*v1alpha1.WatchTopic, error) {
+func (c *WatchTopicClient) Update(res *m.WatchTopic, opts ...v1.UpdateOption) (*m.WatchTopic, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *WatchTopicClient) Update(res *v1alpha1.WatchTopic, opts ...v1.UpdateOpt
 		return nil, err
 	}
 
-	updated := &v1alpha1.WatchTopic{}
+	updated := &m.WatchTopic{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

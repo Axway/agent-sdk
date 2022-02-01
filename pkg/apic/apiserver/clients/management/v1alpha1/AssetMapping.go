@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type AssetMappingMergeFunc func(*v1alpha1.AssetMapping, *v1alpha1.AssetMapping) (*v1alpha1.AssetMapping, error)
+type AssetMappingMergeFunc func(*m.AssetMapping, *m.AssetMapping) (*m.AssetMapping, error)
 
 // Merge builds a merge option for an update operation
 func AssetMappingMerge(f AssetMappingMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.AssetMapping{}, &v1alpha1.AssetMapping{}
+		p, n := &m.AssetMapping{}, &m.AssetMapping{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.AssetMapping:
+		case *m.AssetMapping:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func AssetMappingMerge(f AssetMappingMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.AssetMapping:
+		case *m.AssetMapping:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -60,7 +60,7 @@ type UnscopedAssetMappingClient struct {
 // NewAssetMappingClient -
 func NewAssetMappingClient(c v1.Base) (*UnscopedAssetMappingClient, error) {
 
-	client, err := c.ForKind(v1alpha1.AssetMappingGVK())
+	client, err := c.ForKind(m.AssetMappingGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +77,20 @@ func (c *UnscopedAssetMappingClient) WithScope(scope string) *AssetMappingClient
 }
 
 // Get -
-func (c *UnscopedAssetMappingClient) Get(name string) (*v1alpha1.AssetMapping, error) {
+func (c *UnscopedAssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AssetMapping{}
+	service := &m.AssetMapping{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Update -
-func (c *UnscopedAssetMappingClient) Update(res *v1alpha1.AssetMapping, opts ...v1.UpdateOption) (*v1alpha1.AssetMapping, error) {
+func (c *UnscopedAssetMappingClient) Update(res *m.AssetMapping, opts ...v1.UpdateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedAssetMappingClient) Update(res *v1alpha1.AssetMapping, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.AssetMapping{}
+	updated := &m.AssetMapping{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -112,16 +112,16 @@ func (c *UnscopedAssetMappingClient) Update(res *v1alpha1.AssetMapping, opts ...
 }
 
 // List -
-func (c *AssetMappingClient) List(options ...v1.ListOptions) ([]*v1alpha1.AssetMapping, error) {
+func (c *AssetMappingClient) List(options ...v1.ListOptions) ([]*m.AssetMapping, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.AssetMapping, len(riList))
+	result := make([]*m.AssetMapping, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.AssetMapping{}
+		result[i] = &m.AssetMapping{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -132,20 +132,20 @@ func (c *AssetMappingClient) List(options ...v1.ListOptions) ([]*v1alpha1.AssetM
 }
 
 // Get -
-func (c *AssetMappingClient) Get(name string) (*v1alpha1.AssetMapping, error) {
+func (c *AssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.AssetMapping{}
+	service := &m.AssetMapping{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *AssetMappingClient) Delete(res *v1alpha1.AssetMapping) error {
+func (c *AssetMappingClient) Delete(res *m.AssetMapping) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *AssetMappingClient) Delete(res *v1alpha1.AssetMapping) error {
 }
 
 // Create -
-func (c *AssetMappingClient) Create(res *v1alpha1.AssetMapping, opts ...v1.CreateOption) (*v1alpha1.AssetMapping, error) {
+func (c *AssetMappingClient) Create(res *m.AssetMapping, opts ...v1.CreateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *AssetMappingClient) Create(res *v1alpha1.AssetMapping, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.AssetMapping{}
+	created := &m.AssetMapping{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -179,7 +179,7 @@ func (c *AssetMappingClient) Create(res *v1alpha1.AssetMapping, opts ...v1.Creat
 }
 
 // Update -
-func (c *AssetMappingClient) Update(res *v1alpha1.AssetMapping, opts ...v1.UpdateOption) (*v1alpha1.AssetMapping, error) {
+func (c *AssetMappingClient) Update(res *m.AssetMapping, opts ...v1.UpdateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *AssetMappingClient) Update(res *v1alpha1.AssetMapping, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.AssetMapping{}
+	updated := &m.AssetMapping{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

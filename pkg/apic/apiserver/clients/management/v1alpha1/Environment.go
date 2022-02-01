@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type EnvironmentMergeFunc func(*v1alpha1.Environment, *v1alpha1.Environment) (*v1alpha1.Environment, error)
+type EnvironmentMergeFunc func(*m.Environment, *m.Environment) (*m.Environment, error)
 
 // Merge builds a merge option for an update operation
 func EnvironmentMerge(f EnvironmentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Environment{}, &v1alpha1.Environment{}
+		p, n := &m.Environment{}, &m.Environment{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Environment:
+		case *m.Environment:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func EnvironmentMerge(f EnvironmentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Environment:
+		case *m.Environment:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -55,7 +55,7 @@ type EnvironmentClient struct {
 // NewEnvironmentClient -
 func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.EnvironmentGVK())
+	client, err := c.ForKind(m.EnvironmentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +65,16 @@ func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
 }
 
 // List -
-func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*m.Environment, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Environment, len(riList))
+	result := make([]*m.Environment, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Environment{}
+		result[i] = &m.Environment{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -85,20 +85,20 @@ func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Environ
 }
 
 // Get -
-func (c *EnvironmentClient) Get(name string) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Get(name string) (*m.Environment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Environment{}
+	service := &m.Environment{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
 // Delete -
-func (c *EnvironmentClient) Delete(res *v1alpha1.Environment) error {
+func (c *EnvironmentClient) Delete(res *m.Environment) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *EnvironmentClient) Delete(res *v1alpha1.Environment) error {
 }
 
 // Create -
-func (c *EnvironmentClient) Create(res *v1alpha1.Environment, opts ...v1.CreateOption) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Create(res *m.Environment, opts ...v1.CreateOption) (*m.Environment, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *EnvironmentClient) Create(res *v1alpha1.Environment, opts ...v1.CreateO
 		return nil, err
 	}
 
-	created := &v1alpha1.Environment{}
+	created := &m.Environment{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *EnvironmentClient) Create(res *v1alpha1.Environment, opts ...v1.CreateO
 }
 
 // Update -
-func (c *EnvironmentClient) Update(res *v1alpha1.Environment, opts ...v1.UpdateOption) (*v1alpha1.Environment, error) {
+func (c *EnvironmentClient) Update(res *m.Environment, opts ...v1.UpdateOption) (*m.Environment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *EnvironmentClient) Update(res *v1alpha1.Environment, opts ...v1.UpdateO
 		return nil, err
 	}
 
-	updated := &v1alpha1.Environment{}
+	updated := &m.Environment{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
