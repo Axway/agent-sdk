@@ -33,7 +33,6 @@ var cfg = &config.CentralConfiguration{
 
 // should create a new streamer and call Start
 func TestNewStreamer(t *testing.T) {
-	t.Skip()
 	getToken := &mockTokenGetter{}
 	httpClient := &api.MockHTTPClient{}
 	wt := &mv1.WatchTopic{}
@@ -88,12 +87,10 @@ func TestNewStreamer(t *testing.T) {
 	}
 
 	assert.Nil(t, streamer.Status())
-
 	// should stop the listener and write an error from the manager to the error channel
-	go streamer.Stop()
+	streamer.Stop()
 	err = <-errCh
-	assert.NotNil(t, err)
-
+	assert.Nil(t, err)
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
@@ -153,21 +150,17 @@ func (m mockStreamer) Healthcheck(_ string) *hc.Status {
 
 type mockManager struct {
 	status bool
-	errCh  chan error
 }
 
-func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, errCh chan error) (string, error) {
-	m.errCh = errCh
+func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
 	return "", nil
 }
 
 func (m *mockManager) CloseWatch(_ string) error {
-	m.errCh <- fmt.Errorf("manager error")
 	return nil
 }
 
 func (m *mockManager) CloseConn() {
-	m.errCh <- fmt.Errorf("manager error")
 }
 
 func (m *mockManager) Status() bool {
