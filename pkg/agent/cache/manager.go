@@ -399,7 +399,7 @@ func (c *cacheManager) GetTeamCache() cache.Cache {
 // AddTeam saves a team to the cache
 func (c *cacheManager) AddTeam(team *definitions.PlatformTeam) {
 	defer c.setCacheUpdated(true)
-	c.teams.SetWithSecondaryKey(team.Name, team.ID, team)
+	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
 }
 
 // GetTeamByName gets a team by name
@@ -408,21 +408,21 @@ func (c *cacheManager) GetTeamByName(name string) *definitions.PlatformTeam {
 	if err != nil {
 		return nil
 	}
-	team, ok := item.(*definitions.PlatformTeam)
+	team, ok := item.(definitions.PlatformTeam)
 	if !ok {
 		return nil
 	}
-	return team
+	return &team
 }
 
 // GetDefaultTeam gets the default team
 func (c *cacheManager) GetDefaultTeam() *definitions.PlatformTeam {
 	names := c.teams.GetKeys()
 
-	var defaultTeam *definitions.PlatformTeam
+	var defaultTeam definitions.PlatformTeam
 	for _, name := range names {
 		item, _ := c.teams.Get(name)
-		team, ok := item.(*definitions.PlatformTeam)
+		team, ok := item.(definitions.PlatformTeam)
 		if !ok {
 			continue
 		}
@@ -435,7 +435,7 @@ func (c *cacheManager) GetDefaultTeam() *definitions.PlatformTeam {
 		continue
 	}
 
-	return defaultTeam
+	return &defaultTeam
 }
 
 // GetTeamByID gets a team by id
@@ -444,9 +444,9 @@ func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
 	if err != nil {
 		return nil
 	}
-	team, ok := item.(*definitions.PlatformTeam)
+	team, ok := item.(definitions.PlatformTeam)
 	if !ok {
 		return nil
 	}
-	return team
+	return &team
 }

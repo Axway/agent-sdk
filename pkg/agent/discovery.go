@@ -3,6 +3,7 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -83,6 +84,33 @@ func GetAttributeOnPublishedAPIByID(externalAPIID string, attrName string) strin
 func GetAttributeOnPublishedAPIByPrimaryKey(primaryKey string, attrName string) string {
 	api := getAPIByPrimaryKey(primaryKey)
 	return getAttributeFromResource(api, attrName)
+}
+
+// GetOwnerOnPublishedAPIByName - Returns the owner spec of the published proxy
+func GetOwnerOnPublishedAPIByName(apiName string) *v1.Owner {
+	api := getAPIByName(apiName)
+	if api == nil {
+		return nil
+	}
+	return api.Owner
+}
+
+// GetOwnerOnPublishedAPIByID - Returns the owner spec of the published proxy
+func GetOwnerOnPublishedAPIByID(externalAPIID string) *v1.Owner {
+	api := getAPIByID(externalAPIID)
+	if api == nil {
+		return nil
+	}
+	return api.Owner
+}
+
+// GetOwnerOnPublishedAPIByPrimaryKey - Returns the owner spec of the published proxy
+func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *v1.Owner {
+	api := getAPIByPrimaryKey(primaryKey)
+	if api == nil {
+		return nil
+	}
+	return api.Owner
 }
 
 // PublishAPI - Publishes the API
