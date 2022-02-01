@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
@@ -221,7 +222,8 @@ func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 
 	// If the api path exists in the exceptions list, return true and ignore event
 	for _, value := range exceptions {
-		if value == uriRaw {
+		match, _ := regexp.MatchString(value, uriRaw)
+		if match {
 			return true
 		}
 	}

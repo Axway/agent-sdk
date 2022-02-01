@@ -2,6 +2,8 @@ package traceability
 
 import (
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -114,6 +116,24 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	if outputConfig.Proxy.URL != "" {
 		if _, err := url.ParseRequestURI(outputConfig.Proxy.URL); err != nil {
 			return nil, ErrInvalidConfig.FormatError("traceability.proxyURL")
+		}
+	}
+
+	// if set check for valid regex definitions
+	if outputConfig.APIExceptionsList != nil {
+		// Get the api exceptions list
+		exceptions := outputConfig.APIExceptionsList
+		for i := range exceptions {
+			exception := strings.TrimSpace(exceptions[i])
+
+			// check for regex and then validate
+			_, err := regexp.Compile(exception)
+			if err != nil {
+				err = ErrInvalidRegex.FormatError("apiExceptionValue", exception, err)
+				log.Error(err)
+				return nil, err
+			}
+
 		}
 	}
 
