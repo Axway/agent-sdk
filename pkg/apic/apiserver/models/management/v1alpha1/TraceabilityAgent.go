@@ -113,6 +113,7 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 
 	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
