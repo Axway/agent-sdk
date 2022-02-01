@@ -22,17 +22,17 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 	}
 
 	// unmarshall the rest of the resources here, and set them on the ResourceInstance manually
-	values := map[string]interface{}{}
-	err := json.Unmarshal(data, &values)
+	out := map[string]interface{}{}
+	err := json.Unmarshal(data, &out)
 	if err != nil {
 		return err
 	}
 
-	if values["spec"] != nil {
-		ri.Spec = values["spec"].(map[string]interface{})
+	if out["spec"] != nil {
+		ri.Spec = out["spec"].(map[string]interface{})
 	}
 
-	if values["owner"] != nil {
+	if out["owner"] != nil {
 		ri.Owner = &Owner{}
 		err = json.Unmarshal(data, ri.Owner)
 		if err != nil {

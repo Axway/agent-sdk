@@ -142,17 +142,17 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
 	res.ResourceMeta = aux.ResourceMeta
 
 	// unmarshall all fields into a map
-	raw := map[string]interface{}{}
+	out := map[string]interface{}{}
 
-	err = json.Unmarshal(data, &raw)
+	err = json.Unmarshal(data, &out)
 	if err != nil {
 		return err
 	}
 
 	// unmarshall the owner field
-	if raw["owner"] != nil {
+	if out["owner"] != nil {
 		res.Owner = &apiv1.Owner{}
-		bts, err := json.Marshal(raw["owner"])
+		bts, err := json.Marshal(out["owner"])
 		if err != nil {
 			return err
 		}
@@ -163,8 +163,8 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
 	}
 
 	// unmarshall the spec field
-	if raw["spec"] != nil {
-		bts, err := json.Marshal(raw["spec"])
+	if out["spec"] != nil {
+		bts, err := json.Marshal(out["spec"])
 		if err != nil {
 			return err
 		}
