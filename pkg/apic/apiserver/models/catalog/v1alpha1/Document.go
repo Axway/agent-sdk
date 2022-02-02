@@ -35,13 +35,9 @@ func init() {
 // Document Resource
 type Document struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec DocumentSpec `json:"spec"`
-
+	Icon   interface{}    `json:"icon"`
+	Owner  *apiv1.Owner   `json:"owner"`
+	Spec   DocumentSpec   `json:"spec"`
 	Status DocumentStatus `json:"status"`
 }
 
@@ -113,8 +109,10 @@ func (res *Document) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -123,7 +121,7 @@ func (res *Document) MarshalJSON() ([]byte, error) {
 func (res *Document) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias Document
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

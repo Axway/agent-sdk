@@ -14,7 +14,7 @@ import (
 
 type DeploymentMergeFunc func(*m.Deployment, *m.Deployment) (*m.Deployment, error)
 
-// Merge builds a merge option for an update operation
+// DeploymentMerge builds a merge option for an update operation
 func DeploymentMerge(f DeploymentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Deployment{}, &m.Deployment{}
@@ -47,17 +47,17 @@ func DeploymentMerge(f DeploymentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DeploymentClient -
+// DeploymentClient - rest client for Deployment resources that have a defined resource scope
 type DeploymentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDeploymentClient -
+// UnscopedDeploymentClient - rest client for Deployment resources that do not have a defined scope
 type UnscopedDeploymentClient struct {
 	client v1.Unscoped
 }
 
-// NewDeploymentClient -
+// NewDeploymentClient - creates a client that is not scoped to any resource
 func NewDeploymentClient(c v1.Base) (*UnscopedDeploymentClient, error) {
 
 	client, err := c.ForKind(m.DeploymentGVK())
@@ -69,14 +69,14 @@ func NewDeploymentClient(c v1.Base) (*UnscopedDeploymentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedDeploymentClient) WithScope(scope string) *DeploymentClient {
 	return &DeploymentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedDeploymentClient) Get(name string) (*m.Deployment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedDeploymentClient) Get(name string) (*m.Deployment, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedDeploymentClient) Update(res *m.Deployment, opts ...v1.UpdateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedDeploymentClient) Update(res *m.Deployment, opts ...v1.UpdateOp
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *DeploymentClient) List(options ...v1.ListOptions) ([]*m.Deployment, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *DeploymentClient) List(options ...v1.ListOptions) ([]*m.Deployment, err
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *DeploymentClient) Get(name string) (*m.Deployment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *DeploymentClient) Get(name string) (*m.Deployment, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *DeploymentClient) Delete(res *m.Deployment) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *DeploymentClient) Delete(res *m.Deployment) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *DeploymentClient) Create(res *m.Deployment, opts ...v1.CreateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *DeploymentClient) Create(res *m.Deployment, opts ...v1.CreateOption) (*
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *DeploymentClient) Update(res *m.Deployment, opts ...v1.UpdateOption) (*m.Deployment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type CategoryMergeFunc func(*m.Category, *m.Category) (*m.Category, error)
 
-// Merge builds a merge option for an update operation
+// CategoryMerge builds a merge option for an update operation
 func CategoryMerge(f CategoryMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Category{}, &m.Category{}
@@ -47,12 +47,12 @@ func CategoryMerge(f CategoryMergeFunc) v1.UpdateOption {
 	})
 }
 
-// CategoryClient -
+// CategoryClient - rest client for Category resources that have a defined resource scope
 type CategoryClient struct {
 	client v1.Scoped
 }
 
-// NewCategoryClient -
+// NewCategoryClient - creates a client scoped to a particular resource
 func NewCategoryClient(c v1.Base) (*CategoryClient, error) {
 
 	client, err := c.ForKind(m.CategoryGVK())
@@ -64,7 +64,7 @@ func NewCategoryClient(c v1.Base) (*CategoryClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *CategoryClient) List(options ...v1.ListOptions) ([]*m.Category, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *CategoryClient) List(options ...v1.ListOptions) ([]*m.Category, error) 
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *CategoryClient) Get(name string) (*m.Category, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *CategoryClient) Get(name string) (*m.Category, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *CategoryClient) Delete(res *m.Category) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *CategoryClient) Delete(res *m.Category) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *CategoryClient) Create(res *m.Category, opts ...v1.CreateOption) (*m.Category, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *CategoryClient) Create(res *m.Category, opts ...v1.CreateOption) (*m.Ca
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *CategoryClient) Update(res *m.Category, opts ...v1.UpdateOption) (*m.Category, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

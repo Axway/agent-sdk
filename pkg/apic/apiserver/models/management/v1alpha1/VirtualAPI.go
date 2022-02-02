@@ -35,14 +35,10 @@ func init() {
 // VirtualAPI Resource
 type VirtualAPI struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec VirtualApiSpec `json:"spec"`
-
-	State interface{} `json:"state"`
+	Icon  interface{}    `json:"icon"`
+	Owner *apiv1.Owner   `json:"owner"`
+	Spec  VirtualApiSpec `json:"spec"`
+	State interface{}    `json:"state"`
 }
 
 // FromInstance converts a ResourceInstance to a VirtualAPI
@@ -113,8 +109,10 @@ func (res *VirtualAPI) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
+	out["state"] = res.State
 
 	return json.Marshal(out)
 }
@@ -123,7 +121,7 @@ func (res *VirtualAPI) MarshalJSON() ([]byte, error) {
 func (res *VirtualAPI) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias VirtualAPI
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

@@ -14,7 +14,7 @@ import (
 
 type APIKeyAuthRuleMergeFunc func(*m.APIKeyAuthRule, *m.APIKeyAuthRule) (*m.APIKeyAuthRule, error)
 
-// Merge builds a merge option for an update operation
+// APIKeyAuthRuleMerge builds a merge option for an update operation
 func APIKeyAuthRuleMerge(f APIKeyAuthRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.APIKeyAuthRule{}, &m.APIKeyAuthRule{}
@@ -47,17 +47,17 @@ func APIKeyAuthRuleMerge(f APIKeyAuthRuleMergeFunc) v1.UpdateOption {
 	})
 }
 
-// APIKeyAuthRuleClient -
+// APIKeyAuthRuleClient - rest client for APIKeyAuthRule resources that have a defined resource scope
 type APIKeyAuthRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAPIKeyAuthRuleClient -
+// UnscopedAPIKeyAuthRuleClient - rest client for APIKeyAuthRule resources that do not have a defined scope
 type UnscopedAPIKeyAuthRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewAPIKeyAuthRuleClient -
+// NewAPIKeyAuthRuleClient - creates a client that is not scoped to any resource
 func NewAPIKeyAuthRuleClient(c v1.Base) (*UnscopedAPIKeyAuthRuleClient, error) {
 
 	client, err := c.ForKind(m.APIKeyAuthRuleGVK())
@@ -69,14 +69,14 @@ func NewAPIKeyAuthRuleClient(c v1.Base) (*UnscopedAPIKeyAuthRuleClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAPIKeyAuthRuleClient) WithScope(scope string) *APIKeyAuthRuleClient {
 	return &APIKeyAuthRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAPIKeyAuthRuleClient) Get(name string) (*m.APIKeyAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAPIKeyAuthRuleClient) Get(name string) (*m.APIKeyAuthRule, erro
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAPIKeyAuthRuleClient) Update(res *m.APIKeyAuthRule, opts ...v1.UpdateOption) (*m.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAPIKeyAuthRuleClient) Update(res *m.APIKeyAuthRule, opts ...v1.
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *APIKeyAuthRuleClient) List(options ...v1.ListOptions) ([]*m.APIKeyAuthRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *APIKeyAuthRuleClient) List(options ...v1.ListOptions) ([]*m.APIKeyAuthR
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *APIKeyAuthRuleClient) Get(name string) (*m.APIKeyAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *APIKeyAuthRuleClient) Get(name string) (*m.APIKeyAuthRule, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *APIKeyAuthRuleClient) Delete(res *m.APIKeyAuthRule) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *APIKeyAuthRuleClient) Delete(res *m.APIKeyAuthRule) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *APIKeyAuthRuleClient) Create(res *m.APIKeyAuthRule, opts ...v1.CreateOption) (*m.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *APIKeyAuthRuleClient) Create(res *m.APIKeyAuthRule, opts ...v1.CreateOp
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *APIKeyAuthRuleClient) Update(res *m.APIKeyAuthRule, opts ...v1.UpdateOption) (*m.APIKeyAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -35,10 +35,8 @@ func init() {
 // OAS3Document Resource
 type OAS3Document struct {
 	apiv1.ResourceMeta
-
 	Owner *apiv1.Owner `json:"owner"`
-
-	Spec interface{} `json:"spec"`
+	Spec  interface{}  `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a OAS3Document
@@ -109,8 +107,8 @@ func (res *OAS3Document) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
@@ -119,7 +117,7 @@ func (res *OAS3Document) MarshalJSON() ([]byte, error) {
 func (res *OAS3Document) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias OAS3Document
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

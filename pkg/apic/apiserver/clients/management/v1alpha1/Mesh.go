@@ -14,7 +14,7 @@ import (
 
 type MeshMergeFunc func(*m.Mesh, *m.Mesh) (*m.Mesh, error)
 
-// Merge builds a merge option for an update operation
+// MeshMerge builds a merge option for an update operation
 func MeshMerge(f MeshMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Mesh{}, &m.Mesh{}
@@ -47,12 +47,12 @@ func MeshMerge(f MeshMergeFunc) v1.UpdateOption {
 	})
 }
 
-// MeshClient -
+// MeshClient - rest client for Mesh resources that have a defined resource scope
 type MeshClient struct {
 	client v1.Scoped
 }
 
-// NewMeshClient -
+// NewMeshClient - creates a client scoped to a particular resource
 func NewMeshClient(c v1.Base) (*MeshClient, error) {
 
 	client, err := c.ForKind(m.MeshGVK())
@@ -64,7 +64,7 @@ func NewMeshClient(c v1.Base) (*MeshClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *MeshClient) List(options ...v1.ListOptions) ([]*m.Mesh, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *MeshClient) List(options ...v1.ListOptions) ([]*m.Mesh, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *MeshClient) Get(name string) (*m.Mesh, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *MeshClient) Get(name string) (*m.Mesh, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *MeshClient) Delete(res *m.Mesh) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *MeshClient) Delete(res *m.Mesh) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *MeshClient) Create(res *m.Mesh, opts ...v1.CreateOption) (*m.Mesh, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *MeshClient) Create(res *m.Mesh, opts ...v1.CreateOption) (*m.Mesh, erro
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *MeshClient) Update(res *m.Mesh, opts ...v1.UpdateOption) (*m.Mesh, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

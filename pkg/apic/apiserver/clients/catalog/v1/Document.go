@@ -14,7 +14,7 @@ import (
 
 type DocumentMergeFunc func(*m.Document, *m.Document) (*m.Document, error)
 
-// Merge builds a merge option for an update operation
+// DocumentMerge builds a merge option for an update operation
 func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Document{}, &m.Document{}
@@ -47,17 +47,17 @@ func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DocumentClient -
+// DocumentClient - rest client for Document resources that have a defined resource scope
 type DocumentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDocumentClient -
+// UnscopedDocumentClient - rest client for Document resources that do not have a defined scope
 type UnscopedDocumentClient struct {
 	client v1.Unscoped
 }
 
-// NewDocumentClient -
+// NewDocumentClient - creates a client that is not scoped to any resource
 func NewDocumentClient(c v1.Base) (*UnscopedDocumentClient, error) {
 
 	client, err := c.ForKind(m.DocumentGVK())
@@ -69,14 +69,14 @@ func NewDocumentClient(c v1.Base) (*UnscopedDocumentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedDocumentClient) WithScope(scope string) *DocumentClient {
 	return &DocumentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedDocumentClient) Get(name string) (*m.Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedDocumentClient) Get(name string) (*m.Document, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedDocumentClient) Update(res *m.Document, opts ...v1.UpdateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedDocumentClient) Update(res *m.Document, opts ...v1.UpdateOption
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *DocumentClient) List(options ...v1.ListOptions) ([]*m.Document, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *DocumentClient) List(options ...v1.ListOptions) ([]*m.Document, error) 
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *DocumentClient) Get(name string) (*m.Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *DocumentClient) Get(name string) (*m.Document, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *DocumentClient) Delete(res *m.Document) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *DocumentClient) Delete(res *m.Document) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *DocumentClient) Create(res *m.Document, opts ...v1.CreateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *DocumentClient) Create(res *m.Document, opts ...v1.CreateOption) (*m.Do
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *DocumentClient) Update(res *m.Document, opts ...v1.UpdateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

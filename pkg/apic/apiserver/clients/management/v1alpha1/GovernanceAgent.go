@@ -14,7 +14,7 @@ import (
 
 type GovernanceAgentMergeFunc func(*m.GovernanceAgent, *m.GovernanceAgent) (*m.GovernanceAgent, error)
 
-// Merge builds a merge option for an update operation
+// GovernanceAgentMerge builds a merge option for an update operation
 func GovernanceAgentMerge(f GovernanceAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.GovernanceAgent{}, &m.GovernanceAgent{}
@@ -47,17 +47,17 @@ func GovernanceAgentMerge(f GovernanceAgentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// GovernanceAgentClient -
+// GovernanceAgentClient - rest client for GovernanceAgent resources that have a defined resource scope
 type GovernanceAgentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedGovernanceAgentClient -
+// UnscopedGovernanceAgentClient - rest client for GovernanceAgent resources that do not have a defined scope
 type UnscopedGovernanceAgentClient struct {
 	client v1.Unscoped
 }
 
-// NewGovernanceAgentClient -
+// NewGovernanceAgentClient - creates a client that is not scoped to any resource
 func NewGovernanceAgentClient(c v1.Base) (*UnscopedGovernanceAgentClient, error) {
 
 	client, err := c.ForKind(m.GovernanceAgentGVK())
@@ -69,14 +69,14 @@ func NewGovernanceAgentClient(c v1.Base) (*UnscopedGovernanceAgentClient, error)
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedGovernanceAgentClient) WithScope(scope string) *GovernanceAgentClient {
 	return &GovernanceAgentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedGovernanceAgentClient) Get(name string) (*m.GovernanceAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedGovernanceAgentClient) Get(name string) (*m.GovernanceAgent, er
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedGovernanceAgentClient) Update(res *m.GovernanceAgent, opts ...v1.UpdateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedGovernanceAgentClient) Update(res *m.GovernanceAgent, opts ...v
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *GovernanceAgentClient) List(options ...v1.ListOptions) ([]*m.GovernanceAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *GovernanceAgentClient) List(options ...v1.ListOptions) ([]*m.Governance
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *GovernanceAgentClient) Get(name string) (*m.GovernanceAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *GovernanceAgentClient) Get(name string) (*m.GovernanceAgent, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *GovernanceAgentClient) Delete(res *m.GovernanceAgent) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *GovernanceAgentClient) Delete(res *m.GovernanceAgent) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *GovernanceAgentClient) Create(res *m.GovernanceAgent, opts ...v1.CreateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *GovernanceAgentClient) Create(res *m.GovernanceAgent, opts ...v1.Create
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *GovernanceAgentClient) Update(res *m.GovernanceAgent, opts ...v1.UpdateOption) (*m.GovernanceAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

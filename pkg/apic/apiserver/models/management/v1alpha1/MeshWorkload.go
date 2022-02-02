@@ -35,10 +35,8 @@ func init() {
 // MeshWorkload Resource
 type MeshWorkload struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec MeshWorkloadSpec `json:"spec"`
+	Owner *apiv1.Owner     `json:"owner"`
+	Spec  MeshWorkloadSpec `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a MeshWorkload
@@ -109,8 +107,8 @@ func (res *MeshWorkload) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
@@ -119,7 +117,7 @@ func (res *MeshWorkload) MarshalJSON() ([]byte, error) {
 func (res *MeshWorkload) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias MeshWorkload
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

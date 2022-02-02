@@ -35,14 +35,10 @@ func init() {
 // ConsumerInstance Resource
 type ConsumerInstance struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
+	Owner      *apiv1.Owner               `json:"owner"`
 	References ConsumerInstanceReferences `json:"references"`
-
-	Spec ConsumerInstanceSpec `json:"spec"`
-
-	Status ConsumerInstanceStatus `json:"status"`
+	Spec       ConsumerInstanceSpec       `json:"spec"`
+	Status     ConsumerInstanceStatus     `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a ConsumerInstance
@@ -113,8 +109,10 @@ func (res *ConsumerInstance) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -123,7 +121,7 @@ func (res *ConsumerInstance) MarshalJSON() ([]byte, error) {
 func (res *ConsumerInstance) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias ConsumerInstance
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

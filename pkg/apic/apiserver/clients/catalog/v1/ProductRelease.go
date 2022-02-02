@@ -14,7 +14,7 @@ import (
 
 type ProductReleaseMergeFunc func(*m.ProductRelease, *m.ProductRelease) (*m.ProductRelease, error)
 
-// Merge builds a merge option for an update operation
+// ProductReleaseMerge builds a merge option for an update operation
 func ProductReleaseMerge(f ProductReleaseMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ProductRelease{}, &m.ProductRelease{}
@@ -47,12 +47,12 @@ func ProductReleaseMerge(f ProductReleaseMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ProductReleaseClient -
+// ProductReleaseClient - rest client for ProductRelease resources that have a defined resource scope
 type ProductReleaseClient struct {
 	client v1.Scoped
 }
 
-// NewProductReleaseClient -
+// NewProductReleaseClient - creates a client scoped to a particular resource
 func NewProductReleaseClient(c v1.Base) (*ProductReleaseClient, error) {
 
 	client, err := c.ForKind(m.ProductReleaseGVK())
@@ -64,7 +64,7 @@ func NewProductReleaseClient(c v1.Base) (*ProductReleaseClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *ProductReleaseClient) List(options ...v1.ListOptions) ([]*m.ProductRelease, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *ProductReleaseClient) List(options ...v1.ListOptions) ([]*m.ProductRele
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ProductReleaseClient) Get(name string) (*m.ProductRelease, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *ProductReleaseClient) Get(name string) (*m.ProductRelease, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ProductReleaseClient) Delete(res *m.ProductRelease) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *ProductReleaseClient) Delete(res *m.ProductRelease) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ProductReleaseClient) Create(res *m.ProductRelease, opts ...v1.CreateOption) (*m.ProductRelease, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *ProductReleaseClient) Create(res *m.ProductRelease, opts ...v1.CreateOp
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ProductReleaseClient) Update(res *m.ProductRelease, opts ...v1.UpdateOption) (*m.ProductRelease, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

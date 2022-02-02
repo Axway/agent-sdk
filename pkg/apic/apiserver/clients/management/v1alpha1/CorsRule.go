@@ -14,7 +14,7 @@ import (
 
 type CorsRuleMergeFunc func(*m.CorsRule, *m.CorsRule) (*m.CorsRule, error)
 
-// Merge builds a merge option for an update operation
+// CorsRuleMerge builds a merge option for an update operation
 func CorsRuleMerge(f CorsRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.CorsRule{}, &m.CorsRule{}
@@ -47,17 +47,17 @@ func CorsRuleMerge(f CorsRuleMergeFunc) v1.UpdateOption {
 	})
 }
 
-// CorsRuleClient -
+// CorsRuleClient - rest client for CorsRule resources that have a defined resource scope
 type CorsRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedCorsRuleClient -
+// UnscopedCorsRuleClient - rest client for CorsRule resources that do not have a defined scope
 type UnscopedCorsRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewCorsRuleClient -
+// NewCorsRuleClient - creates a client that is not scoped to any resource
 func NewCorsRuleClient(c v1.Base) (*UnscopedCorsRuleClient, error) {
 
 	client, err := c.ForKind(m.CorsRuleGVK())
@@ -69,14 +69,14 @@ func NewCorsRuleClient(c v1.Base) (*UnscopedCorsRuleClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedCorsRuleClient) WithScope(scope string) *CorsRuleClient {
 	return &CorsRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedCorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedCorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedCorsRuleClient) Update(res *m.CorsRule, opts ...v1.UpdateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedCorsRuleClient) Update(res *m.CorsRule, opts ...v1.UpdateOption
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *CorsRuleClient) List(options ...v1.ListOptions) ([]*m.CorsRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *CorsRuleClient) List(options ...v1.ListOptions) ([]*m.CorsRule, error) 
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *CorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *CorsRuleClient) Get(name string) (*m.CorsRule, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *CorsRuleClient) Delete(res *m.CorsRule) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *CorsRuleClient) Delete(res *m.CorsRule) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *CorsRuleClient) Create(res *m.CorsRule, opts ...v1.CreateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *CorsRuleClient) Create(res *m.CorsRule, opts ...v1.CreateOption) (*m.Co
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *CorsRuleClient) Update(res *m.CorsRule, opts ...v1.UpdateOption) (*m.CorsRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

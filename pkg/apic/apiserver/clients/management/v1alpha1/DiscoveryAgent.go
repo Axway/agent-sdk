@@ -14,7 +14,7 @@ import (
 
 type DiscoveryAgentMergeFunc func(*m.DiscoveryAgent, *m.DiscoveryAgent) (*m.DiscoveryAgent, error)
 
-// Merge builds a merge option for an update operation
+// DiscoveryAgentMerge builds a merge option for an update operation
 func DiscoveryAgentMerge(f DiscoveryAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.DiscoveryAgent{}, &m.DiscoveryAgent{}
@@ -47,17 +47,17 @@ func DiscoveryAgentMerge(f DiscoveryAgentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DiscoveryAgentClient -
+// DiscoveryAgentClient - rest client for DiscoveryAgent resources that have a defined resource scope
 type DiscoveryAgentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDiscoveryAgentClient -
+// UnscopedDiscoveryAgentClient - rest client for DiscoveryAgent resources that do not have a defined scope
 type UnscopedDiscoveryAgentClient struct {
 	client v1.Unscoped
 }
 
-// NewDiscoveryAgentClient -
+// NewDiscoveryAgentClient - creates a client that is not scoped to any resource
 func NewDiscoveryAgentClient(c v1.Base) (*UnscopedDiscoveryAgentClient, error) {
 
 	client, err := c.ForKind(m.DiscoveryAgentGVK())
@@ -69,14 +69,14 @@ func NewDiscoveryAgentClient(c v1.Base) (*UnscopedDiscoveryAgentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedDiscoveryAgentClient) WithScope(scope string) *DiscoveryAgentClient {
 	return &DiscoveryAgentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedDiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedDiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, erro
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedDiscoveryAgentClient) Update(res *m.DiscoveryAgent, opts ...v1.UpdateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedDiscoveryAgentClient) Update(res *m.DiscoveryAgent, opts ...v1.
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *DiscoveryAgentClient) List(options ...v1.ListOptions) ([]*m.DiscoveryAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *DiscoveryAgentClient) List(options ...v1.ListOptions) ([]*m.DiscoveryAg
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *DiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *DiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *DiscoveryAgentClient) Delete(res *m.DiscoveryAgent) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *DiscoveryAgentClient) Delete(res *m.DiscoveryAgent) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *DiscoveryAgentClient) Create(res *m.DiscoveryAgent, opts ...v1.CreateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *DiscoveryAgentClient) Create(res *m.DiscoveryAgent, opts ...v1.CreateOp
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *DiscoveryAgentClient) Update(res *m.DiscoveryAgent, opts ...v1.UpdateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

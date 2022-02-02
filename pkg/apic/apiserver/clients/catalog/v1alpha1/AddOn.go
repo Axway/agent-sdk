@@ -14,7 +14,7 @@ import (
 
 type AddOnMergeFunc func(*m.AddOn, *m.AddOn) (*m.AddOn, error)
 
-// Merge builds a merge option for an update operation
+// AddOnMerge builds a merge option for an update operation
 func AddOnMerge(f AddOnMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AddOn{}, &m.AddOn{}
@@ -47,17 +47,17 @@ func AddOnMerge(f AddOnMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AddOnClient -
+// AddOnClient - rest client for AddOn resources that have a defined resource scope
 type AddOnClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAddOnClient -
+// UnscopedAddOnClient - rest client for AddOn resources that do not have a defined scope
 type UnscopedAddOnClient struct {
 	client v1.Unscoped
 }
 
-// NewAddOnClient -
+// NewAddOnClient - creates a client that is not scoped to any resource
 func NewAddOnClient(c v1.Base) (*UnscopedAddOnClient, error) {
 
 	client, err := c.ForKind(m.AddOnGVK())
@@ -69,14 +69,14 @@ func NewAddOnClient(c v1.Base) (*UnscopedAddOnClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAddOnClient) WithScope(scope string) *AddOnClient {
 	return &AddOnClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAddOnClient) Get(name string) (*m.AddOn, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAddOnClient) Get(name string) (*m.AddOn, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAddOnClient) Update(res *m.AddOn, opts ...v1.UpdateOption) (*m.AddOn, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAddOnClient) Update(res *m.AddOn, opts ...v1.UpdateOption) (*m.
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AddOnClient) List(options ...v1.ListOptions) ([]*m.AddOn, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AddOnClient) List(options ...v1.ListOptions) ([]*m.AddOn, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AddOnClient) Get(name string) (*m.AddOn, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AddOnClient) Get(name string) (*m.AddOn, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AddOnClient) Delete(res *m.AddOn) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AddOnClient) Delete(res *m.AddOn) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AddOnClient) Create(res *m.AddOn, opts ...v1.CreateOption) (*m.AddOn, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AddOnClient) Create(res *m.AddOn, opts ...v1.CreateOption) (*m.AddOn, e
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AddOnClient) Update(res *m.AddOn, opts ...v1.UpdateOption) (*m.AddOn, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

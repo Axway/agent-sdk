@@ -14,7 +14,7 @@ import (
 
 type ReleaseTagMergeFunc func(*m.ReleaseTag, *m.ReleaseTag) (*m.ReleaseTag, error)
 
-// Merge builds a merge option for an update operation
+// ReleaseTagMerge builds a merge option for an update operation
 func ReleaseTagMerge(f ReleaseTagMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ReleaseTag{}, &m.ReleaseTag{}
@@ -47,17 +47,17 @@ func ReleaseTagMerge(f ReleaseTagMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ReleaseTagClient -
+// ReleaseTagClient - rest client for ReleaseTag resources that have a defined resource scope
 type ReleaseTagClient struct {
 	client v1.Scoped
 }
 
-// UnscopedReleaseTagClient -
+// UnscopedReleaseTagClient - rest client for ReleaseTag resources that do not have a defined scope
 type UnscopedReleaseTagClient struct {
 	client v1.Unscoped
 }
 
-// NewReleaseTagClient -
+// NewReleaseTagClient - creates a client that is not scoped to any resource
 func NewReleaseTagClient(c v1.Base) (*UnscopedReleaseTagClient, error) {
 
 	client, err := c.ForKind(m.ReleaseTagGVK())
@@ -69,14 +69,14 @@ func NewReleaseTagClient(c v1.Base) (*UnscopedReleaseTagClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedReleaseTagClient) WithScope(scope string) *ReleaseTagClient {
 	return &ReleaseTagClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedReleaseTagClient) Update(res *m.ReleaseTag, opts ...v1.UpdateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedReleaseTagClient) Update(res *m.ReleaseTag, opts ...v1.UpdateOp
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ReleaseTagClient) List(options ...v1.ListOptions) ([]*m.ReleaseTag, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ReleaseTagClient) List(options ...v1.ListOptions) ([]*m.ReleaseTag, err
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ReleaseTagClient) Delete(res *m.ReleaseTag) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ReleaseTagClient) Delete(res *m.ReleaseTag) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ReleaseTagClient) Create(res *m.ReleaseTag, opts ...v1.CreateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ReleaseTagClient) Create(res *m.ReleaseTag, opts ...v1.CreateOption) (*
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ReleaseTagClient) Update(res *m.ReleaseTag, opts ...v1.UpdateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

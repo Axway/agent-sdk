@@ -14,7 +14,7 @@ import (
 
 type K8SResourceMergeFunc func(*m.K8SResource, *m.K8SResource) (*m.K8SResource, error)
 
-// Merge builds a merge option for an update operation
+// K8SResourceMerge builds a merge option for an update operation
 func K8SResourceMerge(f K8SResourceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.K8SResource{}, &m.K8SResource{}
@@ -47,17 +47,17 @@ func K8SResourceMerge(f K8SResourceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// K8SResourceClient -
+// K8SResourceClient - rest client for K8SResource resources that have a defined resource scope
 type K8SResourceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedK8SResourceClient -
+// UnscopedK8SResourceClient - rest client for K8SResource resources that do not have a defined scope
 type UnscopedK8SResourceClient struct {
 	client v1.Unscoped
 }
 
-// NewK8SResourceClient -
+// NewK8SResourceClient - creates a client that is not scoped to any resource
 func NewK8SResourceClient(c v1.Base) (*UnscopedK8SResourceClient, error) {
 
 	client, err := c.ForKind(m.K8SResourceGVK())
@@ -69,14 +69,14 @@ func NewK8SResourceClient(c v1.Base) (*UnscopedK8SResourceClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedK8SResourceClient) WithScope(scope string) *K8SResourceClient {
 	return &K8SResourceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedK8SResourceClient) Get(name string) (*m.K8SResource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedK8SResourceClient) Get(name string) (*m.K8SResource, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedK8SResourceClient) Update(res *m.K8SResource, opts ...v1.UpdateOption) (*m.K8SResource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedK8SResourceClient) Update(res *m.K8SResource, opts ...v1.Update
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *K8SResourceClient) List(options ...v1.ListOptions) ([]*m.K8SResource, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *K8SResourceClient) List(options ...v1.ListOptions) ([]*m.K8SResource, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *K8SResourceClient) Get(name string) (*m.K8SResource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *K8SResourceClient) Get(name string) (*m.K8SResource, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *K8SResourceClient) Delete(res *m.K8SResource) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *K8SResourceClient) Delete(res *m.K8SResource) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *K8SResourceClient) Create(res *m.K8SResource, opts ...v1.CreateOption) (*m.K8SResource, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *K8SResourceClient) Create(res *m.K8SResource, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *K8SResourceClient) Update(res *m.K8SResource, opts ...v1.UpdateOption) (*m.K8SResource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

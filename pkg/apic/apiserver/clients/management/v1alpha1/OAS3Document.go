@@ -14,7 +14,7 @@ import (
 
 type OAS3DocumentMergeFunc func(*m.OAS3Document, *m.OAS3Document) (*m.OAS3Document, error)
 
-// Merge builds a merge option for an update operation
+// OAS3DocumentMerge builds a merge option for an update operation
 func OAS3DocumentMerge(f OAS3DocumentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.OAS3Document{}, &m.OAS3Document{}
@@ -47,17 +47,17 @@ func OAS3DocumentMerge(f OAS3DocumentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// OAS3DocumentClient -
+// OAS3DocumentClient - rest client for OAS3Document resources that have a defined resource scope
 type OAS3DocumentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedOAS3DocumentClient -
+// UnscopedOAS3DocumentClient - rest client for OAS3Document resources that do not have a defined scope
 type UnscopedOAS3DocumentClient struct {
 	client v1.Unscoped
 }
 
-// NewOAS3DocumentClient -
+// NewOAS3DocumentClient - creates a client that is not scoped to any resource
 func NewOAS3DocumentClient(c v1.Base) (*UnscopedOAS3DocumentClient, error) {
 
 	client, err := c.ForKind(m.OAS3DocumentGVK())
@@ -69,14 +69,14 @@ func NewOAS3DocumentClient(c v1.Base) (*UnscopedOAS3DocumentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedOAS3DocumentClient) WithScope(scope string) *OAS3DocumentClient {
 	return &OAS3DocumentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedOAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedOAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedOAS3DocumentClient) Update(res *m.OAS3Document, opts ...v1.UpdateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedOAS3DocumentClient) Update(res *m.OAS3Document, opts ...v1.Upda
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *OAS3DocumentClient) List(options ...v1.ListOptions) ([]*m.OAS3Document, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *OAS3DocumentClient) List(options ...v1.ListOptions) ([]*m.OAS3Document,
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *OAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *OAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *OAS3DocumentClient) Delete(res *m.OAS3Document) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *OAS3DocumentClient) Delete(res *m.OAS3Document) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *OAS3DocumentClient) Create(res *m.OAS3Document, opts ...v1.CreateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *OAS3DocumentClient) Create(res *m.OAS3Document, opts ...v1.CreateOption
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *OAS3DocumentClient) Update(res *m.OAS3Document, opts ...v1.UpdateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

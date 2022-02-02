@@ -14,7 +14,7 @@ import (
 
 type ResourceDiscoveryMergeFunc func(*m.ResourceDiscovery, *m.ResourceDiscovery) (*m.ResourceDiscovery, error)
 
-// Merge builds a merge option for an update operation
+// ResourceDiscoveryMerge builds a merge option for an update operation
 func ResourceDiscoveryMerge(f ResourceDiscoveryMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ResourceDiscovery{}, &m.ResourceDiscovery{}
@@ -47,17 +47,17 @@ func ResourceDiscoveryMerge(f ResourceDiscoveryMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ResourceDiscoveryClient -
+// ResourceDiscoveryClient - rest client for ResourceDiscovery resources that have a defined resource scope
 type ResourceDiscoveryClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceDiscoveryClient -
+// UnscopedResourceDiscoveryClient - rest client for ResourceDiscovery resources that do not have a defined scope
 type UnscopedResourceDiscoveryClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceDiscoveryClient -
+// NewResourceDiscoveryClient - creates a client that is not scoped to any resource
 func NewResourceDiscoveryClient(c v1.Base) (*UnscopedResourceDiscoveryClient, error) {
 
 	client, err := c.ForKind(m.ResourceDiscoveryGVK())
@@ -69,14 +69,14 @@ func NewResourceDiscoveryClient(c v1.Base) (*UnscopedResourceDiscoveryClient, er
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceDiscoveryClient) WithScope(scope string) *ResourceDiscoveryClient {
 	return &ResourceDiscoveryClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedResourceDiscoveryClient) Get(name string) (*m.ResourceDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedResourceDiscoveryClient) Get(name string) (*m.ResourceDiscovery
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedResourceDiscoveryClient) Update(res *m.ResourceDiscovery, opts ...v1.UpdateOption) (*m.ResourceDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedResourceDiscoveryClient) Update(res *m.ResourceDiscovery, opts 
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ResourceDiscoveryClient) List(options ...v1.ListOptions) ([]*m.ResourceDiscovery, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ResourceDiscoveryClient) List(options ...v1.ListOptions) ([]*m.Resource
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ResourceDiscoveryClient) Get(name string) (*m.ResourceDiscovery, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ResourceDiscoveryClient) Get(name string) (*m.ResourceDiscovery, error)
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ResourceDiscoveryClient) Delete(res *m.ResourceDiscovery) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ResourceDiscoveryClient) Delete(res *m.ResourceDiscovery) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ResourceDiscoveryClient) Create(res *m.ResourceDiscovery, opts ...v1.CreateOption) (*m.ResourceDiscovery, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ResourceDiscoveryClient) Create(res *m.ResourceDiscovery, opts ...v1.Cr
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ResourceDiscoveryClient) Update(res *m.ResourceDiscovery, opts ...v1.UpdateOption) (*m.ResourceDiscovery, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

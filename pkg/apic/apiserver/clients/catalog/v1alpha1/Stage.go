@@ -14,7 +14,7 @@ import (
 
 type StageMergeFunc func(*m.Stage, *m.Stage) (*m.Stage, error)
 
-// Merge builds a merge option for an update operation
+// StageMerge builds a merge option for an update operation
 func StageMerge(f StageMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Stage{}, &m.Stage{}
@@ -47,12 +47,12 @@ func StageMerge(f StageMergeFunc) v1.UpdateOption {
 	})
 }
 
-// StageClient -
+// StageClient - rest client for Stage resources that have a defined resource scope
 type StageClient struct {
 	client v1.Scoped
 }
 
-// NewStageClient -
+// NewStageClient - creates a client scoped to a particular resource
 func NewStageClient(c v1.Base) (*StageClient, error) {
 
 	client, err := c.ForKind(m.StageGVK())
@@ -64,7 +64,7 @@ func NewStageClient(c v1.Base) (*StageClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *StageClient) List(options ...v1.ListOptions) ([]*m.Stage, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *StageClient) List(options ...v1.ListOptions) ([]*m.Stage, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *StageClient) Get(name string) (*m.Stage, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *StageClient) Get(name string) (*m.Stage, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *StageClient) Delete(res *m.Stage) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *StageClient) Delete(res *m.Stage) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *StageClient) Create(res *m.Stage, opts ...v1.CreateOption) (*m.Stage, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *StageClient) Create(res *m.Stage, opts ...v1.CreateOption) (*m.Stage, e
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *StageClient) Update(res *m.Stage, opts ...v1.UpdateOption) (*m.Stage, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type SecretMergeFunc func(*m.Secret, *m.Secret) (*m.Secret, error)
 
-// Merge builds a merge option for an update operation
+// SecretMerge builds a merge option for an update operation
 func SecretMerge(f SecretMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Secret{}, &m.Secret{}
@@ -47,17 +47,17 @@ func SecretMerge(f SecretMergeFunc) v1.UpdateOption {
 	})
 }
 
-// SecretClient -
+// SecretClient - rest client for Secret resources that have a defined resource scope
 type SecretClient struct {
 	client v1.Scoped
 }
 
-// UnscopedSecretClient -
+// UnscopedSecretClient - rest client for Secret resources that do not have a defined scope
 type UnscopedSecretClient struct {
 	client v1.Unscoped
 }
 
-// NewSecretClient -
+// NewSecretClient - creates a client that is not scoped to any resource
 func NewSecretClient(c v1.Base) (*UnscopedSecretClient, error) {
 
 	client, err := c.ForKind(m.SecretGVK())
@@ -69,14 +69,14 @@ func NewSecretClient(c v1.Base) (*UnscopedSecretClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedSecretClient) WithScope(scope string) *SecretClient {
 	return &SecretClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedSecretClient) Get(name string) (*m.Secret, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedSecretClient) Get(name string) (*m.Secret, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedSecretClient) Update(res *m.Secret, opts ...v1.UpdateOption) (*m.Secret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedSecretClient) Update(res *m.Secret, opts ...v1.UpdateOption) (*
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *SecretClient) List(options ...v1.ListOptions) ([]*m.Secret, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *SecretClient) List(options ...v1.ListOptions) ([]*m.Secret, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *SecretClient) Get(name string) (*m.Secret, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *SecretClient) Get(name string) (*m.Secret, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *SecretClient) Delete(res *m.Secret) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *SecretClient) Delete(res *m.Secret) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *SecretClient) Create(res *m.Secret, opts ...v1.CreateOption) (*m.Secret, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *SecretClient) Create(res *m.Secret, opts ...v1.CreateOption) (*m.Secret
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *SecretClient) Update(res *m.Secret, opts ...v1.UpdateOption) (*m.Secret, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type ProductPlanMergeFunc func(*m.ProductPlan, *m.ProductPlan) (*m.ProductPlan, error)
 
-// Merge builds a merge option for an update operation
+// ProductPlanMerge builds a merge option for an update operation
 func ProductPlanMerge(f ProductPlanMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ProductPlan{}, &m.ProductPlan{}
@@ -47,12 +47,12 @@ func ProductPlanMerge(f ProductPlanMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ProductPlanClient -
+// ProductPlanClient - rest client for ProductPlan resources that have a defined resource scope
 type ProductPlanClient struct {
 	client v1.Scoped
 }
 
-// NewProductPlanClient -
+// NewProductPlanClient - creates a client scoped to a particular resource
 func NewProductPlanClient(c v1.Base) (*ProductPlanClient, error) {
 
 	client, err := c.ForKind(m.ProductPlanGVK())
@@ -64,7 +64,7 @@ func NewProductPlanClient(c v1.Base) (*ProductPlanClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *ProductPlanClient) List(options ...v1.ListOptions) ([]*m.ProductPlan, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *ProductPlanClient) List(options ...v1.ListOptions) ([]*m.ProductPlan, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ProductPlanClient) Get(name string) (*m.ProductPlan, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *ProductPlanClient) Get(name string) (*m.ProductPlan, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ProductPlanClient) Delete(res *m.ProductPlan) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *ProductPlanClient) Delete(res *m.ProductPlan) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ProductPlanClient) Create(res *m.ProductPlan, opts ...v1.CreateOption) (*m.ProductPlan, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *ProductPlanClient) Create(res *m.ProductPlan, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ProductPlanClient) Update(res *m.ProductPlan, opts ...v1.UpdateOption) (*m.ProductPlan, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

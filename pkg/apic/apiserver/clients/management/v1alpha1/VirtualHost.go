@@ -14,7 +14,7 @@ import (
 
 type VirtualHostMergeFunc func(*m.VirtualHost, *m.VirtualHost) (*m.VirtualHost, error)
 
-// Merge builds a merge option for an update operation
+// VirtualHostMerge builds a merge option for an update operation
 func VirtualHostMerge(f VirtualHostMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.VirtualHost{}, &m.VirtualHost{}
@@ -47,17 +47,17 @@ func VirtualHostMerge(f VirtualHostMergeFunc) v1.UpdateOption {
 	})
 }
 
-// VirtualHostClient -
+// VirtualHostClient - rest client for VirtualHost resources that have a defined resource scope
 type VirtualHostClient struct {
 	client v1.Scoped
 }
 
-// UnscopedVirtualHostClient -
+// UnscopedVirtualHostClient - rest client for VirtualHost resources that do not have a defined scope
 type UnscopedVirtualHostClient struct {
 	client v1.Unscoped
 }
 
-// NewVirtualHostClient -
+// NewVirtualHostClient - creates a client that is not scoped to any resource
 func NewVirtualHostClient(c v1.Base) (*UnscopedVirtualHostClient, error) {
 
 	client, err := c.ForKind(m.VirtualHostGVK())
@@ -69,14 +69,14 @@ func NewVirtualHostClient(c v1.Base) (*UnscopedVirtualHostClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedVirtualHostClient) WithScope(scope string) *VirtualHostClient {
 	return &VirtualHostClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedVirtualHostClient) Get(name string) (*m.VirtualHost, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedVirtualHostClient) Get(name string) (*m.VirtualHost, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedVirtualHostClient) Update(res *m.VirtualHost, opts ...v1.UpdateOption) (*m.VirtualHost, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedVirtualHostClient) Update(res *m.VirtualHost, opts ...v1.Update
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *VirtualHostClient) List(options ...v1.ListOptions) ([]*m.VirtualHost, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *VirtualHostClient) List(options ...v1.ListOptions) ([]*m.VirtualHost, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *VirtualHostClient) Get(name string) (*m.VirtualHost, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *VirtualHostClient) Get(name string) (*m.VirtualHost, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *VirtualHostClient) Delete(res *m.VirtualHost) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *VirtualHostClient) Delete(res *m.VirtualHost) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *VirtualHostClient) Create(res *m.VirtualHost, opts ...v1.CreateOption) (*m.VirtualHost, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *VirtualHostClient) Create(res *m.VirtualHost, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *VirtualHostClient) Update(res *m.VirtualHost, opts ...v1.UpdateOption) (*m.VirtualHost, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

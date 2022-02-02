@@ -14,7 +14,7 @@ import (
 
 type AssetMergeFunc func(*m.Asset, *m.Asset) (*m.Asset, error)
 
-// Merge builds a merge option for an update operation
+// AssetMerge builds a merge option for an update operation
 func AssetMerge(f AssetMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Asset{}, &m.Asset{}
@@ -47,12 +47,12 @@ func AssetMerge(f AssetMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AssetClient -
+// AssetClient - rest client for Asset resources that have a defined resource scope
 type AssetClient struct {
 	client v1.Scoped
 }
 
-// NewAssetClient -
+// NewAssetClient - creates a client scoped to a particular resource
 func NewAssetClient(c v1.Base) (*AssetClient, error) {
 
 	client, err := c.ForKind(m.AssetGVK())
@@ -64,7 +64,7 @@ func NewAssetClient(c v1.Base) (*AssetClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *AssetClient) List(options ...v1.ListOptions) ([]*m.Asset, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *AssetClient) List(options ...v1.ListOptions) ([]*m.Asset, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AssetClient) Get(name string) (*m.Asset, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *AssetClient) Get(name string) (*m.Asset, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AssetClient) Delete(res *m.Asset) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *AssetClient) Delete(res *m.Asset) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AssetClient) Create(res *m.Asset, opts ...v1.CreateOption) (*m.Asset, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *AssetClient) Create(res *m.Asset, opts ...v1.CreateOption) (*m.Asset, e
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AssetClient) Update(res *m.Asset, opts ...v1.UpdateOption) (*m.Asset, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

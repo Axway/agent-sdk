@@ -14,7 +14,7 @@ import (
 
 type ResourceMergeFunc func(*m.Resource, *m.Resource) (*m.Resource, error)
 
-// Merge builds a merge option for an update operation
+// ResourceMerge builds a merge option for an update operation
 func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Resource{}, &m.Resource{}
@@ -47,17 +47,17 @@ func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ResourceClient -
+// ResourceClient - rest client for Resource resources that have a defined resource scope
 type ResourceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceClient -
+// UnscopedResourceClient - rest client for Resource resources that do not have a defined scope
 type UnscopedResourceClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceClient -
+// NewResourceClient - creates a client that is not scoped to any resource
 func NewResourceClient(c v1.Base) (*UnscopedResourceClient, error) {
 
 	client, err := c.ForKind(m.ResourceGVK())
@@ -69,14 +69,14 @@ func NewResourceClient(c v1.Base) (*UnscopedResourceClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceClient) WithScope(scope string) *ResourceClient {
 	return &ResourceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedResourceClient) Get(name string) (*m.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedResourceClient) Get(name string) (*m.Resource, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedResourceClient) Update(res *m.Resource, opts ...v1.UpdateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedResourceClient) Update(res *m.Resource, opts ...v1.UpdateOption
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ResourceClient) List(options ...v1.ListOptions) ([]*m.Resource, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ResourceClient) List(options ...v1.ListOptions) ([]*m.Resource, error) 
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ResourceClient) Get(name string) (*m.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ResourceClient) Get(name string) (*m.Resource, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ResourceClient) Delete(res *m.Resource) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ResourceClient) Delete(res *m.Resource) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ResourceClient) Create(res *m.Resource, opts ...v1.CreateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ResourceClient) Create(res *m.Resource, opts ...v1.CreateOption) (*m.Re
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ResourceClient) Update(res *m.Resource, opts ...v1.UpdateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

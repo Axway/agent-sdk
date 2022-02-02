@@ -35,12 +35,9 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	References interface{} `json:"references"`
-
-	Spec AssetRequestDefinitionSpec `json:"spec"`
+	Owner      *apiv1.Owner               `json:"owner"`
+	References interface{}                `json:"references"`
+	Spec       AssetRequestDefinitionSpec `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a AssetRequestDefinition
@@ -111,8 +108,9 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
@@ -121,7 +119,7 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias AssetRequestDefinition
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

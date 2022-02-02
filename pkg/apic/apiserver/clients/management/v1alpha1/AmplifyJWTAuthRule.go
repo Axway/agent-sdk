@@ -14,7 +14,7 @@ import (
 
 type AmplifyJWTAuthRuleMergeFunc func(*m.AmplifyJWTAuthRule, *m.AmplifyJWTAuthRule) (*m.AmplifyJWTAuthRule, error)
 
-// Merge builds a merge option for an update operation
+// AmplifyJWTAuthRuleMerge builds a merge option for an update operation
 func AmplifyJWTAuthRuleMerge(f AmplifyJWTAuthRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AmplifyJWTAuthRule{}, &m.AmplifyJWTAuthRule{}
@@ -47,17 +47,17 @@ func AmplifyJWTAuthRuleMerge(f AmplifyJWTAuthRuleMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AmplifyJWTAuthRuleClient -
+// AmplifyJWTAuthRuleClient - rest client for AmplifyJWTAuthRule resources that have a defined resource scope
 type AmplifyJWTAuthRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAmplifyJWTAuthRuleClient -
+// UnscopedAmplifyJWTAuthRuleClient - rest client for AmplifyJWTAuthRule resources that do not have a defined scope
 type UnscopedAmplifyJWTAuthRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewAmplifyJWTAuthRuleClient -
+// NewAmplifyJWTAuthRuleClient - creates a client that is not scoped to any resource
 func NewAmplifyJWTAuthRuleClient(c v1.Base) (*UnscopedAmplifyJWTAuthRuleClient, error) {
 
 	client, err := c.ForKind(m.AmplifyJWTAuthRuleGVK())
@@ -69,14 +69,14 @@ func NewAmplifyJWTAuthRuleClient(c v1.Base) (*UnscopedAmplifyJWTAuthRuleClient, 
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAmplifyJWTAuthRuleClient) WithScope(scope string) *AmplifyJWTAuthRuleClient {
 	return &AmplifyJWTAuthRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAmplifyJWTAuthRuleClient) Get(name string) (*m.AmplifyJWTAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAmplifyJWTAuthRuleClient) Get(name string) (*m.AmplifyJWTAuthRu
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAmplifyJWTAuthRuleClient) Update(res *m.AmplifyJWTAuthRule, opts ...v1.UpdateOption) (*m.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAmplifyJWTAuthRuleClient) Update(res *m.AmplifyJWTAuthRule, opt
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AmplifyJWTAuthRuleClient) List(options ...v1.ListOptions) ([]*m.AmplifyJWTAuthRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AmplifyJWTAuthRuleClient) List(options ...v1.ListOptions) ([]*m.Amplify
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AmplifyJWTAuthRuleClient) Get(name string) (*m.AmplifyJWTAuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AmplifyJWTAuthRuleClient) Get(name string) (*m.AmplifyJWTAuthRule, erro
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AmplifyJWTAuthRuleClient) Delete(res *m.AmplifyJWTAuthRule) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AmplifyJWTAuthRuleClient) Delete(res *m.AmplifyJWTAuthRule) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AmplifyJWTAuthRuleClient) Create(res *m.AmplifyJWTAuthRule, opts ...v1.CreateOption) (*m.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AmplifyJWTAuthRuleClient) Create(res *m.AmplifyJWTAuthRule, opts ...v1.
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AmplifyJWTAuthRuleClient) Update(res *m.AmplifyJWTAuthRule, opts ...v1.UpdateOption) (*m.AmplifyJWTAuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

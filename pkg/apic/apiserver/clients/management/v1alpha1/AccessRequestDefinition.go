@@ -14,7 +14,7 @@ import (
 
 type AccessRequestDefinitionMergeFunc func(*m.AccessRequestDefinition, *m.AccessRequestDefinition) (*m.AccessRequestDefinition, error)
 
-// Merge builds a merge option for an update operation
+// AccessRequestDefinitionMerge builds a merge option for an update operation
 func AccessRequestDefinitionMerge(f AccessRequestDefinitionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AccessRequestDefinition{}, &m.AccessRequestDefinition{}
@@ -47,17 +47,17 @@ func AccessRequestDefinitionMerge(f AccessRequestDefinitionMergeFunc) v1.UpdateO
 	})
 }
 
-// AccessRequestDefinitionClient -
+// AccessRequestDefinitionClient - rest client for AccessRequestDefinition resources that have a defined resource scope
 type AccessRequestDefinitionClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAccessRequestDefinitionClient -
+// UnscopedAccessRequestDefinitionClient - rest client for AccessRequestDefinition resources that do not have a defined scope
 type UnscopedAccessRequestDefinitionClient struct {
 	client v1.Unscoped
 }
 
-// NewAccessRequestDefinitionClient -
+// NewAccessRequestDefinitionClient - creates a client that is not scoped to any resource
 func NewAccessRequestDefinitionClient(c v1.Base) (*UnscopedAccessRequestDefinitionClient, error) {
 
 	client, err := c.ForKind(m.AccessRequestDefinitionGVK())
@@ -69,14 +69,14 @@ func NewAccessRequestDefinitionClient(c v1.Base) (*UnscopedAccessRequestDefiniti
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAccessRequestDefinitionClient) WithScope(scope string) *AccessRequestDefinitionClient {
 	return &AccessRequestDefinitionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAccessRequestDefinitionClient) Get(name string) (*m.AccessRequestDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAccessRequestDefinitionClient) Get(name string) (*m.AccessReque
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAccessRequestDefinitionClient) Update(res *m.AccessRequestDefinition, opts ...v1.UpdateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAccessRequestDefinitionClient) Update(res *m.AccessRequestDefin
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AccessRequestDefinitionClient) List(options ...v1.ListOptions) ([]*m.AccessRequestDefinition, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AccessRequestDefinitionClient) List(options ...v1.ListOptions) ([]*m.Ac
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AccessRequestDefinitionClient) Get(name string) (*m.AccessRequestDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AccessRequestDefinitionClient) Get(name string) (*m.AccessRequestDefini
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AccessRequestDefinitionClient) Delete(res *m.AccessRequestDefinition) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AccessRequestDefinitionClient) Delete(res *m.AccessRequestDefinition) e
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AccessRequestDefinitionClient) Create(res *m.AccessRequestDefinition, opts ...v1.CreateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AccessRequestDefinitionClient) Create(res *m.AccessRequestDefinition, o
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AccessRequestDefinitionClient) Update(res *m.AccessRequestDefinition, opts ...v1.UpdateOption) (*m.AccessRequestDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

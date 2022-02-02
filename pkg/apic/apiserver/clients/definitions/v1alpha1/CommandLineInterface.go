@@ -14,7 +14,7 @@ import (
 
 type CommandLineInterfaceMergeFunc func(*m.CommandLineInterface, *m.CommandLineInterface) (*m.CommandLineInterface, error)
 
-// Merge builds a merge option for an update operation
+// CommandLineInterfaceMerge builds a merge option for an update operation
 func CommandLineInterfaceMerge(f CommandLineInterfaceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.CommandLineInterface{}, &m.CommandLineInterface{}
@@ -47,17 +47,17 @@ func CommandLineInterfaceMerge(f CommandLineInterfaceMergeFunc) v1.UpdateOption 
 	})
 }
 
-// CommandLineInterfaceClient -
+// CommandLineInterfaceClient - rest client for CommandLineInterface resources that have a defined resource scope
 type CommandLineInterfaceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedCommandLineInterfaceClient -
+// UnscopedCommandLineInterfaceClient - rest client for CommandLineInterface resources that do not have a defined scope
 type UnscopedCommandLineInterfaceClient struct {
 	client v1.Unscoped
 }
 
-// NewCommandLineInterfaceClient -
+// NewCommandLineInterfaceClient - creates a client that is not scoped to any resource
 func NewCommandLineInterfaceClient(c v1.Base) (*UnscopedCommandLineInterfaceClient, error) {
 
 	client, err := c.ForKind(m.CommandLineInterfaceGVK())
@@ -69,14 +69,14 @@ func NewCommandLineInterfaceClient(c v1.Base) (*UnscopedCommandLineInterfaceClie
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedCommandLineInterfaceClient) WithScope(scope string) *CommandLineInterfaceClient {
 	return &CommandLineInterfaceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*m.CommandLineInterface, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedCommandLineInterfaceClient) Get(name string) (*m.CommandLineInt
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedCommandLineInterfaceClient) Update(res *m.CommandLineInterface, opts ...v1.UpdateOption) (*m.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedCommandLineInterfaceClient) Update(res *m.CommandLineInterface,
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*m.CommandLineInterface, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *CommandLineInterfaceClient) List(options ...v1.ListOptions) ([]*m.Comma
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *CommandLineInterfaceClient) Get(name string) (*m.CommandLineInterface, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *CommandLineInterfaceClient) Get(name string) (*m.CommandLineInterface, 
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *CommandLineInterfaceClient) Delete(res *m.CommandLineInterface) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *CommandLineInterfaceClient) Delete(res *m.CommandLineInterface) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *CommandLineInterfaceClient) Create(res *m.CommandLineInterface, opts ...v1.CreateOption) (*m.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *CommandLineInterfaceClient) Create(res *m.CommandLineInterface, opts ..
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *CommandLineInterfaceClient) Update(res *m.CommandLineInterface, opts ...v1.UpdateOption) (*m.CommandLineInterface, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

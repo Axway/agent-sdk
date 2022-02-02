@@ -14,7 +14,7 @@ import (
 
 type AssetReleaseMergeFunc func(*m.AssetRelease, *m.AssetRelease) (*m.AssetRelease, error)
 
-// Merge builds a merge option for an update operation
+// AssetReleaseMerge builds a merge option for an update operation
 func AssetReleaseMerge(f AssetReleaseMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AssetRelease{}, &m.AssetRelease{}
@@ -47,12 +47,12 @@ func AssetReleaseMerge(f AssetReleaseMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AssetReleaseClient -
+// AssetReleaseClient - rest client for AssetRelease resources that have a defined resource scope
 type AssetReleaseClient struct {
 	client v1.Scoped
 }
 
-// NewAssetReleaseClient -
+// NewAssetReleaseClient - creates a client scoped to a particular resource
 func NewAssetReleaseClient(c v1.Base) (*AssetReleaseClient, error) {
 
 	client, err := c.ForKind(m.AssetReleaseGVK())
@@ -64,7 +64,7 @@ func NewAssetReleaseClient(c v1.Base) (*AssetReleaseClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *AssetReleaseClient) List(options ...v1.ListOptions) ([]*m.AssetRelease, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *AssetReleaseClient) List(options ...v1.ListOptions) ([]*m.AssetRelease,
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AssetReleaseClient) Get(name string) (*m.AssetRelease, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *AssetReleaseClient) Get(name string) (*m.AssetRelease, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AssetReleaseClient) Delete(res *m.AssetRelease) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *AssetReleaseClient) Delete(res *m.AssetRelease) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AssetReleaseClient) Create(res *m.AssetRelease, opts ...v1.CreateOption) (*m.AssetRelease, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *AssetReleaseClient) Create(res *m.AssetRelease, opts ...v1.CreateOption
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AssetReleaseClient) Update(res *m.AssetRelease, opts ...v1.UpdateOption) (*m.AssetRelease, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

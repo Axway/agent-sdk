@@ -14,7 +14,7 @@ import (
 
 type VirtualAPIMergeFunc func(*m.VirtualAPI, *m.VirtualAPI) (*m.VirtualAPI, error)
 
-// Merge builds a merge option for an update operation
+// VirtualAPIMerge builds a merge option for an update operation
 func VirtualAPIMerge(f VirtualAPIMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.VirtualAPI{}, &m.VirtualAPI{}
@@ -47,12 +47,12 @@ func VirtualAPIMerge(f VirtualAPIMergeFunc) v1.UpdateOption {
 	})
 }
 
-// VirtualAPIClient -
+// VirtualAPIClient - rest client for VirtualAPI resources that have a defined resource scope
 type VirtualAPIClient struct {
 	client v1.Scoped
 }
 
-// NewVirtualAPIClient -
+// NewVirtualAPIClient - creates a client scoped to a particular resource
 func NewVirtualAPIClient(c v1.Base) (*VirtualAPIClient, error) {
 
 	client, err := c.ForKind(m.VirtualAPIGVK())
@@ -64,7 +64,7 @@ func NewVirtualAPIClient(c v1.Base) (*VirtualAPIClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *VirtualAPIClient) List(options ...v1.ListOptions) ([]*m.VirtualAPI, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *VirtualAPIClient) List(options ...v1.ListOptions) ([]*m.VirtualAPI, err
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *VirtualAPIClient) Get(name string) (*m.VirtualAPI, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *VirtualAPIClient) Get(name string) (*m.VirtualAPI, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *VirtualAPIClient) Delete(res *m.VirtualAPI) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *VirtualAPIClient) Delete(res *m.VirtualAPI) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *VirtualAPIClient) Create(res *m.VirtualAPI, opts ...v1.CreateOption) (*m.VirtualAPI, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *VirtualAPIClient) Create(res *m.VirtualAPI, opts ...v1.CreateOption) (*
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *VirtualAPIClient) Update(res *m.VirtualAPI, opts ...v1.UpdateOption) (*m.VirtualAPI, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -35,12 +35,9 @@ func init() {
 // PublishedProduct Resource
 type PublishedProduct struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
+	Owner      *apiv1.Owner               `json:"owner"`
 	References PublishedProductReferences `json:"references"`
-
-	Spec PublishedProductSpec `json:"spec"`
+	Spec       PublishedProductSpec       `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a PublishedProduct
@@ -111,8 +108,9 @@ func (res *PublishedProduct) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
@@ -121,7 +119,7 @@ func (res *PublishedProduct) MarshalJSON() ([]byte, error) {
 func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias PublishedProduct
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

@@ -14,7 +14,7 @@ import (
 
 type AssetMappingMergeFunc func(*m.AssetMapping, *m.AssetMapping) (*m.AssetMapping, error)
 
-// Merge builds a merge option for an update operation
+// AssetMappingMerge builds a merge option for an update operation
 func AssetMappingMerge(f AssetMappingMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AssetMapping{}, &m.AssetMapping{}
@@ -47,17 +47,17 @@ func AssetMappingMerge(f AssetMappingMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AssetMappingClient -
+// AssetMappingClient - rest client for AssetMapping resources that have a defined resource scope
 type AssetMappingClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAssetMappingClient -
+// UnscopedAssetMappingClient - rest client for AssetMapping resources that do not have a defined scope
 type UnscopedAssetMappingClient struct {
 	client v1.Unscoped
 }
 
-// NewAssetMappingClient -
+// NewAssetMappingClient - creates a client that is not scoped to any resource
 func NewAssetMappingClient(c v1.Base) (*UnscopedAssetMappingClient, error) {
 
 	client, err := c.ForKind(m.AssetMappingGVK())
@@ -69,14 +69,14 @@ func NewAssetMappingClient(c v1.Base) (*UnscopedAssetMappingClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAssetMappingClient) WithScope(scope string) *AssetMappingClient {
 	return &AssetMappingClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAssetMappingClient) Update(res *m.AssetMapping, opts ...v1.UpdateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAssetMappingClient) Update(res *m.AssetMapping, opts ...v1.Upda
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AssetMappingClient) List(options ...v1.ListOptions) ([]*m.AssetMapping, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AssetMappingClient) List(options ...v1.ListOptions) ([]*m.AssetMapping,
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AssetMappingClient) Get(name string) (*m.AssetMapping, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AssetMappingClient) Delete(res *m.AssetMapping) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AssetMappingClient) Delete(res *m.AssetMapping) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AssetMappingClient) Create(res *m.AssetMapping, opts ...v1.CreateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AssetMappingClient) Create(res *m.AssetMapping, opts ...v1.CreateOption
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AssetMappingClient) Update(res *m.AssetMapping, opts ...v1.UpdateOption) (*m.AssetMapping, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type IntegrationMergeFunc func(*m.Integration, *m.Integration) (*m.Integration, error)
 
-// Merge builds a merge option for an update operation
+// IntegrationMerge builds a merge option for an update operation
 func IntegrationMerge(f IntegrationMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Integration{}, &m.Integration{}
@@ -47,12 +47,12 @@ func IntegrationMerge(f IntegrationMergeFunc) v1.UpdateOption {
 	})
 }
 
-// IntegrationClient -
+// IntegrationClient - rest client for Integration resources that have a defined resource scope
 type IntegrationClient struct {
 	client v1.Scoped
 }
 
-// NewIntegrationClient -
+// NewIntegrationClient - creates a client scoped to a particular resource
 func NewIntegrationClient(c v1.Base) (*IntegrationClient, error) {
 
 	client, err := c.ForKind(m.IntegrationGVK())
@@ -64,7 +64,7 @@ func NewIntegrationClient(c v1.Base) (*IntegrationClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*m.Integration, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *IntegrationClient) List(options ...v1.ListOptions) ([]*m.Integration, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *IntegrationClient) Get(name string) (*m.Integration, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *IntegrationClient) Get(name string) (*m.Integration, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *IntegrationClient) Delete(res *m.Integration) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *IntegrationClient) Delete(res *m.Integration) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *IntegrationClient) Create(res *m.Integration, opts ...v1.CreateOption) (*m.Integration, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *IntegrationClient) Create(res *m.Integration, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *IntegrationClient) Update(res *m.Integration, opts ...v1.UpdateOption) (*m.Integration, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

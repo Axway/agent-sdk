@@ -14,7 +14,7 @@ import (
 
 type EnvironmentMergeFunc func(*m.Environment, *m.Environment) (*m.Environment, error)
 
-// Merge builds a merge option for an update operation
+// EnvironmentMerge builds a merge option for an update operation
 func EnvironmentMerge(f EnvironmentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Environment{}, &m.Environment{}
@@ -47,12 +47,12 @@ func EnvironmentMerge(f EnvironmentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// EnvironmentClient -
+// EnvironmentClient - rest client for Environment resources that have a defined resource scope
 type EnvironmentClient struct {
 	client v1.Scoped
 }
 
-// NewEnvironmentClient -
+// NewEnvironmentClient - creates a client scoped to a particular resource
 func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
 
 	client, err := c.ForKind(m.EnvironmentGVK())
@@ -64,7 +64,7 @@ func NewEnvironmentClient(c v1.Base) (*EnvironmentClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*m.Environment, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *EnvironmentClient) List(options ...v1.ListOptions) ([]*m.Environment, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *EnvironmentClient) Get(name string) (*m.Environment, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *EnvironmentClient) Get(name string) (*m.Environment, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *EnvironmentClient) Delete(res *m.Environment) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *EnvironmentClient) Delete(res *m.Environment) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *EnvironmentClient) Create(res *m.Environment, opts ...v1.CreateOption) (*m.Environment, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *EnvironmentClient) Create(res *m.Environment, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *EnvironmentClient) Update(res *m.Environment, opts ...v1.UpdateOption) (*m.Environment, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

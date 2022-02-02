@@ -14,7 +14,7 @@ import (
 
 type WatchTopicMergeFunc func(*m.WatchTopic, *m.WatchTopic) (*m.WatchTopic, error)
 
-// Merge builds a merge option for an update operation
+// WatchTopicMerge builds a merge option for an update operation
 func WatchTopicMerge(f WatchTopicMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.WatchTopic{}, &m.WatchTopic{}
@@ -47,12 +47,12 @@ func WatchTopicMerge(f WatchTopicMergeFunc) v1.UpdateOption {
 	})
 }
 
-// WatchTopicClient -
+// WatchTopicClient - rest client for WatchTopic resources that have a defined resource scope
 type WatchTopicClient struct {
 	client v1.Scoped
 }
 
-// NewWatchTopicClient -
+// NewWatchTopicClient - creates a client scoped to a particular resource
 func NewWatchTopicClient(c v1.Base) (*WatchTopicClient, error) {
 
 	client, err := c.ForKind(m.WatchTopicGVK())
@@ -64,7 +64,7 @@ func NewWatchTopicClient(c v1.Base) (*WatchTopicClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*m.WatchTopic, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *WatchTopicClient) List(options ...v1.ListOptions) ([]*m.WatchTopic, err
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *WatchTopicClient) Get(name string) (*m.WatchTopic, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *WatchTopicClient) Get(name string) (*m.WatchTopic, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *WatchTopicClient) Delete(res *m.WatchTopic) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *WatchTopicClient) Delete(res *m.WatchTopic) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *WatchTopicClient) Create(res *m.WatchTopic, opts ...v1.CreateOption) (*m.WatchTopic, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *WatchTopicClient) Create(res *m.WatchTopic, opts ...v1.CreateOption) (*
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *WatchTopicClient) Update(res *m.WatchTopic, opts ...v1.UpdateOption) (*m.WatchTopic, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

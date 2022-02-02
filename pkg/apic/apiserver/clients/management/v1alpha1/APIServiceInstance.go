@@ -14,7 +14,7 @@ import (
 
 type APIServiceInstanceMergeFunc func(*m.APIServiceInstance, *m.APIServiceInstance) (*m.APIServiceInstance, error)
 
-// Merge builds a merge option for an update operation
+// APIServiceInstanceMerge builds a merge option for an update operation
 func APIServiceInstanceMerge(f APIServiceInstanceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.APIServiceInstance{}, &m.APIServiceInstance{}
@@ -47,17 +47,17 @@ func APIServiceInstanceMerge(f APIServiceInstanceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// APIServiceInstanceClient -
+// APIServiceInstanceClient - rest client for APIServiceInstance resources that have a defined resource scope
 type APIServiceInstanceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAPIServiceInstanceClient -
+// UnscopedAPIServiceInstanceClient - rest client for APIServiceInstance resources that do not have a defined scope
 type UnscopedAPIServiceInstanceClient struct {
 	client v1.Unscoped
 }
 
-// NewAPIServiceInstanceClient -
+// NewAPIServiceInstanceClient - creates a client that is not scoped to any resource
 func NewAPIServiceInstanceClient(c v1.Base) (*UnscopedAPIServiceInstanceClient, error) {
 
 	client, err := c.ForKind(m.APIServiceInstanceGVK())
@@ -69,14 +69,14 @@ func NewAPIServiceInstanceClient(c v1.Base) (*UnscopedAPIServiceInstanceClient, 
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAPIServiceInstanceClient) WithScope(scope string) *APIServiceInstanceClient {
 	return &APIServiceInstanceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAPIServiceInstanceClient) Get(name string) (*m.APIServiceInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAPIServiceInstanceClient) Get(name string) (*m.APIServiceInstan
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAPIServiceInstanceClient) Update(res *m.APIServiceInstance, opts ...v1.UpdateOption) (*m.APIServiceInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAPIServiceInstanceClient) Update(res *m.APIServiceInstance, opt
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *APIServiceInstanceClient) List(options ...v1.ListOptions) ([]*m.APIServiceInstance, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *APIServiceInstanceClient) List(options ...v1.ListOptions) ([]*m.APIServ
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *APIServiceInstanceClient) Get(name string) (*m.APIServiceInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *APIServiceInstanceClient) Get(name string) (*m.APIServiceInstance, erro
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *APIServiceInstanceClient) Delete(res *m.APIServiceInstance) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *APIServiceInstanceClient) Delete(res *m.APIServiceInstance) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *APIServiceInstanceClient) Create(res *m.APIServiceInstance, opts ...v1.CreateOption) (*m.APIServiceInstance, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *APIServiceInstanceClient) Create(res *m.APIServiceInstance, opts ...v1.
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *APIServiceInstanceClient) Update(res *m.APIServiceInstance, opts ...v1.UpdateOption) (*m.APIServiceInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

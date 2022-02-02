@@ -83,6 +83,41 @@ func TestAPIServiceMarshal(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+// should unmarshal when owner is not set
+func TestAPIServiceMarshalNoOwner(t *testing.T) {
+	svc1 := &m.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+				APIVersion: "v1",
+			},
+			Name:  "name",
+			Title: "title",
+			Metadata: apiv1.Metadata{
+				ID: "123",
+			},
+		},
+		Spec: m.ApiServiceSpec{
+			Description: "desc",
+			Categories:  []string{"cat1", "cat2"},
+		},
+	}
+
+	bts, err := json.Marshal(svc1)
+	assert.Nil(t, err)
+	assert.NotNil(t, bts)
+
+	svc2 := &m.APIService{}
+
+	err = json.Unmarshal(bts, svc2)
+	assert.Nil(t, err)
+
+	// override the audit metadata to easily assert the two structs are equal
+	svc1.Metadata.Audit = apiv1.AuditMetadata{}
+	svc2.Metadata.Audit = apiv1.AuditMetadata{}
+	assert.Equal(t, svc1, svc2)
+}
+
 // should convert an APIService to a ResourceInstance
 func TestAPIServiceAsInstance(t *testing.T) {
 	svc := &m.APIService{
@@ -150,4 +185,39 @@ func TestAPIServiceAsInstance(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, json.RawMessage(svcBytes), ri.GetRawResource())
+}
+
+func TestDiscoveryAgentResource(t *testing.T) {
+	t.Skip()
+	disc1 := &m.DiscoveryAgent{
+		ResourceMeta: apiv1.ResourceMeta{},
+		Owner:        nil,
+		Spec: m.DiscoveryAgentSpec{
+			DataplaneType: "abc",
+			Config: m.DiscoveryAgentSpecConfig{
+				Filter:     "123",
+				OwningTeam: "aa",
+			},
+		},
+		Status: m.DiscoveryAgentStatus{
+			Version:                "1",
+			LatestAvailableVersion: "1",
+			State:                  "running",
+			PreviousState:          "failed",
+		},
+	}
+
+	bts, err := json.Marshal(disc1)
+	assert.Nil(t, err)
+	assert.NotNil(t, bts)
+
+	disc2 := &m.DiscoveryAgent{}
+
+	err = json.Unmarshal(bts, disc2)
+	assert.Nil(t, err)
+
+	// override the audit metadata to easily assert the two structs are equal
+	disc1.Metadata.Audit = apiv1.AuditMetadata{}
+	disc2.Metadata.Audit = apiv1.AuditMetadata{}
+	assert.Equal(t, disc1, disc2)
 }

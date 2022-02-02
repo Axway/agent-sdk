@@ -35,16 +35,11 @@ func init() {
 // AssetRelease Resource
 type AssetRelease struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
+	Icon       interface{}            `json:"icon"`
+	Owner      *apiv1.Owner           `json:"owner"`
 	References AssetReleaseReferences `json:"references"`
-
-	Spec AssetReleaseSpec `json:"spec"`
-
-	Status AssetReleaseStatus `json:"status"`
+	Spec       AssetReleaseSpec       `json:"spec"`
+	Status     AssetReleaseStatus     `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a AssetRelease
@@ -115,8 +110,11 @@ func (res *AssetRelease) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -125,7 +123,7 @@ func (res *AssetRelease) MarshalJSON() ([]byte, error) {
 func (res *AssetRelease) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias AssetRelease
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

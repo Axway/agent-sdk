@@ -35,12 +35,9 @@ func init() {
 // Stage Resource
 type Stage struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
+	Icon  interface{}  `json:"icon"`
 	Owner *apiv1.Owner `json:"owner"`
-
-	Spec StageSpec `json:"spec"`
+	Spec  StageSpec    `json:"spec"`
 }
 
 // FromInstance converts a ResourceInstance to a Stage
@@ -111,8 +108,9 @@ func (res *Stage) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
@@ -121,7 +119,7 @@ func (res *Stage) MarshalJSON() ([]byte, error) {
 func (res *Stage) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias Stage
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

@@ -14,7 +14,7 @@ import (
 
 type VirtualAPIReleaseMergeFunc func(*m.VirtualAPIRelease, *m.VirtualAPIRelease) (*m.VirtualAPIRelease, error)
 
-// Merge builds a merge option for an update operation
+// VirtualAPIReleaseMerge builds a merge option for an update operation
 func VirtualAPIReleaseMerge(f VirtualAPIReleaseMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.VirtualAPIRelease{}, &m.VirtualAPIRelease{}
@@ -47,12 +47,12 @@ func VirtualAPIReleaseMerge(f VirtualAPIReleaseMergeFunc) v1.UpdateOption {
 	})
 }
 
-// VirtualAPIReleaseClient -
+// VirtualAPIReleaseClient - rest client for VirtualAPIRelease resources that have a defined resource scope
 type VirtualAPIReleaseClient struct {
 	client v1.Scoped
 }
 
-// NewVirtualAPIReleaseClient -
+// NewVirtualAPIReleaseClient - creates a client scoped to a particular resource
 func NewVirtualAPIReleaseClient(c v1.Base) (*VirtualAPIReleaseClient, error) {
 
 	client, err := c.ForKind(m.VirtualAPIReleaseGVK())
@@ -64,7 +64,7 @@ func NewVirtualAPIReleaseClient(c v1.Base) (*VirtualAPIReleaseClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *VirtualAPIReleaseClient) List(options ...v1.ListOptions) ([]*m.VirtualAPIRelease, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *VirtualAPIReleaseClient) List(options ...v1.ListOptions) ([]*m.VirtualA
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *VirtualAPIReleaseClient) Get(name string) (*m.VirtualAPIRelease, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *VirtualAPIReleaseClient) Get(name string) (*m.VirtualAPIRelease, error)
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *VirtualAPIReleaseClient) Delete(res *m.VirtualAPIRelease) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *VirtualAPIReleaseClient) Delete(res *m.VirtualAPIRelease) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *VirtualAPIReleaseClient) Create(res *m.VirtualAPIRelease, opts ...v1.CreateOption) (*m.VirtualAPIRelease, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *VirtualAPIReleaseClient) Create(res *m.VirtualAPIRelease, opts ...v1.Cr
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *VirtualAPIReleaseClient) Update(res *m.VirtualAPIRelease, opts ...v1.UpdateOption) (*m.VirtualAPIRelease, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

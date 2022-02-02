@@ -35,13 +35,9 @@ func init() {
 // ReleaseTag Resource
 type ReleaseTag struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec ReleaseTagSpec `json:"spec"`
-
-	State interface{} `json:"state"`
-
+	Owner  *apiv1.Owner     `json:"owner"`
+	Spec   ReleaseTagSpec   `json:"spec"`
+	State  interface{}      `json:"state"`
 	Status ReleaseTagStatus `json:"status"`
 }
 
@@ -113,8 +109,10 @@ func (res *ReleaseTag) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
+	out["state"] = res.State
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -123,7 +121,7 @@ func (res *ReleaseTag) MarshalJSON() ([]byte, error) {
 func (res *ReleaseTag) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias ReleaseTag
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

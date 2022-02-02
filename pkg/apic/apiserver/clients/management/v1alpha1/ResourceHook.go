@@ -14,7 +14,7 @@ import (
 
 type ResourceHookMergeFunc func(*m.ResourceHook, *m.ResourceHook) (*m.ResourceHook, error)
 
-// Merge builds a merge option for an update operation
+// ResourceHookMerge builds a merge option for an update operation
 func ResourceHookMerge(f ResourceHookMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ResourceHook{}, &m.ResourceHook{}
@@ -47,17 +47,17 @@ func ResourceHookMerge(f ResourceHookMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ResourceHookClient -
+// ResourceHookClient - rest client for ResourceHook resources that have a defined resource scope
 type ResourceHookClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceHookClient -
+// UnscopedResourceHookClient - rest client for ResourceHook resources that do not have a defined scope
 type UnscopedResourceHookClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceHookClient -
+// NewResourceHookClient - creates a client that is not scoped to any resource
 func NewResourceHookClient(c v1.Base) (*UnscopedResourceHookClient, error) {
 
 	client, err := c.ForKind(m.ResourceHookGVK())
@@ -69,14 +69,14 @@ func NewResourceHookClient(c v1.Base) (*UnscopedResourceHookClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceHookClient) WithScope(scope string) *ResourceHookClient {
 	return &ResourceHookClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedResourceHookClient) Update(res *m.ResourceHook, opts ...v1.UpdateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedResourceHookClient) Update(res *m.ResourceHook, opts ...v1.Upda
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ResourceHookClient) List(options ...v1.ListOptions) ([]*m.ResourceHook, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ResourceHookClient) List(options ...v1.ListOptions) ([]*m.ResourceHook,
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ResourceHookClient) Get(name string) (*m.ResourceHook, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ResourceHookClient) Delete(res *m.ResourceHook) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ResourceHookClient) Delete(res *m.ResourceHook) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ResourceHookClient) Create(res *m.ResourceHook, opts ...v1.CreateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ResourceHookClient) Create(res *m.ResourceHook, opts ...v1.CreateOption
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ResourceHookClient) Update(res *m.ResourceHook, opts ...v1.UpdateOption) (*m.ResourceHook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

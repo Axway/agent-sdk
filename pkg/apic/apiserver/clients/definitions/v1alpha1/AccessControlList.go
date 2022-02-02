@@ -14,7 +14,7 @@ import (
 
 type AccessControlListMergeFunc func(*m.AccessControlList, *m.AccessControlList) (*m.AccessControlList, error)
 
-// Merge builds a merge option for an update operation
+// AccessControlListMerge builds a merge option for an update operation
 func AccessControlListMerge(f AccessControlListMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AccessControlList{}, &m.AccessControlList{}
@@ -47,17 +47,17 @@ func AccessControlListMerge(f AccessControlListMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AccessControlListClient -
+// AccessControlListClient - rest client for AccessControlList resources that have a defined resource scope
 type AccessControlListClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAccessControlListClient -
+// UnscopedAccessControlListClient - rest client for AccessControlList resources that do not have a defined scope
 type UnscopedAccessControlListClient struct {
 	client v1.Unscoped
 }
 
-// NewAccessControlListClient -
+// NewAccessControlListClient - creates a client that is not scoped to any resource
 func NewAccessControlListClient(c v1.Base) (*UnscopedAccessControlListClient, error) {
 
 	client, err := c.ForKind(m.AccessControlListGVK())
@@ -69,14 +69,14 @@ func NewAccessControlListClient(c v1.Base) (*UnscopedAccessControlListClient, er
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAccessControlListClient) WithScope(scope string) *AccessControlListClient {
 	return &AccessControlListClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAccessControlListClient) Get(name string) (*m.AccessControlList, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAccessControlListClient) Get(name string) (*m.AccessControlList
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAccessControlListClient) Update(res *m.AccessControlList, opts ...v1.UpdateOption) (*m.AccessControlList, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAccessControlListClient) Update(res *m.AccessControlList, opts 
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AccessControlListClient) List(options ...v1.ListOptions) ([]*m.AccessControlList, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AccessControlListClient) List(options ...v1.ListOptions) ([]*m.AccessCo
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AccessControlListClient) Get(name string) (*m.AccessControlList, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AccessControlListClient) Get(name string) (*m.AccessControlList, error)
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AccessControlListClient) Delete(res *m.AccessControlList) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AccessControlListClient) Delete(res *m.AccessControlList) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AccessControlListClient) Create(res *m.AccessControlList, opts ...v1.CreateOption) (*m.AccessControlList, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AccessControlListClient) Create(res *m.AccessControlList, opts ...v1.Cr
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AccessControlListClient) Update(res *m.AccessControlList, opts ...v1.UpdateOption) (*m.AccessControlList, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -35,14 +35,10 @@ func init() {
 // GovernanceAgent Resource
 type GovernanceAgent struct {
 	apiv1.ResourceMeta
-
 	Agentconfigstatus GovernanceAgentAgentconfigstatus `json:"agentconfigstatus"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec GovernanceAgentSpec `json:"spec"`
-
-	Status GovernanceAgentStatus `json:"status"`
+	Owner             *apiv1.Owner                     `json:"owner"`
+	Spec              GovernanceAgentSpec              `json:"spec"`
+	Status            GovernanceAgentStatus            `json:"status"`
 }
 
 // FromInstance converts a ResourceInstance to a GovernanceAgent
@@ -113,8 +109,9 @@ func (res *GovernanceAgent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["agentconfigstatus"] = res.Agentconfigstatus
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
 	out["status"] = res.Status
 
 	return json.Marshal(out)
@@ -124,7 +121,7 @@ func (res *GovernanceAgent) MarshalJSON() ([]byte, error) {
 func (res *GovernanceAgent) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias GovernanceAgent
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

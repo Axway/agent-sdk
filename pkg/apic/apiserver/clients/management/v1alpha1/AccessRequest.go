@@ -14,7 +14,7 @@ import (
 
 type AccessRequestMergeFunc func(*m.AccessRequest, *m.AccessRequest) (*m.AccessRequest, error)
 
-// Merge builds a merge option for an update operation
+// AccessRequestMerge builds a merge option for an update operation
 func AccessRequestMerge(f AccessRequestMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AccessRequest{}, &m.AccessRequest{}
@@ -47,17 +47,17 @@ func AccessRequestMerge(f AccessRequestMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AccessRequestClient -
+// AccessRequestClient - rest client for AccessRequest resources that have a defined resource scope
 type AccessRequestClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAccessRequestClient -
+// UnscopedAccessRequestClient - rest client for AccessRequest resources that do not have a defined scope
 type UnscopedAccessRequestClient struct {
 	client v1.Unscoped
 }
 
-// NewAccessRequestClient -
+// NewAccessRequestClient - creates a client that is not scoped to any resource
 func NewAccessRequestClient(c v1.Base) (*UnscopedAccessRequestClient, error) {
 
 	client, err := c.ForKind(m.AccessRequestGVK())
@@ -69,14 +69,14 @@ func NewAccessRequestClient(c v1.Base) (*UnscopedAccessRequestClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAccessRequestClient) WithScope(scope string) *AccessRequestClient {
 	return &AccessRequestClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAccessRequestClient) Get(name string) (*m.AccessRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAccessRequestClient) Get(name string) (*m.AccessRequest, error)
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAccessRequestClient) Update(res *m.AccessRequest, opts ...v1.UpdateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAccessRequestClient) Update(res *m.AccessRequest, opts ...v1.Up
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AccessRequestClient) List(options ...v1.ListOptions) ([]*m.AccessRequest, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AccessRequestClient) List(options ...v1.ListOptions) ([]*m.AccessReques
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AccessRequestClient) Get(name string) (*m.AccessRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AccessRequestClient) Get(name string) (*m.AccessRequest, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AccessRequestClient) Delete(res *m.AccessRequest) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AccessRequestClient) Delete(res *m.AccessRequest) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AccessRequestClient) Create(res *m.AccessRequest, opts ...v1.CreateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AccessRequestClient) Create(res *m.AccessRequest, opts ...v1.CreateOpti
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AccessRequestClient) Update(res *m.AccessRequest, opts ...v1.UpdateOption) (*m.AccessRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -35,13 +35,9 @@ func init() {
 // ProductRelease Resource
 type ProductRelease struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec ProductReleaseSpec `json:"spec"`
-
+	Icon   interface{}          `json:"icon"`
+	Owner  *apiv1.Owner         `json:"owner"`
+	Spec   ProductReleaseSpec   `json:"spec"`
 	Status ProductReleaseStatus `json:"status"`
 }
 
@@ -113,8 +109,10 @@ func (res *ProductRelease) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
+	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -123,7 +121,7 @@ func (res *ProductRelease) MarshalJSON() ([]byte, error) {
 func (res *ProductRelease) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias ProductRelease
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

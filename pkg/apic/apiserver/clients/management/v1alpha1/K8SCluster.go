@@ -14,7 +14,7 @@ import (
 
 type K8SClusterMergeFunc func(*m.K8SCluster, *m.K8SCluster) (*m.K8SCluster, error)
 
-// Merge builds a merge option for an update operation
+// K8SClusterMerge builds a merge option for an update operation
 func K8SClusterMerge(f K8SClusterMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.K8SCluster{}, &m.K8SCluster{}
@@ -47,12 +47,12 @@ func K8SClusterMerge(f K8SClusterMergeFunc) v1.UpdateOption {
 	})
 }
 
-// K8SClusterClient -
+// K8SClusterClient - rest client for K8SCluster resources that have a defined resource scope
 type K8SClusterClient struct {
 	client v1.Scoped
 }
 
-// NewK8SClusterClient -
+// NewK8SClusterClient - creates a client scoped to a particular resource
 func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
 
 	client, err := c.ForKind(m.K8SClusterGVK())
@@ -64,7 +64,7 @@ func NewK8SClusterClient(c v1.Base) (*K8SClusterClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*m.K8SCluster, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *K8SClusterClient) List(options ...v1.ListOptions) ([]*m.K8SCluster, err
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *K8SClusterClient) Get(name string) (*m.K8SCluster, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *K8SClusterClient) Get(name string) (*m.K8SCluster, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *K8SClusterClient) Delete(res *m.K8SCluster) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *K8SClusterClient) Delete(res *m.K8SCluster) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *K8SClusterClient) Create(res *m.K8SCluster, opts ...v1.CreateOption) (*m.K8SCluster, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *K8SClusterClient) Create(res *m.K8SCluster, opts ...v1.CreateOption) (*
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *K8SClusterClient) Update(res *m.K8SCluster, opts ...v1.UpdateOption) (*m.K8SCluster, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type ConsumerSubscriptionDefinitionMergeFunc func(*m.ConsumerSubscriptionDefinition, *m.ConsumerSubscriptionDefinition) (*m.ConsumerSubscriptionDefinition, error)
 
-// Merge builds a merge option for an update operation
+// ConsumerSubscriptionDefinitionMerge builds a merge option for an update operation
 func ConsumerSubscriptionDefinitionMerge(f ConsumerSubscriptionDefinitionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ConsumerSubscriptionDefinition{}, &m.ConsumerSubscriptionDefinition{}
@@ -47,17 +47,17 @@ func ConsumerSubscriptionDefinitionMerge(f ConsumerSubscriptionDefinitionMergeFu
 	})
 }
 
-// ConsumerSubscriptionDefinitionClient -
+// ConsumerSubscriptionDefinitionClient - rest client for ConsumerSubscriptionDefinition resources that have a defined resource scope
 type ConsumerSubscriptionDefinitionClient struct {
 	client v1.Scoped
 }
 
-// UnscopedConsumerSubscriptionDefinitionClient -
+// UnscopedConsumerSubscriptionDefinitionClient - rest client for ConsumerSubscriptionDefinition resources that do not have a defined scope
 type UnscopedConsumerSubscriptionDefinitionClient struct {
 	client v1.Unscoped
 }
 
-// NewConsumerSubscriptionDefinitionClient -
+// NewConsumerSubscriptionDefinitionClient - creates a client that is not scoped to any resource
 func NewConsumerSubscriptionDefinitionClient(c v1.Base) (*UnscopedConsumerSubscriptionDefinitionClient, error) {
 
 	client, err := c.ForKind(m.ConsumerSubscriptionDefinitionGVK())
@@ -69,14 +69,14 @@ func NewConsumerSubscriptionDefinitionClient(c v1.Base) (*UnscopedConsumerSubscr
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedConsumerSubscriptionDefinitionClient) WithScope(scope string) *ConsumerSubscriptionDefinitionClient {
 	return &ConsumerSubscriptionDefinitionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Get(name string) (*m.Cons
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *m.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedConsumerSubscriptionDefinitionClient) Update(res *m.ConsumerSub
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) ([]*m.ConsumerSubscriptionDefinition, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ConsumerSubscriptionDefinitionClient) List(options ...v1.ListOptions) (
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ConsumerSubscriptionDefinitionClient) Get(name string) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Get(name string) (*m.ConsumerSubs
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ConsumerSubscriptionDefinitionClient) Delete(res *m.ConsumerSubscriptionDefinition) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Delete(res *m.ConsumerSubscriptio
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ConsumerSubscriptionDefinitionClient) Create(res *m.ConsumerSubscriptionDefinition, opts ...v1.CreateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ConsumerSubscriptionDefinitionClient) Create(res *m.ConsumerSubscriptio
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ConsumerSubscriptionDefinitionClient) Update(res *m.ConsumerSubscriptionDefinition, opts ...v1.UpdateOption) (*m.ConsumerSubscriptionDefinition, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

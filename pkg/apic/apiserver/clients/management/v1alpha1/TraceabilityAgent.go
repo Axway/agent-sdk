@@ -14,7 +14,7 @@ import (
 
 type TraceabilityAgentMergeFunc func(*m.TraceabilityAgent, *m.TraceabilityAgent) (*m.TraceabilityAgent, error)
 
-// Merge builds a merge option for an update operation
+// TraceabilityAgentMerge builds a merge option for an update operation
 func TraceabilityAgentMerge(f TraceabilityAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.TraceabilityAgent{}, &m.TraceabilityAgent{}
@@ -47,17 +47,17 @@ func TraceabilityAgentMerge(f TraceabilityAgentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// TraceabilityAgentClient -
+// TraceabilityAgentClient - rest client for TraceabilityAgent resources that have a defined resource scope
 type TraceabilityAgentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedTraceabilityAgentClient -
+// UnscopedTraceabilityAgentClient - rest client for TraceabilityAgent resources that do not have a defined scope
 type UnscopedTraceabilityAgentClient struct {
 	client v1.Unscoped
 }
 
-// NewTraceabilityAgentClient -
+// NewTraceabilityAgentClient - creates a client that is not scoped to any resource
 func NewTraceabilityAgentClient(c v1.Base) (*UnscopedTraceabilityAgentClient, error) {
 
 	client, err := c.ForKind(m.TraceabilityAgentGVK())
@@ -69,14 +69,14 @@ func NewTraceabilityAgentClient(c v1.Base) (*UnscopedTraceabilityAgentClient, er
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedTraceabilityAgentClient) WithScope(scope string) *TraceabilityAgentClient {
 	return &TraceabilityAgentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedTraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedTraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedTraceabilityAgentClient) Update(res *m.TraceabilityAgent, opts ...v1.UpdateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedTraceabilityAgentClient) Update(res *m.TraceabilityAgent, opts 
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *TraceabilityAgentClient) List(options ...v1.ListOptions) ([]*m.TraceabilityAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *TraceabilityAgentClient) List(options ...v1.ListOptions) ([]*m.Traceabi
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *TraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *TraceabilityAgentClient) Get(name string) (*m.TraceabilityAgent, error)
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *TraceabilityAgentClient) Delete(res *m.TraceabilityAgent) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *TraceabilityAgentClient) Delete(res *m.TraceabilityAgent) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *TraceabilityAgentClient) Create(res *m.TraceabilityAgent, opts ...v1.CreateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *TraceabilityAgentClient) Create(res *m.TraceabilityAgent, opts ...v1.Cr
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *TraceabilityAgentClient) Update(res *m.TraceabilityAgent, opts ...v1.UpdateOption) (*m.TraceabilityAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type ResourceDefinitionVersionMergeFunc func(*m.ResourceDefinitionVersion, *m.ResourceDefinitionVersion) (*m.ResourceDefinitionVersion, error)
 
-// Merge builds a merge option for an update operation
+// ResourceDefinitionVersionMerge builds a merge option for an update operation
 func ResourceDefinitionVersionMerge(f ResourceDefinitionVersionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ResourceDefinitionVersion{}, &m.ResourceDefinitionVersion{}
@@ -47,17 +47,17 @@ func ResourceDefinitionVersionMerge(f ResourceDefinitionVersionMergeFunc) v1.Upd
 	})
 }
 
-// ResourceDefinitionVersionClient -
+// ResourceDefinitionVersionClient - rest client for ResourceDefinitionVersion resources that have a defined resource scope
 type ResourceDefinitionVersionClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceDefinitionVersionClient -
+// UnscopedResourceDefinitionVersionClient - rest client for ResourceDefinitionVersion resources that do not have a defined scope
 type UnscopedResourceDefinitionVersionClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceDefinitionVersionClient -
+// NewResourceDefinitionVersionClient - creates a client that is not scoped to any resource
 func NewResourceDefinitionVersionClient(c v1.Base) (*UnscopedResourceDefinitionVersionClient, error) {
 
 	client, err := c.ForKind(m.ResourceDefinitionVersionGVK())
@@ -69,14 +69,14 @@ func NewResourceDefinitionVersionClient(c v1.Base) (*UnscopedResourceDefinitionV
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *ResourceDefinitionVersionClient {
 	return &ResourceDefinitionVersionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*m.ResourceDefinitionVersion, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*m.ResourceD
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedResourceDefinitionVersionClient) Update(res *m.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedResourceDefinitionVersionClient) Update(res *m.ResourceDefiniti
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*m.ResourceDefinitionVersion, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*m.
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ResourceDefinitionVersionClient) Get(name string) (*m.ResourceDefinitionVersion, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ResourceDefinitionVersionClient) Get(name string) (*m.ResourceDefinitio
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ResourceDefinitionVersionClient) Delete(res *m.ResourceDefinitionVersion) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ResourceDefinitionVersionClient) Delete(res *m.ResourceDefinitionVersio
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ResourceDefinitionVersionClient) Create(res *m.ResourceDefinitionVersion, opts ...v1.CreateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ResourceDefinitionVersionClient) Create(res *m.ResourceDefinitionVersio
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ResourceDefinitionVersionClient) Update(res *m.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

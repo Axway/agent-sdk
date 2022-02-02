@@ -14,7 +14,7 @@ import (
 
 type AmplifyOAuth2AuthRuleMergeFunc func(*m.AmplifyOAuth2AuthRule, *m.AmplifyOAuth2AuthRule) (*m.AmplifyOAuth2AuthRule, error)
 
-// Merge builds a merge option for an update operation
+// AmplifyOAuth2AuthRuleMerge builds a merge option for an update operation
 func AmplifyOAuth2AuthRuleMerge(f AmplifyOAuth2AuthRuleMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AmplifyOAuth2AuthRule{}, &m.AmplifyOAuth2AuthRule{}
@@ -47,17 +47,17 @@ func AmplifyOAuth2AuthRuleMerge(f AmplifyOAuth2AuthRuleMergeFunc) v1.UpdateOptio
 	})
 }
 
-// AmplifyOAuth2AuthRuleClient -
+// AmplifyOAuth2AuthRuleClient - rest client for AmplifyOAuth2AuthRule resources that have a defined resource scope
 type AmplifyOAuth2AuthRuleClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAmplifyOAuth2AuthRuleClient -
+// UnscopedAmplifyOAuth2AuthRuleClient - rest client for AmplifyOAuth2AuthRule resources that do not have a defined scope
 type UnscopedAmplifyOAuth2AuthRuleClient struct {
 	client v1.Unscoped
 }
 
-// NewAmplifyOAuth2AuthRuleClient -
+// NewAmplifyOAuth2AuthRuleClient - creates a client that is not scoped to any resource
 func NewAmplifyOAuth2AuthRuleClient(c v1.Base) (*UnscopedAmplifyOAuth2AuthRuleClient, error) {
 
 	client, err := c.ForKind(m.AmplifyOAuth2AuthRuleGVK())
@@ -69,14 +69,14 @@ func NewAmplifyOAuth2AuthRuleClient(c v1.Base) (*UnscopedAmplifyOAuth2AuthRuleCl
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAmplifyOAuth2AuthRuleClient) WithScope(scope string) *AmplifyOAuth2AuthRuleClient {
 	return &AmplifyOAuth2AuthRuleClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAmplifyOAuth2AuthRuleClient) Get(name string) (*m.AmplifyOAuth2AuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAmplifyOAuth2AuthRuleClient) Get(name string) (*m.AmplifyOAuth2
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAmplifyOAuth2AuthRuleClient) Update(res *m.AmplifyOAuth2AuthRule, opts ...v1.UpdateOption) (*m.AmplifyOAuth2AuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAmplifyOAuth2AuthRuleClient) Update(res *m.AmplifyOAuth2AuthRul
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AmplifyOAuth2AuthRuleClient) List(options ...v1.ListOptions) ([]*m.AmplifyOAuth2AuthRule, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AmplifyOAuth2AuthRuleClient) List(options ...v1.ListOptions) ([]*m.Ampl
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AmplifyOAuth2AuthRuleClient) Get(name string) (*m.AmplifyOAuth2AuthRule, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AmplifyOAuth2AuthRuleClient) Get(name string) (*m.AmplifyOAuth2AuthRule
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AmplifyOAuth2AuthRuleClient) Delete(res *m.AmplifyOAuth2AuthRule) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AmplifyOAuth2AuthRuleClient) Delete(res *m.AmplifyOAuth2AuthRule) error
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AmplifyOAuth2AuthRuleClient) Create(res *m.AmplifyOAuth2AuthRule, opts ...v1.CreateOption) (*m.AmplifyOAuth2AuthRule, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AmplifyOAuth2AuthRuleClient) Create(res *m.AmplifyOAuth2AuthRule, opts 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AmplifyOAuth2AuthRuleClient) Update(res *m.AmplifyOAuth2AuthRule, opts ...v1.UpdateOption) (*m.AmplifyOAuth2AuthRule, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

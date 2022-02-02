@@ -14,7 +14,7 @@ import (
 
 type ConsumerInstanceMergeFunc func(*m.ConsumerInstance, *m.ConsumerInstance) (*m.ConsumerInstance, error)
 
-// Merge builds a merge option for an update operation
+// ConsumerInstanceMerge builds a merge option for an update operation
 func ConsumerInstanceMerge(f ConsumerInstanceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ConsumerInstance{}, &m.ConsumerInstance{}
@@ -47,17 +47,17 @@ func ConsumerInstanceMerge(f ConsumerInstanceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ConsumerInstanceClient -
+// ConsumerInstanceClient - rest client for ConsumerInstance resources that have a defined resource scope
 type ConsumerInstanceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedConsumerInstanceClient -
+// UnscopedConsumerInstanceClient - rest client for ConsumerInstance resources that do not have a defined scope
 type UnscopedConsumerInstanceClient struct {
 	client v1.Unscoped
 }
 
-// NewConsumerInstanceClient -
+// NewConsumerInstanceClient - creates a client that is not scoped to any resource
 func NewConsumerInstanceClient(c v1.Base) (*UnscopedConsumerInstanceClient, error) {
 
 	client, err := c.ForKind(m.ConsumerInstanceGVK())
@@ -69,14 +69,14 @@ func NewConsumerInstanceClient(c v1.Base) (*UnscopedConsumerInstanceClient, erro
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstanceClient {
 	return &ConsumerInstanceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, 
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedConsumerInstanceClient) Update(res *m.ConsumerInstance, opts ...v1.UpdateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedConsumerInstanceClient) Update(res *m.ConsumerInstance, opts ..
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*m.ConsumerInstance, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*m.ConsumerI
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ConsumerInstanceClient) Delete(res *m.ConsumerInstance) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *ConsumerInstanceClient) Delete(res *m.ConsumerInstance) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ConsumerInstanceClient) Create(res *m.ConsumerInstance, opts ...v1.CreateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *ConsumerInstanceClient) Create(res *m.ConsumerInstance, opts ...v1.Crea
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ConsumerInstanceClient) Update(res *m.ConsumerInstance, opts ...v1.UpdateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

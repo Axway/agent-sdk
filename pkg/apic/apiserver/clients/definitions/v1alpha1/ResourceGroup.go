@@ -14,7 +14,7 @@ import (
 
 type ResourceGroupMergeFunc func(*m.ResourceGroup, *m.ResourceGroup) (*m.ResourceGroup, error)
 
-// Merge builds a merge option for an update operation
+// ResourceGroupMerge builds a merge option for an update operation
 func ResourceGroupMerge(f ResourceGroupMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.ResourceGroup{}, &m.ResourceGroup{}
@@ -47,12 +47,12 @@ func ResourceGroupMerge(f ResourceGroupMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ResourceGroupClient -
+// ResourceGroupClient - rest client for ResourceGroup resources that have a defined resource scope
 type ResourceGroupClient struct {
 	client v1.Scoped
 }
 
-// NewResourceGroupClient -
+// NewResourceGroupClient - creates a client scoped to a particular resource
 func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
 
 	client, err := c.ForKind(m.ResourceGroupGVK())
@@ -64,7 +64,7 @@ func NewResourceGroupClient(c v1.Base) (*ResourceGroupClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*m.ResourceGroup, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *ResourceGroupClient) List(options ...v1.ListOptions) ([]*m.ResourceGrou
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *ResourceGroupClient) Get(name string) (*m.ResourceGroup, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *ResourceGroupClient) Get(name string) (*m.ResourceGroup, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *ResourceGroupClient) Delete(res *m.ResourceGroup) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *ResourceGroupClient) Delete(res *m.ResourceGroup) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *ResourceGroupClient) Create(res *m.ResourceGroup, opts ...v1.CreateOption) (*m.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *ResourceGroupClient) Create(res *m.ResourceGroup, opts ...v1.CreateOpti
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *ResourceGroupClient) Update(res *m.ResourceGroup, opts ...v1.UpdateOption) (*m.ResourceGroup, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

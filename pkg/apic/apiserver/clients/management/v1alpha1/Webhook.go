@@ -14,7 +14,7 @@ import (
 
 type WebhookMergeFunc func(*m.Webhook, *m.Webhook) (*m.Webhook, error)
 
-// Merge builds a merge option for an update operation
+// WebhookMerge builds a merge option for an update operation
 func WebhookMerge(f WebhookMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Webhook{}, &m.Webhook{}
@@ -47,17 +47,17 @@ func WebhookMerge(f WebhookMergeFunc) v1.UpdateOption {
 	})
 }
 
-// WebhookClient -
+// WebhookClient - rest client for Webhook resources that have a defined resource scope
 type WebhookClient struct {
 	client v1.Scoped
 }
 
-// UnscopedWebhookClient -
+// UnscopedWebhookClient - rest client for Webhook resources that do not have a defined scope
 type UnscopedWebhookClient struct {
 	client v1.Unscoped
 }
 
-// NewWebhookClient -
+// NewWebhookClient - creates a client that is not scoped to any resource
 func NewWebhookClient(c v1.Base) (*UnscopedWebhookClient, error) {
 
 	client, err := c.ForKind(m.WebhookGVK())
@@ -69,14 +69,14 @@ func NewWebhookClient(c v1.Base) (*UnscopedWebhookClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedWebhookClient) WithScope(scope string) *WebhookClient {
 	return &WebhookClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedWebhookClient) Get(name string) (*m.Webhook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedWebhookClient) Get(name string) (*m.Webhook, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedWebhookClient) Update(res *m.Webhook, opts ...v1.UpdateOption) (*m.Webhook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedWebhookClient) Update(res *m.Webhook, opts ...v1.UpdateOption) 
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *WebhookClient) List(options ...v1.ListOptions) ([]*m.Webhook, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *WebhookClient) List(options ...v1.ListOptions) ([]*m.Webhook, error) {
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *WebhookClient) Get(name string) (*m.Webhook, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *WebhookClient) Get(name string) (*m.Webhook, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *WebhookClient) Delete(res *m.Webhook) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *WebhookClient) Delete(res *m.Webhook) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *WebhookClient) Create(res *m.Webhook, opts ...v1.CreateOption) (*m.Webhook, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *WebhookClient) Create(res *m.Webhook, opts ...v1.CreateOption) (*m.Webh
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *WebhookClient) Update(res *m.Webhook, opts ...v1.UpdateOption) (*m.Webhook, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

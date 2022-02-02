@@ -14,7 +14,7 @@ import (
 
 type AmplifyConfigMergeFunc func(*m.AmplifyConfig, *m.AmplifyConfig) (*m.AmplifyConfig, error)
 
-// Merge builds a merge option for an update operation
+// AmplifyConfigMerge builds a merge option for an update operation
 func AmplifyConfigMerge(f AmplifyConfigMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AmplifyConfig{}, &m.AmplifyConfig{}
@@ -47,17 +47,17 @@ func AmplifyConfigMerge(f AmplifyConfigMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AmplifyConfigClient -
+// AmplifyConfigClient - rest client for AmplifyConfig resources that have a defined resource scope
 type AmplifyConfigClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAmplifyConfigClient -
+// UnscopedAmplifyConfigClient - rest client for AmplifyConfig resources that do not have a defined scope
 type UnscopedAmplifyConfigClient struct {
 	client v1.Unscoped
 }
 
-// NewAmplifyConfigClient -
+// NewAmplifyConfigClient - creates a client that is not scoped to any resource
 func NewAmplifyConfigClient(c v1.Base) (*UnscopedAmplifyConfigClient, error) {
 
 	client, err := c.ForKind(m.AmplifyConfigGVK())
@@ -69,14 +69,14 @@ func NewAmplifyConfigClient(c v1.Base) (*UnscopedAmplifyConfigClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAmplifyConfigClient) WithScope(scope string) *AmplifyConfigClient {
 	return &AmplifyConfigClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error)
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAmplifyConfigClient) Update(res *m.AmplifyConfig, opts ...v1.UpdateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAmplifyConfigClient) Update(res *m.AmplifyConfig, opts ...v1.Up
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AmplifyConfigClient) List(options ...v1.ListOptions) ([]*m.AmplifyConfig, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AmplifyConfigClient) List(options ...v1.ListOptions) ([]*m.AmplifyConfi
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AmplifyConfigClient) Get(name string) (*m.AmplifyConfig, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AmplifyConfigClient) Delete(res *m.AmplifyConfig) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AmplifyConfigClient) Delete(res *m.AmplifyConfig) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AmplifyConfigClient) Create(res *m.AmplifyConfig, opts ...v1.CreateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AmplifyConfigClient) Create(res *m.AmplifyConfig, opts ...v1.CreateOpti
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AmplifyConfigClient) Update(res *m.AmplifyConfig, opts ...v1.UpdateOption) (*m.AmplifyConfig, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

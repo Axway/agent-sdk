@@ -14,7 +14,7 @@ import (
 
 type MeshServiceMergeFunc func(*m.MeshService, *m.MeshService) (*m.MeshService, error)
 
-// Merge builds a merge option for an update operation
+// MeshServiceMerge builds a merge option for an update operation
 func MeshServiceMerge(f MeshServiceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.MeshService{}, &m.MeshService{}
@@ -47,17 +47,17 @@ func MeshServiceMerge(f MeshServiceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// MeshServiceClient -
+// MeshServiceClient - rest client for MeshService resources that have a defined resource scope
 type MeshServiceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedMeshServiceClient -
+// UnscopedMeshServiceClient - rest client for MeshService resources that do not have a defined scope
 type UnscopedMeshServiceClient struct {
 	client v1.Unscoped
 }
 
-// NewMeshServiceClient -
+// NewMeshServiceClient - creates a client that is not scoped to any resource
 func NewMeshServiceClient(c v1.Base) (*UnscopedMeshServiceClient, error) {
 
 	client, err := c.ForKind(m.MeshServiceGVK())
@@ -69,14 +69,14 @@ func NewMeshServiceClient(c v1.Base) (*UnscopedMeshServiceClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedMeshServiceClient) WithScope(scope string) *MeshServiceClient {
 	return &MeshServiceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedMeshServiceClient) Get(name string) (*m.MeshService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedMeshServiceClient) Get(name string) (*m.MeshService, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedMeshServiceClient) Update(res *m.MeshService, opts ...v1.UpdateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedMeshServiceClient) Update(res *m.MeshService, opts ...v1.Update
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*m.MeshService, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *MeshServiceClient) List(options ...v1.ListOptions) ([]*m.MeshService, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *MeshServiceClient) Get(name string) (*m.MeshService, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *MeshServiceClient) Get(name string) (*m.MeshService, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *MeshServiceClient) Delete(res *m.MeshService) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *MeshServiceClient) Delete(res *m.MeshService) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *MeshServiceClient) Create(res *m.MeshService, opts ...v1.CreateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *MeshServiceClient) Create(res *m.MeshService, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *MeshServiceClient) Update(res *m.MeshService, opts ...v1.UpdateOption) (*m.MeshService, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

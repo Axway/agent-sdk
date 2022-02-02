@@ -14,7 +14,7 @@ import (
 
 type MarketplaceMergeFunc func(*m.Marketplace, *m.Marketplace) (*m.Marketplace, error)
 
-// Merge builds a merge option for an update operation
+// MarketplaceMerge builds a merge option for an update operation
 func MarketplaceMerge(f MarketplaceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.Marketplace{}, &m.Marketplace{}
@@ -47,12 +47,12 @@ func MarketplaceMerge(f MarketplaceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// MarketplaceClient -
+// MarketplaceClient - rest client for Marketplace resources that have a defined resource scope
 type MarketplaceClient struct {
 	client v1.Scoped
 }
 
-// NewMarketplaceClient -
+// NewMarketplaceClient - creates a client scoped to a particular resource
 func NewMarketplaceClient(c v1.Base) (*MarketplaceClient, error) {
 
 	client, err := c.ForKind(m.MarketplaceGVK())
@@ -64,7 +64,7 @@ func NewMarketplaceClient(c v1.Base) (*MarketplaceClient, error) {
 
 }
 
-// List -
+// List - gets a list of resources
 func (c *MarketplaceClient) List(options ...v1.ListOptions) ([]*m.Marketplace, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *MarketplaceClient) List(options ...v1.ListOptions) ([]*m.Marketplace, e
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *MarketplaceClient) Get(name string) (*m.Marketplace, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *MarketplaceClient) Get(name string) (*m.Marketplace, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *MarketplaceClient) Delete(res *m.Marketplace) error {
 	ri, err := res.AsInstance()
 
@@ -108,7 +108,7 @@ func (c *MarketplaceClient) Delete(res *m.Marketplace) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *MarketplaceClient) Create(res *m.Marketplace, opts ...v1.CreateOption) (*m.Marketplace, error) {
 	ri, err := res.AsInstance()
 
@@ -131,7 +131,7 @@ func (c *MarketplaceClient) Create(res *m.Marketplace, opts ...v1.CreateOption) 
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *MarketplaceClient) Update(res *m.Marketplace, opts ...v1.UpdateOption) (*m.Marketplace, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

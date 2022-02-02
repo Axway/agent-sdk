@@ -14,7 +14,7 @@ import (
 
 type AssetRequestMergeFunc func(*m.AssetRequest, *m.AssetRequest) (*m.AssetRequest, error)
 
-// Merge builds a merge option for an update operation
+// AssetRequestMerge builds a merge option for an update operation
 func AssetRequestMerge(f AssetRequestMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.AssetRequest{}, &m.AssetRequest{}
@@ -47,17 +47,17 @@ func AssetRequestMerge(f AssetRequestMergeFunc) v1.UpdateOption {
 	})
 }
 
-// AssetRequestClient -
+// AssetRequestClient - rest client for AssetRequest resources that have a defined resource scope
 type AssetRequestClient struct {
 	client v1.Scoped
 }
 
-// UnscopedAssetRequestClient -
+// UnscopedAssetRequestClient - rest client for AssetRequest resources that do not have a defined scope
 type UnscopedAssetRequestClient struct {
 	client v1.Unscoped
 }
 
-// NewAssetRequestClient -
+// NewAssetRequestClient - creates a client that is not scoped to any resource
 func NewAssetRequestClient(c v1.Base) (*UnscopedAssetRequestClient, error) {
 
 	client, err := c.ForKind(m.AssetRequestGVK())
@@ -69,14 +69,14 @@ func NewAssetRequestClient(c v1.Base) (*UnscopedAssetRequestClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedAssetRequestClient) WithScope(scope string) *AssetRequestClient {
 	return &AssetRequestClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *UnscopedAssetRequestClient) Get(name string) (*m.AssetRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *UnscopedAssetRequestClient) Get(name string) (*m.AssetRequest, error) {
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *UnscopedAssetRequestClient) Update(res *m.AssetRequest, opts ...v1.UpdateOption) (*m.AssetRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *UnscopedAssetRequestClient) Update(res *m.AssetRequest, opts ...v1.Upda
 	return updated, nil
 }
 
-// List -
+// List - gets a list of resources
 func (c *AssetRequestClient) List(options ...v1.ListOptions) ([]*m.AssetRequest, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *AssetRequestClient) List(options ...v1.ListOptions) ([]*m.AssetRequest,
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *AssetRequestClient) Get(name string) (*m.AssetRequest, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *AssetRequestClient) Get(name string) (*m.AssetRequest, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *AssetRequestClient) Delete(res *m.AssetRequest) error {
 	ri, err := res.AsInstance()
 
@@ -155,7 +155,7 @@ func (c *AssetRequestClient) Delete(res *m.AssetRequest) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *AssetRequestClient) Create(res *m.AssetRequest, opts ...v1.CreateOption) (*m.AssetRequest, error) {
 	ri, err := res.AsInstance()
 
@@ -178,7 +178,7 @@ func (c *AssetRequestClient) Create(res *m.AssetRequest, opts ...v1.CreateOption
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *AssetRequestClient) Update(res *m.AssetRequest, opts ...v1.UpdateOption) (*m.AssetRequest, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
