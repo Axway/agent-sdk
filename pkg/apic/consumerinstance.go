@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -270,7 +272,7 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 	return consumerInstance, nil
 }
 
-//UpdateConsumerInstanceSubscriptionDefinition -
+// UpdateConsumerInstanceSubscriptionDefinition -
 func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
 	consumerInstance, err := c.getConsumerInstancesByExternalAPIID(externalAPIID)
 	if err != nil {
@@ -296,8 +298,9 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	return err
 }
 
-// getConsumerInstancesByExternalAPIID
+// getConsumerInstancesByExternalAPIID gets consumer instances
 func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+	// TODO: what to do for attributes on consumer instances?
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -306,7 +309,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+AttrExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

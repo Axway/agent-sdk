@@ -1,6 +1,6 @@
 package v1
 
-// Meta
+// Meta interface for API Server resource metadata
 type Meta interface {
 	GetName() string
 	GetGroupVersionKind() GroupVersionKind

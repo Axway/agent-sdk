@@ -1,19 +1,23 @@
 package agent
 
 import (
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
-	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	"github.com/Axway/agent-sdk/pkg/api"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -41,38 +45,28 @@ type APIValidator func(apiID, stageName string) bool
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
-// agentTypesMap - Agent Types map
-var agentTypesMap = map[config.AgentType]string{
-	config.DiscoveryAgent:    "discoveryagents",
-	config.TraceabilityAgent: "traceabilityagents",
-	config.GovernanceAgent:   "governanceagents",
-}
-
 type agentData struct {
-	agentResource     *apiV1.ResourceInstance
-	prevAgentResource *apiV1.ResourceInstance
+	agentResourceManager resource.Manager
 
 	apicClient       apic.Client
 	cfg              config.CentralConfig
 	agentFeaturesCfg config.AgentFeaturesConfig
-	agentCfg         interface{}
 	tokenRequester   auth.PlatformTokenGetter
-	loggerName       string
-	logLevel         string
-	logFormat        string
-	logOutput        string
-	logPath          string
 
-	apiMap                     cache.Cache
-	categoryMap                cache.Cache
 	teamMap                    cache.Cache
+	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 }
 
-var agent = agentData{}
+var agent agentData
+
+func init() {
+	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
+}
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
@@ -81,13 +75,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 // InitializeWithAgentFeatures - Initializes the agent with agent features
 func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
-	// Only create the api map cache if it does not already exist
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
-	}
-	if agent.categoryMap == nil {
-		agent.categoryMap = cache.New()
-	}
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
@@ -111,41 +98,49 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	// Only create the api map cache if it does not already exist
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
+	}
+
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
 		agent.cfg = centralCfg
 		return nil
 	}
 
+	agent.cfg = centralCfg
+	api.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
+
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
 			return err
 		}
-		// Init apic client
-		if agent.apicClient == nil {
-			agent.apicClient = apic.New(centralCfg, agent.tokenRequester)
-			agent.apicClient.AddCache(agent.categoryMap, agent.teamMap)
-		} else {
-			agent.apicClient.SetTokenGetter(agent.tokenRequester)
-			agent.apicClient.OnConfigChange(centralCfg)
-		}
-	}
-	agent.cfg = centralCfg
-	coreapi.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
 
-	if agent.isInitialized {
-		mergeResourceWithConfig()
+		// Init apic client when the agent starts, and on config change.
+		agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
+
+		if util.IsNotTest() {
+			err = initEnvResources(centralCfg, agent.apicClient)
+			if err != nil {
+				return err
+			}
+		}
+
+		if centralCfg.GetAgentName() != "" {
+			if agent.agentResourceManager == nil {
+				agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
+				if err != nil {
+					return err
+				}
+			} else {
+				agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
+			}
+		}
 	}
 
 	if !agent.isInitialized {
-		if getAgentResourceType() != "" {
-			fetchConfig()
-			updateAgentStatus(AgentRunning, "", "")
-		} else if agent.agentFeaturesCfg.ConnectionToCentralEnabled() && agent.cfg.GetAgentName() != "" {
-			return errors.Wrap(apic.ErrCentralConfig, "Agent name cannot be set. Config is used only for agents with API server resource definition")
-		}
-
 		setupSignalProcessor()
 		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
@@ -155,14 +150,45 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			startTeamACLCache()
+			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
+
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
 				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 			}
+
+			// Set agent running
+			if agent.agentResourceManager != nil {
+				UpdateStatusWithPrevious(AgentRunning, "", "")
+			}
 		}
 	}
+
 	agent.isInitialized = true
+	return nil
+}
+
+func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
+	env, err := client.GetEnvironment()
+	if err != nil {
+		return err
+	}
+
+	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
+	if cfg.GetEnvironmentID() == "" {
+		// need to save this ID for the traceability agent for later
+		cfg.SetEnvironmentID(env.Metadata.ID)
+	}
+
+	if cfg.GetTeamID() == "" {
+		team, err := client.GetCentralTeamByName(cfg.GetTeamName())
+		if err != nil {
+			return err
+		}
+
+		cfg.SetTeamID(team.ID)
+	}
+
 	return nil
 }
 
@@ -176,7 +202,7 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.apiMap = cache.New()
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	agent.apicClient = apicClient
 }
 
@@ -195,27 +221,60 @@ func OnAgentResourceChange(agentResourceChangeHandler ConfigChangeHandler) {
 	agent.agentResourceChangeHandler = agentResourceChangeHandler
 }
 
-func startAPIServiceCache() {
-	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(false)
-	id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		return
-	}
-	log.Tracef("registered API cache update job: %s", id)
+// RegisterResourceEventHandler - Registers handler for resource events
+func RegisterResourceEventHandler(name string, resourceEventHandler handler.Handler) {
+	agent.proxyResourceHandler.RegisterTargetHandler(name, resourceEventHandler)
+}
 
-	// Start the full update after the first interval
-	go func() {
-		time.Sleep(time.Hour)
-		allDiscoveryCacheJob := newDiscoveryCache(true)
-		id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
+// UnregisterResourceEventHandler - removes the specified resource event handler
+func UnregisterResourceEventHandler(name string) {
+	agent.proxyResourceHandler.UnregisterTargetHandler(name)
+}
+
+func startAPIServiceCache() {
+	instanceCacheLock := &sync.Mutex{}
+
+	// register the update cache job
+	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
+	if !agent.cfg.IsUsingGRPC() {
+		// healthcheck for central in gRPC mode is registered by streamer
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
+
+		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
-			log.Errorf("could not start the All APIs cache update job: %v", err.Error())
+			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 			return
 		}
-		log.Tracef("registered API cache update all job: %s", id)
-	}()
+		// Start the full update after the first interval
+		go startDiscoveryCache(instanceCacheLock)
+		log.Tracef("registered API cache update job: %s", id)
+	} else {
+		// Load cache from API initially. Following updates to cache will be done using watch events
+		if !agent.cacheManager.HasLoadedPersistedCache() {
+			err := newDiscoveryCacheJob.Execute()
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			// trigger early saving for the initialized cache, following save will be done by interval job
+			agent.cacheManager.SaveCache()
+		}
+
+		err := startStreamMode(agent)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
+
+	if agent.apiValidator != nil {
+		instanceValidator := newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		_, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -225,21 +284,21 @@ func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error 
 	return nil
 }
 
-func startTeamACLCache() {
+func startTeamACLCache(cfg config.CentralConfig, client apic.Client, caches agentcache.Manager) {
 	// register the team cache and acl update jobs
 	var teamChannel chan string
 
 	// Only discovery agents need to start the ACL handler
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+	if cfg.GetAgentType() == config.DiscoveryAgent {
 		teamChannel = make(chan string)
 		registerAccessControlListHandler(teamChannel)
 	}
 
-	registerTeamMapCacheJob(teamChannel)
+	registerTeamMapCacheJob(teamChannel, caches, client)
 }
 
 func isRunningInDockerContainer() bool {
-	// Within the cgroup file, if you are not in a docker container all entries are like this devices:/
+	// Within the cgroup file, if you are not in a docker container all entries are like these devices:/
 	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
 	// So, all we need to do is see if ":/docker" exists somewhere in the file.
 	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
@@ -253,7 +312,7 @@ func isRunningInDockerContainer() bool {
 	return strings.Contains(text, ":/docker")
 }
 
-// initializeTokenRequester - Create a new auth token requestor
+// initializeTokenRequester - Create a new auth token requester
 func initializeTokenRequester(centralCfg config.CentralConfig) error {
 	var err error
 	agent.tokenRequester = auth.NewPlatformTokenGetterWithCentralConfig(centralCfg)
@@ -283,69 +342,33 @@ func GetCentralConfig() config.CentralConfig {
 
 // GetAPICache - Returns the cache
 func GetAPICache() cache.Cache {
-	if agent.apiMap == nil {
-		agent.apiMap = cache.New()
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
 	}
-	return agent.apiMap
+	return agent.cacheManager.GetAPIServiceCache()
 }
 
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
-	return agent.agentResource
+	if agent.agentResourceManager == nil {
+		return nil
+	}
+	return agent.agentResourceManager.GetAgentResource()
 }
 
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
-	// send the current status as the previous
-	updateAgentStatus(status, status, description)
+	UpdateStatusWithPrevious(status, status, description)
 }
 
 // UpdateStatusWithPrevious - Updates the agent state providing a previous state
 func UpdateStatusWithPrevious(status, prevStatus, description string) {
-	updateAgentStatus(status, prevStatus, description)
-}
-
-func fetchConfig() error {
-	// Get Agent Resources
-	isChanged, err := refreshResources()
-	if err != nil {
-		return err
-	}
-
-	if isChanged {
-		// merge agent resource config with central config
-		mergeResourceWithConfig()
-		if agent.agentResourceChangeHandler != nil {
-			agent.agentResourceChangeHandler()
+	if agent.agentResourceManager != nil {
+		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
+		if err != nil {
+			log.Warnf("could not update the agent status reference, %s", err.Error())
 		}
 	}
-	return nil
-}
-
-// refreshResources - Gets the agent and dataplane resources from API server
-func refreshResources() (bool, error) {
-	// IMP - To be removed once the model is in production
-	if agent.cfg.GetAgentName() == "" {
-		return false, nil
-	}
-	var err error
-	agent.agentResource, err = getAgentResource()
-	if err != nil {
-		return false, err
-	}
-
-	isChanged := agent.isInitialized
-	if agent.prevAgentResource != nil {
-		agentResHash, _ := util.ComputeHash(agent.agentResource)
-		prevAgentResHash, _ := util.ComputeHash(agent.prevAgentResource)
-
-		if prevAgentResHash == agentResHash {
-			isChanged = false
-		}
-	}
-	agent.prevAgentResource = agent.agentResource
-
-	return isChanged, nil
 }
 
 func setupSignalProcessor() {
@@ -364,120 +387,45 @@ func setupSignalProcessor() {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	updateAgentStatus(AgentStopped, AgentRunning, "")
+	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-// GetAgentResourceType - Returns the Agent Resource path element
-func getAgentResourceType() string {
-	// Set resource for Agent Type
-	return agentTypesMap[agent.cfg.GetAgentType()]
-}
-
-// GetAgentResource - returns the agent resource
-func getAgentResource() (*apiV1.ResourceInstance, error) {
-	agentResourceType := getAgentResourceType()
-	agentResourceURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName()
-
-	response, err := agent.apicClient.ExecuteAPI(coreapi.GET, agentResourceURL, nil, nil)
+func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
+	time.Sleep(time.Hour)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
+	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
-		return nil, err
-	}
-
-	agent := apiV1.ResourceInstance{}
-	json.Unmarshal(response, &agent)
-	return &agent, nil
-}
-
-// updateAgentStatus - Updates the agent status in agent resource
-func updateAgentStatus(status, prevStatus, message string) error {
-	if agent.cfg == nil || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-		return nil
-	}
-	// IMP - To be removed once the model is in production
-	if agent.cfg == nil || agent.cfg.GetAgentName() == "" {
-		return nil
-	}
-
-	if agent.agentResource != nil {
-		agentResourceType := getAgentResourceType()
-		resource := createAgentStatusSubResource(agentResourceType, status, prevStatus, message)
-
-		err := updateAgentStatusAPI(resource, agentResourceType)
-		if err != nil {
-			log.Warn("Could not update the agent status reference")
-			return err
-		}
-	}
-	return nil
-}
-
-func updateAgentStatusAPI(resource interface{}, agentResourceType string) error {
-	buffer, err := json.Marshal(resource)
-	if err != nil {
-		return nil
-	}
-
-	subResURL := agent.cfg.GetEnvironmentURL() + "/" + agentResourceType + "/" + agent.cfg.GetAgentName() + "/status"
-	_, err = agent.apicClient.ExecuteAPI(coreapi.PUT, subResURL, nil, buffer)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) *v1.ResourceInstance {
-	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResourceName:
-		agentRes := createDiscoveryAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	case v1alpha1.TraceabilityAgentResourceName:
-		agentRes := createTraceabilityAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	case v1alpha1.GovernanceAgentResourceName:
-		agentRes := createGovernanceAgentStatusResource(status, prevStatus, message)
-		resourceInstance, _ := agentRes.AsInstance()
-		return resourceInstance
-	default:
-		panic(ErrUnsupportedAgentType)
-	}
-}
-
-func mergeResourceWithConfig() {
-	// IMP - To be removed once the model is in production
-	if agent.cfg.GetAgentName() == "" {
+		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
 		return
 	}
-
-	switch getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResourceName:
-		mergeDiscoveryAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	case v1alpha1.TraceabilityAgentResourceName:
-		mergeTraceabilityAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	case v1alpha1.GovernanceAgentResourceName:
-		mergeGovernanceAgentWithConfig(agent.cfg.(*config.CentralConfiguration))
-	default:
-		panic(ErrUnsupportedAgentType)
-	}
+	log.Tracef("registered API cache update all job: %s", id)
 }
 
-func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel string) {
-	if cfg.TagsToPublish == "" && resCfgAdditionalTags != "" {
-		cfg.TagsToPublish = resCfgAdditionalTags
+func startStreamMode(agent agentData) error {
+	handlers := []handler.Handler{
+		handler.NewAPISvcHandler(agent.cacheManager),
+		handler.NewInstanceHandler(agent.cacheManager),
+		handler.NewCategoryHandler(agent.cacheManager),
+		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		agent.proxyResourceHandler,
 	}
 
-	logLevel := agent.logLevel
-	if strings.ToUpper(agent.logLevel) == "INFO" && strings.ToUpper(resCfgLogLevel) != "INFO" {
-		logLevel = resCfgLogLevel
-	}
-	agent.logLevel = logLevel
-	if logLevel != "" {
-		log.GlobalLoggerConfig.Level(logLevel).Apply()
+	cs, err := stream.NewStreamer(
+		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.cfg,
+		agent.tokenRequester,
+		agent.cacheManager,
+		func(s stream.Streamer) {
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+		},
+		handlers...,
+	)
+
+	if err != nil {
+		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
-	if cfg.TeamName == "" && resCfgTeamName != "" {
-		cfg.TeamName = resCfgTeamName
-	}
+	stream.NewClientStreamJob(cs)
+
+	return err
 }

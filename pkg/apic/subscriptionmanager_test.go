@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -164,7 +166,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 						ID: "11111",
 					},
 					Attributes: map[string]string{
-						AttrExternalAPIID: "1111",
+						definitions.AttrExternalAPIID: "1111",
 					},
 				},
 			}
@@ -180,7 +182,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 						ID: "22222",
 					},
 					Attributes: map[string]string{
-						AttrExternalAPIID: "2222",
+						definitions.AttrExternalAPIID: "2222",
 					},
 				},
 			}

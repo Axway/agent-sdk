@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultAgentFeaturesConfig(t *testing.T) {
@@ -11,6 +12,7 @@ func TestDefaultAgentFeaturesConfig(t *testing.T) {
 	assert.True(t, agentFeaturesConfig.ConnectionToCentralEnabled())
 	assert.True(t, agentFeaturesConfig.ProcessSystemSignalsEnabled())
 	assert.True(t, agentFeaturesConfig.VersionCheckerEnabled())
+	assert.True(t, agentFeaturesConfig.PersistCacheEnabled())
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.NotNil(t, cfgValidator)

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -16,57 +18,21 @@ import (
 
 func TestNewClient(t *testing.T) {
 	cfg := corecfg.NewCentralConfig(corecfg.DiscoveryAgent)
-	client := New(cfg, MockTokenGetter)
+	client := New(cfg, MockTokenGetter, cache2.NewAgentCacheManager(cfg, false))
 	assert.NotNil(t, client)
 }
 
-func TestCheckAPIServerHealth(t *testing.T) {
+func TestGetEnvironment(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
-	// mockClient := setupMocks(c)
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	cfg.Environment = "Environment"
 	cfg.Mode = corecfg.PublishToEnvironment
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apic-environment.json", // this for call to getEnvironment
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apic-team-notfound.json", // this for call to getTeamByName
-			RespCode: http.StatusOK,
-		},
-	})
+	mockHTTPClient.SetResponse("./testdata/apiserver-environment.json", http.StatusOK)
 
-	// Test DiscoveryAgent, PublishToEnvironment and with team not found specified
-	err := svcClient.checkAPIServerHealth()
-	assert.NotNil(t, err, "Expecting error to be returned from the health check with discovery agent in publishToEnvironment mode for invalid team name")
-
-	// Test Team found
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiserver-environment.json", // this for call to getEnvironment
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apic-team.json", // this for call to getTeamByName
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apic-team.json", // this for call to getTeamByName
-			RespCode: http.StatusOK,
-		},
-	})
-	cfg.SetEnvironmentID("")
-	err = svcClient.checkAPIServerHealth()
-	assert.Nil(t, err, "An unexpected error was returned from the health check with discovery agent in publishToEnvironment mode")
-
-	// Test TraceabilityAgent, publishToEnvironment
-	cfg.AgentType = corecfg.TraceabilityAgent
-	cfg.Mode = corecfg.PublishToEnvironment
-	mockHTTPClient.RespCount = 0 // DON'T REMOVE! Need this because we are reusing the response array from above
-	err = svcClient.checkAPIServerHealth()
+	env, err := svcClient.GetEnvironment()
+	assert.NotNil(t, env)
 	assert.Nil(t, err, "An unexpected error was returned from the health check with traceability agent in publishToEnvironment mode")
-	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID(), "The EnvironmentID was not set correctly, Traceability and publishToEnvironment mode")
+	assert.NotNil(t, env)
 }
 
 func arrContains(arr []string, s string) bool {
@@ -184,12 +150,8 @@ func TestHealthCheck(t *testing.T) {
 	// success
 	responses := []api.MockResponse{
 		{FileName: "./testdata/apiserver-environment.json", RespCode: http.StatusOK},
-		{FileName: "./testdata/apic-team.json", RespCode: http.StatusOK},
-		{FileName: "./testdata/apic-team.json", RespCode: http.StatusOK},
 	}
-	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	mockHTTPClient.SetResponses(responses)
 	status = svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
-	assert.Equal(t, "e4e085bf70638a1d0170639297610000", cfg.GetEnvironmentID())
 }

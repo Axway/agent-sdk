@@ -152,15 +152,6 @@ func (c *ServiceClient) getRevisionInstances(instanceName, url string) ([]*v1alp
 	return c.GetAPIServiceInstances(queryParams, url)
 }
 
-// deleteAPIServiceInstance -
-func (c *ServiceClient) deleteAPIServiceInstance(name string) error {
-	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetInstancesURL()+"/"+name, nil)
-	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
-		return err
-	}
-	return nil
-}
-
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
 func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
 	headers, err := c.createHeader()

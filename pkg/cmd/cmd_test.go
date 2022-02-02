@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
@@ -54,8 +56,45 @@ func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagNam
 	assert.Equal(t, defaultVal, viper.GetDuration(propertyName))
 }
 
-func TestRootCmdFlags(t *testing.T) {
+type agentConfig struct {
+	bProp                 bool
+	dProp                 time.Duration
+	iProp                 int
+	sProp                 string
+	sPropExt              string
+	ssProp                []string
+	agentValidationCalled bool
+}
 
+func (a *agentConfig) ValidateCfg() error {
+	a.agentValidationCalled = true
+	if a.sProp == "" {
+		return errors.New("agentConfig: String prop not set")
+	}
+	return nil
+}
+
+type configWithValidation struct {
+	configValidationCalled bool
+	CentralCfg             corecfg.CentralConfig
+	AgentCfg               *agentConfig
+}
+
+func (c *configWithValidation) ValidateCfg() error {
+	c.configValidationCalled = true
+	if c.AgentCfg.sProp == "" {
+		return errors.New("configWithValidation: String prop not set")
+	}
+	return nil
+}
+
+type configWithNoValidation struct {
+	configValidationCalled bool
+	CentralCfg             corecfg.CentralConfig
+	AgentCfg               corecfg.IConfigValidator
+}
+
+func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
 	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
@@ -121,6 +160,7 @@ func TestNewCmd(t *testing.T) {
 	assert.NotNil(t, newCmd)
 
 }
+
 func TestRootCmdConfigFileLoad(t *testing.T) {
 
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
@@ -213,45 +253,10 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	assert.Contains(t, "Test return error from init config handler, Traceability Agent", errBuf.String())
 }
 
-type agentConfig struct {
-	bProp                 bool
-	dProp                 time.Duration
-	iProp                 int
-	sProp                 string
-	sPropExt              string
-	ssProp                []string
-	agentValidationCalled bool
-}
-
-func (a *agentConfig) ValidateCfg() error {
-	a.agentValidationCalled = true
-	if a.sProp == "" {
-		return errors.New("agentConfig: String prop not set")
-	}
-	return nil
-}
-
-type configWithValidation struct {
-	configValidationCalled bool
-	CentralCfg             corecfg.CentralConfig
-	AgentCfg               *agentConfig
-}
-
-func (c *configWithValidation) ValidateCfg() error {
-	c.configValidationCalled = true
-	if c.AgentCfg.sProp == "" {
-		return errors.New("configWithValidation: String prop not set")
-	}
-	return nil
-}
-
-type configWithNoValidation struct {
-	configValidationCalled bool
-	CentralCfg             corecfg.CentralConfig
-	AgentCfg               corecfg.IConfigValidator
-}
-
 func TestRootCmdAgentConfigValidation(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
 	var rootCmd AgentRootCmd
 	var cfg *configWithValidation
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
@@ -270,9 +275,11 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 		return cfg, nil
 	}
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -296,11 +303,12 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	assert.Contains(t, "configWithValidation: String prop not set", errBuf.String())
 	assert.Equal(t, true, cfg.configValidationCalled)
 	assert.Equal(t, false, cfg.AgentCfg.agentValidationCalled)
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdAgentConfigChildValidation(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
 	var rootCmd AgentRootCmd
 	var cfg *configWithNoValidation
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
@@ -319,9 +327,11 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 		return cfg, nil
 	}
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -346,11 +356,12 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	assert.Contains(t, "agentConfig: String prop not set", errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	assert.Equal(t, true, cfg.AgentCfg.(*agentConfig).agentValidationCalled)
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdHandlersWithError(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
 	var centralCfg corecfg.CentralConfig
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
 		centralCfg = centralConfig
@@ -360,6 +371,13 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 		centralCfg.GetAgentMode()
 		return nil
 	}
+
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
+
 	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	err := rootCmd.Execute()
 
@@ -383,6 +401,9 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 }
 
 func TestRootCmdHandlers(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
 	var rootCmd AgentRootCmd
 	var cfg *configWithNoValidation
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
@@ -406,9 +427,11 @@ func TestRootCmdHandlers(t *testing.T) {
 		return nil
 	}
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -439,25 +462,20 @@ func TestRootCmdHandlers(t *testing.T) {
 	assert.Equal(t, 555, agentCfg.iProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
 
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
-}
-
-func noOpInitConfigHandler(centralConfig corecfg.CentralConfig) (interface{}, error) {
-	return centralConfig, nil
-}
-
-func noOpCmdHandler() error {
-	return nil
 }
 
 func TestRootCommandLoggerStdout(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -476,26 +494,40 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	}
 
 	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStdout
+
 	var logData map[string]string
-	json.Unmarshal([]byte(out), &logData)
+	scanner := bufio.NewScanner(r)
 
-	assert.Equal(t, "info", logData["level"])
-	dataStr := fmt.Sprintf("Starting test_with_non_defaults version -, Amplify Agents SDK version ")
-	assert.Equal(t, dataStr, logData["msg"])
+	level := "info"
+	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
 
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
+	for scanner.Scan() {
+		out := scanner.Text()
+		err := json.Unmarshal([]byte(out), &logData)
+		assert.Nil(t, err, "failed to unmarshal log data")
+		if logData["level"] == level && logData["msg"] == msg {
+			break
+		}
+	}
+
+	os.Stdout = rescueStdout
+
+	assert.Equal(t, level, logData["level"])
+	assert.Equal(t, msg, logData["msg"])
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	s := newTestServer()
+	defer s.Close()
+
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -517,25 +549,38 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	assert.NotPanics(t, fExecute)
 
 	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
-	assert.Nil(t, err)
+	assert.Nil(t, err, "failed to read file")
+	scanner := bufio.NewScanner(bytes.NewReader(dat))
+
 	var logData map[string]string
-	json.Unmarshal([]byte(dat), &logData)
+	level := "info"
+	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
 
-	assert.Equal(t, "info", logData["level"])
-	dataStr := fmt.Sprintf("Starting test_with_non_defaults version -, Amplify Agents SDK version ")
-	assert.Equal(t, dataStr, logData["msg"])
+	for scanner.Scan() {
+		out := scanner.Text()
+		err := json.Unmarshal([]byte(out), &logData)
+		assert.Nil(t, err, "failed to unmarshal log data")
+		if logData["level"] == level && logData["msg"] == msg {
+			break
+		}
+	}
 
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
+	assert.Equal(t, level, logData["level"])
+	assert.Equal(t, msg, logData["msg"])
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "./"+tmpFile.Name())
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "./"+tmpFile.Name())
+	s := newTestServer()
+	defer s.Close()
+
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -567,9 +612,6 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
 	assert.Nil(t, err)
 	assert.Equal(t, out, dat)
-
-	// Remove the test keys file
-	os.Remove("./" + tmpFile.Name())
 }
 
 func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
@@ -584,14 +626,45 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 		},
 	}
 
+	teams := []definitions.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "test",
+			Title:    "test",
+		},
+	}
+
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
+			return
 		}
+
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/secrets/agentSecret") {
 			buf, _ := json.Marshal(secret)
 			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 	defer s.Close()
@@ -615,9 +688,6 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 		cmdHandlerInvoked = true
 		return nil
 	}
-
-	tmpFile, _ := ioutil.TempFile("./", "key*")
-	defer os.Remove("./" + tmpFile.Name())
 
 	os.Setenv("CENTRAL_AUTH_URL", s.URL+"/auth")
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
@@ -705,4 +775,79 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "secretValue2", agentCfg.sProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
+}
+
+func noOpInitConfigHandler(centralConfig corecfg.CentralConfig) (interface{}, error) {
+	return centralConfig, nil
+}
+
+func noOpCmdHandler() error {
+	return nil
+}
+
+func newTestServer() *httptest.Server {
+	teams := []definitions.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "test",
+			Title:    "test",
+		},
+	}
+
+	secret := v1alpha1.Secret{
+		ResourceMeta: v1.ResourceMeta{Name: "agentSecret"},
+		Spec: v1alpha1.SecretSpec{
+			Data: map[string]string{
+				"secretKey":               "secretValue",
+				"cachedSecretKey":         "cachedSecretValue",
+				"keyElement1.keyElement2": "secretValue2",
+			},
+		},
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.RequestURI, "/auth") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/secrets/agentSecret") {
+			buf, _ := json.Marshal(secret)
+			resp.Write(buf)
+		}
+
+		if strings.Contains(req.RequestURI, "/realms/Broker/protocol/openid-connect/token") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
+			resp.Write([]byte("response"))
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/environment") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
+		}
+	}))
+
+	return s
 }

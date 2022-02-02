@@ -21,7 +21,6 @@ import (
 
 var globalHealthChecker *healthChecker
 var statusConfig corecfg.StatusConfig
-var startHealthCheckServerFunc = startHealthCheckServer
 
 func init() {
 	globalHealthChecker = &healthChecker{
@@ -140,27 +139,30 @@ func executeCheck(check *statusCheck) {
 	}
 }
 
-var server *http.Server
+// Server contains an http server for health checks.
+type Server struct {
+	server *http.Server
+}
 
-//HandleRequests - starts the http server
-func HandleRequests() {
+// HandleRequests - starts the http server
+func (s *Server) HandleRequests() {
 	if !globalHealthChecker.registered {
 		http.HandleFunc("/status", statusHandler)
 		globalHealthChecker.registered = true
 	}
 
 	// Close the server if already running. This can happen due to config/agent resource change
-	if server != nil {
-		server.Close()
+	if s.server != nil {
+		s.server.Close()
 	}
 
-	startHealthCheckServerFunc()
+	s.startHealthCheckServer()
 }
 
-func startHealthCheckServer() {
+func (s *Server) startHealthCheckServer() {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
-		server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
-		go server.ListenAndServe()
+		s.server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
+		go s.server.ListenAndServe()
 	}
 }
 

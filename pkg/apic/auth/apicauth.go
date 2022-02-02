@@ -43,7 +43,7 @@ type PlatformTokenGetter interface {
 	tokenGetterCloser
 }
 
-// ApicAuth provides authentication methods for calls agains APIC Cloud services.
+// ApicAuth provides authentication methods for calls against APIC Cloud services.
 type ApicAuth struct {
 	tenantID string
 	tokenGetterCloser
@@ -509,7 +509,7 @@ func (ctg *channelTokenGetter) loop() {
 	defer closeHelper(ctg.tokenGetter)
 	for {
 		if _, ok := <-ctg.requests; !ok { // wait for a request
-			break // if input channel is closed,s top
+			break // if input channel is closed, stop
 		}
 
 		t, err := ctg.tokenGetter.GetToken()
@@ -534,4 +534,43 @@ func (ctg *channelTokenGetter) GetToken() (string, error) {
 func (ctg *channelTokenGetter) Close() error {
 	close(ctg.requests)
 	return nil
+}
+
+// tokenAuth -
+type tokenAuth struct {
+	tenantID       string
+	tokenRequester TokenGetter
+}
+
+// Config the auth config
+type Config struct {
+	PrivateKey  string        `mapstructure:"private_key"`
+	PublicKey   string        `mapstructure:"public_key"`
+	KeyPassword string        `mapstructure:"key_password"`
+	URL         string        `mapstructure:"url"`
+	Audience    string        `mapstructure:"audience"`
+	ClientID    string        `mapstructure:"client_id"`
+	Timeout     time.Duration `mapstructure:"timeout"`
+}
+
+// NewTokenAuth Create a new auth token requester
+func NewTokenAuth(ac Config, tenantID string) TokenGetter {
+	instance := &tokenAuth{tenantID: tenantID}
+	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
+	aud := ac.URL + "/realms/Broker"
+	instance.tokenRequester = NewPlatformTokenGetter(
+		ac.PrivateKey,
+		ac.PublicKey,
+		ac.KeyPassword,
+		tokenURL,
+		aud,
+		ac.ClientID,
+		ac.Timeout,
+	)
+	return instance
+}
+
+// GetToken gets a token
+func (t tokenAuth) GetToken() (string, error) {
+	return t.tokenRequester.GetToken()
 }

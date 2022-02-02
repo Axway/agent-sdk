@@ -5,13 +5,21 @@ import (
 	"flag"
 	"fmt"
 	"hash/fnv"
+	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	// AmplifyCentral amplify central
+	AmplifyCentral = "Amplify Central"
 )
 
 // ComputeHash - get the hash of the byte array sent in
@@ -162,4 +170,22 @@ func RemoveUnquotedSpaces(s string) (string, error) {
 		return "", err
 	}
 	return string(rs), nil
+}
+
+// CreateDirIfNotExist - Creates the directory with same permission as parent
+func CreateDirIfNotExist(dirPath string) {
+	_, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		dataInfo := getParentDirInfo(dirPath)
+		os.MkdirAll(dirPath, dataInfo.Mode().Perm())
+	}
+}
+
+func getParentDirInfo(dirPath string) fs.FileInfo {
+	parent := filepath.Dir(dirPath)
+	dataInfo, err := os.Stat(parent)
+	if os.IsNotExist(err) {
+		return getParentDirInfo(parent)
+	}
+	return dataInfo
 }

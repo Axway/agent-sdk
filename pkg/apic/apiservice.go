@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -70,7 +69,7 @@ func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, se
 	}
 }
 
-//processService -
+// processService -
 func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	uuid, _ := uuid.NewUUID()
 	serviceName := uuid.String()
@@ -81,7 +80,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	serviceBody.serviceContext.serviceAction = addAPI
 
 	// If service exists, update existing service
-	apiService, err := c.getAPIServiceByExternalAPIID(serviceBody)
+	apiService, err := c.getAPIServiceFromCache(serviceBody)
 	if err != nil {
 		return nil, err
 	}
@@ -109,70 +108,31 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	return apiService, err
 }
 
-// deleteService
-func (c *ServiceClient) deleteServiceByAPIID(externalAPIID string) error {
-	svc, err := c.getAPIServiceByAttribute(externalAPIID, "")
-	if err != nil {
-		return err
-	}
-	if svc == nil {
-		return errors.New("no API Service found for externalAPIID " + externalAPIID)
-	}
-	_, err = c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+svc.Name, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// getAPIServiceByExternalAPIID - Returns the API service based on external api identification
-func (c *ServiceClient) getAPIServiceByExternalAPIID(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
-	if serviceBody.PrimaryKey != "" {
-		apiService, err := c.getAPIServiceByAttribute(serviceBody.RestAPIID, serviceBody.PrimaryKey)
-		if apiService != nil || err != nil {
-			return apiService, err
-		}
-	}
-	return c.getAPIServiceByAttribute(serviceBody.RestAPIID, "")
-}
-
-// getAPIServiceByAttribute - Returns the API service based on attribute
-func (c *ServiceClient) getAPIServiceByAttribute(externalAPIID, primaryKey string) (*v1alpha1.APIService, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-	query := map[string]string{}
-	if primaryKey != "" {
-		query["query"] = "attributes." + AttrExternalAPIPrimaryKey + "==\"" + primaryKey + "\""
-	} else {
-		query["query"] = "attributes." + AttrExternalAPIID + "==\"" + externalAPIID + "\""
-	}
-
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         c.cfg.GetServicesURL(),
-		Headers:     headers,
-		QueryParams: query,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		if response.Code != http.StatusNotFound {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
+func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*v1alpha1.APIService, error) {
+	ri := c.caches.GetAPIServiceWithAPIID(apiID)
+	if ri == nil {
 		return nil, nil
 	}
-	apiServices := make([]v1alpha1.APIService, 0)
-	json.Unmarshal(response.Body, &apiServices)
-	if len(apiServices) > 0 {
-		return &apiServices[0], nil
+	apiSvc := &v1alpha1.APIService{}
+	err := apiSvc.FromInstance(ri)
+	return apiSvc, err
+}
+
+func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*v1alpha1.APIService, error) {
+	ri := c.caches.GetAPIServiceWithPrimaryKey(primaryKey)
+	if ri == nil {
+		return nil, nil
 	}
-	return nil, nil
+	apiSvc := &v1alpha1.APIService{}
+	err := apiSvc.FromInstance(ri)
+	return apiSvc, err
+}
+
+func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+	if serviceBody.PrimaryKey != "" {
+		return c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+	}
+	return c.getAPIServiceByExternalAPIID(serviceBody.RestAPIID)
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created

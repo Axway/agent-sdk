@@ -5,6 +5,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -16,6 +19,8 @@ const qaTeamCacheInterval = "QA_CENTRAL_TEAMCACHE_INTERVAL"
 type centralTeamsCache struct {
 	jobs.Job
 	teamChannel chan string
+	cache       cache.Manager
+	client      apic.Client
 }
 
 func (j *centralTeamsCache) Ready() bool {
@@ -27,7 +32,7 @@ func (j *centralTeamsCache) Status() error {
 }
 
 func (j *centralTeamsCache) Execute() error {
-	platformTeams, err := agent.apicClient.GetTeam(map[string]string{})
+	platformTeams, err := j.client.GetTeam(map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -37,40 +42,31 @@ func (j *centralTeamsCache) Execute() error {
 	}
 
 	for _, team := range platformTeams {
-		if id, err := agent.teamMap.Get(team.Name); err != nil || id != team.ID {
-			err = agent.teamMap.Set(team.Name, team.ID)
-			if j.teamChannel != nil {
-				log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
-				j.teamChannel <- team.ID
-			}
-		}
-		if team.Default {
-			if _, err := agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey); err != nil {
-				// remove the secondary key from an existing cache item before adding it to a new one
-				agent.teamMap.DeleteSecondaryKey(apic.DefaultTeamKey)
-			}
-
-			agent.teamMap.SetSecondaryKey(team.Name, apic.DefaultTeamKey)
-		}
-		if err != nil {
-			return err
+		savedTeam := j.cache.GetTeamByID(team.ID)
+		if savedTeam == nil {
+			j.cache.AddTeam(&team)
+			log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
+			j.teamChannel <- team.ID
 		}
 	}
-
 	return nil
 }
 
 // registerTeamMapCacheJob -
-func registerTeamMapCacheJob(teamChannel chan string) {
+func registerTeamMapCacheJob(teamChannel chan string, cache cache.Manager, client apic.Client) {
 	job := &centralTeamsCache{
 		teamChannel: teamChannel,
+		cache:       cache,
+		client:      client,
 	}
-
 	// execute the job on startup to populate the team cache
 	job.Execute()
+	jobs.RegisterIntervalJobWithName(job, getJobInterval(), "Team Cache")
+}
 
+func getJobInterval() time.Duration {
 	interval := time.Hour
-	// chgeck for QA env vars
+	// check for QA env vars
 	if val := os.Getenv(qaTeamCacheInterval); val != "" {
 		if duration, err := time.ParseDuration(val); err == nil {
 			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaTeamCacheInterval, val, time.Hour)
@@ -80,18 +76,21 @@ func registerTeamMapCacheJob(teamChannel chan string) {
 		}
 	}
 
-	jobs.RegisterIntervalJobWithName(job, interval, "Team Cache")
+	return interval
 }
 
-// GetTeamFromCache -
-func GetTeamFromCache(teamName string) (string, bool) {
-	id, found := agent.teamMap.Get(teamName)
-	if teamName == "" {
-		// get the default team
-		id, found = agent.teamMap.GetBySecondaryKey(apic.DefaultTeamKey)
+// GetTeamByName - Returns the PlatformTeam associated with the name
+func GetTeamByName(name string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByName(name)
 	}
-	if found != nil {
-		return "", false
+	return nil
+}
+
+// GetTeamByID - Returns the PlatformTeam associated with the id
+func GetTeamByID(id string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByID(id)
 	}
-	return id.(string), true
+	return nil
 }

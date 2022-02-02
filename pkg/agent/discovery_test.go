@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -13,7 +16,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +24,14 @@ import (
 type mockSvcClient struct {
 	apiSvc *v1alpha1.APIService
 	err    error
+}
+
+func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) GetCentralTeamByName(_ string) (*definitions.PlatformTeam, error) {
+	return nil, nil
 }
 
 func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
@@ -48,9 +58,7 @@ func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, 
 	return nil, nil
 }
 
-func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {
-	return
-}
+func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {}
 
 func (m *mockSvcClient) GetOrCreateCategory(category string) string {
 	return ""
@@ -90,7 +98,7 @@ func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { retu
 func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
-func (m *mockSvcClient) DeleteServiceByAPIID(externalAPIID string) error    { return nil }
+func (m *mockSvcClient) DeleteServiceByName(_ string) error                 { return nil }
 func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error   { return nil }
 func (m *mockSvcClient) DeleteAPIServiceInstance(instanceName string) error { return nil }
 func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
@@ -124,11 +132,11 @@ func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
-func (m *mockSvcClient) OnConfigChange(cfg config.CentralConfig) {}
+func (m *mockSvcClient) OnConfigChange(cfg corecfg.CentralConfig) {}
 
 func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
 
-func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]apic.PlatformTeam, error) {
+func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error) {
 	return nil, nil
 }
 
@@ -145,7 +153,7 @@ func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList)
 }
 
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(true)
+	dcj := newDiscoveryCache(nil, true, &sync.Mutex{})
 	dcj.getHCStatus = func(_ string) hc.StatusLevel {
 		return hc.OK
 	}
@@ -157,10 +165,10 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService1",
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID:         "1111",
-				apic.AttrExternalAPIPrimaryKey: "1234",
-				apic.AttrExternalAPIName:       "NAME",
-				attributeKey:                   attributeValue,
+				definitions.AttrExternalAPIID:         "1111",
+				definitions.AttrExternalAPIPrimaryKey: "1234",
+				definitions.AttrExternalAPIName:       "NAME",
+				attributeKey:                          attributeValue,
 			},
 		},
 	}
@@ -169,20 +177,48 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService2",
 			Attributes: map[string]string{
-				apic.AttrExternalAPIID: "2222",
+				definitions.AttrExternalAPIID: "2222",
 			},
 		},
 	}
 	var serverAPISvcResponse []v1.ResourceInstance
-	// var apiSvc *v1.ResourceInstance
+	environmentRes := &v1alpha1.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "test",
+			Title:    "test",
+		},
+	}
+	teams := []definitions.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
 			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 			resp.Write([]byte(token))
+			return
 		}
+
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
 			buf, _ := json.Marshal(serverAPISvcResponse)
 			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
 		}
 	}))
 	defer s.Close()
@@ -197,17 +233,17 @@ func TestDiscoveryCache(t *testing.T) {
 
 	serverAPISvcResponse = emptyAPISvc
 	dcj.updateAPICache()
-	assert.Equal(t, 0, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 0, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.False(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	dcj.updateAPICache()
-	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
-	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", apic.AttrExternalAPIID))
-	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", apic.AttrExternalAPIID))
+	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", definitions.AttrExternalAPIID))
+	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", definitions.AttrExternalAPIID))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByName("NAME", attributeKey))
 
@@ -218,13 +254,13 @@ func TestDiscoveryCache(t *testing.T) {
 	StartAgentStatusUpdate()
 	PublishAPI(apic.ServiceBody{})
 	agent.apicClient = apicClient
-	assert.Equal(t, 2, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 2, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	dcj.updateAPICache()
-	assert.Equal(t, 1, len(agent.apiMap.GetKeys()))
+	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
 	assert.False(t, IsAPIPublishedByID("2222"))

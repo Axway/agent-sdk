@@ -114,6 +114,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)
+	config.AddAgentFeaturesConfigProperties(c.props)
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
@@ -302,7 +303,8 @@ func (c *agentRootCommand) initConfig() error {
 		// Start the initial and recurring version check jobs
 		startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 		// Init the healthcheck API
-		hc.HandleRequests()
+		healthCheckServer := &hc.Server{}
+		healthCheckServer.HandleRequests()
 	}
 	c.initialized = true
 	return nil

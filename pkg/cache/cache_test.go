@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -381,4 +382,20 @@ func TestSaveAndLoad(t *testing.T) {
 	// Change original cache, make sure loaded has not changed
 	cache.Set(key1, "key1 val2")
 	assert.NotEqual(t, cache.(*itemCache).Items[key1].Object, cache2.(*itemCache).Items[key1].Object, "Updating the oringal cache seemed to have changed the loaded cache")
+
+	// LoadFromBuffer
+	cacheBuffer, _ := json.Marshal(cache)
+	cache3 := LoadFromBuffer(cacheBuffer) // Create a new cache object to load
+	assert.Equal(t, cache.(*itemCache).Items[key1].Object, cache3.(*itemCache).Items[key1].Object, "The loaded key1 value was not the same")
+	assert.Equal(t, cache.(*itemCache).Items[key2].Object, cache3.(*itemCache).Items[key2].Object, "The loaded key2 value was not the same")
+	assert.Equal(t, cache.(*itemCache).Items[key3].Object, cache3.(*itemCache).Items[key3].Object, "The loaded key3 value was not the same")
+	assert.Equal(t, cache.(*itemCache).Items[key4].Object, cache3.(*itemCache).Items[key4].Object, "The loaded key4 value was not the same")
+	assert.Equal(t, cache.(*itemCache).Items[key5].Object, cache3.(*itemCache).Items[key5].Object, "The loaded key5 value was not the same")
+	assert.Equal(t, cache.(*itemCache).SecKeys, cache3.(*itemCache).SecKeys, "The secondary keys were not loaded properly")
+	assert.Equal(t, cache.(*itemCache).Items[key1].SecondaryKeys, cache3.(*itemCache).Items[key1].SecondaryKeys, "The secondary keys for 'key1' were not loaded properly")
+	assert.Equal(t, cache.(*itemCache).Items[key2].SecondaryKeys, cache3.(*itemCache).Items[key2].SecondaryKeys, "The secondary keys for 'key2' were not loaded properly")
+	assert.Equal(t, cache.(*itemCache).Items[key3].SecondaryKeys, cache3.(*itemCache).Items[key3].SecondaryKeys, "The secondary keys for 'key3' were not loaded properly")
+	assert.Equal(t, cache.(*itemCache).Items[key4].SecondaryKeys, cache2.(*itemCache).Items[key4].SecondaryKeys, "The secondary keys for 'key4' were not loaded properly")
+	assert.Equal(t, cache.(*itemCache).Items[key5].ForeignKey, cache3.(*itemCache).Items[key5].ForeignKey, "The foreign keys for 'key5' were not loaded properly")
+
 }

@@ -7,68 +7,127 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
+
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTeamCache(t *testing.T) {
-	type queryRes struct {
-		teams     []string
-		numOnChan int
-	}
-
 	testCases := []struct {
-		name       string
-		queries    []queryRes
-		notInCache []string
+		name               string
+		teams              []*definitions.PlatformTeam
+		cached             []*definitions.PlatformTeam
+		expectedTeamsSaved int
 	}{
 		{
-			name: "Teams",
-			queries: []queryRes{
+			name:               "Should save one team to the cache",
+			expectedTeamsSaved: 1,
+			cached:             []*definitions.PlatformTeam{},
+			teams: []*definitions.PlatformTeam{
 				{
-					teams:     []string{"TeamA"},
-					numOnChan: 1,
-				},
-				{
-					teams:     []string{"TeamA", "TeamB", "TeamC"},
-					numOnChan: 2,
-				},
-				{
-					teams:     []string{"TeamA", "TeamB", "TeamC", "TeamD"},
-					numOnChan: 1,
+					Name:    "TeamA",
+					ID:      "1",
+					Default: true,
 				},
 			},
-			notInCache: []string{"TeamE"},
+		},
+		{
+			name:               "Should save two teams to the cache, and skip one team that already exists",
+			expectedTeamsSaved: 2,
+			cached: []*definitions.PlatformTeam{
+				{
+					Name:    "TeamA",
+					ID:      "1",
+					Default: true,
+				},
+			},
+			teams: []*definitions.PlatformTeam{
+				{
+					Name:    "TeamA",
+					ID:      "1",
+					Default: true,
+				},
+				{
+					Name:    "TeamB",
+					ID:      "2",
+					Default: false,
+				},
+				{
+					Name:    "TeamC",
+					ID:      "3",
+					Default: false,
+				},
+			},
+		},
+		{
+			name:               "Should save one team to the cache, and skip 3 that already exist",
+			expectedTeamsSaved: 1,
+			cached: []*definitions.PlatformTeam{
+				{
+					Name:    "TeamA",
+					ID:      "1",
+					Default: true,
+				},
+				{
+					Name:    "TeamB",
+					ID:      "2",
+					Default: false,
+				},
+				{
+					Name:    "TeamC",
+					ID:      "3",
+					Default: false,
+				},
+			},
+			teams: []*definitions.PlatformTeam{
+				{
+					Name:    "TeamA",
+					ID:      "1",
+					Default: true,
+				},
+				{
+					Name:    "TeamB",
+					ID:      "2",
+					Default: false,
+				},
+				{
+					Name:    "TeamC",
+					ID:      "3",
+					Default: false,
+				},
+				{
+					Name:    "TeamD",
+					ID:      "4",
+					Default: false,
+				},
+			},
 		},
 	}
 
 	for _, test := range testCases {
+
 		t.Run(test.name, func(t *testing.T) {
-			request := 0
 			s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				switch {
 				case strings.Contains(req.RequestURI, "/auth"):
 					token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 					resp.Write([]byte(token))
 				case strings.Contains(req.RequestURI, "platformTeams"):
-					// add teams to reply
-					reply := make([]*apic.PlatformTeam, 0)
-					for i, team := range test.queries[request].teams {
-						reply = append(reply, &apic.PlatformTeam{
-							ID:      team,
-							Name:    team,
-							Default: i == 0,
-						})
-					}
-					request++
-					data, _ := json.Marshal(reply)
+					data, _ := json.Marshal(test.teams)
 					resp.Write(data)
 				}
 			}))
 			defer s.Close()
 
 			cfg := createCentralCfg(s.URL, "env")
+			caches := cache.NewAgentCacheManager(cfg, false)
+
+			for _, item := range test.cached {
+				caches.AddTeam(item)
+			}
+
 			resetResources()
 			agent.teamMap = nil
 			err := Initialize(cfg)
@@ -77,36 +136,26 @@ func TestTeamCache(t *testing.T) {
 			assert.NotNil(t, agent.apicClient)
 
 			teamChanel := make(chan string)
-			job := centralTeamsCache{teamChannel: teamChanel}
+			job := centralTeamsCache{
+				teamChannel: teamChanel,
+				client:      agent.apicClient,
+				cache:       caches,
+			}
 
-			// receive all the teams
-			allTeams := make([]string, 0)
-			receivedTeams := make([]string, 0)
-			for _, q := range test.queries {
-				allTeams = append(allTeams, q.teams...)
-				go job.Execute()
-				expected := q.numOnChan
-				for expected > 0 {
-					team := <-teamChanel
-					receivedTeams = append(receivedTeams, team)
-					expected--
+			go job.Execute()
+			count := 0
+			for {
+				if count >= test.expectedTeamsSaved {
+					break
+				}
+				select {
+				case team := <-teamChanel:
+					count++
+					assert.NotNil(t, team)
 				}
 			}
-			expectedTeams := util.RemoveDuplicateValuesFromStringSlice(allTeams)
 
-			// test validations
-			assert.ElementsMatch(t, expectedTeams, receivedTeams)
-			defTeam, found := GetTeamFromCache("")
-			assert.True(t, found, "a default team was not in the cache")
-			assert.Equal(t, expectedTeams[0], defTeam)
-			for _, team := range expectedTeams {
-				_, found := GetTeamFromCache(team)
-				assert.True(t, found, "%s team was not in the cache", team)
-			}
-			for _, team := range test.notInCache {
-				_, found := GetTeamFromCache(team)
-				assert.False(t, found, "%s team was in the cache", team)
-			}
+			assert.Equal(t, test.expectedTeamsSaved, count)
 		})
 	}
 }

@@ -40,6 +40,11 @@ type Cache interface {
 	Load(path string) error
 }
 
+// GetItem interface for getting a single item from a cache.
+type GetItem interface {
+	Get(key string) (interface{}, error)
+}
+
 type action int
 
 const (
@@ -125,6 +130,20 @@ func Load(path string) Cache {
 	}
 	go newCache.handleAction()
 	newCache.Load(path)
+	return newCache
+}
+
+// LoadFromBuffer - create a new cache object and loads the data from buffer
+func LoadFromBuffer(buffer []byte) Cache {
+	newCache := &itemCache{
+		Items:   make(map[string]*Item),
+		SecKeys: make(map[string]string),
+	}
+	json.Unmarshal(buffer, &newCache)
+
+	newCache.actionChannel = make(chan cacheAction)
+	newCache.replyChannel = make(chan cacheReply)
+	go newCache.handleAction()
 	return newCache
 }
 

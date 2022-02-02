@@ -61,7 +61,7 @@ func (su *agentStatusUpdate) Execute() error {
 
 	// get the status from the health check and jobs
 	status := su.getCombinedStatus()
-	log.Tracef("Type of agent status update being checked %s : ", su.typeOfStatusUpdate)
+	log.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
 
 	// Check to see if this is the immediate status change
 	// If change of status is coming FROM or TO 'unhealthy', then report this immediately

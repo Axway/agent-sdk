@@ -13,6 +13,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
@@ -124,7 +126,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
 		}
 		if serviceBody.serviceContext.previousRevision != nil {
-			revAttributes[AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
+			revAttributes[definitions.AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
 		}
 		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
 		log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
