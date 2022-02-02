@@ -1,0 +1,42 @@
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "DiscoveryAgent",
+  "name": "edgeda",
+  "title": "edgeda",
+  "metadata": {
+      "id": "8a2e91d47e4b2eef017e4f3a1d6f2d72",
+      "audit": {
+          "createTimestamp": "2022-01-12T16:58:35.759+0000",
+          "createUserId": "88dd5eba-1060-4436-aaae-298064370c34",
+          "modifyTimestamp": "2022-01-12T16:58:35.759+0000",
+          "modifyUserId": "88dd5eba-1060-4436-aaae-298064370c34"
+      },
+      "scope": {
+          "id": "8a2e8abb7e4b300e017e4f39fa3a2eab",
+          "kind": "Environment",
+          "name": "v7edge",
+          "selfLink": "/management/v1alpha1/environments/v7edge"
+      },
+      "resourceVersion": "0",
+      "selfLink": "/management/v1alpha1/environments/v7edge/discoveryagents/edgeda"
+  },
+  "attributes": {},
+  "finalizers": [],
+  "owner": {},
+  "tags": [],
+  "spec": {
+      "config": {
+          "test":"set"
+      },
+      "logging": {},
+      "dataplaneType": "Changed"
+  },
+  "status": {
+      "state": "running",
+      "version": "1.1.2-debug",
+      "previousState": "running",
+      "lastActivityTime": "2022-02-01T15:36:22.154-0700",
+      "latestAvailableVersion": "1.1.10"
+  }
+}

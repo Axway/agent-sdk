@@ -2,6 +2,8 @@ package v1
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,4 +98,64 @@ func TestResourceInstance_FromInstance(t *testing.T) {
 	err = ri2.FromInstance(inst)
 	assert.Nil(t, err)
 	assert.Equal(t, ri1, ri2)
+}
+
+func TestResourceInstance_UnmarshalMarshallJSON(t *testing.T) {
+	tests := []struct {
+		name         string
+		testFile     string
+		outFile      string
+		update       map[string]interface{}
+		validateKeys []string
+	}{
+		{
+			name:     "Discovery Agent",
+			testFile: "testdata/discoveryagent_in.json",
+			outFile:  "testdata/discoveryagent_out.json",
+			update: map[string]interface{}{
+				"dataplaneType": "Changed",
+				"config": map[string]string{
+					"test": "set",
+				},
+			},
+			validateKeys: []string{"spec", "status", "name", "title"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inputFile, _ := os.Open(tt.testFile)
+			inputData, _ := ioutil.ReadAll(inputFile)
+
+			// unmarshal the json to an object
+			ri := &ResourceInstance{}
+			if err := ri.UnmarshalJSON(inputData); err != nil {
+				t.Errorf("ResourceInstance.UnmarshalJSON() error = %v", err)
+			}
+
+			// update the selected spec values
+			for k, v := range tt.update {
+				ri.Spec[k] = v
+			}
+
+			out, err := ri.MarshalJSON()
+			if err != nil {
+				t.Errorf("ResourceInstance.MarshalJSON() error = %v", err)
+			}
+
+			// unmarshal out to map[string]interface{} to complete compares
+			outData := map[string]interface{}{}
+			json.Unmarshal(out, &outData)
+
+			// unmarshal expected to map[string]interface{}
+			expectedFile, _ := os.Open(tt.outFile)
+			expectedBytes, _ := ioutil.ReadAll(expectedFile)
+			expectedData := map[string]interface{}{}
+			json.Unmarshal(expectedBytes, &expectedData)
+
+			// compare out and expected
+			for _, k := range tt.validateKeys {
+				assert.Equal(t, expectedData[k], outData[k])
+			}
+		})
+	}
 }
