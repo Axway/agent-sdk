@@ -12,7 +12,7 @@ import (
 
 type {{.res.kind}}MergeFunc func(*m.{{.res.kind}}, *m.{{.res.kind}}) (*m.{{.res.kind}}, error)
 
-// Merge builds a merge option for an update operation
+// {{.res.kind}}Merge builds a merge option for an update operation
 func {{.res.kind}}Merge(f {{.res.kind}}MergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
 		p, n := &m.{{.res.kind}}{}, &m.{{.res.kind}}{}
@@ -45,23 +45,23 @@ func {{.res.kind}}Merge(f {{.res.kind}}MergeFunc) v1.UpdateOption {
 	})
 }
 
-// {{.res.kind}}Client -
+// {{.res.kind}}Client - rest client for {{.res.kind}} resources that have a defined resource scope
 type {{.res.kind}}Client struct {
 	client v1.Scoped
 }
 
 {{ if .res.scope }}
-// Unscoped{{.res.kind}}Client -
+// Unscoped{{.res.kind}}Client - rest client for {{.res.kind}} resources that do not have a defined scope
 type Unscoped{{.res.kind}}Client struct {
 	client v1.Unscoped
 }
 {{ end }}
 
 {{ if .res.scope }}
-// New{{.res.kind}}Client -
+// New{{.res.kind}}Client - creates a client that is not scoped to any resource
 func New{{.res.kind}}Client(c v1.Base) (*Unscoped{{.res.kind}}Client, error) {
 {{ else }}
-// New{{.res.kind}}Client -
+// New{{.res.kind}}Client - creates a client scoped to a particular resource
 func New{{.res.kind}}Client(c v1.Base) (*{{.res.kind}}Client, error) {
 {{ end }}
 	client, err := c.ForKind(m.{{.res.kind}}GVK())
@@ -77,14 +77,14 @@ func New{{.res.kind}}Client(c v1.Base) (*{{.res.kind}}Client, error) {
 }
 
 {{ if .res.scope }}
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *Unscoped{{.res.kind}}Client) WithScope(scope string) *{{.res.kind}}Client {
 	return &{{.res.kind}}Client{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *Unscoped{{.res.kind}}Client) Get(name string) (*m.{{.res.kind}}, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *Unscoped{{.res.kind}}Client) Get(name string) (*m.{{.res.kind}}, error)
 	return service, nil
 }
 
-// Update -
+// Update - updates a resource
 func (c *Unscoped{{.res.kind}}Client) Update(res *m.{{.res.kind}}, opts ...v1.UpdateOption) (*m.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
@@ -120,7 +120,7 @@ func (c *Unscoped{{.res.kind}}Client) Update(res *m.{{.res.kind}}, opts ...v1.Up
 }
 {{ end }}
 
-// List -
+// List - gets a list of resources
 func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*m.{{.res.kind}}, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
@@ -140,7 +140,7 @@ func (c *{{.res.kind}}Client) List(options ...v1.ListOptions) ([]*m.{{.res.kind}
 	return result, nil
 }
 
-// Get -
+// Get - gets a resource by name
 func (c *{{.res.kind}}Client) Get(name string) (*m.{{.res.kind}}, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
@@ -153,7 +153,7 @@ func (c *{{.res.kind}}Client) Get(name string) (*m.{{.res.kind}}, error) {
 	return service, nil
 }
 
-// Delete -
+// Delete - deletes a resource
 func (c *{{.res.kind}}Client) Delete(res *m.{{.res.kind}}) error {
 	ri, err := res.AsInstance()
 
@@ -164,7 +164,7 @@ func (c *{{.res.kind}}Client) Delete(res *m.{{.res.kind}}) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
+// Create - creates a resource
 func (c *{{.res.kind}}Client) Create(res *m.{{.res.kind}}, opts ...v1.CreateOption) (*m.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 
@@ -187,7 +187,7 @@ func (c *{{.res.kind}}Client) Create(res *m.{{.res.kind}}, opts ...v1.CreateOpti
 	return created, err
 }
 
-// Update -
+// Update - updates a resource
 func (c *{{.res.kind}}Client) Update(res *m.{{.res.kind}}, opts ...v1.UpdateOption) (*m.{{.res.kind}}, error) {
 	ri, err := res.AsInstance()
 	if err != nil {

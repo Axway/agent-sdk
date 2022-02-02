@@ -114,8 +114,11 @@ func (res *{{.res.kind}}) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["spec"] = res.Spec
-	out["owner"] = res.Owner
+	{{range $field, $isNotEmpty := .res.fields}}
+        {{ $fieldName := $field | strings.Title }}
+		{{ $keyName := $field | strings.ToLower }}
+		out["{{$keyName}}"] = res.{{$fieldName}}
+	{{end}}
 
 	return json.Marshal(out)
 }
@@ -124,7 +127,7 @@ func (res *{{.res.kind}}) MarshalJSON() ([]byte, error) {
 func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias to unmarshal the data into to avoid a circular UnmarshalJSON call
+	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
 	type Alias {{.res.kind}}
 	aux := &struct{ *Alias }{
 		Alias: (*Alias)(res),

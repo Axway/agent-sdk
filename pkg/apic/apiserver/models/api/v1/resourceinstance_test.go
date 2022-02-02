@@ -28,7 +28,7 @@ func TestResourceInstanceMarshalJSON(t *testing.T) {
 			},
 			Tags: []string{"tag1", "tag2"},
 			SubResources: map[string]interface{}{
-				"subresource": map[string]interface{}{
+				"x-agent-details": map[string]interface{}{
 					"sub1": "value",
 				},
 			},

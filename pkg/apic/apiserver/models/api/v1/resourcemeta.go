@@ -191,6 +191,8 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 	for k, _ := range all {
 		delete(rawSubs, k)
 	}
+	delete(rawSubs, "owner")
+	delete(rawSubs, "spec")
 
 	if rm.SubResources == nil {
 		rm.SubResources = make(map[string]interface{})
