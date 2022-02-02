@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// test that the custom marshaller from the template works as expected
+// should handle marshaling and unmarshalling for an apiserver resource with a custom sub resource
 func TestAPIServiceMarshal(t *testing.T) {
 	svc1 := &m.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -31,8 +31,11 @@ func TestAPIServiceMarshal(t *testing.T) {
 				"attr1": "val1",
 				"attr2": "val2",
 			},
-			Tags:       []string{"tag1", "tag2"},
-			Finalizers: nil,
+			Tags: []string{"tag1", "tag2"},
+			Finalizers: []apiv1.Finalizer{
+				{Name: "finalizer1"},
+				{Name: "finalizer2"},
+			},
 			SubResources: map[string]interface{}{
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
@@ -62,16 +65,19 @@ func TestAPIServiceMarshal(t *testing.T) {
 	err = json.Unmarshal(bts, svc2)
 	assert.Nil(t, err)
 
+	// override the audit metadata to easily assert the two structs are equal
 	svc1.Metadata.Audit = apiv1.AuditMetadata{}
 	svc2.Metadata.Audit = apiv1.AuditMetadata{}
 	assert.Equal(t, svc1, svc2)
 
 	svc3 := &m.APIService{}
 
+	// should return an error when given an invalid spec
 	b := []byte(`{"spec":"def"}`)
 	err = json.Unmarshal(b, svc3)
 	assert.NotNil(t, err)
 
+	// should return an error when given an invalid owner
 	b = []byte(`{"owner":"def"}`)
 	err = json.Unmarshal(b, svc3)
 	assert.NotNil(t, err)
@@ -120,15 +126,16 @@ func TestAPIServiceAsInstance(t *testing.T) {
 		},
 	}
 
-	inst, err := svc.AsInstance()
+	ri, err := svc.AsInstance()
 	assert.Nil(t, err)
 
+	// override the audit metadata to easily assert the two structs are equal
 	svc.Metadata.Audit = apiv1.AuditMetadata{}
-	inst.Metadata.Audit = apiv1.AuditMetadata{}
+	ri.Metadata.Audit = apiv1.AuditMetadata{}
 
 	// marshal the instance spec to bytes, then convert it to an ApiServiceSpec
 	// to see if it matches the svc.Spec field
-	bts, err := json.Marshal(inst.Spec)
+	bts, err := json.Marshal(ri.Spec)
 	assert.Nil(t, err)
 
 	instSpec := &m.ApiServiceSpec{}
@@ -136,11 +143,11 @@ func TestAPIServiceAsInstance(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, svc.Spec, *instSpec)
-	assert.Equal(t, svc.Owner, inst.Owner)
-	assert.Equal(t, svc.ResourceMeta, inst.ResourceMeta)
+	assert.Equal(t, svc.Owner, ri.Owner)
+	assert.Equal(t, svc.ResourceMeta, ri.ResourceMeta)
 
 	svcBytes, err := json.Marshal(svc)
 	assert.Nil(t, err)
 
-	assert.Equal(t, json.RawMessage(svcBytes), inst.GetRawResource())
+	assert.Equal(t, json.RawMessage(svcBytes), ri.GetRawResource())
 }

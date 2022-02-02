@@ -126,13 +126,9 @@ func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 		for key, value := range subResources {
 			rawSubs[key] = value
 		}
-
-		bts, err := json.Marshal(&rawSubs)
-		if err != nil {
-			return bts, err
-		}
 	}
 
+	// create an alias for *ResourceMeta to avoid a circular reference while marshalling.
 	type Alias ResourceMeta
 	v := &struct{ *Alias }{
 		Alias: (*Alias)(rm),
@@ -156,41 +152,51 @@ func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rawMeta)
 }
 
-// UnmarshalJSON unmarshal the ResourceMeta to properly set the SubResources
+// UnmarshalJSON unmarshalls the ResourceMeta to properly set the SubResources
 func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 	type Alias ResourceMeta
+	// create an alias for *ResourceMeta to avoid a circular reference while unmarshalling.
 	v := &struct{ *Alias }{
 		Alias: (*Alias)(rm),
 	}
 
+	// unmarshal data to the alias. The SubResources will not be unmarshalled since they are not defined.
 	err := json.Unmarshal(data, v)
 	if err != nil {
 		return err
 	}
 
-	raw := map[string]interface{}{}
-	err = json.Unmarshal(data, &raw)
+	bts, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 
-	delete(raw, "spec")
-	delete(raw, "owner")
-	delete(raw, "apiVersion")
-	delete(raw, "attributes")
-	delete(raw, "finalizers")
-	delete(raw, "group")
-	delete(raw, "kind")
-	delete(raw, "metadata")
-	delete(raw, "name")
-	delete(raw, "tags")
-	delete(raw, "title")
-	delete(raw, "version")
+	// all contains all the defined keys of ResourceMeta. The keys will be used to identify the values
+	// that do not belong in the SubResources map.
+	all := map[string]interface{}{}
+	err = json.Unmarshal(bts, &all)
+	if err != nil {
+		return err
+	}
+
+	// unmarshal data again to a map[string]interface{} to get all the values and the unique sub resources
+	rawSubs := map[string]interface{}{}
+	err = json.Unmarshal(data, &rawSubs)
+	if err != nil {
+		return err
+	}
+
+	// all contains all keys but the sub resources. rawSubs contains all keys, but should only contain the subresource keys.
+	// delete the keys from subs that are not sub resource keys
+	for k, _ := range all {
+		delete(rawSubs, k)
+	}
 
 	if rm.SubResources == nil {
 		rm.SubResources = make(map[string]interface{})
 	}
-	for k, v := range raw {
+
+	for k, v := range rawSubs {
 		rm.SubResources[k] = v
 	}
 
