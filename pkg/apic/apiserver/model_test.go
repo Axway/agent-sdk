@@ -300,11 +300,11 @@ func TestGovernanceAgentResource(t *testing.T) {
 	assert.Contains(t, gov2.SubResources, "x-agent-details")
 
 	// expect that the two resources contain the same data when marshalled into bytes
-	bts1, err := json.Marshal(gov1)
+	ri1, err := gov1.AsInstance()
 	assert.Nil(t, err)
 
-	bts2, err := json.Marshal(gov2)
+	ri2, err := gov2.AsInstance()
 	assert.Nil(t, err)
 
-	assert.Equal(t, bts1, bts2)
+	assert.Equal(t, ri1.GetRawResource(), ri2.GetRawResource())
 }
