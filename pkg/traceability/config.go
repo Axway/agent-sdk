@@ -162,17 +162,18 @@ func GetMaxRetries() int {
 	return outputConfig.MaxRetries
 }
 
-// GetAPIExceptionsList - Returns traceability APIs exception list (api paths)
-func GetAPIExceptionsList() []showRegex {
+// getAPIExceptionsList - Returns traceability APIs exception list (api paths)
+func getAPIExceptionsList() []showRegex {
 	if outputConfig == nil {
 		return []showRegex{}
 	}
 	return newShowRegex
 }
 
+// newShowRegex - array of showRegex
 var newShowRegex []showRegex
 
-// showRegex - regular expression to check againstß
+// showRegex - regular expression to check against
 type showRegex struct {
 	keyMatch *regexp.Regexp
 }

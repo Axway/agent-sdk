@@ -375,7 +375,7 @@ func (ta *traceabilityAgentHealthChecker) connectionHealthcheck(host string) *hc
 
 // ShouldIgnoreEvent - check to see if the uri exists in exception list
 func ShouldIgnoreEvent(uriRaw string) bool {
-	exceptions := GetAPIExceptionsList()
+	exceptions := getAPIExceptionsList()
 
 	// If the api path exists in the exceptions list, return true and ignore event
 	for _, exception := range exceptions {
