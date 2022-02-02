@@ -39,26 +39,6 @@ type MeshService struct {
 	Spec  MeshServiceSpec `json:"spec"`
 }
 
-// FromInstance converts a ResourceInstance to a MeshService
-func (res *MeshService) FromInstance(ri *apiv1.ResourceInstance) error {
-	if ri == nil {
-		res = nil
-		return nil
-	}
-
-	var err error
-	rawResource := ri.GetRawResource()
-	if rawResource == nil {
-		rawResource, err = json.Marshal(ri)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = json.Unmarshal(rawResource, res)
-	return err
-}
-
 // MeshServiceFromInstanceArray converts a []*ResourceInstance to a []*MeshService
 func MeshServiceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshService, error) {
 	newArray := make([]*MeshService, 0)
@@ -94,6 +74,24 @@ func (res *MeshService) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
+// FromInstance converts a ResourceInstance to a MeshService
+func (res *MeshService) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
+	}
+	err = json.Unmarshal(rawResource, res)
+	return err
+}
+
 // MarshalJSON custom marshaller to handle sub resources
 func (res *MeshService) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
@@ -117,54 +115,23 @@ func (res *MeshService) MarshalJSON() ([]byte, error) {
 func (res *MeshService) UnmarshalJSON(data []byte) error {
 	var err error
 
-	// Create an alias for unmarshalling to avoid a circular UnmarshalJSON call
-	type Alias MeshService
-	aux := &struct{ *Alias }{
-		Alias: (*Alias)(res),
-	}
-
-	err = json.Unmarshal(data, &aux)
+	aux := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(data, aux)
 	if err != nil {
 		return err
 	}
 
-	// The only field that will properly unmarshal will be the ResourceMeta field.
-	// This is because ResourceMeta is embedded on all resources, and when UnmarshalJSON is called on the Alias,
-	// the ResourceMeta UnmarshalJSON will be called instead of the default UnmarshalJSON, which would handle all fields.
-	// The rest of the fields need to be unmarshalled manually.
 	res.ResourceMeta = aux.ResourceMeta
+	res.Owner = aux.Owner
 
-	// unmarshall all fields into a map
-	out := map[string]interface{}{}
-
-	err = json.Unmarshal(data, &out)
+	sr, err := json.Marshal(aux.Spec)
 	if err != nil {
 		return err
 	}
 
-	// unmarshall the owner field
-	if out["owner"] != nil {
-		res.Owner = &apiv1.Owner{}
-		bts, err := json.Marshal(out["owner"])
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(bts, res.Owner)
-		if err != nil {
-			return err
-		}
-	}
-
-	// unmarshall the spec field
-	if out["spec"] != nil {
-		bts, err := json.Marshal(out["spec"])
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(bts, &res.Spec)
-		if err != nil {
-			return err
-		}
+	err = json.Unmarshal(sr, &res.Spec)
+	if err != nil {
+		return err
 	}
 
 	return nil

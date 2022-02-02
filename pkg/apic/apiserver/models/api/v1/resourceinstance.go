@@ -3,6 +3,7 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 // Interface describes API Server & catalog resources
@@ -37,7 +38,11 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 	}
 
 	if out["spec"] != nil {
-		ri.Spec = out["spec"].(map[string]interface{})
+		v, ok := out["spec"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("spec is not a map[string]interface{}")
+		}
+		ri.Spec = v
 	}
 
 	if out["owner"] != nil {

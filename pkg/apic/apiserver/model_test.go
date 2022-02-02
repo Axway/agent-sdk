@@ -187,37 +187,124 @@ func TestAPIServiceAsInstance(t *testing.T) {
 	assert.Equal(t, json.RawMessage(svcBytes), ri.GetRawResource())
 }
 
-func TestDiscoveryAgentResource(t *testing.T) {
-	t.Skip()
-	disc1 := &m.DiscoveryAgent{
-		ResourceMeta: apiv1.ResourceMeta{},
-		Owner:        nil,
-		Spec: m.DiscoveryAgentSpec{
-			DataplaneType: "abc",
-			Config: m.DiscoveryAgentSpecConfig{
-				Filter:     "123",
-				OwningTeam: "aa",
+// Should create an APIService from a ResourceInstance
+func TestAPIServiceFromInstance(t *testing.T) {
+	// convert a service to an instance
+	svc1 := &m.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+				APIVersion: "v1",
+			},
+			Name:  "name",
+			Title: "title",
+			Metadata: apiv1.Metadata{
+				ID:              "123",
+				Audit:           apiv1.AuditMetadata{},
+				ResourceVersion: "1",
+				SelfLink:        "/self/link",
+				State:           "state",
+			},
+			Attributes: map[string]string{
+				"attr1": "val1",
+				"attr2": "val2",
+			},
+			Tags:       []string{"tag1", "tag2"},
+			Finalizers: nil,
+			SubResources: map[string]interface{}{
+				"x-agent-details": map[string]interface{}{
+					"x-agent-id": "123",
+				},
 			},
 		},
-		Status: m.DiscoveryAgentStatus{
-			Version:                "1",
-			LatestAvailableVersion: "1",
-			State:                  "running",
-			PreviousState:          "failed",
+		Owner: &apiv1.Owner{
+			Type: apiv1.TeamOwner,
+			ID:   "233",
+		},
+		Spec: m.ApiServiceSpec{
+			Description: "desc",
+			Categories:  []string{"cat1", "cat2"},
+			Icon: m.ApiServiceSpecIcon{
+				ContentType: "image/png",
+				Data:        "data",
+			},
 		},
 	}
+	ri1, err := svc1.AsInstance()
+	assert.Nil(t, err)
 
-	bts, err := json.Marshal(disc1)
+	// call FromInstance using the first service, which should fill all the fields of svc2 from svc1
+	svc2 := &m.APIService{}
+	err = svc2.FromInstance(ri1)
+	assert.Nil(t, err)
+
+	// the api services should be equal, and their resource instances should be equal
+	ri2, err := svc2.AsInstance()
+	assert.Nil(t, err)
+	assert.Equal(t, ri1, ri2)
+
+	svc1.Metadata.Audit = apiv1.AuditMetadata{}
+	svc2.Metadata.Audit = apiv1.AuditMetadata{}
+	assert.Equal(t, svc1, svc2)
+}
+
+// should unmarshal a populated governance agent into an empty governance agent.
+// Unmarshalling should handle the pre-defined sub resources and any dynamic sub resources.
+func TestGovernanceAgentResource(t *testing.T) {
+	gov1 := &m.GovernanceAgent{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Group: "management",
+					Kind:  "GovernanceAgent",
+				},
+				APIVersion: "v1alpha1",
+			},
+			Name:  "name",
+			Title: "title",
+			Metadata: apiv1.Metadata{
+				ID: "123",
+			},
+		},
+		Agentconfigstatus: m.GovernanceAgentAgentconfigstatus{
+			ResourceVersion: "321",
+			ErrorMessage:    "msg",
+			ConfigState:     "state",
+		},
+		Spec: m.GovernanceAgentSpec{
+			DataplaneType: "aws",
+			Config: map[string]interface{}{
+				"abc": "123",
+			},
+		},
+		Status: m.GovernanceAgentStatus{
+			Version:    "v1",
+			SdkVersion: "1.0.0",
+		},
+	}
+	gov1.SetSubResource("x-agent-details", map[string]interface{}{
+		"abc": "1223",
+	})
+	bts, err := json.Marshal(gov1)
 	assert.Nil(t, err)
 	assert.NotNil(t, bts)
 
-	disc2 := &m.DiscoveryAgent{}
+	gov2 := &m.GovernanceAgent{}
 
-	err = json.Unmarshal(bts, disc2)
+	err = json.Unmarshal(bts, gov2)
 	assert.Nil(t, err)
 
-	// override the audit metadata to easily assert the two structs are equal
-	disc1.Metadata.Audit = apiv1.AuditMetadata{}
-	disc2.Metadata.Audit = apiv1.AuditMetadata{}
-	assert.Equal(t, disc1, disc2)
+	// expect that the sub resources defined on the gov1 resource are contained in the SubResource map
+	assert.Contains(t, gov2.SubResources, "status")
+	assert.Contains(t, gov2.SubResources, "agentconfigstatus")
+	assert.Contains(t, gov2.SubResources, "x-agent-details")
+
+	// expect that the two resources contain the same data when marshalled into bytes
+	bts1, err := json.Marshal(gov1)
+	assert.Nil(t, err)
+
+	bts2, err := json.Marshal(gov2)
+	assert.Nil(t, err)
+
+	assert.Equal(t, bts1, bts2)
 }
