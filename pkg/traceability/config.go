@@ -172,6 +172,7 @@ func GetAPIExceptionsList() []showRegex {
 
 var newShowRegex []showRegex
 
+// showRegex - regular expression to check againstß
 type showRegex struct {
 	keyMatch *regexp.Regexp
 }

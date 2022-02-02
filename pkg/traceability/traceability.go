@@ -373,6 +373,7 @@ func (ta *traceabilityAgentHealthChecker) connectionHealthcheck(host string) *hc
 	return status
 }
 
+// ShouldIgnoreEvent - check to see if the uri exists in exception list
 func ShouldIgnoreEvent(uriRaw string) bool {
 	exceptions := GetAPIExceptionsList()
 
