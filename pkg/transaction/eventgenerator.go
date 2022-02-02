@@ -2,8 +2,6 @@ package transaction
 
 import (
 	"encoding/json"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -215,21 +213,8 @@ func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 	}
 
 	// Get the api exceptions list
-	exceptions := traceability.GetAPIExceptionsList()
-	for i := range exceptions {
-		exceptions[i] = strings.TrimSpace(exceptions[i])
-	}
+	return traceability.ShouldIgnoreEvent(uriRaw)
 
-	// If the api path exists in the exceptions list, return true and ignore event
-	for _, value := range exceptions {
-		match, _ := regexp.MatchString(value, uriRaw)
-		if match {
-			return true
-		}
-	}
-
-	// api path not found in exceptions list
-	return false
 }
 
 // healthcheck -
