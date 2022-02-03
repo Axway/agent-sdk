@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type ResourceMergeFunc func(*v1alpha1.Resource, *v1alpha1.Resource) (*v1alpha1.Resource, error)
+type ResourceMergeFunc func(*m.Resource, *m.Resource) (*m.Resource, error)
 
-// Merge builds a merge option for an update operation
+// ResourceMerge builds a merge option for an update operation
 func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Resource{}, &v1alpha1.Resource{}
+		p, n := &m.Resource{}, &m.Resource{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Resource:
+		case *m.Resource:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Resource:
+		case *m.Resource:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func ResourceMerge(f ResourceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ResourceClient -
+// ResourceClient - rest client for Resource resources that have a defined resource scope
 type ResourceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceClient -
+// UnscopedResourceClient - rest client for Resource resources that do not have a defined scope
 type UnscopedResourceClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceClient -
+// NewResourceClient - creates a client that is not scoped to any resource
 func NewResourceClient(c v1.Base) (*UnscopedResourceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ResourceGVK())
+	client, err := c.ForKind(m.ResourceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewResourceClient(c v1.Base) (*UnscopedResourceClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceClient) WithScope(scope string) *ResourceClient {
 	return &ResourceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedResourceClient) Get(name string) (*v1alpha1.Resource, error) {
+// Get - gets a resource by name
+func (c *UnscopedResourceClient) Get(name string) (*m.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Resource{}
+	service := &m.Resource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedResourceClient) Update(res *v1alpha1.Resource, opts ...v1.UpdateOption) (*v1alpha1.Resource, error) {
+// Update - updates a resource
+func (c *UnscopedResourceClient) Update(res *m.Resource, opts ...v1.UpdateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedResourceClient) Update(res *v1alpha1.Resource, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.Resource{}
+	updated := &m.Resource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedResourceClient) Update(res *v1alpha1.Resource, opts ...v1.Updat
 	return updated, nil
 }
 
-// List -
-func (c *ResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resource, error) {
+// List - gets a list of resources
+func (c *ResourceClient) List(options ...v1.ListOptions) ([]*m.Resource, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Resource, len(riList))
+	result := make([]*m.Resource, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Resource{}
+		result[i] = &m.Resource{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *ResourceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Resource, 
 	return result, nil
 }
 
-// Get -
-func (c *ResourceClient) Get(name string) (*v1alpha1.Resource, error) {
+// Get - gets a resource by name
+func (c *ResourceClient) Get(name string) (*m.Resource, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Resource{}
+	service := &m.Resource{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *ResourceClient) Delete(res *v1alpha1.Resource) error {
+// Delete - deletes a resource
+func (c *ResourceClient) Delete(res *m.Resource) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *ResourceClient) Delete(res *v1alpha1.Resource) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *ResourceClient) Create(res *v1alpha1.Resource, opts ...v1.CreateOption) (*v1alpha1.Resource, error) {
+// Create - creates a resource
+func (c *ResourceClient) Create(res *m.Resource, opts ...v1.CreateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ResourceClient) Create(res *v1alpha1.Resource, opts ...v1.CreateOption)
 		return nil, err
 	}
 
-	created := &v1alpha1.Resource{}
+	created := &m.Resource{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *ResourceClient) Create(res *v1alpha1.Resource, opts ...v1.CreateOption)
 	return created, err
 }
 
-// Update -
-func (c *ResourceClient) Update(res *v1alpha1.Resource, opts ...v1.UpdateOption) (*v1alpha1.Resource, error) {
+// Update - updates a resource
+func (c *ResourceClient) Update(res *m.Resource, opts ...v1.UpdateOption) (*m.Resource, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ResourceClient) Update(res *v1alpha1.Resource, opts ...v1.UpdateOption)
 		return nil, err
 	}
 
-	updated := &v1alpha1.Resource{}
+	updated := &m.Resource{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

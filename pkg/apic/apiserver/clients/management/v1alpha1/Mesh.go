@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type MeshMergeFunc func(*v1alpha1.Mesh, *v1alpha1.Mesh) (*v1alpha1.Mesh, error)
+type MeshMergeFunc func(*m.Mesh, *m.Mesh) (*m.Mesh, error)
 
-// Merge builds a merge option for an update operation
+// MeshMerge builds a merge option for an update operation
 func MeshMerge(f MeshMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Mesh{}, &v1alpha1.Mesh{}
+		p, n := &m.Mesh{}, &m.Mesh{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Mesh:
+		case *m.Mesh:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func MeshMerge(f MeshMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Mesh:
+		case *m.Mesh:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,15 +47,15 @@ func MeshMerge(f MeshMergeFunc) v1.UpdateOption {
 	})
 }
 
-// MeshClient -
+// MeshClient - rest client for Mesh resources that have a defined resource scope
 type MeshClient struct {
 	client v1.Scoped
 }
 
-// NewMeshClient -
+// NewMeshClient - creates a client scoped to a particular resource
 func NewMeshClient(c v1.Base) (*MeshClient, error) {
 
-	client, err := c.ForKind(v1alpha1.MeshGVK())
+	client, err := c.ForKind(m.MeshGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +64,17 @@ func NewMeshClient(c v1.Base) (*MeshClient, error) {
 
 }
 
-// List -
-func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
+// List - gets a list of resources
+func (c *MeshClient) List(options ...v1.ListOptions) ([]*m.Mesh, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Mesh, len(riList))
+	result := make([]*m.Mesh, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Mesh{}
+		result[i] = &m.Mesh{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -84,21 +84,21 @@ func (c *MeshClient) List(options ...v1.ListOptions) ([]*v1alpha1.Mesh, error) {
 	return result, nil
 }
 
-// Get -
-func (c *MeshClient) Get(name string) (*v1alpha1.Mesh, error) {
+// Get - gets a resource by name
+func (c *MeshClient) Get(name string) (*m.Mesh, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Mesh{}
+	service := &m.Mesh{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *MeshClient) Delete(res *v1alpha1.Mesh) error {
+// Delete - deletes a resource
+func (c *MeshClient) Delete(res *m.Mesh) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -108,8 +108,8 @@ func (c *MeshClient) Delete(res *v1alpha1.Mesh) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *MeshClient) Create(res *v1alpha1.Mesh, opts ...v1.CreateOption) (*v1alpha1.Mesh, error) {
+// Create - creates a resource
+func (c *MeshClient) Create(res *m.Mesh, opts ...v1.CreateOption) (*m.Mesh, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *MeshClient) Create(res *v1alpha1.Mesh, opts ...v1.CreateOption) (*v1alp
 		return nil, err
 	}
 
-	created := &v1alpha1.Mesh{}
+	created := &m.Mesh{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -131,8 +131,8 @@ func (c *MeshClient) Create(res *v1alpha1.Mesh, opts ...v1.CreateOption) (*v1alp
 	return created, err
 }
 
-// Update -
-func (c *MeshClient) Update(res *v1alpha1.Mesh, opts ...v1.UpdateOption) (*v1alpha1.Mesh, error) {
+// Update - updates a resource
+func (c *MeshClient) Update(res *m.Mesh, opts ...v1.UpdateOption) (*m.Mesh, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *MeshClient) Update(res *v1alpha1.Mesh, opts ...v1.UpdateOption) (*v1alp
 		return nil, err
 	}
 
-	updated := &v1alpha1.Mesh{}
+	updated := &m.Mesh{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

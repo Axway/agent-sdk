@@ -140,6 +140,7 @@ func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]str
 	}
 	return m.apiResponse, nil
 }
+
 func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
 	res := &v1alpha1.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{

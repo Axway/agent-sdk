@@ -5,18 +5,18 @@
 package {{.res.version}}
 
 import (
-	"encoding/json"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+    "encoding/json"
+    apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 var (
-	_{{.res.kind}}GVK = apiv1.GroupVersionKind{
-		GroupKind: apiv1.GroupKind{
-			Group: "{{.res.group}}",
-			Kind:  "{{.res.kind}}",
-		},
-		APIVersion: "{{.res.version}}",
-	}
+    _{{.res.kind}}GVK = apiv1.GroupVersionKind{
+        GroupKind: apiv1.GroupKind{
+            Group: "{{.res.group}}",
+            Kind:  "{{.res.kind}}",
+        },
+        APIVersion: "{{.res.version}}",
+    }
 {{if .res.scopes }}
   {{.res.kind}}Scopes = []string{"{{ join $.res.scopes "\", \""}}",}
 {{else}}
@@ -25,8 +25,6 @@ var (
 )
 
 const {{.res.kind}}ResourceName = "{{.res.resource}}"
-
-
 
 func {{.res.kind}}GVK() apiv1.GroupVersionKind {
 	return _{{.res.kind}}GVK
@@ -39,31 +37,11 @@ func init() {
 // {{.res.kind}} Resource
 type {{.res.kind}} struct {
 	apiv1.ResourceMeta
-	{{range $field, $isNotEmpty := .res.fields}}
-		{{ $type := $field | strings.Title }}
-		{{ $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" }}
-        {{ $type}} {{if $isNotEmpty}} {{ $varName }}{{ $type }} {{else}} {{if eq $type "Owner"}} *apiv1.Owner {{else}} interface{} {{end}} {{end}} `json:"{{$field | strings.ToLower}}"`
+	{{range $field, $isNotEmpty := .res.fields -}}
+		{{$type := $field | strings.Title -}}
+		{{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
+        {{- $type}} {{if $isNotEmpty}} {{ $varName }}{{ $type }} {{else}} {{if eq $type "Owner"}} *apiv1.Owner {{else}} interface{} {{end}} {{end}} `json:"{{$field | strings.ToLower}}"`
 	{{end}}
-}
-
-// FromInstance converts a ResourceInstance to a {{.res.kind}}
-func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
-	if ri == nil {
-		res = nil
-		return nil
-	}
-
-	var err error
-	rawResource := ri.GetRawResource()
-	if rawResource == nil {
-		rawResource, err = json.Marshal(ri)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = json.Unmarshal(rawResource, res)
-	return err
 }
 
 // {{.res.kind}}FromInstanceArray converts a []*ResourceInstance to a []*{{.res.kind}}
@@ -99,4 +77,90 @@ func (res *{{.res.kind}}) AsInstance() (*apiv1.ResourceInstance, error) {
 	}
 
 	return &instance, nil
+}
+
+// FromInstance converts a ResourceInstance to a {{.res.kind}}
+func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
+    if ri == nil {
+        res = nil
+        return nil
+    }
+    var err error
+    rawResource := ri.GetRawResource()
+    if rawResource == nil {
+        rawResource, err = json.Marshal(ri)
+        if err != nil {
+            return err
+        }
+    }
+    err = json.Unmarshal(rawResource, res)
+    return err
+}
+
+// MarshalJSON custom marshaller to handle sub resources
+func (res *{{.res.kind}}) MarshalJSON() ([]byte, error) {
+	m, err := json.Marshal(&res.ResourceMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	var out map[string]interface{}
+	err = json.Unmarshal(m, &out)
+	if err != nil {
+		return nil, err
+	}
+
+	{{range $field, $isNotEmpty := .res.fields -}}
+        {{- $fieldName := $field | strings.Title -}}
+		{{- $keyName := $field | strings.ToLower -}}
+		out["{{$keyName}}"] = res.{{$fieldName}}
+	{{end}}
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON custom unmarshaller to handle sub resources
+func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
+    var err error
+
+    aux := &apiv1.ResourceInstance{}
+    err = json.Unmarshal(data, aux)
+    if err != nil {
+        return err
+    }
+
+    res.ResourceMeta = aux.ResourceMeta
+    res.Owner = aux.Owner
+
+    // ResourceInstance holds the spec as a map[string]interface{}.
+    // Convert it to bytes, then convert to the spec type for the resource.
+    sr, err := json.Marshal(aux.Spec)
+    if err != nil {
+        return err
+    }
+
+    err = json.Unmarshal(sr, &res.Spec)
+    if err != nil {
+        return err
+    }
+
+    {{range $field, $isNotEmpty := .res.fields -}}
+        {{- $fieldName := $field | strings.Title -}}
+        {{- $keyName := $field | strings.ToLower -}}
+        {{if eq $keyName "owner"}}
+        {{else if eq $keyName "spec"}}
+        {{else}}
+        // marshalling subresource {{$fieldName}}
+        sr, err = json.Marshal(aux.SubResources["{{$keyName}}"])
+        if err != nil {
+            return err
+        }
+
+        err = json.Unmarshal(sr, &res.{{$fieldName}})
+        if err != nil {
+            return err
+        }
+        {{end}}
+    {{end}}
+    return nil
 }

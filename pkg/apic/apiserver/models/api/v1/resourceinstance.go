@@ -3,7 +3,15 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
+
+// Interface describes API Server & catalog resources
+type Interface interface {
+	Meta
+	AsInstance() (*ResourceInstance, error)
+	FromInstance(from *ResourceInstance) error
+}
 
 // ResourceInstance API Server generic resource structure.
 type ResourceInstance struct {
@@ -21,9 +29,37 @@ func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// unmarshall the rest of the resources here, and set them on the ResourceInstance manually
+	out := map[string]interface{}{}
+	err := json.Unmarshal(data, &out)
+	if err != nil {
+		return err
+	}
+
+	if out["spec"] != nil {
+		v, ok := out["spec"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("spec is not a map[string]interface{}")
+		}
+		ri.Spec = v
+	}
+
+	if out["owner"] != nil {
+		var err error
+		ri.Owner = &Owner{}
+		bts, err := json.Marshal(out["owner"])
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(bts, ri.Owner)
+		if err != nil {
+			return err
+		}
+	}
+
 	// clean up any unnecessary chars from json byte array
 	byteBuf := bytes.Buffer{}
-	err := json.Compact(&byteBuf, data)
+	err = json.Compact(&byteBuf, data)
 	if err != nil {
 		return err
 	}
@@ -48,10 +84,14 @@ func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	rawInstance := map[string]interface{}{}
 	if err := json.Unmarshal(riAlias, &rawInstance); err != nil {
 		return []byte{}, err
 	}
+
+	rawInstance["spec"] = ri.Spec
+	rawInstance["owner"] = ri.Owner
 
 	// override the rawStruct map with the values from the rawInstance map
 	for key, value := range rawInstance {
@@ -77,11 +117,4 @@ func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 // GetRawResource gets the resource as bytes
 func (ri *ResourceInstance) GetRawResource() json.RawMessage {
 	return ri.rawResource
-}
-
-// Interface describes API Server & catalog resources
-type Interface interface {
-	Meta
-	AsInstance() (*ResourceInstance, error)
-	FromInstance(from *ResourceInstance) error
 }

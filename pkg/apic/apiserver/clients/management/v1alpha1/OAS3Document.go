@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type OAS3DocumentMergeFunc func(*v1alpha1.OAS3Document, *v1alpha1.OAS3Document) (*v1alpha1.OAS3Document, error)
+type OAS3DocumentMergeFunc func(*m.OAS3Document, *m.OAS3Document) (*m.OAS3Document, error)
 
-// Merge builds a merge option for an update operation
+// OAS3DocumentMerge builds a merge option for an update operation
 func OAS3DocumentMerge(f OAS3DocumentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.OAS3Document{}, &v1alpha1.OAS3Document{}
+		p, n := &m.OAS3Document{}, &m.OAS3Document{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.OAS3Document:
+		case *m.OAS3Document:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func OAS3DocumentMerge(f OAS3DocumentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.OAS3Document:
+		case *m.OAS3Document:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func OAS3DocumentMerge(f OAS3DocumentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// OAS3DocumentClient -
+// OAS3DocumentClient - rest client for OAS3Document resources that have a defined resource scope
 type OAS3DocumentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedOAS3DocumentClient -
+// UnscopedOAS3DocumentClient - rest client for OAS3Document resources that do not have a defined scope
 type UnscopedOAS3DocumentClient struct {
 	client v1.Unscoped
 }
 
-// NewOAS3DocumentClient -
+// NewOAS3DocumentClient - creates a client that is not scoped to any resource
 func NewOAS3DocumentClient(c v1.Base) (*UnscopedOAS3DocumentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.OAS3DocumentGVK())
+	client, err := c.ForKind(m.OAS3DocumentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewOAS3DocumentClient(c v1.Base) (*UnscopedOAS3DocumentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedOAS3DocumentClient) WithScope(scope string) *OAS3DocumentClient {
 	return &OAS3DocumentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedOAS3DocumentClient) Get(name string) (*v1alpha1.OAS3Document, error) {
+// Get - gets a resource by name
+func (c *UnscopedOAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.OAS3Document{}
+	service := &m.OAS3Document{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedOAS3DocumentClient) Update(res *v1alpha1.OAS3Document, opts ...v1.UpdateOption) (*v1alpha1.OAS3Document, error) {
+// Update - updates a resource
+func (c *UnscopedOAS3DocumentClient) Update(res *m.OAS3Document, opts ...v1.UpdateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedOAS3DocumentClient) Update(res *v1alpha1.OAS3Document, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.OAS3Document{}
+	updated := &m.OAS3Document{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedOAS3DocumentClient) Update(res *v1alpha1.OAS3Document, opts ...
 	return updated, nil
 }
 
-// List -
-func (c *OAS3DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.OAS3Document, error) {
+// List - gets a list of resources
+func (c *OAS3DocumentClient) List(options ...v1.ListOptions) ([]*m.OAS3Document, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.OAS3Document, len(riList))
+	result := make([]*m.OAS3Document, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.OAS3Document{}
+		result[i] = &m.OAS3Document{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *OAS3DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.OAS3Do
 	return result, nil
 }
 
-// Get -
-func (c *OAS3DocumentClient) Get(name string) (*v1alpha1.OAS3Document, error) {
+// Get - gets a resource by name
+func (c *OAS3DocumentClient) Get(name string) (*m.OAS3Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.OAS3Document{}
+	service := &m.OAS3Document{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *OAS3DocumentClient) Delete(res *v1alpha1.OAS3Document) error {
+// Delete - deletes a resource
+func (c *OAS3DocumentClient) Delete(res *m.OAS3Document) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *OAS3DocumentClient) Delete(res *v1alpha1.OAS3Document) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *OAS3DocumentClient) Create(res *v1alpha1.OAS3Document, opts ...v1.CreateOption) (*v1alpha1.OAS3Document, error) {
+// Create - creates a resource
+func (c *OAS3DocumentClient) Create(res *m.OAS3Document, opts ...v1.CreateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *OAS3DocumentClient) Create(res *v1alpha1.OAS3Document, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.OAS3Document{}
+	created := &m.OAS3Document{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *OAS3DocumentClient) Create(res *v1alpha1.OAS3Document, opts ...v1.Creat
 	return created, err
 }
 
-// Update -
-func (c *OAS3DocumentClient) Update(res *v1alpha1.OAS3Document, opts ...v1.UpdateOption) (*v1alpha1.OAS3Document, error) {
+// Update - updates a resource
+func (c *OAS3DocumentClient) Update(res *m.OAS3Document, opts ...v1.UpdateOption) (*m.OAS3Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *OAS3DocumentClient) Update(res *v1alpha1.OAS3Document, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.OAS3Document{}
+	updated := &m.OAS3Document{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

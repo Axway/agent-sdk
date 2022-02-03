@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type DiscoveryAgentMergeFunc func(*v1alpha1.DiscoveryAgent, *v1alpha1.DiscoveryAgent) (*v1alpha1.DiscoveryAgent, error)
+type DiscoveryAgentMergeFunc func(*m.DiscoveryAgent, *m.DiscoveryAgent) (*m.DiscoveryAgent, error)
 
-// Merge builds a merge option for an update operation
+// DiscoveryAgentMerge builds a merge option for an update operation
 func DiscoveryAgentMerge(f DiscoveryAgentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.DiscoveryAgent{}, &v1alpha1.DiscoveryAgent{}
+		p, n := &m.DiscoveryAgent{}, &m.DiscoveryAgent{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.DiscoveryAgent:
+		case *m.DiscoveryAgent:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func DiscoveryAgentMerge(f DiscoveryAgentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.DiscoveryAgent:
+		case *m.DiscoveryAgent:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func DiscoveryAgentMerge(f DiscoveryAgentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DiscoveryAgentClient -
+// DiscoveryAgentClient - rest client for DiscoveryAgent resources that have a defined resource scope
 type DiscoveryAgentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDiscoveryAgentClient -
+// UnscopedDiscoveryAgentClient - rest client for DiscoveryAgent resources that do not have a defined scope
 type UnscopedDiscoveryAgentClient struct {
 	client v1.Unscoped
 }
 
-// NewDiscoveryAgentClient -
+// NewDiscoveryAgentClient - creates a client that is not scoped to any resource
 func NewDiscoveryAgentClient(c v1.Base) (*UnscopedDiscoveryAgentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.DiscoveryAgentGVK())
+	client, err := c.ForKind(m.DiscoveryAgentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewDiscoveryAgentClient(c v1.Base) (*UnscopedDiscoveryAgentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedDiscoveryAgentClient) WithScope(scope string) *DiscoveryAgentClient {
 	return &DiscoveryAgentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedDiscoveryAgentClient) Get(name string) (*v1alpha1.DiscoveryAgent, error) {
+// Get - gets a resource by name
+func (c *UnscopedDiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.DiscoveryAgent{}
+	service := &m.DiscoveryAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedDiscoveryAgentClient) Update(res *v1alpha1.DiscoveryAgent, opts ...v1.UpdateOption) (*v1alpha1.DiscoveryAgent, error) {
+// Update - updates a resource
+func (c *UnscopedDiscoveryAgentClient) Update(res *m.DiscoveryAgent, opts ...v1.UpdateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedDiscoveryAgentClient) Update(res *v1alpha1.DiscoveryAgent, opts
 		return nil, err
 	}
 
-	updated := &v1alpha1.DiscoveryAgent{}
+	updated := &m.DiscoveryAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedDiscoveryAgentClient) Update(res *v1alpha1.DiscoveryAgent, opts
 	return updated, nil
 }
 
-// List -
-func (c *DiscoveryAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.DiscoveryAgent, error) {
+// List - gets a list of resources
+func (c *DiscoveryAgentClient) List(options ...v1.ListOptions) ([]*m.DiscoveryAgent, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.DiscoveryAgent, len(riList))
+	result := make([]*m.DiscoveryAgent, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.DiscoveryAgent{}
+		result[i] = &m.DiscoveryAgent{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *DiscoveryAgentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Disc
 	return result, nil
 }
 
-// Get -
-func (c *DiscoveryAgentClient) Get(name string) (*v1alpha1.DiscoveryAgent, error) {
+// Get - gets a resource by name
+func (c *DiscoveryAgentClient) Get(name string) (*m.DiscoveryAgent, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.DiscoveryAgent{}
+	service := &m.DiscoveryAgent{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *DiscoveryAgentClient) Delete(res *v1alpha1.DiscoveryAgent) error {
+// Delete - deletes a resource
+func (c *DiscoveryAgentClient) Delete(res *m.DiscoveryAgent) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *DiscoveryAgentClient) Delete(res *v1alpha1.DiscoveryAgent) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *DiscoveryAgentClient) Create(res *v1alpha1.DiscoveryAgent, opts ...v1.CreateOption) (*v1alpha1.DiscoveryAgent, error) {
+// Create - creates a resource
+func (c *DiscoveryAgentClient) Create(res *m.DiscoveryAgent, opts ...v1.CreateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *DiscoveryAgentClient) Create(res *v1alpha1.DiscoveryAgent, opts ...v1.C
 		return nil, err
 	}
 
-	created := &v1alpha1.DiscoveryAgent{}
+	created := &m.DiscoveryAgent{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *DiscoveryAgentClient) Create(res *v1alpha1.DiscoveryAgent, opts ...v1.C
 	return created, err
 }
 
-// Update -
-func (c *DiscoveryAgentClient) Update(res *v1alpha1.DiscoveryAgent, opts ...v1.UpdateOption) (*v1alpha1.DiscoveryAgent, error) {
+// Update - updates a resource
+func (c *DiscoveryAgentClient) Update(res *m.DiscoveryAgent, opts ...v1.UpdateOption) (*m.DiscoveryAgent, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *DiscoveryAgentClient) Update(res *v1alpha1.DiscoveryAgent, opts ...v1.U
 		return nil, err
 	}
 
-	updated := &v1alpha1.DiscoveryAgent{}
+	updated := &m.DiscoveryAgent{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

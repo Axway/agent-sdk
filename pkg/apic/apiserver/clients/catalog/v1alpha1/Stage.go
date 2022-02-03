@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type StageMergeFunc func(*v1alpha1.Stage, *v1alpha1.Stage) (*v1alpha1.Stage, error)
+type StageMergeFunc func(*m.Stage, *m.Stage) (*m.Stage, error)
 
-// Merge builds a merge option for an update operation
+// StageMerge builds a merge option for an update operation
 func StageMerge(f StageMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Stage{}, &v1alpha1.Stage{}
+		p, n := &m.Stage{}, &m.Stage{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Stage:
+		case *m.Stage:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func StageMerge(f StageMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Stage:
+		case *m.Stage:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,15 +47,15 @@ func StageMerge(f StageMergeFunc) v1.UpdateOption {
 	})
 }
 
-// StageClient -
+// StageClient - rest client for Stage resources that have a defined resource scope
 type StageClient struct {
 	client v1.Scoped
 }
 
-// NewStageClient -
+// NewStageClient - creates a client scoped to a particular resource
 func NewStageClient(c v1.Base) (*StageClient, error) {
 
-	client, err := c.ForKind(v1alpha1.StageGVK())
+	client, err := c.ForKind(m.StageGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +64,17 @@ func NewStageClient(c v1.Base) (*StageClient, error) {
 
 }
 
-// List -
-func (c *StageClient) List(options ...v1.ListOptions) ([]*v1alpha1.Stage, error) {
+// List - gets a list of resources
+func (c *StageClient) List(options ...v1.ListOptions) ([]*m.Stage, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Stage, len(riList))
+	result := make([]*m.Stage, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Stage{}
+		result[i] = &m.Stage{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -84,21 +84,21 @@ func (c *StageClient) List(options ...v1.ListOptions) ([]*v1alpha1.Stage, error)
 	return result, nil
 }
 
-// Get -
-func (c *StageClient) Get(name string) (*v1alpha1.Stage, error) {
+// Get - gets a resource by name
+func (c *StageClient) Get(name string) (*m.Stage, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Stage{}
+	service := &m.Stage{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *StageClient) Delete(res *v1alpha1.Stage) error {
+// Delete - deletes a resource
+func (c *StageClient) Delete(res *m.Stage) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -108,8 +108,8 @@ func (c *StageClient) Delete(res *v1alpha1.Stage) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *StageClient) Create(res *v1alpha1.Stage, opts ...v1.CreateOption) (*v1alpha1.Stage, error) {
+// Create - creates a resource
+func (c *StageClient) Create(res *m.Stage, opts ...v1.CreateOption) (*m.Stage, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *StageClient) Create(res *v1alpha1.Stage, opts ...v1.CreateOption) (*v1a
 		return nil, err
 	}
 
-	created := &v1alpha1.Stage{}
+	created := &m.Stage{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -131,8 +131,8 @@ func (c *StageClient) Create(res *v1alpha1.Stage, opts ...v1.CreateOption) (*v1a
 	return created, err
 }
 
-// Update -
-func (c *StageClient) Update(res *v1alpha1.Stage, opts ...v1.UpdateOption) (*v1alpha1.Stage, error) {
+// Update - updates a resource
+func (c *StageClient) Update(res *m.Stage, opts ...v1.UpdateOption) (*m.Stage, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *StageClient) Update(res *v1alpha1.Stage, opts ...v1.UpdateOption) (*v1a
 		return nil, err
 	}
 
-	updated := &v1alpha1.Stage{}
+	updated := &m.Stage{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
