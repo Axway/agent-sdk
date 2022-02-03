@@ -113,7 +113,7 @@ func (res *PublishedProduct) MarshalJSON() ([]byte, error) {
 	return json.Marshal(out)
 }
 
-// UnmarshalJSON custom unmarshaler to handle sub resources
+// UnmarshalJSON custom unmarshaller to handle sub resources
 func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 	var err error
 
@@ -126,6 +126,8 @@ func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 	res.ResourceMeta = aux.ResourceMeta
 	res.Owner = aux.Owner
 
+	// ResourceInstance holds the spec as a map[string]interface{}.
+	// Convert it to bytes, then convert to the spec type for the resource.
 	sr, err := json.Marshal(aux.Spec)
 	if err != nil {
 		return err
@@ -136,6 +138,7 @@ func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource References
 	sr, err = json.Marshal(aux.SubResources["references"])
 	if err != nil {
 		return err
