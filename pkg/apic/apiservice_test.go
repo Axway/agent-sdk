@@ -218,8 +218,16 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, svc)
 
-	// should return the nil for the error and resource when finding by the primary key
+	// should return the resource when primary key is not found but external api id is
 	cloneServiceBody.PrimaryKey = "4563"
+	ri, _ = apiSvc.AsInstance()
+	client.caches.AddAPIService(ri)
+	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, svc)
+
+	// should return the nil for the error and resource when primary key and external api id are not found
+	cloneServiceBody.RestAPIID = "4563"
 	ri, _ = apiSvc.AsInstance()
 	client.caches.AddAPIService(ri)
 	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
