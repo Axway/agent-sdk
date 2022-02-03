@@ -3,6 +3,8 @@ package traceability
 import (
 	"regexp"
 	"strings"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func setUpAPIExceptionList(apiExceptionsList []string) (string, error) {
@@ -46,6 +48,7 @@ func ShouldIgnoreEvent(uriRaw string) bool {
 	// If the api path exists in the exceptions list, return true and ignore event
 	for _, exception := range exceptions {
 		if exception.MatchString(uriRaw) {
+			log.Debugf("%s found in exception list.  Do not process event.", uriRaw)
 			return true
 		}
 	}

@@ -117,6 +117,7 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 		}
 	}
 
+	// set up the api exceptions list for logging events
 	exception, err := setUpAPIExceptionList(outputConfig.APIExceptionsList)
 	if err != nil {
 		err = ErrInvalidRegex.FormatError("apiExceptionValue", exception, err)
