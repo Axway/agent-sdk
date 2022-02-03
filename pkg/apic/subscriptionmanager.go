@@ -113,10 +113,11 @@ func (sm *subscriptionManager) processSubscriptions() {
 				subscription, _ := msg.(CentralSubscription)
 				id := subscription.GetID()
 				if !sm.isItemOnLocklist(id) {
+					log.Tracef("checking if we should handle subscription %s", subscription.GetName())
 					sm.addLocklistItem(id)
-					log.Infof("Subscription %s received", subscription.GetName())
 					err := sm.preprocessSubscription(&subscription)
 					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
+						log.Infof("Subscription %s received", subscription.GetName())
 						sm.invokeProcessor(subscription)
 						log.Infof("Subscription %s processed", subscription.GetName())
 					}
