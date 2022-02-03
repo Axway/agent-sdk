@@ -107,3 +107,15 @@ func TestResourceMeta(t *testing.T) {
 	meta.SetTags([]string{"tag1", "tag2"})
 	assert.Equal(t, meta.Tags, meta.GetTags())
 }
+
+// should be able to call get methods if meta is nil
+func TestResourceMetaNilReference(t *testing.T) {
+	var meta *ResourceMeta
+
+	assert.Equal(t, "", meta.GetName())
+	assert.Equal(t, Metadata{}, meta.GetMetadata())
+	assert.Equal(t, GroupVersionKind{}, meta.GetGroupVersionKind())
+	assert.Equal(t, map[string]string{}, meta.GetAttributes())
+	assert.Equal(t, []string{}, meta.GetTags())
+	assert.Nil(t, meta.GetSubResource("abc"))
+}

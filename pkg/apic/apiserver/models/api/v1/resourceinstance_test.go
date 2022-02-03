@@ -59,6 +59,16 @@ func TestResourceInstanceMarshalJSON(t *testing.T) {
 	assert.Equal(t, r1.ResourceMeta, r2.ResourceMeta)
 }
 
+func TestResourceInstanceUnMarshalError(t *testing.T) {
+	ri := &ResourceInstance{}
+	err := json.Unmarshal([]byte(`{"spec": "fake"}`), ri)
+	assert.Error(t, err)
+
+	ri = &ResourceInstance{}
+	err = json.Unmarshal([]byte(`{"owner": "fake", "spec": {}}`), ri)
+	assert.Error(t, err)
+}
+
 func TestResourceInstance_FromInstance(t *testing.T) {
 	ri1 := &ResourceInstance{
 		ResourceMeta: ResourceMeta{

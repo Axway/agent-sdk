@@ -24,7 +24,6 @@ type ResourceInstance struct {
 
 // UnmarshalJSON - custom unmarshaler for ResourceInstance struct to additionally use a custom subscriptionField
 func (ri *ResourceInstance) UnmarshalJSON(data []byte) error {
-	// TODO: find out how this works
 	type Alias ResourceInstance // Create an intermediate type to unmarshal the base attributes
 	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(ri)}); err != nil {
 		return err

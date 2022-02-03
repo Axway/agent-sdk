@@ -102,7 +102,7 @@ func (rm *ResourceMeta) SetTags(tags []string) {
 
 // GetSubResource get a sub resource by name
 func (rm *ResourceMeta) GetSubResource(key string) interface{} {
-	if rm.SubResources == nil {
+	if rm == nil || rm.SubResources == nil {
 		return nil
 	}
 	return rm.SubResources[key]
@@ -111,6 +111,10 @@ func (rm *ResourceMeta) GetSubResource(key string) interface{} {
 // SetSubResource saves a value to a sub resource by name and overrides the current value.
 // To update a SubResource first call GetSubResource and modify it, then save it.
 func (rm *ResourceMeta) SetSubResource(name string, value interface{}) {
+	if rm == nil {
+		return
+	}
+
 	if rm.SubResources == nil {
 		rm.SubResources = make(map[string]interface{})
 	}

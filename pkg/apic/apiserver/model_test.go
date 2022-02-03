@@ -69,18 +69,6 @@ func TestAPIServiceMarshal(t *testing.T) {
 	svc1.Metadata.Audit = apiv1.AuditMetadata{}
 	svc2.Metadata.Audit = apiv1.AuditMetadata{}
 	assert.Equal(t, svc1, svc2)
-
-	svc3 := &m.APIService{}
-
-	// should return an error when given an invalid spec
-	b := []byte(`{"spec":"def"}`)
-	err = json.Unmarshal(b, svc3)
-	assert.NotNil(t, err)
-
-	// should return an error when given an invalid owner
-	b = []byte(`{"owner":"def"}`)
-	err = json.Unmarshal(b, svc3)
-	assert.NotNil(t, err)
 }
 
 // should unmarshal when owner is not set
