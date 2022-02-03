@@ -1,7 +1,7 @@
 package log
 
 import (
-	"fmt"
+	"encoding/json"
 	"regexp"
 )
 
@@ -9,7 +9,8 @@ import (
 func ObscureArguments(redactedFields []string, args ...interface{}) []interface{} {
 	var obscuredParams []interface{}
 	for _, arg := range args {
-		obscuredParams = append(obscuredParams, obscureParams(fmt.Sprintf("%s", arg), redactedFields))
+		b, _ := json.Marshal(arg)
+		obscuredParams = append(obscuredParams, obscureParams(string(b), redactedFields))
 	}
 	return obscuredParams
 
@@ -25,9 +26,16 @@ func obscureParams(jsn string, sensitiveParams []string) string {
 
 // obscureParam obscure/mask/redact a value in a json string
 func obscureParam(jsn string, param string) string {
+
+	rWithNumberSlash := *regexp.MustCompile(`"` + param + `": ?([0-9]+)`)
+	jsn = rWithNumberSlash.ReplaceAllString(jsn, `"`+param+`": "[redacted]"`)
+
+	rWithNumberNoSlash := *regexp.MustCompile(`\\"` + param + `\\":.*?([0-9]+)`)
+	jsn = rWithNumberNoSlash.ReplaceAllString(jsn, `"`+param+`": "[redacted]"`)
+
 	rWithSlash := *regexp.MustCompile(`\\"` + param + `\\":.*?"(.*?)\\"`)
-	jsn = rWithSlash.ReplaceAllString(jsn, `\"`+param+`\": \"**********\"`)
+	jsn = rWithSlash.ReplaceAllString(jsn, `\"`+param+`\": "[redacted]"`)
 
 	rWithoutSlash := *regexp.MustCompile(`"` + param + `":.*?"(.*?)"`)
-	return rWithoutSlash.ReplaceAllString(jsn, `"`+param+`": "**********"`)
+	return rWithoutSlash.ReplaceAllString(jsn, `"`+param+`": "[redacted]"`)
 }
