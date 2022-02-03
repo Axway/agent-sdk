@@ -60,15 +60,12 @@ type agentData struct {
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
-
-	publishMutex *sync.Mutex
 }
 
 var agent agentData
 
 func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
-	agent.publishMutex = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent

@@ -116,8 +116,6 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *v1.Owner {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		agent.publishMutex.Lock()
-		defer agent.publishMutex.Unlock()
 		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
