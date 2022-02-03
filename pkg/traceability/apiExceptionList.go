@@ -7,46 +7,37 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func setUpAPIExceptionList(apiExceptionsList []string) (string, error) {
+// setUpAPIExceptionList - called from config to set up api exceptions list for traceability
+func setUpAPIExceptionList(cfgAPIiExceptionsList []string) (string, error) {
 	// if set check for valid regex definitions
-	if apiExceptionsList != nil {
-		newShowRegex = make([]*regexp.Regexp, 0)
+	exceptionRegEx = make([]*regexp.Regexp, 0)
 
-		// Get the api exceptions list
-		exceptions := apiExceptionsList
-		for i := range exceptions {
-			exception := strings.TrimSpace(exceptions[i])
+	// Get the api exceptions list
+	exceptions := cfgAPIiExceptionsList
+	for i := range exceptions {
+		exception := strings.TrimSpace(exceptions[i])
 
-			// check for regex and then validate
-			keyMatch, err := regexp.Compile(exception)
-			if err != nil {
-				return exception, err
-			}
-
-			newShowRegex = append(newShowRegex, keyMatch)
-
+		// check for regex and then validate
+		keyMatch, err := regexp.Compile(exception)
+		if err != nil {
+			return exception, err
 		}
+
+		exceptionRegEx = append(exceptionRegEx, keyMatch)
+
 	}
+
 	return "", nil
 }
 
-// getAPIExceptionsList - Returns traceability APIs exception list (api paths)
-func getAPIExceptionsList() []*regexp.Regexp {
-	if newShowRegex == nil {
-		return []*regexp.Regexp{}
-	}
-	return newShowRegex
-}
-
-// newShowRegex - array of regexp.Regexp
-var newShowRegex []*regexp.Regexp
+// exceptionRegEx - array of regexp.Regexp
+var exceptionRegEx []*regexp.Regexp
 
 // ShouldIgnoreEvent - check to see if the uri exists in exception list
 func ShouldIgnoreEvent(uriRaw string) bool {
-	exceptions := getAPIExceptionsList()
 
 	// If the api path exists in the exceptions list, return true and ignore event
-	for _, exception := range exceptions {
+	for _, exception := range exceptionRegEx {
 		if exception.MatchString(uriRaw) {
 			log.Debugf("%s found in exception list.  Do not process event.", uriRaw)
 			return true
