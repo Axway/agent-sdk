@@ -20,7 +20,7 @@ func setUpAPIExceptionList(apiExceptionsList []string) (string, error) {
 			// check for regex and then validate
 			keyMatch, err := regexp.Compile(exception)
 			if err != nil {
-				return "", err
+				return exception, err
 			}
 
 			newShowRegex = append(newShowRegex, keyMatch)
