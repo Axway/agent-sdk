@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -41,10 +43,9 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 	if resource.Kind != apiService {
 		return nil
 	}
-
-	id, ok := resource.Attributes[definitions.AttrExternalAPIID]
-	if !ok {
-		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.AttrExternalAPIID, resource.Name)
+	id, err := util.GetAgentDetailsValue(resource, definitions.XExternalAPIID)
+	if err != nil {
+		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.XExternalAPIID, resource.Name)
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {

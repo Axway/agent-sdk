@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -22,17 +24,17 @@ func newInstanceValidator(cacheLock *sync.Mutex, isAgentPollMode bool) *instance
 	return &instanceValidator{cacheLock: cacheLock, isAgentPollMode: isAgentPollMode}
 }
 
-//Ready -
+// Ready -
 func (j *instanceValidator) Ready() bool {
 	return true
 }
 
-//Status -
+// Status -
 func (j *instanceValidator) Status() error {
 	return nil
 }
 
-//Execute -
+// Execute -
 func (j *instanceValidator) Execute() error {
 	j.validateAPIOnDataplane()
 	return nil
@@ -50,11 +52,11 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 			continue
 		}
 
-		if _, valid := serviceInstanceResource.Attributes[definitions.AttrExternalAPIID]; !valid {
+		externalAPIID, _ := util.GetAgentDetailsValue(serviceInstanceResource, definitions.XExternalAPIID)
+		if externalAPIID == "" {
 			continue // skip service instances without external api id
 		}
-		externalAPIID := serviceInstanceResource.Attributes[definitions.AttrExternalAPIID]
-		externalAPIStage := serviceInstanceResource.Attributes[definitions.AttrExternalAPIStage]
+		externalAPIStage, _ := util.GetAgentDetailsValue(serviceInstanceResource, definitions.AttrExternalAPIStage)
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it

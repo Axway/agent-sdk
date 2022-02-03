@@ -13,6 +13,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -23,7 +25,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-//TODO
+// TODO
 /*
 	1. Search for comment "DEPRECATED to be removed on major release"
 	2. Remove deprecated code left from APIGOV-19751
@@ -61,31 +63,36 @@ func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, revAttributes map[string]string, revisionName string) *v1alpha1.APIServiceRevision {
-	return &v1alpha1.APIServiceRevision{
+func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, attr map[string]string, name string) *v1alpha1.APIServiceRevision {
+	rev := &v1alpha1.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceRevisionGVK(),
-			Name:             revisionName,
+			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, revAttributes, false),
+			Attributes:       buildAPIResourceAttributes(serviceBody, attr),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
+	rev.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+
+	return rev
 }
 
 func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevision, serviceBody *ServiceBody) *v1alpha1.APIServiceRevision {
 	revision.ResourceMeta.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
+	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
 	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
+	revision.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+
 	return revision
 }
 
-//processRevision -
+// processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	err := c.setRevisionAction(serviceBody)
 
@@ -125,10 +132,16 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		if serviceBody.AltRevisionPrefix == "" {
 			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
 		}
-		if serviceBody.serviceContext.previousRevision != nil {
-			revAttributes[definitions.AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
-		}
+
 		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
+
+		if serviceBody.serviceContext.previousRevision != nil {
+			err := util.SetAgentDetailsKey(revision, definitions.AttrPreviousAPIServiceRevisionID, serviceBody.serviceContext.previousRevision.Metadata.ID)
+			if err != nil {
+				log.Errorf("failed to set previous revision id for %v-%v ", serviceBody.APIName)
+			}
+		}
+
 		log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	}
 
@@ -201,7 +214,7 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	return nil
 }
 
-//getRevisionDefinitionType -
+// getRevisionDefinitionType -
 func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
 	if serviceBody.ResourceType == "" {
 		return Unstructured
@@ -209,7 +222,7 @@ func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) strin
 	return serviceBody.ResourceType
 }
 
-//DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
+// DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
 // updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
 func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
 	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern()
@@ -221,7 +234,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 	var dateFormat = ""
 
 	if dateRegEx.MatchString(apiSvcRevPattern) {
-		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              //{{.Date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
+		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              // {{.Date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
 		index := strings.Index(datePattern, ":")                                           // get index of ":" (colon)
 		date := datePattern[index+1 : index+11]                                            // sub out "{{.Date:" and "}}" to get the format of the date only
 		dateFormat = apiSvcRevTitleDateMap[date]                                           // make sure dateFormat is a valid date format

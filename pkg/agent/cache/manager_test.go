@@ -13,7 +13,7 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	attributes := map[string]string{
-		definitions.AttrExternalAPIID:   apiID,
+		definitions.XExternalAPIID:      apiID,
 		definitions.AttrExternalAPIName: apiName,
 	}
 	if primaryKey != "" {

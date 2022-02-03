@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -28,17 +30,21 @@ func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.A
 }
 
 func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, serviceName string) *v1alpha1.APIService {
-	return &v1alpha1.APIService{
+	svc := &v1alpha1.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             serviceName,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, true),
+			Attributes:       buildAPIResourceAttributes(serviceBody, nil),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildAPIServiceSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, true),
 	}
+
+	svc.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, true))
+
+	return svc
 }
 
 func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *v1.Owner {
@@ -54,15 +60,17 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *
 	return nil
 }
 
-func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, serviceBody *ServiceBody) {
-	apiSvc.ResourceMeta.Metadata.ResourceVersion = ""
-	apiSvc.Title = serviceBody.NameToPush
-	apiSvc.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, apiSvc.ResourceMeta.Attributes, true)
-	apiSvc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	apiSvc.Spec.Description = serviceBody.Description
-	apiSvc.Owner = c.getOwnerObject(serviceBody, true)
+func (c *ServiceClient) updateAPIServiceResource(svc *v1alpha1.APIService, serviceBody *ServiceBody) {
+	svc.ResourceMeta.Metadata.ResourceVersion = ""
+	svc.Title = serviceBody.NameToPush
+	svc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	svc.Spec.Description = serviceBody.Description
+	svc.Owner = c.getOwnerObject(serviceBody, true)
+	svc.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, svc.ResourceMeta.Attributes)
+	svc.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, true))
+
 	if serviceBody.Image != "" {
-		apiSvc.Spec.Icon = v1alpha1.ApiServiceSpecIcon{
+		svc.Spec.Icon = v1alpha1.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
 		}

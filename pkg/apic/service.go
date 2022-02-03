@@ -70,8 +70,8 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIS
 }
 
 // DeleteServiceByName -
-func (c *ServiceClient) DeleteServiceByName(apiName string) error {
-	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+apiName, nil)
+func (c *ServiceClient) DeleteServiceByName(name string) error {
+	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+name, nil)
 	if err != nil {
 		return err
 	}
@@ -102,13 +102,13 @@ func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 }
 
 // GetCatalogItemIDForConsumerInstance -
-func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
-	return c.getCatalogItemIDForConsumerInstance(instanceID)
+func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(id string) (string, error) {
+	return c.getCatalogItemIDForConsumerInstance(id)
 }
 
 // DeleteConsumerInstance -
-func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
-	return c.deleteConsumerInstance(instanceName)
+func (c *ServiceClient) DeleteConsumerInstance(name string) error {
+	return c.deleteConsumerInstance(name)
 }
 
 // DeleteAPIServiceInstance deletes an api service instance in central by name
@@ -162,7 +162,7 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
-func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
+func buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string) map[string]string {
 	attributes := make(map[string]string)
 
 	// Add attributes from resource if present
@@ -177,20 +177,26 @@ func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, add
 		}
 	}
 
+	return attributes
+}
+
+func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) map[string]string {
+	details := make(map[string]string)
+
 	externalAPIID := serviceBody.RestAPIID
-	// check to see if its an APIService
+	// check to see if is an APIService
 	if !isAPIService && serviceBody.Stage != "" {
-		attributes[definitions.AttrExternalAPIStage] = serviceBody.Stage
+		details[definitions.AttrExternalAPIStage] = serviceBody.Stage
 	}
 	if serviceBody.PrimaryKey != "" {
-		attributes[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
+		details[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
 	}
 
-	attributes[definitions.AttrExternalAPIID] = externalAPIID
-	attributes[definitions.AttrExternalAPIName] = serviceBody.APIName
-	attributes[definitions.AttrCreatedBy] = serviceBody.CreatedBy
+	details[definitions.XExternalAPIID] = externalAPIID
+	details[definitions.AttrExternalAPIName] = serviceBody.APIName
+	details[definitions.AttrCreatedBy] = serviceBody.CreatedBy
 
-	return attributes
+	return details
 }
 
 func isValidAuthPolicy(auth string) bool {

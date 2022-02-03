@@ -196,7 +196,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 			Name:  "abc",
 			Title: "abc",
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:   cloneServiceBody.RestAPIID,
+				definitions.XExternalAPIID:      cloneServiceBody.RestAPIID,
 				definitions.AttrExternalAPIName: serviceBody.APIName,
 			},
 		},
@@ -338,7 +338,7 @@ func TestUpdateService(t *testing.T) {
 func TestRevision(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	cloneServiceBody := serviceBody
-	//Alt Revision
+	// Alt Revision
 	cloneServiceBody.AltRevisionPrefix = "1.1.1"
 	client.processRevision(&cloneServiceBody)
 	assert.Contains(t, cloneServiceBody.serviceContext.revisionName, "1.1.1")
@@ -402,7 +402,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 			Name:  "abc",
 			Title: "abc",
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID: "12345",
+				definitions.XExternalAPIID: "12345",
 			},
 		},
 		Spec: v1alpha1.ApiServiceSpec{},

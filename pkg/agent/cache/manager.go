@@ -25,7 +25,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 
-	//API Service cache related methods
+	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) string
 	GetAPIServiceCache() cache.Cache
 	GetAPIServiceKeys() []string
@@ -197,11 +197,12 @@ func (c *cacheManager) SaveCache() {
 
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
-	externalAPIID, ok := apiService.Attributes[definitions.AttrExternalAPIID]
-	if ok {
+	externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.XExternalAPIID)
+	if externalAPIID != "" {
 		defer c.setCacheUpdated(true)
-		externalAPIName := apiService.Attributes[definitions.AttrExternalAPIName]
-		if externalAPIPrimaryKey, found := apiService.Attributes[definitions.AttrExternalAPIPrimaryKey]; found {
+		externalAPIName, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIName)
+		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIPrimaryKey)
+		if externalAPIPrimaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(externalAPIID); err != nil {
 				c.apiMap.Delete(externalAPIID)

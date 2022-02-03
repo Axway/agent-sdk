@@ -22,7 +22,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 				ID: "svc-" + externalAPIID,
 			},
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:         externalAPIID,
+				definitions.XExternalAPIID:            externalAPIID,
 				definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
 				definitions.AttrExternalAPIName:       externalAPIName,
 			},
@@ -34,7 +34,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 				ID: "instance-" + externalAPIID,
 			},
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:   externalAPIID,
+				definitions.XExternalAPIID:      externalAPIID,
 				definitions.AttrExternalAPIName: externalAPIName,
 			},
 		},

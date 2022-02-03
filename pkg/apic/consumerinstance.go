@@ -72,7 +72,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	}
 }
 
-//buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
+// buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
 func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties {
 	if serviceBody.ResourceType != Unstructured {
 		return v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{}
@@ -130,36 +130,54 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName string, instAttributes map[string]string, doc string) *v1alpha1.ConsumerInstance {
-	return &v1alpha1.ConsumerInstance{
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, attr map[string]string, doc string) *v1alpha1.ConsumerInstance {
+	ci := &v1alpha1.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
-			Name:             consumerInstanceName,
+			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
+			Attributes:       map[string]string{},
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
+
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false)
+	for k, v := range attr {
+		agentDetails[k] = v
+	}
+
+	ci.SetSubResource(definitions.XAgentDetails, agentDetails)
+	ci.Attributes = buildAPIResourceAttributes(serviceBody, agentDetails)
+
+	return ci
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, instAttributes map[string]string, doc string) {
-	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
-	consumerInstance.Title = serviceBody.NameToPush
-	for k, v := range instAttributes {
-		consumerInstance.ResourceMeta.Attributes[k] = v
+func (c *ServiceClient) updateConsumerInstanceResource(instance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, attr map[string]string, doc string) {
+	instance.ResourceMeta.Metadata.ResourceVersion = ""
+	instance.Title = serviceBody.NameToPush
+	for k, v := range attr {
+		instance.ResourceMeta.Attributes[k] = v
 	}
-	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
-	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+
+	details := buildAgentDetailsSubResource(serviceBody, false)
+	for k, v := range details {
+		instance.ResourceMeta.Attributes[k] = v
+	}
+
+	instance.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, instance.ResourceMeta.Attributes)
+	instance.SetSubResource(definitions.XAgentDetails, details)
+
+	instance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
 	// use existing categories only if mappings have not been configured
-	categories := consumerInstance.Spec.Categories
+	categories := instance.Spec.Categories
 	if corecfg.IsMappingConfigured() {
 		// use only mapping categories if mapping was configured
 		categories = serviceBody.categoryNames
 	}
-	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
-	consumerInstance.Owner = c.getOwnerObject(serviceBody, false)
+	instance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
+	instance.Owner = c.getOwnerObject(serviceBody, false)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
@@ -241,19 +259,19 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 }
 
 // getAPIServerConsumerInstance -
-func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string, queryParams map[string]string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[string]string) (*v1alpha1.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstanceName
+	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + name
 
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         consumerInstanceURL,
 		Headers:     headers,
-		QueryParams: queryParams,
+		QueryParams: query,
 	}
 
 	response, err := c.apiClient.Send(request)
@@ -308,7 +326,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("attributes."+definitions.XExternalAPIID+"==\"%s\"", externalAPIID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -378,16 +396,16 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.Co
 }
 
 // getConsumerInstanceByName
-func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstanceByName(name string) (*v1alpha1.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	log.Tracef("Get consumer instance by name: %s", consumerInstanceName)
+	log.Tracef("Get consumer instance by name: %s", name)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("name==%s", consumerInstanceName),
+		"query": fmt.Sprintf("name==%s", name),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

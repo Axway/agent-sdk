@@ -165,7 +165,7 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService1",
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:         "1111",
+				definitions.XExternalAPIID:            "1111",
 				definitions.AttrExternalAPIPrimaryKey: "1234",
 				definitions.AttrExternalAPIName:       "NAME",
 				attributeKey:                          attributeValue,
@@ -177,7 +177,7 @@ func TestDiscoveryCache(t *testing.T) {
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService2",
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID: "2222",
+				definitions.XExternalAPIID: "2222",
 			},
 		},
 	}
@@ -242,8 +242,8 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
-	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", definitions.AttrExternalAPIID))
-	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", definitions.AttrExternalAPIID))
+	assert.Equal(t, "1111", GetAttributeOnPublishedAPIByID("1111", definitions.XExternalAPIID))
+	assert.Equal(t, "", GetAttributeOnPublishedAPIByID("2222", definitions.XExternalAPIID))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByPrimaryKey("1234", attributeKey))
 	assert.Equal(t, attributeValue, GetAttributeOnPublishedAPIByName("NAME", attributeKey))
 

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -30,17 +32,21 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 	instanceAttributes map[string]string,
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) *v1alpha1.APIServiceInstance {
-	return &v1alpha1.APIServiceInstance{
+	instance := &v1alpha1.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
 			Name:             instanceName,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, instanceAttributes, false),
+			Attributes:       buildAPIResourceAttributes(serviceBody, instanceAttributes),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
 		},
 		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
+
+	instance.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+
+	return instance
 }
 
 func (c *ServiceClient) updateInstanceResource(
@@ -50,10 +56,12 @@ func (c *ServiceClient) updateInstanceResource(
 ) *v1alpha1.APIServiceInstance {
 	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
-	instance.Attributes = c.buildAPIResourceAttributes(serviceBody, instance.Attributes, false)
+	instance.Attributes = buildAPIResourceAttributes(serviceBody, instance.Attributes)
 	instance.Tags = c.mapToTagsArray(serviceBody.Tags)
 	instance.Spec = c.buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	instance.Owner = c.getOwnerObject(serviceBody, false)
+	instance.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+
 	return instance
 }
 
