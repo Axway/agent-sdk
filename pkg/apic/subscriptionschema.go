@@ -11,6 +11,7 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // SubscriptionSchema -
@@ -21,6 +22,7 @@ type SubscriptionSchema interface {
 	GetSubscriptionName() string
 	mapStringInterface() (map[string]interface{}, error)
 	rawJSON() (json.RawMessage, error)
+	SetJSONDraft07SchemaVersion()
 }
 
 // SubscriptionSchemaPropertyDefinition -
@@ -52,11 +54,16 @@ func NewSubscriptionSchema(name string) SubscriptionSchema {
 	return &subscriptionSchema{
 		SubscriptionName:  name,
 		SchemaType:        "object",
-		SchemaVersion:     "http://json-schema.org/draft-07/schema#",
+		SchemaVersion:     "http://json-schema.org/draft-04/schema#",
 		SchemaDescription: "Subscription specification for authentication",
 		Properties:        make(map[string]SubscriptionSchemaPropertyDefinition),
 		Required:          make([]string, 0),
 	}
+}
+
+//SetJSONDraft07SchemaVersion - set the JSON schema for the subscription definition to Draft-07
+func (ss *subscriptionSchema) SetJSONDraft07SchemaVersion() {
+	ss.SchemaVersion = "http://json-schema.org/draft-07/schema#"
 }
 
 // AddProperty -
@@ -150,14 +157,30 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 
 	// Create New definition
 	if registeredSchema == nil {
-		return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+		err1 := c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+		err2 := c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
+		if err1 != nil {
+			return err1
+		}
+		if err2 != nil {
+			return err2
+		}
+		return nil
 	}
 
 	if update {
 		// Check if the schema definitions changed before update
 		currentHash, _ := util.ComputeHash(spec)
 		if currentHash != registeredSpecHash {
-			return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+			err1 := c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+			err2 := c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
+			if err1 != nil {
+				return err1
+			}
+			if err2 != nil {
+				return err2
+			}
+			return nil
 		}
 	}
 
@@ -281,13 +304,16 @@ func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, sp
 
 	request := coreapi.Request{
 		Method:  coreapi.POST,
-		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL(),
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL(),
 		Headers: headers,
 		Body:    buffer,
 	}
 
+	fmt.Printf("%+v", string(buffer))
+
 	response, err := c.apiClient.Send(request)
 	if err != nil {
+		log.Error(err.Error())
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
 	if response.Code != http.StatusCreated {
@@ -303,7 +329,7 @@ func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, sp
 
 func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
-	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
+	buffer, _ := c.marshalSubscriptionDefinition(defName, spec)
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -315,6 +341,9 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 		Headers: headers,
 		Body:    buffer,
 	}
+
+	test := buffer
+	_ = test
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
@@ -341,7 +370,7 @@ func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, sp
 	}
 	request := coreapi.Request{
 		Method:  coreapi.PUT,
-		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + defName,
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL() + "/" + defName,
 		Headers: headers,
 		Body:    buffer,
 	}
@@ -422,6 +451,7 @@ func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1al
 
 // TODO: kf use me
 func (c *ServiceClient) prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.AccessRequestDefinitionSpec, error) {
+	subscriptionSchema.SetJSONDraft07SchemaVersion()
 	catalogSubscriptionSchema, err := subscriptionSchema.mapStringInterface()
 	if err != nil {
 		return nil, err
