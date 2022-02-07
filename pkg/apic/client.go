@@ -513,7 +513,7 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definiti
 	return platformTeams, nil
 }
 
-//GetAccessControlList -
+// GetAccessControlList -
 func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
@@ -545,12 +545,12 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 	return acl, err
 }
 
-//UpdateAccessControlList -
+// UpdateAccessControlList -
 func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPut)
 }
 
-//CreateAccessControlList -
+// CreateAccessControlList -
 func (c *ServiceClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPost)
 }
@@ -626,4 +626,78 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
+}
+
+// linkSubResource creates a sub resource by calling the provided url. url should be the link to the resource.
+// subResourceName is the name of the sub resource to add to the resource found at the given url.
+// subResourceName will be appended to the end of the url for the PUT request.
+// body is the payload of the subresource to create.
+func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
+	// https://apicentral.axway.com/apis/management/v1alpha1/environments/wc-env/apiservices/eeeee/:extension
+	bts, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
+func (c *ServiceClient) CreateSubResourceUnscoped(res *apiv1.ResourceInstance) error {
+	for subName, sub := range res.SubResources {
+		group := res.Group
+		kind := res.Kind
+		version := res.APIVersion
+		base := c.cfg.GetURL()
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s", base, group, version, kind, res.Name, subName)
+
+		r := map[string]interface{}{
+			subName: sub,
+		}
+		bts, err := json.Marshal(r)
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			if err != nil {
+				log.Errorf("failed to link sub resource %s to resource %s: %v", subName, res.Name, err)
+			}
+		}()
+	}
+
+	return nil
+}
+
+// CreateSubResourceScoped creates a sub resource on th provided scoped resource.
+func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind string, res *apiv1.ResourceInstance) error {
+	for subName, sub := range res.SubResources {
+		group := res.Group
+		version := res.APIVersion
+		base := c.cfg.GetURL()
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKind, scopeName, resKind, res.Name, subName)
+
+		r := map[string]interface{}{
+			subName: sub,
+		}
+		bts, err := json.Marshal(r)
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			if err != nil {
+				log.Errorf("failed to link sub resource %s to resource %s: %v", subName, res.Name, err)
+			}
+		}()
+	}
+
+	return nil
 }

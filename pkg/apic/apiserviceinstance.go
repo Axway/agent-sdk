@@ -117,6 +117,19 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
+	if err == nil {
+		if len(instance.SubResources) > 0 {
+			inst, err := instance.AsInstance()
+			if err != nil {
+				return err
+			}
+			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.APIServiceInstanceResourceName, inst)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	serviceBody.serviceContext.instanceName = instanceName
 
 	return err

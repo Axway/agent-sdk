@@ -113,6 +113,20 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	if err == nil {
 		serviceBody.serviceContext.serviceName = serviceName
 	}
+
+	if err == nil {
+		if len(apiService.SubResources) > 0 {
+			inst, err := apiService.AsInstance()
+			if err != nil {
+				return apiService, err
+			}
+			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.APIServiceResourceName, inst)
+			if err != nil {
+				return apiService, err
+			}
+		}
+	}
+
 	return apiService, err
 }
 

@@ -253,6 +253,19 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
+	if err == nil {
+		if len(consumerInstance.SubResources) > 0 {
+			inst, err := consumerInstance.AsInstance()
+			if err != nil {
+				return err
+			}
+			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.ConsumerInstanceResourceName, inst)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
 
 	return err

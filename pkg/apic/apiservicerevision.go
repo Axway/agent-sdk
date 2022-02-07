@@ -161,6 +161,19 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		return err
 	}
 
+	if err == nil {
+		if len(revision.SubResources) > 0 {
+			inst, err := revision.AsInstance()
+			if err != nil {
+				return err
+			}
+			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.APIServiceRevisionResourceName, inst)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	serviceBody.serviceContext.revisionName = revisionName
 
 	return nil
