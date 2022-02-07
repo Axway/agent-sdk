@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type MeshWorkloadMergeFunc func(*v1alpha1.MeshWorkload, *v1alpha1.MeshWorkload) (*v1alpha1.MeshWorkload, error)
+type MeshWorkloadMergeFunc func(*m.MeshWorkload, *m.MeshWorkload) (*m.MeshWorkload, error)
 
-// Merge builds a merge option for an update operation
+// MeshWorkloadMerge builds a merge option for an update operation
 func MeshWorkloadMerge(f MeshWorkloadMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.MeshWorkload{}, &v1alpha1.MeshWorkload{}
+		p, n := &m.MeshWorkload{}, &m.MeshWorkload{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.MeshWorkload:
+		case *m.MeshWorkload:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func MeshWorkloadMerge(f MeshWorkloadMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.MeshWorkload:
+		case *m.MeshWorkload:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func MeshWorkloadMerge(f MeshWorkloadMergeFunc) v1.UpdateOption {
 	})
 }
 
-// MeshWorkloadClient -
+// MeshWorkloadClient - rest client for MeshWorkload resources that have a defined resource scope
 type MeshWorkloadClient struct {
 	client v1.Scoped
 }
 
-// UnscopedMeshWorkloadClient -
+// UnscopedMeshWorkloadClient - rest client for MeshWorkload resources that do not have a defined scope
 type UnscopedMeshWorkloadClient struct {
 	client v1.Unscoped
 }
 
-// NewMeshWorkloadClient -
+// NewMeshWorkloadClient - creates a client that is not scoped to any resource
 func NewMeshWorkloadClient(c v1.Base) (*UnscopedMeshWorkloadClient, error) {
 
-	client, err := c.ForKind(v1alpha1.MeshWorkloadGVK())
+	client, err := c.ForKind(m.MeshWorkloadGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewMeshWorkloadClient(c v1.Base) (*UnscopedMeshWorkloadClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedMeshWorkloadClient) WithScope(scope string) *MeshWorkloadClient {
 	return &MeshWorkloadClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedMeshWorkloadClient) Get(name string) (*v1alpha1.MeshWorkload, error) {
+// Get - gets a resource by name
+func (c *UnscopedMeshWorkloadClient) Get(name string) (*m.MeshWorkload, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshWorkload{}
+	service := &m.MeshWorkload{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedMeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...v1.UpdateOption) (*v1alpha1.MeshWorkload, error) {
+// Update - updates a resource
+func (c *UnscopedMeshWorkloadClient) Update(res *m.MeshWorkload, opts ...v1.UpdateOption) (*m.MeshWorkload, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedMeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshWorkload{}
+	updated := &m.MeshWorkload{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedMeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...
 	return updated, nil
 }
 
-// List -
-func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshWorkload, error) {
+// List - gets a list of resources
+func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*m.MeshWorkload, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.MeshWorkload, len(riList))
+	result := make([]*m.MeshWorkload, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.MeshWorkload{}
+		result[i] = &m.MeshWorkload{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *MeshWorkloadClient) List(options ...v1.ListOptions) ([]*v1alpha1.MeshWo
 	return result, nil
 }
 
-// Get -
-func (c *MeshWorkloadClient) Get(name string) (*v1alpha1.MeshWorkload, error) {
+// Get - gets a resource by name
+func (c *MeshWorkloadClient) Get(name string) (*m.MeshWorkload, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.MeshWorkload{}
+	service := &m.MeshWorkload{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *MeshWorkloadClient) Delete(res *v1alpha1.MeshWorkload) error {
+// Delete - deletes a resource
+func (c *MeshWorkloadClient) Delete(res *m.MeshWorkload) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *MeshWorkloadClient) Delete(res *v1alpha1.MeshWorkload) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload, opts ...v1.CreateOption) (*v1alpha1.MeshWorkload, error) {
+// Create - creates a resource
+func (c *MeshWorkloadClient) Create(res *m.MeshWorkload, opts ...v1.CreateOption) (*m.MeshWorkload, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload, opts ...v1.Creat
 		return nil, err
 	}
 
-	created := &v1alpha1.MeshWorkload{}
+	created := &m.MeshWorkload{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *MeshWorkloadClient) Create(res *v1alpha1.MeshWorkload, opts ...v1.Creat
 	return created, err
 }
 
-// Update -
-func (c *MeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...v1.UpdateOption) (*v1alpha1.MeshWorkload, error) {
+// Update - updates a resource
+func (c *MeshWorkloadClient) Update(res *m.MeshWorkload, opts ...v1.UpdateOption) (*m.MeshWorkload, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *MeshWorkloadClient) Update(res *v1alpha1.MeshWorkload, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.MeshWorkload{}
+	updated := &m.MeshWorkload{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

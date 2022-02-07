@@ -18,4 +18,8 @@ const (
 	ProductPlanStateDRAFT ProductPlanState = "draft"
 	// GENERATE: The following code has been modified after code generation
 	ProductPlanStateACTIVE ProductPlanState = "active"
+	// GENERATE: The following code has been modified after code generation
+	ProductPlanStateDEPRECATED ProductPlanState = "deprecated"
+	// GENERATE: The following code has been modified after code generation
+	ProductPlanStateARCHIVED ProductPlanState = "archived"
 )

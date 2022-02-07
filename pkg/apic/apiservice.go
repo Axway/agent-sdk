@@ -130,7 +130,10 @@ func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*v1alpha1.
 
 func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
-		return c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+		apiService, err := c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+		if apiService != nil && err == nil {
+			return apiService, err
+		}
 	}
 	return c.getAPIServiceByExternalAPIID(serviceBody.RestAPIID)
 }

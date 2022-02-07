@@ -35,32 +35,9 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	References interface{} `json:"references"`
-
-	Spec AssetRequestDefinitionSpec `json:"spec"`
-}
-
-// FromInstance converts a ResourceInstance to a AssetRequestDefinition
-func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
-	if ri == nil {
-		res = nil
-		return nil
-	}
-
-	var err error
-	rawResource := ri.GetRawResource()
-	if rawResource == nil {
-		rawResource, err = json.Marshal(ri)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = json.Unmarshal(rawResource, res)
-	return err
+	Owner      *apiv1.Owner               `json:"owner"`
+	References interface{}                `json:"references"`
+	Spec       AssetRequestDefinitionSpec `json:"spec"`
 }
 
 // AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition
@@ -96,4 +73,81 @@ func (res *AssetRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error)
 	}
 
 	return &instance, nil
+}
+
+// FromInstance converts a ResourceInstance to a AssetRequestDefinition
+func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
+	}
+	err = json.Unmarshal(rawResource, res)
+	return err
+}
+
+// MarshalJSON custom marshaller to handle sub resources
+func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
+	m, err := json.Marshal(&res.ResourceMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	var out map[string]interface{}
+	err = json.Unmarshal(m, &out)
+	if err != nil {
+		return nil, err
+	}
+
+	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON custom unmarshaller to handle sub resources
+func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
+	var err error
+
+	aux := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	res.ResourceMeta = aux.ResourceMeta
+	res.Owner = aux.Owner
+
+	// ResourceInstance holds the spec as a map[string]interface{}.
+	// Convert it to bytes, then convert to the spec type for the resource.
+	sr, err := json.Marshal(aux.Spec)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Spec)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource References
+	sr, err = json.Marshal(aux.SubResources["references"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.References)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

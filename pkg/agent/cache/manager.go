@@ -80,7 +80,6 @@ type cacheManager struct {
 
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
-	// todo - make path configurable
 	m := &cacheManager{
 		accessRequestMap: cache.New(),
 		apiMap:           cache.New(),

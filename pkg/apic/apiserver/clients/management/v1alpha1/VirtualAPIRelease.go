@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type VirtualAPIReleaseMergeFunc func(*v1alpha1.VirtualAPIRelease, *v1alpha1.VirtualAPIRelease) (*v1alpha1.VirtualAPIRelease, error)
+type VirtualAPIReleaseMergeFunc func(*m.VirtualAPIRelease, *m.VirtualAPIRelease) (*m.VirtualAPIRelease, error)
 
-// Merge builds a merge option for an update operation
+// VirtualAPIReleaseMerge builds a merge option for an update operation
 func VirtualAPIReleaseMerge(f VirtualAPIReleaseMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.VirtualAPIRelease{}, &v1alpha1.VirtualAPIRelease{}
+		p, n := &m.VirtualAPIRelease{}, &m.VirtualAPIRelease{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.VirtualAPIRelease:
+		case *m.VirtualAPIRelease:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func VirtualAPIReleaseMerge(f VirtualAPIReleaseMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.VirtualAPIRelease:
+		case *m.VirtualAPIRelease:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,15 +47,15 @@ func VirtualAPIReleaseMerge(f VirtualAPIReleaseMergeFunc) v1.UpdateOption {
 	})
 }
 
-// VirtualAPIReleaseClient -
+// VirtualAPIReleaseClient - rest client for VirtualAPIRelease resources that have a defined resource scope
 type VirtualAPIReleaseClient struct {
 	client v1.Scoped
 }
 
-// NewVirtualAPIReleaseClient -
+// NewVirtualAPIReleaseClient - creates a client scoped to a particular resource
 func NewVirtualAPIReleaseClient(c v1.Base) (*VirtualAPIReleaseClient, error) {
 
-	client, err := c.ForKind(v1alpha1.VirtualAPIReleaseGVK())
+	client, err := c.ForKind(m.VirtualAPIReleaseGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +64,17 @@ func NewVirtualAPIReleaseClient(c v1.Base) (*VirtualAPIReleaseClient, error) {
 
 }
 
-// List -
-func (c *VirtualAPIReleaseClient) List(options ...v1.ListOptions) ([]*v1alpha1.VirtualAPIRelease, error) {
+// List - gets a list of resources
+func (c *VirtualAPIReleaseClient) List(options ...v1.ListOptions) ([]*m.VirtualAPIRelease, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.VirtualAPIRelease, len(riList))
+	result := make([]*m.VirtualAPIRelease, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.VirtualAPIRelease{}
+		result[i] = &m.VirtualAPIRelease{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -84,21 +84,21 @@ func (c *VirtualAPIReleaseClient) List(options ...v1.ListOptions) ([]*v1alpha1.V
 	return result, nil
 }
 
-// Get -
-func (c *VirtualAPIReleaseClient) Get(name string) (*v1alpha1.VirtualAPIRelease, error) {
+// Get - gets a resource by name
+func (c *VirtualAPIReleaseClient) Get(name string) (*m.VirtualAPIRelease, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.VirtualAPIRelease{}
+	service := &m.VirtualAPIRelease{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *VirtualAPIReleaseClient) Delete(res *v1alpha1.VirtualAPIRelease) error {
+// Delete - deletes a resource
+func (c *VirtualAPIReleaseClient) Delete(res *m.VirtualAPIRelease) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -108,8 +108,8 @@ func (c *VirtualAPIReleaseClient) Delete(res *v1alpha1.VirtualAPIRelease) error 
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *VirtualAPIReleaseClient) Create(res *v1alpha1.VirtualAPIRelease, opts ...v1.CreateOption) (*v1alpha1.VirtualAPIRelease, error) {
+// Create - creates a resource
+func (c *VirtualAPIReleaseClient) Create(res *m.VirtualAPIRelease, opts ...v1.CreateOption) (*m.VirtualAPIRelease, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *VirtualAPIReleaseClient) Create(res *v1alpha1.VirtualAPIRelease, opts .
 		return nil, err
 	}
 
-	created := &v1alpha1.VirtualAPIRelease{}
+	created := &m.VirtualAPIRelease{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -131,8 +131,8 @@ func (c *VirtualAPIReleaseClient) Create(res *v1alpha1.VirtualAPIRelease, opts .
 	return created, err
 }
 
-// Update -
-func (c *VirtualAPIReleaseClient) Update(res *v1alpha1.VirtualAPIRelease, opts ...v1.UpdateOption) (*v1alpha1.VirtualAPIRelease, error) {
+// Update - updates a resource
+func (c *VirtualAPIReleaseClient) Update(res *m.VirtualAPIRelease, opts ...v1.UpdateOption) (*m.VirtualAPIRelease, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (c *VirtualAPIReleaseClient) Update(res *v1alpha1.VirtualAPIRelease, opts .
 		return nil, err
 	}
 
-	updated := &v1alpha1.VirtualAPIRelease{}
+	updated := &m.VirtualAPIRelease{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

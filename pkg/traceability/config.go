@@ -117,6 +117,13 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 		}
 	}
 
+	// set up the api exceptions list for logging events
+	exception, err := setUpAPIExceptionList(outputConfig.APIExceptionsList)
+	if err != nil {
+		err = ErrInvalidRegex.FormatError("apiExceptionValue", exception, err)
+		log.Error(err)
+	}
+
 	return outputConfig, nil
 }
 
@@ -134,12 +141,4 @@ func GetMaxRetries() int {
 		return 3
 	}
 	return outputConfig.MaxRetries
-}
-
-// GetAPIExceptionsList - Returns traceability APIs exception list (api paths)
-func GetAPIExceptionsList() []string {
-	if outputConfig == nil {
-		return []string{}
-	}
-	return outputConfig.APIExceptionsList
 }

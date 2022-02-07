@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type PublishedProductMergeFunc func(*v1alpha1.PublishedProduct, *v1alpha1.PublishedProduct) (*v1alpha1.PublishedProduct, error)
+type PublishedProductMergeFunc func(*m.PublishedProduct, *m.PublishedProduct) (*m.PublishedProduct, error)
 
-// Merge builds a merge option for an update operation
+// PublishedProductMerge builds a merge option for an update operation
 func PublishedProductMerge(f PublishedProductMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.PublishedProduct{}, &v1alpha1.PublishedProduct{}
+		p, n := &m.PublishedProduct{}, &m.PublishedProduct{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.PublishedProduct:
+		case *m.PublishedProduct:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func PublishedProductMerge(f PublishedProductMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.PublishedProduct:
+		case *m.PublishedProduct:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func PublishedProductMerge(f PublishedProductMergeFunc) v1.UpdateOption {
 	})
 }
 
-// PublishedProductClient -
+// PublishedProductClient - rest client for PublishedProduct resources that have a defined resource scope
 type PublishedProductClient struct {
 	client v1.Scoped
 }
 
-// UnscopedPublishedProductClient -
+// UnscopedPublishedProductClient - rest client for PublishedProduct resources that do not have a defined scope
 type UnscopedPublishedProductClient struct {
 	client v1.Unscoped
 }
 
-// NewPublishedProductClient -
+// NewPublishedProductClient - creates a client that is not scoped to any resource
 func NewPublishedProductClient(c v1.Base) (*UnscopedPublishedProductClient, error) {
 
-	client, err := c.ForKind(v1alpha1.PublishedProductGVK())
+	client, err := c.ForKind(m.PublishedProductGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewPublishedProductClient(c v1.Base) (*UnscopedPublishedProductClient, erro
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedPublishedProductClient) WithScope(scope string) *PublishedProductClient {
 	return &PublishedProductClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedPublishedProductClient) Get(name string) (*v1alpha1.PublishedProduct, error) {
+// Get - gets a resource by name
+func (c *UnscopedPublishedProductClient) Get(name string) (*m.PublishedProduct, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.PublishedProduct{}
+	service := &m.PublishedProduct{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedPublishedProductClient) Update(res *v1alpha1.PublishedProduct, opts ...v1.UpdateOption) (*v1alpha1.PublishedProduct, error) {
+// Update - updates a resource
+func (c *UnscopedPublishedProductClient) Update(res *m.PublishedProduct, opts ...v1.UpdateOption) (*m.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedPublishedProductClient) Update(res *v1alpha1.PublishedProduct, 
 		return nil, err
 	}
 
-	updated := &v1alpha1.PublishedProduct{}
+	updated := &m.PublishedProduct{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedPublishedProductClient) Update(res *v1alpha1.PublishedProduct, 
 	return updated, nil
 }
 
-// List -
-func (c *PublishedProductClient) List(options ...v1.ListOptions) ([]*v1alpha1.PublishedProduct, error) {
+// List - gets a list of resources
+func (c *PublishedProductClient) List(options ...v1.ListOptions) ([]*m.PublishedProduct, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.PublishedProduct, len(riList))
+	result := make([]*m.PublishedProduct, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.PublishedProduct{}
+		result[i] = &m.PublishedProduct{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *PublishedProductClient) List(options ...v1.ListOptions) ([]*v1alpha1.Pu
 	return result, nil
 }
 
-// Get -
-func (c *PublishedProductClient) Get(name string) (*v1alpha1.PublishedProduct, error) {
+// Get - gets a resource by name
+func (c *PublishedProductClient) Get(name string) (*m.PublishedProduct, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.PublishedProduct{}
+	service := &m.PublishedProduct{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *PublishedProductClient) Delete(res *v1alpha1.PublishedProduct) error {
+// Delete - deletes a resource
+func (c *PublishedProductClient) Delete(res *m.PublishedProduct) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *PublishedProductClient) Delete(res *v1alpha1.PublishedProduct) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *PublishedProductClient) Create(res *v1alpha1.PublishedProduct, opts ...v1.CreateOption) (*v1alpha1.PublishedProduct, error) {
+// Create - creates a resource
+func (c *PublishedProductClient) Create(res *m.PublishedProduct, opts ...v1.CreateOption) (*m.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *PublishedProductClient) Create(res *v1alpha1.PublishedProduct, opts ...
 		return nil, err
 	}
 
-	created := &v1alpha1.PublishedProduct{}
+	created := &m.PublishedProduct{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *PublishedProductClient) Create(res *v1alpha1.PublishedProduct, opts ...
 	return created, err
 }
 
-// Update -
-func (c *PublishedProductClient) Update(res *v1alpha1.PublishedProduct, opts ...v1.UpdateOption) (*v1alpha1.PublishedProduct, error) {
+// Update - updates a resource
+func (c *PublishedProductClient) Update(res *m.PublishedProduct, opts ...v1.UpdateOption) (*m.PublishedProduct, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *PublishedProductClient) Update(res *v1alpha1.PublishedProduct, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.PublishedProduct{}
+	updated := &m.PublishedProduct{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

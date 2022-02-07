@@ -300,7 +300,6 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 
 // getConsumerInstancesByExternalAPIID gets consumer instances
 func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
-	// TODO: what to do for attributes on consumer instances?
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err

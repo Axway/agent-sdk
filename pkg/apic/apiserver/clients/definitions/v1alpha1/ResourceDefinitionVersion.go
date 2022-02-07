@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/definitions/v1alpha1"
 )
 
-type ResourceDefinitionVersionMergeFunc func(*v1alpha1.ResourceDefinitionVersion, *v1alpha1.ResourceDefinitionVersion) (*v1alpha1.ResourceDefinitionVersion, error)
+type ResourceDefinitionVersionMergeFunc func(*m.ResourceDefinitionVersion, *m.ResourceDefinitionVersion) (*m.ResourceDefinitionVersion, error)
 
-// Merge builds a merge option for an update operation
+// ResourceDefinitionVersionMerge builds a merge option for an update operation
 func ResourceDefinitionVersionMerge(f ResourceDefinitionVersionMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ResourceDefinitionVersion{}, &v1alpha1.ResourceDefinitionVersion{}
+		p, n := &m.ResourceDefinitionVersion{}, &m.ResourceDefinitionVersion{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ResourceDefinitionVersion:
+		case *m.ResourceDefinitionVersion:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ResourceDefinitionVersionMerge(f ResourceDefinitionVersionMergeFunc) v1.Upd
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ResourceDefinitionVersion:
+		case *m.ResourceDefinitionVersion:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func ResourceDefinitionVersionMerge(f ResourceDefinitionVersionMergeFunc) v1.Upd
 	})
 }
 
-// ResourceDefinitionVersionClient -
+// ResourceDefinitionVersionClient - rest client for ResourceDefinitionVersion resources that have a defined resource scope
 type ResourceDefinitionVersionClient struct {
 	client v1.Scoped
 }
 
-// UnscopedResourceDefinitionVersionClient -
+// UnscopedResourceDefinitionVersionClient - rest client for ResourceDefinitionVersion resources that do not have a defined scope
 type UnscopedResourceDefinitionVersionClient struct {
 	client v1.Unscoped
 }
 
-// NewResourceDefinitionVersionClient -
+// NewResourceDefinitionVersionClient - creates a client that is not scoped to any resource
 func NewResourceDefinitionVersionClient(c v1.Base) (*UnscopedResourceDefinitionVersionClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ResourceDefinitionVersionGVK())
+	client, err := c.ForKind(m.ResourceDefinitionVersionGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewResourceDefinitionVersionClient(c v1.Base) (*UnscopedResourceDefinitionV
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedResourceDefinitionVersionClient) WithScope(scope string) *ResourceDefinitionVersionClient {
 	return &ResourceDefinitionVersionClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
+// Get - gets a resource by name
+func (c *UnscopedResourceDefinitionVersionClient) Get(name string) (*m.ResourceDefinitionVersion, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ResourceDefinitionVersion{}
+	service := &m.ResourceDefinitionVersion{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*v1alpha1.ResourceDefinitionVersion, error) {
+// Update - updates a resource
+func (c *UnscopedResourceDefinitionVersionClient) Update(res *m.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceD
 		return nil, err
 	}
 
-	updated := &v1alpha1.ResourceDefinitionVersion{}
+	updated := &m.ResourceDefinitionVersion{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceD
 	return updated, nil
 }
 
-// List -
-func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1alpha1.ResourceDefinitionVersion, error) {
+// List - gets a list of resources
+func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*m.ResourceDefinitionVersion, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ResourceDefinitionVersion, len(riList))
+	result := make([]*m.ResourceDefinitionVersion, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ResourceDefinitionVersion{}
+		result[i] = &m.ResourceDefinitionVersion{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *ResourceDefinitionVersionClient) List(options ...v1.ListOptions) ([]*v1
 	return result, nil
 }
 
-// Get -
-func (c *ResourceDefinitionVersionClient) Get(name string) (*v1alpha1.ResourceDefinitionVersion, error) {
+// Get - gets a resource by name
+func (c *ResourceDefinitionVersionClient) Get(name string) (*m.ResourceDefinitionVersion, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ResourceDefinitionVersion{}
+	service := &m.ResourceDefinitionVersion{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *ResourceDefinitionVersionClient) Delete(res *v1alpha1.ResourceDefinitionVersion) error {
+// Delete - deletes a resource
+func (c *ResourceDefinitionVersionClient) Delete(res *m.ResourceDefinitionVersion) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *ResourceDefinitionVersionClient) Delete(res *v1alpha1.ResourceDefinitio
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *ResourceDefinitionVersionClient) Create(res *v1alpha1.ResourceDefinitionVersion, opts ...v1.CreateOption) (*v1alpha1.ResourceDefinitionVersion, error) {
+// Create - creates a resource
+func (c *ResourceDefinitionVersionClient) Create(res *m.ResourceDefinitionVersion, opts ...v1.CreateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ResourceDefinitionVersionClient) Create(res *v1alpha1.ResourceDefinitio
 		return nil, err
 	}
 
-	created := &v1alpha1.ResourceDefinitionVersion{}
+	created := &m.ResourceDefinitionVersion{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *ResourceDefinitionVersionClient) Create(res *v1alpha1.ResourceDefinitio
 	return created, err
 }
 
-// Update -
-func (c *ResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*v1alpha1.ResourceDefinitionVersion, error) {
+// Update - updates a resource
+func (c *ResourceDefinitionVersionClient) Update(res *m.ResourceDefinitionVersion, opts ...v1.UpdateOption) (*m.ResourceDefinitionVersion, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ResourceDefinitionVersionClient) Update(res *v1alpha1.ResourceDefinitio
 		return nil, err
 	}
 
-	updated := &v1alpha1.ResourceDefinitionVersion{}
+	updated := &m.ResourceDefinitionVersion{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

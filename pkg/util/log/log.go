@@ -3,12 +3,11 @@ package log
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/elastic/beats/v7/libbeat/logp"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptrace"
 	"os"
-
-	"github.com/elastic/beats/v7/libbeat/logp"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -138,6 +137,26 @@ func Warnf(format string, args ...interface{}) {
 	} else {
 		log.Warnf(format, args...)
 	}
+}
+
+// TraceRedacted Redacted log for traces
+func TraceRedacted(redactedFields []string, args ...interface{}) {
+	Trace(ObscureArguments(redactedFields, args...))
+}
+
+// ErrorRedacted Redacted log for errors
+func ErrorRedacted(redactedFields []string, args ...interface{}) {
+	Error(ObscureArguments(redactedFields, args...))
+}
+
+// InfoRedacted Redacted log for information
+func InfoRedacted(redactedFields []string, args ...interface{}) {
+	Info(ObscureArguments(redactedFields, args...))
+}
+
+// DebugRedacted Redacted log for debugging
+func DebugRedacted(redactedFields []string, args ...interface{}) {
+	Debug(ObscureArguments(redactedFields, args...))
 }
 
 // SetLevel -

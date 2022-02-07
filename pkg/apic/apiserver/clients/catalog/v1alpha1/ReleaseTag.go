@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type ReleaseTagMergeFunc func(*v1alpha1.ReleaseTag, *v1alpha1.ReleaseTag) (*v1alpha1.ReleaseTag, error)
+type ReleaseTagMergeFunc func(*m.ReleaseTag, *m.ReleaseTag) (*m.ReleaseTag, error)
 
-// Merge builds a merge option for an update operation
+// ReleaseTagMerge builds a merge option for an update operation
 func ReleaseTagMerge(f ReleaseTagMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ReleaseTag{}, &v1alpha1.ReleaseTag{}
+		p, n := &m.ReleaseTag{}, &m.ReleaseTag{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ReleaseTag:
+		case *m.ReleaseTag:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ReleaseTagMerge(f ReleaseTagMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ReleaseTag:
+		case *m.ReleaseTag:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func ReleaseTagMerge(f ReleaseTagMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ReleaseTagClient -
+// ReleaseTagClient - rest client for ReleaseTag resources that have a defined resource scope
 type ReleaseTagClient struct {
 	client v1.Scoped
 }
 
-// UnscopedReleaseTagClient -
+// UnscopedReleaseTagClient - rest client for ReleaseTag resources that do not have a defined scope
 type UnscopedReleaseTagClient struct {
 	client v1.Unscoped
 }
 
-// NewReleaseTagClient -
+// NewReleaseTagClient - creates a client that is not scoped to any resource
 func NewReleaseTagClient(c v1.Base) (*UnscopedReleaseTagClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ReleaseTagGVK())
+	client, err := c.ForKind(m.ReleaseTagGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewReleaseTagClient(c v1.Base) (*UnscopedReleaseTagClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedReleaseTagClient) WithScope(scope string) *ReleaseTagClient {
 	return &ReleaseTagClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedReleaseTagClient) Get(name string) (*v1alpha1.ReleaseTag, error) {
+// Get - gets a resource by name
+func (c *UnscopedReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ReleaseTag{}
+	service := &m.ReleaseTag{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedReleaseTagClient) Update(res *v1alpha1.ReleaseTag, opts ...v1.UpdateOption) (*v1alpha1.ReleaseTag, error) {
+// Update - updates a resource
+func (c *UnscopedReleaseTagClient) Update(res *m.ReleaseTag, opts ...v1.UpdateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedReleaseTagClient) Update(res *v1alpha1.ReleaseTag, opts ...v1.U
 		return nil, err
 	}
 
-	updated := &v1alpha1.ReleaseTag{}
+	updated := &m.ReleaseTag{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedReleaseTagClient) Update(res *v1alpha1.ReleaseTag, opts ...v1.U
 	return updated, nil
 }
 
-// List -
-func (c *ReleaseTagClient) List(options ...v1.ListOptions) ([]*v1alpha1.ReleaseTag, error) {
+// List - gets a list of resources
+func (c *ReleaseTagClient) List(options ...v1.ListOptions) ([]*m.ReleaseTag, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ReleaseTag, len(riList))
+	result := make([]*m.ReleaseTag, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ReleaseTag{}
+		result[i] = &m.ReleaseTag{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *ReleaseTagClient) List(options ...v1.ListOptions) ([]*v1alpha1.ReleaseT
 	return result, nil
 }
 
-// Get -
-func (c *ReleaseTagClient) Get(name string) (*v1alpha1.ReleaseTag, error) {
+// Get - gets a resource by name
+func (c *ReleaseTagClient) Get(name string) (*m.ReleaseTag, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ReleaseTag{}
+	service := &m.ReleaseTag{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *ReleaseTagClient) Delete(res *v1alpha1.ReleaseTag) error {
+// Delete - deletes a resource
+func (c *ReleaseTagClient) Delete(res *m.ReleaseTag) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *ReleaseTagClient) Delete(res *v1alpha1.ReleaseTag) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *ReleaseTagClient) Create(res *v1alpha1.ReleaseTag, opts ...v1.CreateOption) (*v1alpha1.ReleaseTag, error) {
+// Create - creates a resource
+func (c *ReleaseTagClient) Create(res *m.ReleaseTag, opts ...v1.CreateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ReleaseTagClient) Create(res *v1alpha1.ReleaseTag, opts ...v1.CreateOpt
 		return nil, err
 	}
 
-	created := &v1alpha1.ReleaseTag{}
+	created := &m.ReleaseTag{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *ReleaseTagClient) Create(res *v1alpha1.ReleaseTag, opts ...v1.CreateOpt
 	return created, err
 }
 
-// Update -
-func (c *ReleaseTagClient) Update(res *v1alpha1.ReleaseTag, opts ...v1.UpdateOption) (*v1alpha1.ReleaseTag, error) {
+// Update - updates a resource
+func (c *ReleaseTagClient) Update(res *m.ReleaseTag, opts ...v1.UpdateOption) (*m.ReleaseTag, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ReleaseTagClient) Update(res *v1alpha1.ReleaseTag, opts ...v1.UpdateOpt
 		return nil, err
 	}
 
-	updated := &v1alpha1.ReleaseTag{}
+	updated := &m.ReleaseTag{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

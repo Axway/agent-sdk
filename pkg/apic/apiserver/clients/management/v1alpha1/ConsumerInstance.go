@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-type ConsumerInstanceMergeFunc func(*v1alpha1.ConsumerInstance, *v1alpha1.ConsumerInstance) (*v1alpha1.ConsumerInstance, error)
+type ConsumerInstanceMergeFunc func(*m.ConsumerInstance, *m.ConsumerInstance) (*m.ConsumerInstance, error)
 
-// Merge builds a merge option for an update operation
+// ConsumerInstanceMerge builds a merge option for an update operation
 func ConsumerInstanceMerge(f ConsumerInstanceMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.ConsumerInstance{}, &v1alpha1.ConsumerInstance{}
+		p, n := &m.ConsumerInstance{}, &m.ConsumerInstance{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.ConsumerInstance:
+		case *m.ConsumerInstance:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func ConsumerInstanceMerge(f ConsumerInstanceMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.ConsumerInstance:
+		case *m.ConsumerInstance:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func ConsumerInstanceMerge(f ConsumerInstanceMergeFunc) v1.UpdateOption {
 	})
 }
 
-// ConsumerInstanceClient -
+// ConsumerInstanceClient - rest client for ConsumerInstance resources that have a defined resource scope
 type ConsumerInstanceClient struct {
 	client v1.Scoped
 }
 
-// UnscopedConsumerInstanceClient -
+// UnscopedConsumerInstanceClient - rest client for ConsumerInstance resources that do not have a defined scope
 type UnscopedConsumerInstanceClient struct {
 	client v1.Unscoped
 }
 
-// NewConsumerInstanceClient -
+// NewConsumerInstanceClient - creates a client that is not scoped to any resource
 func NewConsumerInstanceClient(c v1.Base) (*UnscopedConsumerInstanceClient, error) {
 
-	client, err := c.ForKind(v1alpha1.ConsumerInstanceGVK())
+	client, err := c.ForKind(m.ConsumerInstanceGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewConsumerInstanceClient(c v1.Base) (*UnscopedConsumerInstanceClient, erro
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedConsumerInstanceClient) WithScope(scope string) *ConsumerInstanceClient {
 	return &ConsumerInstanceClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedConsumerInstanceClient) Get(name string) (*v1alpha1.ConsumerInstance, error) {
+// Get - gets a resource by name
+func (c *UnscopedConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ConsumerInstance{}
+	service := &m.ConsumerInstance{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, opts ...v1.UpdateOption) (*v1alpha1.ConsumerInstance, error) {
+// Update - updates a resource
+func (c *UnscopedConsumerInstanceClient) Update(res *m.ConsumerInstance, opts ...v1.UpdateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, 
 		return nil, err
 	}
 
-	updated := &v1alpha1.ConsumerInstance{}
+	updated := &m.ConsumerInstance{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, 
 	return updated, nil
 }
 
-// List -
-func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.ConsumerInstance, error) {
+// List - gets a list of resources
+func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*m.ConsumerInstance, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.ConsumerInstance, len(riList))
+	result := make([]*m.ConsumerInstance, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.ConsumerInstance{}
+		result[i] = &m.ConsumerInstance{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *ConsumerInstanceClient) List(options ...v1.ListOptions) ([]*v1alpha1.Co
 	return result, nil
 }
 
-// Get -
-func (c *ConsumerInstanceClient) Get(name string) (*v1alpha1.ConsumerInstance, error) {
+// Get - gets a resource by name
+func (c *ConsumerInstanceClient) Get(name string) (*m.ConsumerInstance, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.ConsumerInstance{}
+	service := &m.ConsumerInstance{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *ConsumerInstanceClient) Delete(res *v1alpha1.ConsumerInstance) error {
+// Delete - deletes a resource
+func (c *ConsumerInstanceClient) Delete(res *m.ConsumerInstance) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *ConsumerInstanceClient) Delete(res *v1alpha1.ConsumerInstance) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance, opts ...v1.CreateOption) (*v1alpha1.ConsumerInstance, error) {
+// Create - creates a resource
+func (c *ConsumerInstanceClient) Create(res *m.ConsumerInstance, opts ...v1.CreateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance, opts ...
 		return nil, err
 	}
 
-	created := &v1alpha1.ConsumerInstance{}
+	created := &m.ConsumerInstance{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *ConsumerInstanceClient) Create(res *v1alpha1.ConsumerInstance, opts ...
 	return created, err
 }
 
-// Update -
-func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, opts ...v1.UpdateOption) (*v1alpha1.ConsumerInstance, error) {
+// Update - updates a resource
+func (c *ConsumerInstanceClient) Update(res *m.ConsumerInstance, opts ...v1.UpdateOption) (*m.ConsumerInstance, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *ConsumerInstanceClient) Update(res *v1alpha1.ConsumerInstance, opts ...
 		return nil, err
 	}
 
-	updated := &v1alpha1.ConsumerInstance{}
+	updated := &m.ConsumerInstance{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)

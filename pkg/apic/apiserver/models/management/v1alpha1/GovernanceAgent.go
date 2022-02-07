@@ -35,34 +35,10 @@ func init() {
 // GovernanceAgent Resource
 type GovernanceAgent struct {
 	apiv1.ResourceMeta
-
 	Agentconfigstatus GovernanceAgentAgentconfigstatus `json:"agentconfigstatus"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
-	Spec GovernanceAgentSpec `json:"spec"`
-
-	Status GovernanceAgentStatus `json:"status"`
-}
-
-// FromInstance converts a ResourceInstance to a GovernanceAgent
-func (res *GovernanceAgent) FromInstance(ri *apiv1.ResourceInstance) error {
-	if ri == nil {
-		res = nil
-		return nil
-	}
-
-	var err error
-	rawResource := ri.GetRawResource()
-	if rawResource == nil {
-		rawResource, err = json.Marshal(ri)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = json.Unmarshal(rawResource, res)
-	return err
+	Owner             *apiv1.Owner                     `json:"owner"`
+	Spec              GovernanceAgentSpec              `json:"spec"`
+	Status            GovernanceAgentStatus            `json:"status"`
 }
 
 // GovernanceAgentFromInstanceArray converts a []*ResourceInstance to a []*GovernanceAgent
@@ -98,4 +74,93 @@ func (res *GovernanceAgent) AsInstance() (*apiv1.ResourceInstance, error) {
 	}
 
 	return &instance, nil
+}
+
+// FromInstance converts a ResourceInstance to a GovernanceAgent
+func (res *GovernanceAgent) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
+	}
+	err = json.Unmarshal(rawResource, res)
+	return err
+}
+
+// MarshalJSON custom marshaller to handle sub resources
+func (res *GovernanceAgent) MarshalJSON() ([]byte, error) {
+	m, err := json.Marshal(&res.ResourceMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	var out map[string]interface{}
+	err = json.Unmarshal(m, &out)
+	if err != nil {
+		return nil, err
+	}
+
+	out["agentconfigstatus"] = res.Agentconfigstatus
+	out["owner"] = res.Owner
+	out["spec"] = res.Spec
+	out["status"] = res.Status
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON custom unmarshaller to handle sub resources
+func (res *GovernanceAgent) UnmarshalJSON(data []byte) error {
+	var err error
+
+	aux := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	res.ResourceMeta = aux.ResourceMeta
+	res.Owner = aux.Owner
+
+	// ResourceInstance holds the spec as a map[string]interface{}.
+	// Convert it to bytes, then convert to the spec type for the resource.
+	sr, err := json.Marshal(aux.Spec)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Spec)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource Agentconfigstatus
+	sr, err = json.Marshal(aux.SubResources["agentconfigstatus"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Agentconfigstatus)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource Status
+	sr, err = json.Marshal(aux.SubResources["status"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Status)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

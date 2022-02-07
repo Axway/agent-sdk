@@ -35,36 +35,11 @@ func init() {
 // Product Resource
 type Product struct {
 	apiv1.ResourceMeta
-
-	Icon interface{} `json:"icon"`
-
-	Owner *apiv1.Owner `json:"owner"`
-
+	Icon       interface{}       `json:"icon"`
+	Owner      *apiv1.Owner      `json:"owner"`
 	References ProductReferences `json:"references"`
-
-	Spec ProductSpec `json:"spec"`
-
-	State ProductState `json:"state"`
-}
-
-// FromInstance converts a ResourceInstance to a Product
-func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
-	if ri == nil {
-		res = nil
-		return nil
-	}
-
-	var err error
-	rawResource := ri.GetRawResource()
-	if rawResource == nil {
-		rawResource, err = json.Marshal(ri)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = json.Unmarshal(rawResource, res)
-	return err
+	Spec       ProductSpec       `json:"spec"`
+	State      ProductState      `json:"state"`
 }
 
 // ProductFromInstanceArray converts a []*ResourceInstance to a []*Product
@@ -100,4 +75,105 @@ func (res *Product) AsInstance() (*apiv1.ResourceInstance, error) {
 	}
 
 	return &instance, nil
+}
+
+// FromInstance converts a ResourceInstance to a Product
+func (res *Product) FromInstance(ri *apiv1.ResourceInstance) error {
+	if ri == nil {
+		res = nil
+		return nil
+	}
+	var err error
+	rawResource := ri.GetRawResource()
+	if rawResource == nil {
+		rawResource, err = json.Marshal(ri)
+		if err != nil {
+			return err
+		}
+	}
+	err = json.Unmarshal(rawResource, res)
+	return err
+}
+
+// MarshalJSON custom marshaller to handle sub resources
+func (res *Product) MarshalJSON() ([]byte, error) {
+	m, err := json.Marshal(&res.ResourceMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	var out map[string]interface{}
+	err = json.Unmarshal(m, &out)
+	if err != nil {
+		return nil, err
+	}
+
+	out["icon"] = res.Icon
+	out["owner"] = res.Owner
+	out["references"] = res.References
+	out["spec"] = res.Spec
+	out["state"] = res.State
+
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON custom unmarshaller to handle sub resources
+func (res *Product) UnmarshalJSON(data []byte) error {
+	var err error
+
+	aux := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	res.ResourceMeta = aux.ResourceMeta
+	res.Owner = aux.Owner
+
+	// ResourceInstance holds the spec as a map[string]interface{}.
+	// Convert it to bytes, then convert to the spec type for the resource.
+	sr, err := json.Marshal(aux.Spec)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Spec)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource Icon
+	sr, err = json.Marshal(aux.SubResources["icon"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Icon)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource References
+	sr, err = json.Marshal(aux.SubResources["references"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.References)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource State
+	sr, err = json.Marshal(aux.SubResources["state"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.State)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

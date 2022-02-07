@@ -9,18 +9,18 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 )
 
-type DocumentMergeFunc func(*v1alpha1.Document, *v1alpha1.Document) (*v1alpha1.Document, error)
+type DocumentMergeFunc func(*m.Document, *m.Document) (*m.Document, error)
 
-// Merge builds a merge option for an update operation
+// DocumentMerge builds a merge option for an update operation
 func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 	return v1.Merge(func(prev, new apiv1.Interface) (apiv1.Interface, error) {
-		p, n := &v1alpha1.Document{}, &v1alpha1.Document{}
+		p, n := &m.Document{}, &m.Document{}
 
 		switch t := prev.(type) {
-		case *v1alpha1.Document:
+		case *m.Document:
 			p = t
 		case *apiv1.ResourceInstance:
 			err := p.FromInstance(t)
@@ -32,7 +32,7 @@ func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 		}
 
 		switch t := new.(type) {
-		case *v1alpha1.Document:
+		case *m.Document:
 			n = t
 		case *apiv1.ResourceInstance:
 			err := n.FromInstance(t)
@@ -47,20 +47,20 @@ func DocumentMerge(f DocumentMergeFunc) v1.UpdateOption {
 	})
 }
 
-// DocumentClient -
+// DocumentClient - rest client for Document resources that have a defined resource scope
 type DocumentClient struct {
 	client v1.Scoped
 }
 
-// UnscopedDocumentClient -
+// UnscopedDocumentClient - rest client for Document resources that do not have a defined scope
 type UnscopedDocumentClient struct {
 	client v1.Unscoped
 }
 
-// NewDocumentClient -
+// NewDocumentClient - creates a client that is not scoped to any resource
 func NewDocumentClient(c v1.Base) (*UnscopedDocumentClient, error) {
 
-	client, err := c.ForKind(v1alpha1.DocumentGVK())
+	client, err := c.ForKind(m.DocumentGVK())
 	if err != nil {
 		return nil, err
 	}
@@ -69,28 +69,28 @@ func NewDocumentClient(c v1.Base) (*UnscopedDocumentClient, error) {
 
 }
 
-// WithScope -
+// WithScope - sets the resource scope for the client
 func (c *UnscopedDocumentClient) WithScope(scope string) *DocumentClient {
 	return &DocumentClient{
 		c.client.WithScope(scope),
 	}
 }
 
-// Get -
-func (c *UnscopedDocumentClient) Get(name string) (*v1alpha1.Document, error) {
+// Get - gets a resource by name
+func (c *UnscopedDocumentClient) Get(name string) (*m.Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Document{}
+	service := &m.Document{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Update -
-func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption) (*v1alpha1.Document, error) {
+// Update - updates a resource
+func (c *UnscopedDocumentClient) Update(res *m.Document, opts ...v1.UpdateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.Updat
 		return nil, err
 	}
 
-	updated := &v1alpha1.Document{}
+	updated := &m.Document{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
@@ -111,17 +111,17 @@ func (c *UnscopedDocumentClient) Update(res *v1alpha1.Document, opts ...v1.Updat
 	return updated, nil
 }
 
-// List -
-func (c *DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Document, error) {
+// List - gets a list of resources
+func (c *DocumentClient) List(options ...v1.ListOptions) ([]*m.Document, error) {
 	riList, err := c.client.List(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*v1alpha1.Document, len(riList))
+	result := make([]*m.Document, len(riList))
 
 	for i := range riList {
-		result[i] = &v1alpha1.Document{}
+		result[i] = &m.Document{}
 		err := result[i].FromInstance(riList[i])
 		if err != nil {
 			return nil, err
@@ -131,21 +131,21 @@ func (c *DocumentClient) List(options ...v1.ListOptions) ([]*v1alpha1.Document, 
 	return result, nil
 }
 
-// Get -
-func (c *DocumentClient) Get(name string) (*v1alpha1.Document, error) {
+// Get - gets a resource by name
+func (c *DocumentClient) Get(name string) (*m.Document, error) {
 	ri, err := c.client.Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &v1alpha1.Document{}
+	service := &m.Document{}
 	service.FromInstance(ri)
 
 	return service, nil
 }
 
-// Delete -
-func (c *DocumentClient) Delete(res *v1alpha1.Document) error {
+// Delete - deletes a resource
+func (c *DocumentClient) Delete(res *m.Document) error {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -155,8 +155,8 @@ func (c *DocumentClient) Delete(res *v1alpha1.Document) error {
 	return c.client.Delete(ri)
 }
 
-// Create -
-func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption) (*v1alpha1.Document, error) {
+// Create - creates a resource
+func (c *DocumentClient) Create(res *m.Document, opts ...v1.CreateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption)
 		return nil, err
 	}
 
-	created := &v1alpha1.Document{}
+	created := &m.Document{}
 
 	err = created.FromInstance(cri)
 	if err != nil {
@@ -178,8 +178,8 @@ func (c *DocumentClient) Create(res *v1alpha1.Document, opts ...v1.CreateOption)
 	return created, err
 }
 
-// Update -
-func (c *DocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption) (*v1alpha1.Document, error) {
+// Update - updates a resource
+func (c *DocumentClient) Update(res *m.Document, opts ...v1.UpdateOption) (*m.Document, error) {
 	ri, err := res.AsInstance()
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (c *DocumentClient) Update(res *v1alpha1.Document, opts ...v1.UpdateOption)
 		return nil, err
 	}
 
-	updated := &v1alpha1.Document{}
+	updated := &m.Document{}
 
 	// Updates the resource in place
 	err = updated.FromInstance(resource)
