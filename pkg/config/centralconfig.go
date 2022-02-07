@@ -114,12 +114,15 @@ type CentralConfig interface {
 	DeleteServicesURL() string
 	GetConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
+	GetAPIServerAccessRequestDefinitionURL() string
 	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
 	GetCategoriesURL() string
 	GetSubscriptionURL() string
 	GetSubscriptionConfig() SubscriptionConfig
 	GetCatalogItemSubscriptionsURL(string) string
+	GetCatalogItemAccessRequestSubscriptionStatesURL(string) string
+	GetCatalogItemAccessRequestSubscriptionPropertiesURL(string) string
 	GetCatalogItemSubscriptionStatesURL(string, string) string
 	GetCatalogItemSubscriptionPropertiesURL(string, string) string
 	GetCatalogItemSubscriptionRelationshipURL(string, string) string
@@ -366,6 +369,11 @@ func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
 }
 
+// GetAPIServerAccessRequestDefinitionURL - Returns the APIServer URL for access request definitions
+func (c *CentralConfiguration) GetAPIServerAccessRequestDefinitionURL() string {
+	return c.GetEnvironmentURL() + "/accessrequestdefinitions"
+}
+
 // GetCategoriesURL - Returns the Categories URL
 func (c *CentralConfiguration) GetCategoriesURL() string {
 	return c.GetAPIServerCatalogURL() + "/categories"
@@ -386,6 +394,11 @@ func (c *CentralConfiguration) GetSubscriptionURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
 }
 
+// GetAccessRequestSubscriptionURL - Returns the access request URL for subscriptions list
+func (c *CentralConfiguration) GetAccessRequestSubscriptionURL() string {
+	return c.GetEnvironmentURL() + "/accessrequests"
+}
+
 // GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
 func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
 	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
@@ -396,9 +409,19 @@ func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID
 	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
 }
 
+// GetAccessRequestSubscriptionStatesURL - Returns the access request URL for catalog item subscription states
+func (c *CentralConfiguration) GetAccessRequestSubscriptionStatesURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/%s/state", c.GetSubscriptionURL(), accessRequestName)
+}
+
 // GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties
 func (c *CentralConfiguration) GetCatalogItemSubscriptionPropertiesURL(catalogItemID, subscriptionID string) string {
 	return fmt.Sprintf("%s/%s/properties", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetAccessRequestSubscriptionPropertiesURL - Returns the access request URL for subscription properties
+func (c *CentralConfiguration) GetAccessRequestSubscriptionPropertiesURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/%s", c.GetSubscriptionURL(), accessRequestName)
 }
 
 // GetCatalogItemSubscriptionRelationshipURL - Returns the relationships URL for catalog item subscription

@@ -75,7 +75,7 @@ func (s *schemaBuilder) Register() error {
 	schema := &subscriptionSchema{
 		SubscriptionName:  s.name,
 		SchemaType:        "object",
-		SchemaVersion:     "http://json-schema.org/draft-04/schema#",
+		SchemaVersion:     "http://json-schema.org/draft-07/schema#",
 		SchemaDescription: "Subscription specification for authentication",
 		Properties:        s.properties,
 		UniqueKeys:        s.uniqueKeys,

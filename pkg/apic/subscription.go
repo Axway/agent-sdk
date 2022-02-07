@@ -15,14 +15,29 @@ type SubscriptionState string
 
 // SubscriptionState
 const (
-	SubscriptionApproved             = SubscriptionState("APPROVED")
-	SubscriptionRequested            = SubscriptionState("REQUESTED")
-	SubscriptionRejected             = SubscriptionState("REJECTED")
-	SubscriptionActive               = SubscriptionState("ACTIVE")
-	SubscriptionUnsubscribed         = SubscriptionState("UNSUBSCRIBED")
-	SubscriptionUnsubscribeInitiated = SubscriptionState("UNSUBSCRIBE_INITIATED")
-	SubscriptionFailedToSubscribe    = SubscriptionState("FAILED_TO_SUBSCRIBE")
-	SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
+	//TODO: remove these
+	// SubscriptionApproved             = SubscriptionState("APPROVED")
+	// SubscriptionRequested            = SubscriptionState("REQUESTED")
+	// SubscriptionRejected             = SubscriptionState("REJECTED")
+	// SubscriptionActive               = SubscriptionState("ACTIVE")
+	// SubscriptionUnsubscribed         = SubscriptionState("UNSUBSCRIBED")
+	// SubscriptionUnsubscribeInitiated = SubscriptionState("UNSUBSCRIBE_INITIATED")
+	// SubscriptionFailedToSubscribe    = SubscriptionState("FAILED_TO_SUBSCRIBE")
+	// SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
+	SubscriptionApproved              = AccessRequestProvisioning
+	SubscriptionRequested             = AccessRequestFailedProvisioning
+	SubscriptionRejected              = AccessRequestFailedProvisioning
+	SubscriptionActive                = AccessRequestProvisioned
+	SubscriptionUnsubscribed          = AccessRequestDeprovisioned
+	SubscriptionUnsubscribeInitiated  = AccessRequestDeprovisioning
+	SubscriptionFailedToSubscribe     = AccessRequestFailedProvisioning
+	SubscriptionFailedToUnsubscribe   = AccessRequestFailedDeprovisioning
+	AccessRequestProvisioning         = SubscriptionState("provisioning")
+	AccessRequestProvisioned          = SubscriptionState("provisioned")
+	AccessRequestFailedProvisioning   = SubscriptionState("failedProvisioning")
+	AccessRequestDeprovisioning       = SubscriptionState("deprovisioning")
+	AccessRequestDeprovisioned        = SubscriptionState("deprovisioned")
+	AccessRequestFailedDeprovisioning = SubscriptionState("failedDeprovisioning")
 )
 
 const (
@@ -152,6 +167,10 @@ func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionSta
 	}
 
 	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
+	//TODO: kf use me
+	accessRequestSubStateURL := s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionStatesURL(s.GetID())
+	fmt.Println("accessRequestSubStateURL: ", accessRequestSubStateURL)
+
 	subState := uc.CatalogItemSubscriptionState{
 		Description: description,
 		State:       string(newState),
@@ -307,6 +326,10 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 	}
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
+	//TODO: kf use me
+	accessRequestUrl := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
+	fmt.Println("accessRequestUrl: ", accessRequestUrl)
+
 	body, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -339,6 +362,10 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 	}
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
+	//TODO: kf use me
+	accessRequestUrl := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
+	fmt.Println("accessRequestUrl: ", accessRequestUrl)
+
 	body, err := json.Marshal(values)
 	if err != nil {
 		return err

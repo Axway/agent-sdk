@@ -94,6 +94,28 @@ type LighthouseUsageEvent struct {
 	Meta        map[string]interface{}           `json:"meta"`
 }
 
+// AppDetails - struct for app details to report
+type AppDetails struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Data - struct for data to report as API Metrics
+type Data struct {
+	APIDetails APIDetails
+	StatusCode string
+	Duration   int64
+	UsageBytes int64
+	AppDetails AppDetails
+	TeamName   string
+}
+
+// AppUsage - struct to hold metric specific for app usage
+type AppUsage struct {
+	App   AppDetails `json:"app"`
+	Count int64      `json:"count"`
+}
+
 // ISO8601 - time format
 const (
 	ISO8601 = "2006-01-02T15:04:00Z07:00"
