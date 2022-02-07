@@ -327,8 +327,8 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
 	//TODO: kf use me
-	accessRequestUrl := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
-	fmt.Println("accessRequestUrl: ", accessRequestUrl)
+	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
+	fmt.Println("accessRequestURL: ", accessRequestURL)
 
 	body, err := json.Marshal(value)
 	if err != nil {
@@ -363,8 +363,8 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
 	//TODO: kf use me
-	accessRequestUrl := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
-	fmt.Println("accessRequestUrl: ", accessRequestUrl)
+	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
+	fmt.Println("accessRequestURL: ", accessRequestURL)
 
 	body, err := json.Marshal(values)
 	if err != nil {
