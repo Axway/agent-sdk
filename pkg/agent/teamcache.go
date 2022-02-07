@@ -45,8 +45,10 @@ func (j *centralTeamsCache) Execute() error {
 		savedTeam := j.cache.GetTeamByID(team.ID)
 		if savedTeam == nil {
 			j.cache.AddTeam(&team)
-			log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
-			j.teamChannel <- team.ID
+			if j.teamChannel != nil {
+				log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
+				j.teamChannel <- team.ID
+			}
 		}
 	}
 	return nil
