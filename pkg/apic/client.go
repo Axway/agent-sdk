@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -14,7 +15,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -49,7 +50,7 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	SetConfig(cfg corecfg.CentralConfig)
-	PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error)
+	PublishService(serviceBody *ServiceBody) (*mv1a.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
@@ -58,8 +59,8 @@ type Client interface {
 	DeleteAPIServiceInstance(name string) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
-	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error)
+	GetConsumerInstanceByID(consumerInstanceID string) (*mv1a.ConsumerInstance, error)
+	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddress(ID string) (string, error)
 	GetUserName(ID string) (string, error)
@@ -69,22 +70,22 @@ type Client interface {
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
-	GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error)
+	GetAPIRevisions(queryParams map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
 	GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
-	GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error)
-	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
-	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
+	GetAPIServiceByName(serviceName string) (*mv1a.APIService, error)
+	GetAPIServiceInstanceByName(serviceInstanceName string) (*mv1a.APIServiceInstance, error)
+	GetAPIRevisionByName(serviceRevisionName string) (*mv1a.APIServiceRevision, error)
 	CreateCategory(categoryName string) (*catalog.Category, error)
 	GetOrCreateCategory(category string) string
-	GetEnvironment() (*v1alpha1.Environment, error)
+	GetEnvironment() (*mv1a.Environment, error)
 	GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error)
 	GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error)
-	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
-	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
+	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 }
 
 // New creates a new Client
@@ -344,7 +345,7 @@ func (c *ServiceClient) setTeamCache() error {
 }
 
 // GetEnvironment get an environment
-func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
+func (c *ServiceClient) GetEnvironment() (*mv1a.Environment, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -359,7 +360,7 @@ func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	}
 
 	// Get env id from apiServerEnvByte
-	env := &v1alpha1.Environment{}
+	env := &mv1a.Environment{}
 	err = json.Unmarshal(bytes, env)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
@@ -513,7 +514,7 @@ func (c *ServiceClient) GetTeam(query map[string]string) ([]definitions.Platform
 }
 
 // GetAccessControlList -
-func (c *ServiceClient) GetAccessControlList(name string) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -535,7 +536,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*v1alpha1.AccessContr
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var acl *v1alpha1.AccessControlList
+	var acl *mv1a.AccessControlList
 	err = json.Unmarshal(response.Body, &acl)
 	if err != nil {
 		return nil, err
@@ -545,16 +546,16 @@ func (c *ServiceClient) GetAccessControlList(name string) (*v1alpha1.AccessContr
 }
 
 // UpdateAccessControlList -
-func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPut)
 }
 
 // CreateAccessControlList -
-func (c *ServiceClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPost)
 }
 
-func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, method string) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method string) (*mv1a.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -587,7 +588,7 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	updatedACL := &v1alpha1.AccessControlList{}
+	updatedACL := &mv1a.AccessControlList{}
 	err = json.Unmarshal(response.Body, updatedACL)
 	if err != nil {
 		return nil, err
@@ -648,7 +649,12 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
 func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.ResourceInstance) error {
+	var execErr error
+	wg := &sync.WaitGroup{}
+
 	for subName, sub := range res.SubResources {
+		wg.Add(1)
+
 		group := res.Group
 		version := res.APIVersion
 		base := c.cfg.GetURL()
@@ -662,23 +668,33 @@ func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.Resour
 			return err
 		}
 
-		go func() {
+		go func(wg *sync.WaitGroup, sn string) {
+			defer wg.Done()
 			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
-				log.Errorf("failed to link sub resource %s to resource %s: %v", subName, res.Name, err)
+				if execErr == nil {
+					execErr = err
+				}
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, res.Name, err)
 			}
-		}()
+		}(wg, subName)
 	}
 
-	return nil
+	wg.Wait()
+
+	return execErr
 }
 
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
 func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind string, res *apiv1.ResourceInstance) error {
+	var execErr error
+	wg := &sync.WaitGroup{}
+
 	for subName, sub := range res.SubResources {
 		if subName == "references" || subName == "status" {
 			continue
 		}
+		wg.Add(1)
 
 		group := res.Group
 		version := res.APIVersion
@@ -693,13 +709,17 @@ func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind st
 			return err
 		}
 
-		go func() {
-			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+		go func(sn string) {
+			defer wg.Done()
+			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
-				log.Errorf("failed to link sub resource %s to resource %s: %v", subName, res.Name, err)
+				execErr = err
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, res.Name, err)
 			}
-		}()
+		}(subName)
 	}
 
-	return nil
+	wg.Wait()
+
+	return execErr
 }

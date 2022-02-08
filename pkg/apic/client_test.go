@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
 	"github.com/stretchr/testify/assert"
@@ -153,4 +157,82 @@ func TestHealthCheck(t *testing.T) {
 	mockHTTPClient.SetResponses(responses)
 	status = svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
+}
+
+func TestCreateSubResourceScoped(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "mockenv"
+	cfg.PlatformURL = "http://foo.bar:4080"
+
+	// There should be one request for each sub resource of the ResourceInstance
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+	})
+
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:             "test-resource",
+			GroupVersionKind: mv1.APIServiceGVK(),
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					"externalAPIID":   "12345",
+					"externalAPIName": "daleapi",
+					"createdBy":       "",
+				},
+				"abc": map[string]interface{}{
+					"123": "132",
+				},
+			},
+		},
+	}
+
+	err := svcClient.CreateSubResourceScoped(mv1.EnvironmentResourceName, cfg.GetEnvironmentName(), mv1.APIServiceResourceName, ri)
+	assert.Nil(t, err)
+}
+
+func TestCreateSubResourceUnscoped(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "mockenv"
+	cfg.PlatformURL = "http://foo.bar:4080"
+
+	// There should be one request for each sub resource of the ResourceInstance
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+	})
+
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:             "test-resource",
+			GroupVersionKind: mv1.APIServiceGVK(),
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					"externalAPIID":   "12345",
+					"externalAPIName": "daleapi",
+					"createdBy":       "",
+				},
+				"abc": map[string]interface{}{
+					"123": "132",
+				},
+			},
+		},
+	}
+
+	err := svcClient.CreateSubResourceUnscoped(mv1.EnvironmentResourceName, ri)
+	assert.Nil(t, err)
 }

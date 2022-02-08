@@ -342,7 +342,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/serviceinstancejson", // for call to update the serviceinstance
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -666,10 +666,10 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 
-	// Get last request as consumerinstance
+	// Get second to last request as consumerinstance
 	var consInst v1alpha1.ConsumerInstance
-	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-1].Body))
-	json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-1].Body, &consInst)
+	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
+	assert.Nil(t, err)
 
 	// Only asset type set, label and asset type are equal
 	assert.Equal(t, assetType, consInst.Spec.UnstructuredDataProperties.Type)
@@ -729,8 +729,9 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 
 	// Get last request as consumerinstance
 	consInst = v1alpha1.ConsumerInstance{}
-	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-1].Body))
-	json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-1].Body, &consInst)
+	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-2].Body))
+	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
+	assert.Nil(t, err)
 
 	// Only label type set, label and asset type are equal
 	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Type)
