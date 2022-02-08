@@ -15,14 +15,14 @@ type SubscriptionState string
 
 // SubscriptionState
 const (
-	SubscriptionApproved              = AccessRequestProvisioning
-	SubscriptionRequested             = AccessRequestFailedProvisioning
-	SubscriptionRejected              = AccessRequestFailedProvisioning
-	SubscriptionActive                = AccessRequestProvisioned
-	SubscriptionUnsubscribed          = AccessRequestDeprovisioned
-	SubscriptionUnsubscribeInitiated  = AccessRequestDeprovisioning
-	SubscriptionFailedToSubscribe     = AccessRequestFailedProvisioning
-	SubscriptionFailedToUnsubscribe   = AccessRequestFailedDeprovisioning
+	SubscriptionApproved              = SubscriptionState("APPROVED")
+	SubscriptionRequested             = SubscriptionState("REQUESTED")
+	SubscriptionRejected              = SubscriptionState("REJECTED")
+	SubscriptionActive                = SubscriptionState("ACTIVE")
+	SubscriptionUnsubscribed          = SubscriptionState("UNSUBSCRIBED")
+	SubscriptionUnsubscribeInitiated  = SubscriptionState("UNSUBSCRIBE_INITIATED")
+	SubscriptionFailedToSubscribe     = SubscriptionState("FAILED_TO_SUBSCRIBE")
+	SubscriptionFailedToUnsubscribe   = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
 	AccessRequestProvisioning         = SubscriptionState("provisioning")
 	AccessRequestProvisioned          = SubscriptionState("provisioned")
 	AccessRequestFailedProvisioning   = SubscriptionState("failedProvisioning")
@@ -352,6 +352,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 		return err
 	}
 
+	fmt.Println("s: ", s)
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
 	//TODO: kf use me
 	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)

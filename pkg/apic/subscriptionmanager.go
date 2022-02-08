@@ -68,13 +68,30 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
+	var subStateMap = map[SubscriptionState]SubscriptionState{
+		SubscriptionApproved:             AccessRequestProvisioning,
+		SubscriptionRequested:            AccessRequestFailedProvisioning,
+		SubscriptionRejected:             AccessRequestFailedProvisioning,
+		SubscriptionActive:               AccessRequestProvisioned,
+		SubscriptionUnsubscribed:         AccessRequestDeprovisioned,
+		SubscriptionUnsubscribeInitiated: AccessRequestDeprovisioning,
+		SubscriptionFailedToSubscribe:    AccessRequestFailedProvisioning,
+		SubscriptionFailedToUnsubscribe:  AccessRequestFailedProvisioning,
+	}
 	processorList, ok := sm.processorMap[state]
 	if !ok {
 		processorList = make([]SubscriptionProcessor, 0)
 	}
 	sm.statesToQuery = append(sm.statesToQuery, string(state))
 	sm.processorMap[state] = append(processorList, processor)
-
+	if mappedState, ok := subStateMap[state]; ok {
+		processorList, ok := sm.processorMap[mappedState]
+		if !ok {
+			processorList = make([]SubscriptionProcessor, 0)
+		}
+		sm.statesToQuery = append(sm.statesToQuery, string(mappedState))
+		sm.processorMap[mappedState] = append(processorList, processor)
+	}
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
