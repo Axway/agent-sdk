@@ -187,7 +187,7 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
 	if apiServerResource != nil {
 		subscription.ApicID = apiServerResource.Metadata.ID
-		subscription.RemoteAPIID = apiServerResource.Attributes[definitions.XExternalAPIID]
+		subscription.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
 		subscription.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
 		subscription.RemoteAPIAttributes = apiServerResource.Attributes
 		if subscription.RemoteAPIStage != "" {

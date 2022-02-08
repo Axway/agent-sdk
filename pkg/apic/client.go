@@ -100,9 +100,9 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 }
 
 // getTeamFromCache -
-func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
+func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
 	var team *definitions.PlatformTeam
-	if teamName == "" {
+	if name == "" {
 		team = c.caches.GetDefaultTeam()
 		if team == nil {
 			return "", false
@@ -110,7 +110,7 @@ func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
 		return team.ID, true
 	}
 
-	team = c.caches.GetTeamByName(teamName)
+	team = c.caches.GetTeamByName(name)
 	if team == nil {
 		return "", false
 	}
@@ -223,16 +223,16 @@ func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
 	return strArr
 }
 
-func readResponseErrors(statuscode int, body []byte) string {
+func readResponseErrors(status int, body []byte) string {
 	// Return error string only for error status code
-	if statuscode < http.StatusBadRequest {
+	if status < http.StatusBadRequest {
 		return ""
 	}
 
 	responseErr := &ResponseError{}
 	err := json.Unmarshal(body, &responseErr)
 	if err != nil || len(responseErr.Errors) == 0 {
-		errStr := getHTTPResponseErrorString(statuscode, body)
+		errStr := getHTTPResponseErrorString(status, body)
 		log.Tracef("HTTP response error: %v", string(errStr))
 		return errStr
 	}
@@ -243,7 +243,7 @@ func readResponseErrors(statuscode int, body []byte) string {
 	return errStr
 }
 
-func getHTTPResponseErrorString(statuscode int, body []byte) string {
+func getHTTPResponseErrorString(status int, body []byte) string {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
 	errorMsg := ""
@@ -252,7 +252,7 @@ func getHTTPResponseErrorString(statuscode int, body []byte) string {
 		errorMsg = string(buffer)
 	}
 
-	errStr := "status - " + strconv.Itoa(statuscode)
+	errStr := "status - " + strconv.Itoa(status)
 	if errorMsg != "" {
 		errStr += ", detail - " + errorMsg
 	}
@@ -453,13 +453,13 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 }
 
 // GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetCentralTeamByName(name string) (*definitions.PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 
-	if teamName != "" {
+	if name != "" {
 		queryParams = map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", teamName),
+			"query": fmt.Sprintf("name==\"%s\"", name),
 		}
 	}
 
@@ -469,11 +469,11 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.Plat
 	}
 
 	if len(platformTeams) == 0 {
-		return nil, ErrTeamNotFound.FormatError(teamName)
+		return nil, ErrTeamNotFound.FormatError(name)
 	}
 
 	team := platformTeams[0]
-	if teamName == "" {
+	if name == "" {
 		// Loop through to find the default team
 		for i, platformTeam := range platformTeams {
 			if platformTeam.Default {
@@ -488,7 +488,7 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.Plat
 }
 
 // GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetTeam(query map[string]string) ([]definitions.PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -498,7 +498,7 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definiti
 	// Platform teams API require access and DOSA account will not have the access
 	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
 
-	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
+	response, reqErr := c.sendServerRequest(platformURL, headers, query)
 	if reqErr != nil {
 		return nil, reqErr
 	}
@@ -513,7 +513,7 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definiti
 }
 
 // GetAccessControlList -
-func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) GetAccessControlList(name string) (*v1alpha1.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -521,7 +521,7 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 
 	request := coreapi.Request{
 		Method:  http.MethodGet,
-		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), aclName),
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), name),
 		Headers: headers,
 	}
 
@@ -597,7 +597,7 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 }
 
 // ExecuteAPI - execute the api
-func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -606,7 +606,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 	request := coreapi.Request{
 		Method:      method,
 		URL:         url,
-		QueryParams: queryParam,
+		QueryParams: query,
 		Headers:     headers,
 		Body:        buffer,
 	}

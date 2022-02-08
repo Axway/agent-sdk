@@ -166,7 +166,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 						ID: "11111",
 					},
 					Attributes: map[string]string{
-						definitions.XExternalAPIID: "1111",
+						definitions.AttrExternalAPIID: "1111",
 					},
 				},
 			}
@@ -182,7 +182,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 						ID: "22222",
 					},
 					Attributes: map[string]string{
-						definitions.XExternalAPIID: "2222",
+						definitions.AttrExternalAPIID: "2222",
 					},
 				},
 			}

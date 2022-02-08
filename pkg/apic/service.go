@@ -192,7 +192,7 @@ func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) m
 		details[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
 	}
 
-	details[definitions.XExternalAPIID] = externalAPIID
+	details[definitions.AttrExternalAPIID] = externalAPIID
 	details[definitions.AttrExternalAPIName] = serviceBody.APIName
 	details[definitions.AttrCreatedBy] = serviceBody.CreatedBy
 

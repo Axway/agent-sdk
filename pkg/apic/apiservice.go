@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceSpec {
+func buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceSpec {
 	if serviceBody.Image != "" {
 		return v1alpha1.ApiServiceSpec{
 			Description: serviceBody.Description,
@@ -38,7 +38,7 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, servic
 			Attributes:       buildAPIResourceAttributes(serviceBody, nil),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  c.buildAPIServiceSpec(serviceBody),
+		Spec:  buildAPIServiceSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, true),
 	}
 
@@ -158,19 +158,19 @@ func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*v1alp
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
+func (c *ServiceClient) rollbackAPIService(name string) (string, error) {
 	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, nil)
 }
 
 // GetAPIServiceByName - Returns the API service based on its name
-func (c *ServiceClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) GetAPIServiceByName(name string) (*v1alpha1.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetServicesURL() + "/" + serviceName,
+		URL:     c.cfg.GetServicesURL() + "/" + name,
 		Headers: headers,
 	}
 	response, err := c.apiClient.Send(request)

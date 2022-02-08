@@ -52,7 +52,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 			continue
 		}
 
-		externalAPIID, _ := util.GetAgentDetailsValue(serviceInstanceResource, definitions.XExternalAPIID)
+		externalAPIID, _ := util.GetAgentDetailsValue(serviceInstanceResource, definitions.AttrExternalAPIID)
 		if externalAPIID == "" {
 			continue // skip service instances without external api id
 		}

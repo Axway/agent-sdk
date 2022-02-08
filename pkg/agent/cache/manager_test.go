@@ -13,7 +13,7 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	sub := map[string]interface{}{
-		definitions.XExternalAPIID:      apiID,
+		definitions.AttrExternalAPIID:   apiID,
 		definitions.AttrExternalAPIName: apiName,
 	}
 
@@ -253,4 +253,5 @@ func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual 
 	assert.Equal(t, expected.Metadata.ID, actual.Metadata.ID)
 	assert.Equal(t, expected.Attributes, actual.Attributes)
 	assert.Equal(t, expected.Spec, actual.Spec)
+	assert.Equal(t, expected.SubResources, actual.SubResources)
 }

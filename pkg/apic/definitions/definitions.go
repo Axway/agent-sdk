@@ -26,7 +26,7 @@ const (
 	XAgentDetails                    = "x-agent-details"
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
 	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
-	XExternalAPIID                   = "externalAPIID"
+	AttrExternalAPIID                = "externalAPIID"
 	AttrExternalAPIPrimaryKey        = "externalAPIPrimaryKey"
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"

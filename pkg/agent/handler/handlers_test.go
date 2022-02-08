@@ -35,7 +35,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 					},
 					SubResources: map[string]interface{}{
 						definitions.XAgentDetails: map[string]interface{}{
-							definitions.XExternalAPIID:      "123",
+							definitions.AttrExternalAPIID:   "123",
 							definitions.AttrExternalAPIName: "name",
 						},
 					},
@@ -55,7 +55,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 					},
 					SubResources: map[string]interface{}{
 						definitions.XAgentDetails: map[string]interface{}{
-							definitions.XExternalAPIID:            "123",
+							definitions.AttrExternalAPIID:         "123",
 							definitions.AttrExternalAPIPrimaryKey: "abc",
 							definitions.AttrExternalAPIName:       "name",
 						},
@@ -91,7 +91,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 					},
 					SubResources: map[string]interface{}{
 						definitions.XAgentDetails: map[string]interface{}{
-							definitions.XExternalAPIID:      "123",
+							definitions.AttrExternalAPIID:   "123",
 							definitions.AttrExternalAPIName: "name",
 						},
 					},

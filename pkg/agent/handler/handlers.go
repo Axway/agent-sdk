@@ -43,9 +43,9 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 	if resource.Kind != apiService {
 		return nil
 	}
-	id, err := util.GetAgentDetailsValue(resource, definitions.XExternalAPIID)
+	id, err := util.GetAgentDetailsValue(resource, definitions.AttrExternalAPIID)
 	if err != nil {
-		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.XExternalAPIID, resource.Name)
+		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.AttrExternalAPIID, resource.Name)
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {

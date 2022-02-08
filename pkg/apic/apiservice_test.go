@@ -216,7 +216,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 			Title: "abc",
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
-					definitions.XExternalAPIID:      cloneServiceBody.RestAPIID,
+					definitions.AttrExternalAPIID:   cloneServiceBody.RestAPIID,
 					definitions.AttrExternalAPIName: serviceBody.APIName,
 				},
 			},
@@ -505,7 +505,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 			Title: "abc",
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
-					definitions.XExternalAPIID: "12345",
+					definitions.AttrExternalAPIID: "12345",
 				},
 			},
 		},

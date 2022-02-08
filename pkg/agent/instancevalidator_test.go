@@ -23,7 +23,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 			},
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
-					definitions.XExternalAPIID:            externalAPIID,
+					definitions.AttrExternalAPIID:         externalAPIID,
 					definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
 					definitions.AttrExternalAPIName:       externalAPIName,
 				},
@@ -37,7 +37,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 			},
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
-					definitions.XExternalAPIID:      externalAPIID,
+					definitions.AttrExternalAPIID:   externalAPIID,
 					definitions.AttrExternalAPIName: externalAPIName,
 				},
 			},

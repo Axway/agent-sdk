@@ -28,16 +28,16 @@ func buildAPIServiceInstanceSpec(
 
 func (c *ServiceClient) buildAPIServiceInstanceResource(
 	serviceBody *ServiceBody,
-	instanceName string,
-	instanceAttributes map[string]string,
+	name string,
+	attributes map[string]string,
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) *v1alpha1.APIServiceInstance {
 	instance := &v1alpha1.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
-			Name:             instanceName,
+			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       buildAPIResourceAttributes(serviceBody, instanceAttributes),
+			Attributes:       buildAPIResourceAttributes(serviceBody, attributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endPoints),
@@ -76,7 +76,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	var instance *v1alpha1.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
-	instancePrefix := c.getRevisionPrefix(serviceBody)
+	instancePrefix := getRevisionPrefix(serviceBody)
 	instanceName := instancePrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
@@ -109,7 +109,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	_, err = c.apiServiceDeployAPI(httpMethod, instanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
@@ -164,17 +164,17 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServi
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getRevisionInstances(instanceName, url string) ([]*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) getRevisionInstances(name, url string) ([]*v1alpha1.APIServiceInstance, error) {
 	// Check if instances exist for the current revision.
 	queryParams := map[string]string{
-		"query": "name==" + instanceName,
+		"query": "name==" + name,
 	}
 
 	return c.GetAPIServiceInstances(queryParams, url)
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
-func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*v1alpha1.APIServiceInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alp
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetInstancesURL() + "/" + instanceName,
+		URL:     c.cfg.GetInstancesURL() + "/" + name,
 		Headers: headers,
 	}
 

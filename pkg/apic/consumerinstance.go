@@ -245,7 +245,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	_, err = c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
@@ -339,7 +339,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+definitions.XExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

@@ -53,16 +53,6 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
-	return v1alpha1.ApiServiceRevisionSpec{
-		ApiService: serviceBody.serviceContext.serviceName,
-		Definition: v1alpha1.ApiServiceRevisionSpecDefinition{
-			Type:  c.getRevisionDefinitionType(*serviceBody),
-			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
-		},
-	}
-}
-
 func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, attr map[string]string, name string) *v1alpha1.APIServiceRevision {
 	rev := &v1alpha1.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
@@ -72,7 +62,7 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 			Attributes:       buildAPIResourceAttributes(serviceBody, attr),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  c.buildAPIServiceRevisionSpec(serviceBody),
+		Spec:  buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 	rev.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
@@ -85,7 +75,7 @@ func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevi
 	revision.Title = serviceBody.NameToPush
 	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
 	revision.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
-	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
+	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
 	revision.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
 
@@ -105,7 +95,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	if revAttributes == nil {
 		revAttributes = make(map[string]string)
 	}
-	revisionPrefix := c.getRevisionPrefix(serviceBody)
+	revisionPrefix := getRevisionPrefix(serviceBody)
 	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 	revisionURL := c.cfg.GetRevisionsURL()
 	revision := serviceBody.serviceContext.previousRevision
@@ -153,7 +143,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	_, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
@@ -181,20 +171,13 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
 // NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*v1alpha1.APIServiceRevision
-func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
-	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), stage)
+func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	revisions, err := c.GetAPIServiceRevisions(query, c.cfg.GetRevisionsURL(), stage)
 	if err != nil {
 		return nil, err
 	}
 
 	return revisions, nil
-}
-
-func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
-	if serviceBody.Stage != "" {
-		return sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
-	}
-	return sanitizeAPIName(serviceBody.serviceContext.serviceName)
 }
 
 func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
@@ -225,14 +208,6 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 		}
 	}
 	return nil
-}
-
-// getRevisionDefinitionType -
-func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
-	if serviceBody.ResourceType == "" {
-		return Unstructured
-	}
-	return serviceBody.ResourceType
 }
 
 // DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
@@ -301,7 +276,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 }
 
 // GetAPIRevisionByName - Returns the API revision based on its revision name
-func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
+func (c *ServiceClient) GetAPIRevisionByName(name string) (*v1alpha1.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -309,7 +284,7 @@ func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.API
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetRevisionsURL() + "/" + revisionName,
+		URL:     c.cfg.GetRevisionsURL() + "/" + name,
 		Headers: headers,
 	}
 
@@ -327,4 +302,29 @@ func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.API
 	apiRevision := new(v1alpha1.APIServiceRevision)
 	json.Unmarshal(response.Body, apiRevision)
 	return apiRevision, nil
+}
+
+func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
+	return v1alpha1.ApiServiceRevisionSpec{
+		ApiService: serviceBody.serviceContext.serviceName,
+		Definition: v1alpha1.ApiServiceRevisionSpecDefinition{
+			Type:  getRevisionDefinitionType(*serviceBody),
+			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
+		},
+	}
+}
+
+func getRevisionPrefix(serviceBody *ServiceBody) string {
+	if serviceBody.Stage != "" {
+		return sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
+	}
+	return sanitizeAPIName(serviceBody.serviceContext.serviceName)
+}
+
+// getRevisionDefinitionType -
+func getRevisionDefinitionType(serviceBody ServiceBody) string {
+	if serviceBody.ResourceType == "" {
+		return Unstructured
+	}
+	return serviceBody.ResourceType
 }

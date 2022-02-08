@@ -101,7 +101,7 @@ func (j *discoveryCache) updateAPICache() {
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
 	for _, svc := range apiServices {
-		id, _ := util.GetAgentDetailsValue(svc, definitions.XExternalAPIID)
+		id, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
 		// skip service without external api id
 		if id == "" {
 			continue
@@ -158,7 +158,7 @@ func (j *discoveryCache) updatePIServiceInstancesCache() {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
 	for _, instance := range serviceInstances {
-		id, _ := util.GetAgentDetailsValue(instance, definitions.XExternalAPIID)
+		id, _ := util.GetAgentDetailsValue(instance, definitions.AttrExternalAPIID)
 		if id == "" {
 			continue // skip instance without external api id
 		}

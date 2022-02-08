@@ -197,7 +197,7 @@ func (c *cacheManager) SaveCache() {
 
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
-	externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.XExternalAPIID)
+	externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIID)
 	if externalAPIID != "" {
 		defer c.setCacheUpdated(true)
 		externalAPIName, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIName)
