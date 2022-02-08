@@ -36,7 +36,8 @@ type subscriptionManager struct {
 	receiverQuitChannel chan bool
 	processorMap        map[SubscriptionState][]SubscriptionProcessor
 	validator           SubscriptionValidator
-	statesToQuery       []string
+	ucStatesToQuery     []string
+	arStatesToQuery     []string
 	apicClient          *ServiceClient
 	locklist            map[string]string // subscription items to skip because they are locked
 	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
@@ -48,14 +49,15 @@ type subscriptionManager struct {
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:      false,
-		apicClient:     apicClient,
-		processorMap:   make(map[SubscriptionState][]SubscriptionProcessor),
-		statesToQuery:  make([]string, 0),
-		locklist:       make(map[string]string),
-		locklistLock:   &sync.RWMutex{},
-		pollingEnabled: apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
-		pollInterval:   apicClient.cfg.GetPollInterval(),
+		isRunning:       false,
+		apicClient:      apicClient,
+		processorMap:    make(map[SubscriptionState][]SubscriptionProcessor),
+		ucStatesToQuery: make([]string, 0),
+		arStatesToQuery: make([]string, 0),
+		locklist:        make(map[string]string),
+		locklistLock:    &sync.RWMutex{},
+		pollingEnabled:  apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:    apicClient.cfg.GetPollInterval(),
 	}
 
 	return subscriptionMgr
@@ -78,20 +80,25 @@ func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, proces
 		SubscriptionFailedToSubscribe:    AccessRequestFailedProvisioning,
 		SubscriptionFailedToUnsubscribe:  AccessRequestFailedProvisioning,
 	}
-	processorList, ok := sm.processorMap[state]
-	if !ok {
-		processorList = make([]SubscriptionProcessor, 0)
-	}
-	sm.statesToQuery = append(sm.statesToQuery, string(state))
-	sm.processorMap[state] = append(processorList, processor)
-	if mappedState, ok := subStateMap[state]; ok {
-		processorList, ok := sm.processorMap[mappedState]
+	mappedState, ok := subStateMap[state]
+	if ok {
+		processorList, ok := sm.processorMap[state]
 		if !ok {
 			processorList = make([]SubscriptionProcessor, 0)
 		}
-		sm.statesToQuery = append(sm.statesToQuery, string(mappedState))
-		sm.processorMap[mappedState] = append(processorList, processor)
+		sm.ucStatesToQuery = append(sm.ucStatesToQuery, string(state))
+		sm.processorMap[state] = append(processorList, processor)
+	} else {
+		// access requst processor only
+		mappedState = state
 	}
+
+	processorList, ok := sm.processorMap[mappedState]
+	if !ok {
+		processorList = make([]SubscriptionProcessor, 0)
+	}
+	sm.arStatesToQuery = append(sm.arStatesToQuery, string(mappedState))
+	sm.processorMap[mappedState] = append(processorList, processor)
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
@@ -113,7 +120,11 @@ func (sm *subscriptionManager) Status() error {
 }
 
 func (sm *subscriptionManager) Execute() error {
-	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
+	// query for central subscriptions
+	subscriptions, err := sm.apicClient.getSubscriptions(sm.ucStatesToQuery)
+	// query for central subscriptions
+	accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
+	subscriptions = append(subscriptions, accessRequests...)
 	if err == nil {
 		for _, subscription := range subscriptions {
 			sm.publishChannel <- subscription
@@ -265,7 +276,7 @@ func (sm *subscriptionManager) Start() {
 		go sm.processSubscriptions()
 
 		// Wait for at least one processor to register before registering the job
-		if len(sm.statesToQuery) > 0 && sm.pollingEnabled && sm.jobID == "" {
+		if (len(sm.ucStatesToQuery) > 0 || len(sm.arStatesToQuery) > 0) && sm.pollingEnabled && sm.jobID == "" {
 			var err error
 			sm.jobID, err = jobs.RegisterIntervalJobWithName(sm, sm.pollInterval, "Subscription Manager")
 			if err != nil {

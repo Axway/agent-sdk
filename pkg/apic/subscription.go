@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
@@ -59,6 +60,7 @@ type Subscription interface {
 // CentralSubscription -
 type CentralSubscription struct {
 	CatalogItemSubscription *uc.CatalogItemSubscription `json:"catalogItemSubscription"`
+	AccessRequest           *v1alpha1.AccessRequest     `json:"accessRequest"`
 	ApicID                  string                      `json:"-"`
 	RemoteAPIID             string                      `json:"-"`
 	RemoteAPIStage          string                      `json:"-"`
@@ -218,10 +220,60 @@ func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription
 	}
 
 	queryParams["query"] = searchQuery
-	return c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+	response, err := c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptions := make([]uc.CatalogItemSubscription, 0)
+	json.Unmarshal(response, &subscriptions)
+
+	// build the CentralSubscriptions from the UC ones
+	centralSubscriptions := make([]CentralSubscription, 0)
+	for i := range subscriptions {
+		sub := CentralSubscription{
+			CatalogItemSubscription: &subscriptions[i],
+			apicClient:              c,
+		}
+		centralSubscriptions = append(centralSubscriptions, sub)
+	}
+	return centralSubscriptions, nil
 }
 
-func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]CentralSubscription, error) {
+// getSubscriptions -
+func (c *ServiceClient) getAccessRequests(states []string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state==" + state
+	}
+
+	queryParams["query"] = searchQuery
+	response, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestSubscriptionURL(), queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptions := make([]v1alpha1.AccessRequest, 0)
+	json.Unmarshal(response, &subscriptions)
+
+	// build the CentralSubscriptions from the UC ones
+	centralSubscriptions := make([]CentralSubscription, 0)
+	for i := range subscriptions {
+		sub := CentralSubscription{
+			AccessRequest: &subscriptions[i],
+			apicClient:    c,
+		}
+		centralSubscriptions = append(centralSubscriptions, sub)
+	}
+	return centralSubscriptions, nil
+}
+
+func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]byte, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -244,19 +296,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		return nil, ErrSubscriptionResp.FormatError(response.Code)
 	}
 
-	subscriptions := make([]uc.CatalogItemSubscription, 0)
-	json.Unmarshal(response.Body, &subscriptions)
-
-	// build the CentralSubscriptions from the UC ones
-	centralSubscriptions := make([]CentralSubscription, 0)
-	for i := range subscriptions {
-		sub := CentralSubscription{
-			CatalogItemSubscription: &subscriptions[i],
-			apicClient:              c,
-		}
-		centralSubscriptions = append(centralSubscriptions, sub)
-	}
-	return centralSubscriptions, nil
+	return request.Body, nil
 }
 
 // UpdateEnumProperty -
