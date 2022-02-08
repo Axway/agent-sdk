@@ -60,6 +60,9 @@ type agentData struct {
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
+
+	instanceCacheLock      *sync.Mutex
+	instanceValidatorJobID string
 }
 
 var agent agentData
@@ -234,10 +237,10 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() {
-	instanceCacheLock := &sync.Mutex{}
+	agent.instanceCacheLock = &sync.Mutex{}
 
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
+	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {
 		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
@@ -248,7 +251,7 @@ func startAPIServiceCache() {
 			return
 		}
 		// Start the full update after the first interval
-		go startDiscoveryCache(instanceCacheLock)
+		go startDiscoveryCache(agent.instanceCacheLock)
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
@@ -263,15 +266,6 @@ func startAPIServiceCache() {
 		}
 
 		err := startStreamMode(agent)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-	}
-
-	if agent.apiValidator != nil {
-		instanceValidator := newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
-		_, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
 		if err != nil {
 			log.Error(err)
 			return
