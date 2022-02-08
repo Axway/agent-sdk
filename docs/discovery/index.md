@@ -46,7 +46,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
 | central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
 | central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
-| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)          |
+| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 10 seconds)          |
 
 The following is a sample of Central configuration in YAML
 
