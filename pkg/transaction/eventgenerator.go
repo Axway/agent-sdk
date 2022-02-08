@@ -78,13 +78,15 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 		if summaryEvent.TransactionSummary.Application != nil {
 			appName = summaryEvent.TransactionSummary.Application.Name
 		}
-		teamName := ""
+		var team metric.Team
 		if summaryEvent.TransactionSummary.Team != nil {
-			teamName = summaryEvent.TransactionSummary.Team.ID
+			team = metric.Team{
+				ID: summaryEvent.TransactionSummary.Team.ID,
+			}
 		}
 		collector := metric.GetMetricCollector()
 		if collector != nil {
-			collector.AddMetric(apiDetails, statusCode, int64(duration), bytes, appName, teamName)
+			collector.AddMetric(apiDetails, statusCode, int64(duration), bytes, appName, team)
 		}
 	}
 }

@@ -39,9 +39,14 @@ type APIDetails struct {
 	Revision int    `json:"revision"`
 }
 
+type Team struct {
+	ID string `json:"id"`
+}
+
 // APIMetric - struct to hold metric specific for status code based API transactions
 type APIMetric struct {
 	API         APIDetails         `json:"api"`
+	Team        Team               `json:"team"`
 	StatusCode  string             `json:"statusCode"`
 	Status      string             `json:"status"`
 	Count       int64              `json:"count"`
@@ -53,6 +58,7 @@ type APIMetric struct {
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
 	API        APIDetails `json:"api"`
+	Team       Team       `json:"team"`
 	StatusCode string     `json:"statusCode"`
 	Count      int64      `json:"count"`
 	Values     []int64    `json:"values"`
