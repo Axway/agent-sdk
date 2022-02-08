@@ -446,11 +446,12 @@ func TestProxyHandler(t *testing.T) {
 	}
 	handler1 := &customHandler{}
 	proxy := NewStreamWatchProxyHandler()
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	assert.Nil(t, err)
 	assert.Nil(t, handler1.ri)
 
 	proxy.RegisterTargetHandler("custom", handler1)
-	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Nil(t, err)
 	assert.Equal(t, testRes, handler1.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler1.action)
