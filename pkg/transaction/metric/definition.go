@@ -39,6 +39,7 @@ type APIDetails struct {
 	Revision int    `json:"revision"`
 }
 
+// Team - Holds the details of team owning the api
 type Team struct {
 	ID string `json:"id"`
 }
