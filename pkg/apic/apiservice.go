@@ -96,6 +96,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 		return nil, err
 	}
 	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	apiService.Name = serviceBody.serviceContext.serviceName
 	return apiService, err
 }
 
