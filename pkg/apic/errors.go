@@ -17,10 +17,11 @@ var (
 var (
 	ErrNoAddressFound = errors.Newf(1140, "could not find the subscriber (%s) email address")
 	// Subscription APIs
-	ErrSubscriptionQuery        = errors.New(1141, "error connecting to Amplify Central for subscriptions")
-	ErrSubscriptionResp         = errors.Newf(1142, "unexpected response code (%d) from Amplify Central for subscription")
-	ErrSubscriptionSchemaCreate = errors.New(1143, "error creating/updating subscription schema in Amplify Central")
-	ErrSubscriptionSchemaResp   = errors.Newf(1144, "unexpected response code (%d) when creating a subscription schema in Amplify Central")
+	ErrSubscriptionQuery                   = errors.New(1141, "error connecting to Amplify Central for subscriptions")
+	ErrSubscriptionResp                    = errors.Newf(1142, "unexpected response code (%d) from Amplify Central for subscription")
+	ErrSubscriptionSchemaCreate            = errors.New(1143, "error creating/updating subscription schema in Amplify Central")
+	ErrSubscriptionSchemaResp              = errors.Newf(1144, "unexpected response code (%d) when creating a subscription schema in Amplify Central")
+	ErrAccessRequestSubscriptionSchemaResp = errors.Newf(1147, "unexpected response code (%d) when creating an acceess request subscription schema in Amplify Central")
 
 	// APIs related to webhooks
 	ErrCreateWebhook = errors.New(1145, "unable to create webhook")

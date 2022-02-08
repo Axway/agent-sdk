@@ -459,7 +459,6 @@ func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
 
 // AccessRequest
 
-//TODO: kf add Add,Get,Delete,DeleteAll,GetKeys,GetBySecondaryKey...
 // GetAccessRequestCache - returns the access request cache
 func (c *cacheManager) GetAccessRequestCache() cache.Cache {
 	return c.accessRequestMap

@@ -2,7 +2,6 @@ package apic
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -20,6 +19,7 @@ type SubscriptionSchema interface {
 	GetProperty(name string) *SubscriptionSchemaPropertyDefinition
 	AddUniqueKey(keyName string)
 	GetSubscriptionName() string
+	SetSubscriptionName(name string)
 	mapStringInterface() (map[string]interface{}, error)
 	rawJSON() (json.RawMessage, error)
 	SetJSONDraft07SchemaVersion()
@@ -98,6 +98,11 @@ func (ss *subscriptionSchema) GetSubscriptionName() string {
 	return ss.SubscriptionName
 }
 
+// SetSubscriptionName -
+func (ss *subscriptionSchema) SetSubscriptionName(name string) {
+	ss.SubscriptionName = name
+}
+
 // AddUniqueKey -
 func (ss *subscriptionSchema) AddUniqueKey(keyName string) {
 	ss.UniqueKeys = append(ss.UniqueKeys, keyName)
@@ -134,8 +139,22 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 	c.subscriptionRegistrationLock.Lock()
 	defer c.subscriptionRegistrationLock.Unlock()
 
+	err := c.registerSubscriptionSchema(subscriptionSchema, update)
+	if err != nil {
+		return err
+	}
+
+	err = c.registerAccessRequestSubscriptionSchema(subscriptionSchema, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
 	var registeredSpecHash uint64
 	registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+
 	if registeredSchema != nil {
 		registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
 	} else {
@@ -147,23 +166,11 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		return err
 	}
 
-	//TODO: kf use me
-	accessRequestSpec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
-	fmt.Println("accessRequestSpec: ", accessRequestSpec)
-
-	if err != nil {
-		return err
-	}
-
 	// Create New definition
 	if registeredSchema == nil {
-		err1 := c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-		err2 := c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-		if err1 != nil {
-			return err1
-		}
-		if err2 != nil {
-			return err2
+		err := c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+		if err != nil {
+			return err
 		}
 		return nil
 	}
@@ -172,13 +179,57 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		// Check if the schema definitions changed before update
 		currentHash, _ := util.ComputeHash(spec)
 		if currentHash != registeredSpecHash {
-			err1 := c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-			err2 := c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-			if err1 != nil {
-				return err1
+			err := c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+			if err != nil {
+				return err
 			}
-			if err2 != nil {
-				return err2
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
+	accReqDefNameSuffix := "-access-request"
+	subscriptionSchema.SetSubscriptionName(subscriptionSchema.GetSubscriptionName() + accReqDefNameSuffix)
+	var registeredSpecHash uint64
+	registeredSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+
+	spec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+
+	registeredAccessRequestSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+	if registeredAccessRequestSchema != nil {
+		registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
+	} else {
+		update = true
+	}
+
+	accessRequestSpec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+
+	// Create New definition
+	if registeredSchema == nil {
+		err = c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if update {
+		// Check if the schema definitions changed before update
+		currentHash, _ := util.ComputeHash(spec)
+		if currentHash != registeredSpecHash {
+			err = c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
+			if err != nil {
+				return err
 			}
 			return nil
 		}
@@ -199,7 +250,6 @@ func (c *ServiceClient) getCachedSubscriptionSchema(defName string) *v1alpha1.Co
 	return cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition)
 }
 
-//TODO: kf use me
 func (c *ServiceClient) getCachedAccessRequestSubscriptionSchema(defName string) *v1alpha1.AccessRequestDefinition {
 	cachedSchema, err := c.subscriptionSchemaCache.Get(defName)
 	if err != nil {
@@ -292,7 +342,6 @@ func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.
 	return nil
 }
 
-//TODO: kf use me
 func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
 	//Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
@@ -309,8 +358,6 @@ func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, sp
 		Body:    buffer,
 	}
 
-	fmt.Printf("%+v", string(buffer))
-
 	response, err := c.apiClient.Send(request)
 	if err != nil {
 		log.Error(err.Error())
@@ -318,7 +365,7 @@ func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, sp
 	}
 	if response.Code != http.StatusCreated {
 		readResponseErrors(response.Code, response.Body)
-		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
+		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
 
 	registeredSchema := &v1alpha1.AccessRequestDefinition{}
@@ -359,7 +406,6 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 	return nil
 }
 
-// TODO: kf use me
 func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
@@ -381,7 +427,7 @@ func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, sp
 	}
 	if !(response.Code == http.StatusOK) {
 		readResponseErrors(response.Code, response.Body)
-		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
+		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 	}
 
 	registeredSchema := &v1alpha1.AccessRequestDefinition{}
@@ -449,7 +495,6 @@ func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1al
 	}, nil
 }
 
-// TODO: kf use me
 func (c *ServiceClient) prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.AccessRequestDefinitionSpec, error) {
 	subscriptionSchema.SetJSONDraft07SchemaVersion()
 	catalogSubscriptionSchema, err := subscriptionSchema.mapStringInterface()
@@ -498,7 +543,6 @@ func (c *ServiceClient) marshalSubscriptionDefinition(defName string, spec *v1al
 	return json.Marshal(apiServerService)
 }
 
-//TODO: kf use me
 func (c *ServiceClient) marshalAccessRequestSubscriptionDefinition(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) ([]byte, error) {
 	apiServerService := v1alpha1.AccessRequestDefinition{
 

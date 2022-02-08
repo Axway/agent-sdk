@@ -395,8 +395,6 @@ func (c *collector) processAppUsage(usageName string) {
 		appID := elements[1]
 		accessRequest := agent.GetAccessRequestByAppID(appID)
 
-		//TODO: kf  need to generate accessRequest.Spec.AssetRequest from api server
-		//use AssetRequest?
 		log.Infof("****Reporting a count of %d calls on asset request %s", c.getOrRegisterCounter(usageName).Count(), accessRequest.Spec.AccessRequest)
 		c.getOrRegisterCounter(usageName).Clear()
 	}

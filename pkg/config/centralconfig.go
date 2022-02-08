@@ -121,8 +121,8 @@ type CentralConfig interface {
 	GetSubscriptionURL() string
 	GetSubscriptionConfig() SubscriptionConfig
 	GetCatalogItemSubscriptionsURL(string) string
-	GetCatalogItemAccessRequestSubscriptionStatesURL(string) string
-	GetCatalogItemAccessRequestSubscriptionPropertiesURL(string) string
+	GetAccessRequestSubscriptionStatesURL(string) string
+	GetAccessRequestSubscriptionPropertiesURL(string) string
 	GetCatalogItemSubscriptionStatesURL(string, string) string
 	GetCatalogItemSubscriptionPropertiesURL(string, string) string
 	GetCatalogItemSubscriptionRelationshipURL(string, string) string

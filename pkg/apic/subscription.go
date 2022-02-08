@@ -15,15 +15,6 @@ type SubscriptionState string
 
 // SubscriptionState
 const (
-	//TODO: remove these
-	// SubscriptionApproved             = SubscriptionState("APPROVED")
-	// SubscriptionRequested            = SubscriptionState("REQUESTED")
-	// SubscriptionRejected             = SubscriptionState("REJECTED")
-	// SubscriptionActive               = SubscriptionState("ACTIVE")
-	// SubscriptionUnsubscribed         = SubscriptionState("UNSUBSCRIBED")
-	// SubscriptionUnsubscribeInitiated = SubscriptionState("UNSUBSCRIBE_INITIATED")
-	// SubscriptionFailedToSubscribe    = SubscriptionState("FAILED_TO_SUBSCRIBE")
-	// SubscriptionFailedToUnsubscribe  = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
 	SubscriptionApproved              = AccessRequestProvisioning
 	SubscriptionRequested             = AccessRequestFailedProvisioning
 	SubscriptionRejected              = AccessRequestFailedProvisioning
@@ -168,7 +159,7 @@ func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionSta
 
 	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
 	//TODO: kf use me
-	accessRequestSubStateURL := s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionStatesURL(s.GetID())
+	accessRequestSubStateURL := s.getServiceClient().cfg.GetAccessRequestSubscriptionStatesURL(s.GetID())
 	fmt.Println("accessRequestSubStateURL: ", accessRequestSubStateURL)
 
 	subState := uc.CatalogItemSubscriptionState{
@@ -327,7 +318,7 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
 	//TODO: kf use me
-	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
+	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
 	fmt.Println("accessRequestURL: ", accessRequestURL)
 
 	body, err := json.Marshal(value)
@@ -363,7 +354,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 
 	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
 	//TODO: kf use me
-	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
+	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
 	fmt.Println("accessRequestURL: ", accessRequestURL)
 
 	body, err := json.Marshal(values)

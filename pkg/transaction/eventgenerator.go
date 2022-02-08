@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
