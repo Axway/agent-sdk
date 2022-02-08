@@ -1,9 +1,4 @@
 #!/bin/bash
-MODE=
-
-if [ "$1" = "preview" ]; then
-    MODE=preview
-fi
 
 sonar-scanner -X \
     -Dsonar.host.url=${SONAR_HOST} \
@@ -19,7 +14,6 @@ sonar-scanner -X \
     -Dsonar.test.inclusions=**/*test*.go \
     -Dsonar.go.tests.reportPaths=goreport.json \
     -Dsonar.go.coverage.reportPaths=gocoverage.out \
-    -Dsonar.analysis.mode=${MODE} \
     -Dsonar.issuesReport.console.enable=true \
     -Dsonar.report.export.path=sonar-report.json
 
