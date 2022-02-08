@@ -202,7 +202,9 @@ func checkRunningAgent() error {
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client) {
-	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
+	if agent.cfg != nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
+	}
 	agent.apicClient = apicClient
 }
 
