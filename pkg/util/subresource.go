@@ -29,9 +29,10 @@ func GetAgentDetails(h handler) map[string]interface{} {
 	return v
 }
 
-// GetAgentDetailsValue get a single string value fom the x-agent-details sub resource.
+// GetAgentDetailsValue gets a single string value fom the x-agent-details sub resource.
 // Returns nil if x-agent-details does not exist.
-// returns errors if unable to perform type conversion.
+// Returns errors if unable to perform type conversion.
+// Returns an empty string if the value does not exist, or if there is an error.
 func GetAgentDetailsValue(h handler, key string) (string, error) {
 	item := h.GetSubResource(definitions.XAgentDetails)
 	if item == nil {
@@ -40,36 +41,47 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 
 	sub, ok := item.(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("unable to convert x-agent-details to map[string]interface{}")
+		return "", fmt.Errorf(
+			"unable to convert %s to map[string]interface{}. Received type %T",
+			definitions.XAgentDetails,
+			sub,
+		)
 	}
 
-	v, ok := sub[key]
+	item, ok = sub[key]
 	if !ok {
-		return "", fmt.Errorf("key %s not found in x-agent-details", key)
+		return "", fmt.Errorf("key %s not found in %s", key, definitions.XAgentDetails)
 	}
 
-	s, ok := v.(string)
-	if !ok {
-		return "", fmt.Errorf("value for %s is not a string. found %s", key, v)
+	switch v := item.(type) {
+	case int:
+		return fmt.Sprintf("%d", v), nil
+	case string:
+		return v, nil
+	default:
+		return "", fmt.Errorf(
+			"%s keys should be a string or int. Received type %T for key %s",
+			definitions.XAgentDetails,
+			v,
+			key,
+		)
 	}
-
-	return s, nil
 }
 
-// SetAgentDetailsKey sets a key value pair in the x-agent-details sub resource
-func SetAgentDetailsKey(h handler, key string, value interface{}) error {
+// SetAgentDetailsKey sets a key value pair in the x-agent-details sub resource. If x-agent-details does not exist, it is created.
+// If value is not a string or an int, an error will be returned.
+func SetAgentDetailsKey(h handler, key, value string) error {
 	item := h.GetSubResource(definitions.XAgentDetails)
 	if item == nil {
-		h.SetSubResource(definitions.XAgentDetails, map[string]interface{}{
-			key: value,
-		})
+		h.SetSubResource(definitions.XAgentDetails, map[string]interface{}{key: value})
 		return nil
 	}
 
 	sub, ok := item.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("x-agent-details is not a map[string]interface{}")
+		return fmt.Errorf("%s is not a map[string]interface{}. Received type %T", definitions.XAgentDetails, sub)
 	}
+
 	sub[key] = value
 
 	h.SetSubResource(definitions.XAgentDetails, sub)
