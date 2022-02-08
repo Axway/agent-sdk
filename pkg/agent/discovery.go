@@ -4,6 +4,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -68,10 +69,16 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 }
 
 func getAttributeFromResource(apiResource *apiV1.ResourceInstance, attrName string) string {
-	if apiResource != nil && apiResource.Attributes != nil {
-		return apiResource.Attributes[attrName]
+	var v string
+	if apiResource != nil {
+		if apiResource.Attributes != nil {
+			v = apiResource.Attributes[attrName]
+		}
+		if v == "" {
+			v, _ = util.GetAgentDetailsValue(apiResource, attrName)
+		}
 	}
-	return ""
+	return v
 }
 
 // GetAttributeOnPublishedAPIByID - Returns the value on published proxy

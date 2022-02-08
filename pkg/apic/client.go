@@ -190,7 +190,7 @@ func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
 }
 
 // mapToTagsArray -
-func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
+func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
 	strArr := []string{}
 
 	for key, val := range m {
@@ -212,7 +212,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	// Add any tags from config
-	additionalTags := c.cfg.GetTagsToPublish()
 	if additionalTags != "" {
 		additionalTagsArray := strings.Split(additionalTags, ",")
 
@@ -648,13 +647,12 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 }
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
-func (c *ServiceClient) CreateSubResourceUnscoped(res *apiv1.ResourceInstance) error {
+func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.ResourceInstance) error {
 	for subName, sub := range res.SubResources {
 		group := res.Group
-		kind := res.Kind
 		version := res.APIVersion
 		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s", base, group, version, kind, res.Name, subName)
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, group, version, kind, res.Name, subName)
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -678,6 +676,10 @@ func (c *ServiceClient) CreateSubResourceUnscoped(res *apiv1.ResourceInstance) e
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
 func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind string, res *apiv1.ResourceInstance) error {
 	for subName, sub := range res.SubResources {
+		if subName == "references" || subName == "status" {
+			continue
+		}
+
 		group := res.Group
 		version := res.APIVersion
 		base := c.cfg.GetURL()

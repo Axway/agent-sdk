@@ -70,7 +70,7 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
 			Attributes:       buildAPIResourceAttributes(serviceBody, attr),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
@@ -84,7 +84,7 @@ func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevi
 	revision.ResourceMeta.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
 	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
-	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	revision.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
 	revision.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
@@ -138,7 +138,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		if serviceBody.serviceContext.previousRevision != nil {
 			err := util.SetAgentDetailsKey(revision, definitions.AttrPreviousAPIServiceRevisionID, serviceBody.serviceContext.previousRevision.Metadata.ID)
 			if err != nil {
-				log.Errorf("failed to set previous revision id for %v-%v ", serviceBody.APIName)
+				log.Errorf("failed to set previous revision id to subresource for %s ", serviceBody.APIName)
 			}
 		}
 

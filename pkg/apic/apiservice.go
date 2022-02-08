@@ -36,7 +36,7 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, servic
 			Name:             serviceName,
 			Title:            serviceBody.NameToPush,
 			Attributes:       buildAPIResourceAttributes(serviceBody, nil),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildAPIServiceSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, true),
@@ -63,7 +63,7 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *
 func (c *ServiceClient) updateAPIServiceResource(svc *v1alpha1.APIService, serviceBody *ServiceBody) {
 	svc.ResourceMeta.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
-	svc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	svc.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = c.getOwnerObject(serviceBody, true)
 	svc.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, svc.ResourceMeta.Attributes)

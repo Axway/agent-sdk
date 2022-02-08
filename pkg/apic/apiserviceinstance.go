@@ -16,7 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func (c *ServiceClient) buildAPIServiceInstanceSpec(
+func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) v1alpha1.ApiServiceInstanceSpec {
@@ -38,9 +38,9 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Name:             instanceName,
 			Title:            serviceBody.NameToPush,
 			Attributes:       buildAPIResourceAttributes(serviceBody, instanceAttributes),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Spec:  buildAPIServiceInstanceSpec(serviceBody, endPoints),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 
@@ -57,8 +57,8 @@ func (c *ServiceClient) updateInstanceResource(
 	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = buildAPIResourceAttributes(serviceBody, instance.Attributes)
-	instance.Tags = c.mapToTagsArray(serviceBody.Tags)
-	instance.Spec = c.buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	instance.Owner = c.getOwnerObject(serviceBody, false)
 	instance.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
 
@@ -67,7 +67,7 @@ func (c *ServiceClient) updateInstanceResource(
 
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	instanceEndpoints, err := c.createInstanceEndpoint(serviceBody.Endpoints)
+	instanceEndpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	return err
 }
 
-func (c *ServiceClient) createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
+func createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
 	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
 	var err error
 

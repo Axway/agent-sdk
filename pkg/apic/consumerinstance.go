@@ -59,7 +59,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		Version:            serviceBody.Version,
 		State:              serviceBody.State,
 		Status:             serviceBody.Status,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Tags:               mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		Documentation:      doc,
 		OwningTeam:         owningTeam,
 		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
@@ -137,7 +137,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			Name:             name,
 			Title:            serviceBody.NameToPush,
 			Attributes:       map[string]string{},
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 		Owner: c.getOwnerObject(serviceBody, false),
@@ -169,7 +169,7 @@ func (c *ServiceClient) updateConsumerInstanceResource(instance *v1alpha1.Consum
 	instance.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, instance.ResourceMeta.Attributes)
 	instance.SetSubResource(definitions.XAgentDetails, details)
 
-	instance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+	instance.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	// use existing categories only if mappings have not been configured
 	categories := instance.Spec.Categories
 	if corecfg.IsMappingConfigured() {

@@ -164,11 +164,13 @@ func TestDiscoveryCache(t *testing.T) {
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService1",
-			Attributes: map[string]string{
-				definitions.XExternalAPIID:            "1111",
-				definitions.AttrExternalAPIPrimaryKey: "1234",
-				definitions.AttrExternalAPIName:       "NAME",
-				attributeKey:                          attributeValue,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.XExternalAPIID:            "1111",
+					definitions.AttrExternalAPIPrimaryKey: "1234",
+					definitions.AttrExternalAPIName:       "NAME",
+					attributeKey:                          attributeValue,
+				},
 			},
 		},
 	}
@@ -176,8 +178,10 @@ func TestDiscoveryCache(t *testing.T) {
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
 			Name:             "testAPIService2",
-			Attributes: map[string]string{
-				definitions.XExternalAPIID: "2222",
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.XExternalAPIID: "2222",
+				},
 			},
 		},
 	}

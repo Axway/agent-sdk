@@ -12,17 +12,20 @@ import (
 )
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
-	attributes := map[string]string{
+	sub := map[string]interface{}{
 		definitions.XExternalAPIID:      apiID,
 		definitions.AttrExternalAPIName: apiName,
 	}
+
 	if primaryKey != "" {
-		attributes[definitions.AttrExternalAPIPrimaryKey] = primaryKey
+		sub[definitions.AttrExternalAPIPrimaryKey] = primaryKey
 	}
 
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
-			Attributes: attributes,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: sub,
+			},
 		},
 	}
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 )
@@ -81,7 +82,11 @@ func (c *MockHTTPClient) Send(request Request) (*Response, error) {
 }
 
 func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
-	responseFile, _ := os.Open(c.Responses[c.RespCount].FileName) // APIC Environments
+	if c.RespCount >= len(c.Responses) {
+		log.Fatalf("Error: too many requests. failed on request: %s", request.URL)
+	}
+	fileName := c.Responses[c.RespCount].FileName
+	responseFile, _ := os.Open(fileName) // APIC Environments
 	dat, _ := ioutil.ReadAll(responseFile)
 
 	response := Response{

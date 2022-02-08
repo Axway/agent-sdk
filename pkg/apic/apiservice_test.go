@@ -8,6 +8,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -26,6 +28,7 @@ var serviceBody = ServiceBody{
 	ImageContentType: "image/jpeg",
 	ResourceType:     Oas2,
 	categoryTitles:   testCategories,
+	RestAPIID:        "12345",
 }
 
 func TestIsValidAuthPolicy(t *testing.T) {
@@ -46,15 +49,31 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 	})
@@ -195,9 +214,11 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 		ResourceMeta: v1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
-			Attributes: map[string]string{
-				definitions.XExternalAPIID:      cloneServiceBody.RestAPIID,
-				definitions.AttrExternalAPIName: serviceBody.APIName,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.XExternalAPIID:      cloneServiceBody.RestAPIID,
+					definitions.AttrExternalAPIName: serviceBody.APIName,
+				},
 			},
 		},
 		Spec: v1alpha1.ApiServiceSpec{},
@@ -211,7 +232,9 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 
 	// should return the resource when found by the primary key
 	cloneServiceBody.PrimaryKey = "555"
-	apiSvc.Attributes[definitions.AttrExternalAPIPrimaryKey] = cloneServiceBody.PrimaryKey
+	err = util.SetAgentDetailsKey(apiSvc, definitions.AttrExternalAPIPrimaryKey, cloneServiceBody.PrimaryKey)
+	assert.Nil(t, err)
+
 	ri, _ = apiSvc.AsInstance()
 	client.caches.AddAPIService(ri)
 	svc, err = client.getAPIServiceFromCache(&cloneServiceBody)
@@ -229,7 +252,6 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 
 func TestUpdateService(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
-
 	// tests for updating existing revision
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -241,11 +263,19 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 		{
@@ -264,6 +294,10 @@ func TestUpdateService(t *testing.T) {
 			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
 	})
 
 	cloneServiceBody := serviceBody
@@ -277,18 +311,6 @@ func TestUpdateService(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 
-	// this is a failure test
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json",
-			RespCode: http.StatusRequestTimeout,
-		},
-	})
-
-	apiSvc, err = client.PublishService(&serviceBody)
-	assert.NotNil(t, err)
-	assert.Nil(t, apiSvc)
-
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -300,11 +322,19 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/existingservicerevisions.json", // this for call to get the revision
 			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 		{
@@ -316,11 +346,19 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/existingconsumerinstances.json", // for call to get the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 	})
@@ -335,7 +373,70 @@ func TestUpdateService(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
 }
-func TestRevision(t *testing.T) {
+
+func Test_PublishServiceError(t *testing.T) {
+	client, httpClient := GetTestServiceClient()
+
+	// tests for updating existing revision
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/apiservice.json", // for call to update the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingserviceinstances.json", // for call to get instance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/existingconsumerinstances.json", // for call to check existance of the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+	})
+	// this is a failure test
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusRequestTimeout,
+		},
+	})
+
+	apiSvc, err := client.PublishService(&serviceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, apiSvc)
+}
+
+func Test_processRevision(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	cloneServiceBody := serviceBody
 	// Alt Revision
@@ -347,6 +448,7 @@ func TestRevision(t *testing.T) {
 	client.processRevision(&cloneServiceBody)
 	assert.NotEqual(t, "", cloneServiceBody.serviceContext.revisionName)
 }
+
 func TestDeleteConsumerInstance(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 	httpClient.ResponseCode = http.StatusRequestTimeout
@@ -401,8 +503,10 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 		ResourceMeta: v1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
-			Attributes: map[string]string{
-				definitions.XExternalAPIID: "12345",
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.XExternalAPIID: "12345",
+				},
 			},
 		},
 		Spec: v1alpha1.ApiServiceSpec{},
@@ -434,6 +538,7 @@ func TestGetConsumerInstanceByID(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "daleapi", instance.Name)
 }
+
 func TestRegisterSubscriptionWebhook(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
@@ -511,15 +616,31 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 	})
@@ -563,15 +684,31 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusCreated,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 	})
