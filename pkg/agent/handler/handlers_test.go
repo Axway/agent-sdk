@@ -432,12 +432,9 @@ type customHandler struct {
 }
 
 func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if c.err != nil {
-		return c.err
-	}
 	c.action = action
 	c.ri = resource
-	return nil
+	return c.err
 }
 
 func TestProxyHandler(t *testing.T) {
@@ -447,42 +444,49 @@ func TestProxyHandler(t *testing.T) {
 			Title: "title",
 		},
 	}
-	handler := &customHandler{}
+	handler1 := &customHandler{}
 	proxy := NewStreamWatchProxyHandler()
 	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, handler.ri)
+	assert.Nil(t, handler1.ri)
 
-	proxy.RegisterTargetHandler("custom", handler)
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Equal(t, testRes, handler.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler.action)
-	handler.ri = nil
+	proxy.RegisterTargetHandler("custom", handler1)
+	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	assert.Nil(t, err)
+	assert.Equal(t, testRes, handler1.ri)
+	assert.Equal(t, proto.Event_UPDATED, handler1.action)
 
+	handler1.ri = nil
 	handler2 := &customHandler{}
 	proxy.RegisterTargetHandler("custom2", handler2)
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Equal(t, testRes, handler.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler.action)
+
+	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, testRes, handler1.ri)
+	assert.Equal(t, proto.Event_UPDATED, handler1.action)
+
 	assert.Equal(t, testRes, handler2.ri)
 	assert.Equal(t, proto.Event_UPDATED, handler2.action)
 
-	handler.ri = nil
+	handler1.ri = nil
 	handler2.ri = nil
-	handler.err = errors.New("test")
-	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
+	handler1.err = errors.New("test")
+	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.NotNil(t, err)
-	assert.Equal(t, err, handler.err)
-	assert.Nil(t, handler.ri)
+	assert.Equal(t, err, handler1.err)
+	assert.Equal(t, testRes, handler1.ri)
+	// should be nil since handler1 was called first and returned an error, so handler2 was not called.
 	assert.Nil(t, handler2.ri)
 
-	handler.ri = nil
+	handler1.ri = nil
 	handler2.ri = nil
-	handler.err = nil
+	handler1.err = nil
+
 	proxy.UnregisterTargetHandler("custom2")
 	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
 	assert.Nil(t, err)
 	assert.Nil(t, handler2.ri)
-	assert.Equal(t, testRes, handler.ri)
+	assert.Equal(t, testRes, handler1.ri)
 }
 
 type mockResourceManager struct {
@@ -496,6 +500,8 @@ func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstanc
 func (m *mockResourceManager) GetAgentResource() *v1.ResourceInstance {
 	return m.resource
 }
-func (m *mockResourceManager) OnConfigChange(cfg config.CentralConfig, apicClient apic.Client) {}
-func (m *mockResourceManager) FetchAgentResource() error                                       { return nil }
-func (m *mockResourceManager) UpdateAgentStatus(status, prevStatus, message string) error      { return nil }
+func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Client) {}
+
+func (m *mockResourceManager) FetchAgentResource() error { return nil }
+
+func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return nil }
