@@ -127,6 +127,7 @@ type streamer struct {
 	newListener        newListenerFunc
 	sequenceManager    *agentSequenceManager
 	onStreamConnection OnStreamConnection
+	cacheManager       agentcache.Manager
 }
 
 // NewStreamer creates a Streamer
@@ -179,6 +180,7 @@ func NewStreamer(
 		newListener:        NewEventListener,
 		sequenceManager:    sequenceManager,
 		onStreamConnection: onStreamConnection,
+		cacheManager:       cacheManager,
 	}, nil
 }
 
@@ -220,6 +222,18 @@ func (c *streamer) Start() error {
 	c.manager = manager
 
 	listenCh := c.listener.Listen()
+
+	c.cacheManager.ApplyResourceReadLock()
+	// defer release the resource cache lock just in case if there are error
+	// while registering the watch
+	defer c.cacheManager.ReleaseResourceReadLock()
+
+	// Register the callback to release the resource cache lock on
+	// successful registration and reading events from harvester
+	c.manager.OnRegisterSuccess(func() {
+		c.cacheManager.ReleaseResourceReadLock()
+	})
+
 	_, err = c.manager.RegisterWatch(c.topicSelfLink, events, eventErrorCh)
 	if err != nil {
 		return err
