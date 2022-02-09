@@ -206,7 +206,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
-		CacheStorageInterval:      60 * time.Second,
+		CacheStorageInterval:      10 * time.Second,
 	}
 }
 
@@ -694,7 +694,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
 	props.AddIntProperty(pathGRPCPort, 0, "Port for Amplify Central gRPC connection")
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
-	props.AddDurationProperty(pathCacheStorageInterval, 30*time.Second, "The interval to persist agent caches to file")
+	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")

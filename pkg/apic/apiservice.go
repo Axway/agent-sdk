@@ -9,7 +9,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/google/uuid"
 )
 
 func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceSpec {
@@ -27,11 +26,10 @@ func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.A
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, serviceName string) *v1alpha1.APIService {
+func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody) *v1alpha1.APIService {
 	return &v1alpha1.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceGVK(),
-			Name:             serviceName,
 			Title:            serviceBody.NameToPush,
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, true),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
@@ -71,9 +69,6 @@ func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, se
 
 // processService -
 func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
-	uuid, _ := uuid.NewUUID()
-	serviceName := uuid.String()
-
 	// Default action to create service
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
@@ -86,13 +81,12 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	}
 
 	if apiService != nil {
-		serviceName = apiService.Name
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
-		serviceURL += "/" + serviceName
+		serviceURL += "/" + apiService.Name
 		c.updateAPIServiceResource(apiService, serviceBody)
 	} else {
-		apiService = c.buildAPIServiceResource(serviceBody, serviceName)
+		apiService = c.buildAPIServiceResource(serviceBody)
 	}
 
 	// spec needs to adhere to environment schema
@@ -101,10 +95,8 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	if err != nil {
 		return nil, err
 	}
-	_, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
-	if err == nil {
-		serviceBody.serviceContext.serviceName = serviceName
-	}
+	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	apiService.Name = serviceBody.serviceContext.serviceName
 	return apiService, err
 }
 

@@ -28,7 +28,7 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 		ConnectToCentral:     true,
 		ProcessSystemSignals: true,
 		VersionChecker:       true,
-		PersistCache:         true,
+		PersistCache:         false,
 	}
 }
 

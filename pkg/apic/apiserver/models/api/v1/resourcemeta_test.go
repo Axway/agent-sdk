@@ -74,6 +74,25 @@ func TestResourceMetaMarshal(t *testing.T) {
 	// expect to the sub resources to be equal
 	assert.True(t, len(meta2.SubResources) == 1)
 	assert.Equal(t, xAgentDetailsSub, meta2.SubResources["x-agent-details"])
+
+	// unset the name
+	meta1.Name = ""
+
+	bts, err = json.Marshal(meta1)
+	assert.Nil(t, err)
+	assert.NotNil(t, bts)
+
+	// Unmarshal the ResourceMeta bytes to a map to confirm that MarshalJSON did not save name
+	values = map[string]interface{}{}
+	json.Unmarshal(bts, &values)
+	assert.NotContains(t, values, "name")
+
+	// Unmarshal the ResourceMeta bytes to a map to confirm that MarshalJSON
+	meta3 := ResourceMeta{}
+	err = json.Unmarshal(bts, &meta3)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", meta3.Name)
 }
 
 func TestResourceMeta(t *testing.T) {
