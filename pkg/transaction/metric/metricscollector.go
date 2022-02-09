@@ -23,7 +23,7 @@ import (
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string, team Team)
+	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
 }
 
 // collector - collects the metrics for transactions events
@@ -175,14 +175,14 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string, team Team) {
+func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
 	c.updateUsage(1)
 	c.updateVolume(bytes)
-	c.updateMetric(apiDetails, statusCode, duration, team)
+	c.updateMetric(apiDetails, statusCode, duration)
 }
 
 func (c *collector) updateVolume(bytes int64) {
@@ -200,7 +200,7 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64, team Team) *APIMetric {
+func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64) *APIMetric {
 	if !c.usageConfig.CanPublishMetric() {
 		return nil // no need to update metrics with publish off
 	}
@@ -217,7 +217,6 @@ func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, durat
 		// setup the start time to be used for reporting metric event
 		apiStatusMap[statusCode] = &APIMetric{
 			API:        apiDetails,
-			Team:       team,
 			StatusCode: statusCode,
 			Status: func() string {
 				httpStatusCode, _ := strconv.Atoi(statusCode)
