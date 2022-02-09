@@ -139,14 +139,17 @@ func (res *AmplifyRuntimeConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Status
-	sr, err = json.Marshal(aux.SubResources["status"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Status)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "status")
+		err = json.Unmarshal(sr, &res.Status)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

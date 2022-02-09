@@ -283,9 +283,10 @@ func TestGovernanceAgentResource(t *testing.T) {
 	assert.Nil(t, err)
 
 	// expect that the sub resources defined on the gov1 resource are contained in the SubResource map
-	assert.Contains(t, gov2.SubResources, "status")
-	assert.Contains(t, gov2.SubResources, "agentconfigstatus")
 	assert.Contains(t, gov2.SubResources, "x-agent-details")
+	// SubResources should not contain any field already defined on the resource
+	assert.NotContains(t, gov2.SubResources, "status")
+	assert.NotContains(t, gov2.SubResources, "agentconfigstatus")
 
 	// expect that the two resources contain the same data when marshalled into bytes
 	ri1, err := gov1.AsInstance()
