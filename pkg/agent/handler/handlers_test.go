@@ -513,7 +513,7 @@ func TestProxyHandler1(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			for i, _ := range tc.handlers {
+			for i := range tc.handlers {
 				proxy.UnregisterTargetHandler(fmt.Sprintf("%d", i))
 			}
 		})
