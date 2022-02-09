@@ -426,14 +426,10 @@ func TestAgentResourceHandler(t *testing.T) {
 }
 
 type customHandler struct {
-	err    error
-	action proto.Event_Type
-	ri     *v1.ResourceInstance
+	err error
 }
 
 func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
-	c.action = action
-	c.ri = resource
 	return c.err
 }
 
