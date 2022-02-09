@@ -73,5 +73,9 @@
       "message": "Catalog Item updated in Unified Catalog",
       "transitionTime": "2020-08-14T20:55:52.636+0000"
     }
+  },
+  "x-agent-details": {
+    "createdBy": "",
+    "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
   }
 }
