@@ -429,7 +429,7 @@ type customHandler struct {
 	err error
 }
 
-func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (c *customHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *v1.ResourceInstance) error {
 	return c.err
 }
 
