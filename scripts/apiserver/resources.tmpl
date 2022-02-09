@@ -167,3 +167,8 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
     {{end}}
     return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *{{.res.kind}}) PluralName() string {
+	return {{.res.kind}}ResourceName
+}

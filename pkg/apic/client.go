@@ -693,9 +693,6 @@ func (c *ServiceClient) CreateSubResourceScoped(
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
-		if subName == "references" || subName == "status" {
-			continue
-		}
 		wg.Add(1)
 
 		base := c.cfg.GetURL()

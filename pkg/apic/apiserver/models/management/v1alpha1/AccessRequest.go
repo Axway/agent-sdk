@@ -170,3 +170,8 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *AccessRequest) PluralName() string {
+	return AccessRequestResourceName
+}

@@ -170,3 +170,8 @@ func (res *Document) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *Document) PluralName() string {
+	return DocumentResourceName
+}

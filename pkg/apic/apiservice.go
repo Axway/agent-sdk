@@ -84,23 +84,23 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	serviceBody.serviceContext.serviceAction = addAPI
 
 	// If service exists, update existing service
-	apiService, err := c.getAPIServiceFromCache(serviceBody)
+	svc, err := c.getAPIServiceFromCache(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 
-	if apiService != nil {
+	if svc != nil {
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
-		serviceURL += "/" + apiService.Name
-		c.updateAPIServiceResource(apiService, serviceBody)
+		serviceURL += "/" + svc.Name
+		c.updateAPIServiceResource(svc, serviceBody)
 	} else {
-		apiService = c.buildAPIServiceResource(serviceBody)
+		svc = c.buildAPIServiceResource(serviceBody)
 	}
 
 	// spec needs to adhere to environment schema
 
-	buffer, err := json.Marshal(apiService)
+	buffer, err := json.Marshal(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -108,25 +108,25 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	if err != nil {
 		return nil, err
 	}
-	apiService.Name = serviceBody.serviceContext.serviceName
+	svc.Name = serviceBody.serviceContext.serviceName
 
-	if len(apiService.SubResources) > 0 {
+	if len(svc.SubResources) > 0 {
 		// TODO: what should happen if the subresource doesn't create? Should the service be rolled back?
 		err = c.CreateSubResourceScoped(
 			mv1a.EnvironmentResourceName,
 			c.cfg.GetEnvironmentName(),
-			mv1a.APIServiceResourceName,
-			apiService.Name,
-			apiService.Group,
-			apiService.APIVersion,
-			apiService.SubResources,
+			svc.PluralName(),
+			svc.Name,
+			svc.Group,
+			svc.APIVersion,
+			svc.SubResources,
 		)
 		if err != nil {
-			return apiService, err
+			return svc, err
 		}
 	}
 
-	return apiService, err
+	return svc, err
 }
 
 func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*mv1a.APIService, error) {

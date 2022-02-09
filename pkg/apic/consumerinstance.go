@@ -258,7 +258,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 			err = c.CreateSubResourceScoped(
 				mv1a.EnvironmentResourceName,
 				c.cfg.GetEnvironmentName(),
-				mv1a.ConsumerInstanceResourceName,
+				instance.PluralName(),
 				instance.Name,
 				instance.Group,
 				instance.APIVersion,

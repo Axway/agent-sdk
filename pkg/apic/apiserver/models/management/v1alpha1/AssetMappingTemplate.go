@@ -138,3 +138,8 @@ func (res *AssetMappingTemplate) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *AssetMappingTemplate) PluralName() string {
+	return AssetMappingTemplateResourceName
+}

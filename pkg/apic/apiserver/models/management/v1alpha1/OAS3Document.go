@@ -138,3 +138,8 @@ func (res *OAS3Document) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *OAS3Document) PluralName() string {
+	return OAS3DocumentResourceName
+}

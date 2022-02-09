@@ -156,7 +156,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 			err = c.CreateSubResourceScoped(
 				mv1a.EnvironmentResourceName,
 				c.cfg.GetEnvironmentName(),
-				mv1a.APIServiceRevisionResourceName,
+				revision.PluralName(),
 				revision.Name,
 				revision.Group,
 				revision.APIVersion,

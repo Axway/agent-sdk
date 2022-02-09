@@ -138,3 +138,8 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *AccessControlList) PluralName() string {
+	return AccessControlListResourceName
+}

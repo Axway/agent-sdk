@@ -170,3 +170,8 @@ func (res *VirtualAPIRelease) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *VirtualAPIRelease) PluralName() string {
+	return VirtualAPIReleaseResourceName
+}
