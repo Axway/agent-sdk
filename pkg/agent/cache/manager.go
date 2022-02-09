@@ -58,6 +58,9 @@ type Manager interface {
 	GetTeamByName(name string) *definitions.PlatformTeam
 	GetTeamByID(id string) *definitions.PlatformTeam
 	GetDefaultTeam() *definitions.PlatformTeam
+
+	ApplyResourceReadLock()
+	ReleaseResourceReadLock()
 }
 
 type cacheManager struct {
@@ -66,6 +69,7 @@ type cacheManager struct {
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
 	sequenceCache           cache.Cache
+	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
 	persistedCache          cache.Cache
 	teams                   cache.Cache
@@ -225,11 +229,17 @@ func (c *cacheManager) GetAPIServiceCache() cache.Cache {
 
 // GetAPIServiceKeys - returns keys for APIService cache
 func (c *cacheManager) GetAPIServiceKeys() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	return c.apiMap.GetKeys()
 }
 
 // GetAPIServiceWithAPIID - returns resource from APIService cache based on externalAPIID attribute
 func (c *cacheManager) GetAPIServiceWithAPIID(externalAPIID string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	api, _ := c.apiMap.Get(externalAPIID)
 	if api == nil {
 		api, _ = c.apiMap.GetBySecondaryKey(externalAPIID)
@@ -246,6 +256,9 @@ func (c *cacheManager) GetAPIServiceWithAPIID(externalAPIID string) *v1.Resource
 
 // GetAPIServiceWithPrimaryKey - returns resource from APIService cache based on externalAPIPrimaryKey attribute
 func (c *cacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	api, _ := c.apiMap.Get(primaryKey)
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
@@ -258,6 +271,9 @@ func (c *cacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.Resour
 
 // GetAPIServiceWithName - returns resource from APIService cache based on externalAPIName attribute
 func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	api, _ := c.apiMap.GetBySecondaryKey(apiName)
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
@@ -290,11 +306,17 @@ func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 
 // GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
 func (c *cacheManager) GetAPIServiceInstanceKeys() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	return c.instanceMap.GetKeys()
 }
 
 // GetAPIServiceInstanceByID - returns resource from APIServiceInstance cache based on instance ID
 func (c *cacheManager) GetAPIServiceInstanceByID(instanceID string) (*v1.ResourceInstance, error) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	item, err := c.instanceMap.Get(instanceID)
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
@@ -335,11 +357,17 @@ func (c *cacheManager) GetCategoryCache() cache.Cache {
 
 // GetCategoryKeys - returns keys for Category cache
 func (c *cacheManager) GetCategoryKeys() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	return c.categoryMap.GetKeys()
 }
 
 // GetCategory - returns resource from Category cache based on name
 func (c *cacheManager) GetCategory(categoryName string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	category, _ := c.categoryMap.Get(categoryName)
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
@@ -352,6 +380,9 @@ func (c *cacheManager) GetCategory(categoryName string) *v1.ResourceInstance {
 
 // GetCategoryWithTitle - returns resource from Category cache based on title
 func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
 	category, _ := c.categoryMap.GetBySecondaryKey(title)
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
@@ -449,4 +480,12 @@ func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
 		return nil
 	}
 	return &team
+}
+
+func (c *cacheManager) ApplyResourceReadLock() {
+	c.resourceCacheReadLock.Lock()
+}
+
+func (c *cacheManager) ReleaseResourceReadLock() {
+	c.resourceCacheReadLock.Unlock()
 }

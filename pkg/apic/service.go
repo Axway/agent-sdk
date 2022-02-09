@@ -259,13 +259,7 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 		return "", utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	itemID := ""
-	metadata := gjson.Get(string(response.Body), "metadata").String()
-	if metadata != "" {
-		itemID = gjson.Get(string(metadata), "id").String()
-	}
-
-	return itemID, nil
+	return gjson.Get(string(response.Body), "name").String(), nil
 }
 
 // create the on-and-only secret for the environment

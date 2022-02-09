@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -437,57 +437,91 @@ func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.Eve
 	return c.err
 }
 
-func TestProxyHandler(t *testing.T) {
-	testRes := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name:  "name",
-			Title: "title",
+func TestProxyHandler1(t *testing.T) {
+	tests := []struct {
+		name     string
+		handlers []Handler
+		event    proto.Event_Type
+		hasError bool
+	}{
+		{
+			name:     "should not register any handlers, and return nil when Handle is called",
+			event:    proto.Event_UPDATED,
+			handlers: nil,
+			hasError: false,
+		},
+		{
+			name:  "should register a handler and return nil when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+			},
+			hasError: false,
+		},
+		{
+			name:  "should register two handlers and return nil when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+				&customHandler{},
+			},
+			hasError: false,
+		},
+		{
+			name:  "should register a handler and return an error when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{err: fmt.Errorf("error")},
+			},
+			hasError: true,
+		},
+		{
+			name:  "should register two handlers and return an error when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+				&customHandler{err: fmt.Errorf("error")},
+			},
+			hasError: true,
+		},
+		{
+			name:  "should register two handlers and return an error when calling the first registered handler",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{err: fmt.Errorf("error")},
+				&customHandler{},
+			},
+			hasError: true,
 		},
 	}
-	handler1 := &customHandler{}
-	proxy := NewStreamWatchProxyHandler()
-	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, err)
-	assert.Nil(t, handler1.ri)
 
-	proxy.RegisterTargetHandler("custom", handler1)
-	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, err)
-	assert.Equal(t, testRes, handler1.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler1.action)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ri := &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+				},
+			}
 
-	handler1.ri = nil
-	handler2 := &customHandler{}
-	proxy.RegisterTargetHandler("custom2", handler2)
+			proxy := NewStreamWatchProxyHandler()
 
-	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, err)
+			for i, h := range tc.handlers {
+				proxy.RegisterTargetHandler(fmt.Sprintf("%d", i), h)
+			}
 
-	assert.Equal(t, testRes, handler1.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler1.action)
+			err := proxy.Handle(tc.event, nil, ri)
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 
-	assert.Equal(t, testRes, handler2.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler2.action)
-
-	handler1.ri = nil
-	handler2.ri = nil
-	handler1.err = errors.New("test")
-	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.NotNil(t, err)
-	assert.Equal(t, err, handler1.err)
-	assert.Equal(t, testRes, handler1.ri)
-	// should be nil since handler1 was called first and returned an error, so handler2 was not called.
-	assert.Nil(t, handler2.ri)
-
-	handler1.ri = nil
-	handler2.ri = nil
-	handler1.err = nil
-
-	proxy.UnregisterTargetHandler("custom2")
-	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, err)
-	assert.Nil(t, handler2.ri)
-	assert.Equal(t, testRes, handler1.ri)
+			for i, _ := range tc.handlers {
+				proxy.UnregisterTargetHandler(fmt.Sprintf("%d", i))
+			}
+		})
+	}
 }
 
 type mockResourceManager struct {

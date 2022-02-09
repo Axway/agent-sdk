@@ -8,10 +8,10 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/google/uuid"
 )
 
 func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
@@ -29,11 +29,10 @@ func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody, serviceName string) *mv1a.APIService {
+func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody) *mv1a.APIService {
 	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
-			Name:             serviceName,
 			Title:            serviceBody.NameToPush,
 			Attributes:       buildAPIResourceAttributes(serviceBody, nil),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
@@ -78,10 +77,7 @@ func (c *ServiceClient) updateAPIServiceResource(svc *mv1a.APIService, serviceBo
 }
 
 // processService -
-func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIService, error) {
-	uid, _ := uuid.NewUUID()
-	serviceName := uid.String()
-
+func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
 	// Default action to create service
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
@@ -94,13 +90,12 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIServi
 	}
 
 	if apiService != nil {
-		serviceName = apiService.Name
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
-		serviceURL += "/" + serviceName
+		serviceURL += "/" + apiService.Name
 		c.updateAPIServiceResource(apiService, serviceBody)
 	} else {
-		apiService = c.buildAPIServiceResource(serviceBody, serviceName)
+		apiService = c.buildAPIServiceResource(serviceBody)
 	}
 
 	// spec needs to adhere to environment schema
@@ -109,27 +104,26 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIServi
 	if err != nil {
 		return nil, err
 	}
-	_, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
-	if err == nil {
-		serviceBody.serviceContext.serviceName = serviceName
+	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	if err != nil {
+		return nil, err
 	}
+	apiService.Name = serviceBody.serviceContext.serviceName
 
-	if err == nil {
-		if len(apiService.SubResources) > 0 {
-			inst, err := apiService.AsInstance()
-			if err != nil {
-				return apiService, err
-			}
-			// TODO: what should happen if the subresource doesn't create? Should the service be rolled back?
-			err = c.CreateSubResourceScoped(
-				mv1a.EnvironmentResourceName,
-				c.cfg.GetEnvironmentName(),
-				mv1a.APIServiceResourceName,
-				inst,
-			)
-			if err != nil {
-				return apiService, err
-			}
+	if len(apiService.SubResources) > 0 {
+		inst, err := apiService.AsInstance()
+		if err != nil {
+			return apiService, err
+		}
+		// TODO: what should happen if the subresource doesn't create? Should the service be rolled back?
+		err = c.CreateSubResourceScoped(
+			mv1a.EnvironmentResourceName,
+			c.cfg.GetEnvironmentName(),
+			mv1a.APIServiceResourceName,
+			inst,
+		)
+		if err != nil {
+			return apiService, err
 		}
 	}
 
@@ -158,7 +152,10 @@ func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*mv1a.APIS
 
 func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*mv1a.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
-		return c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+		apiService, err := c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+		if apiService != nil && err == nil {
+			return apiService, err
+		}
 	}
 	return c.getAPIServiceByExternalAPIID(serviceBody.RestAPIID)
 }

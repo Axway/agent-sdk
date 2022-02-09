@@ -18,7 +18,7 @@ type Meta interface {
 // ResourceMeta metadata for a ResourceInstance
 type ResourceMeta struct {
 	GroupVersionKind
-	Name  string `json:"name"`
+	Name  string `json:"name,omitempty"`
 	Title string `json:"title,omitempty"`
 	// Metadata the metadata for the resource
 	Metadata Metadata `json:"metadata,omitempty"`
