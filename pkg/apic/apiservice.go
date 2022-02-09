@@ -111,16 +111,15 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	apiService.Name = serviceBody.serviceContext.serviceName
 
 	if len(apiService.SubResources) > 0 {
-		inst, err := apiService.AsInstance()
-		if err != nil {
-			return apiService, err
-		}
 		// TODO: what should happen if the subresource doesn't create? Should the service be rolled back?
 		err = c.CreateSubResourceScoped(
 			mv1a.EnvironmentResourceName,
 			c.cfg.GetEnvironmentName(),
 			mv1a.APIServiceResourceName,
-			inst,
+			apiService.Name,
+			apiService.Group,
+			apiService.APIVersion,
+			apiService.SubResources,
 		)
 		if err != nil {
 			return apiService, err

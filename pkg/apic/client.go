@@ -648,17 +648,17 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 }
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
-func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.ResourceInstance) error {
+func (c *ServiceClient) CreateSubResourceUnscoped(
+	kindPlural, name, group, version string, subs map[string]interface{},
+) error {
 	var execErr error
 	wg := &sync.WaitGroup{}
 
-	for subName, sub := range res.SubResources {
+	for subName, sub := range subs {
 		wg.Add(1)
 
-		group := res.Group
-		version := res.APIVersion
 		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, group, version, kind, res.Name, subName)
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, group, version, kindPlural, name, subName)
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -675,7 +675,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.Resour
 				if execErr == nil {
 					execErr = err
 				}
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, res.Name, err)
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
 			}
 		}(wg, subName)
 	}
@@ -686,20 +686,20 @@ func (c *ServiceClient) CreateSubResourceUnscoped(kind string, res *apiv1.Resour
 }
 
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
-func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind string, res *apiv1.ResourceInstance) error {
+func (c *ServiceClient) CreateSubResourceScoped(
+	scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{},
+) error {
 	var execErr error
 	wg := &sync.WaitGroup{}
 
-	for subName, sub := range res.SubResources {
+	for subName, sub := range subs {
 		if subName == "references" || subName == "status" {
 			continue
 		}
 		wg.Add(1)
 
-		group := res.Group
-		version := res.APIVersion
 		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKind, scopeName, resKind, res.Name, subName)
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -714,7 +714,7 @@ func (c *ServiceClient) CreateSubResourceScoped(scopeKind, scopeName, resKind st
 			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, res.Name, err)
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
 			}
 		}(subName)
 	}

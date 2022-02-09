@@ -11,16 +11,16 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
-	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) v1alpha1.ApiServiceInstanceSpec {
-	return v1alpha1.ApiServiceInstanceSpec{
+	endPoints []mv1a.ApiServiceInstanceSpecEndpoint,
+) mv1a.ApiServiceInstanceSpec {
+	return mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision: serviceBody.serviceContext.revisionName,
 		Endpoint:           endPoints,
 	}
@@ -30,11 +30,11 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 	serviceBody *ServiceBody,
 	name string,
 	attributes map[string]string,
-	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) *v1alpha1.APIServiceInstance {
-	instance := &v1alpha1.APIServiceInstance{
+	endPoints []mv1a.ApiServiceInstanceSpecEndpoint,
+) *mv1a.APIServiceInstance {
+	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
+			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
 			Attributes:       buildAPIResourceAttributes(serviceBody, attributes),
@@ -50,10 +50,10 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 }
 
 func (c *ServiceClient) updateInstanceResource(
-	instance *v1alpha1.APIServiceInstance,
+	instance *mv1a.APIServiceInstance,
 	serviceBody *ServiceBody,
-	endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) *v1alpha1.APIServiceInstance {
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+) *mv1a.APIServiceInstance {
 	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = buildAPIResourceAttributes(serviceBody, instance.Attributes)
@@ -73,7 +73,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	}
 
 	var httpMethod string
-	var instance *v1alpha1.APIServiceInstance
+	var instance *mv1a.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
 	instancePrefix := getRevisionPrefix(serviceBody)
@@ -118,15 +118,17 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	}
 
 	if err == nil {
-		if len(instance.SubResources) > 0 {
-			inst, err := instance.AsInstance()
-			if err != nil {
-				return err
-			}
-			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.APIServiceInstanceResourceName, inst)
-			if err != nil {
-				return err
-			}
+		err = c.CreateSubResourceScoped(
+			mv1a.EnvironmentResourceName,
+			c.cfg.GetEnvironmentName(),
+			mv1a.APIServiceInstanceResourceName,
+			instance.Name,
+			instance.Group,
+			instance.APIVersion,
+			instance.SubResources,
+		)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -135,19 +137,19 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	return err
 }
 
-func createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
-	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
+func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceInstanceSpecEndpoint, error) {
+	endPoints := make([]mv1a.ApiServiceInstanceSpecEndpoint, 0)
 	var err error
 
 	// To set your own endpoints call AddServiceEndpoint/SetServiceEndpoint on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(endpoints) > 0 {
 		for _, endpointDef := range endpoints {
-			ep := v1alpha1.ApiServiceInstanceSpecEndpoint{
+			ep := mv1a.ApiServiceInstanceSpecEndpoint{
 				Host:     endpointDef.Host,
 				Port:     endpointDef.Port,
 				Protocol: endpointDef.Protocol,
-				Routing: v1alpha1.ApiServiceInstanceSpecRouting{
+				Routing: mv1a.ApiServiceInstanceSpecRouting{
 					BasePath: endpointDef.BasePath,
 				},
 			}
@@ -164,7 +166,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServi
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getRevisionInstances(name, url string) ([]*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) getRevisionInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
 	// Check if instances exist for the current revision.
 	queryParams := map[string]string{
 		"query": "name==" + name,
@@ -174,7 +176,7 @@ func (c *ServiceClient) getRevisionInstances(name, url string) ([]*v1alpha1.APIS
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
-func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -197,7 +199,7 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*v1alpha1.APIS
 		}
 		return nil, nil
 	}
-	apiInstance := new(v1alpha1.APIServiceInstance)
+	apiInstance := new(mv1a.APIServiceInstance)
 	json.Unmarshal(response.Body, apiInstance)
 	return apiInstance, nil
 }

@@ -21,7 +21,7 @@ import (
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -53,10 +53,10 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, attr map[string]string, name string) *v1alpha1.APIServiceRevision {
-	rev := &v1alpha1.APIServiceRevision{
+func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, attr map[string]string, name string) *mv1a.APIServiceRevision {
+	rev := &mv1a.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.APIServiceRevisionGVK(),
+			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
 			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
 			Attributes:       buildAPIResourceAttributes(serviceBody, attr),
@@ -70,7 +70,7 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 	return rev
 }
 
-func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevision, serviceBody *ServiceBody) *v1alpha1.APIServiceRevision {
+func (c *ServiceClient) updateRevisionResource(revision *mv1a.APIServiceRevision, serviceBody *ServiceBody) *mv1a.APIServiceRevision {
 	revision.ResourceMeta.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
 	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
@@ -153,11 +153,15 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	if err == nil {
 		if len(revision.SubResources) > 0 {
-			inst, err := revision.AsInstance()
-			if err != nil {
-				return err
-			}
-			err = c.CreateSubResourceScoped(v1alpha1.EnvironmentResourceName, c.cfg.GetEnvironmentName(), v1alpha1.APIServiceRevisionResourceName, inst)
+			err = c.CreateSubResourceScoped(
+				mv1a.EnvironmentResourceName,
+				c.cfg.GetEnvironmentName(),
+				mv1a.APIServiceRevisionResourceName,
+				revision.Name,
+				revision.Group,
+				revision.APIVersion,
+				revision.SubResources,
+			)
 			if err != nil {
 				return err
 			}
@@ -170,8 +174,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
-// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*v1alpha1.APIServiceRevision
-func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*mv1a.APIServiceRevision
+func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error) {
 	revisions, err := c.GetAPIServiceRevisions(query, c.cfg.GetRevisionsURL(), stage)
 	if err != nil {
 		return nil, err
@@ -276,7 +280,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 }
 
 // GetAPIRevisionByName - Returns the API revision based on its revision name
-func (c *ServiceClient) GetAPIRevisionByName(name string) (*v1alpha1.APIServiceRevision, error) {
+func (c *ServiceClient) GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -299,15 +303,15 @@ func (c *ServiceClient) GetAPIRevisionByName(name string) (*v1alpha1.APIServiceR
 		}
 		return nil, nil
 	}
-	apiRevision := new(v1alpha1.APIServiceRevision)
+	apiRevision := new(mv1a.APIServiceRevision)
 	json.Unmarshal(response.Body, apiRevision)
 	return apiRevision, nil
 }
 
-func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
-	return v1alpha1.ApiServiceRevisionSpec{
+func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) mv1a.ApiServiceRevisionSpec {
+	return mv1a.ApiServiceRevisionSpec{
 		ApiService: serviceBody.serviceContext.serviceName,
-		Definition: v1alpha1.ApiServiceRevisionSpecDefinition{
+		Definition: mv1a.ApiServiceRevisionSpecDefinition{
 			Type:  getRevisionDefinitionType(*serviceBody),
 			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
 		},
