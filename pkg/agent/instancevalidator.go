@@ -69,6 +69,14 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 	var err error
 	var agentError *utilErrors.AgentError
 
+	defer func() {
+		// remove the api service instance from the cache for both scenarios
+		if j.isAgentPollMode {
+			// In GRPC mode delete is done on receiving delete event from service
+			agent.cacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
+		}
+	}()
+
 	// delete if it is an api service
 	if agent.serviceValidator != nil && !agent.serviceValidator(externalAPIPrimaryKey, externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
@@ -100,10 +108,5 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 		return
 	}
 
-	// remove the api service instance from the cache for both scenarios
-	if j.isAgentPollMode {
-		// In GRPC mode delete is done on receiving delete event from service
-		agent.cacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
-	}
 	log.Debugf(msg, resource.Title)
 }
