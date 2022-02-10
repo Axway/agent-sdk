@@ -237,13 +237,14 @@ func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription
 	}
 
 	queryParams["query"] = searchQuery
-	response, err := c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+
+	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
 	if err != nil {
-		return nil, err
+		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
 
 	subscriptions := make([]uc.CatalogItemSubscription, 0)
-	json.Unmarshal(response, &subscriptions)
+	json.Unmarshal(resBody, &subscriptions)
 
 	// build the CentralSubscriptions from the UC ones
 	centralSubscriptions := make([]CentralSubscription, 0)
@@ -270,13 +271,13 @@ func (c *ServiceClient) getAccessRequests(states []string) ([]CentralSubscriptio
 	}
 
 	queryParams["query"] = searchQuery
-	response, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestSubscriptionURL(), queryParams)
+	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestSubscriptionURL(), queryParams)
 	if err != nil {
 		return nil, err
 	}
 
 	subscriptions := make([]v1alpha1.AccessRequest, 0)
-	json.Unmarshal(response, &subscriptions)
+	json.Unmarshal(resBody, &subscriptions)
 
 	// build the CentralSubscriptions from the UC ones
 	centralSubscriptions := make([]CentralSubscription, 0)
@@ -313,7 +314,7 @@ func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[str
 		return nil, ErrSubscriptionResp.FormatError(response.Code)
 	}
 
-	return request.Body, nil
+	return response.Body, nil
 }
 
 // UpdateEnumProperty -

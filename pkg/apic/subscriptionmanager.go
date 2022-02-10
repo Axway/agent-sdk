@@ -125,7 +125,7 @@ func (sm *subscriptionManager) Execute() error {
 	if err != nil {
 		return err
 	}
-	// query for central subscriptions
+	// query for central accress requests
 	accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
 	subscriptions = append(subscriptions, accessRequests...)
 	if err == nil {
@@ -175,6 +175,9 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
 		return err
+	}
+	if apiSI == nil {
+		return utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, "APIServiceInstance is nil")
 	}
 
 	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
