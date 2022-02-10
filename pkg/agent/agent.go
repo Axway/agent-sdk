@@ -63,6 +63,7 @@ type agentData struct {
 
 	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
+	agentInstanceValidator *instanceValidator
 }
 
 var agent agentData
@@ -241,6 +242,7 @@ func startAPIServiceCache() {
 
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
+	agent.agentInstanceValidator = newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
 	if !agent.cfg.IsUsingGRPC() {
 		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)

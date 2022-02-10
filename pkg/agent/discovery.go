@@ -4,7 +4,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -135,14 +134,14 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 
-	if agent.instanceValidatorJobID == "" && apiValidator != nil {
-		instanceValidator := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
-		jobID, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
-		agent.instanceValidatorJobID = jobID
-		if err != nil {
-			log.Error(err)
-		}
-	}
+	// if agent.instanceValidatorJobID == "" && apiValidator != nil {
+	// instanceValidator := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+	// jobID, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+	// agent.instanceValidatorJobID = jobID
+	// 	if err != nil {
+	// 		log.Error(err)
+	// 	}
+	// }
 }
 
 // RegisterDeleteServiceValidator - DEPRECATED Registers callback for validating if the service should be deleted

@@ -59,28 +59,33 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID)
+			j.deleteServiceInstanceOrService(serviceInstanceResource, serviceInstanceResource.Name, externalAPIID)
 		}
 	}
 }
 
-func (j *instanceValidator) shouldDeleteService(apiID string) bool {
+func (j *instanceValidator) shouldDeleteService(instanceName, apiID string) bool {
 	list, err := agent.apicClient.GetConsumerInstancesByExternalAPIID(apiID)
 	if err != nil {
 		return false
 	}
 
-	// if there is only 1 consumer instance left, we can signal to delete the service too
-	return len(list) <= 1
+	// if there is only 1 consumer instance left, we should validate that it has this service published
+	// validate that the api service instance being removed is the instance on the consumer instance
+	if len(list) == 1 {
+		return list[0].Spec.ApiServiceInstance == instanceName
+	}
+
+	return false
 }
 
-func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIID string) {
+func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, instanceName, externalAPIID string) {
 	msg := ""
 	var err error
 	var agentError *utilErrors.AgentError
 
 	// delete if it is an api service
-	if j.shouldDeleteService(externalAPIID) {
+	if j.shouldDeleteService(instanceName, externalAPIID) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
 		agentError = ErrDeletingService
 		msg = "Deleted API Service for catalog item %s from Amplify Central"
