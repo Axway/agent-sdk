@@ -81,7 +81,7 @@ func (j *discoveryCache) Execute() error {
 	if j.agentResourceManager != nil {
 		j.agentResourceManager.FetchAgentResource()
 	}
-	return agent.agentInstanceValidator.Execute()
+	return agent.instanceValidatorJob.Execute()
 }
 
 func (j *discoveryCache) updateAPICache() {

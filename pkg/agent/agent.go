@@ -61,9 +61,8 @@ type agentData struct {
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
-	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
-	agentInstanceValidator *instanceValidator
+	instanceValidatorJob   *instanceValidator
 }
 
 var agent agentData
@@ -238,11 +237,11 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() {
-	agent.instanceCacheLock = &sync.Mutex{}
+	instanceCacheLock := &sync.Mutex{}
 
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
-	agent.agentInstanceValidator = newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, instanceCacheLock)
+	agent.instanceValidatorJob = newInstanceValidator(instanceCacheLock, !agent.cfg.IsUsingGRPC())
 	if !agent.cfg.IsUsingGRPC() {
 		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
@@ -253,7 +252,7 @@ func startAPIServiceCache() {
 			return
 		}
 		// Start the full update after the first interval
-		go startDiscoveryCache(agent.instanceCacheLock)
+		go startDiscoveryCache(instanceCacheLock)
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
