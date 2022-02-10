@@ -14,11 +14,13 @@ const (
 	DataTypeObject  = "object"
 )
 
+// PropertyBuilder - mandatory methods for all property builders
 type PropertyBuilder interface {
 	// Build - builds the property, this is called automatically by the schema builder
 	Build() (*SubscriptionSchemaPropertyDefinition, error)
 }
 
+// SubscriptionPropertyBuilder - common methods related to subscription property builders
 type SubscriptionPropertyBuilder interface {
 	// SetName - sets the name of the property
 	SetName(name string) SubscriptionPropertyBuilder
@@ -45,6 +47,7 @@ type SubscriptionPropertyBuilder interface {
 	PropertyBuilder
 }
 
+// StringPropertyBuilder - specific methods related to the String property builders
 type StringPropertyBuilder interface {
 	// SetEnumValues - Set a list of valid values for the property
 	SetEnumValues(values []string) StringPropertyBuilder
@@ -57,6 +60,7 @@ type StringPropertyBuilder interface {
 	PropertyBuilder
 }
 
+// NumberPropertyBuilder - specific methods related to the Number property builders
 type NumberPropertyBuilder interface {
 	// SetMinValue - Set the minimum allowed number value
 	SetMinValue(min float64) NumberPropertyBuilder
@@ -65,6 +69,7 @@ type NumberPropertyBuilder interface {
 	PropertyBuilder
 }
 
+// IntegerPropertyBuilder - specific methods related to the Integer property builders
 type IntegerPropertyBuilder interface {
 	// SetMinValue - Set the minimum allowed integer value
 	SetMinValue(min int64) IntegerPropertyBuilder
@@ -73,12 +78,14 @@ type IntegerPropertyBuilder interface {
 	PropertyBuilder
 }
 
+// ObjectPropertyBuilder - specific methods related to the Object property builders
 type ObjectPropertyBuilder interface {
 	// AddProperty - Add a property in the object property
 	AddProperty(property PropertyBuilder) ObjectPropertyBuilder
 	PropertyBuilder
 }
 
+// ArrayPropertyBuilder - specific methods related to the Array property builders
 type ArrayPropertyBuilder interface {
 	// AddItem - Add a item property in the array property
 	AddItem(item PropertyBuilder) ArrayPropertyBuilder
@@ -107,36 +114,43 @@ func NewSubscriptionSchemaPropertyBuilder() SubscriptionPropertyBuilder {
 	return &schemaProperty{}
 }
 
+// SetName - sets the name of the property
 func (p *schemaProperty) SetName(name string) SubscriptionPropertyBuilder {
 	p.name = name
 	return p
 }
 
+// SetDescription - set the description of the property
 func (p *schemaProperty) SetDescription(description string) SubscriptionPropertyBuilder {
 	p.description = description
 	return p
 }
 
+// SetRequired - set the property as a required field in the schema
 func (p *schemaProperty) SetRequired() SubscriptionPropertyBuilder {
 	p.required = true
 	return p
 }
 
+// SetReadOnly - set the property as a read only property
 func (p *schemaProperty) SetReadOnly() SubscriptionPropertyBuilder {
 	p.readOnly = true
 	return p
 }
 
+// SetHidden - set the property as a hidden property
 func (p *schemaProperty) SetHidden() SubscriptionPropertyBuilder {
 	p.hidden = true
 	return p
 }
 
+// SetAPICRefField - set the apic reference field for this property
 func (p *schemaProperty) SetAPICRefField(field string) SubscriptionPropertyBuilder {
 	p.apicRefField = field
 	return p
 }
 
+// IsString - Set the property to be of type string
 func (p *schemaProperty) IsString() StringPropertyBuilder {
 	p.dataType = DataTypeString
 	return &stringSchemaProperty{
@@ -144,6 +158,7 @@ func (p *schemaProperty) IsString() StringPropertyBuilder {
 	}
 }
 
+// IsNumber - Set the property to be of type number
 func (p *schemaProperty) IsNumber() NumberPropertyBuilder {
 	p.dataType = DataTypeNumber
 	return &numberSchemaProperty{
@@ -151,6 +166,7 @@ func (p *schemaProperty) IsNumber() NumberPropertyBuilder {
 	}
 }
 
+// IsInteger - Set the property to be of type integer
 func (p *schemaProperty) IsInteger() IntegerPropertyBuilder {
 	p.dataType = DataTypeInteger
 	return &integerSchemaProperty{
@@ -160,6 +176,7 @@ func (p *schemaProperty) IsInteger() IntegerPropertyBuilder {
 	}
 }
 
+// IsArray - Set the property to be of type array
 func (p *schemaProperty) IsArray() ArrayPropertyBuilder {
 	p.dataType = DataTypeArray
 	return &arraySchemaProperty{
@@ -167,6 +184,7 @@ func (p *schemaProperty) IsArray() ArrayPropertyBuilder {
 	}
 }
 
+// IsObject - Set the property to be of type object
 func (p *schemaProperty) IsObject() ObjectPropertyBuilder {
 	p.dataType = DataTypeObject
 	return &objectSchemaProperty{
@@ -253,7 +271,7 @@ func (p *stringSchemaProperty) enumContains(str string) bool {
 	return false
 }
 
-// AddEnumValue - add a new value to the enum list
+// AddEnumValue - Add another value to the list of allowed values for the property
 func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder {
 	if !p.enumContains(value) {
 		p.enums = append(p.enums, value)
@@ -305,7 +323,7 @@ func (p *numberSchemaProperty) SetMaxValue(max float64) NumberPropertyBuilder {
 	return p
 }
 
-// Build - create a number SubscriptionSchemaPropertyDefinition for use in the subscription schema builder
+// Build - create the SubscriptionSchemaPropertyDefinition for use in the subscription schema builder
 func (p *numberSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
 	if err != nil {
@@ -382,6 +400,7 @@ func (p *arraySchemaProperty) SetMaxItems(max uint) ArrayPropertyBuilder {
 	return p
 }
 
+// Build - create the SubscriptionSchemaPropertyDefinition for use in the subscription schema builder
 func (p *arraySchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
 	if err != nil {
@@ -413,6 +432,7 @@ type objectSchemaProperty struct {
 	SubscriptionPropertyBuilder
 }
 
+// AddProperty - Add a property in the object property
 func (p *objectSchemaProperty) AddProperty(property PropertyBuilder) ObjectPropertyBuilder {
 	def, err := property.Build()
 	if err == nil {

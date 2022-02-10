@@ -22,6 +22,7 @@ type SubscriptionSchema interface {
 	rawJSON() (json.RawMessage, error)
 }
 
+// AnyOfSubscriptionSchemaPropertyDefinitions - used for items of SubscriptionSchemaPropertyDefinition
 type AnyOfSubscriptionSchemaPropertyDefinitions struct {
 	AnyOf []SubscriptionSchemaPropertyDefinition `json:"anyOf,omitempty"`
 }
