@@ -58,11 +58,18 @@ func setupAPIValidator(apiValidation bool) {
 	}
 }
 
+func setupServiceValidator(serviceValidation bool) {
+	agent.serviceValidator = func(primaryKey, apiID, stageName string) bool {
+		return serviceValidation
+	}
+}
+
 func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 	// Setup
 	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
 	setupCache("12345", "test")
 	setupAPIValidator(true)
+	setupServiceValidator(true)
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.Nil(t, err)
@@ -78,14 +85,11 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	setupCache("12345", "test")
 	setupAPICClient([]api.MockResponse{
 		{
-			FileName: "../apic/testdata/consumerinstancelist.json", // for call to get the consumer instances
-			RespCode: http.StatusOK,
-		},
-		{
 			RespCode: http.StatusNoContent, // delete service
 		},
 	})
 	setupAPIValidator(false)
+	setupServiceValidator(false)
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)
@@ -108,7 +112,7 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 		},
 	})
 	setupAPIValidator(false)
-
+	setupServiceValidator(true)
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)

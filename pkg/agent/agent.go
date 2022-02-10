@@ -42,6 +42,9 @@ var AgentResourceType string
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
+// ServiceValidator - Callback for validating the API service on dataplane
+type ServiceValidator func(primaryKey, apiID, stageName string) bool
+
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
@@ -56,6 +59,7 @@ type agentData struct {
 	teamMap                    cache.Cache
 	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
+	serviceValidator           ServiceValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
@@ -69,6 +73,7 @@ var agent agentData
 
 func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
+	agent.instanceCacheLock = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent
@@ -237,8 +242,6 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() {
-	agent.instanceCacheLock = &sync.Mutex{}
-
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {

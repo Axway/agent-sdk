@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -55,39 +54,30 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		}
 		externalAPIID := serviceInstanceResource.Attributes[definitions.AttrExternalAPIID]
 		externalAPIStage := serviceInstanceResource.Attributes[definitions.AttrExternalAPIStage]
+		externalPrimaryKey := serviceInstanceResource.Attributes[definitions.AttrExternalAPIPrimaryKey]
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			j.deleteServiceInstanceOrService(serviceInstanceResource, externalAPIID)
+			j.deleteServiceInstanceOrService(serviceInstanceResource, externalPrimaryKey, externalAPIID, externalAPIStage)
 		}
 	}
 }
 
-func (j *instanceValidator) shouldDeleteService(apiID string) bool {
-	list, err := agent.apicClient.GetConsumerInstancesByExternalAPIID(apiID)
-	if err != nil {
-		return false
-	}
-
-	// if there is only 1 consumer instance left, we can signal to delete the service too
-	return len(list) <= 1
-}
-
-func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIID string) {
+func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIPrimaryKey, externalAPIID, externalAPIStage string) {
 	msg := ""
 	var err error
 	var agentError *utilErrors.AgentError
 
 	// delete if it is an api service
-	if j.shouldDeleteService(externalAPIID) {
+	if agent.serviceValidator != nil && !agent.serviceValidator(externalAPIPrimaryKey, externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
 		agentError = ErrDeletingService
 		msg = "Deleted API Service for catalog item %s from Amplify Central"
 
 		svc := agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
 		if svc == nil {
-			err = fmt.Errorf("api service %s not found in cache. unable to delete it from central", externalAPIID)
+			log.Errorf("api service %s not found in cache. unable to delete it from central", externalAPIID)
 			return
 		}
 
