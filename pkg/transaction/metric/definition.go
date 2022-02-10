@@ -48,7 +48,6 @@ type Team struct {
 // APIMetric - struct to hold metric specific for status code based API transactions
 type APIMetric struct {
 	API         APIDetails         `json:"api"`
-	Team        Team               `json:"team"`
 	StatusCode  string             `json:"statusCode"`
 	Status      string             `json:"status"`
 	Count       int64              `json:"count"`
