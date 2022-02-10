@@ -21,7 +21,7 @@ import (
 const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
-	apiServerFields     = "name,title,owner,attributes"
+	apiServerFields     = "metadata,name,title,owner,attributes"
 	queryFormatString   = "%s>\"%s\""
 )
 
@@ -78,7 +78,7 @@ func (j *discoveryCache) Execute() error {
 	log.Trace("executing API cache update job")
 	j.updateAPICache()
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-		j.updatePIServiceInstancesCache()
+		j.updateAPIServiceInstancesCache()
 		j.updateCategoryCache()
 	}
 	if j.agentResourceManager != nil {
@@ -133,7 +133,7 @@ func (j *discoveryCache) updateAPICache() {
 	}
 }
 
-func (j *discoveryCache) updatePIServiceInstancesCache() {
+func (j *discoveryCache) updateAPIServiceInstancesCache() {
 	if agent.apiValidator == nil {
 		return
 	}
