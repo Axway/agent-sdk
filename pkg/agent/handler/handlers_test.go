@@ -433,7 +433,7 @@ func (c *customHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *v1.Res
 	return c.err
 }
 
-func TestProxyHandler1(t *testing.T) {
+func TestProxyHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		handlers []Handler
@@ -531,6 +531,7 @@ func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstanc
 func (m *mockResourceManager) GetAgentResource() *v1.ResourceInstance {
 	return m.resource
 }
+
 func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Client) {}
 
 func (m *mockResourceManager) FetchAgentResource() error { return nil }
