@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -420,63 +420,98 @@ func TestAgentResourceHandler(t *testing.T) {
 }
 
 type customHandler struct {
-	err    error
-	action proto.Event_Type
-	ri     *v1.ResourceInstance
+	err error
 }
 
-func (c *customHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if c.err != nil {
-		return c.err
-	}
-	c.action = action
-	c.ri = resource
-	return nil
+func (c *customHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *v1.ResourceInstance) error {
+	return c.err
 }
 
 func TestProxyHandler(t *testing.T) {
-	testRes := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name:  "name",
-			Title: "title",
+	tests := []struct {
+		name     string
+		handlers []Handler
+		event    proto.Event_Type
+		hasError bool
+	}{
+		{
+			name:     "should not register any handlers, and return nil when Handle is called",
+			event:    proto.Event_UPDATED,
+			handlers: nil,
+			hasError: false,
+		},
+		{
+			name:  "should register a handler and return nil when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+			},
+			hasError: false,
+		},
+		{
+			name:  "should register two handlers and return nil when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+				&customHandler{},
+			},
+			hasError: false,
+		},
+		{
+			name:  "should register a handler and return an error when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{err: fmt.Errorf("error")},
+			},
+			hasError: true,
+		},
+		{
+			name:  "should register two handlers and return an error when Handle is called",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{},
+				&customHandler{err: fmt.Errorf("error")},
+			},
+			hasError: true,
+		},
+		{
+			name:  "should register two handlers and return an error when calling the first registered handler",
+			event: proto.Event_CREATED,
+			handlers: []Handler{
+				&customHandler{err: fmt.Errorf("error")},
+				&customHandler{},
+			},
+			hasError: true,
 		},
 	}
-	handler := &customHandler{}
-	proxy := NewStreamWatchProxyHandler()
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, handler.ri)
 
-	proxy.RegisterTargetHandler("custom", handler)
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Equal(t, testRes, handler.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler.action)
-	handler.ri = nil
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ri := &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+				},
+			}
 
-	handler2 := &customHandler{}
-	proxy.RegisterTargetHandler("custom2", handler2)
-	proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Equal(t, testRes, handler.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler.action)
-	assert.Equal(t, testRes, handler2.ri)
-	assert.Equal(t, proto.Event_UPDATED, handler2.action)
+			proxy := NewStreamWatchProxyHandler()
 
-	handler.ri = nil
-	handler2.ri = nil
-	handler.err = errors.New("test")
-	err := proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.NotNil(t, err)
-	assert.Equal(t, err, handler.err)
-	assert.Nil(t, handler.ri)
-	assert.Nil(t, handler2.ri)
+			for i, h := range tc.handlers {
+				proxy.RegisterTargetHandler(fmt.Sprintf("%d", i), h)
+			}
 
-	handler.ri = nil
-	handler2.ri = nil
-	handler.err = nil
-	proxy.UnregisterTargetHandler("custom2")
-	err = proxy.Handle(proto.Event_UPDATED, nil, testRes)
-	assert.Nil(t, err)
-	assert.Nil(t, handler2.ri)
-	assert.Equal(t, testRes, handler.ri)
+			err := proxy.Handle(tc.event, nil, ri)
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			for i := range tc.handlers {
+				proxy.UnregisterTargetHandler(fmt.Sprintf("%d", i))
+			}
+		})
+	}
 }
 
 type mockResourceManager struct {
@@ -490,6 +525,9 @@ func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstanc
 func (m *mockResourceManager) GetAgentResource() *v1.ResourceInstance {
 	return m.resource
 }
-func (m *mockResourceManager) OnConfigChange(cfg config.CentralConfig, apicClient apic.Client) {}
-func (m *mockResourceManager) FetchAgentResource() error                                       { return nil }
-func (m *mockResourceManager) UpdateAgentStatus(status, prevStatus, message string) error      { return nil }
+
+func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Client) {}
+
+func (m *mockResourceManager) FetchAgentResource() error { return nil }
+
+func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return nil }
