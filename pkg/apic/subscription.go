@@ -75,16 +75,25 @@ func (s *CentralSubscription) GetRemoteAPIAttributes() map[string]string {
 
 // GetCreatedUserID - Returns ID of the user that created the subscription
 func (s *CentralSubscription) GetCreatedUserID() string {
+	if s.useAccessRequest() {
+		return s.AccessRequest.Metadata.Audit.CreateUserID
+	}
 	return s.CatalogItemSubscription.Metadata.CreateUserId
 }
 
 // GetID - Returns ID of the subscription
 func (s *CentralSubscription) GetID() string {
+	if s.useAccessRequest() {
+		return s.AccessRequest.Name
+	}
 	return s.CatalogItemSubscription.Id
 }
 
 // GetName - Returns Name of the subscription
 func (s *CentralSubscription) GetName() string {
+	if s.useAccessRequest() {
+		return s.AccessRequest.Name
+	}
 	return s.CatalogItemSubscription.Name
 }
 
@@ -105,11 +114,17 @@ func (s *CentralSubscription) GetRemoteAPIStage() string {
 
 // GetCatalogItemID - Returns ID of the Catalog Item
 func (s *CentralSubscription) GetCatalogItemID() string {
+	if s.useAccessRequest() {
+		return s.AccessRequest.Spec.ApiServiceInstance
+	}
 	return s.CatalogItemSubscription.CatalogItemId
 }
 
 // GetState - Returns subscription state
 func (s *CentralSubscription) GetState() SubscriptionState {
+	if s.useAccessRequest() {
+		return SubscriptionState(s.AccessRequest.State.Name)
+	}
 	return SubscriptionState(s.CatalogItemSubscription.State)
 }
 
@@ -159,10 +174,12 @@ func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionSta
 		return err
 	}
 
-	subStateURL := s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
-	//TODO: kf use me
-	accessRequestSubStateURL := s.getServiceClient().cfg.GetAccessRequestSubscriptionStatesURL(s.GetID())
-	fmt.Println("accessRequestSubStateURL: ", accessRequestSubStateURL)
+	var subStateURL string
+	if s.useAccessRequest() {
+		subStateURL = s.getServiceClient().cfg.GetAccessRequestSubscriptionStatesURL(s.GetID())
+	} else {
+		subStateURL = s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
+	}
 
 	subState := uc.CatalogItemSubscriptionState{
 		Description: description,
@@ -249,7 +266,7 @@ func (c *ServiceClient) getAccessRequests(states []string) ([]CentralSubscriptio
 		if searchQuery != "" {
 			searchQuery += ","
 		}
-		searchQuery += "state==" + state
+		searchQuery += "state.name==" + state
 	}
 
 	queryParams["query"] = searchQuery
@@ -349,17 +366,19 @@ func (s *CentralSubscription) UpdateProperties(appName string) error {
 	return nil
 }
 
-// UpdatePropertyValue - Updates the property value of the subscription
+// updatePropertyValue - Updates the property value of the subscription
 func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[string]interface{}) error {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return err
 	}
 
-	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
-	//TODO: kf use me
-	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
-	fmt.Println("accessRequestURL: ", accessRequestURL)
+	var url string
+	if s.useAccessRequest() {
+		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
+	} else {
+		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
+	}
 
 	body, err := json.Marshal(value)
 	if err != nil {
@@ -392,11 +411,12 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 		return err
 	}
 
-	fmt.Println("s: ", s)
-	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
-	//TODO: kf use me
-	accessRequestURL := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
-	fmt.Println("accessRequestURL: ", accessRequestURL)
+	var url string
+	if s.useAccessRequest() {
+		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), profileKey)
+	} else {
+		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
+	}
 
 	body, err := json.Marshal(values)
 	if err != nil {
@@ -420,4 +440,8 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
 	return nil
+}
+
+func (s *CentralSubscription) useAccessRequest() bool {
+	return s.AccessRequest != nil
 }

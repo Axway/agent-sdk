@@ -102,7 +102,10 @@ func (c *ServiceClient) getSubscriptionsForCatalogItem(states []string, catalogI
 		}
 		return make([]CentralSubscription, 0), nil
 	}
-	return subscriptions, nil
+	centralSubscriptions := make([]CentralSubscription, 0)
+	json.Unmarshal(subscriptions, &centralSubscriptions)
+
+	return centralSubscriptions, nil
 }
 
 func (c *ServiceClient) getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {

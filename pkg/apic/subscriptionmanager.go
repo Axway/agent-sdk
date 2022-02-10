@@ -122,6 +122,9 @@ func (sm *subscriptionManager) Status() error {
 func (sm *subscriptionManager) Execute() error {
 	// query for central subscriptions
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.ucStatesToQuery)
+	if err != nil {
+		return err
+	}
 	// query for central subscriptions
 	accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
 	subscriptions = append(subscriptions, accessRequests...)
