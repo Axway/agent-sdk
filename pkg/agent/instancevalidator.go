@@ -64,6 +64,35 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	}
 }
 
+func (j *instanceValidator) shouldDeleteService(externalAPIPrimaryKey, externalAPIID, externalAPIStage string) bool {
+	instanceCount := 0
+	if externalAPIPrimaryKey != "" {
+		instanceCount = j.getServiceInstanceCount(definitions.AttrExternalAPIPrimaryKey, externalAPIPrimaryKey)
+		log.Tracef("Query instances with externalPrimaryKey attribute : %s", externalAPIPrimaryKey)
+	} else {
+		instanceCount = j.getServiceInstanceCount(definitions.AttrExternalAPIID, externalAPIID)
+		log.Tracef("Query instances with externalAPIID attribute :", externalAPIID)
+	}
+
+	log.Tracef("Instances count : %d", instanceCount)
+
+	return instanceCount <= 1
+}
+
+func (j *instanceValidator) getServiceInstanceCount(attName, attValue string) int {
+	instanceCount := 0
+	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
+		serviceInstanceResource, _ := agent.cacheManager.GetAPIServiceInstanceByID(key)
+		if serviceInstanceResource != nil {
+			instaceAttValue := serviceInstanceResource.Attributes[attName]
+			if attValue == instaceAttValue {
+				instanceCount++
+			}
+		}
+	}
+	return instanceCount
+}
+
 func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIPrimaryKey, externalAPIID, externalAPIStage string) {
 	msg := ""
 	var err error
@@ -78,7 +107,7 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 	}()
 
 	// delete if it is an api service
-	if agent.serviceValidator != nil && !agent.serviceValidator(externalAPIPrimaryKey, externalAPIID, externalAPIStage) {
+	if j.shouldDeleteService(externalAPIPrimaryKey, externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
 		agentError = ErrDeletingService
 		msg = "Deleted API Service for catalog item %s from Amplify Central"
