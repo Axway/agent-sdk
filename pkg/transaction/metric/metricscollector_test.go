@@ -39,7 +39,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 
 var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNjE0NjA0NzE0LCJleHAiOjE2NDYxNDA3MTQsImF1ZCI6InRlc3RhdWQiLCJzdWIiOiIxMjM0NTYiLCJvcmdfZ3VpZCI6IjEyMzQtMTIzNC0xMjM0LTEyMzQifQ.5Uqt0oFhMgmI-sLQKPGkHwknqzlTxv-qs9I_LmZ18LQ"
 
-var teamId = "team123"
+var teamID = "team123"
 
 type testHTTPServer struct {
 	lighthouseEventCount int
@@ -216,7 +216,7 @@ func TestMetricCollector(t *testing.T) {
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
-					metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "200", 10, 10, "")
+					metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				metricCollector.Execute()
@@ -263,12 +263,12 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
 			metricCollector.Execute()
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamId}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamId}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 10, 10, "")
 
 			// No event generation/publish, store the cache
 			metricCollector.storage.save()
@@ -284,11 +284,11 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "200", 10, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamId}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamId}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamId}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 10, 10, "")
 
 			metricCollector.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
