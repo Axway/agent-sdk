@@ -135,8 +135,9 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 
-	if agent.instanceValidatorJobID == "" && apiValidator != nil && GetCentralConfig().IsUsingGRPC() {
-		jobID, err := jobs.RegisterIntervalJobWithName(agent.instanceValidatorJob, agent.cfg.GetPollInterval(), "API service instance validator")
+	if agent.instanceValidatorJobID == "" && apiValidator != nil {
+		instanceValidatorJob := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		jobID, err := jobs.RegisterIntervalJobWithName(instanceValidatorJob, agent.cfg.GetPollInterval(), "API service instance validator")
 		agent.instanceValidatorJobID = jobID
 		if err != nil {
 			log.Error(err)
