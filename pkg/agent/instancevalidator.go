@@ -71,7 +71,7 @@ func (j *instanceValidator) shouldDeleteService(externalAPIPrimaryKey, externalA
 		log.Tracef("Query instances with externalPrimaryKey attribute : %s", externalAPIPrimaryKey)
 	} else {
 		instanceCount = j.getServiceInstanceCount(definitions.AttrExternalAPIID, externalAPIID)
-		log.Tracef("Query instances with externalAPIID attribute :", externalAPIID)
+		log.Tracef("Query instances with externalAPIID attribute : %s", externalAPIID)
 	}
 
 	log.Tracef("Instances count : %d", instanceCount)

@@ -34,8 +34,9 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 				ID: "instance-" + externalAPIID,
 			},
 			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:   externalAPIID,
-				definitions.AttrExternalAPIName: externalAPIName,
+				definitions.AttrExternalAPIID:         externalAPIID,
+				definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
+				definitions.AttrExternalAPIName:       externalAPIName,
 			},
 		},
 	}
@@ -103,16 +104,27 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 	// Setup
 	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
 	setupCache("12345", "test")
-	setupAPICClient([]api.MockResponse{
-		{
-			RespCode: http.StatusNoContent, // for call to get the consumer instances
+	instance := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: "instance-" + "123456",
+			},
+			Attributes: map[string]string{
+				definitions.AttrExternalAPIID:         "123456",
+				definitions.AttrExternalAPIPrimaryKey: "primary-12345",
+				definitions.AttrExternalAPIName:       "test",
+			},
 		},
+	}
+	agent.cacheManager.AddAPIServiceInstance(instance)
+	setupAPICClient([]api.MockResponse{
 		{
 			RespCode: http.StatusNoContent, // delete instance
 		},
 	})
-	setupAPIValidator(false)
-	setupServiceValidator(true)
+	agent.apiValidator = func(apiID, stageName string) bool {
+		return apiID != "12345"
+	}
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)
