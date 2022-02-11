@@ -313,8 +313,8 @@ func (c *ServiceClient) GetAPIRevisionByName(name string) (*mv1a.APIServiceRevis
 		return nil, nil
 	}
 	apiRevision := new(mv1a.APIServiceRevision)
-	json.Unmarshal(response.Body, apiRevision)
-	return apiRevision, nil
+	err = json.Unmarshal(response.Body, apiRevision)
+	return apiRevision, err
 }
 
 func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) mv1a.ApiServiceRevisionSpec {

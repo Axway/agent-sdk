@@ -194,6 +194,6 @@ func (c *ServiceClient) GetAPIServiceByName(name string) (*mv1a.APIService, erro
 		return nil, nil
 	}
 	apiService := new(mv1a.APIService)
-	json.Unmarshal(response.Body, apiService)
-	return apiService, nil
+	err = json.Unmarshal(response.Body, apiService)
+	return apiService, err
 }

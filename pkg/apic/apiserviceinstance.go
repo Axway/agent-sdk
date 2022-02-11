@@ -205,6 +205,6 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*mv1a.APIServi
 		return nil, nil
 	}
 	apiInstance := new(mv1a.APIServiceInstance)
-	json.Unmarshal(response.Body, apiInstance)
-	return apiInstance, nil
+	err = json.Unmarshal(response.Body, apiInstance)
+	return apiInstance, err
 }

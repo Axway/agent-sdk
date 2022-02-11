@@ -314,8 +314,8 @@ func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[stri
 		return nil, nil
 	}
 	consumerInstance := new(mv1a.ConsumerInstance)
-	json.Unmarshal(response.Body, consumerInstance)
-	return consumerInstance, nil
+	err = json.Unmarshal(response.Body, consumerInstance)
+	return consumerInstance, err
 }
 
 // UpdateConsumerInstanceSubscriptionDefinition -
@@ -415,12 +415,12 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*mv1a.Consum
 	}
 
 	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
-	json.Unmarshal(response.Body, &consumerInstances)
+	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, errors.New("Unable to find consumerInstance using instanceID " + instanceID)
 	}
 
-	return consumerInstances[0], nil
+	return consumerInstances[0], err
 }
 
 // getConsumerInstanceByName
@@ -453,12 +453,12 @@ func (c *ServiceClient) getConsumerInstanceByName(name string) (*mv1a.ConsumerIn
 	}
 
 	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
-	json.Unmarshal(response.Body, &consumerInstances)
+	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, nil
 	}
 
-	return consumerInstances[0], nil
+	return consumerInstances[0], err
 }
 
 // deleteConsumerInstance -
