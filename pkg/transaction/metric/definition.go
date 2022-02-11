@@ -40,11 +40,6 @@ type APIDetails struct {
 	TeamID   string `json:"teamId"`
 }
 
-// Team - Holds the details of team owning the api
-type Team struct {
-	ID string `json:"id"`
-}
-
 // APIMetric - struct to hold metric specific for status code based API transactions
 type APIMetric struct {
 	API         APIDetails         `json:"api"`
