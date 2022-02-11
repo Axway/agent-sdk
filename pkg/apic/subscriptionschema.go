@@ -503,7 +503,7 @@ func (c *ServiceClient) prepareAccessRequestSubscriptionDefinitionSpec(subscript
 	}
 
 	webhooks := make([]string, 0)
-	//TODO: kf fix me or create ticket
+	//TODO: create ticket for webhooks
 	// use existing webhooks if present
 	// if registeredSchema != nil {
 	// 	webhooks = registeredSchema.Spec.Webhooks
