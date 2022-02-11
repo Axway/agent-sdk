@@ -13,8 +13,6 @@ package v1alpha1
 type AccessRequestSpec struct {
 	// The name of an APIServiceInstance resource that specifies where the API is deployed.
 	ApiServiceInstance string `json:"apiServiceInstance"`
-	// The AccessRequest
-	AccessRequest string `json:"accessRequest"`
 	// The value that matches the AccessRequestDefinition schema linked to the referenced APIServiceInstance.
 	Data map[string]interface{} `json:"data"`
 }
