@@ -8,7 +8,7 @@ import (
 
 // handler is an interface for handling sub resources on apiserver items
 type handler interface {
-	// GetSubResource get a sub resource by name
+	// GetSubResource gets a sub resource by name
 	GetSubResource(key string) interface{}
 	// SetSubResource saves a value to a sub resource by name and overrides the current value.
 	SetSubResource(key string, resource interface{})

@@ -19,13 +19,9 @@ import (
 // NewManagerFunc func signature to create a Manager
 type NewManagerFunc func(cfg *Config, opts ...Option) (Manager, error)
 
-// WatchCallback - callback for watch manager
-type WatchCallback func()
-
 // Manager - Interface to manage watch connections
 type Manager interface {
 	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
-	OnRegisterSuccess(callback WatchCallback)
 	CloseWatch(id string) error
 	CloseConn()
 	Status() bool
@@ -40,15 +36,14 @@ type SequenceProvider interface {
 type TokenGetter func() (string, error)
 
 type watchManager struct {
-	cfg                     *Config
-	clientMap               map[string]*watchClient
-	connection              *grpc.ClientConn
-	hClient                 *harvesterClient
-	logger                  logrus.FieldLogger
-	mutex                   sync.Mutex
-	newWatchClientFunc      newWatchClientFunc
-	registerSuccessCallback WatchCallback
-	options                 *watchOptions
+	cfg                *Config
+	clientMap          map[string]*watchClient
+	connection         *grpc.ClientConn
+	hClient            *harvesterClient
+	logger             logrus.FieldLogger
+	mutex              sync.Mutex
+	newWatchClientFunc newWatchClientFunc
+	options            *watchOptions
 }
 
 // New - Creates a new watch manager
@@ -150,31 +145,23 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	m.clientMap[subID] = client
 
 	client.processRequest()
-	go func() {
-		if m.hClient != nil && m.options.sequenceGetter != nil {
-			sequenceID := m.options.sequenceGetter.GetSequence()
-			if sequenceID > 0 {
-				err := m.hClient.receiveSyncEvents(link, sequenceID, events)
-				if err != nil {
-					client.handleError(err)
-					return
-				}
+
+	if m.hClient != nil && m.options.sequenceGetter != nil {
+		sequenceID := m.options.sequenceGetter.GetSequence()
+		if sequenceID > 0 {
+			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+			if err != nil {
+				client.handleError(err)
+				return subID, err
 			}
 		}
-		if m.registerSuccessCallback != nil {
-			m.registerSuccessCallback()
-		}
-		client.processEvents()
-	}()
+	}
+
+	go client.processEvents()
 
 	log.Infof("registered watch client. id: %s. watchtopic: %s", subID, link)
 
 	return subID, nil
-}
-
-// OnRegisterSuccess - sets the callback for successful watch registration
-func (m *watchManager) OnRegisterSuccess(callback WatchCallback) {
-	m.registerSuccessCallback = callback
 }
 
 // CloseWatch closes the specified watch stream by id

@@ -127,9 +127,12 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
-			apiSvc, e := ret.AsInstance()
-			if e == nil {
-				agent.cacheManager.AddAPIService(apiSvc)
+			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
+			if !agent.cfg.IsUsingGRPC() {
+				apiSvc, e := ret.AsInstance()
+				if e == nil {
+					agent.cacheManager.AddAPIService(apiSvc)
+				}
 			}
 		} else {
 			return err

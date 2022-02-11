@@ -43,17 +43,30 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 	if resource.Kind != apiService {
 		return nil
 	}
-	id, err := util.GetAgentDetailsValue(resource, definitions.AttrExternalAPIID)
-	if err != nil || id == "" {
-		return fmt.Errorf("%s not found on ResourceClient api service %s", definitions.AttrExternalAPIID, resource.Name)
-	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
 		h.agentCacheManager.AddAPIService(resource)
+		return nil
 	}
 
 	if action == proto.Event_DELETED {
-		return h.agentCacheManager.DeleteAPIService(id)
+		// external api id is not available on the resource for a delete event.
+		// retrieve all keys and match the metadata id to see which resource needs to be deleted from the cache.
+		keys := h.agentCacheManager.GetAPIServiceKeys()
+		for _, k := range keys {
+			svc := h.agentCacheManager.GetAPIServiceWithAPIID(k)
+
+			if svc.Metadata.ID == resource.Metadata.ID {
+				id, err := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
+				if err != nil {
+					return fmt.Errorf(
+						"%s not found on api service %s. %s", definitions.AttrExternalAPIID, resource.Name, err,
+					)
+				}
+				h.agentCacheManager.DeleteAPIService(id)
+				break
+			}
+		}
 	}
 
 	return nil
