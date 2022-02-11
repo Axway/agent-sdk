@@ -295,7 +295,7 @@ func (c *ServiceClient) getAccessRequestSubscriptionSchema(schemaName string) (*
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetAPIServerSubscriptionDefinitionURL() + "/" + schemaName,
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL() + "/" + schemaName,
 		Headers: headers,
 	}
 

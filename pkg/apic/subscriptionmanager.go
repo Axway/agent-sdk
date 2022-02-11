@@ -147,6 +147,9 @@ func (sm *subscriptionManager) processSubscriptions() {
 					sm.addLocklistItem(id)
 					log.Tracef("checking if we should handle subscription %s", subscription.GetName())
 					err := sm.preprocessSubscription(&subscription)
+					if err != nil {
+						log.Error(err)
+					}
 					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
 						log.Infof("Subscription %s received", subscription.GetName())
 						sm.invokeProcessor(subscription)
@@ -162,40 +165,43 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
-	subscription.ApicID = subscription.GetCatalogItemID()
-	subscription.apicClient = sm.apicClient
+	// subscription.ApicID = subscription.GetCatalogItemID()
+	// subscription.apicClient = sm.apicClient
 
-	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID(), subscription.GetID())
+	if subscription.UseAccessRequest() {
+		apiSI, err := sm.apicClient.GetAPIServiceInstanceByName(subscription.ApicID)
+		if err != nil {
+			log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
+			return err
+		}
+		if apiSI == nil {
+			return utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, "APIServiceInstance is nil")
+		}
+		apiSIR, err := apiSI.AsInstance()
+		if err != nil {
+			log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
+			return err
+		}
+		sm.setSubscriptionInfo(subscription, apiSIR)
+	} else {
+		subscription.ApicID = subscription.GetCatalogItemID()
+		subscription.apicClient = sm.apicClient
 
-	if err != nil {
-		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
-		return err
+		apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.ApicID, subscription.GetID())
+		if err != nil {
+			log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
+			return err
+		}
+		if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
+			log.Debugf("Subscription '%s' skipped because associated catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
+			return errors.New("environment of subscription is not associated with agent's environment - skipping")
+		}
+		if apiserverInfo.ConsumerInstance.Name == "" {
+			log.Debugf("Subscription '%s' skipped because associated catalog item is not created by agent", subscription.GetName())
+			return errors.New("associated catalog item is not created by agent - skipping")
+		}
+		sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
 	}
-	apiSI, err := sm.apicClient.GetAPIServiceInstanceByName(subscription.GetCatalogItemID())
-	if err != nil {
-		log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
-		return err
-	}
-	if apiSI == nil {
-		return utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, "APIServiceInstance is nil")
-	}
-
-	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
-		log.Debugf("Subscription '%s' skipped because associated catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
-		return errors.New("environment of subscription is not associated with agent's environment - skipping")
-	}
-	if apiserverInfo.ConsumerInstance.Name == "" {
-		log.Debugf("Subscription '%s' skipped because associated catalog item is not created by agent", subscription.GetName())
-		return errors.New("associated catalog item is not created by agent - skipping")
-	}
-	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
-
-	apiSIR, err := apiSI.AsInstance()
-	if err != nil {
-		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
-		return err
-	}
-	sm.setSubscriptionInfo(subscription, apiSIR)
 
 	return nil
 }

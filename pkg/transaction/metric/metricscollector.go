@@ -395,7 +395,7 @@ func (c *collector) processAppUsage(usageName string) {
 		appID := elements[1]
 		accessRequest := agent.GetAccessRequestByAppID(appID)
 
-		log.Infof("****Reporting a count of %d calls on asset request %s", c.getOrRegisterCounter(usageName).Count(), accessRequest.Spec.AccessRequest)
+		log.Infof("****Reporting a count of %d calls on asset request %s", c.getOrRegisterCounter(usageName).Count(), accessRequest.Spec)
 		c.getOrRegisterCounter(usageName).Clear()
 	}
 }
