@@ -10,7 +10,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -215,9 +215,9 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 			Name:  "abc",
 			Title: "abc",
 			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrExternalAPIID:   cloneServiceBody.RestAPIID,
-					definitions.AttrExternalAPIName: serviceBody.APIName,
+				defs.XAgentDetails: map[string]interface{}{
+					defs.AttrExternalAPIID:   cloneServiceBody.RestAPIID,
+					defs.AttrExternalAPIName: serviceBody.APIName,
 				},
 			},
 		},
@@ -232,7 +232,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 
 	// should return the resource when found by the primary key
 	cloneServiceBody.PrimaryKey = "555"
-	err = util.SetAgentDetailsKey(apiSvc, definitions.AttrExternalAPIPrimaryKey, cloneServiceBody.PrimaryKey)
+	err = util.SetAgentDetailsKey(apiSvc, defs.AttrExternalAPIPrimaryKey, cloneServiceBody.PrimaryKey)
 	assert.Nil(t, err)
 
 	ri, _ = apiSvc.AsInstance()
@@ -512,8 +512,8 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 			Name:  "abc",
 			Title: "abc",
 			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrExternalAPIID: "12345",
+				defs.XAgentDetails: map[string]interface{}{
+					defs.AttrExternalAPIID: "12345",
 				},
 			},
 		},

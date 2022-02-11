@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -30,7 +30,7 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 	serviceBody *ServiceBody,
 	name string,
 	attributes map[string]string,
-	endPoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
 	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
@@ -40,11 +40,12 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Attributes:       buildAPIResourceAttributes(serviceBody, attributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  buildAPIServiceInstanceSpec(serviceBody, endPoints),
+		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 
-	instance.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+	details := buildAgentDetailsSubResource(serviceBody, false)
+	util.SetAgentDetails(instance, details)
 
 	return instance
 }
@@ -54,20 +55,21 @@ func (c *ServiceClient) updateInstanceResource(
 	serviceBody *ServiceBody,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
+	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
 	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = buildAPIResourceAttributes(serviceBody, instance.Attributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	instance.Owner = c.getOwnerObject(serviceBody, false)
-	instance.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false))
 
 	return instance
 }
 
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	instanceEndpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
+	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err
 	}
@@ -81,11 +83,11 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
-		instanceAttributes := serviceBody.InstanceAttributes
-		if instanceAttributes == nil {
-			instanceAttributes = make(map[string]string)
+		attr := serviceBody.InstanceAttributes
+		if attr == nil {
+			attr = make(map[string]string)
 		}
-		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, instanceAttributes, instanceEndpoints)
+		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, attr, endpoints)
 	}
 
 	if serviceBody.serviceContext.revisionAction == updateAPI {
@@ -98,7 +100,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
 		}
 		instanceURL = instanceURL + "/" + instanceName
-		instance = c.updateInstanceResource(instances[0], serviceBody, instanceEndpoints)
+		instance = c.updateInstanceResource(instances[0], serviceBody, endpoints)
 	}
 
 	buffer, err := json.Marshal(instance)
@@ -128,7 +130,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			instance.SubResources,
 		)
 		if err != nil {
-			return err
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				return errors.New(err.Error() + rollbackErr.Error())
+			}
 		}
 	}
 

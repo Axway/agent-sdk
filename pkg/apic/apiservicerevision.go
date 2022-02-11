@@ -15,7 +15,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -65,19 +65,21 @@ func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody
 		Spec:  buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
-	rev.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+
+	util.SetAgentDetails(rev, buildAgentDetailsSubResource(serviceBody, false))
 
 	return rev
 }
 
 func (c *ServiceClient) updateRevisionResource(revision *mv1a.APIServiceRevision, serviceBody *ServiceBody) *mv1a.APIServiceRevision {
+	revision.GroupVersionKind = mv1a.APIServiceRevisionGVK()
 	revision.ResourceMeta.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
 	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
 	revision.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
-	revision.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, false))
+	util.SetAgentDetails(revision, buildAgentDetailsSubResource(serviceBody, false))
 
 	return revision
 }
@@ -126,9 +128,13 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
 
 		if serviceBody.serviceContext.previousRevision != nil {
-			err := util.SetAgentDetailsKey(revision, definitions.AttrPreviousAPIServiceRevisionID, serviceBody.serviceContext.previousRevision.Metadata.ID)
+			err := util.SetAgentDetailsKey(
+				revision,
+				defs.AttrPreviousAPIServiceRevisionID,
+				serviceBody.serviceContext.previousRevision.Metadata.ID,
+			)
 			if err != nil {
-				log.Errorf("failed to set previous revision id to subresource for %s ", serviceBody.APIName)
+				log.Errorf("failed to set previous revision id to subresource for %s. error: %s", serviceBody.APIName, err)
 			}
 		}
 
@@ -163,7 +169,10 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 				revision.SubResources,
 			)
 			if err != nil {
-				return err
+				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+				if rollbackErr != nil {
+					return errors.New(err.Error() + rollbackErr.Error())
+				}
 			}
 		}
 	}

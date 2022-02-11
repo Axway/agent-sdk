@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -54,10 +54,10 @@ type Manager interface {
 	GetSequence(watchTopicName string) int64
 
 	GetTeamCache() cache.Cache
-	AddTeam(team *definitions.PlatformTeam)
-	GetTeamByName(name string) *definitions.PlatformTeam
-	GetTeamByID(id string) *definitions.PlatformTeam
-	GetDefaultTeam() *definitions.PlatformTeam
+	AddTeam(team *defs.PlatformTeam)
+	GetTeamByName(name string) *defs.PlatformTeam
+	GetTeamByID(id string) *defs.PlatformTeam
+	GetDefaultTeam() *defs.PlatformTeam
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
@@ -201,11 +201,15 @@ func (c *cacheManager) SaveCache() {
 
 // AddAPIService - add/update APIService resource in cache
 func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
-	externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIID)
+	externalAPIID, err := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIID)
+	if err != nil {
+		log.Errorf("failed to get external API ID from APIService resource: %s", err)
+		return externalAPIID
+	}
 	if externalAPIID != "" {
 		defer c.setCacheUpdated(true)
-		externalAPIName, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIName)
-		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIPrimaryKey)
+		externalAPIName, _ := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIName)
+		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIPrimaryKey)
 		if externalAPIPrimaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(externalAPIID); err != nil {
@@ -428,18 +432,18 @@ func (c *cacheManager) GetTeamCache() cache.Cache {
 }
 
 // AddTeam saves a team to the cache
-func (c *cacheManager) AddTeam(team *definitions.PlatformTeam) {
+func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
 	defer c.setCacheUpdated(true)
 	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
 }
 
 // GetTeamByName gets a team by name
-func (c *cacheManager) GetTeamByName(name string) *definitions.PlatformTeam {
+func (c *cacheManager) GetTeamByName(name string) *defs.PlatformTeam {
 	item, err := c.teams.Get(name)
 	if err != nil {
 		return nil
 	}
-	team, ok := item.(definitions.PlatformTeam)
+	team, ok := item.(defs.PlatformTeam)
 	if !ok {
 		return nil
 	}
@@ -447,13 +451,13 @@ func (c *cacheManager) GetTeamByName(name string) *definitions.PlatformTeam {
 }
 
 // GetDefaultTeam gets the default team
-func (c *cacheManager) GetDefaultTeam() *definitions.PlatformTeam {
+func (c *cacheManager) GetDefaultTeam() *defs.PlatformTeam {
 	names := c.teams.GetKeys()
 
-	var defaultTeam definitions.PlatformTeam
+	var defaultTeam defs.PlatformTeam
 	for _, name := range names {
 		item, _ := c.teams.Get(name)
-		team, ok := item.(definitions.PlatformTeam)
+		team, ok := item.(defs.PlatformTeam)
 		if !ok {
 			continue
 		}
@@ -470,12 +474,12 @@ func (c *cacheManager) GetDefaultTeam() *definitions.PlatformTeam {
 }
 
 // GetTeamByID gets a team by id
-func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
+func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
 	item, err := c.teams.GetBySecondaryKey(id)
 	if err != nil {
 		return nil
 	}
-	team, ok := item.(definitions.PlatformTeam)
+	team, ok := item.(defs.PlatformTeam)
 	if !ok {
 		return nil
 	}

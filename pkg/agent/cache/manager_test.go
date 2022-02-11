@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -13,18 +13,18 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	sub := map[string]interface{}{
-		definitions.AttrExternalAPIID:   apiID,
-		definitions.AttrExternalAPIName: apiName,
+		defs.AttrExternalAPIID:   apiID,
+		defs.AttrExternalAPIName: apiName,
 	}
 
 	if primaryKey != "" {
-		sub[definitions.AttrExternalAPIPrimaryKey] = primaryKey
+		sub[defs.AttrExternalAPIPrimaryKey] = primaryKey
 	}
 
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: sub,
+				defs.XAgentDetails: sub,
 			},
 		},
 	}

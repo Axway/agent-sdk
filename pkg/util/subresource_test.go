@@ -26,7 +26,7 @@ func TestGetAgentDetails(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "should return the agent details sub resource",
+			name: "should return the agent details sub resource when saved as a map[string]interface{}",
 			ri: &mockRI{subResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{},
 			}},
@@ -40,7 +40,6 @@ func TestGetAgentDetails(t *testing.T) {
 			assert.Equal(t, tc.expected, val)
 		})
 	}
-
 }
 
 func TestGetAgentDetailsValue(t *testing.T) {
@@ -174,6 +173,12 @@ func TestSetAgentDetailsKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSetAgentDetails(t *testing.T) {
+	ri := &mockRI{subResources: map[string]interface{}{}}
+	SetAgentDetails(ri, map[string]interface{}{})
+	assert.Contains(t, ri.subResources, definitions.XAgentDetails)
 }
 
 type mockRI struct {

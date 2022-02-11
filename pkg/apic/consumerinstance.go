@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -148,13 +150,19 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 		agentDetails[k] = v
 	}
 
-	ci.SetSubResource(definitions.XAgentDetails, agentDetails)
-	ci.Attributes = buildAPIResourceAttributes(serviceBody, agentDetails)
+	attrs := make(map[string]string)
+
+	for k, v := range agentDetails {
+		attrs[k] = v.(string)
+	}
+	util.SetAgentDetails(ci, agentDetails)
+	ci.Attributes = buildAPIResourceAttributes(serviceBody, attrs)
 
 	return ci
 }
 
 func (c *ServiceClient) updateConsumerInstanceResource(instance *mv1a.ConsumerInstance, serviceBody *ServiceBody, attr map[string]string, doc string) {
+	instance.GroupVersionKind = mv1a.ConsumerInstanceGVK()
 	instance.ResourceMeta.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	for k, v := range attr {
@@ -163,11 +171,11 @@ func (c *ServiceClient) updateConsumerInstanceResource(instance *mv1a.ConsumerIn
 
 	details := buildAgentDetailsSubResource(serviceBody, false)
 	for k, v := range details {
-		instance.ResourceMeta.Attributes[k] = v
+		instance.ResourceMeta.Attributes[k] = v.(string)
 	}
 
 	instance.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, instance.ResourceMeta.Attributes)
-	instance.SetSubResource(definitions.XAgentDetails, details)
+	util.SetAgentDetails(instance, details)
 
 	instance.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	// use existing categories only if mappings have not been configured
@@ -265,7 +273,10 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 				instance.SubResources,
 			)
 			if err != nil {
-				return err
+				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+				if rollbackErr != nil {
+					return errors.New(err.Error() + rollbackErr.Error())
+				}
 			}
 		}
 	}

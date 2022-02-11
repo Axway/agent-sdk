@@ -2,9 +2,10 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -41,7 +42,7 @@ func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody) *mv1a.
 		Owner: c.getOwnerObject(serviceBody, true),
 	}
 
-	svc.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, true))
+	util.SetAgentDetails(svc, buildAgentDetailsSubResource(serviceBody, true))
 
 	return svc
 }
@@ -60,13 +61,15 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *
 }
 
 func (c *ServiceClient) updateAPIServiceResource(svc *mv1a.APIService, serviceBody *ServiceBody) {
+	svc.GroupVersionKind = mv1a.APIServiceGVK()
 	svc.ResourceMeta.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
 	svc.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = c.getOwnerObject(serviceBody, true)
 	svc.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, svc.ResourceMeta.Attributes)
-	svc.SetSubResource(definitions.XAgentDetails, buildAgentDetailsSubResource(serviceBody, true))
+
+	util.SetAgentDetails(svc, buildAgentDetailsSubResource(serviceBody, true))
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{
@@ -121,8 +124,12 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 			svc.APIVersion,
 			svc.SubResources,
 		)
+
 		if err != nil {
-			return svc, err
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				return nil, errors.New(err.Error() + rollbackErr.Error())
+			}
 		}
 	}
 

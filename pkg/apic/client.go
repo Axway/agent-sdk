@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
@@ -52,37 +52,37 @@ type Client interface {
 	SetConfig(cfg corecfg.CentralConfig)
 	PublishService(serviceBody *ServiceBody) (*mv1a.APIService, error)
 	RegisterSubscriptionWebhook() error
-	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
-	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	RegisterSubscriptionSchema(schema SubscriptionSchema, update bool) error
+	UpdateSubscriptionSchema(schema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetConsumerInstanceByID(consumerInstanceID string) (*mv1a.ConsumerInstance, error)
+	GetConsumerInstanceByID(id string) (*mv1a.ConsumerInstance, error)
 	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddress(ID string) (string, error)
 	GetUserName(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
 	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
-	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, schema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
-	GetAPIRevisions(queryParams map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
-	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
-	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
-	GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
-	GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
-	GetAPIServiceByName(serviceName string) (*mv1a.APIService, error)
-	GetAPIServiceInstanceByName(serviceInstanceName string) (*mv1a.APIServiceInstance, error)
-	GetAPIRevisionByName(serviceRevisionName string) (*mv1a.APIServiceRevision, error)
-	CreateCategory(categoryName string) (*catalog.Category, error)
+	GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceInstances(query map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIServiceByName(name string) (*mv1a.APIService, error)
+	GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error)
+	GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error)
+	CreateCategory(name string) (*catalog.Category, error)
 	GetOrCreateCategory(category string) string
 	GetEnvironment() (*mv1a.Environment, error)
-	GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error)
-	GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error)
+	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
+	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
@@ -102,7 +102,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 
 // getTeamFromCache -
 func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
-	var team *definitions.PlatformTeam
+	var team *defs.PlatformTeam
 	if name == "" {
 		team = c.caches.GetDefaultTeam()
 		if team == nil {
@@ -399,7 +399,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 }
 
 // GetPlatformUserInfo - request the platform user info
-func (c *ServiceClient) getPlatformUserInfo(id string) (*definitions.PlatformUserInfo, error) {
+func (c *ServiceClient) getPlatformUserInfo(id string) (*defs.PlatformUserInfo, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -416,7 +416,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*definitions.PlatformUse
 		return nil, reqErr
 	}
 
-	var platformUserInfo definitions.PlatformUserInfo
+	var platformUserInfo defs.PlatformUserInfo
 	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
 	if err != nil {
 		return nil, err
@@ -454,7 +454,7 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 }
 
 // GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(name string) (*definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetCentralTeamByName(name string) (*defs.PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 
@@ -489,7 +489,7 @@ func (c *ServiceClient) GetCentralTeamByName(name string) (*definitions.Platform
 }
 
 // GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(query map[string]string) ([]definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -504,7 +504,7 @@ func (c *ServiceClient) GetTeam(query map[string]string) ([]definitions.Platform
 		return nil, reqErr
 	}
 
-	var platformTeams []definitions.PlatformTeam
+	var platformTeams []defs.PlatformTeam
 	err = json.Unmarshal(response, &platformTeams)
 	if err != nil {
 		return nil, err

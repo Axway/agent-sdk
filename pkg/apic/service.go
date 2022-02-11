@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -22,10 +22,8 @@ import (
 type actionType int
 
 const (
-	none      actionType = iota
-	addAPI               = iota
-	updateAPI            = iota
-	deleteAPI            = iota
+	addAPI    = iota
+	updateAPI = iota
 )
 
 const (
@@ -180,21 +178,21 @@ func buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[str
 	return attributes
 }
 
-func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) map[string]string {
-	details := make(map[string]string)
+func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) map[string]interface{} {
+	details := make(map[string]interface{})
 
 	externalAPIID := serviceBody.RestAPIID
 	// check to see if is an APIService
 	if !isAPIService && serviceBody.Stage != "" {
-		details[definitions.AttrExternalAPIStage] = serviceBody.Stage
+		details[defs.AttrExternalAPIStage] = serviceBody.Stage
 	}
 	if serviceBody.PrimaryKey != "" {
-		details[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
+		details[defs.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
 	}
 
-	details[definitions.AttrExternalAPIID] = externalAPIID
-	details[definitions.AttrExternalAPIName] = serviceBody.APIName
-	details[definitions.AttrCreatedBy] = serviceBody.CreatedBy
+	details[defs.AttrExternalAPIID] = externalAPIID
+	details[defs.AttrExternalAPIName] = serviceBody.APIName
+	details[defs.AttrCreatedBy] = serviceBody.CreatedBy
 
 	return details
 }
