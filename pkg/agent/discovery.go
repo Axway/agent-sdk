@@ -131,7 +131,10 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 			if !agent.cfg.IsUsingGRPC() {
 				apiSvc, e := ret.AsInstance()
 				if e == nil {
-					agent.cacheManager.AddAPIService(apiSvc)
+					addErr := agent.cacheManager.AddAPIService(apiSvc)
+					if addErr != nil {
+						log.Error(addErr)
+					}
 				}
 			}
 		} else {

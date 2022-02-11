@@ -45,8 +45,7 @@ func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, reso
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		h.agentCacheManager.AddAPIService(resource)
-		return nil
+		return h.agentCacheManager.AddAPIService(resource)
 	}
 
 	if action == proto.Event_DELETED {

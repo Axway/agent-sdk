@@ -71,12 +71,14 @@ func TestAPIServiceCache(t *testing.T) {
 	api1 := createAPIService("id1", "api1", "")
 	api2 := createAPIService("id2", "api2", "api2key")
 
-	externalAPIID := m.AddAPIService(api1)
-	assert.Equal(t, "id1", externalAPIID)
-	externalAPIID = m.AddAPIService(api2)
-	assert.Equal(t, "id2", externalAPIID)
-	externalAPIID = m.AddAPIService(api2)
-	assert.Equal(t, "id2", externalAPIID)
+	err := m.AddAPIService(api1)
+	assert.Nil(t, err)
+
+	err = m.AddAPIService(api2)
+	assert.Nil(t, err)
+
+	err = m.AddAPIService(api2)
+	assert.Nil(t, err)
 
 	cachedAPI := m.GetAPIServiceWithAPIID("id1")
 	assert.Equal(t, api1, cachedAPI)
@@ -96,7 +98,7 @@ func TestAPIServiceCache(t *testing.T) {
 	cachedAPI = m.GetAPIServiceWithPrimaryKey("api2key")
 	assert.Equal(t, api2, cachedAPI)
 
-	err := m.DeleteAPIService("api1")
+	err = m.DeleteAPIService("api1")
 	assert.Nil(t, err)
 	cachedAPI = m.GetAPIServiceWithAPIID("api1")
 	assert.Nil(t, cachedAPI)
@@ -206,7 +208,8 @@ func TestCachePersistenc(t *testing.T) {
 	assert.NotNil(t, m)
 
 	api1 := createAPIService("id1", "api1", "")
-	m.AddAPIService(api1)
+	err := m.AddAPIService(api1)
+	assert.Nil(t, err)
 
 	instance1 := createAPIServiceInstance("id1")
 	m.AddAPIServiceInstance(instance1)

@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -26,7 +27,7 @@ type Manager interface {
 	SaveCache()
 
 	// API Service cache related methods
-	AddAPIService(resource *v1.ResourceInstance) string
+	AddAPIService(resource *v1.ResourceInstance) error
 	GetAPIServiceCache() cache.Cache
 	GetAPIServiceKeys() []string
 	GetAPIServiceWithAPIID(externalAPIID string) *v1.ResourceInstance
@@ -200,11 +201,10 @@ func (c *cacheManager) SaveCache() {
 // API service cache management
 
 // AddAPIService - add/update APIService resource in cache
-func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
+func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) error {
 	externalAPIID, err := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIID)
 	if err != nil {
-		log.Errorf("failed to get external API ID from APIService resource: %s", err)
-		return externalAPIID
+		return fmt.Errorf("failed to get external API ID from APIService resource: %s", err)
 	}
 	if externalAPIID != "" {
 		defer c.setCacheUpdated(true)
@@ -223,7 +223,8 @@ func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) string {
 		}
 		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
 	}
-	return externalAPIID
+
+	return nil
 }
 
 // GetAPIServiceCache - returns the APIService cache

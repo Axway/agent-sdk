@@ -101,9 +101,9 @@ func (j *discoveryCache) updateAPICache() {
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
 	for _, svc := range apiServices {
-		id, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
+		externalAPIID, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
 		// skip service without external api id
-		if id == "" {
+		if externalAPIID == "" {
 			continue
 		}
 		// Update the lastServiceTime based on the newest service found
@@ -112,7 +112,11 @@ func (j *discoveryCache) updateAPICache() {
 			j.lastServiceTime = thisTime
 		}
 
-		externalAPIID := agent.cacheManager.AddAPIService(svc)
+		err := agent.cacheManager.AddAPIService(svc)
+		if err != nil {
+			log.Errorf("error adding API service to cache: %s", err)
+			continue
+		}
 		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIPrimaryKey)
 		if externalAPIPrimaryKey != "" {
 			existingAPIs[externalAPIPrimaryKey] = true

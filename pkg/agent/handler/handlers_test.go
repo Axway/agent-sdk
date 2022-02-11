@@ -74,7 +74,9 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: apiService,
 						},
 					},
-					SubResources: map[string]interface{}{},
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{},
+					},
 				},
 			},
 		},
