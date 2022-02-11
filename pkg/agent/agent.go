@@ -42,9 +42,6 @@ var AgentResourceType string
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
-// ServiceValidator - Callback for validating the API service on dataplane
-type ServiceValidator func(primaryKey, apiID, stageName string) bool
-
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
@@ -59,7 +56,6 @@ type agentData struct {
 	teamMap                    cache.Cache
 	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
-	serviceValidator           ServiceValidator
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler

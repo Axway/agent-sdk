@@ -148,8 +148,3 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 func RegisterDeleteServiceValidator(validator interface{}) {
 	log.Warnf("the RegisterDeleteServiceValidator is no longer used, please remove the call to it")
 }
-
-// RegisterServiceValidator - Registers callback for validating if the service exists on dataplane
-func RegisterServiceValidator(validator ServiceValidator) {
-	agent.serviceValidator = validator
-}
