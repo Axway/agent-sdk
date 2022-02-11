@@ -75,7 +75,7 @@ func (s *CentralSubscription) GetRemoteAPIAttributes() map[string]string {
 
 // GetCreatedUserID - Returns ID of the user that created the subscription
 func (s *CentralSubscription) GetCreatedUserID() string {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		return s.AccessRequest.Metadata.Audit.CreateUserID
 	}
 	return s.CatalogItemSubscription.Metadata.CreateUserId
@@ -83,7 +83,7 @@ func (s *CentralSubscription) GetCreatedUserID() string {
 
 // GetID - Returns ID of the subscription
 func (s *CentralSubscription) GetID() string {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		return s.AccessRequest.Name
 	}
 	return s.CatalogItemSubscription.Id
@@ -91,7 +91,7 @@ func (s *CentralSubscription) GetID() string {
 
 // GetName - Returns Name of the subscription
 func (s *CentralSubscription) GetName() string {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		return s.AccessRequest.Name
 	}
 	return s.CatalogItemSubscription.Name
@@ -114,7 +114,7 @@ func (s *CentralSubscription) GetRemoteAPIStage() string {
 
 // GetCatalogItemID - Returns ID of the Catalog Item
 func (s *CentralSubscription) GetCatalogItemID() string {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		return ""
 	}
 	return s.CatalogItemSubscription.CatalogItemId
@@ -122,7 +122,7 @@ func (s *CentralSubscription) GetCatalogItemID() string {
 
 // GetState - Returns subscription state
 func (s *CentralSubscription) GetState() SubscriptionState {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		return SubscriptionState(s.AccessRequest.State.Name)
 	}
 	return SubscriptionState(s.CatalogItemSubscription.State)
@@ -130,7 +130,7 @@ func (s *CentralSubscription) GetState() SubscriptionState {
 
 // GetPropertyValue - Returns subscription Property value based on the key
 func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		if value, found := s.AccessRequest.Spec.Data[propertyKey]; found {
 			return value.(string)
 		}
@@ -184,7 +184,7 @@ func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionSta
 	var statePostBody []byte
 	var subStateURL string
 
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		subStateURL = s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName())
 		s.AccessRequest.State = v1alpha1.AccessRequestState{
 			Message: description,
@@ -398,7 +398,7 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 	}
 
 	var url string
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
 	} else {
 		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
@@ -437,7 +437,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 
 	var url string
 	var body []byte
-	if s.UseAccessRequest() {
+	if s.IsUsingAccessRequest() {
 		url = s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetName())
 		body, err = json.Marshal(s.AccessRequest)
 	} else {
@@ -467,7 +467,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 	return nil
 }
 
-// UseAccessRequest - Returns true if access request is being used
-func (s *CentralSubscription) UseAccessRequest() bool {
+// IsUsingAccessRequest - Returns true if access request is being used
+func (s *CentralSubscription) IsUsingAccessRequest() bool {
 	return s.AccessRequest != nil
 }

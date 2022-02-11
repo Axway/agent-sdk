@@ -31,7 +31,7 @@ var (
 	ErrUpdateSubscriptionDefProperties    = errors.New(1156, "error updating subscription definition properties in Amplify Central")
 	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
-	ErrGetGetAPIServiceInstanceByName     = errors.New(1159, "error getting api service instance by name")
+	ErrGetAPIServiceInstanceByName        = errors.New(1159, "error getting api service instance by name")
 
 	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")

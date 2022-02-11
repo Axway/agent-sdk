@@ -165,21 +165,18 @@ func (sm *subscriptionManager) processSubscriptions() {
 }
 
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
-	// subscription.ApicID = subscription.GetCatalogItemID()
-	// subscription.apicClient = sm.apicClient
-
-	if subscription.UseAccessRequest() {
+	if subscription.IsUsingAccessRequest() {
 		apiSI, err := sm.apicClient.GetAPIServiceInstanceByName(subscription.ApicID)
 		if err != nil {
-			log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
+			log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
 			return err
 		}
 		if apiSI == nil {
-			return utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, "APIServiceInstance is nil")
+			return utilerrors.Wrap(ErrGetAPIServiceInstanceByName, "APIServiceInstance is nil")
 		}
 		apiSIR, err := apiSI.AsInstance()
 		if err != nil {
-			log.Error(utilerrors.Wrap(ErrGetGetAPIServiceInstanceByName, err.Error()))
+			log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
 			return err
 		}
 		sm.setSubscriptionInfo(subscription, apiSIR)
