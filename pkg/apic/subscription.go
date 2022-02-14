@@ -99,6 +99,9 @@ func (s *CentralSubscription) GetName() string {
 
 // GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *CentralSubscription) GetApicID() string {
+	if s.IsUsingAccessRequest() {
+		return s.AccessRequest.Spec.ApiServiceInstance
+	}
 	return s.ApicID
 }
 
