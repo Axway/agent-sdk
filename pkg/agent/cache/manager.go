@@ -25,7 +25,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 
-	//API Service cache related methods
+	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) string
 	GetAPIServiceCache() cache.Cache
 	GetAPIServiceKeys() []string
