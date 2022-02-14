@@ -168,7 +168,6 @@ func (fk fakeByScope) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error)
 
 // ListCtx -
 func (fk fakeByScope) ListCtx(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
-	// TODO should list work for unscoped
 	return nil, notFound("", "")
 }
 
@@ -185,8 +184,6 @@ func (fk fakeByScope) UpdateCtx(c context.Context, ri *apiv1.ResourceInstance, o
 	newri.ResourceMeta.Metadata.Scope.Kind = fk.scopeKind.Kind
 
 	return fk.fks[ri.ResourceMeta.Metadata.Scope.Name].UpdateCtx(c, &newri, opts...)
-	// TODO should work if ri has scope name
-
 }
 
 // WithScope -
@@ -519,7 +516,7 @@ func (fk *fakeScoped) List(ri ...ListOptions) ([]*apiv1.ResourceInstance, error)
 // ListCtx -
 func (fk *fakeScoped) ListCtx(_ context.Context, options ...ListOptions) ([]*apiv1.ResourceInstance, error) {
 	if fk == nil {
-		return nil, fmt.Errorf("unknown scope") // TODO
+		return nil, fmt.Errorf("unknown scope")
 	}
 
 	opts := listOptions{}
@@ -613,7 +610,7 @@ func (fk *fakeScoped) create(ri *apiv1.ResourceInstance, opts ...CreateOption) (
 				Scope:           fk.ms,
 				ResourceVersion: "0",
 				References:      nil,
-				State:           "", // TODO
+				State:           "",
 			},
 			Attributes: ri.Attributes,
 			Tags:       ri.Tags,
