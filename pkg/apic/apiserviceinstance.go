@@ -109,6 +109,8 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
+	ri, _ := instance.AsInstance()
+	c.caches.AddAPIServiceInstance(ri)
 	serviceBody.serviceContext.instanceName = instanceName
 
 	return err
