@@ -16,7 +16,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	unifiedcatalog "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/tidwall/gjson"
 )
 
 type actionType int
@@ -227,9 +226,22 @@ func sanitizeAPIName(name string) string {
 
 // apiServiceDeployAPI -
 func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
-	headers, err := c.createHeader()
+	ri, err := c.executeAPIServiceAPI(method, url, buffer)
 	if err != nil {
 		return "", err
+	}
+	resourceName := ""
+	if ri != nil {
+		resourceName = ri.Name
+	}
+	return resourceName, nil
+}
+
+// executeAPIServiceAPI -
+func (c *ServiceClient) executeAPIServiceAPI(method, url string, buffer []byte) (*v1.ResourceInstance, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
 	}
 
 	request := coreapi.Request{
@@ -241,19 +253,20 @@ func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (
 	}
 	response, err := c.apiClient.Send(request)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	//  Check to see if rollback was processed
 	if method == http.MethodDelete && response.Code == http.StatusNoContent {
-		return "", nil
+		return nil, nil
 	}
 
 	if response.Code >= http.StatusBadRequest {
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return "", utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
-
-	return gjson.Get(string(response.Body), "name").String(), nil
+	ri := &v1.ResourceInstance{}
+	json.Unmarshal(response.Body, ri)
+	return ri, nil
 }
 
 // create the on-and-only secret for the environment

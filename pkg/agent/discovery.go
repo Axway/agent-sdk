@@ -136,8 +136,8 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 
 	if agent.instanceValidatorJobID == "" && apiValidator != nil {
-		instanceValidator := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
-		jobID, err := jobs.RegisterIntervalJobWithName(instanceValidator, agent.cfg.GetPollInterval(), "API service instance validator")
+		instanceValidatorJob := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		jobID, err := jobs.RegisterIntervalJobWithName(instanceValidatorJob, agent.cfg.GetPollInterval(), "API service instance validator")
 		agent.instanceValidatorJobID = jobID
 		if err != nil {
 			log.Error(err)
