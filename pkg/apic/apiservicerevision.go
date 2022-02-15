@@ -53,33 +53,42 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, attr map[string]string, name string) *mv1a.APIServiceRevision {
+func (c *ServiceClient) buildAPIServiceRevision(
+	serviceBody *ServiceBody, name string,
+) *mv1a.APIServiceRevision {
 	rev := &mv1a.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
 			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
-			Attributes:       buildAPIResourceAttributes(serviceBody, attr),
+			Attributes:       util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.RevisionAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 
-	util.SetAgentDetails(rev, buildAgentDetailsSubResource(serviceBody, false))
+	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, revDetails)
+	util.SetAgentDetails(rev, agentDetails)
 
 	return rev
 }
 
-func (c *ServiceClient) updateRevisionResource(revision *mv1a.APIServiceRevision, serviceBody *ServiceBody) *mv1a.APIServiceRevision {
+func (c *ServiceClient) updateAPIServiceRevision(
+	serviceBody *ServiceBody, revision *mv1a.APIServiceRevision,
+) *mv1a.APIServiceRevision {
 	revision.GroupVersionKind = mv1a.APIServiceRevisionGVK()
-	revision.ResourceMeta.Metadata.ResourceVersion = ""
+	revision.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes)
-	revision.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	revision.Attributes = util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.RevisionAttributes)
+	revision.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
-	util.SetAgentDetails(revision, buildAgentDetailsSubResource(serviceBody, false))
+
+	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
+	details := buildAgentDetailsSubResource(serviceBody, false, revDetails)
+	util.SetAgentDetails(revision, details)
 
 	return revision
 }
@@ -93,10 +102,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	}
 
 	var httpMethod string
-	revAttributes := serviceBody.RevisionAttributes
-	if revAttributes == nil {
-		revAttributes = make(map[string]string)
-	}
+
 	revisionPrefix := getRevisionPrefix(serviceBody)
 	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 	revisionURL := c.cfg.GetRevisionsURL()
@@ -110,7 +116,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
 
-		revision = c.updateRevisionResource(revision, serviceBody)
+		revision = c.updateAPIServiceRevision(serviceBody, revision)
 		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	}
 
@@ -125,7 +131,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
 		}
 
-		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
+		revision = c.buildAPIServiceRevision(serviceBody, revisionName)
 
 		if serviceBody.serviceContext.previousRevision != nil {
 			err := util.SetAgentDetailsKey(

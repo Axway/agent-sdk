@@ -30,19 +30,20 @@ func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody) *mv1a.APIService {
+func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
 	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
-			Attributes:       buildAPIResourceAttributes(serviceBody, nil),
+			Attributes:       serviceBody.ServiceAttributes,
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, true),
 	}
 
-	util.SetAgentDetails(svc, buildAgentDetailsSubResource(serviceBody, true))
+	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
+	util.SetAgentDetails(svc, svcDetails)
 
 	return svc
 }
@@ -60,16 +61,17 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *
 	return nil
 }
 
-func (c *ServiceClient) updateAPIServiceResource(svc *mv1a.APIService, serviceBody *ServiceBody) {
+func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
 	svc.GroupVersionKind = mv1a.APIServiceGVK()
-	svc.ResourceMeta.Metadata.ResourceVersion = ""
+	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
-	svc.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = c.getOwnerObject(serviceBody, true)
-	svc.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, svc.ResourceMeta.Attributes)
+	svc.Attributes = serviceBody.ServiceAttributes
 
-	util.SetAgentDetails(svc, buildAgentDetailsSubResource(serviceBody, true))
+	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
+	util.SetAgentDetails(svc, svcDetails)
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{
@@ -96,9 +98,9 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
 		serviceURL += "/" + svc.Name
-		c.updateAPIServiceResource(svc, serviceBody)
+		c.updateAPIService(serviceBody, svc)
 	} else {
-		svc = c.buildAPIServiceResource(serviceBody)
+		svc = c.buildAPIService(serviceBody)
 	}
 
 	// spec needs to adhere to environment schema

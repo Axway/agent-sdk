@@ -189,3 +189,31 @@ func getParentDirInfo(dirPath string) fs.FileInfo {
 	}
 	return dataInfo
 }
+
+// MergeMapStringInterface - merges the provided maps.
+// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1
+func MergeMapStringInterface(m ...map[string]interface{}) map[string]interface{} {
+	attrs := make(map[string]interface{})
+
+	for _, item := range m {
+		for k, v := range item {
+			attrs[k] = v
+		}
+	}
+
+	return attrs
+}
+
+// MergeMapStringString - merges the provided maps.
+// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1
+func MergeMapStringString(m ...map[string]string) map[string]string {
+	attrs := make(map[string]string)
+
+	for _, item := range m {
+		for k, v := range item {
+			attrs[k] = v
+		}
+	}
+
+	return attrs
+}
