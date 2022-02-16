@@ -7,7 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -43,14 +43,14 @@ type discoveryCache struct {
 	agentResourceManager resource.Manager
 }
 
-func newDiscoveryCache(agentResourceManager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
+func newDiscoveryCache(manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
 		lastCategoryTime:     time.Time{},
 		refreshAll:           getAll,
 		instanceCacheLock:    instanceCacheLock,
-		agentResourceManager: agentResourceManager,
+		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
 	}
 }
@@ -96,12 +96,16 @@ func (j *discoveryCache) updateAPICache() {
 	}
 
 	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
+		)
 	}
-	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
+	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetServicesURL(), apiServerPageSize,
+	)
 
 	for _, svc := range apiServices {
-		externalAPIID, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
+		externalAPIID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 		// skip service without external api id
 		if externalAPIID == "" {
 			continue
@@ -117,9 +121,9 @@ func (j *discoveryCache) updateAPICache() {
 			log.Errorf("error adding API service to cache: %s", err)
 			continue
 		}
-		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIPrimaryKey)
-		if externalAPIPrimaryKey != "" {
-			existingAPIs[externalAPIPrimaryKey] = true
+		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+		if primaryKey != "" {
+			existingAPIs[primaryKey] = true
 		} else {
 			existingAPIs[externalAPIID] = true
 		}
@@ -146,11 +150,15 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 	}
 
 	if !j.lastInstanceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
+		)
 	}
 
 	j.lastInstanceTime = time.Now()
-	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetInstancesURL(), apiServerPageSize)
+	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetInstancesURL(), apiServerPageSize,
+	)
 	if err != nil {
 		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
 		return
@@ -162,7 +170,7 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
 	for _, instance := range serviceInstances {
-		id, _ := util.GetAgentDetailsValue(instance, definitions.AttrExternalAPIID)
+		id, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if id == "" {
 			continue // skip instance without external api id
 		}
@@ -187,9 +195,13 @@ func (j *discoveryCache) updateCategoryCache() {
 	}
 
 	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(apiV1.APIServerTimeFormat))
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(apiV1.APIServerTimeFormat),
+		)
 	}
-	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetCategoriesURL(), apiServerPageSize)
+	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetCategoriesURL(), apiServerPageSize,
+	)
 
 	for _, category := range categories {
 		// Update the lastCategoryTime based on the newest category found
