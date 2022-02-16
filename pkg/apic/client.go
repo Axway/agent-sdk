@@ -120,37 +120,27 @@ func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
-func (c *ServiceClient) GetOrCreateCategory(category string) string {
-	categoryCache := c.caches.GetCategoryCache()
-	if categoryCache == nil {
-		log.Errorf("category cache has not been initialized")
-		return ""
-	}
-
-	categoryInterface, _ := categoryCache.GetBySecondaryKey(category)
-	if categoryInterface == nil {
+func (c *ServiceClient) GetOrCreateCategory(title string) string {
+	category := c.caches.GetCategoryWithTitle(title)
+	if category == nil {
 		if !corecfg.IsCategoryAutocreationEnabled() {
-			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
+			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", title)
 			return ""
 		}
 
 		// create the category and add it to the cache
-		newCategory, err := c.CreateCategory(category)
+		newCategory, err := c.CreateCategory(title)
 		if err != nil {
-			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
+			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(title).Error())
 			return ""
 		}
-		categoryInterface, _ = newCategory.AsInstance()
-		log.Infof("Created new category %s (%s)", newCategory.Title, newCategory.Name)
-		categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
+		category, err = newCategory.AsInstance()
+		if err == nil {
+			c.caches.AddCategory(category)
+		}
 	}
 
-	cat, ok := categoryInterface.(*apiv1.ResourceInstance)
-	if !ok {
-		return ""
-	}
-
-	return cat.Name
+	return category.Name
 }
 
 // initClient - config change handler

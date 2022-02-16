@@ -18,11 +18,11 @@ import (
 
 func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
-	endPoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) mv1a.ApiServiceInstanceSpec {
 	return mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision: serviceBody.serviceContext.revisionName,
-		Endpoint:           endPoints,
+		Endpoint:           endpoints,
 	}
 }
 
@@ -108,7 +108,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	_, err = c.apiServiceDeployAPI(httpMethod, instanceURL, buffer)
+	ri, err := c.executeAPIServiceAPI(httpMethod, instanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -137,6 +137,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		}
 	}
 
+	c.caches.AddAPIServiceInstance(ri)
 	serviceBody.serviceContext.instanceName = instanceName
 
 	return err

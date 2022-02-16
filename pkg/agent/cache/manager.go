@@ -30,25 +30,25 @@ type Manager interface {
 	AddAPIService(resource *v1.ResourceInstance) error
 	GetAPIServiceCache() cache.Cache
 	GetAPIServiceKeys() []string
-	GetAPIServiceWithAPIID(externalAPIID string) *v1.ResourceInstance
+	GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance
 	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
-	DeleteAPIService(externalAPIID string) error
+	DeleteAPIService(apiID string) error
 
 	// API service instance cache related methods
 	AddAPIServiceInstance(resource *v1.ResourceInstance)
 	GetAPIServiceInstanceKeys() []string
-	GetAPIServiceInstanceByID(instanceID string) (*v1.ResourceInstance, error)
-	DeleteAPIServiceInstance(instanceID string) error
+	GetAPIServiceInstanceByID(id string) (*v1.ResourceInstance, error)
+	DeleteAPIServiceInstance(id string) error
 	DeleteAllAPIServiceInstance()
 
 	// Category cache related methods
 	AddCategory(resource *v1.ResourceInstance)
 	GetCategoryCache() cache.Cache
 	GetCategoryKeys() []string
-	GetCategory(categoryName string) *v1.ResourceInstance
+	GetCategory(name string) *v1.ResourceInstance
 	GetCategoryWithTitle(title string) *v1.ResourceInstance
-	DeleteCategory(categoryName string) error
+	DeleteCategory(name string) error
 
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
@@ -124,19 +124,19 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 }
 
 func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
-	cacheStoragePath := cfg.GetCacheStoragePath()
-	if cacheStoragePath == "" {
-		cacheStoragePath = defaultCacheStoragePath
+	cachePath := cfg.GetCacheStoragePath()
+	if cachePath == "" {
+		cachePath = defaultCacheStoragePath
 	}
-	util.CreateDirIfNotExist(cacheStoragePath)
+	util.CreateDirIfNotExist(cachePath)
 	if cfg.GetAgentName() != "" {
-		return cacheStoragePath + "/" + cfg.GetAgentName() + ".cache"
+		return cachePath + "/" + cfg.GetAgentName() + ".cache"
 	}
-	return cacheStoragePath + "/" + cfg.GetEnvironmentName() + ".cache"
+	return cachePath + "/" + cfg.GetEnvironmentName() + ".cache"
 }
 
-func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, cacheKey string) cache.Cache {
-	itemCache, _ := cacheMap.Get(cacheKey)
+func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) cache.Cache {
+	itemCache, _ := cacheMap.Get(key)
 	if itemCache != nil {
 		raw, _ := json.Marshal(itemCache)
 		return cache.LoadFromBuffer(raw)
@@ -201,27 +201,27 @@ func (c *cacheManager) SaveCache() {
 // API service cache management
 
 // AddAPIService - add/update APIService resource in cache
-func (c *cacheManager) AddAPIService(apiService *v1.ResourceInstance) error {
-	externalAPIID, err := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIID)
+func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
+	apiID, err := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 	if err != nil {
 		return fmt.Errorf("failed to get external API ID from APIService resource: %s", err)
 	}
-	if externalAPIID != "" {
+	if apiID != "" {
 		defer c.setCacheUpdated(true)
-		externalAPIName, _ := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIName)
-		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(apiService, defs.AttrExternalAPIPrimaryKey)
-		if externalAPIPrimaryKey != "" {
+		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
+		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+		if primaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
-			if _, err := c.apiMap.Get(externalAPIID); err != nil {
-				c.apiMap.Delete(externalAPIID)
+			if _, err := c.apiMap.Get(apiID); err != nil {
+				c.apiMap.Delete(apiID)
 			}
 
-			c.apiMap.SetWithSecondaryKey(externalAPIPrimaryKey, externalAPIID, apiService)
-			c.apiMap.SetSecondaryKey(externalAPIPrimaryKey, externalAPIName)
+			c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
+			c.apiMap.SetSecondaryKey(primaryKey, apiName)
 		} else {
-			c.apiMap.SetWithSecondaryKey(externalAPIID, externalAPIName, apiService)
+			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
 		}
-		log.Tracef("added api name: %s, id %s to API cache", externalAPIName, externalAPIID)
+		log.Tracef("added api name: %s, id %s to API cache", apiName, apiID)
 	}
 
 	return nil
@@ -241,13 +241,13 @@ func (c *cacheManager) GetAPIServiceKeys() []string {
 }
 
 // GetAPIServiceWithAPIID - returns resource from APIService cache based on externalAPIID attribute
-func (c *cacheManager) GetAPIServiceWithAPIID(externalAPIID string) *v1.ResourceInstance {
+func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	api, _ := c.apiMap.Get(externalAPIID)
+	api, _ := c.apiMap.Get(apiID)
 	if api == nil {
-		api, _ = c.apiMap.GetBySecondaryKey(externalAPIID)
+		api, _ = c.apiMap.GetBySecondaryKey(apiID)
 	}
 
 	if api != nil {
@@ -318,11 +318,11 @@ func (c *cacheManager) GetAPIServiceInstanceKeys() []string {
 }
 
 // GetAPIServiceInstanceByID - returns resource from APIServiceInstance cache based on instance ID
-func (c *cacheManager) GetAPIServiceInstanceByID(instanceID string) (*v1.ResourceInstance, error) {
+func (c *cacheManager) GetAPIServiceInstanceByID(id string) (*v1.ResourceInstance, error) {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, err := c.instanceMap.Get(instanceID)
+	item, err := c.instanceMap.Get(id)
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
@@ -333,10 +333,10 @@ func (c *cacheManager) GetAPIServiceInstanceByID(instanceID string) (*v1.Resourc
 }
 
 // DeleteAPIServiceInstance - remove APIServiceInstance resource from cache based on instance ID
-func (c *cacheManager) DeleteAPIServiceInstance(instanceID string) error {
+func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 	defer c.setCacheUpdated(true)
 
-	return c.instanceMap.Delete(instanceID)
+	return c.instanceMap.Delete(id)
 }
 
 // DeleteAllAPIServiceInstance - remove all APIServiceInstance resource from cache
@@ -350,9 +350,11 @@ func (c *cacheManager) DeleteAllAPIServiceInstance() {
 
 // AddCategory - add/update Category resource in cache
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
 	defer c.setCacheUpdated(true)
 
-	c.categoryMap.SetWithSecondaryKey(resource.Name, resource.Title, resource)
+	c.categoryMap.SetWithSecondaryKey(resource.Name, fmt.Sprintf("title-%s", resource.Title), resource)
 }
 
 // GetCategoryCache - returns the Category cache
@@ -369,11 +371,11 @@ func (c *cacheManager) GetCategoryKeys() []string {
 }
 
 // GetCategory - returns resource from Category cache based on name
-func (c *cacheManager) GetCategory(categoryName string) *v1.ResourceInstance {
+func (c *cacheManager) GetCategory(name string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	category, _ := c.categoryMap.Get(categoryName)
+	category, _ := c.categoryMap.Get(name)
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
 		if ok {
@@ -388,7 +390,7 @@ func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	category, _ := c.categoryMap.GetBySecondaryKey(title)
+	category, _ := c.categoryMap.GetBySecondaryKey(fmt.Sprintf("title-%s", title))
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
 		if ok {
@@ -399,10 +401,10 @@ func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
 }
 
 // DeleteCategory - remove Category resource from cache based on name
-func (c *cacheManager) DeleteCategory(categoryName string) error {
+func (c *cacheManager) DeleteCategory(name string) error {
 	defer c.setCacheUpdated(true)
 
-	return c.categoryMap.Delete(categoryName)
+	return c.categoryMap.Delete(name)
 }
 
 // Watch Sequence cache
