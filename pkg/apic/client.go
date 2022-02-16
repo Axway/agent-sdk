@@ -120,14 +120,8 @@ func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
 
 // GetOrCreateCategory - Returns the value on published proxy
 func (c *ServiceClient) GetOrCreateCategory(category string) string {
-	categoryCache := c.caches.GetCategoryCache()
-	if categoryCache == nil {
-		log.Errorf("category cache has not been initialized")
-		return ""
-	}
-
-	categoryInterface, _ := categoryCache.GetBySecondaryKey(category)
-	if categoryInterface == nil {
+	categoryResource := c.caches.GetCategoryWithTitle(category)
+	if categoryResource == nil {
 		if !corecfg.IsCategoryAutocreationEnabled() {
 			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
 			return ""
@@ -139,17 +133,13 @@ func (c *ServiceClient) GetOrCreateCategory(category string) string {
 			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
 			return ""
 		}
-		categoryInterface, _ = newCategory.AsInstance()
-		log.Infof("Created new category %s (%s)", newCategory.Title, newCategory.Name)
-		categoryCache.SetWithSecondaryKey(newCategory.Name, newCategory.Title, categoryInterface)
+		categoryResource, err = newCategory.AsInstance()
+		if err == nil {
+			c.caches.AddCategory(categoryResource)
+		}
 	}
 
-	cat, ok := categoryInterface.(*apiv1.ResourceInstance)
-	if !ok {
-		return ""
-	}
-
-	return cat.Name
+	return categoryResource.Name
 }
 
 // initClient - config change handler

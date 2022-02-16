@@ -69,6 +69,7 @@ var agent agentData
 
 func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
+	agent.instanceCacheLock = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent
@@ -237,8 +238,6 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() {
-	agent.instanceCacheLock = &sync.Mutex{}
-
 	// register the update cache job
 	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
 	if !agent.cfg.IsUsingGRPC() {

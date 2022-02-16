@@ -98,7 +98,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	_, err = c.apiServiceDeployAPI(httpMethod, instanceURL, buffer)
+	ri, err := c.executeAPIServiceAPI(httpMethod, instanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
@@ -109,6 +109,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
+	c.caches.AddAPIServiceInstance(ri)
 	serviceBody.serviceContext.instanceName = instanceName
 
 	return err

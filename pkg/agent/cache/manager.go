@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -350,9 +351,11 @@ func (c *cacheManager) DeleteAllAPIServiceInstance() {
 
 // AddCategory - add/update Category resource in cache
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
 	defer c.setCacheUpdated(true)
 
-	c.categoryMap.SetWithSecondaryKey(resource.Name, resource.Title, resource)
+	c.categoryMap.SetWithSecondaryKey(resource.Name, fmt.Sprintf("title-%s", resource.Title), resource)
 }
 
 // GetCategoryCache - returns the Category cache
@@ -388,7 +391,7 @@ func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	category, _ := c.categoryMap.GetBySecondaryKey(title)
+	category, _ := c.categoryMap.GetBySecondaryKey(fmt.Sprintf("title-%s", title))
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
 		if ok {
