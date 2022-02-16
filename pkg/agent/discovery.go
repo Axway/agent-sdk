@@ -69,16 +69,11 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
 
-func getAttributeFromResource(apiResource *apiV1.ResourceInstance, attrName string) string {
-	var v string
-	if apiResource != nil {
-		if apiResource.Attributes != nil {
-			v = apiResource.Attributes[attrName]
-		}
-		if v == "" {
-			v, _ = util.GetAgentDetailsValue(apiResource, attrName)
-		}
+func getAttributeFromResource(resource *apiV1.ResourceInstance, attrName string) string {
+	if resource == nil {
+		return ""
 	}
+	v, _ := util.GetAgentDetailsValue(resource, attrName)
 	return v
 }
 
