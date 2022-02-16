@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -159,25 +160,9 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
-func buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string) map[string]string {
-	attributes := make(map[string]string)
-
-	// Add attributes from resource if present
-	for key, val := range additionalAttr {
-		attributes[key] = val
-	}
-
-	// Add attributes from service body setup by agent
-	if serviceBody.ServiceAttributes != nil {
-		for key, val := range serviceBody.ServiceAttributes {
-			attributes[key] = val
-		}
-	}
-
-	return attributes
-}
-
-func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) map[string]interface{} {
+func buildAgentDetailsSubResource(
+	serviceBody *ServiceBody, isAPIService bool, additional map[string]interface{},
+) map[string]interface{} {
 	details := make(map[string]interface{})
 
 	externalAPIID := serviceBody.RestAPIID
@@ -193,7 +178,7 @@ func buildAgentDetailsSubResource(serviceBody *ServiceBody, isAPIService bool) m
 	details[defs.AttrExternalAPIName] = serviceBody.APIName
 	details[defs.AttrCreatedBy] = serviceBody.CreatedBy
 
-	return details
+	return util.MergeMapStringInterface(details, additional)
 }
 
 func isValidAuthPolicy(auth string) bool {

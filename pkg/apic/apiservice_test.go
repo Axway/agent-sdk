@@ -14,7 +14,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -210,7 +210,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 	assert.Nil(t, svc)
 
 	// Should return the service and no error
-	apiSvc := &v1alpha1.APIService{
+	apiSvc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
@@ -221,7 +221,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 				},
 			},
 		},
-		Spec: v1alpha1.ApiServiceSpec{},
+		Spec: mv1a.ApiServiceSpec{},
 	}
 	// should return the resource when found by the external api id
 	ri, _ := apiSvc.AsInstance()
@@ -507,7 +507,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 			RespCode: http.StatusNoContent, // delete OK
 		},
 	})
-	svc := &v1alpha1.APIService{
+	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
@@ -517,7 +517,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 				},
 			},
 		},
-		Spec: v1alpha1.ApiServiceSpec{},
+		Spec: mv1a.ApiServiceSpec{},
 	}
 	ri, _ := svc.AsInstance()
 	client.caches.AddAPIService(ri)
@@ -675,7 +675,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 
 	// Get second to last request as consumerinstance
-	var consInst v1alpha1.ConsumerInstance
+	var consInst mv1a.ConsumerInstance
 	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
 	assert.Nil(t, err)
 
@@ -736,7 +736,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 
 	// Get last request as consumerinstance
-	consInst = v1alpha1.ConsumerInstance{}
+	consInst = mv1a.ConsumerInstance{}
 	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-2].Body))
 	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
 	assert.Nil(t, err)
@@ -746,4 +746,125 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Label)
 	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
 	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
+}
+
+func TestServiceClient_buildAPIService(t *testing.T) {
+	body := &ServiceBody{
+		Description:      "description",
+		ImageContentType: "content-type",
+		Image:            "image-data",
+		NameToPush:       "nametopush",
+		APIName:          "apiname",
+		RestAPIID:        "restapiid",
+		PrimaryKey:       "primarykey",
+		Stage:            "staging",
+		Version:          "v1",
+		Tags: map[string]interface{}{
+			"tag1": "value1",
+			"tag2": "value2",
+		},
+		AgentMode:          0,
+		CreatedBy:          "createdby",
+		ServiceAttributes:  map[string]string{"service_attribute": "value"},
+		RevisionAttributes: nil,
+		InstanceAttributes: nil,
+		ServiceAgentDetails: map[string]interface{}{
+			"subresource_key": "value",
+		},
+	}
+
+	tags := []string{"tag1_value1", "tag2_value2"}
+
+	client, _ := GetTestServiceClient()
+	svc := client.buildAPIService(body)
+
+	assert.Equal(t, mv1a.APIServiceGVK(), svc.GroupVersionKind)
+	assert.Empty(t, svc.Name)
+	assert.Equal(t, body.NameToPush, svc.Title)
+	assert.Contains(t, svc.Tags, tags[0])
+	assert.Contains(t, svc.Tags, tags[1])
+	assert.Equal(t, body.ServiceAttributes, svc.Attributes)
+	assert.Equal(t, body.ImageContentType, svc.Spec.Icon.ContentType)
+	assert.Equal(t, body.Image, svc.Spec.Icon.Data)
+	assert.Equal(t, body.Description, svc.Spec.Description)
+	assert.Equal(t, body.ServiceAttributes, svc.Attributes)
+
+	sub := util.GetAgentDetails(svc)
+	// stage is not set for api services
+	assert.Empty(t, sub[defs.AttrExternalAPIStage])
+	assert.Equal(t, body.PrimaryKey, sub[defs.AttrExternalAPIPrimaryKey])
+	assert.Equal(t, body.RestAPIID, sub[defs.AttrExternalAPIID])
+	assert.Equal(t, body.APIName, sub[defs.AttrExternalAPIName])
+	assert.Equal(t, body.CreatedBy, sub[defs.AttrCreatedBy])
+	assert.Contains(t, sub, "subresource_key")
+}
+
+func TestServiceClient_updateAPIService(t *testing.T) {
+	body := &ServiceBody{
+		Description:      "description",
+		ImageContentType: "content-type",
+		Image:            "image-data",
+		NameToPush:       "nametopush",
+		APIName:          "apiname",
+		RestAPIID:        "restapiid",
+		PrimaryKey:       "primarykey",
+		Stage:            "staging",
+		Version:          "v1",
+		Tags: map[string]interface{}{
+			"tag1": "value1",
+			"tag2": "value2",
+		},
+		AgentMode:          0,
+		CreatedBy:          "createdby",
+		ServiceAttributes:  map[string]string{"service_attribute": "value"},
+		RevisionAttributes: map[string]string{"revision_attribute": "value"},
+		InstanceAttributes: map[string]string{"instance_attribute": "value"},
+		ServiceAgentDetails: map[string]interface{}{
+			"subresource_svc_key": "value",
+		},
+		InstanceAgentDetails: map[string]interface{}{
+			"subresource_instance_key": "value",
+		},
+		RevisionAgentDetails: map[string]interface{}{
+			"subresource_revision_key": "value",
+		},
+	}
+
+	svc := &mv1a.APIService{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ResourceVersion: "123",
+			},
+		},
+	}
+
+	tags := []string{"tag1_value1", "tag2_value2"}
+
+	client, _ := GetTestServiceClient()
+	client.updateAPIService(body, svc)
+
+	assert.Equal(t, mv1a.APIServiceGVK(), svc.GroupVersionKind)
+	assert.Empty(t, svc.Metadata.ResourceVersion)
+	assert.Empty(t, svc.Name)
+
+	assert.Equal(t, body.NameToPush, svc.Title)
+	assert.Contains(t, svc.Tags, tags[0])
+	assert.Contains(t, svc.Tags, tags[1])
+	assert.Equal(t, body.ServiceAttributes, svc.Attributes)
+	assert.NotContains(t, svc.Attributes, "instance_attribute")
+	assert.NotContains(t, svc.Attributes, "revision_attribute")
+
+	assert.Equal(t, body.ImageContentType, svc.Spec.Icon.ContentType)
+	assert.Equal(t, body.Image, svc.Spec.Icon.Data)
+	assert.Equal(t, body.Description, svc.Spec.Description)
+
+	sub := util.GetAgentDetails(svc)
+	assert.Empty(t, sub[defs.AttrExternalAPIStage])
+	assert.Equal(t, body.PrimaryKey, sub[defs.AttrExternalAPIPrimaryKey])
+	assert.Equal(t, body.RestAPIID, sub[defs.AttrExternalAPIID])
+	assert.Equal(t, body.APIName, sub[defs.AttrExternalAPIName])
+	assert.Equal(t, body.CreatedBy, sub[defs.AttrCreatedBy])
+	assert.Contains(t, sub, "subresource_svc_key")
+	assert.NotContains(t, sub, "subresource_instance_key")
+	assert.NotContains(t, sub, "subresource_revision_key")
 }

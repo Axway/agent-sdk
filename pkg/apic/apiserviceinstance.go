@@ -26,10 +26,9 @@ func buildAPIServiceInstanceSpec(
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceInstanceResource(
+func (c *ServiceClient) buildAPIServiceInstance(
 	serviceBody *ServiceBody,
 	name string,
-	attributes map[string]string,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
 	instance := &mv1a.APIServiceInstance{
@@ -37,32 +36,35 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       buildAPIResourceAttributes(serviceBody, attributes),
+			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 
-	details := buildAgentDetailsSubResource(serviceBody, false)
+	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	details := buildAgentDetailsSubResource(serviceBody, false, instDetails)
 	util.SetAgentDetails(instance, details)
 
 	return instance
 }
 
-func (c *ServiceClient) updateInstanceResource(
-	instance *mv1a.APIServiceInstance,
+func (c *ServiceClient) updateAPIServiceInstance(
 	serviceBody *ServiceBody,
+	instance *mv1a.APIServiceInstance,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
 	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
-	instance.ResourceMeta.Metadata.ResourceVersion = ""
+	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
-	instance.Attributes = buildAPIResourceAttributes(serviceBody, instance.Attributes)
+	instance.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	instance.Owner = c.getOwnerObject(serviceBody, false)
-	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false))
+
+	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
 
 	return instance
 }
@@ -83,11 +85,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
-		attr := serviceBody.InstanceAttributes
-		if attr == nil {
-			attr = make(map[string]string)
-		}
-		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, attr, endpoints)
+		instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
 	}
 
 	if serviceBody.serviceContext.revisionAction == updateAPI {
@@ -100,7 +98,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
 		}
 		instanceURL = instanceURL + "/" + instanceName
-		instance = c.updateInstanceResource(instances[0], serviceBody, endpoints)
+		instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
 	}
 
 	buffer, err := json.Marshal(instance)

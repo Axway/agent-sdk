@@ -17,7 +17,7 @@ import (
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gabriel-vasile/mimetype"
 )
 
@@ -132,60 +132,55 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, attr map[string]string, doc string) *mv1a.ConsumerInstance {
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *mv1a.ConsumerInstance {
 	ci := &mv1a.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       map[string]string{},
+			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
 
-	agentDetails := buildAgentDetailsSubResource(serviceBody, false)
-	for k, v := range attr {
-		agentDetails[k] = v
-	}
-
-	attrs := make(map[string]string)
-
-	for k, v := range agentDetails {
-		attrs[k] = v.(string)
-	}
+	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
-	ci.Attributes = buildAPIResourceAttributes(serviceBody, attrs)
+
+	// add all agent details keys to the ci attributes
+	for k, v := range agentDetails {
+		ci.Attributes[k] = v.(string)
+	}
 
 	return ci
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(instance *mv1a.ConsumerInstance, serviceBody *ServiceBody, attr map[string]string, doc string) {
-	instance.GroupVersionKind = mv1a.ConsumerInstanceGVK()
-	instance.ResourceMeta.Metadata.ResourceVersion = ""
-	instance.Title = serviceBody.NameToPush
-	for k, v := range attr {
-		instance.ResourceMeta.Attributes[k] = v
+func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1a.ConsumerInstance, doc string) {
+	ci.GroupVersionKind = mv1a.ConsumerInstanceGVK()
+	ci.Metadata.ResourceVersion = ""
+	ci.Title = serviceBody.NameToPush
+	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	ci.Owner = c.getOwnerObject(serviceBody, false)
+	ci.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
+
+	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
+	util.SetAgentDetails(ci, agentDetails)
+
+	// add all agent details keys to the ci attributes
+	for k, v := range agentDetails {
+		ci.Attributes[k] = v.(string)
 	}
 
-	details := buildAgentDetailsSubResource(serviceBody, false)
-	for k, v := range details {
-		instance.ResourceMeta.Attributes[k] = v.(string)
-	}
-
-	instance.ResourceMeta.Attributes = buildAPIResourceAttributes(serviceBody, instance.ResourceMeta.Attributes)
-	util.SetAgentDetails(instance, details)
-
-	instance.ResourceMeta.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	// use existing categories only if mappings have not been configured
-	categories := instance.Spec.Categories
+	categories := ci.Spec.Categories
 	if corecfg.IsMappingConfigured() {
 		// use only mapping categories if mapping was configured
 		categories = serviceBody.categoryNames
 	}
-	instance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
-	instance.Owner = c.getOwnerObject(serviceBody, false)
+	ci.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
@@ -215,11 +210,6 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
-	instAttributes := serviceBody.InstanceAttributes
-	if instAttributes == nil {
-		instAttributes = make(map[string]string)
-	}
-
 	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
 		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
@@ -240,9 +230,9 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	if instance != nil {
 		httpMethod = http.MethodPut
 		consumerInstanceURL += "/" + consumerInstanceName
-		c.updateConsumerInstanceResource(instance, serviceBody, instAttributes, doc)
+		c.updateConsumerInstance(serviceBody, instance, doc)
 	} else {
-		instance = c.buildConsumerInstance(serviceBody, consumerInstanceName, instAttributes, doc)
+		instance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 	}
 
 	buffer, err := json.Marshal(instance)
@@ -330,7 +320,7 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 		return nil // no updates to be made
 	}
 
-	consumerInstance[0].ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance[0].Metadata.ResourceVersion = ""
 	consumerInstance[0].Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
 
 	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstance[0].Name
