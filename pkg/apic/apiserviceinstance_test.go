@@ -72,7 +72,7 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 	assert.Contains(t, inst.Tags, tags[1])
 
 	assert.Contains(t, inst.Attributes, "instance_attribute")
-	assert.Contains(t, inst.Attributes, "service_attribute")
+	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
 
 	assert.Equal(t, inst.Spec.Endpoint, ep)
@@ -144,7 +144,7 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 		ResourceMeta: v1.ResourceMeta{
 			Title: "oldname",
 			Attributes: map[string]string{
-				"old": "value",
+				"old_attr": "value",
 			},
 			Name:     "name",
 			Tags:     []string{"old_tag"},
@@ -165,8 +165,9 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 	assert.Equal(t, inst.Spec.Endpoint, ep)
 
 	assert.Contains(t, inst.Attributes, "instance_attribute")
-	assert.Contains(t, inst.Attributes, "service_attribute")
+	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
+	assert.NotContains(t, inst.Attributes, "old_attr")
 
 	sub := util.GetAgentDetails(inst)
 	assert.Equal(t, body.Stage, sub[defs.AttrExternalAPIStage])

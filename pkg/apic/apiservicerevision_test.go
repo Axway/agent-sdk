@@ -151,11 +151,8 @@ func Test_buildAPIServiceRevision(t *testing.T) {
 	assert.Contains(t, revision.Tags, tags[0])
 	assert.Contains(t, revision.Tags, tags[1])
 
-	expectedAttrs := util.MergeMapStringString(body.ServiceAttributes, body.RevisionAttributes)
-	assert.Equal(t, expectedAttrs, revision.Attributes)
-
-	assert.Contains(t, revision.Attributes, "service_attribute")
 	assert.Contains(t, revision.Attributes, "revision_attribute")
+	assert.NotContains(t, revision.Attributes, "service_attribute")
 	assert.NotContains(t, revision.Attributes, "instance_attribute")
 
 	assert.Equal(t, Unstructured, revision.Spec.Definition.Type)
@@ -228,8 +225,8 @@ func Test_updateAPIServiceRevision(t *testing.T) {
 	assert.Contains(t, revision.Tags, tags[1])
 	assert.NotContains(t, revision.Tags, "oldtag1")
 
-	assert.Contains(t, revision.Attributes, "service_attribute")
 	assert.Contains(t, revision.Attributes, "revision_attribute")
+	assert.NotContains(t, revision.Attributes, "service_attribute")
 	assert.NotContains(t, revision.Attributes, "instance_attribute")
 	assert.NotContains(t, revision.Attributes, "old_attribute")
 

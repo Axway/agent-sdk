@@ -130,6 +130,12 @@ func TestMergeMapStringInterface(t *testing.T) {
 	assert.Equal(t, m2["asdf"], resul2t["asdf"])
 	assert.Equal(t, m3["foo"], resul2t["foo"])
 	assert.Equal(t, m3["zxcv"], resul2t["zxcv"])
+
+	result3 := MergeMapStringInterface(nil)
+	assert.NotNil(t, result3)
+
+	result4 := MergeMapStringInterface(m1, nil)
+	assert.NotNil(t, result4)
 }
 
 func TestMergeMapStringString(t *testing.T) {
@@ -157,11 +163,17 @@ func TestMergeMapStringString(t *testing.T) {
 		"zxcv": "zxcv3",
 	}
 
-	resul2t := MergeMapStringString(m1, m2, m3)
-	assert.Equal(t, m1["aaa"], resul2t["aaa"])
-	assert.Equal(t, m2["baz"], resul2t["baz"])
-	assert.Equal(t, m2["quux"], resul2t["quux"])
-	assert.Equal(t, m2["asdf"], resul2t["asdf"])
-	assert.Equal(t, m3["foo"], resul2t["foo"])
-	assert.Equal(t, m3["zxcv"], resul2t["zxcv"])
+	result2 := MergeMapStringString(m1, m2, m3)
+	assert.Equal(t, m1["aaa"], result2["aaa"])
+	assert.Equal(t, m2["baz"], result2["baz"])
+	assert.Equal(t, m2["quux"], result2["quux"])
+	assert.Equal(t, m2["asdf"], result2["asdf"])
+	assert.Equal(t, m3["foo"], result2["foo"])
+	assert.Equal(t, m3["zxcv"], result2["zxcv"])
+
+	result3 := MergeMapStringString(nil)
+	assert.NotNil(t, result3)
+
+	result4 := MergeMapStringString(m1, nil)
+	assert.NotNil(t, result4)
 }

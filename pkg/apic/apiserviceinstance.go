@@ -36,7 +36,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.InstanceAttributes),
+			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
@@ -58,7 +58,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
 	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
-	instance.Attributes = util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.InstanceAttributes)
+	instance.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	instance.Owner = c.getOwnerObject(serviceBody, false)

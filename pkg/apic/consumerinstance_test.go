@@ -51,8 +51,8 @@ func TestServiceClient_buildConsumerInstance(t *testing.T) {
 	assert.Contains(t, inst.Tags, tags[0])
 	assert.Contains(t, inst.Tags, tags[1])
 
-	assert.Contains(t, inst.Attributes, "service_attribute")
 	assert.Contains(t, inst.Attributes, "instance_attribute")
+	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
 
 	assert.Equal(t, body.Stage, inst.Attributes[defs.AttrExternalAPIStage])
@@ -130,8 +130,8 @@ func TestServiceClient_updateConsumerInstance(t *testing.T) {
 	assert.Contains(t, inst.Tags, tags[0])
 	assert.Contains(t, inst.Tags, tags[1])
 
-	assert.Contains(t, inst.Attributes, "service_attribute")
 	assert.Contains(t, inst.Attributes, "instance_attribute")
+	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
 	assert.NotContains(t, inst.Attributes, "old_attribute")
 

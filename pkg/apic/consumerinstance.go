@@ -138,7 +138,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.InstanceAttributes),
+			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
@@ -163,7 +163,7 @@ func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1
 	ci.Title = serviceBody.NameToPush
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	ci.Owner = c.getOwnerObject(serviceBody, false)
-	ci.Attributes = util.MergeMapStringString(serviceBody.ServiceAttributes, serviceBody.InstanceAttributes)
+	ci.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
 
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
