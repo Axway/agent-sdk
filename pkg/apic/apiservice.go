@@ -3,7 +3,9 @@ package apic
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -31,6 +33,7 @@ func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 }
 
 func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
+	ownerObject, ownerErr := c.getOwnerObject(serviceBody, true)
 	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
@@ -39,35 +42,39 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceSpec(serviceBody),
-		Owner: c.getOwnerObject(serviceBody, true),
+		Owner: ownerObject,
 	}
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
+	c.updateAPIServerStatus(ownerObject, svc, ownerErr)
 
 	return svc
 }
 
-func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *v1.Owner {
+func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (*v1.Owner, error) {
 	if id, found := c.getTeamFromCache(serviceBody.TeamName); found {
 		return &v1.Owner{
 			Type: v1.TeamOwner,
 			ID:   id,
-		}
+		}, nil
 	} else if warning {
 		// warning is only true when creating service, revision and instance will not print it
-		log.Warnf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
+		warnMsg := fmt.Sprintf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
+		log.Warnf(warnMsg)
+		return nil, errors.New(warnMsg)
 	}
-	return nil
+	return nil, nil
 }
 
 func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
+	var ownerErr error
 	svc.GroupVersionKind = mv1a.APIServiceGVK()
 	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
 	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
-	svc.Owner = c.getOwnerObject(serviceBody, true)
+	svc.Owner, ownerErr = c.getOwnerObject(serviceBody, true)
 	svc.Attributes = serviceBody.ServiceAttributes
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -78,6 +85,23 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
 		}
+	}
+
+	c.updateAPIServerStatus(svc.Owner, svc, ownerErr)
+
+}
+
+func (c *ServiceClient) updateAPIServerStatus(ownerObject *v1.Owner, svc *mv1a.APIService, ownerErr error) {
+	status := &APIServiceStatus{}
+
+	if ownerObject != nil {
+		if ownerErr != nil {
+			status = &APIServiceStatus{"warning",
+				ownerErr.Error(),
+				time.Time{}}
+
+		}
+		svc.SetSubResource("APIServiceStatus", status)
 	}
 }
 
