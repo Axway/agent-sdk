@@ -513,35 +513,6 @@ func (s *AccessRequestSubscription) getServiceClient() *ServiceClient {
 
 // UpdateEnumProperty -
 func (s *AccessRequestSubscription) UpdateEnumProperty(key, newValue, dataType string) error {
-	catalogItemID := s.GetCatalogItemID()
-
-	// First need to get the subscriptionDefProperties for the catalog item
-	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
-	if ss == nil || err != nil {
-		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
-	}
-
-	// update the appName in the enum
-	prop := ss.GetProperty(key)
-
-	// first check that the property is unique
-	for _, ele := range prop.Enum {
-		if ele == newValue {
-			return nil
-		}
-	}
-	newOptions := append(prop.Enum, newValue)
-
-	ss.AddProperty(key, dataType, prop.Description, "", true, newOptions)
-	// note: there will be a small time window where the enum items might be out-of-order. The agent will eventually
-	// pick up the changes and update the schema, which will reorder them.
-
-	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
-	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
-	if err != nil {
-		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
-	}
-
 	return nil
 }
 
@@ -599,6 +570,13 @@ func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]inter
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return err
+	}
+
+	if s.AccessRequest.Spec.Data == nil {
+		s.AccessRequest.Spec.Data = map[string]interface{}{}
+	}
+	for key, val := range values {
+		s.AccessRequest.Spec.Data[key] = val
 	}
 
 	url := s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetName())
