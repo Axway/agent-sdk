@@ -377,7 +377,7 @@ func (s *AccessRequestSubscription) GetCreatedUserID() string {
 	return s.AccessRequest.Metadata.Audit.CreateUserID
 }
 
-// GetID - Returns ID of the subscription
+// GetID - Returns Name of the subscription
 func (s *AccessRequestSubscription) GetID() string {
 	return s.AccessRequest.Name
 }
@@ -387,7 +387,7 @@ func (s *AccessRequestSubscription) GetName() string {
 	return s.AccessRequest.Name
 }
 
-// GetApicID - Returns ID of the Catalog Item or API Service instance
+// GetApicID - Returns ID of the API Service instance
 func (s *AccessRequestSubscription) GetApicID() string {
 	return s.AccessRequest.Spec.ApiServiceInstance
 }
@@ -402,9 +402,9 @@ func (s *AccessRequestSubscription) GetRemoteAPIStage() string {
 	return s.RemoteAPIStage
 }
 
-// GetCatalogItemID - Returns ID of the Catalog Item
+// GetCatalogItemID - Returns the name of the accesd request
 func (s *AccessRequestSubscription) GetCatalogItemID() string {
-	return ""
+	return s.AccessRequest.Name
 }
 
 // GetState - Returns subscription state
@@ -425,26 +425,12 @@ func (s *AccessRequestSubscription) updateProperties(properties map[string]inter
 		return nil
 	}
 
-	// TODO keep existing properties
-	// var profile map[string]interface{}
-	// for _, p := range s.CatalogItemSubscription.Properties {
-	// 	if p.Key == profileKey {
-	// 		profile = p.Value
-	// 	}
-	// }
-
-	allProps := map[string]interface{}{}
-	// keep existing properties
-	// for k, v := range profile {
-	// 	allProps[k] = v
-	// }
-
 	// override with new values
 	for k, v := range properties {
-		allProps[k] = v
+		s.AccessRequest.Spec.Data[k] = v
 	}
 
-	return s.updatePropertyValue(profileKey, allProps)
+	return nil
 }
 
 func (s *AccessRequestSubscription) updateAccessRequestState(newState SubscriptionState, description string) (*coreapi.Request, *coreapi.Request, error) {
@@ -511,57 +497,13 @@ func (s *AccessRequestSubscription) getServiceClient() *ServiceClient {
 	return s.apicClient
 }
 
-// UpdateEnumProperty -
+// UpdateEnumProperty - not used on access request
 func (s *AccessRequestSubscription) UpdateEnumProperty(key, newValue, dataType string) error {
 	return nil
 }
 
-// UpdateProperties -
+// UpdateProperties - not used on access request
 func (s *AccessRequestSubscription) UpdateProperties(appName string) error {
-	err := s.UpdateEnumProperty(appNameKey, appName, subscriptionAppNameType)
-	if err != nil {
-		return err
-	}
-
-	// Now we can update the appname in the subscription itself
-	err = s.updatePropertyValue(profileKey, map[string]interface{}{appNameKey: appName})
-	if err != nil {
-		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
-	}
-
-	return nil
-}
-
-// updatePropertyValue - Updates the property value of the subscription
-func (s *AccessRequestSubscription) updatePropertyValue(propertyKey string, value map[string]interface{}) error {
-	headers, err := s.getServiceClient().createHeader()
-	if err != nil {
-		return err
-	}
-
-	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
-
-	body, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.PUT,
-		URL:     url,
-		Headers: headers,
-		Body:    body,
-	}
-
-	response, err := s.getServiceClient().apiClient.Send(request)
-	if err != nil {
-		return err
-	}
-
-	if !(response.Code == http.StatusOK) {
-		readResponseErrors(response.Code, response.Body)
-		return ErrSubscriptionResp.FormatError(response.Code)
-	}
 	return nil
 }
 
