@@ -30,6 +30,11 @@
     "spec": {
       "description": "best api ever"
     },
+    "x-apiservice-status": {
+      "time": "'0001-01-01T00:00:00Z'",
+      "level": "ok",
+      "message": ""
+    },
     "x-agent-details": {
       "externalAPIID": "fooapi"
     }
