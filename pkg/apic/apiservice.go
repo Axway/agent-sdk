@@ -101,7 +101,7 @@ func (c *ServiceClient) updateAPIServerStatus(ownerObject *v1.Owner, svc *mv1a.A
 				time.Time{}}
 
 		}
-		svc.SetSubResource("APIServiceStatus", status)
+		svc.SetSubResource("x-apiservice-status", status)
 	}
 }
 

@@ -129,7 +129,7 @@ type APIServerInfo struct {
 
 // APIServiceStatus
 type APIServiceStatus struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
-	Time    time.Time
+	Level   string    `json:"level"`
+	Message string    `json:"message"`
+	Time    time.Time `json:"time"`
 }
