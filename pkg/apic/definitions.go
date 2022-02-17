@@ -127,7 +127,7 @@ type APIServerInfo struct {
 	Environment      APIServerInfoProperty `json:"environment,omitempty"`
 }
 
-// APIServiceStatus
+// APIServiceStatus -
 type APIServiceStatus struct {
 	Level   string    `json:"level"`
 	Message string    `json:"message"`
