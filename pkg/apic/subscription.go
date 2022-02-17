@@ -45,14 +45,16 @@ var catalogToAccessRequestStateMap = map[SubscriptionState]SubscriptionState{
 	SubscriptionFailedToUnsubscribe:  AccessRequestFailedDeprovisioning,
 }
 
-func (s SubscriptionState) GetAccessRequestState() SubscriptionState {
+// getAccessRequestState - gets the access request state equivalent from a subscription state
+func (s SubscriptionState) getAccessRequestState() SubscriptionState {
 	if state, found := catalogToAccessRequestStateMap[s]; found {
 		return state
 	}
 	return s
 }
 
-func (s SubscriptionState) IsUnifiedCatalogState() bool {
+// isUnifiedCatalogState - returns true is the state is a unified catalog state
+func (s SubscriptionState) isUnifiedCatalogState() bool {
 	_, found := catalogToAccessRequestStateMap[s]
 	return found
 }
@@ -114,8 +116,8 @@ func (s *CentralSubscription) GetName() string {
 	return s.CatalogItemSubscription.Name
 }
 
+// GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *CentralSubscription) GetApicID() string {
-	// GetApicID - Returns ID of the Catalog Item or API Service instance
 	return s.ApicID
 }
 
@@ -389,8 +391,8 @@ func (s *AccessRequestSubscription) GetName() string {
 	return s.AccessRequest.Name
 }
 
+// GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *AccessRequestSubscription) GetApicID() string {
-	// GetApicID - Returns ID of the Catalog Item or API Service instance
 	return s.AccessRequest.Spec.ApiServiceInstance
 }
 
@@ -457,7 +459,7 @@ func (s *AccessRequestSubscription) updateAccessRequestState(newState Subscripti
 
 	s.AccessRequest.State = v1alpha1.AccessRequestState{
 		Message: description,
-		Name:    string(newState.GetAccessRequestState()),
+		Name:    string(newState.getAccessRequestState()),
 	}
 	statePostBody, err := json.Marshal(s.AccessRequest)
 	if err != nil {

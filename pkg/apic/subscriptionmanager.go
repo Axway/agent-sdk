@@ -70,7 +70,7 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
-	if state.IsUnifiedCatalogState() {
+	if state.isUnifiedCatalogState() {
 		processorList, ok := sm.processorMap[state]
 		if !ok {
 			processorList = make([]SubscriptionProcessor, 0)
@@ -79,12 +79,12 @@ func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, proces
 		sm.processorMap[state] = append(processorList, processor)
 	}
 
-	processorList, ok := sm.processorMap[state.GetAccessRequestState()]
+	processorList, ok := sm.processorMap[state.getAccessRequestState()]
 	if !ok {
 		processorList = make([]SubscriptionProcessor, 0)
 	}
-	sm.arStatesToQuery = append(sm.arStatesToQuery, string(state.GetAccessRequestState()))
-	sm.processorMap[state.GetAccessRequestState()] = append(processorList, processor)
+	sm.arStatesToQuery = append(sm.arStatesToQuery, string(state.getAccessRequestState()))
+	sm.processorMap[state.getAccessRequestState()] = append(processorList, processor)
 }
 
 // RegisterValidator - Registers validator for subscription to be processed

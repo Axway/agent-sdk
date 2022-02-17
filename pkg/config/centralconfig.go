@@ -421,7 +421,7 @@ func (c *CentralConfiguration) GetAccessRequestSubscriptionURL(accessRequestName
 	return fmt.Sprintf("%s/%s", c.GetAccessRequestURL(), accessRequestName)
 }
 
-// GetAccessRequestSubscriptionURL - Returns the access request URL for catalog item subscription states
+// GetAccessRequestStateURL - Returns the access request URL to update the state
 func (c *CentralConfiguration) GetAccessRequestStateURL(accessRequestName string) string {
 	return fmt.Sprintf("%s/%s/state", c.GetAccessRequestURL(), accessRequestName)
 }
