@@ -122,6 +122,7 @@ type CentralConfig interface {
 	GetSubscriptionConfig() SubscriptionConfig
 	GetAccessRequestURL() string
 	GetAccessRequestSubscriptionURL(string) string
+	GetAccessRequestStateURL(string) string
 	GetAccessRequestSubscriptionPropertiesURL(string) string
 	GetCatalogItemSubscriptionsURL(string) string
 	GetCatalogItemSubscriptionStatesURL(string, string) string
@@ -418,6 +419,11 @@ func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID
 // GetAccessRequestSubscriptionURL - Returns the access request URL for catalog item subscription states
 func (c *CentralConfiguration) GetAccessRequestSubscriptionURL(accessRequestName string) string {
 	return fmt.Sprintf("%s/%s", c.GetAccessRequestURL(), accessRequestName)
+}
+
+// GetAccessRequestSubscriptionURL - Returns the access request URL for catalog item subscription states
+func (c *CentralConfiguration) GetAccessRequestStateURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/%s/state", c.GetAccessRequestURL(), accessRequestName)
 }
 
 // GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties

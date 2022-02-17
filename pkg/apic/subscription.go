@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
@@ -78,12 +80,13 @@ type Subscription interface {
 	UpdateEnumProperty(key, value, dataType string) error
 	UpdateProperties(appName string) error
 	UpdatePropertyValues(values map[string]interface{}) error
+	setAPIResourceInfo(apiServerResource *v1.ResourceInstance)
 }
 
 // CentralSubscription -
 type CentralSubscription struct {
+	Subscription
 	CatalogItemSubscription *uc.CatalogItemSubscription `json:"catalogItemSubscription"`
-	AccessRequest           *v1alpha1.AccessRequest     `json:"accessRequest"`
 	ApicID                  string                      `json:"-"`
 	RemoteAPIID             string                      `json:"-"`
 	RemoteAPIStage          string                      `json:"-"`
@@ -98,33 +101,21 @@ func (s *CentralSubscription) GetRemoteAPIAttributes() map[string]string {
 
 // GetCreatedUserID - Returns ID of the user that created the subscription
 func (s *CentralSubscription) GetCreatedUserID() string {
-	if s.IsUsingAccessRequest() {
-		return s.AccessRequest.Metadata.Audit.CreateUserID
-	}
 	return s.CatalogItemSubscription.Metadata.CreateUserId
 }
 
 // GetID - Returns ID of the subscription
 func (s *CentralSubscription) GetID() string {
-	if s.IsUsingAccessRequest() {
-		return s.AccessRequest.Name
-	}
 	return s.CatalogItemSubscription.Id
 }
 
 // GetName - Returns Name of the subscription
 func (s *CentralSubscription) GetName() string {
-	if s.IsUsingAccessRequest() {
-		return s.AccessRequest.Name
-	}
 	return s.CatalogItemSubscription.Name
 }
 
-// GetApicID - Returns ID of the Catalog Item or API Service instance
 func (s *CentralSubscription) GetApicID() string {
-	if s.IsUsingAccessRequest() {
-		return s.AccessRequest.Spec.ApiServiceInstance
-	}
+	// GetApicID - Returns ID of the Catalog Item or API Service instance
 	return s.ApicID
 }
 
@@ -140,33 +131,21 @@ func (s *CentralSubscription) GetRemoteAPIStage() string {
 
 // GetCatalogItemID - Returns ID of the Catalog Item
 func (s *CentralSubscription) GetCatalogItemID() string {
-	if s.IsUsingAccessRequest() {
-		return ""
-	}
 	return s.CatalogItemSubscription.CatalogItemId
 }
 
 // GetState - Returns subscription state
 func (s *CentralSubscription) GetState() SubscriptionState {
-	if s.IsUsingAccessRequest() {
-		return SubscriptionState(s.AccessRequest.State.Name)
-	}
 	return SubscriptionState(s.CatalogItemSubscription.State)
 }
 
 // GetPropertyValue - Returns subscription Property value based on the key
 func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
-	if s.IsUsingAccessRequest() {
-		if value, found := s.AccessRequest.Spec.Data[propertyKey]; found {
-			return value.(string)
-		}
-	} else {
-		if len(s.CatalogItemSubscription.Properties) > 0 {
-			subscriptionProperty := s.CatalogItemSubscription.Properties[0]
-			value, ok := subscriptionProperty.Value[propertyKey]
-			if ok {
-				return fmt.Sprintf("%v", value)
-			}
+	if len(s.CatalogItemSubscription.Properties) > 0 {
+		subscriptionProperty := s.CatalogItemSubscription.Properties[0]
+		value, ok := subscriptionProperty.Value[propertyKey]
+		if ok {
+			return fmt.Sprintf("%v", value)
 		}
 	}
 	return ""
@@ -199,30 +178,6 @@ func (s *CentralSubscription) updateProperties(properties map[string]interface{}
 	return s.updatePropertyValue(profileKey, allProps)
 }
 
-func (s *CentralSubscription) updateAccessRequestState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, error) {
-	headers, err := s.getServiceClient().createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	s.AccessRequest.State = v1alpha1.AccessRequestState{
-		Message: description,
-		Name:    string(newState.GetAccessRequestState()),
-	}
-	statePostBody, err := json.Marshal(s.AccessRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return &coreapi.Request{
-		Method:      coreapi.PUT,
-		URL:         s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName()),
-		QueryParams: nil,
-		Headers:     headers,
-		Body:        statePostBody,
-	}, nil
-}
-
 func (s *CentralSubscription) updateCatalogSubscriptionState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, error) {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
@@ -248,13 +203,9 @@ func (s *CentralSubscription) updateCatalogSubscriptionState(newState Subscripti
 
 // UpdateStateWithProperties - Updates the state of subscription
 func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error {
-	var request *coreapi.Request
-	var err error
-	if s.IsUsingAccessRequest() {
-		request, err = s.updateAccessRequestState(newState, description, properties)
-	} else {
-		request, err = s.updateCatalogSubscriptionState(newState, description, properties)
-	}
+
+	request, err := s.updateCatalogSubscriptionState(newState, description, properties)
+
 	if err != nil {
 		return err
 	}
@@ -282,99 +233,6 @@ func (s *CentralSubscription) UpdateState(newState SubscriptionState, descriptio
 // getServiceClient - returns the apic client
 func (s *CentralSubscription) getServiceClient() *ServiceClient {
 	return s.apicClient
-}
-
-// getSubscriptions -
-func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription, error) {
-	queryParams := make(map[string]string)
-
-	searchQuery := ""
-	for _, state := range states {
-		if searchQuery != "" {
-			searchQuery += ","
-		}
-		searchQuery += "state==" + state
-	}
-
-	queryParams["query"] = searchQuery
-
-	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
-	}
-
-	subscriptions := make([]uc.CatalogItemSubscription, 0)
-	json.Unmarshal(resBody, &subscriptions)
-
-	// build the CentralSubscriptions from the UC ones
-	centralSubscriptions := make([]CentralSubscription, 0)
-	for i := range subscriptions {
-		sub := CentralSubscription{
-			CatalogItemSubscription: &subscriptions[i],
-			apicClient:              c,
-		}
-		centralSubscriptions = append(centralSubscriptions, sub)
-	}
-	return centralSubscriptions, nil
-}
-
-// getSubscriptions -
-func (c *ServiceClient) getAccessRequests(states []string) ([]CentralSubscription, error) {
-	queryParams := make(map[string]string)
-
-	searchQuery := ""
-	for _, state := range states {
-		if searchQuery != "" {
-			searchQuery += ","
-		}
-		searchQuery += "state.name==" + state
-	}
-
-	queryParams["query"] = searchQuery
-	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestURL(), queryParams)
-	if err != nil {
-		return nil, err
-	}
-
-	subscriptions := make([]v1alpha1.AccessRequest, 0)
-	json.Unmarshal(resBody, &subscriptions)
-
-	// build the CentralSubscriptions from the UC ones
-	centralSubscriptions := make([]CentralSubscription, 0)
-	for i := range subscriptions {
-		sub := CentralSubscription{
-			AccessRequest: &subscriptions[i],
-			apicClient:    c,
-		}
-		centralSubscriptions = append(centralSubscriptions, sub)
-	}
-	return centralSubscriptions, nil
-}
-
-func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]byte, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	request := coreapi.Request{
-		Method:      coreapi.GET,
-		URL:         url,
-		QueryParams: queryParams,
-		Headers:     headers,
-		Body:        nil,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
-	}
-	if response.Code != http.StatusOK && response.Code != http.StatusNotFound {
-		readResponseErrors(response.Code, response.Body)
-		return nil, ErrSubscriptionResp.FormatError(response.Code)
-	}
-
-	return response.Body, nil
 }
 
 // UpdateEnumProperty -
@@ -434,12 +292,7 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 		return err
 	}
 
-	var url string
-	if s.IsUsingAccessRequest() {
-		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
-	} else {
-		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
-	}
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), propertyKey)
 
 	body, err := json.Marshal(value)
 	if err != nil {
@@ -472,15 +325,9 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 		return err
 	}
 
-	var url string
-	var body []byte
-	if s.IsUsingAccessRequest() {
-		url = s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetName())
-		body, err = json.Marshal(s.AccessRequest)
-	} else {
-		url = fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
-		body, err = json.Marshal(values)
-	}
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetCatalogItemSubscriptionPropertiesURL(s.GetCatalogItemID(), s.GetID()), profileKey)
+	body, err := json.Marshal(values)
+
 	if err != nil {
 		return err
 	}
@@ -504,7 +351,383 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 	return nil
 }
 
-// IsUsingAccessRequest - Returns true if access request is being used
-func (s *CentralSubscription) IsUsingAccessRequest() bool {
-	return s.AccessRequest != nil
+func (s *CentralSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
+	s.ApicID = apiServerResource.Metadata.ID
+	s.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
+	s.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
+	s.RemoteAPIAttributes = apiServerResource.Attributes
+}
+
+// AccessRequestSubscription -
+type AccessRequestSubscription struct {
+	Subscription
+	AccessRequest       *v1alpha1.AccessRequest `json:"accessRequest"`
+	ApicID              string                  `json:"-"`
+	RemoteAPIID         string                  `json:"-"`
+	RemoteAPIStage      string                  `json:"-"`
+	apicClient          *ServiceClient
+	RemoteAPIAttributes map[string]string
+}
+
+// GetRemoteAPIAttributes - Returns the attributes from the API that the subscription is tied to.
+func (s *AccessRequestSubscription) GetRemoteAPIAttributes() map[string]string {
+	return s.RemoteAPIAttributes
+}
+
+// GetCreatedUserID - Returns ID of the user that created the subscription
+func (s *AccessRequestSubscription) GetCreatedUserID() string {
+	return s.AccessRequest.Metadata.Audit.CreateUserID
+}
+
+// GetID - Returns ID of the subscription
+func (s *AccessRequestSubscription) GetID() string {
+	return s.AccessRequest.Name
+}
+
+// GetName - Returns Name of the subscription
+func (s *AccessRequestSubscription) GetName() string {
+	return s.AccessRequest.Name
+}
+
+func (s *AccessRequestSubscription) GetApicID() string {
+	// GetApicID - Returns ID of the Catalog Item or API Service instance
+	return s.AccessRequest.Spec.ApiServiceInstance
+}
+
+// GetRemoteAPIID - Returns ID of the API on remote gateway
+func (s *AccessRequestSubscription) GetRemoteAPIID() string {
+	return s.RemoteAPIID
+}
+
+// GetRemoteAPIStage - Returns the stage name of the API on remote gateway
+func (s *AccessRequestSubscription) GetRemoteAPIStage() string {
+	return s.RemoteAPIStage
+}
+
+// GetCatalogItemID - Returns ID of the Catalog Item
+func (s *AccessRequestSubscription) GetCatalogItemID() string {
+	return ""
+}
+
+// GetState - Returns subscription state
+func (s *AccessRequestSubscription) GetState() SubscriptionState {
+	return SubscriptionState(s.AccessRequest.State.Name)
+}
+
+// GetPropertyValue - Returns subscription Property value based on the key
+func (s *AccessRequestSubscription) GetPropertyValue(propertyKey string) string {
+	if value, found := s.AccessRequest.Spec.Data[propertyKey]; found {
+		return value.(string)
+	}
+	return ""
+}
+
+func (s *AccessRequestSubscription) updateProperties(properties map[string]interface{}) error {
+	if len(properties) == 0 {
+		return nil
+	}
+
+	// TODO keep existing properties
+	// var profile map[string]interface{}
+	// for _, p := range s.CatalogItemSubscription.Properties {
+	// 	if p.Key == profileKey {
+	// 		profile = p.Value
+	// 	}
+	// }
+
+	allProps := map[string]interface{}{}
+	// keep existing properties
+	// for k, v := range profile {
+	// 	allProps[k] = v
+	// }
+
+	// override with new values
+	for k, v := range properties {
+		allProps[k] = v
+	}
+
+	return s.updatePropertyValue(profileKey, allProps)
+}
+
+func (s *AccessRequestSubscription) updateAccessRequestState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, *coreapi.Request, error) {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	s.AccessRequest.State = v1alpha1.AccessRequestState{
+		Message: description,
+		Name:    string(newState.GetAccessRequestState()),
+	}
+	statePostBody, err := json.Marshal(s.AccessRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &coreapi.Request{
+			Method:      coreapi.PUT,
+			URL:         s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName()),
+			QueryParams: nil,
+			Headers:     headers,
+			Body:        statePostBody,
+		},
+		&coreapi.Request{
+			Method:      coreapi.PUT,
+			URL:         s.getServiceClient().cfg.GetAccessRequestStateURL(s.GetName()),
+			QueryParams: nil,
+			Headers:     headers,
+			Body:        statePostBody,
+		},
+		nil
+}
+
+// UpdateStateWithProperties - Updates the state of subscription
+func (s *AccessRequestSubscription) UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error {
+	if err := s.updateProperties(properties); err != nil {
+		return err
+	}
+
+	propsRequest, stateRequest, err := s.updateAccessRequestState(newState, description, properties)
+	if err != nil {
+		return err
+	}
+
+	for _, request := range []*coreapi.Request{stateRequest, propsRequest} {
+		response, err := s.getServiceClient().apiClient.Send(*request)
+		if err != nil {
+			return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
+		}
+		if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+			readResponseErrors(response.Code, response.Body)
+			return ErrSubscriptionResp.FormatError(response.Code)
+		}
+	}
+	return nil
+}
+
+// UpdateState - Updates the state of subscription
+func (s *AccessRequestSubscription) UpdateState(newState SubscriptionState, description string) error {
+	return s.UpdateStateWithProperties(newState, description, map[string]interface{}{})
+}
+
+// getServiceClient - returns the apic client
+func (s *AccessRequestSubscription) getServiceClient() *ServiceClient {
+	return s.apicClient
+}
+
+// UpdateEnumProperty -
+func (s *AccessRequestSubscription) UpdateEnumProperty(key, newValue, dataType string) error {
+	catalogItemID := s.GetCatalogItemID()
+
+	// First need to get the subscriptionDefProperties for the catalog item
+	ss, err := s.getServiceClient().GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey)
+	if ss == nil || err != nil {
+		return agenterrors.Wrap(ErrGetSubscriptionDefProperties, err.Error())
+	}
+
+	// update the appName in the enum
+	prop := ss.GetProperty(key)
+
+	// first check that the property is unique
+	for _, ele := range prop.Enum {
+		if ele == newValue {
+			return nil
+		}
+	}
+	newOptions := append(prop.Enum, newValue)
+
+	ss.AddProperty(key, dataType, prop.Description, "", true, newOptions)
+	// note: there will be a small time window where the enum items might be out-of-order. The agent will eventually
+	// pick up the changes and update the schema, which will reorder them.
+
+	// update the the subscriptionDefProperties for the catalog item. This MUST be done before updating the subscription
+	err = s.getServiceClient().UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, profileKey, ss)
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	return nil
+}
+
+// UpdateProperties -
+func (s *AccessRequestSubscription) UpdateProperties(appName string) error {
+	err := s.UpdateEnumProperty(appNameKey, appName, subscriptionAppNameType)
+	if err != nil {
+		return err
+	}
+
+	// Now we can update the appname in the subscription itself
+	err = s.updatePropertyValue(profileKey, map[string]interface{}{appNameKey: appName})
+	if err != nil {
+		return agenterrors.Wrap(ErrUpdateSubscriptionDefProperties, err.Error())
+	}
+
+	return nil
+}
+
+// updatePropertyValue - Updates the property value of the subscription
+func (s *AccessRequestSubscription) updatePropertyValue(propertyKey string, value map[string]interface{}) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/%s", s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetID()), propertyKey)
+
+	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		readResponseErrors(response.Code, response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
+}
+
+// UpdatePropertyValues - Updates the property values of the subscription
+func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]interface{}) error {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return err
+	}
+
+	url := s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetName())
+	body, err := json.Marshal(s.AccessRequest)
+
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+	}
+
+	response, err := s.getServiceClient().apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if !(response.Code == http.StatusOK) {
+		readResponseErrors(response.Code, response.Body)
+		return ErrSubscriptionResp.FormatError(response.Code)
+	}
+	return nil
+}
+
+func (s *AccessRequestSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
+	s.ApicID = apiServerResource.Metadata.ID
+	s.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
+	s.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
+	s.RemoteAPIAttributes = apiServerResource.Attributes
+}
+
+// getSubscriptions -
+func (c *ServiceClient) getSubscriptions(states []string) ([]CentralSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state==" + state
+	}
+
+	queryParams["query"] = searchQuery
+
+	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetSubscriptionURL(), queryParams)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
+	}
+
+	subscriptions := make([]uc.CatalogItemSubscription, 0)
+	json.Unmarshal(resBody, &subscriptions)
+
+	// build the Subscription from the UC ones
+	subs := make([]CentralSubscription, 0)
+	for i := range subscriptions {
+		sub := CentralSubscription{
+			CatalogItemSubscription: &subscriptions[i],
+			apicClient:              c,
+		}
+		subs = append(subs, sub)
+	}
+	return subs, nil
+}
+
+// getAccessRequests -
+func (c *ServiceClient) getAccessRequests(states []string) ([]AccessRequestSubscription, error) {
+	queryParams := make(map[string]string)
+
+	searchQuery := ""
+	for _, state := range states {
+		if searchQuery != "" {
+			searchQuery += ","
+		}
+		searchQuery += "state.name==" + state
+	}
+
+	queryParams["query"] = searchQuery
+	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestURL(), queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptions := make([]v1alpha1.AccessRequest, 0)
+	json.Unmarshal(resBody, &subscriptions)
+
+	// build the AccessRequestSubscription from the UC ones
+	subs := make([]AccessRequestSubscription, 0)
+	for i := range subscriptions {
+		sub := AccessRequestSubscription{
+			AccessRequest: &subscriptions[i],
+			apicClient:    c,
+		}
+		subs = append(subs, sub)
+	}
+	return subs, nil
+}
+
+func (c *ServiceClient) sendSubscriptionsRequest(url string, queryParams map[string]string) ([]byte, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:      coreapi.GET,
+		URL:         url,
+		QueryParams: queryParams,
+		Headers:     headers,
+		Body:        nil,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
+	}
+	if response.Code != http.StatusOK && response.Code != http.StatusNotFound {
+		readResponseErrors(response.Code, response.Body)
+		return nil, ErrSubscriptionResp.FormatError(response.Code)
+	}
+
+	return response.Body, nil
+
 }
