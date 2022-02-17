@@ -22,7 +22,6 @@ var (
 	AssetRequestScopes = []string{"Asset"}
 )
 
-const AssetRequestScope = "AssetRelease"
 const AssetRequestResourceName = "assetrequests"
 
 func AssetRequestGVK() apiv1.GroupVersionKind {
