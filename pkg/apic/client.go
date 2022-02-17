@@ -86,6 +86,9 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error
 }
 
 // New creates a new Client

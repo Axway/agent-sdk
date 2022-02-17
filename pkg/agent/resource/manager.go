@@ -2,13 +2,14 @@ package resource
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -30,6 +31,7 @@ type Manager interface {
 	SetAgentResource(agentResource *v1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
+	GetAgentResourceVersion() (string, error)
 }
 
 type agentResourceManager struct {
@@ -196,15 +198,15 @@ func (a *agentResourceManager) updateAgentStatusAPI(resource interface{}, agentR
 
 func (a *agentResourceManager) createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) (*v1.ResourceInstance, error) {
 	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		agentRes := createDiscoveryAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		agentRes := createTraceabilityAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		agentRes := createGovernanceAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
@@ -220,13 +222,38 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 	}
 
 	switch a.getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
+	}
+}
+
+// GetAgentResourceVersion returns the agent version saved on the agent resource.
+func (a *agentResourceManager) GetAgentResourceVersion() (string, error) {
+	ri := a.GetAgentResource()
+	if ri == nil {
+		return "", nil
+	}
+
+	switch a.getAgentResourceType() {
+	case mv1a.DiscoveryAgentResourceName:
+		da := &mv1a.DiscoveryAgent{}
+		err := da.FromInstance(ri)
+		return da.Status.Version, err
+	case mv1a.TraceabilityAgentResourceName:
+		ta := &mv1a.TraceabilityAgent{}
+		err := ta.FromInstance(ri)
+		return ta.Status.Version, err
+	case mv1a.GovernanceAgentResourceName:
+		ga := &mv1a.GovernanceAgent{}
+		err := ga.FromInstance(ri)
+		return ga.Status.Version, err
+	default:
+		return "", fmt.Errorf("unexpected agent type: %s", a.getAgentResourceType())
 	}
 }

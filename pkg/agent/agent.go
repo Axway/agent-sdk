@@ -15,13 +15,13 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -141,12 +141,19 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			} else {
 				agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
 			}
+
+			v, _ := agent.agentResourceManager.GetAgentResourceVersion()
+			am := migrate.NewAttributeMigration(agent.apicClient, centralCfg, strings.Split(v, "-")[0])
+			err = am.Migrate()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	if !agent.isInitialized {
 		setupSignalProcessor()
-		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
+		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
 		}

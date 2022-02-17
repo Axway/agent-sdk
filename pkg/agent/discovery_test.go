@@ -81,6 +81,7 @@ func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
 func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
+
 func (m *mockSvcClient) RegisterSubscriptionWebhook() error {
 	return m.err
 }
@@ -98,27 +99,37 @@ func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { retu
 func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
-func (m *mockSvcClient) DeleteServiceByName(_ string) error                 { return nil }
-func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error   { return nil }
+
+func (m *mockSvcClient) DeleteServiceByName(_ string) error { return nil }
+
+func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
+
 func (m *mockSvcClient) DeleteAPIServiceInstance(instanceName string) error { return nil }
+
 func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
 	return nil
 }
+
 func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
+
 func (m *mockSvcClient) GetConsumerInstancesByExternalAPIID(consumerInstanceID string) ([]*v1alpha1.ConsumerInstance, error) {
 	return nil, nil
 }
 
-func (m *mockSvcClient) GetUserName(ID string) (string, error)         { return "", nil }
+func (m *mockSvcClient) GetUserName(ID string) (string, error) { return "", nil }
+
 func (m *mockSvcClient) GetUserEmailAddress(ID string) (string, error) { return "", nil }
+
 func (m *mockSvcClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]apic.CentralSubscription, error) {
 	return nil, nil
 }
+
 func (m *mockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
 	return nil, nil
 }
+
 func (m *mockSvcClient) Healthcheck(name string) *hc.Status {
 	return &hc.Status{Result: hc.OK}
 }
@@ -129,9 +140,11 @@ func (m *mockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 }
 
 func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "", nil }
+
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
+
 func (m *mockSvcClient) OnConfigChange(cfg corecfg.CentralConfig) {}
 
 func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
@@ -150,6 +163,18 @@ func (m *mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList)
 
 func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
 	return nil, nil
+}
+
+func (m *mockSvcClient) UpdateAPIV1ResourceInstance(_ string, _ *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+	return nil
+}
+
+func (m *mockSvcClient) CreateSubResourceUnscoped(_, _, _, _ string, _ map[string]interface{}) error {
+	return nil
 }
 
 func TestDiscoveryCache(t *testing.T) {
