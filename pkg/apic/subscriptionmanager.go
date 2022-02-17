@@ -70,35 +70,21 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
-	var subStateMap = map[SubscriptionState]SubscriptionState{
-		SubscriptionApproved:             AccessRequestProvisioning,
-		SubscriptionRequested:            AccessRequestFailedProvisioning,
-		SubscriptionRejected:             AccessRequestFailedProvisioning,
-		SubscriptionActive:               AccessRequestProvisioned,
-		SubscriptionUnsubscribed:         AccessRequestDeprovisioned,
-		SubscriptionUnsubscribeInitiated: AccessRequestDeprovisioning,
-		SubscriptionFailedToSubscribe:    AccessRequestFailedProvisioning,
-		SubscriptionFailedToUnsubscribe:  AccessRequestFailedProvisioning,
-	}
-	mappedState, ok := subStateMap[state]
-	if ok {
+	if state.IsUnifiedCatalogState() {
 		processorList, ok := sm.processorMap[state]
 		if !ok {
 			processorList = make([]SubscriptionProcessor, 0)
 		}
 		sm.ucStatesToQuery = append(sm.ucStatesToQuery, string(state))
 		sm.processorMap[state] = append(processorList, processor)
-	} else {
-		// access requst processor only
-		mappedState = state
 	}
 
-	processorList, ok := sm.processorMap[mappedState]
+	processorList, ok := sm.processorMap[state.GetAccessRequestState()]
 	if !ok {
 		processorList = make([]SubscriptionProcessor, 0)
 	}
-	sm.arStatesToQuery = append(sm.arStatesToQuery, string(mappedState))
-	sm.processorMap[mappedState] = append(processorList, processor)
+	sm.arStatesToQuery = append(sm.arStatesToQuery, string(state.GetAccessRequestState()))
+	sm.processorMap[state.GetAccessRequestState()] = append(processorList, processor)
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
@@ -125,7 +111,7 @@ func (sm *subscriptionManager) Execute() error {
 	if err != nil {
 		return err
 	}
-	// query for central accress requests
+	// query for central access requests
 	accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
 	subscriptions = append(subscriptions, accessRequests...)
 	if err == nil {

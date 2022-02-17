@@ -32,6 +32,29 @@ const (
 	AccessRequestFailedDeprovisioning = SubscriptionState("failedDeprovisioning")
 )
 
+var catalogToAccessRequestStateMap = map[SubscriptionState]SubscriptionState{
+	SubscriptionApproved:             AccessRequestProvisioning,
+	SubscriptionRequested:            AccessRequestFailedProvisioning,
+	SubscriptionRejected:             AccessRequestFailedProvisioning,
+	SubscriptionActive:               AccessRequestProvisioned,
+	SubscriptionUnsubscribed:         AccessRequestDeprovisioned,
+	SubscriptionUnsubscribeInitiated: AccessRequestDeprovisioning,
+	SubscriptionFailedToSubscribe:    AccessRequestFailedProvisioning,
+	SubscriptionFailedToUnsubscribe:  AccessRequestFailedDeprovisioning,
+}
+
+func (s SubscriptionState) GetAccessRequestState() SubscriptionState {
+	if state, found := catalogToAccessRequestStateMap[s]; found {
+		return state
+	}
+	return s
+}
+
+func (s SubscriptionState) IsUnifiedCatalogState() bool {
+	_, found := catalogToAccessRequestStateMap[s]
+	return found
+}
+
 const (
 	appNameKey              = "appName"
 	subscriptionAppNameType = "string"
@@ -176,60 +199,71 @@ func (s *CentralSubscription) updateProperties(properties map[string]interface{}
 	return s.updatePropertyValue(profileKey, allProps)
 }
 
+func (s *CentralSubscription) updateAccessRequestState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, error) {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	s.AccessRequest.State = v1alpha1.AccessRequestState{
+		Message: description,
+		Name:    string(newState.GetAccessRequestState()),
+	}
+	statePostBody, err := json.Marshal(s.AccessRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return &coreapi.Request{
+		Method:      coreapi.PUT,
+		URL:         s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName()),
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        statePostBody,
+	}, nil
+}
+
+func (s *CentralSubscription) updateCatalogSubscriptionState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, error) {
+	headers, err := s.getServiceClient().createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	subState := uc.CatalogItemSubscriptionState{
+		Description: description,
+		State:       string(newState),
+	}
+	statePostBody, err := json.Marshal(subState)
+	if err != nil {
+		return nil, err
+	}
+	return &coreapi.Request{
+		Method:      coreapi.POST,
+		URL:         s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID()),
+		QueryParams: nil,
+		Headers:     headers,
+		Body:        statePostBody,
+	}, nil
+}
+
 // UpdateStateWithProperties - Updates the state of subscription
 func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error {
-	headers, err := s.getServiceClient().createHeader()
+	var request *coreapi.Request
+	var err error
+	if s.IsUsingAccessRequest() {
+		request, err = s.updateAccessRequestState(newState, description, properties)
+	} else {
+		request, err = s.updateCatalogSubscriptionState(newState, description, properties)
+	}
 	if err != nil {
 		return err
 	}
 
-	var request coreapi.Request
-	var statePostBody []byte
-	var subStateURL string
-
-	if s.IsUsingAccessRequest() {
-		subStateURL = s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName())
-		s.AccessRequest.State = v1alpha1.AccessRequestState{
-			Message: description,
-			Name:    string(newState),
-		}
-		statePostBody, err = json.Marshal(s.AccessRequest)
-		if err != nil {
-			return err
-		}
-
-		request = coreapi.Request{
-			Method:      coreapi.PUT,
-			URL:         subStateURL,
-			QueryParams: nil,
-			Headers:     headers,
-			Body:        statePostBody,
-		}
-	} else {
-		subStateURL = s.getServiceClient().cfg.GetCatalogItemSubscriptionStatesURL(s.GetCatalogItemID(), s.GetID())
-
-		subState := uc.CatalogItemSubscriptionState{
-			Description: description,
-			State:       string(newState),
-		}
-		statePostBody, err := json.Marshal(subState)
-		if err != nil {
-			return err
-		}
-		request = coreapi.Request{
-			Method:      coreapi.POST,
-			URL:         subStateURL,
-			QueryParams: nil,
-			Headers:     headers,
-			Body:        statePostBody,
-		}
-	}
-
-	if err = s.updateProperties(properties); err != nil {
+	if err := s.updateProperties(properties); err != nil {
 		return err
 	}
 
-	response, err := s.getServiceClient().apiClient.Send(request)
+	response, err := s.getServiceClient().apiClient.Send(*request)
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
 	}
