@@ -126,47 +126,48 @@ func (sm *subscriptionManager) Execute() error {
 
 func (sm *subscriptionManager) processSubscriptions() {
 	for {
+		var subscription Subscription
+		isAccessRequest := false
 		select {
 		case msg, ok := <-sm.ucSubReceiveChannel:
 			if ok {
-				subscription, _ := msg.(CentralSubscription)
-				id := subscription.GetID()
-				if !sm.isItemOnLocklist(id) {
-					sm.addLocklistItem(id)
-					log.Tracef("checking if we should handle subscription %s", subscription.GetName())
-					err := sm.preprocessSubscription(&subscription)
-					if err != nil {
-						log.Error(err)
-					}
-					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-						log.Infof("Subscription %s received", subscription.GetName())
-						sm.invokeProcessor(&subscription)
-						log.Infof("Subscription %s processed", subscription.GetName())
-					}
-					sm.removeLocklistItem(id)
-				}
+				centralSub := msg.(CentralSubscription)
+				subscription = &centralSub
 			}
 		case msg, ok := <-sm.accReqReceiveChannel:
+			isAccessRequest = true
 			if ok {
-				subscription, _ := msg.(AccessRequestSubscription)
-				id := subscription.GetID()
-				if !sm.isItemOnLocklist(id) {
-					sm.addLocklistItem(id)
-					log.Tracef("checking if we should handle subscription %s", subscription.GetName())
-					err := sm.preprocessAccessRequest(&subscription)
-					if err != nil {
-						log.Error(err)
-					}
-					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-						log.Infof("Subscription %s received", subscription.GetName())
-						sm.invokeProcessor(&subscription)
-						log.Infof("Subscription %s processed", subscription.GetName())
-					}
-					sm.removeLocklistItem(id)
-				}
+				accReq := msg.(AccessRequestSubscription)
+				subscription = &accReq
 			}
 		case <-sm.receiverQuitChannel:
 			return
+		}
+		if subscription != nil {
+			id := subscription.GetID()
+			if !sm.isItemOnLocklist(id) {
+				sm.addLocklistItem(id)
+				log.Tracef("checking if we should handle subscription %s", subscription.GetName())
+				var err error
+				if isAccessRequest {
+					accessReq := subscription.(*AccessRequestSubscription)
+					err = sm.preprocessAccessRequest(accessReq)
+				} else {
+					centralSub := subscription.(*CentralSubscription)
+					err = sm.preprocessSubscription(centralSub)
+				}
+				if err != nil {
+					log.Error(err)
+				}
+				if err == nil && subscription.GetApicID() != "" && subscription.GetRemoteAPIID() != "" {
+					log.Infof("Subscription %s received", subscription.GetName())
+					sm.invokeProcessor(subscription)
+					log.Infof("Subscription %s processed", subscription.GetName())
+				} else {
+					log.Tracef("Skipping subscription %s api service not on this dataplane", subscription.GetName())
+				}
+				sm.removeLocklistItem(id)
+			}
 		}
 	}
 }

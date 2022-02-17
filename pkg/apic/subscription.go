@@ -180,7 +180,7 @@ func (s *CentralSubscription) updateProperties(properties map[string]interface{}
 	return s.updatePropertyValue(profileKey, allProps)
 }
 
-func (s *CentralSubscription) updateCatalogSubscriptionState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, error) {
+func (s *CentralSubscription) updateCatalogSubscriptionState(newState SubscriptionState, description string) (*coreapi.Request, error) {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return nil, err
@@ -205,22 +205,18 @@ func (s *CentralSubscription) updateCatalogSubscriptionState(newState Subscripti
 
 // UpdateStateWithProperties - Updates the state of subscription
 func (s *CentralSubscription) UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error {
-
-	request, err := s.updateCatalogSubscriptionState(newState, description, properties)
-
-	if err != nil {
-		return err
-	}
-
 	if err := s.updateProperties(properties); err != nil {
 		return err
 	}
 
-	response, err := s.getServiceClient().apiClient.Send(*request)
+	request, err := s.updateCatalogSubscriptionState(newState, description)
 	if err != nil {
-		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
+		return err
 	}
-	if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+
+	if response, err := s.getServiceClient().apiClient.Send(*request); err != nil {
+		return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
+	} else if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
 		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
@@ -451,7 +447,7 @@ func (s *AccessRequestSubscription) updateProperties(properties map[string]inter
 	return s.updatePropertyValue(profileKey, allProps)
 }
 
-func (s *AccessRequestSubscription) updateAccessRequestState(newState SubscriptionState, description string, properties map[string]interface{}) (*coreapi.Request, *coreapi.Request, error) {
+func (s *AccessRequestSubscription) updateAccessRequestState(newState SubscriptionState, description string) (*coreapi.Request, *coreapi.Request, error) {
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return nil, nil, err
@@ -489,17 +485,15 @@ func (s *AccessRequestSubscription) UpdateStateWithProperties(newState Subscript
 		return err
 	}
 
-	propsRequest, stateRequest, err := s.updateAccessRequestState(newState, description, properties)
+	propsRequest, stateRequest, err := s.updateAccessRequestState(newState, description)
 	if err != nil {
 		return err
 	}
 
 	for _, request := range []*coreapi.Request{stateRequest, propsRequest} {
-		response, err := s.getServiceClient().apiClient.Send(*request)
-		if err != nil {
+		if response, err := s.getServiceClient().apiClient.Send(*request); err != nil {
 			return agenterrors.Wrap(ErrSubscriptionQuery, err.Error())
-		}
-		if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
+		} else if !(response.Code == http.StatusOK || response.Code == http.StatusCreated) {
 			readResponseErrors(response.Code, response.Body)
 			return ErrSubscriptionResp.FormatError(response.Code)
 		}
