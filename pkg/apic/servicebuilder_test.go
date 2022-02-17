@@ -30,6 +30,20 @@ func TestNewServiceBodyBuilder(t *testing.T) {
 func TestServiceBodySetters(t *testing.T) {
 	tags := map[string]interface{}{"tag1": "t1", "tag2": "t2"}
 	attribs := map[string]string{"attrib1": "a1", "attrib2": "a2"}
+	revAttr := map[string]string{"svc": "attr"}
+	instAttr := map[string]string{"inst": "attr"}
+	svcDetails := map[string]interface{}{"svc": "details"}
+	instDetails := map[string]interface{}{"inst": "details"}
+	revDetails := map[string]interface{}{"rev": "details"}
+	ep := []EndpointDefinition{
+		{
+			Protocol: "https",
+			Host:     "test.com",
+			Port:     443,
+			BasePath: "/test",
+		},
+	}
+
 	serviceBuilder := NewServiceBodyBuilder()
 	sb, err := serviceBuilder.
 		SetTitle("sbtitle").
@@ -54,6 +68,8 @@ func TestServiceBodySetters(t *testing.T) {
 		SetResourceType("foobar").
 		SetTags(tags).
 		SetServiceAttribute(attribs).
+		SetRevisionAttribute(revAttr).
+		SetInstanceAttribute(instAttr).
 		SetUnstructuredContentType("application/zip").
 		SetUnstructuredFilename("test.zip").
 		SetUnstructuredLabel("Label").
@@ -61,6 +77,10 @@ func TestServiceBodySetters(t *testing.T) {
 		SetAltRevisionPrefix("1.1.1").
 		SetTeamName("00000").
 		SetCategories([]string{"CategoryA", "CategoryB", "CategoryC"}).
+		SetServiceAgentDetails(svcDetails).
+		SetInstanceAgentDetails(instDetails).
+		SetRevisionAgentDetails(revDetails).
+		SetServiceEndpoints(ep).
 		Build()
 
 	assert.Nil(t, err)
@@ -99,6 +119,12 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "Type", sb.UnstructuredProps.AssetType)
 	assert.Equal(t, "00000", sb.TeamName)
 	assert.Equal(t, []string{"CategoryA", "CategoryB", "CategoryC"}, sb.categoryTitles)
+	assert.Equal(t, ep, sb.Endpoints)
+	assert.Equal(t, revAttr, sb.RevisionAttributes)
+	assert.Equal(t, instAttr, sb.InstanceAttributes)
+	assert.Equal(t, svcDetails, sb.ServiceAgentDetails)
+	assert.Equal(t, instDetails, sb.InstanceAgentDetails)
+	assert.Equal(t, revDetails, sb.RevisionAgentDetails)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {

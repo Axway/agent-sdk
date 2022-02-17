@@ -33,9 +33,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: apiService,
 						},
 					},
-					Attributes: map[string]string{
-						definitions.AttrExternalAPIID:   "123",
-						definitions.AttrExternalAPIName: "name",
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID:   "123",
+							definitions.AttrExternalAPIName: "name",
+						},
 					},
 				},
 			},
@@ -51,10 +53,12 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: apiService,
 						},
 					},
-					Attributes: map[string]string{
-						definitions.AttrExternalAPIID:         "123",
-						definitions.AttrExternalAPIPrimaryKey: "abc",
-						definitions.AttrExternalAPIName:       "name",
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID:         "123",
+							definitions.AttrExternalAPIPrimaryKey: "abc",
+							definitions.AttrExternalAPIName:       "name",
+						},
 					},
 				},
 			},
@@ -70,7 +74,9 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: apiService,
 						},
 					},
-					Attributes: map[string]string{},
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{},
+					},
 				},
 			},
 		},
@@ -85,9 +91,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: apiService,
 						},
 					},
-					Attributes: map[string]string{
-						definitions.AttrExternalAPIID:   "123",
-						definitions.AttrExternalAPIName: "name",
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID:   "123",
+							definitions.AttrExternalAPIName: "name",
+						},
 					},
 				},
 			},
@@ -103,7 +111,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 							Kind: category,
 						},
 					},
-					Attributes: map[string]string{},
+					SubResources: map[string]interface{}{},
 				},
 			},
 		},

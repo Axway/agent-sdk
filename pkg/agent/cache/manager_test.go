@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -12,17 +12,20 @@ import (
 )
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
-	attributes := map[string]string{
-		definitions.AttrExternalAPIID:   apiID,
-		definitions.AttrExternalAPIName: apiName,
+	sub := map[string]interface{}{
+		defs.AttrExternalAPIID:   apiID,
+		defs.AttrExternalAPIName: apiName,
 	}
+
 	if primaryKey != "" {
-		attributes[definitions.AttrExternalAPIPrimaryKey] = primaryKey
+		sub[defs.AttrExternalAPIPrimaryKey] = primaryKey
 	}
 
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
-			Attributes: attributes,
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: sub,
+			},
 		},
 	}
 }
@@ -68,12 +71,14 @@ func TestAPIServiceCache(t *testing.T) {
 	api1 := createAPIService("id1", "api1", "")
 	api2 := createAPIService("id2", "api2", "api2key")
 
-	externalAPIID := m.AddAPIService(api1)
-	assert.Equal(t, "id1", externalAPIID)
-	externalAPIID = m.AddAPIService(api2)
-	assert.Equal(t, "id2", externalAPIID)
-	externalAPIID = m.AddAPIService(api2)
-	assert.Equal(t, "id2", externalAPIID)
+	err := m.AddAPIService(api1)
+	assert.Nil(t, err)
+
+	err = m.AddAPIService(api2)
+	assert.Nil(t, err)
+
+	err = m.AddAPIService(api2)
+	assert.Nil(t, err)
 
 	cachedAPI := m.GetAPIServiceWithAPIID("id1")
 	assert.Equal(t, api1, cachedAPI)
@@ -93,7 +98,7 @@ func TestAPIServiceCache(t *testing.T) {
 	cachedAPI = m.GetAPIServiceWithPrimaryKey("api2key")
 	assert.Equal(t, api2, cachedAPI)
 
-	err := m.DeleteAPIService("api1")
+	err = m.DeleteAPIService("api1")
 	assert.Nil(t, err)
 	cachedAPI = m.GetAPIServiceWithAPIID("api1")
 	assert.Nil(t, cachedAPI)
@@ -203,7 +208,8 @@ func TestCachePersistenc(t *testing.T) {
 	assert.NotNil(t, m)
 
 	api1 := createAPIService("id1", "api1", "")
-	m.AddAPIService(api1)
+	err := m.AddAPIService(api1)
+	assert.Nil(t, err)
 
 	instance1 := createAPIServiceInstance("id1")
 	m.AddAPIServiceInstance(instance1)
@@ -250,4 +256,5 @@ func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual 
 	assert.Equal(t, expected.Metadata.ID, actual.Metadata.ID)
 	assert.Equal(t, expected.Attributes, actual.Attributes)
 	assert.Equal(t, expected.Spec, actual.Spec)
+	assert.Equal(t, expected.SubResources, actual.SubResources)
 }

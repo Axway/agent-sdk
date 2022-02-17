@@ -97,3 +97,83 @@ func TestLoadEnvFromFile(t *testing.T) {
 	b, _ = strconv.ParseBool(os.Getenv("CENTRAL_USAGEREPORTING_OFFLINE"))
 	assert.Equal(t, "https://test.net", os.Getenv("CENTRAL_AUTH_URL"))
 }
+
+func TestMergeMapStringInterface(t *testing.T) {
+	m1 := map[string]interface{}{
+		"foo": "foo1",
+		"baz": "baz1",
+		"aaa": "aaa1",
+	}
+	m2 := map[string]interface{}{
+		"foo":  "foo2",
+		"baz":  "baz2",
+		"quux": "quux2",
+		"asdf": "asdf2",
+	}
+
+	result := MergeMapStringInterface(m1, m2)
+	assert.Equal(t, m1["aaa"], result["aaa"])
+	assert.Equal(t, m2["foo"], result["foo"])
+	assert.Equal(t, m2["baz"], result["baz"])
+	assert.Equal(t, m2["quux"], result["quux"])
+	assert.Equal(t, m2["asdf"], result["asdf"])
+
+	m3 := map[string]interface{}{
+		"foo":  "foo3",
+		"zxcv": "zxcv3",
+	}
+
+	resul2t := MergeMapStringInterface(m1, m2, m3)
+	assert.Equal(t, m1["aaa"], resul2t["aaa"])
+	assert.Equal(t, m2["baz"], resul2t["baz"])
+	assert.Equal(t, m2["quux"], resul2t["quux"])
+	assert.Equal(t, m2["asdf"], resul2t["asdf"])
+	assert.Equal(t, m3["foo"], resul2t["foo"])
+	assert.Equal(t, m3["zxcv"], resul2t["zxcv"])
+
+	result3 := MergeMapStringInterface(nil)
+	assert.NotNil(t, result3)
+
+	result4 := MergeMapStringInterface(m1, nil)
+	assert.NotNil(t, result4)
+}
+
+func TestMergeMapStringString(t *testing.T) {
+	m1 := map[string]string{
+		"foo": "foo1",
+		"baz": "baz1",
+		"aaa": "aaa1",
+	}
+	m2 := map[string]string{
+		"foo":  "foo2",
+		"baz":  "baz2",
+		"quux": "quux2",
+		"asdf": "asdf2",
+	}
+
+	result := MergeMapStringString(m1, m2)
+	assert.Equal(t, m1["aaa"], result["aaa"])
+	assert.Equal(t, m2["foo"], result["foo"])
+	assert.Equal(t, m2["baz"], result["baz"])
+	assert.Equal(t, m2["quux"], result["quux"])
+	assert.Equal(t, m2["asdf"], result["asdf"])
+
+	m3 := map[string]string{
+		"foo":  "foo3",
+		"zxcv": "zxcv3",
+	}
+
+	result2 := MergeMapStringString(m1, m2, m3)
+	assert.Equal(t, m1["aaa"], result2["aaa"])
+	assert.Equal(t, m2["baz"], result2["baz"])
+	assert.Equal(t, m2["quux"], result2["quux"])
+	assert.Equal(t, m2["asdf"], result2["asdf"])
+	assert.Equal(t, m3["foo"], result2["foo"])
+	assert.Equal(t, m3["zxcv"], result2["zxcv"])
+
+	result3 := MergeMapStringString(nil)
+	assert.NotNil(t, result3)
+
+	result4 := MergeMapStringString(m1, nil)
+	assert.NotNil(t, result4)
+}

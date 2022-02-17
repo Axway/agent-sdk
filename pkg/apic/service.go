@@ -9,7 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -21,10 +22,8 @@ import (
 type actionType int
 
 const (
-	none      actionType = iota
-	addAPI               = iota
-	updateAPI            = iota
-	deleteAPI            = iota
+	addAPI    = iota
+	updateAPI = iota
 )
 
 const (
@@ -69,8 +68,8 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIS
 }
 
 // DeleteServiceByName -
-func (c *ServiceClient) DeleteServiceByName(apiName string) error {
-	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+apiName, nil)
+func (c *ServiceClient) DeleteServiceByName(name string) error {
+	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+name, nil)
 	if err != nil {
 		return err
 	}
@@ -101,13 +100,13 @@ func (c *ServiceClient) RegisterSubscriptionWebhook() error {
 }
 
 // GetCatalogItemIDForConsumerInstance -
-func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
-	return c.getCatalogItemIDForConsumerInstance(instanceID)
+func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(id string) (string, error) {
+	return c.getCatalogItemIDForConsumerInstance(id)
 }
 
 // DeleteConsumerInstance -
-func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
-	return c.deleteConsumerInstance(instanceName)
+func (c *ServiceClient) DeleteConsumerInstance(name string) error {
+	return c.deleteConsumerInstance(name)
 }
 
 // DeleteAPIServiceInstance deletes an api service instance in central by name
@@ -161,35 +160,25 @@ func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	}
 }
 
-func (c *ServiceClient) buildAPIResourceAttributes(serviceBody *ServiceBody, additionalAttr map[string]string, isAPIService bool) map[string]string {
-	attributes := make(map[string]string)
-
-	// Add attributes from resource if present
-	for key, val := range additionalAttr {
-		attributes[key] = val
-	}
-
-	// Add attributes from service body setup by agent
-	if serviceBody.ServiceAttributes != nil {
-		for key, val := range serviceBody.ServiceAttributes {
-			attributes[key] = val
-		}
-	}
+func buildAgentDetailsSubResource(
+	serviceBody *ServiceBody, isAPIService bool, additional map[string]interface{},
+) map[string]interface{} {
+	details := make(map[string]interface{})
 
 	externalAPIID := serviceBody.RestAPIID
-	// check to see if its an APIService
+	// check to see if is an APIService
 	if !isAPIService && serviceBody.Stage != "" {
-		attributes[definitions.AttrExternalAPIStage] = serviceBody.Stage
+		details[defs.AttrExternalAPIStage] = serviceBody.Stage
 	}
 	if serviceBody.PrimaryKey != "" {
-		attributes[definitions.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
+		details[defs.AttrExternalAPIPrimaryKey] = serviceBody.PrimaryKey
 	}
 
-	attributes[definitions.AttrExternalAPIID] = externalAPIID
-	attributes[definitions.AttrExternalAPIName] = serviceBody.APIName
-	attributes[definitions.AttrCreatedBy] = serviceBody.CreatedBy
+	details[defs.AttrExternalAPIID] = externalAPIID
+	details[defs.AttrExternalAPIName] = serviceBody.APIName
+	details[defs.AttrCreatedBy] = serviceBody.CreatedBy
 
-	return attributes
+	return util.MergeMapStringInterface(details, additional)
 }
 
 func isValidAuthPolicy(auth string) bool {

@@ -21,11 +21,7 @@
       "resourceVersion": "2239",
       "references": []
     },
-    "attributes": {
-      "release": "1.0.0",
-      "x-axway-agent": "true",
-      "externalAPIID": "fooapi"
-    },
+    "attributes": {},
     "tags": [
       "prod",
       "axway",
@@ -33,6 +29,9 @@
     ],
     "spec": {
       "description": "best api ever"
+    },
+    "x-agent-details": {
+      "externalAPIID": "fooapi"
     }
   }
 ]

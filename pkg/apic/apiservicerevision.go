@@ -13,17 +13,19 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
+
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-//TODO
+// TODO
 /*
 	1. Search for comment "DEPRECATED to be removed on major release"
 	2. Remove deprecated code left from APIGOV-19751
@@ -51,41 +53,47 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevisionSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceRevisionSpec {
-	return v1alpha1.ApiServiceRevisionSpec{
-		ApiService: serviceBody.serviceContext.serviceName,
-		Definition: v1alpha1.ApiServiceRevisionSpecDefinition{
-			Type:  c.getRevisionDefinitionType(*serviceBody),
-			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
-		},
-	}
-}
-
-func (c *ServiceClient) buildAPIServiceRevisionResource(serviceBody *ServiceBody, revAttributes map[string]string, revisionName string) *v1alpha1.APIServiceRevision {
-	return &v1alpha1.APIServiceRevision{
+func (c *ServiceClient) buildAPIServiceRevision(
+	serviceBody *ServiceBody, name string,
+) *mv1a.APIServiceRevision {
+	rev := &mv1a.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.APIServiceRevisionGVK(),
-			Name:             revisionName,
+			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
+			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, revAttributes, false),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.RevisionAttributes),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  c.buildAPIServiceRevisionSpec(serviceBody),
+		Spec:  buildAPIServiceRevisionSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
+
+	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, revDetails)
+	util.SetAgentDetails(rev, agentDetails)
+
+	return rev
 }
 
-func (c *ServiceClient) updateRevisionResource(revision *v1alpha1.APIServiceRevision, serviceBody *ServiceBody) *v1alpha1.APIServiceRevision {
-	revision.ResourceMeta.Metadata.ResourceVersion = ""
+func (c *ServiceClient) updateAPIServiceRevision(
+	serviceBody *ServiceBody, revision *mv1a.APIServiceRevision,
+) *mv1a.APIServiceRevision {
+	revision.GroupVersionKind = mv1a.APIServiceRevisionGVK()
+	revision.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
-	revision.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, revision.ResourceMeta.Attributes, false)
-	revision.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	revision.Spec = c.buildAPIServiceRevisionSpec(serviceBody)
+	revision.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.RevisionAttributes)
+	revision.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
 	revision.Owner = c.getOwnerObject(serviceBody, false)
+
+	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
+	details := buildAgentDetailsSubResource(serviceBody, false, revDetails)
+	util.SetAgentDetails(revision, details)
+
 	return revision
 }
 
-//processRevision -
+// processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	err := c.setRevisionAction(serviceBody)
 
@@ -94,11 +102,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	}
 
 	var httpMethod string
-	revAttributes := serviceBody.RevisionAttributes
-	if revAttributes == nil {
-		revAttributes = make(map[string]string)
-	}
-	revisionPrefix := c.getRevisionPrefix(serviceBody)
+
+	revisionPrefix := getRevisionPrefix(serviceBody)
 	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 	revisionURL := c.cfg.GetRevisionsURL()
 	revision := serviceBody.serviceContext.previousRevision
@@ -111,7 +116,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
 
-		revision = c.updateRevisionResource(revision, serviceBody)
+		revision = c.updateAPIServiceRevision(serviceBody, revision)
 		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	}
 
@@ -125,10 +130,20 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		if serviceBody.AltRevisionPrefix == "" {
 			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
 		}
+
+		revision = c.buildAPIServiceRevision(serviceBody, revisionName)
+
 		if serviceBody.serviceContext.previousRevision != nil {
-			revAttributes[definitions.AttrPreviousAPIServiceRevisionID] = serviceBody.serviceContext.previousRevision.Metadata.ID
+			err := util.SetAgentDetailsKey(
+				revision,
+				defs.AttrPreviousAPIServiceRevisionID,
+				serviceBody.serviceContext.previousRevision.Metadata.ID,
+			)
+			if err != nil {
+				log.Errorf("failed to set previous revision id to subresource for %s. error: %s", serviceBody.APIName, err)
+			}
 		}
-		revision = c.buildAPIServiceRevisionResource(serviceBody, revAttributes, revisionName)
+
 		log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	}
 
@@ -140,12 +155,32 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	_, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
 		}
 		return err
+	}
+
+	if err == nil {
+		if len(revision.SubResources) > 0 {
+			err = c.CreateSubResourceScoped(
+				mv1a.EnvironmentResourceName,
+				c.cfg.GetEnvironmentName(),
+				revision.PluralName(),
+				revision.Name,
+				revision.Group,
+				revision.APIVersion,
+				revision.SubResources,
+			)
+			if err != nil {
+				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+				if rollbackErr != nil {
+					return errors.New(err.Error() + rollbackErr.Error())
+				}
+			}
+		}
 	}
 
 	serviceBody.serviceContext.revisionName = revisionName
@@ -154,21 +189,14 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
-// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*v1alpha1.APIServiceRevision
-func (c *ServiceClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
-	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), stage)
+// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*mv1a.APIServiceRevision
+func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error) {
+	revisions, err := c.GetAPIServiceRevisions(query, c.cfg.GetRevisionsURL(), stage)
 	if err != nil {
 		return nil, err
 	}
 
 	return revisions, nil
-}
-
-func (c *ServiceClient) getRevisionPrefix(serviceBody *ServiceBody) string {
-	if serviceBody.Stage != "" {
-		return sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
-	}
-	return sanitizeAPIName(serviceBody.serviceContext.serviceName)
 }
 
 func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
@@ -201,15 +229,7 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	return nil
 }
 
-//getRevisionDefinitionType -
-func (c *ServiceClient) getRevisionDefinitionType(serviceBody ServiceBody) string {
-	if serviceBody.ResourceType == "" {
-		return Unstructured
-	}
-	return serviceBody.ResourceType
-}
-
-//DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
+// DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"
 // updateAPIServiceRevisionTitle - update title after creating or updating APIService Revision according to the APIServiceRevision Pattern
 func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) string {
 	apiSvcRevPattern := c.cfg.GetAPIServiceRevisionPattern()
@@ -221,7 +241,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 	var dateFormat = ""
 
 	if dateRegEx.MatchString(apiSvcRevPattern) {
-		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              //{{.Date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
+		datePattern := dateRegEx.FindString(apiSvcRevPattern)                              // {{.Date:YYYY/MM/DD}} or one of the validate formats from apiSvcRevTitleDateMap
 		index := strings.Index(datePattern, ":")                                           // get index of ":" (colon)
 		date := datePattern[index+1 : index+11]                                            // sub out "{{.Date:" and "}}" to get the format of the date only
 		dateFormat = apiSvcRevTitleDateMap[date]                                           // make sure dateFormat is a valid date format
@@ -275,7 +295,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 }
 
 // GetAPIRevisionByName - Returns the API revision based on its revision name
-func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
+func (c *ServiceClient) GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -283,7 +303,7 @@ func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.API
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetRevisionsURL() + "/" + revisionName,
+		URL:     c.cfg.GetRevisionsURL() + "/" + name,
 		Headers: headers,
 	}
 
@@ -298,7 +318,32 @@ func (c *ServiceClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.API
 		}
 		return nil, nil
 	}
-	apiRevision := new(v1alpha1.APIServiceRevision)
-	json.Unmarshal(response.Body, apiRevision)
-	return apiRevision, nil
+	apiRevision := new(mv1a.APIServiceRevision)
+	err = json.Unmarshal(response.Body, apiRevision)
+	return apiRevision, err
+}
+
+func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) mv1a.ApiServiceRevisionSpec {
+	return mv1a.ApiServiceRevisionSpec{
+		ApiService: serviceBody.serviceContext.serviceName,
+		Definition: mv1a.ApiServiceRevisionSpecDefinition{
+			Type:  getRevisionDefinitionType(*serviceBody),
+			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
+		},
+	}
+}
+
+func getRevisionPrefix(serviceBody *ServiceBody) string {
+	if serviceBody.Stage != "" {
+		return sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
+	}
+	return sanitizeAPIName(serviceBody.serviceContext.serviceName)
+}
+
+// getRevisionDefinitionType -
+func getRevisionDefinitionType(serviceBody ServiceBody) string {
+	if serviceBody.ResourceType == "" {
+		return Unstructured
+	}
+	return serviceBody.ResourceType
 }

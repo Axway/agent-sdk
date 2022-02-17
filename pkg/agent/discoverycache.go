@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
@@ -20,7 +22,7 @@ import (
 const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
-	apiServerFields     = "metadata,name,title,owner,attributes"
+	apiServerFields     = "metadata,name,title,owner,attributes,x-agent-details"
 	queryFormatString   = "%s>\"%s\""
 )
 
@@ -53,13 +55,13 @@ func newDiscoveryCache(agentResourceManager resource.Manager, getAll bool, insta
 	}
 }
 
-//Ready -
+// Ready -
 func (j *discoveryCache) Ready() bool {
 	status := j.getHCStatus(healthcheckEndpoint)
 	return status == hc.OK
 }
 
-//Status -
+// Status -
 func (j *discoveryCache) Status() error {
 	status := j.getHCStatus(healthcheckEndpoint)
 	if status == hc.OK {
@@ -68,7 +70,7 @@ func (j *discoveryCache) Status() error {
 	return fmt.Errorf("could not establish a connection to APIC to update the cache")
 }
 
-//Execute -
+// Execute -
 func (j *discoveryCache) Execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
@@ -98,18 +100,25 @@ func (j *discoveryCache) updateAPICache() {
 	}
 	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, agent.cfg.GetServicesURL(), apiServerPageSize)
 
-	for _, apiService := range apiServices {
-		if _, valid := apiService.Attributes[definitions.AttrExternalAPIID]; !valid {
-			continue // skip service without external api id
+	for _, svc := range apiServices {
+		externalAPIID, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
+		// skip service without external api id
+		if externalAPIID == "" {
+			continue
 		}
 		// Update the lastServiceTime based on the newest service found
-		thisTime := time.Time(apiService.Metadata.Audit.CreateTimestamp)
+		thisTime := time.Time(svc.Metadata.Audit.CreateTimestamp)
 		if j.lastServiceTime.Before(thisTime) {
 			j.lastServiceTime = thisTime
 		}
 
-		externalAPIID := agent.cacheManager.AddAPIService(apiService)
-		if externalAPIPrimaryKey, found := apiService.Attributes[definitions.AttrExternalAPIPrimaryKey]; found {
+		err := agent.cacheManager.AddAPIService(svc)
+		if err != nil {
+			log.Errorf("error adding API service to cache: %s", err)
+			continue
+		}
+		externalAPIPrimaryKey, _ := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIPrimaryKey)
+		if externalAPIPrimaryKey != "" {
 			existingAPIs[externalAPIPrimaryKey] = true
 		} else {
 			existingAPIs[externalAPIID] = true
@@ -153,7 +162,8 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
 	for _, instance := range serviceInstances {
-		if _, valid := instance.Attributes[definitions.AttrExternalAPIID]; !valid {
+		id, _ := util.GetAgentDetailsValue(instance, definitions.AttrExternalAPIID)
+		if id == "" {
 			continue // skip instance without external api id
 		}
 		agent.cacheManager.AddAPIServiceInstance(instance)
