@@ -23,7 +23,7 @@ import (
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string)
+	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
 }
 
 // collector - collects the metrics for transactions events
@@ -175,7 +175,7 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string) {
+func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
