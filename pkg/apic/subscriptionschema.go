@@ -371,7 +371,10 @@ func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, sp
 
 func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
-	buffer, _ := c.marshalSubscriptionDefinition(defName, spec)
+	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -383,9 +386,6 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 		Headers: headers,
 		Body:    buffer,
 	}
-
-	test := buffer
-	_ = test
 
 	response, err := c.apiClient.Send(request)
 	if err != nil {
@@ -495,34 +495,13 @@ func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1al
 
 func (c *ServiceClient) prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.AccessRequestDefinitionSpec, error) {
 	subscriptionSchema.SetJSONDraft07SchemaVersion()
-	catalogSubscriptionSchema, err := subscriptionSchema.mapStringInterface()
+	schema, err := subscriptionSchema.mapStringInterface()
 	if err != nil {
 		return nil, err
 	}
 
-	webhooks := make([]string, 0)
-	//TODO: create ticket for webhooks
-	// use existing webhooks if present
-	// if registeredSchema != nil {
-	// 	webhooks = registeredSchema.Spec.Webhooks
-	// }
-
-	if c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalMode() == corecfg.WebhookApproval {
-		found := false
-		for _, webhook := range webhooks {
-			if webhook == DefaultSubscriptionWebhookName {
-				found = true
-				break
-			}
-		}
-		// Only add the default subscription webhook if it is not there
-		if !found {
-			webhooks = append(webhooks, DefaultSubscriptionWebhookName)
-		}
-	}
-
 	return &v1alpha1.AccessRequestDefinitionSpec{
-		Schema: catalogSubscriptionSchema,
+		Schema: schema,
 	}, nil
 }
 
