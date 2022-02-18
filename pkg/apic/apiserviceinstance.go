@@ -31,7 +31,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	name string,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
-	owner, _ := c.getOwnerObject(serviceBody, false)
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
@@ -56,7 +56,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance *mv1a.APIServiceInstance,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
-	owner, _ := c.getOwnerObject(serviceBody, false)
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
 	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
