@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"fmt"
+	"regexp"
 	"sync"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -19,9 +20,20 @@ var oldAttrs = []string{
 	defs.AttrExternalAPIName,
 	defs.AttrExternalAPIStage,
 	defs.AttrCreatedBy,
-	"majorHash",
-	"minorHash",
-	// TODO: all attributes from each agent are needed
+}
+
+var agentAttrs = make([]string, 0)
+
+var regexes = make([]string, 0)
+
+// AddPattern saves a pattern to match against an attribute to migrate to a subresource
+func AddPattern(pattern string) {
+	regexes = append(regexes, pattern)
+}
+
+// AddAttr saves an attribute to migrate to a subresource
+func AddAttr(attr string) {
+	agentAttrs = append(agentAttrs, attr)
 }
 
 type client interface {
@@ -215,6 +227,16 @@ func updateAttrs(ri *v1.ResourceInstance) item {
 			details[attr] = ri.Attributes[attr]
 			delete(ri.Attributes, attr)
 			item.update = true
+		}
+	}
+
+	for attr := range ri.Attributes {
+		for _, reg := range regexes {
+			if ok, _ := regexp.MatchString(reg, attr); ok {
+				details[attr] = ri.Attributes[attr]
+				delete(ri.Attributes, attr)
+				item.update = true
+			}
 		}
 	}
 

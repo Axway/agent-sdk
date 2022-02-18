@@ -31,6 +31,8 @@ func TestAttributeMigration(t *testing.T) {
 				defs.AttrCreatedBy:                    "created-by",
 				"majorHash":                           "major",
 				"minorHash":                           "minor",
+				"az-api-hash":                         "azhash",
+				"az-resource-id":                      "resourceid",
 				"random":                              "abc",
 			},
 		},
@@ -135,6 +137,8 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	assert.NotContains(m.t, ri.Attributes, defs.AttrCreatedBy)
 	assert.NotContains(m.t, ri.Attributes, "majorHash")
 	assert.NotContains(m.t, ri.Attributes, "minorHash")
+	assert.NotContains(m.t, ri.Attributes, "az-api-hash")
+	assert.NotContains(m.t, ri.Attributes, "az-resource-id")
 	assert.Contains(m.t, ri.Attributes, "random")
 
 	sub := util.GetAgentDetails(ri)
@@ -146,6 +150,8 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	assert.Contains(m.t, sub, defs.AttrCreatedBy)
 	assert.Contains(m.t, sub, "majorHash")
 	assert.Contains(m.t, sub, "minorHash")
+	assert.Contains(m.t, sub, "az-api-hash")
+	assert.Contains(m.t, sub, "az-resource-id")
 	assert.NotContains(m.t, sub, "random")
 
 	return nil, nil
