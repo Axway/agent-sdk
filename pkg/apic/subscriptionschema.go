@@ -404,6 +404,9 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {

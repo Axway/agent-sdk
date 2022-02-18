@@ -540,7 +540,7 @@ func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]inter
 		return err
 	}
 
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
