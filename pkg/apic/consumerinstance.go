@@ -133,7 +133,7 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 }
 
 func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *mv1a.ConsumerInstance {
-	owner, _ := c.getOwnerObject(serviceBody, false)
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	ci := &mv1a.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
@@ -159,7 +159,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 }
 
 func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1a.ConsumerInstance, doc string) {
-	owner, _ := c.getOwnerObject(serviceBody, false)
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	ci.GroupVersionKind = mv1a.ConsumerInstanceGVK()
 	ci.Metadata.ResourceVersion = ""
 	ci.Title = serviceBody.NameToPush

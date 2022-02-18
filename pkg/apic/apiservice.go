@@ -47,7 +47,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
 
-	if ownerObject != nil {
+	if ownerErr != nil {
 		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
 		util.UpdateAPIServerStatus(svc, svcDetails)
 
@@ -91,7 +91,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 		}
 	}
 
-	if svc.Owner != nil {
+	if ownerErr != nil {
 		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
 		util.UpdateAPIServerStatus(svc, svcDetails)
 	}
