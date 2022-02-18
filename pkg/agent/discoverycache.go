@@ -253,13 +253,13 @@ func addAccessRequestToAPICache(accessReq v1alpha1.AccessRequest) string {
 		externalAppID   string
 		externalAppName string
 	)
-	appID, ok := accessReq.Spec.Data["dataplaneAppID"]
-	externalAppID = appID.(string)
-	if ok {
-		appName := accessReq.Spec.Data["dataplaneAppName"]
-		externalAppName = appName.(string)
-		agent.cacheManager.GetAccessRequestCache().SetWithSecondaryKey(externalAppID, externalAppName, accessReq)
-		log.Tracef("added app name: %s, id %s to App cache", externalAppName, externalAppID)
+	if appID, ok := accessReq.Spec.Data["dataplaneAppID"]; ok {
+		externalAppID = appID.(string)
+		if appName, ok := accessReq.Spec.Data["dataplaneAppName"]; ok {
+			externalAppName = appName.(string)
+			agent.cacheManager.GetAccessRequestCache().SetWithSecondaryKey(externalAppID, externalAppName, accessReq)
+			log.Tracef("added app name: %s, id %s to App cache", externalAppName, externalAppID)
+		}
 	}
 	return externalAppID
 }
