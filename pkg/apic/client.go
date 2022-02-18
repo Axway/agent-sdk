@@ -701,7 +701,7 @@ func (c *ServiceClient) CreateSubResourceScoped(
 			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s -: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s - scoped: %v", sn, name, err)
 			}
 		}(subName)
 	}
