@@ -144,11 +144,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 		return err
 	}
 
-	err = c.registerAccessRequestSubscriptionSchema(subscriptionSchema, update)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.registerAccessRequestSubscriptionSchema(subscriptionSchema, update)
 }
 
 func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
@@ -168,23 +164,13 @@ func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema Subscripti
 
 	// Create New definition
 	if registeredSchema == nil {
-		err := c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-		if err != nil {
-			return err
-		}
-		return nil
+		return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
 	}
 
 	if update {
 		// Check if the schema definitions changed before update
-		currentHash, _ := util.ComputeHash(spec)
-		if currentHash != registeredSpecHash {
-			err := c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-			if err != nil {
-				return err
-			}
-
-			return nil
+		if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
+			return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
 		}
 	}
 
@@ -216,22 +202,13 @@ func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSche
 
 	// Create New definition
 	if registeredSchema == nil {
-		err = c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-		if err != nil {
-			return err
-		}
-		return nil
+		return c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
 	}
 
 	if update {
 		// Check if the schema definitions changed before update
-		currentHash, _ := util.ComputeHash(spec)
-		if currentHash != registeredSpecHash {
-			err = c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-			if err != nil {
-				return err
-			}
-			return nil
+		if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
+			return c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
 		}
 	}
 
@@ -305,7 +282,8 @@ func (c *ServiceClient) getAccessRequestSubscriptionSchema(schemaName string) (*
 	}
 
 	if response.Code != http.StatusOK {
-		return nil, nil
+		readResponseErrors(response.Code, response.Body)
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
 	registeredSchema := &v1alpha1.AccessRequestDefinition{}
 	json.Unmarshal(response.Body, registeredSchema)
@@ -315,6 +293,9 @@ func (c *ServiceClient) getAccessRequestSubscriptionSchema(schemaName string) (*
 func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	//Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {
