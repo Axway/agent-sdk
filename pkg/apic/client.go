@@ -665,7 +665,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(
 				if execErr == nil {
 					execErr = err
 				}
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s - unscoped: %v", sn, name, err)
 			}
 		}(wg, subName)
 	}
@@ -701,7 +701,7 @@ func (c *ServiceClient) CreateSubResourceScoped(
 			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s -: %v", sn, name, err)
 			}
 		}(subName)
 	}

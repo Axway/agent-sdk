@@ -53,6 +53,10 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
 		},
@@ -628,6 +632,10 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
 		},
@@ -690,6 +698,10 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 		{
 			FileName: "./testdata/apiservice.json", // this for call to create the service
 			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
 		},
 		{
 			FileName: "./testdata/agent-details-sr.json", // this for call to create the service

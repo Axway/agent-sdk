@@ -112,7 +112,7 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 			return nil, err
 		}
 	}
-
+	fmt.Print(c.RespCount)
 	response := Response{
 		Code:    c.Responses[c.RespCount].RespCode,
 		Body:    dat,
