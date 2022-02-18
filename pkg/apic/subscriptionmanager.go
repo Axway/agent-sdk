@@ -27,17 +27,17 @@ type SubscriptionManager interface {
 type subscriptionManager struct {
 	jobs.Job
 	isRunning            bool
-	ucSubPublisher       notification.Notifier
-	ucSubPublishChan     chan interface{}
-	ucSubReceiveChannel  chan interface{}
-	accReqPublisher      notification.Notifier
-	accReqPublishChan    chan interface{}
-	accReqReceiveChannel chan interface{}
+	ucSubPublisher       notification.Notifier // unified catalog subscrtion notifier
+	ucSubPublishChan     chan interface{}      // unified catalog subscrtion publish channel
+	ucSubReceiveChannel  chan interface{}      // unified catalog subscrtion receive channel
+	accReqPublisher      notification.Notifier // access request notifier
+	accReqPublishChan    chan interface{}      // access request publish channel
+	accReqReceiveChannel chan interface{}      // access request receive channel
 	receiverQuitChannel  chan bool
 	processorMap         map[SubscriptionState][]SubscriptionProcessor
 	validator            SubscriptionValidator
-	ucStatesToQuery      []string
-	arStatesToQuery      []string
+	ucStatesToQuery      []string // states to query for unified catalog subscriptions
+	arStatesToQuery      []string // states to query for access requests
 	apicClient           *ServiceClient
 	locklist             map[string]string // subscription items to skip because they are locked
 	locklistLock         *sync.RWMutex     // Use lock when making changes/reading the locklist map
@@ -284,9 +284,9 @@ func (sm *subscriptionManager) Start() {
 		sm.receiverQuitChannel = make(chan bool)
 
 		sm.ucSubPublishChan = make(chan interface{})
-		sm.ucSubReceiveChannel = make(chan interface{})
+		sm.ucSubReceiveChannel = make(chan interface{}) // unified catlog subscriptions channel
 		sm.accReqPublishChan = make(chan interface{})
-		sm.accReqReceiveChannel = make(chan interface{})
+		sm.accReqReceiveChannel = make(chan interface{}) // access request channel
 
 		sm.ucSubPublisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.ucSubPublishChan)
 		notification.Subscribe("CentralSubscriptions", sm.ucSubReceiveChannel)
