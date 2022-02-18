@@ -21,13 +21,12 @@ func createSubscriptionSchema() error {
     SetName(config.GetConfig().CentralConfig.GetEnvironmentName()).
     AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
       SetName("appName").
-      IsString().
-      SetEnumValues([]string{"Application 1", "Application 2", "Application 3"}).
-      AddEnumValue("Create an application").
-      SetFirstEnumValue("Create an application").
-      SetSortEnumValues().
       SetDescription("The Application for this Subscription").
       SetRequired()).
+      IsString().
+        SetEnumValues([]string{"Application 1", "Application 2", "Application 3"}).
+        SetFirstEnumValue("Create an application").
+        SetSortEnumValues().
     Register()
 }
 ```
@@ -49,8 +48,8 @@ type SubscriptionSchemaBuilder interface {
   // Set a name for the subscription schema, this is required
   SetName(name string) SubscriptionSchemaBuilder
 
-  // Add a property, via the SubscriptionPropertyBuilder, to the schema, call this as many times as needed
-  AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder
+  // Add a property, via the PropertyBuilder, to the schema, call this as many times as needed
+  AddProperty(property PropertyBuilder) SubscriptionSchemaBuilder
 
   // Add a unique key to the schema, call this as many times as needed
   AddUniqueKey(keyName string) SubscriptionSchemaBuilder
@@ -65,47 +64,214 @@ type SubscriptionSchemaBuilder interface {
 
 ### Subscription Schema Property Builder
 
-The subscription schema property builder has the following methods that may be used.
+The subscription schema property builder has the following methods that may be used. By calling IsString(), IsInteger(), IsNumber(), IsObject(), IsArray() methods you can set the type and configure the property using a specific builder. 
 
 ```go
 type SubscriptionPropertyBuilder interface {
-  // Set a name for this property, this is required
-  SetName(name string) SubscriptionPropertyBuilder
-
-  // Set the property description
-  SetDescription(description string) SubscriptionPropertyBuilder
-
-  // Set the property as required in the schema
-  SetRequired() SubscriptionPropertyBuilder
-
-  // Set the property as read only in the schema
-  SetReadOnly() SubscriptionPropertyBuilder
-
-  // Set the property as hidden in the schema
-  SetHidden() SubscriptionPropertyBuilder
-
-  // Set the property to be of type string, this is the only supported type
-  IsString() SubscriptionPropertyBuilder
-
-  // Add a list of valid values for the property
-  SetEnumValues(values []string) SubscriptionPropertyBuilder
-
-  // Add another value to the list of allowed values for the property
-  AddEnumValue(value string) SubscriptionPropertyBuilder
-
-  // Sort the allowed values alphabetically in the schema
-  SetSortEnumValues() SubscriptionPropertyBuilder
-
-  // Set the value that should appear first in the list
-  SetFirstEnumValue(value string) SubscriptionPropertyBuilder
-  
-  // Set the apic reference field for this property
-  SetAPICRefField(field string) SubscriptionPropertyBuilder
-
-  // Builds the property, this is called automatically by the schema builder
-  Build() (*SubscriptionSchemaPropertyDefinition, error)
+    // SetName - sets the name of the property
+    SetName(name string) SubscriptionPropertyBuilder
+    // SetDescription - set the description of the property
+    SetDescription(description string) SubscriptionPropertyBuilder
+    // SetRequired - set the property as a required field in the schema
+    SetRequired() SubscriptionPropertyBuilder
+    // SetReadOnly - set the property as a read only property
+    SetReadOnly() SubscriptionPropertyBuilder
+    // SetHidden - set the property as a hidden property
+    SetHidden() SubscriptionPropertyBuilder
+    // SetAPICRefField - set the apic reference field for this property
+    SetAPICRefField(field string) SubscriptionPropertyBuilder
+    // IsString - Set the property to be of type string
+    IsString() StringPropertyBuilder
+    // IsInteger - Set the property to be of type integer
+    IsInteger() IntegerPropertyBuilder
+    // IsNumber - Set the property to be of type number
+    IsNumber() NumberPropertyBuilder
+    // IsArray - Set the property to be of type array
+    IsArray() ArrayPropertyBuilder
+    // IsObject - Set the property to be of type object
+    IsObject() ObjectPropertyBuilder
 }
 ```
+#### String Property Builder
+
+```go
+type StringPropertyBuilder interface {
+    // SetEnumValues - Set a list of valid values for the property
+    SetEnumValues(values []string) StringPropertyBuilder
+    // SetSortEnumValues - Sort the allowed values alphabetically in the schema
+    SetSortEnumValues() StringPropertyBuilder
+    // SetFirstEnumValue - Set the value that should appear first in the list
+    SetFirstEnumValue(value string) StringPropertyBuilder
+    // AddEnumValue - Add another value to the list of allowed values for the property
+    AddEnumValue(value string) StringPropertyBuilder
+}
+```
+Example of a required string property declaration.
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+	SetName("String property").
+	SetDescription("Description of the String property.").
+	SetRequired().
+	IsString()
+```
+![Text Property](./stringproperty.png)
+
+Example of a required choice property declaration
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+		SetName("String property with list").
+		SetDescription("Description of the String property.").
+		SetRequired().
+		IsString().
+                    SetEnumValues([]string{"Application 42","Application 1", "Application 24"}).
+                    SetFirstEnumValue("Create an app").
+                    SetSortEnumValues()
+```
+![Choice Text Property](./stringenumproperty.png)
+
+#### Number Property Builder
+```go
+type NumberPropertyBuilder interface {
+    // SetMinValue - Set the minimum allowed property value
+    SetMinValue(min float64) NumberPropertyBuilder
+    // SetMaxValue - Set the maximum allowed property value
+    SetMaxValue(min float64) NumberPropertyBuilder
+}
+
+```
+Example of a Number property with Min and Max values.
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+    SetName("Number property").
+    SetDescription("Description of the Number property.").
+    IsNumber().
+        SetMinValue(3.14).
+        SetMaxValue(100.5)
+```
+![Number Property](./numberproperty.png)
+
+#### Integer Property Builder
+```go
+type IntegerPropertyBuilder interface {
+    // SetMinValue - Set the minimum allowed property value
+    SetMinValue(min int64) IntegerPropertyBuilder
+    // SetMaxValue - Set the maximum allowed property value
+    SetMaxValue(min int64) IntegerPropertyBuilder
+}
+```
+Same display as for number property except accepting only integer values
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+    SetName("Integer property").
+    SetDescription("Description of the Integer property.").
+    IsInteger().
+        SetMinValue(10).
+        SetMaxValue(42)
+```
+Example of an Integer property with Min and Max values.
+
+![Integer Property](./integerproperty.png)
+
+#### Object Property Builder
+
+Create an object property containing other properties. Useful in combination with an Array property, see examples below
+```go
+type ObjectPropertyBuilder interface {
+    // AddProperty - Add a property in the object property
+    AddProperty(property PropertyBuilder) ObjectPropertyBuilder
+}
+```
+
+#### Array Property Builder
+
+Create an array of property.
+```go
+type ArrayPropertyBuilder interface {
+    // AddItem - Add a item property in the array property
+    AddItem(item PropertyBuilder) ArrayPropertyBuilder
+    // SetMinItems - Set the minimum number of items in the array property
+    SetMinItems(min uint) ArrayPropertyBuilder
+    // SetMaxItems - Set the maximum number of items in the array property
+    SetMaxItems(max uint) ArrayPropertyBuilder
+}
+```
+
+Example of an array property allowing integer inputs with Min and Max constraints.
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+    SetName("Array property").
+    SetDescription("Description of the Array property.").
+    IsArray().
+        AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
+            SetName("HTTP Code").
+            IsInteger().
+                SetMinValue(100).
+                SetMaxValue(599))
+```
+Initial display of the array property. You have to click on the "+" button to add items:
+
+![Empty Array Property](./arrayproperty-empty.png)
+
+When adding items:
+
+![Array Property](./arrayproperty.png)
+
+
+Example of an array property allowing the user to choose between 2 kind of authorization:
+```go
+apic.NewSubscriptionSchemaPropertyBuilder().
+    SetName("Authorization").
+    SetDescription("Determines the type of authorization used.").
+    IsArray().
+	SetMaxItems(1).
+        AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
+            SetName("OAuth2").
+            IsObject().
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("OAuth2 client id").
+                    SetDescription("OAuth2 client id.").
+                    SetRequired().
+                    IsString()).
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("OAuth2 client secret").
+                    SetDescription("OAuth2 client secret.").
+                    SetRequired().
+                    IsString()).
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("OAuth2 provider").
+                    SetDescription("URL provider of access tokens. Example: http://mysite.com/oauth/token").
+                    SetRequired().
+                    IsString()).
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("OAuth2 mode").
+                    SetDescription("Whether to send client credentials in body or via header of the request.").
+                    SetRequired().
+                    IsString().
+                        SetEnumValues([]string{"header", "body"})).
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("OAuth2 scope").
+                    SetDescription("Scope supported for the client credentials OAuth2 authorization. Example: READ").
+                    IsString())).
+        AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
+            SetName("Credentials").
+            IsObject().
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("Username").
+                    SetDescription("Your username credential.").
+                    SetRequired().
+                    IsString()).
+                AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
+                    SetName("Password ").
+                    SetDescription("Your password credential.").
+                    SetRequired().
+                    IsString()))
+```
+Initial display:
+![Auhtorization Property](./authorization-empty.png)
+
+After clicking on the "+" button, you have the choice between "OAuth2" and "Credentials" authorization:
+![Auhtorization Oauth Property](./authorization-choice1.png)
+![Auhtorization Credential Property](./authorization-choice2.png)
 
 ## Processing Subscriptions
 

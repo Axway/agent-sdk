@@ -25,18 +25,29 @@ type SubscriptionSchema interface {
 	SetJSONDraft07SchemaVersion()
 }
 
+// AnyOfSubscriptionSchemaPropertyDefinitions - used for items of SubscriptionSchemaPropertyDefinition
+type AnyOfSubscriptionSchemaPropertyDefinitions struct {
+	AnyOf []SubscriptionSchemaPropertyDefinition `json:"anyOf,omitempty"`
+}
+
 // SubscriptionSchemaPropertyDefinition -
 type SubscriptionSchemaPropertyDefinition struct {
-	Type          string   `json:"type"`
-	Description   string   `json:"description"`
-	Enum          []string `json:"enum,omitempty"`
-	ReadOnly      bool     `json:"readOnly,omitempty"`
-	Format        string   `json:"format,omitempty"`
-	APICRef       string   `json:"x-axway-ref-apic,omitempty"`
-	Name          string   `json:"-"`
-	Required      bool     `json:"-"`
-	SortEnums     bool     `json:"-"`
-	FirstEnumItem string   `json:"-"`
+	Type               string                                          `json:"type"`
+	Title              string                                          `json:"title"`
+	Description        string                                          `json:"description"`
+	Enum               []string                                        `json:"enum,omitempty"`
+	ReadOnly           bool                                            `json:"readOnly,omitempty"`
+	Format             string                                          `json:"format,omitempty"`
+	Properties         map[string]SubscriptionSchemaPropertyDefinition `json:"properties,omitempty"`
+	RequiredProperties []string                                        `json:"required,omitempty"`
+	Items              *AnyOfSubscriptionSchemaPropertyDefinitions     `json:"items,omitempty"`    // We use a pointer to avoid generating an empty struct if not set
+	MinItems           *uint                                           `json:"minItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	MaxItems           *uint                                           `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Minimum            *float64                                        `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Maximum            *float64                                        `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 max value
+	APICRef            string                                          `json:"x-axway-ref-apic,omitempty"`
+	Name               string                                          `json:"-"`
+	Required           bool                                            `json:"-"`
 }
 
 type subscriptionSchema struct {
@@ -70,6 +81,7 @@ func (ss *subscriptionSchema) SetJSONDraft07SchemaVersion() {
 func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string) {
 	newProp := SubscriptionSchemaPropertyDefinition{
 		Type:        dataType,
+		Title:       name,
 		Description: description,
 		APICRef:     apicRefField,
 	}
@@ -180,17 +192,16 @@ func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema Subscripti
 func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
 	accReqDefNameSuffix := "-access-request"
 	subscriptionSchema.SetSubscriptionName(subscriptionSchema.GetSubscriptionName() + accReqDefNameSuffix)
+
 	var registeredSpecHash uint64
-	registeredSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+	registeredAccessRequestSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
 
 	spec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
 	if err != nil {
 		return err
 	}
-
-	registeredAccessRequestSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
 	if registeredAccessRequestSchema != nil {
-		registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
+		registeredSpecHash, _ = util.ComputeHash(registeredAccessRequestSchema.Spec)
 	} else {
 		update = true
 	}
@@ -201,7 +212,7 @@ func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSche
 	}
 
 	// Create New definition
-	if registeredSchema == nil {
+	if registeredAccessRequestSchema == nil {
 		return c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
 	}
 
@@ -326,6 +337,9 @@ func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.
 func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
 	//Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {
