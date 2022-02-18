@@ -334,7 +334,7 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	return err
 }
 
-// getConsumerInstancesByExternalAPIID gets consumer instances
+// getConsumerInstancesByExternalAPIID gets consumer instances.
 func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
