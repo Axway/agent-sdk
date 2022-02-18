@@ -24,6 +24,7 @@ type PlatformTeam struct {
 // Constants for attributes
 const (
 	XAgentDetails                    = "x-agent-details"
+	APIServiceStatusSubresource      = "x-apiservice-status"
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
 	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
 	AttrExternalAPIID                = "externalAPIID"

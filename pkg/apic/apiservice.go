@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -47,7 +46,12 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
-	c.updateAPIServerStatus(ownerObject, svc, ownerErr)
+
+	if ownerObject != nil {
+		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
+		util.UpdateAPIServerStatus(svc, svcDetails)
+
+	}
 
 	return svc
 }
@@ -87,25 +91,11 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 		}
 	}
 
-	c.updateAPIServerStatus(svc.Owner, svc, ownerErr)
-
-}
-
-// updateAPIServerStatus - set the subresource if team/org mismatched on API
-func (c *ServiceClient) updateAPIServerStatus(ownerObject *v1.Owner, svc *mv1a.APIService, ownerErr error) {
-	status := &APIServiceStatus{}
-
-	// make sure the owner is not nil
-	if ownerObject != nil {
-		// only set status if error
-		if ownerErr != nil {
-			status = &APIServiceStatus{"warning",
-				ownerErr.Error(),
-				time.Time{}}
-
-		}
-		svc.SetSubResource("x-apiservice-status", status)
+	if svc.Owner != nil {
+		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
+		util.UpdateAPIServerStatus(svc, svcDetails)
 	}
+
 }
 
 // processService -

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -179,6 +180,23 @@ func buildAgentDetailsSubResource(
 	details[defs.AttrCreatedBy] = serviceBody.CreatedBy
 
 	return util.MergeMapStringInterface(details, additional)
+}
+
+func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
+	status := &APIServiceStatus{}
+	var apiServiceStatusMap map[string]interface{}
+
+	// only set status if error
+	if ownerErr != nil {
+		status = &APIServiceStatus{"warning",
+			ownerErr.Error(),
+			time.Time{}}
+	}
+
+	apiServiceStatusIn, _ := json.Marshal(status)
+	json.Unmarshal(apiServiceStatusIn, &apiServiceStatusMap)
+
+	return apiServiceStatusMap
 }
 
 func isValidAuthPolicy(auth string) bool {
