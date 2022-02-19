@@ -489,6 +489,14 @@ func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
 	assert.Nil(t, instances)
 
 	// good
+	ri := &v1.ResourceInstance{ResourceMeta: v1.ResourceMeta{
+		GroupVersionKind: v1.GroupVersionKind{},
+		Name:             "name",
+		Title:            "title",
+	}}
+	util.SetAgentDetailsKey(ri, defs.AttrExternalAPIID, "12345")
+	client.caches.AddAPIService(ri)
+
 	httpClient.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
 	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
 	assert.Nil(t, err)
@@ -766,10 +774,16 @@ func TestServiceClient_buildAPIService(t *testing.T) {
 		AgentMode:          0,
 		CreatedBy:          "createdby",
 		ServiceAttributes:  map[string]string{"service_attribute": "value"},
-		RevisionAttributes: nil,
-		InstanceAttributes: nil,
+		RevisionAttributes: map[string]string{"revision_attribute": "value"},
+		InstanceAttributes: map[string]string{"instance_attribute": "value"},
 		ServiceAgentDetails: map[string]interface{}{
-			"subresource_key": "value",
+			"subresource_svc_key": "value",
+		},
+		InstanceAgentDetails: map[string]interface{}{
+			"subresource_instance_key": "value",
+		},
+		RevisionAgentDetails: map[string]interface{}{
+			"subresource_revision_key": "value",
 		},
 	}
 
@@ -789,6 +803,15 @@ func TestServiceClient_buildAPIService(t *testing.T) {
 	assert.Equal(t, body.Description, svc.Spec.Description)
 	assert.Equal(t, body.ServiceAttributes, svc.Attributes)
 
+	assert.Contains(t, svc.Attributes, "service_attribute")
+	assert.NotContains(t, svc.Attributes, "revision_attribute")
+	assert.NotContains(t, svc.Attributes, "instance_attribute")
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, svc.Attributes, defs.AttrCreatedBy)
+
 	sub := util.GetAgentDetails(svc)
 	// stage is not set for api services
 	assert.Empty(t, sub[defs.AttrExternalAPIStage])
@@ -796,7 +819,9 @@ func TestServiceClient_buildAPIService(t *testing.T) {
 	assert.Equal(t, body.RestAPIID, sub[defs.AttrExternalAPIID])
 	assert.Equal(t, body.APIName, sub[defs.AttrExternalAPIName])
 	assert.Equal(t, body.CreatedBy, sub[defs.AttrCreatedBy])
-	assert.Contains(t, sub, "subresource_key")
+	assert.Contains(t, sub, "subresource_svc_key")
+	assert.NotContains(t, sub, "subresource_instance_key")
+	assert.NotContains(t, sub, "subresource_revision_key")
 }
 
 func TestServiceClient_updateAPIService(t *testing.T) {
@@ -857,6 +882,15 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 	assert.Equal(t, body.ImageContentType, svc.Spec.Icon.ContentType)
 	assert.Equal(t, body.Image, svc.Spec.Icon.Data)
 	assert.Equal(t, body.Description, svc.Spec.Description)
+
+	assert.Contains(t, svc.Attributes, "service_attribute")
+	assert.NotContains(t, svc.Attributes, "revision_attribute")
+	assert.NotContains(t, svc.Attributes, "instance_attribute")
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, svc.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, svc.Attributes, defs.AttrCreatedBy)
 
 	sub := util.GetAgentDetails(svc)
 	assert.Empty(t, sub[defs.AttrExternalAPIStage])

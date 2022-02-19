@@ -154,6 +154,11 @@ func Test_buildAPIServiceRevision(t *testing.T) {
 	assert.Contains(t, revision.Attributes, "revision_attribute")
 	assert.NotContains(t, revision.Attributes, "service_attribute")
 	assert.NotContains(t, revision.Attributes, "instance_attribute")
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, revision.Attributes, defs.AttrCreatedBy)
 
 	assert.Equal(t, Unstructured, revision.Spec.Definition.Type)
 	assert.Equal(t, body.serviceContext.serviceName, revision.Spec.ApiService)
@@ -229,6 +234,11 @@ func Test_updateAPIServiceRevision(t *testing.T) {
 	assert.NotContains(t, revision.Attributes, "service_attribute")
 	assert.NotContains(t, revision.Attributes, "instance_attribute")
 	assert.NotContains(t, revision.Attributes, "old_attribute")
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, revision.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, revision.Attributes, defs.AttrCreatedBy)
 
 	assert.Equal(t, Unstructured, revision.Spec.Definition.Type)
 	assert.Equal(t, body.serviceContext.serviceName, revision.Spec.ApiService)
@@ -242,4 +252,5 @@ func Test_updateAPIServiceRevision(t *testing.T) {
 	assert.Contains(t, sub, "subresource_svc_key")
 	assert.Contains(t, sub, "subresource_revision_key")
 	assert.NotContains(t, sub, "subresource_instance_key")
+	assert.NotContains(t, sub, "revision_attribute")
 }

@@ -141,13 +141,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			} else {
 				agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
 			}
-
-			v, _ := agent.agentResourceManager.GetAgentResourceVersion()
-			am := migrate.NewAttributeMigration(agent.apicClient, centralCfg, strings.Split(v, "-")[0])
-			err = am.Migrate()
-			if err != nil {
-				return err
-			}
 		}
 	}
 
@@ -245,8 +238,10 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() {
+	am := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
+	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, am)
 	if !agent.cfg.IsUsingGRPC() {
 		// healthcheck for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
@@ -257,7 +252,7 @@ func startAPIServiceCache() {
 			return
 		}
 		// Start the full update after the first interval
-		go startDiscoveryCache(agent.instanceCacheLock)
+		go startDiscoveryCache(agent.instanceCacheLock, am)
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
@@ -392,9 +387,9 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
+func startDiscoveryCache(instanceCacheLock *sync.Mutex, am migrate.AttrMigrator) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, am)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())

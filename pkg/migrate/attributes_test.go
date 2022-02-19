@@ -48,7 +48,8 @@ func TestAttributeMigration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
+			AddAttr("majorHash", "minorHash")
+			AddPattern("az-")
 			res := []*apiv1.ResourceInstance{
 				{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -65,8 +66,8 @@ func TestAttributeMigration(t *testing.T) {
 				t:   t,
 			}
 			cfg := &config.CentralConfiguration{}
-			am := NewAttributeMigration(c, cfg, "1.1.4")
-			err := am.migrate("/apiservices")
+			am := NewAttributeMigration(c, cfg)
+			err := am.migrate("/apiservices", nil)
 			assert.Equal(t, tc.updateCalled, c.updateCalled)
 			assert.Equal(t, tc.createSubCalled, c.createSubCalled)
 			assert.Nil(t, err)
@@ -79,23 +80,16 @@ func TestMigrate(t *testing.T) {
 		t: t,
 	}
 	cfg := &config.CentralConfiguration{}
-	am := NewAttributeMigration(c, cfg, "1.1.4")
-	err := am.Migrate()
+	am := NewAttributeMigration(c, cfg)
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: mv1a.APIServiceGVK(),
+			Attributes:       map[string]string{},
+		},
+	}
+	_, err := am.Migrate(ri)
+	assert.NotNil(t, util.GetAgentDetails(ri))
 	assert.Nil(t, err)
-}
-
-func Test_shouldMigrate(t *testing.T) {
-	ok := shouldMigrate("1.2.3", "1.0.0")
-	assert.True(t, ok)
-
-	ok = shouldMigrate("1.0.0", "1.2.3")
-	assert.False(t, ok)
-
-	ok = shouldMigrate("1.0.0", "")
-	assert.False(t, ok)
-
-	ok = shouldMigrate("", "1.2.3")
-	assert.False(t, ok)
 }
 
 func Test_getPlural(t *testing.T) {

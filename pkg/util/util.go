@@ -205,7 +205,7 @@ func MergeMapStringInterface(m ...map[string]interface{}) map[string]interface{}
 }
 
 // MergeMapStringString - merges the provided maps.
-// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1
+// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1.
 func MergeMapStringString(m ...map[string]string) map[string]string {
 	attrs := make(map[string]string)
 

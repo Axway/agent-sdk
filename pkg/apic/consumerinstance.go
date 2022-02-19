@@ -10,8 +10,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -138,7 +136,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
+			Attributes:       util.MergeMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
@@ -149,11 +147,6 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
 
-	// add all agent details keys to the ci attributes
-	for k, v := range agentDetails {
-		ci.Attributes[k] = v.(string)
-	}
-
 	return ci
 }
 
@@ -163,16 +156,11 @@ func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1
 	ci.Title = serviceBody.NameToPush
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	ci.Owner = c.getOwnerObject(serviceBody, false)
-	ci.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
+	ci.Attributes = util.MergeMapStringString(serviceBody.InstanceAttributes)
 
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
-
-	// add all agent details keys to the ci attributes
-	for k, v := range agentDetails {
-		ci.Attributes[k] = v.(string)
-	}
 
 	// use existing categories only if mappings have not been configured
 	categories := ci.Spec.Categories
@@ -341,10 +329,15 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 		return nil, err
 	}
 
+	svc := c.caches.GetAPIServiceWithAPIID(externalAPIID)
+	if svc == nil {
+		return nil, fmt.Errorf("api service with external api id %s not found in the cache", externalAPIID)
+	}
+
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("metadata.references.name==%s", svc.Name),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

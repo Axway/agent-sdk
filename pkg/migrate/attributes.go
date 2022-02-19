@@ -10,8 +10,9 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/hashicorp/go-version"
 )
+
+const queryByRefName = "metadata.references.name"
 
 var oldAttrs = []string{
 	defs.AttrPreviousAPIServiceRevisionID,
@@ -22,18 +23,21 @@ var oldAttrs = []string{
 	defs.AttrCreatedBy,
 }
 
-var agentAttrs = make([]string, 0)
+// AttrMigrator interface for performing an attribute migration
+type AttrMigrator interface {
+	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+}
 
 var regexes = make([]string, 0)
 
-// AddPattern saves a pattern to match against an attribute to migrate to a subresource
-func AddPattern(pattern string) {
-	regexes = append(regexes, pattern)
+// AddPattern saves patterns to match against an attribute to migrate to the x-agent-details subresource
+func AddPattern(pattern ...string) {
+	regexes = append(regexes, pattern...)
 }
 
-// AddAttr saves an attribute to migrate to a subresource
-func AddAttr(attr string) {
-	agentAttrs = append(agentAttrs, attr)
+// AddAttr saves attributes to migrate to the x-agent-details subresource
+func AddAttr(attr ...string) {
+	oldAttrs = append(oldAttrs, attr...)
 }
 
 type client interface {
@@ -47,66 +51,96 @@ type item struct {
 	update bool
 }
 
+type migrateFunc func(ri *v1.ResourceInstance) error
+
 // AttributeMigration - used for migrating attributes to subresource
 type AttributeMigration struct {
-	client       client
-	cfg          config.CentralConfig
-	agentVersion string
-	minVersion   string
+	client client
+	cfg    config.CentralConfig
 }
 
 // NewAttributeMigration creates a new AttributeMigration
-func NewAttributeMigration(client client, cfg config.CentralConfig, agentVersion string) *AttributeMigration {
+func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMigration {
 	return &AttributeMigration{
-		client:       client,
-		cfg:          cfg,
-		agentVersion: agentVersion,
-		minVersion:   "1.1.15",
+		client: client,
+		cfg:    cfg,
 	}
 }
 
-// Migrate - migrate attributes to subresource if the agent version is less than
-// the minimum version needed for the migration
-func (m *AttributeMigration) Migrate() error {
-	ok := shouldMigrate(m.minVersion, m.agentVersion)
-	if !ok {
-		return nil
+// Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
+// If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
+// that refer to the APIService will all have their attributes updated.
+func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	if ri.Kind != mv1a.APIServiceGVK().Kind {
+		return ri, fmt.Errorf("expected resource instance kind to be api service")
 	}
 
-	urls := []string{
-		m.cfg.GetServicesURL(),
-		m.cfg.GetInstancesURL(),
-		m.cfg.GetRevisionsURL(),
+	// skip migration if x-agent-details is found for the service.
+	details := util.GetAgentDetails(ri)
+	if len(details) > 0 {
+		return ri, nil
 	}
 
-	wg := &sync.WaitGroup{}
-	errCh := make(chan error, 4)
-
-	for _, url := range urls {
-		wg.Add(1)
-
-		go func(url string) {
-			defer wg.Done()
-
-			err := m.migrate(url)
-			errCh <- err
-		}(url)
+	funcs := []migrateFunc{
+		m.updateSvc,
+		m.updateRev,
+		m.updateInst,
+		m.updateCI,
 	}
 
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return fmt.Errorf("failed to perform attribute migration: %s", e)
+	for _, fun := range funcs {
+		err := fun(ri)
+		if err != nil {
+			return ri, err
 		}
 	}
 
-	return nil
+	return ri, nil
 }
 
-func (m *AttributeMigration) migrate(resourceURL string) error {
-	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(nil, resourceURL, 100)
+// updateSvc updates the attributes on service in place, then updates on api server.
+func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
+	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
+	item := updateAttrs(ri)
+	if !item.update {
+		return nil
+	}
+
+	return m.updateRes(url, ri)
+}
+
+// updateRev gets a list of revisions for the service and updates their attributes.
+func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
+	url := m.cfg.GetRevisionsURL()
+	q := map[string]string{
+		queryByRefName: ri.Name,
+	}
+
+	return m.migrate(url, q)
+}
+
+// updateInst gets a list of instances for the service and updates their attributes.
+func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
+	url := m.cfg.GetInstancesURL()
+	q := map[string]string{
+		queryByRefName: ri.Name,
+	}
+
+	return m.migrate(url, q)
+}
+
+// updateCI gets a list of consumer instances for the service and updates their attributes.
+func (m *AttributeMigration) updateCI(ri *v1.ResourceInstance) error {
+	url := m.cfg.GetConsumerInstancesURL()
+	q := map[string]string{
+		queryByRefName: ri.Name,
+	}
+
+	return m.migrate(url, q)
+}
+
+func (m *AttributeMigration) migrate(resourceURL string, query map[string]string) error {
+	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
 	}
@@ -148,6 +182,7 @@ func (m *AttributeMigration) migrate(resourceURL string) error {
 	return nil
 }
 
+// updateRes updates the resource, and the sub resource
 func (m *AttributeMigration) updateRes(resUrl string, ri *v1.ResourceInstance) error {
 	url := fmt.Sprintf("%s/%s", resUrl, ri.Name)
 	_, err := m.client.UpdateAPIV1ResourceInstance(url, ri)
@@ -155,11 +190,7 @@ func (m *AttributeMigration) updateRes(resUrl string, ri *v1.ResourceInstance) e
 		return err
 	}
 
-	err = m.createSubResource(ri)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.createSubResource(ri)
 }
 
 func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
@@ -196,21 +227,6 @@ func getPlural(kind string) (string, error) {
 	}
 }
 
-// shouldMigrate returns true if the current version is less than the minimum version
-func shouldMigrate(min, current string) bool {
-	minV, err := version.NewVersion(min)
-	if err != nil {
-		return false
-	}
-
-	currentV, err := version.NewVersion(current)
-	if err != nil {
-		return false
-	}
-
-	return currentV.LessThan(minV)
-}
-
 func updateAttrs(ri *v1.ResourceInstance) item {
 	details := util.GetAgentDetails(ri)
 	if details == nil {
@@ -230,8 +246,8 @@ func updateAttrs(ri *v1.ResourceInstance) item {
 		}
 	}
 
-	for attr := range ri.Attributes {
-		for _, reg := range regexes {
+	for _, reg := range regexes {
+		for attr := range ri.Attributes {
 			if ok, _ := regexp.MatchString(reg, attr); ok {
 				details[attr] = ri.Attributes[attr]
 				delete(ri.Attributes, attr)

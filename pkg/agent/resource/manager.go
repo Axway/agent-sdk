@@ -2,7 +2,6 @@ package resource
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -31,7 +30,6 @@ type Manager interface {
 	SetAgentResource(agentResource *v1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
-	GetAgentResourceVersion() (string, error)
 }
 
 type agentResourceManager struct {
@@ -230,30 +228,5 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
-	}
-}
-
-// GetAgentResourceVersion returns the agent version saved on the agent resource.
-func (a *agentResourceManager) GetAgentResourceVersion() (string, error) {
-	ri := a.GetAgentResource()
-	if ri == nil {
-		return "", nil
-	}
-
-	switch a.getAgentResourceType() {
-	case mv1a.DiscoveryAgentResourceName:
-		da := &mv1a.DiscoveryAgent{}
-		err := da.FromInstance(ri)
-		return da.Status.Version, err
-	case mv1a.TraceabilityAgentResourceName:
-		ta := &mv1a.TraceabilityAgent{}
-		err := ta.FromInstance(ri)
-		return ta.Status.Version, err
-	case mv1a.GovernanceAgentResourceName:
-		ga := &mv1a.GovernanceAgent{}
-		err := ga.FromInstance(ri)
-		return ga.Status.Version, err
-	default:
-		return "", fmt.Errorf("unexpected agent type: %s", a.getAgentResourceType())
 	}
 }
