@@ -1,10 +1,12 @@
 package migrate
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -41,6 +43,7 @@ func AddAttr(attr ...string) {
 }
 
 type client interface {
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
@@ -76,10 +79,10 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 	}
 
 	// skip migration if x-agent-details is found for the service.
-	details := util.GetAgentDetails(ri)
-	if len(details) > 0 {
-		return ri, nil
-	}
+	// details := util.GetAgentDetails(ri)
+	// if len(details) > 0 {
+	// 	return ri, nil
+	// }
 
 	funcs := []migrateFunc{
 		m.updateSvc,
@@ -88,10 +91,26 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 		m.updateCI,
 	}
 
-	for _, fun := range funcs {
-		err := fun(ri)
-		if err != nil {
-			return ri, err
+	errCh := make(chan error)
+	wg := &sync.WaitGroup{}
+
+	for _, f := range funcs {
+		wg.Add(1)
+
+		go func(fun migrateFunc) {
+			defer wg.Done()
+
+			err := fun(ri)
+			errCh <- err
+		}(f)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for e := range errCh {
+		if e != nil {
+			return ri, e
 		}
 	}
 
@@ -101,12 +120,17 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 // updateSvc updates the attributes on service in place, then updates on api server.
 func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
-	item := updateAttrs(ri)
-	if !item.update {
-		return nil
-	}
+	return m.migrate(url, nil)
 
-	return m.updateRes(url, ri)
+	// ri, err := m.getRI(url)
+	// if err != nil {
+	// 	return err
+	// }
+	// item := updateAttrs(ri)
+	// if !item.update {
+	// 	return nil
+	// }
+	// return m.updateRes(m.cfg.GetServicesURL(), ri)
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
@@ -148,6 +172,11 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	items := make([]item, 0)
 
 	for _, ri := range resources {
+		// url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
+		// ri, err := m.getRI(url)
+		// if err != nil {
+		// 	return err
+		// }
 		item := updateAttrs(ri)
 		items = append(items, item)
 	}
@@ -156,7 +185,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	errCh := make(chan error, len(items))
 
 	for _, item := range items {
-		if item.update == false {
+		if !item.update {
 			continue
 		}
 
@@ -191,6 +220,18 @@ func (m *AttributeMigration) updateRes(resUrl string, ri *v1.ResourceInstance) e
 	}
 
 	return m.createSubResource(ri)
+}
+
+// getRI gets the resource instance
+func (m *AttributeMigration) getRI(resUrl string) (*v1.ResourceInstance, error) {
+	response, err := m.client.ExecuteAPI(api.GET, resUrl, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error while retrieving ResourceInstance: %s", err)
+	}
+
+	resourceInstance := &v1.ResourceInstance{}
+	err = json.Unmarshal(response, &resourceInstance)
+	return resourceInstance, err
 }
 
 func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {

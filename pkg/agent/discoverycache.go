@@ -23,7 +23,7 @@ import (
 const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
-	apiServerFields     = "metadata,name,title,owner,attributes,x-agent-details"
+	apiServerFields     = "metadata,group,kind,name,title,owner,attributes,x-agent-details"
 	queryFormatString   = "%s>\"%s\""
 )
 
