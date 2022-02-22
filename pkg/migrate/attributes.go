@@ -217,8 +217,8 @@ func (m *AttributeMigration) updateRI(url string, ri *v1.ResourceInstance) error
 }
 
 // getRI gets the resource instance
-func (m *AttributeMigration) getRI(resUrl string) (*v1.ResourceInstance, error) {
-	response, err := m.client.ExecuteAPI(api.GET, resUrl, nil, nil)
+func (m *AttributeMigration) getRI(url string) (*v1.ResourceInstance, error) {
+	response, err := m.client.ExecuteAPI(api.GET, url, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while retrieving ResourceInstance: %s", err)
 	}
