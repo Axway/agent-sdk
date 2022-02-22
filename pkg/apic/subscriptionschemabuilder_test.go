@@ -31,14 +31,20 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		{
 			RespCode: http.StatusCreated,
 		},
+		{
+			RespCode: http.StatusNotFound,
+		},
+		{
+			RespCode: http.StatusCreated,
+		},
 	})
 	err := NewSubscriptionSchemaBuilder(svcClient).
 		SetName("name").
 		AddUniqueKey("key").
 		AddProperty(NewSubscriptionSchemaPropertyBuilder().
 			SetName("name").
-			IsString().
 			SetRequired().
+			IsString().
 			SetEnumValues([]string{"a", "b", "c"})).
 		Register()
 
@@ -46,6 +52,9 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 
 	svcClient, mockHTTPClient = GetTestServiceClient()
 	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			RespCode: http.StatusCreated,
+		},
 		{
 			RespCode: http.StatusCreated,
 		},
