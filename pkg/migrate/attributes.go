@@ -97,7 +97,7 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 	for _, f := range funcs {
 		wg.Add(1)
 
-		go func(fun migrateFunc) {
+		func(fun migrateFunc) {
 			defer wg.Done()
 
 			err := fun(ri)
@@ -118,8 +118,18 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 }
 
 // updateSvc updates the attributes on service in place, then updates on api server.
-func (m *AttributeMigration) updateSvc(_ *v1.ResourceInstance) error {
-	return m.migrate(m.cfg.GetServicesURL(), nil)
+func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
+	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
+	ri, err := m.getRI(url)
+	if err != nil {
+		return err
+	}
+	item := updateAttrs(ri)
+	if !item.update {
+		return nil
+	}
+
+	return m.updateRI(url, ri)
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
@@ -175,10 +185,10 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 
 		wg.Add(1)
 
-		go func(ri *v1.ResourceInstance) {
+		func(ri *v1.ResourceInstance) {
 			defer wg.Done()
 			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-			err := m.updateRes(url, ri)
+			err := m.updateRI(url, ri)
 			errCh <- err
 		}(item.ri)
 	}
@@ -195,8 +205,8 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	return nil
 }
 
-// updateRes updates the resource, and the sub resource
-func (m *AttributeMigration) updateRes(url string, ri *v1.ResourceInstance) error {
+// updateRI updates the resource, and the sub resource
+func (m *AttributeMigration) updateRI(url string, ri *v1.ResourceInstance) error {
 	_, err := m.client.UpdateAPIV1ResourceInstance(url, ri)
 	if err != nil {
 		return err

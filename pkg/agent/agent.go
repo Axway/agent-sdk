@@ -153,7 +153,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			startAPIServiceCache()
+			am := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+			// register the update cache job
+			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, am)
+			discoveryCache.Execute()
+			startAPIServiceCache(discoveryCache, am)
 			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
 
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -237,16 +241,12 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache() {
-	am := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
-
-	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, am)
+func startAPIServiceCache(discoveryCache jobs.Job, am migrate.AttrMigrator) {
 	if !agent.cfg.IsUsingGRPC() {
-		// healthcheck for central in gRPC mode is registered by streamer
+		// health check for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
-		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
+		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 			return
@@ -257,11 +257,6 @@ func startAPIServiceCache() {
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
 		if !agent.cacheManager.HasLoadedPersistedCache() {
-			err := newDiscoveryCacheJob.Execute()
-			if err != nil {
-				log.Error(err)
-				return
-			}
 			// trigger early saving for the initialized cache, following save will be done by interval job
 			agent.cacheManager.SaveCache()
 		}
