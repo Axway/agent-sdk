@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -153,12 +154,23 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			am := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+			migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 			// register the update cache job
-			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, am)
+			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
 			discoveryCache.Execute()
 
-			startAPIServiceCache(am)
+			for _, key := range agent.cacheManager.GetAPIServiceCache().GetKeys() {
+				i, _ := agent.cacheManager.GetAPIServiceCache().Get(key)
+				ri := &apiV1.ResourceInstance{}
+				bts, _ := json.Marshal(i)
+				json.Unmarshal(bts, ri)
+				err := migration.Migrate(ri)
+				if err != nil {
+					return fmt.Errorf("failed to migrate attributes on resource: %s", err)
+				}
+			}
+
+			startAPIServiceCache()
 			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
 
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -242,19 +254,19 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache(am migrate.AttrMigrator) {
+func startAPIServiceCache() {
 	if !agent.cfg.IsUsingGRPC() {
 		// health check for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
-		discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, am)
+		discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
 		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
 			return
 		}
 		// Start the full update after the first interval
-		go startDiscoveryCache(agent.instanceCacheLock, am)
+		go startDiscoveryCache(agent.instanceCacheLock)
 		log.Tracef("registered API cache update job: %s", id)
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
@@ -384,9 +396,9 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startDiscoveryCache(instanceCacheLock *sync.Mutex, am migrate.AttrMigrator) {
+func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, am)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())

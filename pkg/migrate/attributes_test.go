@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"encoding/json"
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -87,8 +88,10 @@ func TestMigrate(t *testing.T) {
 			Attributes:       map[string]string{},
 		},
 	}
-	_, err := am.Migrate(ri)
-	assert.NotNil(t, util.GetAgentDetails(ri))
+
+	c.execRes = ri
+
+	err := am.Migrate(ri)
 	assert.Nil(t, err)
 }
 
@@ -115,6 +118,7 @@ type mockClient struct {
 	t               *testing.T
 	updateCalled    bool
 	createSubCalled bool
+	execRes         *apiv1.ResourceInstance
 }
 
 func (m *mockClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
@@ -154,4 +158,8 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 func (m *mockClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
+}
+
+func (m *mockClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
+	return json.Marshal(m.execRes)
 }

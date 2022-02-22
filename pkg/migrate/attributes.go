@@ -73,15 +73,15 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 // Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
 // If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
 // that refer to the APIService will all have their attributes updated.
-func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) error {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
-		return ri, fmt.Errorf("expected resource instance kind to be api service")
+		return fmt.Errorf("expected resource instance kind to be api service")
 	}
 
 	// skip migration if x-agent-details is found for the service.
 	details := util.GetAgentDetails(ri)
 	if len(details) > 0 {
-		return ri, nil
+		return nil
 	}
 
 	funcs := []migrateFunc{
@@ -91,7 +91,7 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 		m.updateCI,
 	}
 
-	errCh := make(chan error)
+	errCh := make(chan error, len(funcs))
 	wg := &sync.WaitGroup{}
 
 	for _, f := range funcs {
@@ -110,11 +110,11 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 
 	for e := range errCh {
 		if e != nil {
-			return ri, e
+			return e
 		}
 	}
 
-	return ri, nil
+	return nil
 }
 
 // updateSvc updates the attributes on service in place, then updates on api server.
@@ -187,6 +187,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 
 		go func(ri *v1.ResourceInstance) {
 			defer wg.Done()
+
 			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
 			err := m.updateRI(url, ri)
 			errCh <- err

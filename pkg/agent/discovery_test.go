@@ -177,15 +177,8 @@ func (m *mockSvcClient) CreateSubResourceUnscoped(_, _, _, _ string, _ map[strin
 	return nil
 }
 
-type mockMigrator struct {
-}
-
-func (m mockMigrator) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	return ri, nil
-}
-
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(nil, true, &sync.Mutex{}, &mockMigrator{})
+	dcj := newDiscoveryCache(nil, true, &sync.Mutex{})
 	dcj.getHCStatus = func(_ string) hc.StatusLevel {
 		return hc.OK
 	}
