@@ -79,10 +79,10 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 	}
 
 	// skip migration if x-agent-details is found for the service.
-	// details := util.GetAgentDetails(ri)
-	// if len(details) > 0 {
-	// 	return ri, nil
-	// }
+	details := util.GetAgentDetails(ri)
+	if len(details) > 0 {
+		return ri, nil
+	}
 
 	funcs := []migrateFunc{
 		m.updateSvc,
@@ -119,8 +119,8 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 
 // updateSvc updates the attributes on service in place, then updates on api server.
 func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
-	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
-	return m.migrate(url, nil)
+	// url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
+	return m.migrate(m.cfg.GetServicesURL(), nil)
 
 	// ri, err := m.getRI(url)
 	// if err != nil {
@@ -212,8 +212,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 }
 
 // updateRes updates the resource, and the sub resource
-func (m *AttributeMigration) updateRes(resUrl string, ri *v1.ResourceInstance) error {
-	url := fmt.Sprintf("%s/%s", resUrl, ri.Name)
+func (m *AttributeMigration) updateRes(url string, ri *v1.ResourceInstance) error {
 	_, err := m.client.UpdateAPIV1ResourceInstance(url, ri)
 	if err != nil {
 		return err
