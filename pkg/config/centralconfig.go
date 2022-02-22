@@ -140,6 +140,7 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
+	IsUsingAccessRequests() bool
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -172,6 +173,7 @@ type CentralConfiguration struct {
 	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
+	UseAccessRequests         bool                 `config:"useAccessRequests"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
 	GRPCCfg                   GRPCConfig           `config:"grpc"`
 	CacheStoragePath          string               `config:"cacheStoragePath"`
@@ -501,6 +503,11 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 }
 
 // IsUsingGRPC -
+func (c *CentralConfiguration) IsUsingAccessRequests() bool {
+	return c.UseAccessRequests
+}
+
+// IsUsingGRPC -
 func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.GRPCCfg.Enabled
 }
@@ -556,6 +563,7 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathJobTimeout                = "central.jobTimeout"
+	pathUseAccessRequests         = "central.userAccessRequests"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
 	pathGRPCPort                  = "central.grpc.port"
@@ -694,6 +702,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
+	props.AddBoolProperty(pathUseAccessRequests, false, "Controls whether the agent should look for access requests for provisioning access on the dataplane")
 	// Watch stream config
 	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
@@ -741,6 +750,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
+		UseAccessRequests:         props.BoolPropertyValue(pathUseAccessRequests),
 		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),

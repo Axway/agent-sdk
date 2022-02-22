@@ -151,12 +151,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 	c.subscriptionRegistrationLock.Lock()
 	defer c.subscriptionRegistrationLock.Unlock()
 
-	err := c.registerSubscriptionSchema(subscriptionSchema, update)
-	if err != nil {
-		return err
-	}
-
-	return c.registerAccessRequestSubscriptionSchema(subscriptionSchema, update)
+	return c.registerSubscriptionSchema(subscriptionSchema, update)
 }
 
 func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {

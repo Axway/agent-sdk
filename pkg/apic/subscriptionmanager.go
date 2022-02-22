@@ -44,20 +44,22 @@ type subscriptionManager struct {
 	jobID                string
 	pollingEnabled       bool
 	pollInterval         time.Duration
+	useAccessRequests    bool
 }
 
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:       false,
-		apicClient:      apicClient,
-		processorMap:    make(map[SubscriptionState][]SubscriptionProcessor),
-		ucStatesToQuery: make([]string, 0),
-		arStatesToQuery: make([]string, 0),
-		locklist:        make(map[string]string),
-		locklistLock:    &sync.RWMutex{},
-		pollingEnabled:  apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
-		pollInterval:    apicClient.cfg.GetPollInterval(),
+		isRunning:         false,
+		apicClient:        apicClient,
+		processorMap:      make(map[SubscriptionState][]SubscriptionProcessor),
+		ucStatesToQuery:   make([]string, 0),
+		arStatesToQuery:   make([]string, 0),
+		locklist:          make(map[string]string),
+		locklistLock:      &sync.RWMutex{},
+		pollingEnabled:    apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:      apicClient.cfg.GetPollInterval(),
+		useAccessRequests: apicClient.cfg.IsUsingAccessRequests(),
 	}
 
 	return subscriptionMgr
@@ -114,11 +116,13 @@ func (sm *subscriptionManager) Execute() error {
 	for _, subscription := range subscriptions {
 		sm.ucSubPublishChan <- subscription
 	}
-	// query for central access requests
-	accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
-	if err == nil {
-		for _, accessRequest := range accessRequests {
-			sm.accReqPublishChan <- accessRequest
+	if sm.useAccessRequests {
+		// query for central access requests
+		accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
+		if err == nil {
+			for _, accessRequest := range accessRequests {
+				sm.accReqPublishChan <- accessRequest
+			}
 		}
 	}
 	return err
@@ -285,16 +289,22 @@ func (sm *subscriptionManager) Start() {
 
 		sm.ucSubPublishChan = make(chan interface{})
 		sm.ucSubReceiveChannel = make(chan interface{}) // unified catlog subscriptions channel
-		sm.accReqPublishChan = make(chan interface{})
-		sm.accReqReceiveChannel = make(chan interface{}) // access request channel
 
 		sm.ucSubPublisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.ucSubPublishChan)
 		notification.Subscribe("CentralSubscriptions", sm.ucSubReceiveChannel)
-		sm.accReqPublisher, _ = notification.RegisterNotifier("AccessRequests", sm.accReqPublishChan)
-		notification.Subscribe("AccessRequests", sm.accReqReceiveChannel)
 
 		go sm.ucSubPublisher.Start()
-		go sm.accReqPublisher.Start()
+
+		if sm.useAccessRequests {
+			sm.accReqPublishChan = make(chan interface{})
+			sm.accReqReceiveChannel = make(chan interface{}) // access request channel
+
+			sm.accReqPublisher, _ = notification.RegisterNotifier("AccessRequests", sm.accReqPublishChan)
+			notification.Subscribe("AccessRequests", sm.accReqReceiveChannel)
+
+			go sm.accReqPublisher.Start()
+		}
+
 		go sm.processSubscriptions()
 
 		// Wait for at least one processor to register before registering the job
