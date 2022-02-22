@@ -563,7 +563,7 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathJobTimeout                = "central.jobTimeout"
-	pathUseAccessRequests         = "central.userAccessRequests"
+	pathUseAccessRequests         = "central.useAccessRequests"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
 	pathGRPCPort                  = "central.grpc.port"
