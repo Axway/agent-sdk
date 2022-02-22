@@ -325,7 +325,9 @@ func (sm *subscriptionManager) Start() {
 func (sm *subscriptionManager) Stop() {
 	if sm.isRunning {
 		sm.ucSubPublisher.Stop()
-		sm.accReqPublisher.Stop()
+		if sm.useAccessRequests {
+			sm.accReqPublisher.Stop()
+		}
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 		jobs.UnregisterJob(sm.jobID)
