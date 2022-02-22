@@ -97,7 +97,7 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 	for _, f := range funcs {
 		wg.Add(1)
 
-		func(fun migrateFunc) {
+		go func(fun migrateFunc) {
 			defer wg.Done()
 
 			err := fun(ri)
@@ -185,7 +185,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 
 		wg.Add(1)
 
-		func(ri *v1.ResourceInstance) {
+		go func(ri *v1.ResourceInstance) {
 			defer wg.Done()
 			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
 			err := m.updateRI(url, ri)
