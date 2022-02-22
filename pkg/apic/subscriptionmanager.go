@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -21,7 +19,6 @@ type SubscriptionManager interface {
 	RegisterValidator(validator SubscriptionValidator)
 	Start()
 	Stop()
-	getPublisher() notification.Notifier
 	getProcessorMap() map[SubscriptionState][]SubscriptionProcessor
 	OnConfigChange(apicClient *ServiceClient)
 }
@@ -29,33 +26,40 @@ type SubscriptionManager interface {
 // subscriptionManager -
 type subscriptionManager struct {
 	jobs.Job
-	isRunning           bool
-	publisher           notification.Notifier
-	publishChannel      chan interface{}
-	receiveChannel      chan interface{}
-	receiverQuitChannel chan bool
-	processorMap        map[SubscriptionState][]SubscriptionProcessor
-	validator           SubscriptionValidator
-	statesToQuery       []string
-	apicClient          *ServiceClient
-	locklist            map[string]string // subscription items to skip because they are locked
-	locklistLock        *sync.RWMutex     // Use lock when making changes/reading the locklist map
-	jobID               string
-	pollingEnabled      bool
-	pollInterval        time.Duration
+	isRunning            bool
+	ucSubPublisher       notification.Notifier // unified catalog subscrtion notifier
+	ucSubPublishChan     chan interface{}      // unified catalog subscrtion publish channel
+	ucSubReceiveChannel  chan interface{}      // unified catalog subscrtion receive channel
+	accReqPublisher      notification.Notifier // access request notifier
+	accReqPublishChan    chan interface{}      // access request publish channel
+	accReqReceiveChannel chan interface{}      // access request receive channel
+	receiverQuitChannel  chan bool
+	processorMap         map[SubscriptionState][]SubscriptionProcessor
+	validator            SubscriptionValidator
+	ucStatesToQuery      []string // states to query for unified catalog subscriptions
+	arStatesToQuery      []string // states to query for access requests
+	apicClient           *ServiceClient
+	locklist             map[string]string // subscription items to skip because they are locked
+	locklistLock         *sync.RWMutex     // Use lock when making changes/reading the locklist map
+	jobID                string
+	pollingEnabled       bool
+	pollInterval         time.Duration
+	useAccessRequests    bool
 }
 
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:      false,
-		apicClient:     apicClient,
-		processorMap:   make(map[SubscriptionState][]SubscriptionProcessor),
-		statesToQuery:  make([]string, 0),
-		locklist:       make(map[string]string),
-		locklistLock:   &sync.RWMutex{},
-		pollingEnabled: apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
-		pollInterval:   apicClient.cfg.GetPollInterval(),
+		isRunning:         false,
+		apicClient:        apicClient,
+		processorMap:      make(map[SubscriptionState][]SubscriptionProcessor),
+		ucStatesToQuery:   make([]string, 0),
+		arStatesToQuery:   make([]string, 0),
+		locklist:          make(map[string]string),
+		locklistLock:      &sync.RWMutex{},
+		pollingEnabled:    apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:      apicClient.cfg.GetPollInterval(),
+		useAccessRequests: apicClient.cfg.IsUsingAccessRequests(),
 	}
 
 	return subscriptionMgr
@@ -68,13 +72,21 @@ func (sm *subscriptionManager) OnConfigChange(apicClient *ServiceClient) {
 
 // RegisterCallback - Register subscription processor callback for specified state
 func (sm *subscriptionManager) RegisterProcessor(state SubscriptionState, processor SubscriptionProcessor) {
-	processorList, ok := sm.processorMap[state]
+	if state.isUnifiedCatalogState() {
+		processorList, ok := sm.processorMap[state]
+		if !ok {
+			processorList = make([]SubscriptionProcessor, 0)
+		}
+		sm.ucStatesToQuery = append(sm.ucStatesToQuery, string(state))
+		sm.processorMap[state] = append(processorList, processor)
+	}
+
+	processorList, ok := sm.processorMap[state.getAccessRequestState()]
 	if !ok {
 		processorList = make([]SubscriptionProcessor, 0)
 	}
-	sm.statesToQuery = append(sm.statesToQuery, string(state))
-	sm.processorMap[state] = append(processorList, processor)
-
+	sm.arStatesToQuery = append(sm.arStatesToQuery, string(state.getAccessRequestState()))
+	sm.processorMap[state.getAccessRequestState()] = append(processorList, processor)
 }
 
 // RegisterValidator - Registers validator for subscription to be processed
@@ -96,36 +108,70 @@ func (sm *subscriptionManager) Status() error {
 }
 
 func (sm *subscriptionManager) Execute() error {
-	subscriptions, err := sm.apicClient.getSubscriptions(sm.statesToQuery)
-	if err == nil {
-		for _, subscription := range subscriptions {
-			sm.publishChannel <- subscription
+	// query for central subscriptions
+	subscriptions, err := sm.apicClient.getSubscriptions(sm.ucStatesToQuery)
+	if err != nil {
+		return err
+	}
+	for _, subscription := range subscriptions {
+		sm.ucSubPublishChan <- subscription
+	}
+	if sm.useAccessRequests {
+		// query for central access requests
+		accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
+		if err == nil {
+			for _, accessRequest := range accessRequests {
+				sm.accReqPublishChan <- accessRequest
+			}
 		}
 	}
-	return nil
+	return err
 }
 
 func (sm *subscriptionManager) processSubscriptions() {
 	for {
+		var subscription Subscription
+		isAccessRequest := false
 		select {
-		case msg, ok := <-sm.receiveChannel:
+		case msg, ok := <-sm.ucSubReceiveChannel:
 			if ok {
-				subscription, _ := msg.(CentralSubscription)
-				id := subscription.GetID()
-				if !sm.isItemOnLocklist(id) {
-					sm.addLocklistItem(id)
-					log.Tracef("checking if we should handle subscription %s", subscription.GetName())
-					err := sm.preprocessSubscription(&subscription)
-					if err == nil && subscription.ApicID != "" && subscription.GetRemoteAPIID() != "" {
-						log.Infof("Subscription %s received", subscription.GetName())
-						sm.invokeProcessor(subscription)
-						log.Infof("Subscription %s processed", subscription.GetName())
-					}
-					sm.removeLocklistItem(id)
-				}
+				centralSub := msg.(CentralSubscription)
+				subscription = &centralSub
+			}
+		case msg, ok := <-sm.accReqReceiveChannel:
+			isAccessRequest = true
+			if ok {
+				accReq := msg.(AccessRequestSubscription)
+				subscription = &accReq
 			}
 		case <-sm.receiverQuitChannel:
 			return
+		}
+		if subscription != nil {
+			id := subscription.GetID()
+			if !sm.isItemOnLocklist(id) {
+				sm.addLocklistItem(id)
+				log.Tracef("checking if we should handle subscription %s", subscription.GetName())
+				var err error
+				if isAccessRequest {
+					accessReq := subscription.(*AccessRequestSubscription)
+					err = sm.preprocessAccessRequest(accessReq)
+				} else {
+					centralSub := subscription.(*CentralSubscription)
+					err = sm.preprocessSubscription(centralSub)
+				}
+				if err != nil {
+					log.Error(err)
+				}
+				if err == nil && subscription.GetApicID() != "" && subscription.GetRemoteAPIID() != "" {
+					log.Infof("Subscription %s received", subscription.GetName())
+					sm.invokeProcessor(subscription)
+					log.Infof("Subscription %s processed", subscription.GetName())
+				} else {
+					log.Tracef("Skipping subscription %s api service not on this dataplane", subscription.GetName())
+				}
+				sm.removeLocklistItem(id)
+			}
 		}
 	}
 }
@@ -133,8 +179,7 @@ func (sm *subscriptionManager) processSubscriptions() {
 func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
-
-	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.GetCatalogItemID(), subscription.GetID())
+	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.ApicID, subscription.GetID())
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
 		return err
@@ -148,6 +193,28 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 		return errors.New("associated catalog item is not created by agent - skipping")
 	}
 	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
+
+	return nil
+}
+
+func (sm *subscriptionManager) preprocessAccessRequest(subscription *AccessRequestSubscription) error {
+	subscription.ApicID = subscription.GetApicID()
+	subscription.apicClient = sm.apicClient
+	apiSI, err := sm.apicClient.GetAPIServiceInstanceByName(subscription.ApicID)
+	if err != nil {
+		log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
+		return err
+	}
+	if apiSI == nil {
+		return utilerrors.Wrap(ErrGetAPIServiceInstanceByName, "APIServiceInstance is nil")
+	}
+	apiSIR, err := apiSI.AsInstance()
+	if err != nil {
+		log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
+		return err
+	}
+	sm.setSubscriptionInfo(subscription, apiSIR)
+
 	return nil
 }
 
@@ -184,32 +251,29 @@ func (sm *subscriptionManager) preprocessSubscriptionForAPIServiceInstance(subsc
 // - ApicID - using the metadata of API server resource metadata.id
 // - RemoteAPIID - using the attribute externalAPIID on API server resource
 // - RemoteAPIStage - using the attribute externalAPIStage on API server resource (if present)
-func (sm *subscriptionManager) setSubscriptionInfo(subscription *CentralSubscription, apiServerResource *v1.ResourceInstance) {
+func (sm *subscriptionManager) setSubscriptionInfo(subscription Subscription, apiServerResource *v1.ResourceInstance) {
 	if apiServerResource != nil {
-		subscription.ApicID = apiServerResource.Metadata.ID
-		subscription.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
-		subscription.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
-		subscription.RemoteAPIAttributes = apiServerResource.Attributes
-		if subscription.RemoteAPIStage != "" {
+		subscription.setAPIResourceInfo((apiServerResource))
+		if subscription.GetRemoteAPIStage() != "" {
 			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s)",
-				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID)
+				subscription.GetID(), apiServerResource.Kind, subscription.GetApicID(), subscription.GetRemoteAPIID())
 		} else {
 			log.Debugf("Subscription Details (ID: %s, Reference type: %s, Reference ID: %s, Remote API ID: %s, Remote API Stage: %s)",
-				subscription.GetID(), apiServerResource.Kind, subscription.ApicID, subscription.RemoteAPIID, subscription.RemoteAPIStage)
+				subscription.GetID(), apiServerResource.Kind, subscription.GetApicID(), subscription.GetRemoteAPIID(), subscription.GetRemoteAPIStage())
 		}
 	}
 }
 
-func (sm *subscriptionManager) invokeProcessor(subscription CentralSubscription) {
+func (sm *subscriptionManager) invokeProcessor(subscription Subscription) {
 	invokeProcessor := true
 	if sm.validator != nil {
-		invokeProcessor = sm.validator(&subscription)
+		invokeProcessor = sm.validator(subscription)
 	}
 	if invokeProcessor {
 		processorList, ok := sm.processorMap[SubscriptionState(subscription.GetState())]
 		if ok {
 			for _, processor := range processorList {
-				processor(&subscription)
+				processor(subscription)
 			}
 		}
 	}
@@ -223,17 +287,28 @@ func (sm *subscriptionManager) Start() {
 	if !sm.isRunning {
 		sm.receiverQuitChannel = make(chan bool)
 
-		sm.publishChannel = make(chan interface{})
-		sm.receiveChannel = make(chan interface{})
+		sm.ucSubPublishChan = make(chan interface{})
+		sm.ucSubReceiveChannel = make(chan interface{}) // unified catlog subscriptions channel
 
-		sm.publisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.publishChannel)
-		notification.Subscribe("CentralSubscriptions", sm.receiveChannel)
+		sm.ucSubPublisher, _ = notification.RegisterNotifier("CentralSubscriptions", sm.ucSubPublishChan)
+		notification.Subscribe("CentralSubscriptions", sm.ucSubReceiveChannel)
 
-		go sm.publisher.Start()
+		go sm.ucSubPublisher.Start()
+
+		if sm.useAccessRequests {
+			sm.accReqPublishChan = make(chan interface{})
+			sm.accReqReceiveChannel = make(chan interface{}) // access request channel
+
+			sm.accReqPublisher, _ = notification.RegisterNotifier("AccessRequests", sm.accReqPublishChan)
+			notification.Subscribe("AccessRequests", sm.accReqReceiveChannel)
+
+			go sm.accReqPublisher.Start()
+		}
+
 		go sm.processSubscriptions()
 
 		// Wait for at least one processor to register before registering the job
-		if len(sm.statesToQuery) > 0 && sm.pollingEnabled && sm.jobID == "" {
+		if (len(sm.ucStatesToQuery) > 0 || len(sm.arStatesToQuery) > 0) && sm.pollingEnabled && sm.jobID == "" {
 			var err error
 			sm.jobID, err = jobs.RegisterIntervalJobWithName(sm, sm.pollInterval, "Subscription Manager")
 			if err != nil {
@@ -249,16 +324,15 @@ func (sm *subscriptionManager) Start() {
 // Stop - Stop processing subscriptions
 func (sm *subscriptionManager) Stop() {
 	if sm.isRunning {
-		sm.publisher.Stop()
+		sm.ucSubPublisher.Stop()
+		if sm.useAccessRequests {
+			sm.accReqPublisher.Stop()
+		}
 		sm.receiverQuitChannel <- true
 		sm.isRunning = false
 		jobs.UnregisterJob(sm.jobID)
 		sm.jobID = ""
 	}
-}
-
-func (sm *subscriptionManager) getPublisher() notification.Notifier {
-	return sm.publisher
 }
 
 func (sm *subscriptionManager) getProcessorMap() map[SubscriptionState][]SubscriptionProcessor {
