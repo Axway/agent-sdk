@@ -3,61 +3,38 @@ package agent
 import (
 	"fmt"
 	"sort"
-	"sync"
-	"time"
+	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const envACLFormat = "%s-agent-acl"
 
-var waitForTime = time.Minute
-
 //aclUpdateHandler - job that handles updates to the ACL in the environment
 type aclUpdateHandlerJob struct {
 	jobs.Job
-	currentACL       *v1alpha1.AccessControlList
-	existingTeamIDs  []string
-	newTeamIDs       []string
-	stopChan         chan interface{}
-	teamChan         chan string
-	runningChan      chan bool
-	isRunning        bool
-	countdownStarted bool // signal that the countdown to push updated teams has started
-	newTeamMutex     sync.Mutex
-	countdownMutex   sync.Mutex
+	lastTeamIDs []string
 }
 
-func newACLUpdateHandlerJob(teamChanel chan string) *aclUpdateHandlerJob {
-	job := &aclUpdateHandlerJob{
-		existingTeamIDs: make([]string, 0),
-		newTeamIDs:      make([]string, 0),
-		stopChan:        make(chan interface{}),
-		teamChan:        teamChanel,
-		runningChan:     make(chan bool),
-		isRunning:       false,
-		newTeamMutex:    sync.Mutex{},
-		countdownMutex:  sync.Mutex{},
-	}
-	go job.statusUpdate()
+func newACLUpdateHandlerJob() *aclUpdateHandlerJob {
+	job := &aclUpdateHandlerJob{}
 	return job
 }
 
 func (j *aclUpdateHandlerJob) Ready() bool {
 	status := hc.GetStatus(healthcheckEndpoint)
-	return status == hc.OK
+	ready := status == hc.OK
+	if ready {
+		j.initializeACLJob()
+	}
+	return ready
 }
 
 func (j *aclUpdateHandlerJob) Status() error {
-	if !j.isRunning {
-		return fmt.Errorf("acl update handler not running")
-	}
-
 	status := hc.GetStatus(healthcheckEndpoint)
 	if status == hc.OK {
 		return nil
@@ -66,111 +43,55 @@ func (j *aclUpdateHandlerJob) Status() error {
 }
 
 func (j *aclUpdateHandlerJob) Execute() error {
-	j.started()
-	defer j.stopped()
-
-	j.initializeACLJob()
-
-	for {
-		select {
-		case teamID, ok := <-j.teamChan:
-			if !ok {
-				err := fmt.Errorf("team channel was closed")
-				return err
-			}
-			j.handleTeam(teamID)
-		case <-j.stopChan:
-			log.Info("Stopping the api handler")
-			return nil
-		}
+	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
+	newTeamIDs = sort.StringSlice(newTeamIDs)
+	if j.lastTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(j.lastTeamIDs, "") {
+		return nil
 	}
+	if err := j.updateACL(newTeamIDs); err != nil {
+		return err
+	}
+	j.lastTeamIDs = sort.StringSlice(newTeamIDs)
+	return nil
 }
 
 func (j *aclUpdateHandlerJob) getACLName() string {
 	return fmt.Sprintf(envACLFormat, GetCentralConfig().GetEnvironmentName())
 }
 
-func (j *aclUpdateHandlerJob) statusUpdate() {
-	for {
-		select {
-		case update := <-j.runningChan:
-			j.isRunning = update
-		}
-	}
-}
-
 func (j *aclUpdateHandlerJob) initializeACLJob() {
+	if acl := agent.cacheManager.GetAccessControlList(); acl != nil {
+		return
+	}
+
 	acl, err := agent.apicClient.GetAccessControlList(j.getACLName())
 	if err != nil {
-		go j.updateACL()
 		return
 	}
 
-	j.currentACL = acl
-	for _, subject := range acl.Spec.Subjects {
-		if subject.Type == v1.TeamOwner {
-			j.existingTeamIDs = append(j.existingTeamIDs, subject.ID)
-		}
+	if aclInstance, err := acl.AsInstance(); err == nil {
+		agent.cacheManager.SetAccessControlList(aclInstance)
 	}
-
-	numTeamsOnEnv := len(j.existingTeamIDs)
-	j.existingTeamIDs = util.RemoveDuplicateValuesFromStringSlice(j.existingTeamIDs)
-	if len(j.existingTeamIDs) != numTeamsOnEnv {
-		go j.updateACL()
-		return
-	}
-	sort.Strings(j.existingTeamIDs)
-}
-
-func (j *aclUpdateHandlerJob) started() {
-	j.runningChan <- true
-}
-
-func (j *aclUpdateHandlerJob) stopped() {
-	j.runningChan <- false
-}
-
-func (j *aclUpdateHandlerJob) handleTeam(teamID string) {
-	log.Tracef("acl update job received team id %s", teamID)
-	// lock so an update does not happen until the team is added to the array
-	j.newTeamMutex.Lock()
-	defer j.newTeamMutex.Unlock()
-
-	if util.IsItemInSlice(j.existingTeamIDs, teamID) {
-		log.Tracef("team id %s already in acl", teamID)
-		return
-	}
-
-	if util.IsItemInSlice(j.newTeamIDs, teamID) {
-		log.Tracef("team id %s already in acl update process", teamID)
-		return
-	}
-
-	j.newTeamIDs = append(j.newTeamIDs, teamID)
-	go j.updateACL()
 }
 
 func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
-	acl := j.currentACL
-	if acl == nil {
-		acl = &v1alpha1.AccessControlList{
-			ResourceMeta: v1.ResourceMeta{
-				GroupVersionKind: v1alpha1.AccessControlListGVK(),
-				Name:             j.getACLName(),
-				Title:            j.getACLName(),
-			},
-			Spec: v1alpha1.AccessControlListSpec{
-				Rules: []v1alpha1.AccessRules{
-					{
-						Access: []v1alpha1.AccessLevelScope{
-							{
-								Level: "scope",
-							},
+	acl := &v1alpha1.AccessControlList{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1alpha1.AccessControlListGVK(),
+			Name:             j.getACLName(),
+			Title:            j.getACLName(),
+		},
+		Spec: v1alpha1.AccessControlListSpec{
+			Rules: []v1alpha1.AccessRules{
+				{
+					Access: []v1alpha1.AccessLevelScope{
+						{
+							Level: "scope",
 						},
 					},
 				},
 			},
-		}
+		},
 	}
 
 	// Add all the teams
@@ -185,51 +106,34 @@ func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.Acce
 	return acl
 }
 
-func (j *aclUpdateHandlerJob) updateACL() {
-	j.countdownMutex.Lock()
-	if j.countdownStarted {
-		j.countdownMutex.Unlock()
-		return
+func (j *aclUpdateHandlerJob) updateACL(teamIDs []string) error {
+	// do not add an acl if there are no teamIDs and an ACL currently does not exist
+	currentACL := agent.cacheManager.GetAccessControlList()
+	if len(teamIDs) == 0 && currentACL == nil {
+		return nil
 	}
 
-	j.countdownStarted = true
-	j.countdownMutex.Unlock()
-	log.Tracef("waiting %s, for more teams, before updating acl", waitForTime)
-	time.Sleep(waitForTime)
-
-	// lock so teams are not added to the array until the update is done
-	j.newTeamMutex.Lock()
-	defer func() {
-		j.countdownMutex.Lock()
-		// reset this signal once function completes
-		j.countdownStarted = false
-		j.newTeamMutex.Unlock()
-		j.countdownMutex.Unlock()
-	}()
-
 	var err error
-	var acl *v1alpha1.AccessControlList
 	log.Tracef("acl about to be updated")
-	if j.currentACL != nil {
-		acl, err = agent.apicClient.UpdateAccessControlList(j.createACLResource(append(j.existingTeamIDs, j.newTeamIDs...)))
+	acl := j.createACLResource(teamIDs)
+	if currentACL != nil {
+		acl, err = agent.apicClient.UpdateAccessControlList(acl)
 	} else {
-		acl, err = agent.apicClient.CreateAccessControlList(j.createACLResource(j.newTeamIDs))
+		acl, err = agent.apicClient.CreateAccessControlList(acl)
 	}
 
 	if err == nil {
-		log.Tracef("acl has been updated")
-		j.existingTeamIDs = append(j.existingTeamIDs, j.newTeamIDs...)
-		j.newTeamIDs = make([]string, 0)
-		sort.Strings(j.existingTeamIDs)
-		j.currentACL = acl
-	} else {
-		log.Errorf("error in acl handler: %s", err)
+		aclInstance, err := acl.AsInstance()
+		if err == nil {
+			agent.cacheManager.SetAccessControlList(aclInstance)
+		}
 	}
+	return err
 }
 
 // registerAccessControlListHandler -
-func registerAccessControlListHandler(teamChannel chan string) {
-	job := newACLUpdateHandlerJob(teamChannel)
+func registerAccessControlListHandler() {
+	job := newACLUpdateHandlerJob()
 
-	jobs.RegisterChannelJobWithName(job, job.stopChan, "Access Control List Handler")
+	jobs.RegisterIntervalJobWithName(job, agent.cfg.GetPollInterval(), "Access Control List")
 }

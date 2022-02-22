@@ -17,6 +17,7 @@ import (
 
 const (
 	defaultCacheStoragePath = "./data/cache"
+	accessControlList       = "AccessControlListKey"
 )
 
 // Manager - interface to manage agent resource
@@ -33,6 +34,7 @@ type Manager interface {
 	GetAPIServiceWithAPIID(externalAPIID string) *v1.ResourceInstance
 	GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance
 	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
+	GetTeamsIDsInAPIServices() []string
 	DeleteAPIService(externalAPIID string) error
 
 	// API service instance cache related methods
@@ -50,15 +52,18 @@ type Manager interface {
 	GetCategoryWithTitle(title string) *v1.ResourceInstance
 	DeleteCategory(categoryName string) error
 
-	// Watch Sequence cache related methods
-	AddSequence(watchTopicName string, sequenceID int64)
-	GetSequence(watchTopicName string) int64
-
+	// Team and ACL related cache methods
 	GetTeamCache() cache.Cache
 	AddTeam(team *definitions.PlatformTeam)
 	GetTeamByName(name string) *definitions.PlatformTeam
 	GetTeamByID(id string) *definitions.PlatformTeam
 	GetDefaultTeam() *definitions.PlatformTeam
+	SetAccessControlList(acl *v1.ResourceInstance)
+	GetAccessControlList() *v1.ResourceInstance
+
+	// Watch Sequence cache related methods
+	AddSequence(watchTopicName string, sequenceID int64)
+	GetSequence(watchTopicName string) int64
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
@@ -284,6 +289,29 @@ func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstanc
 	return nil
 }
 
+// GetTeamsIDsInAPIServices - returns the array of team IDs that have services
+func (c *cacheManager) GetTeamsIDsInAPIServices() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	teamNameMap := make(map[string]struct{})
+	teamIDs := make([]string, 0)
+	for _, key := range c.apiMap.GetKeys() {
+		api, _ := c.apiMap.Get(key)
+		if apiSvc, ok := api.(*v1.ResourceInstance); ok {
+			if apiSvc.Owner != nil && apiSvc.Owner.Type == v1.TeamOwner {
+				if _, found := teamNameMap[apiSvc.Owner.ID]; found {
+					continue
+				}
+				teamNameMap[apiSvc.Owner.ID] = struct{}{}
+				teamIDs = append(teamIDs, apiSvc.Owner.ID)
+			}
+		}
+	}
+
+	return teamIDs
+}
+
 // DeleteAPIService - remove APIService resource from cache based on externalAPIID or externalAPIPrimaryKey
 func (c *cacheManager) DeleteAPIService(key string) error {
 	defer c.setCacheUpdated(true)
@@ -402,28 +430,6 @@ func (c *cacheManager) DeleteCategory(categoryName string) error {
 	return c.categoryMap.Delete(categoryName)
 }
 
-// Watch Sequence cache
-
-// AddSequence - add/updates the sequenceID for the watch topic in cache
-func (c *cacheManager) AddSequence(watchTopicName string, sequenceID int64) {
-	defer c.setCacheUpdated(true)
-
-	c.sequenceCache.Set(watchTopicName, sequenceID)
-}
-
-// GetSequence - returns the sequenceID for the watch topic in cache
-func (c *cacheManager) GetSequence(watchTopicName string) int64 {
-	cachedSeqID, err := c.sequenceCache.Get(watchTopicName)
-	if err == nil {
-		if seqID, ok := cachedSeqID.(int64); ok {
-			return seqID
-		} else if seqID, ok := cachedSeqID.(float64); ok {
-			return int64(seqID)
-		}
-	}
-	return 0
-}
-
 // GetTeamCache - returns the team cache
 func (c *cacheManager) GetTeamCache() cache.Cache {
 	return c.teams
@@ -482,6 +488,43 @@ func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
 		return nil
 	}
 	return &team
+}
+
+// SetAccessControlList saves the Access Control List to the cache
+func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
+	defer c.setCacheUpdated(true)
+	c.teams.Set(accessControlList, acl)
+}
+
+// GetAccessControlList gets the Access Control List from the cache
+func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
+	item, err := c.teams.Get(accessControlList)
+	if err != nil {
+		return nil
+	}
+	return item.(*v1.ResourceInstance)
+}
+
+// Watch Sequence cache
+
+// AddSequence - add/updates the sequenceID for the watch topic in cache
+func (c *cacheManager) AddSequence(watchTopicName string, sequenceID int64) {
+	defer c.setCacheUpdated(true)
+
+	c.sequenceCache.Set(watchTopicName, sequenceID)
+}
+
+// GetSequence - returns the sequenceID for the watch topic in cache
+func (c *cacheManager) GetSequence(watchTopicName string) int64 {
+	cachedSeqID, err := c.sequenceCache.Get(watchTopicName)
+	if err == nil {
+		if seqID, ok := cachedSeqID.(int64); ok {
+			return seqID
+		} else if seqID, ok := cachedSeqID.(float64); ok {
+			return int64(seqID)
+		}
+	}
+	return 0
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {

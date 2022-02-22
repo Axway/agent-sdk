@@ -136,11 +136,7 @@ func TestTeamCache(t *testing.T) {
 			assert.NotNil(t, agent.apicClient)
 
 			teamChanel := make(chan string)
-			job := centralTeamsCache{
-				teamChannel: teamChanel,
-				client:      agent.apicClient,
-				cache:       caches,
-			}
+			job := centralTeamsCache{}
 
 			go job.Execute()
 			count := 0

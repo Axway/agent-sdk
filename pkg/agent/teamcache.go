@@ -5,10 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -18,9 +16,6 @@ const qaTeamCacheInterval = "QA_CENTRAL_TEAMCACHE_INTERVAL"
 
 type centralTeamsCache struct {
 	jobs.Job
-	teamChannel chan string
-	cache       cache.Manager
-	client      apic.Client
 }
 
 func (j *centralTeamsCache) Ready() bool {
@@ -32,7 +27,7 @@ func (j *centralTeamsCache) Status() error {
 }
 
 func (j *centralTeamsCache) Execute() error {
-	platformTeams, err := j.client.GetTeam(map[string]string{})
+	platformTeams, err := agent.apicClient.GetTeam(map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -42,25 +37,18 @@ func (j *centralTeamsCache) Execute() error {
 	}
 
 	for _, team := range platformTeams {
-		savedTeam := j.cache.GetTeamByID(team.ID)
+		savedTeam := agent.cacheManager.GetTeamByID(team.ID)
 		if savedTeam == nil {
-			j.cache.AddTeam(&team)
-			if j.teamChannel != nil {
-				log.Tracef("sending %s (%s) team to acl", team.Name, team.ID)
-				j.teamChannel <- team.ID
-			}
+			agent.cacheManager.AddTeam(&team)
 		}
 	}
 	return nil
 }
 
 // registerTeamMapCacheJob -
-func registerTeamMapCacheJob(teamChannel chan string, cache cache.Manager, client apic.Client) {
-	job := &centralTeamsCache{
-		teamChannel: teamChannel,
-		cache:       cache,
-		client:      client,
-	}
+func registerTeamMapCacheJob() {
+	job := &centralTeamsCache{}
+
 	// execute the job on startup to populate the team cache
 	job.Execute()
 	jobs.RegisterIntervalJobWithName(job, getJobInterval(), "Team Cache")
