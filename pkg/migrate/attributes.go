@@ -118,19 +118,8 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 }
 
 // updateSvc updates the attributes on service in place, then updates on api server.
-func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
-	// url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
+func (m *AttributeMigration) updateSvc(_ *v1.ResourceInstance) error {
 	return m.migrate(m.cfg.GetServicesURL(), nil)
-
-	// ri, err := m.getRI(url)
-	// if err != nil {
-	// 	return err
-	// }
-	// item := updateAttrs(ri)
-	// if !item.update {
-	// 	return nil
-	// }
-	// return m.updateRes(m.cfg.GetServicesURL(), ri)
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
@@ -172,11 +161,6 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	items := make([]item, 0)
 
 	for _, ri := range resources {
-		// url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-		// ri, err := m.getRI(url)
-		// if err != nil {
-		// 	return err
-		// }
 		item := updateAttrs(ri)
 		items = append(items, item)
 	}
