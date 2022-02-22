@@ -502,7 +502,7 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
-// IsUsingGRPC -
+// IsUsingAccessRequests -
 func (c *CentralConfiguration) IsUsingAccessRequests() bool {
 	return c.UseAccessRequests
 }
