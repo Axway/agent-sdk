@@ -116,11 +116,7 @@ func (j *discoveryCache) updateAPICache() {
 			j.lastServiceTime = thisTime
 		}
 
-		err := agent.cacheManager.AddAPIService(svc)
-		if err != nil {
-			log.Errorf("error adding API service to cache: %s", err)
-			continue
-		}
+		agent.cacheManager.AddAPIService(svc)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
 		if primaryKey != "" {
 			existingAPIs[primaryKey] = true
