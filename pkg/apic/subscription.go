@@ -450,7 +450,7 @@ func (s *AccessRequestSubscription) updateAccessRequestState(newState Subscripti
 
 	return &coreapi.Request{
 			Method:      coreapi.PUT,
-			URL:         s.getServiceClient().cfg.GetAccessRequestSubscriptionURL(s.GetName()),
+			URL:         s.getServiceClient().cfg.GetAccessRequestURL(s.GetName()),
 			QueryParams: nil,
 			Headers:     headers,
 			Body:        statePostBody,
@@ -521,7 +521,7 @@ func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]inter
 		s.AccessRequest.Spec.Data[key] = val
 	}
 
-	url := s.getServiceClient().cfg.GetAccessRequestSubscriptionPropertiesURL(s.GetName())
+	url := s.getServiceClient().cfg.GetAccessRequestURL(s.GetName())
 	body, err := json.Marshal(s.AccessRequest)
 
 	if err != nil {
@@ -601,7 +601,7 @@ func (c *ServiceClient) getAccessRequests(states []string) ([]AccessRequestSubsc
 	}
 
 	queryParams["query"] = searchQuery
-	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestURL(), queryParams)
+	resBody, err := c.sendSubscriptionsRequest(c.cfg.GetAccessRequestsURL(), queryParams)
 	if err != nil {
 		return nil, err
 	}

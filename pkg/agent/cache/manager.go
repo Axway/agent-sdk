@@ -60,15 +60,12 @@ type Manager interface {
 	GetTeamByID(id string) *definitions.PlatformTeam
 	GetDefaultTeam() *definitions.PlatformTeam
 
-	//Access Request cache related methods
-	GetAccessRequestCache() cache.Cache
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
 
 type cacheManager struct {
 	jobs.Job
-	accessRequestMap        cache.Cache
 	apiMap                  cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
@@ -85,13 +82,12 @@ type cacheManager struct {
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	m := &cacheManager{
-		accessRequestMap: cache.New(),
-		apiMap:           cache.New(),
-		instanceMap:      cache.New(),
-		categoryMap:      cache.New(),
-		sequenceCache:    cache.New(),
-		teams:            cache.New(),
-		isCacheUpdated:   false,
+		apiMap:         cache.New(),
+		instanceMap:    cache.New(),
+		categoryMap:    cache.New(),
+		sequenceCache:  cache.New(),
+		teams:          cache.New(),
+		isCacheUpdated: false,
 	}
 
 	if cfg.IsUsingGRPC() && persistCache {
@@ -107,7 +103,6 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	cacheMap := cache.New()
 	err := cacheMap.Load(c.cacheFilename)
 	if err == nil {
-		c.accessRequestMap = c.loadPersistedResourceInstanceCache(cacheMap, "accessRequests")
 		c.apiMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServices")
 		c.instanceMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServiceInstances")
 		c.categoryMap = c.loadPersistedResourceInstanceCache(cacheMap, "categories")
@@ -117,7 +112,6 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		c.isCacheUpdated = false
 	}
 
-	cacheMap.Set("accessRequests", c.accessRequestMap)
 	cacheMap.Set("apiServices", c.apiMap)
 	cacheMap.Set("apiServiceInstances", c.instanceMap)
 	cacheMap.Set("categories", c.categoryMap)
@@ -488,13 +482,6 @@ func (c *cacheManager) GetTeamByID(id string) *definitions.PlatformTeam {
 		return nil
 	}
 	return &team
-}
-
-// AccessRequest
-
-// GetAccessRequestCache - returns the access request cache
-func (c *cacheManager) GetAccessRequestCache() cache.Cache {
-	return c.accessRequestMap
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {
