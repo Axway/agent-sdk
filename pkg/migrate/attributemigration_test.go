@@ -85,14 +85,30 @@ func TestMigrate(t *testing.T) {
 	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
-			Attributes:       map[string]string{},
+			Attributes: map[string]string{
+				defs.AttrPreviousAPIServiceRevisionID: "1",
+				defs.AttrExternalAPIID:                "2",
+				defs.AttrExternalAPIPrimaryKey:        "3",
+				defs.AttrExternalAPIName:              "api-name",
+				defs.AttrExternalAPIStage:             "stage",
+				defs.AttrCreatedBy:                    "created-by",
+				"majorHash":                           "major",
+				"minorHash":                           "minor",
+				"az-api-hash":                         "azhash",
+				"az-resource-id":                      "resourceid",
+				"random":                              "abc",
+			},
 		},
 	}
 
 	c.execRes = ri
 
-	_, err := am.Migrate(ri)
+	AddAttr("majorHash", "minorHash")
+	AddPattern("az-")
+
+	svc, err := am.Migrate(ri)
 	assert.Nil(t, err)
+	assert.NotNil(t, util.GetAgentDetails(svc))
 }
 
 func Test_getPlural(t *testing.T) {
