@@ -16,15 +16,15 @@ import (
 
 func TestTeamCache(t *testing.T) {
 	testCases := []struct {
-		name               string
-		teams              []*definitions.PlatformTeam
-		cached             []*definitions.PlatformTeam
-		expectedTeamsSaved int
+		name                 string
+		teams                []*definitions.PlatformTeam
+		cached               []*definitions.PlatformTeam
+		expectedTeamsInCache int
 	}{
 		{
-			name:               "Should save one team to the cache",
-			expectedTeamsSaved: 1,
-			cached:             []*definitions.PlatformTeam{},
+			name:                 "Should save one team to the cache",
+			expectedTeamsInCache: 1,
+			cached:               []*definitions.PlatformTeam{},
 			teams: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
@@ -34,8 +34,8 @@ func TestTeamCache(t *testing.T) {
 			},
 		},
 		{
-			name:               "Should save two teams to the cache, and skip one team that already exists",
-			expectedTeamsSaved: 2,
+			name:                 "Should save two teams to the cache, and remove a team that was added",
+			expectedTeamsInCache: 2,
 			cached: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
@@ -44,11 +44,6 @@ func TestTeamCache(t *testing.T) {
 				},
 			},
 			teams: []*definitions.PlatformTeam{
-				{
-					Name:    "TeamA",
-					ID:      "1",
-					Default: true,
-				},
 				{
 					Name:    "TeamB",
 					ID:      "2",
@@ -62,8 +57,8 @@ func TestTeamCache(t *testing.T) {
 			},
 		},
 		{
-			name:               "Should save one team to the cache, and skip 3 that already exist",
-			expectedTeamsSaved: 1,
+			name:                 "Should save 4 teams in the cache",
+			expectedTeamsInCache: 4,
 			cached: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
@@ -135,23 +130,23 @@ func TestTeamCache(t *testing.T) {
 			assert.NotNil(t, agent)
 			assert.NotNil(t, agent.apicClient)
 
-			teamChanel := make(chan string)
 			job := centralTeamsCache{}
 
-			go job.Execute()
-			count := 0
-			for {
-				if count >= test.expectedTeamsSaved {
-					break
-				}
-				select {
-				case team := <-teamChanel:
-					count++
-					assert.NotNil(t, team)
-				}
-			}
+			job.Execute()
+			teams := agent.cacheManager.GetTeamCache().GetKeys()
+			// count := 0
+			// for {
+			// 	if count >= test.expectedTeamsSaved {
+			// 		break
+			// 	}
+			// 	select {
+			// 	case team := <-teamChanel:
+			// 		count++
+			// 		assert.NotNil(t, team)
+			// 	}
+			// }
 
-			assert.Equal(t, test.expectedTeamsSaved, count)
+			assert.Equal(t, test.expectedTeamsInCache, len(teams))
 		})
 	}
 }

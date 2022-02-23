@@ -15,17 +15,17 @@ import (
 const envACLFormat = "%s-agent-acl"
 
 //aclUpdateHandler - job that handles updates to the ACL in the environment
-type aclUpdateHandlerJob struct {
+type aclUpdateJob struct {
 	jobs.Job
 	lastTeamIDs []string
 }
 
-func newACLUpdateHandlerJob() *aclUpdateHandlerJob {
-	job := &aclUpdateHandlerJob{}
+func newACLUpdateJob() *aclUpdateJob {
+	job := &aclUpdateJob{}
 	return job
 }
 
-func (j *aclUpdateHandlerJob) Ready() bool {
+func (j *aclUpdateJob) Ready() bool {
 	status := hc.GetStatus(healthcheckEndpoint)
 	ready := status == hc.OK
 	if ready {
@@ -34,7 +34,7 @@ func (j *aclUpdateHandlerJob) Ready() bool {
 	return ready
 }
 
-func (j *aclUpdateHandlerJob) Status() error {
+func (j *aclUpdateJob) Status() error {
 	status := hc.GetStatus(healthcheckEndpoint)
 	if status == hc.OK {
 		return nil
@@ -42,7 +42,7 @@ func (j *aclUpdateHandlerJob) Status() error {
 	return fmt.Errorf("could not establish a connection to APIC to update the acl")
 }
 
-func (j *aclUpdateHandlerJob) Execute() error {
+func (j *aclUpdateJob) Execute() error {
 	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
 	newTeamIDs = sort.StringSlice(newTeamIDs)
 	if j.lastTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(j.lastTeamIDs, "") {
@@ -55,11 +55,11 @@ func (j *aclUpdateHandlerJob) Execute() error {
 	return nil
 }
 
-func (j *aclUpdateHandlerJob) getACLName() string {
+func (j *aclUpdateJob) getACLName() string {
 	return fmt.Sprintf(envACLFormat, GetCentralConfig().GetEnvironmentName())
 }
 
-func (j *aclUpdateHandlerJob) initializeACLJob() {
+func (j *aclUpdateJob) initializeACLJob() {
 	if acl := agent.cacheManager.GetAccessControlList(); acl != nil {
 		return
 	}
@@ -74,7 +74,7 @@ func (j *aclUpdateHandlerJob) initializeACLJob() {
 	}
 }
 
-func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
+func (j *aclUpdateJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
 	acl := &v1alpha1.AccessControlList{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.AccessControlListGVK(),
@@ -106,7 +106,7 @@ func (j *aclUpdateHandlerJob) createACLResource(teamIDs []string) *v1alpha1.Acce
 	return acl
 }
 
-func (j *aclUpdateHandlerJob) updateACL(teamIDs []string) error {
+func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 	// do not add an acl if there are no teamIDs and an ACL currently does not exist
 	currentACL := agent.cacheManager.GetAccessControlList()
 	if len(teamIDs) == 0 && currentACL == nil {
@@ -133,7 +133,7 @@ func (j *aclUpdateHandlerJob) updateACL(teamIDs []string) error {
 
 // registerAccessControlListHandler -
 func registerAccessControlListHandler() {
-	job := newACLUpdateHandlerJob()
+	job := newACLUpdateJob()
 
 	jobs.RegisterIntervalJobWithName(job, agent.cfg.GetPollInterval(), "Access Control List")
 }
