@@ -19,7 +19,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -384,7 +383,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrAuthentication
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 }
 
@@ -523,7 +522,7 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 
 	if response.Code != http.StatusOK {
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	var acl *v1alpha1.AccessControlList
@@ -535,9 +534,13 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 	return acl, err
 }
 
-//UpdateAccessControlList -
+//UpdateAccessControlList - removes existing then creates new AccessControlList
 func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
-	return c.deployAccessControl(acl, http.MethodPut)
+	// first delete the existing access control list
+	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
+		return nil, err
+	}
+	return c.deployAccessControl(acl, http.MethodPost)
 }
 
 //CreateAccessControlList -
@@ -551,13 +554,8 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		return nil, err
 	}
 
-	data, err := json.Marshal(*acl)
-	if err != nil {
-		return nil, err
-	}
-
 	url := c.cfg.GetEnvironmentACLsURL()
-	if method == http.MethodPut {
+	if method == http.MethodPut || method == http.MethodDelete {
 		url = fmt.Sprintf("%s/%s", url, acl.Name)
 	}
 
@@ -565,7 +563,14 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		Method:  method,
 		URL:     url,
 		Headers: headers,
-		Body:    data,
+	}
+
+	if method == http.MethodPut || method == http.MethodPost {
+		data, err := json.Marshal(*acl)
+		if err != nil {
+			return nil, err
+		}
+		request.Body = data
 	}
 
 	response, err := c.apiClient.Send(request)
@@ -573,15 +578,22 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		return nil, err
 	}
 
-	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
-		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	if response.Code == http.StatusNoContent && method == http.MethodDelete {
+		return nil, nil
 	}
 
-	updatedACL := &v1alpha1.AccessControlList{}
-	err = json.Unmarshal(response.Body, updatedACL)
-	if err != nil {
-		return nil, err
+	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var updatedACL *v1alpha1.AccessControlList
+	if method == http.MethodPut || method == http.MethodPost {
+		updatedACL = &v1alpha1.AccessControlList{}
+		err = json.Unmarshal(response.Body, updatedACL)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return updatedACL, err
@@ -614,6 +626,6 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		return nil, ErrAuthentication
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 }

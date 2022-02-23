@@ -154,7 +154,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
+			startTeamACLCache()
 
 			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
@@ -279,17 +279,13 @@ func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error 
 	return nil
 }
 
-func startTeamACLCache(cfg config.CentralConfig, client apic.Client, caches agentcache.Manager) {
-	// register the team cache and acl update jobs
-	var teamChannel chan string
-
+func startTeamACLCache() {
 	// Only discovery agents need to start the ACL handler
-	if cfg.GetAgentType() == config.DiscoveryAgent {
-		teamChannel = make(chan string)
-		registerAccessControlListHandler(teamChannel)
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		registerAccessControlListHandler()
 	}
 
-	registerTeamMapCacheJob(teamChannel, caches, client)
+	registerTeamMapCacheJob()
 }
 
 func isRunningInDockerContainer() bool {
