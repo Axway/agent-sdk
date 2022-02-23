@@ -178,7 +178,7 @@ func (m *mockSvcClient) CreateSubResourceUnscoped(_, _, _, _ string, _ map[strin
 }
 
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(nil, true, &sync.Mutex{})
+	dcj := newDiscoveryCache(nil, true, &sync.Mutex{}, nil)
 	dcj.getHCStatus = func(_ string) hc.StatusLevel {
 		return hc.OK
 	}

@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -156,19 +155,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			StartAgentStatusUpdate()
 			migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 			// register the update cache job
-			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
+			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
 			discoveryCache.Execute()
-
-			for _, key := range agent.cacheManager.GetAPIServiceCache().GetKeys() {
-				i, _ := agent.cacheManager.GetAPIServiceCache().Get(key)
-				ri := &apiV1.ResourceInstance{}
-				bts, _ := json.Marshal(i)
-				json.Unmarshal(bts, ri)
-				err := migration.Migrate(ri)
-				if err != nil {
-					return fmt.Errorf("failed to migrate attributes on resource: %s", err)
-				}
-			}
 
 			startAPIServiceCache()
 			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
@@ -259,7 +247,7 @@ func startAPIServiceCache() {
 		// health check for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
-		discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
+		discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, nil)
 		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
 			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
@@ -398,7 +386,7 @@ func cleanUp() {
 
 func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())

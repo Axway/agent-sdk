@@ -73,15 +73,15 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 // Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
 // If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
 // that refer to the APIService will all have their attributes updated.
-func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) error {
+func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
-		return fmt.Errorf("expected resource instance kind to be api service")
+		return ri, fmt.Errorf("expected resource instance kind to be api service")
 	}
 
 	// skip migration if x-agent-details is found for the service.
 	details := util.GetAgentDetails(ri)
 	if len(details) > 0 {
-		return nil
+		return ri, nil
 	}
 
 	funcs := []migrateFunc{
@@ -110,26 +110,29 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) error {
 
 	for e := range errCh {
 		if e != nil {
-			return e
+			return ri, e
 		}
 	}
 
-	return nil
+	return ri, nil
 }
 
 // updateSvc updates the attributes on service in place, then updates on api server.
 func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
-	ri, err := m.getRI(url)
+	r, err := m.getRI(url)
 	if err != nil {
 		return err
 	}
-	item := updateAttrs(ri)
+	item := updateAttrs(r)
 	if !item.update {
 		return nil
 	}
 
-	return m.updateRI(url, ri)
+	// replace the address value so that the Migrate func can return the updated resource instance
+	*ri = *item.ri
+
+	return m.updateRI(url, item.ri)
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
@@ -216,7 +219,6 @@ func (m *AttributeMigration) updateRI(url string, ri *v1.ResourceInstance) error
 	return m.createSubResource(ri)
 }
 
-// getRI gets the resource instance
 func (m *AttributeMigration) getRI(url string) (*v1.ResourceInstance, error) {
 	response, err := m.client.ExecuteAPI(api.GET, url, nil, nil)
 	if err != nil {

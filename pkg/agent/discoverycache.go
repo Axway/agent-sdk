@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -41,9 +42,12 @@ type discoveryCache struct {
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
+	migrator             migrate.AttrMigrator
 }
 
-func newDiscoveryCache(manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
+func newDiscoveryCache(
+	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
+) *discoveryCache {
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
@@ -52,6 +56,7 @@ func newDiscoveryCache(manager resource.Manager, getAll bool, instanceCacheLock 
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
+		migrator:             migrator,
 	}
 }
 
@@ -105,6 +110,9 @@ func (j *discoveryCache) updateAPICache() {
 	)
 
 	for _, svc := range apiServices {
+		if j.migrator != nil {
+			svc, _ = j.migrator.Migrate(svc)
+		}
 		externalAPIID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 		// skip service without external api id
 		if externalAPIID == "" {

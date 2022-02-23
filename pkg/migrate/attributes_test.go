@@ -91,7 +91,7 @@ func TestMigrate(t *testing.T) {
 
 	c.execRes = ri
 
-	err := am.Migrate(ri)
+	_, err := am.Migrate(ri)
 	assert.Nil(t, err)
 }
 
