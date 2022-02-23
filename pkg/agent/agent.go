@@ -153,15 +153,15 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
-			// register the update cache job
-			discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
-			discoveryCache.Execute()
 
-			startAPIServiceCache()
+			err := startAPIServiceCache()
+			if err != nil {
+				return err
+			}
+
 			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
 
-			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
 				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 			}
@@ -242,16 +242,22 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache() {
+func startAPIServiceCache() error {
+	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+	// register the update cache job
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
+	err := discoveryCache.Execute()
+	if err != nil {
+		return err
+	}
+
 	if !agent.cfg.IsUsingGRPC() {
 		// health check for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
-		discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, nil)
 		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
-			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-			return
+			return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
 		}
 		// Start the full update after the first interval
 		go startDiscoveryCache(agent.instanceCacheLock)
@@ -265,10 +271,11 @@ func startAPIServiceCache() {
 
 		err := startStreamMode(agent)
 		if err != nil {
-			log.Error(err)
-			return
+			return err
 		}
 	}
+
+	return nil
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
