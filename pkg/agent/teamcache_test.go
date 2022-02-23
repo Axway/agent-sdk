@@ -134,18 +134,6 @@ func TestTeamCache(t *testing.T) {
 
 			job.Execute()
 			teams := agent.cacheManager.GetTeamCache().GetKeys()
-			// count := 0
-			// for {
-			// 	if count >= test.expectedTeamsSaved {
-			// 		break
-			// 	}
-			// 	select {
-			// 	case team := <-teamChanel:
-			// 		count++
-			// 		assert.NotNil(t, team)
-			// 	}
-			// }
-
 			assert.Equal(t, test.expectedTeamsInCache, len(teams))
 		})
 	}
