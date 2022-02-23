@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// ProductPlanSpecSubscriptionSetup Subscription set up details.
+// ProductPlanSpecSubscriptionSetup Subscription set up details. (catalog.v1alpha1.ProductPlan)
 type ProductPlanSpecSubscriptionSetup struct {
-	// JSON Schema draft \\#7 for defining the information requested from the consumer.
+	// JSON Schema draft \\#7 for defining the information requested from the consumer. (catalog.v1alpha1.ProductPlan)
 	Form map[string]interface{} `json:"form,omitempty"`
 }

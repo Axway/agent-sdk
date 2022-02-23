@@ -30,8 +30,9 @@
     "spec": {
       "description": "best api ever"
     },
-    "x-apiservice-status": {
-      "time": "'0001-01-01T00:00:00Z'",
+    "status": {
+      "name": "status",
+      "transitionTime": "'0001-01-01T00:00:00Z'",
       "level": "ok",
       "message": ""
     },

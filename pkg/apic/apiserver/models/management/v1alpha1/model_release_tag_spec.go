@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ReleaseTagSpec struct for ReleaseTagSpec
+// ReleaseTagSpec  (management.v1alpha1.ReleaseTag)
 type ReleaseTagSpec struct {
 	// Description of the Release Tag.
 	Description string `json:"description,omitempty"`

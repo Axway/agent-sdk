@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductReferencesAssets struct for ProductReferencesAssets
+// ProductReferencesAssets  (catalog.v1alpha1.Product)
 type ProductReferencesAssets struct {
 	// The Asset reference.
 	Name    string                   `json:"name,omitempty"`

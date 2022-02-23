@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
+// AccessRequestReferences  (management.v1alpha1.AccessRequest)
 type AccessRequestReferences struct {
 	// The name of the assetRequest resource from which this access request is created.
 	AssetRequest string `json:"assetRequest,omitempty"`
