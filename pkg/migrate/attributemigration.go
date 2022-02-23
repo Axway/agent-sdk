@@ -14,8 +14,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
-const queryByRefName = "metadata.references.name"
-
 var oldAttrs = []string{
 	defs.AttrPreviousAPIServiceRevisionID,
 	defs.AttrExternalAPIID,
@@ -139,7 +137,7 @@ func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		queryByRefName: ri.Name,
+		"query": queryFunc(ri.Name),
 	}
 
 	return m.migrate(url, q)
@@ -149,7 +147,7 @@ func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
 func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
 	url := m.cfg.GetInstancesURL()
 	q := map[string]string{
-		queryByRefName: ri.Name,
+		"query": queryFunc(ri.Name),
 	}
 
 	return m.migrate(url, q)
@@ -159,7 +157,7 @@ func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
 func (m *AttributeMigration) updateCI(ri *v1.ResourceInstance) error {
 	url := m.cfg.GetConsumerInstancesURL()
 	q := map[string]string{
-		queryByRefName: ri.Name,
+		"query": queryFunc(ri.Name),
 	}
 
 	return m.migrate(url, q)
@@ -296,4 +294,8 @@ func updateAttrs(ri *v1.ResourceInstance) item {
 	util.SetAgentDetails(ri, details)
 
 	return item
+}
+
+func queryFunc(name string) string {
+	return fmt.Sprintf("metadata.references.name==%s", name)
 }
