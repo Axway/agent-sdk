@@ -58,8 +58,8 @@ func TestAPIServiceMarshal(t *testing.T) {
 		},
 		Status: m.ApiServiceStatus{
 			Phase: m.ApiServiceStatusPhase{
-				Name:           "status",
-				Level:          "ok",
+				Name:           "Create",
+				Level:          "warn",
 				Message:        "",
 				TransitionTime: getTimestamp(),
 			},
@@ -110,8 +110,8 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 		},
 		Status: m.ApiServiceStatus{
 			Phase: m.ApiServiceStatusPhase{
-				Name:           "status",
-				Level:          "ok",
+				Name:           "Create",
+				Level:          "warn",
 				Message:        "",
 				TransitionTime: getTimestamp(),
 			},
@@ -163,10 +163,10 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				},
 				"status": map[string]interface{}{
 					"phase": map[string]interface{}{
-						"name":           "status",
-						"level":          "ok",
+						"name":           "Create",
+						"level":          "warn",
 						"message":        "status ok",
-						"transitionTime": newTime,
+						"transitionTime": time.Time(newTime).Format(v1.APIServerTimeFormat),
 					},
 				},
 			},
@@ -185,8 +185,8 @@ func TestAPIServiceAsInstance(t *testing.T) {
 		},
 		Status: m.ApiServiceStatus{
 			Phase: m.ApiServiceStatusPhase{
-				Name:           "status",
-				Level:          "ok",
+				Name:           "Create",
+				Level:          "warn",
 				Message:        "status ok",
 				TransitionTime: newTime,
 			},
@@ -263,8 +263,8 @@ func TestAPIServiceFromInstance(t *testing.T) {
 		},
 		Status: m.ApiServiceStatus{
 			Phase: m.ApiServiceStatusPhase{
-				Name:           "status",
-				Level:          "ok",
+				Name:           "Create",
+				Level:          "warn",
 				Message:        "",
 				TransitionTime: getTimestamp(),
 			},
