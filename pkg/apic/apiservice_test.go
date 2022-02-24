@@ -902,3 +902,15 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 	assert.NotContains(t, sub, "subresource_instance_key")
 	assert.NotContains(t, sub, "subresource_revision_key")
 }
+
+func Test_buildAPIServiceNilAttributes(t *testing.T) {
+	client, _ := GetTestServiceClient()
+	body := &ServiceBody{}
+
+	svc := client.buildAPIService(body)
+	assert.NotNil(t, svc.Attributes)
+
+	svc.Attributes = nil
+	client.updateAPIService(body, svc)
+	assert.NotNil(t, svc.Attributes)
+}

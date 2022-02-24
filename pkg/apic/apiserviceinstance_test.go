@@ -62,6 +62,7 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 			},
 		},
 	}
+
 	inst := client.buildAPIServiceInstance(body, "name", ep)
 
 	assert.Equal(t, mv1a.APIServiceInstanceGVK(), inst.GroupVersionKind)
@@ -190,4 +191,17 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 	assert.Contains(t, sub, "subresource_instance_key")
 	assert.NotContains(t, sub, "subresource_revision_key")
 	assert.NotContains(t, sub, "revision_attribute")
+}
+
+func Test_buildAPIServiceInstanceNilAttributes(t *testing.T) {
+	client, _ := GetTestServiceClient()
+	body := &ServiceBody{}
+	ep := []mv1a.ApiServiceInstanceSpecEndpoint{}
+	inst := client.buildAPIServiceInstance(body, "name", ep)
+	assert.NotNil(t, inst.Attributes)
+
+	inst.Attributes = nil
+
+	inst = client.updateAPIServiceInstance(body, inst, ep)
+	assert.NotNil(t, inst.Attributes)
 }

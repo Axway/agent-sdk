@@ -154,3 +154,15 @@ func TestServiceClient_updateConsumerInstance(t *testing.T) {
 	assert.NotContains(t, sub, "subresource_revision_key")
 	assert.NotContains(t, sub, "instance_attribute")
 }
+
+func Test_buildConsumerInstanceNilAttributes(t *testing.T) {
+	client, _ := GetTestServiceClient()
+	body := &ServiceBody{}
+
+	ci := client.buildConsumerInstance(body, "name", "doc")
+	assert.NotNil(t, ci.Attributes)
+
+	ci.Attributes = nil
+	client.updateConsumerInstance(body, ci, "doc")
+	assert.NotNil(t, ci.Attributes)
+}

@@ -217,3 +217,12 @@ func MergeMapStringString(m ...map[string]string) map[string]string {
 
 	return attrs
 }
+
+// CheckEmptyMapStringString creates a new empty map if the provided map is nil
+func CheckEmptyMapStringString(m map[string]string) map[string]string {
+	if m == nil {
+		return make(map[string]string)
+	}
+
+	return m
+}
