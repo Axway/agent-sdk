@@ -42,16 +42,13 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 		},
 		Spec:  buildAPIServiceSpec(serviceBody),
 		Owner: ownerObject,
+		Status: mv1a.ApiServiceStatus{
+			Phase: buildAPIServiceStatusSubResource(ownerErr),
+		},
 	}
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
-
-	if ownerErr != nil {
-		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
-		util.UpdateAPIServerStatus(svc, svcDetails)
-
-	}
 
 	return svc
 }
@@ -80,6 +77,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner, ownerErr = c.getOwnerObject(serviceBody, true)
 	svc.Attributes = serviceBody.ServiceAttributes
+	svc.Status.Phase = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
@@ -89,11 +87,6 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
 		}
-	}
-
-	if ownerErr != nil {
-		svcDetails = buildAPIServiceStatusSubResource(ownerErr)
-		util.UpdateAPIServerStatus(svc, svcDetails)
 	}
 
 }

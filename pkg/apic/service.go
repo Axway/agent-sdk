@@ -182,7 +182,7 @@ func buildAgentDetailsSubResource(
 	return util.MergeMapStringInterface(details, additional)
 }
 
-func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
+func buildAPIServiceStatusSubResource(ownerErr error) v1alpha1.ApiServiceStatusPhase {
 
 	// get current time
 	activityTime := time.Now()
@@ -190,7 +190,6 @@ func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
 
 	// create status phase
 	status := v1alpha1.ApiServiceStatusPhase{}
-	var apiServiceStatusMap map[string]interface{}
 
 	// clear apiservice status
 	message := ""
@@ -210,10 +209,7 @@ func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
 		Message:        message,
 	}
 
-	apiServiceStatusIn, _ := json.Marshal(status)
-	json.Unmarshal(apiServiceStatusIn, &apiServiceStatusMap)
-
-	return apiServiceStatusMap
+	return status
 }
 
 func isValidAuthPolicy(auth string) bool {

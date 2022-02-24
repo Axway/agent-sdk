@@ -89,11 +89,6 @@ func SetAgentDetails(h handler, details map[string]interface{}) {
 	h.SetSubResource(defs.XAgentDetails, details)
 }
 
-// UpdateAPIServerStatus - set the subresource if team/org mismatched on API
-func UpdateAPIServerStatus(h handler, status map[string]interface{}) {
-	h.SetSubResource(defs.APIServiceStatusSubresource, status)
-}
-
 func convert(item interface{}) (map[string]interface{}, error) {
 	switch v := item.(type) {
 	case map[string]interface{}:

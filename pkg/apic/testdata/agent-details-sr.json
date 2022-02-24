@@ -3,11 +3,5 @@
     "externalAPIID": "12345",
     "externalAPIName": "daleapi",
     "createdBy": ""
-  },
-  "status": {
-    "name": "status",
-    "transitionTime": "'0001-01-01T00:00:00Z'",
-    "level": "ok",
-    "message": ""
   }
 }
