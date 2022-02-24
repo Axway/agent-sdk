@@ -145,12 +145,47 @@ func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
 
 // updateInst gets a list of instances for the service and updates their attributes.
 func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
-	url := m.cfg.GetInstancesURL()
+	revURL := m.cfg.GetRevisionsURL()
+
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query":  queryFunc(ri.Name),
+		"fields": "name",
 	}
 
-	return m.migrate(url, q)
+	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
+	if err != nil {
+		return err
+	}
+
+	errCh := make(chan error, len(revs))
+	wg := &sync.WaitGroup{}
+
+	// query for api service instances by reference to a revision name
+	for _, rev := range revs {
+		wg.Add(1)
+
+		go func(r *v1.ResourceInstance) {
+			defer wg.Done()
+
+			q := map[string]string{
+				"query": queryFunc(r.Name),
+			}
+			url := m.cfg.GetInstancesURL()
+			err := m.migrate(url, q)
+			errCh <- err
+		}(rev)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for e := range errCh {
+		if e != nil {
+			return e
+		}
+	}
+
+	return nil
 }
 
 // updateCI gets a list of consumer instances for the service and updates their attributes.
