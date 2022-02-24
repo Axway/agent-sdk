@@ -164,7 +164,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				"status": map[string]interface{}{
 					"phase": map[string]interface{}{
 						"name":           "Create",
-						"level":          "warn",
+						"level":          "info",
 						"message":        "status ok",
 						"transitionTime": time.Time(newTime).Format(v1.APIServerTimeFormat),
 					},

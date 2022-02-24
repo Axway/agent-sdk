@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -97,7 +96,6 @@ func (res *APIService) FromInstance(ri *apiv1.ResourceInstance) error {
 // MarshalJSON custom marshaller to handle sub resources
 func (res *APIService) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
-	fmt.Println(string(m))
 	if err != nil {
 		return nil, err
 	}
@@ -112,9 +110,7 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
-	foo, err := json.Marshal(out)
-	fmt.Println(string(foo))
-	return foo, err
+	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources

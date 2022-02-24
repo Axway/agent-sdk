@@ -193,7 +193,7 @@ func buildAPIServiceStatusSubResource(name string, ownerErr error) v1alpha1.ApiS
 
 	// clear apiservice status
 	message := ""
-	level := "ok"
+	level := "info"
 
 	// only set status if ownerErr != nil
 	if ownerErr != nil {
