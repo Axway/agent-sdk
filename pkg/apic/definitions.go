@@ -2,7 +2,6 @@ package apic
 
 import (
 	"sync"
-	"time"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
@@ -125,11 +124,4 @@ type APIServerInfoProperty struct {
 type APIServerInfo struct {
 	ConsumerInstance APIServerInfoProperty `json:"consumerInstance,omitempty"`
 	Environment      APIServerInfoProperty `json:"environment,omitempty"`
-}
-
-// APIServiceStatus -
-type APIServiceStatus struct {
-	Level   string    `json:"level"`
-	Message string    `json:"message"`
-	Time    time.Time `json:"time"`
 }

@@ -43,7 +43,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 		Spec:  buildAPIServiceSpec(serviceBody),
 		Owner: ownerObject,
 		Status: mv1a.ApiServiceStatus{
-			Phase: buildAPIServiceStatusSubResource(ownerErr),
+			Phase: buildAPIServiceStatusSubResource("Create", ownerErr),
 		},
 	}
 
@@ -77,7 +77,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner, ownerErr = c.getOwnerObject(serviceBody, true)
 	svc.Attributes = serviceBody.ServiceAttributes
-	svc.Status.Phase = buildAPIServiceStatusSubResource(ownerErr)
+	svc.Status.Phase = buildAPIServiceStatusSubResource("Update", ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)

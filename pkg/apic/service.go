@@ -182,7 +182,7 @@ func buildAgentDetailsSubResource(
 	return util.MergeMapStringInterface(details, additional)
 }
 
-func buildAPIServiceStatusSubResource(ownerErr error) v1alpha1.ApiServiceStatusPhase {
+func buildAPIServiceStatusSubResource(name string, ownerErr error) v1alpha1.ApiServiceStatusPhase {
 
 	// get current time
 	activityTime := time.Now()
@@ -203,7 +203,7 @@ func buildAPIServiceStatusSubResource(ownerErr error) v1alpha1.ApiServiceStatusP
 
 	// update apiservice status phase
 	status = v1alpha1.ApiServiceStatusPhase{
-		Name:           defs.APIServiceStatusSubresource,
+		Name:           name,
 		Level:          level,
 		TransitionTime: newV1Time,
 		Message:        message,
