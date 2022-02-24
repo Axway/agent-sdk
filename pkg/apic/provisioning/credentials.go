@@ -21,31 +21,41 @@ type apiKeyCredential struct {
 type CredentialBuilder interface {
 	SetOAuth(id, secret string) CredentialBuilder
 	SetAPIKey(key string) CredentialBuilder
-	Process() (CredentialBuilder, error)
+	Process() (*Credential, error)
 }
 
 type credentialBuilder struct {
 	err        error
-	credential Credential
+	credential *Credential
 }
 
 func NewCredentialBuilder() CredentialBuilder {
 	return &credentialBuilder{
-		credential: Credential{},
+		credential: &Credential{},
 	}
 }
 
-func (c *credentialBuilder) Process() (CredentialBuilder, error) {
-	return c, c.err
+func (c *credentialBuilder) Process() (*Credential, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+	return c.credential, nil
 }
 
-func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
+func (c *credentialBuilder) hasError(credType credentialType) bool {
 	if c.err != nil {
-		return c
+		return true
 	}
 
 	if c.credential.credentialType != 0 {
-		c.err = fmt.Errorf(credentialTypeSetError, credentialTypeOAuth, c.credential.credentialType)
+		c.err = fmt.Errorf(credentialTypeSetError, credType, c.credential.credentialType)
+		return true
+	}
+	return false
+}
+
+func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
+	if c.hasError(credentialTypeOAuth) {
 		return c
 	}
 
@@ -58,12 +68,7 @@ func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 }
 
 func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
-	if c.err != nil {
-		return c
-	}
-
-	if c.credential.credentialType != 0 {
-		c.err = fmt.Errorf(credentialTypeSetError, credentialTypeAPIKey, c.credential.credentialType)
+	if c.hasError(credentialTypeAPIKey) {
 		return c
 	}
 
