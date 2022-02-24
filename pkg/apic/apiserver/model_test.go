@@ -14,9 +14,6 @@ import (
 
 // should handle marshaling and unmarshalling for an apiserver resource with a custom sub resource
 func TestAPIServiceMarshal(t *testing.T) {
-	activityTime := time.Now()
-	newV1Time := v1.Time(activityTime)
-
 	svc1 := &m.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
@@ -64,7 +61,7 @@ func TestAPIServiceMarshal(t *testing.T) {
 				Name:           "status",
 				Level:          "ok",
 				Message:        "",
-				TransitionTime: newV1Time,
+				TransitionTime: getTimestamp(),
 			},
 		},
 	}
@@ -73,16 +70,7 @@ func TestAPIServiceMarshal(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, bts)
 
-	svc2 := &m.APIService{
-		Status: m.ApiServiceStatus{
-			Phase: m.ApiServiceStatusPhase{
-				Name:           "status",
-				Level:          "ok",
-				Message:        "",
-				TransitionTime: newV1Time,
-			},
-		},
-	}
+	svc2 := &m.APIService{}
 
 	err = json.Unmarshal(bts, svc2)
 	assert.Nil(t, err)
@@ -106,10 +94,27 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 			Metadata: apiv1.Metadata{
 				ID: "123",
 			},
+			Finalizers: []apiv1.Finalizer{
+				{Name: "finalizer1"},
+				{Name: "finalizer2"},
+			},
+			SubResources: map[string]interface{}{
+				"x-agent-details": map[string]interface{}{
+					"x-agent-id": "123",
+				},
+			},
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
 			Categories:  []string{"cat1", "cat2"},
+		},
+		Status: m.ApiServiceStatus{
+			Phase: m.ApiServiceStatusPhase{
+				Name:           "status",
+				Level:          "ok",
+				Message:        "",
+				TransitionTime: getTimestamp(),
+			},
 		},
 	}
 
@@ -130,6 +135,7 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 
 // should convert an APIService to a ResourceInstance
 func TestAPIServiceAsInstance(t *testing.T) {
+	newTime := getTimestamp()
 	svc := &m.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
@@ -155,6 +161,14 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
 				},
+				"status": map[string]interface{}{
+					"phase": map[string]interface{}{
+						"name":           "status",
+						"level":          "ok",
+						"message":        "status ok",
+						"transitionTime": newTime,
+					},
+				},
 			},
 		},
 		Owner: &apiv1.Owner{
@@ -167,6 +181,14 @@ func TestAPIServiceAsInstance(t *testing.T) {
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
+			},
+		},
+		Status: m.ApiServiceStatus{
+			Phase: m.ApiServiceStatusPhase{
+				Name:           "status",
+				Level:          "ok",
+				Message:        "status ok",
+				TransitionTime: newTime,
 			},
 		},
 	}
@@ -237,6 +259,14 @@ func TestAPIServiceFromInstance(t *testing.T) {
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
+			},
+		},
+		Status: m.ApiServiceStatus{
+			Phase: m.ApiServiceStatusPhase{
+				Name:           "status",
+				Level:          "ok",
+				Message:        "",
+				TransitionTime: getTimestamp(),
 			},
 		},
 	}
@@ -318,4 +348,15 @@ func TestGovernanceAgentResource(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, ri1.GetRawResource(), ri2.GetRawResource())
+}
+
+// getTimestamp - Returns current timestamp formatted for API Server
+func getTimestamp() v1.Time {
+	activityTime := time.Now()
+	newV1Time := v1.Time(activityTime)
+
+	// marshall the time in and out of JSON to get same format
+	timeBytes, _ := newV1Time.MarshalJSON()
+	newV1Time.UnmarshalJSON(timeBytes)
+	return newV1Time
 }

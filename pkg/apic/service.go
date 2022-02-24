@@ -184,19 +184,30 @@ func buildAgentDetailsSubResource(
 
 func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
 
+	// get current time
 	activityTime := time.Now()
 	newV1Time := v1.Time(activityTime)
 
+	// create status phase
 	status := v1alpha1.ApiServiceStatusPhase{}
 	var apiServiceStatusMap map[string]interface{}
 
-	// only set status if error
+	// clear apiservice status
+	message := ""
+	level := "ok"
+
+	// only set status if ownerErr != nil
 	if ownerErr != nil {
-		status = v1alpha1.ApiServiceStatusPhase{
-			Name:           defs.APIServiceStatusSubresource,
-			Level:          "warn",
-			TransitionTime: newV1Time,
-			Message:        ownerErr.Error()}
+		message = ownerErr.Error()
+		level = "warn"
+	}
+
+	// update apiservice status phase
+	status = v1alpha1.ApiServiceStatusPhase{
+		Name:           defs.APIServiceStatusSubresource,
+		Level:          level,
+		TransitionTime: newV1Time,
+		Message:        message,
 	}
 
 	apiServiceStatusIn, _ := json.Marshal(status)
