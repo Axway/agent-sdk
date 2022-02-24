@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -182,6 +183,10 @@ func buildAgentDetailsSubResource(
 }
 
 func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
+
+	activityTime := time.Now()
+	newV1Time := v1.Time(activityTime)
+
 	status := v1alpha1.ApiServiceStatusPhase{}
 	var apiServiceStatusMap map[string]interface{}
 
@@ -190,7 +195,7 @@ func buildAPIServiceStatusSubResource(ownerErr error) map[string]interface{} {
 		status = v1alpha1.ApiServiceStatusPhase{
 			Name:           defs.APIServiceStatusSubresource,
 			Level:          "warn",
-			TransitionTime: v1.Time{},
+			TransitionTime: newV1Time,
 			Message:        ownerErr.Error()}
 	}
 

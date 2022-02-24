@@ -3,15 +3,20 @@ package models
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/stretchr/testify/assert"
 )
 
 // should handle marshaling and unmarshalling for an apiserver resource with a custom sub resource
 func TestAPIServiceMarshal(t *testing.T) {
+	activityTime := time.Now()
+	newV1Time := v1.Time(activityTime)
+
 	svc1 := &m.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
@@ -54,13 +59,30 @@ func TestAPIServiceMarshal(t *testing.T) {
 				Data:        "data",
 			},
 		},
+		Status: m.ApiServiceStatus{
+			Phase: m.ApiServiceStatusPhase{
+				Name:           "status",
+				Level:          "ok",
+				Message:        "",
+				TransitionTime: newV1Time,
+			},
+		},
 	}
 
 	bts, err := json.Marshal(svc1)
 	assert.Nil(t, err)
 	assert.NotNil(t, bts)
 
-	svc2 := &m.APIService{}
+	svc2 := &m.APIService{
+		Status: m.ApiServiceStatus{
+			Phase: m.ApiServiceStatusPhase{
+				Name:           "status",
+				Level:          "ok",
+				Message:        "",
+				TransitionTime: newV1Time,
+			},
+		},
+	}
 
 	err = json.Unmarshal(bts, svc2)
 	assert.Nil(t, err)
