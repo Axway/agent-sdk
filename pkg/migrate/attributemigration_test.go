@@ -18,11 +18,15 @@ func TestAttributeMigration(t *testing.T) {
 		attrs           map[string]string
 		updateCalled    bool
 		createSubCalled bool
+		tags            []string
+		expectedTags    int
 	}{
 		{
 			name:            "should move api service attributes to the x-agent-details sub resource",
 			updateCalled:    true,
 			createSubCalled: true,
+			tags:            []string{"tag1", "tag2"},
+			expectedTags:    1,
 			attrs: map[string]string{
 				defs.AttrPreviousAPIServiceRevisionID: "1",
 				defs.AttrExternalAPIID:                "2",
@@ -49,8 +53,9 @@ func TestAttributeMigration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			AddAttr("majorHash", "minorHash")
-			AddPattern("az-")
+			MatchAttr("majorHash", "minorHash")
+			MatchAttrPattern("az-")
+			RemoveTagPattern("tag1")
 			res := []*apiv1.ResourceInstance{
 				{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -59,12 +64,14 @@ func TestAttributeMigration(t *testing.T) {
 						Title:            "item-one",
 						Metadata:         apiv1.Metadata{},
 						Attributes:       tc.attrs,
+						Tags:             tc.tags,
 					},
 				},
 			}
 			c := &mockClient{
-				res: res,
-				t:   t,
+				res:          res,
+				t:            t,
+				expectedTags: tc.expectedTags,
 			}
 			cfg := &config.CentralConfiguration{}
 			am := NewAttributeMigration(c, cfg)
@@ -103,8 +110,8 @@ func TestMigrate(t *testing.T) {
 
 	c.execRes = ri
 
-	AddAttr("majorHash", "minorHash")
-	AddPattern("az-")
+	MatchAttr("majorHash", "minorHash")
+	MatchAttrPattern("az-")
 
 	svc, err := am.Migrate(ri)
 	assert.Nil(t, err)
@@ -135,6 +142,7 @@ type mockClient struct {
 	updateCalled    bool
 	createSubCalled bool
 	execRes         *apiv1.ResourceInstance
+	expectedTags    int
 }
 
 func (m *mockClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
@@ -167,6 +175,8 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	assert.Contains(m.t, sub, "az-api-hash")
 	assert.Contains(m.t, sub, "az-resource-id")
 	assert.NotContains(m.t, sub, "random")
+
+	assert.Equal(m.t, m.expectedTags, len(ri.Tags))
 
 	return nil, nil
 }

@@ -12,6 +12,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var oldAttrs = []string{
@@ -30,14 +31,21 @@ type AttrMigrator interface {
 
 var regexes = make([]string, 0)
 
-// AddPattern saves patterns to match against an attribute to migrate to the x-agent-details subresource
-func AddPattern(pattern ...string) {
+var tagRegexes = make([]string, 0)
+
+// MatchAttrPattern matches attribute patterns to match against an attribute to migrate to the x-agent-details subresource
+func MatchAttrPattern(pattern ...string) {
 	regexes = append(regexes, pattern...)
 }
 
-// AddAttr saves attributes to migrate to the x-agent-details subresource
-func AddAttr(attr ...string) {
+// MatchAttr matches attributes to migrate to the x-agent-details subresource
+func MatchAttr(attr ...string) {
 	oldAttrs = append(oldAttrs, attr...)
+}
+
+// RemoveTagPattern matches tags by a pattern for removal from the resource
+func RemoveTagPattern(tags ...string) {
+	tagRegexes = append(tagRegexes, tags...)
 }
 
 type client interface {
@@ -82,6 +90,8 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 		return ri, nil
 	}
 
+	log.Debugf("migrating attributes for service: %s", ri.Name)
+
 	funcs := []migrateFunc{
 		m.updateSvc,
 		m.updateRev,
@@ -111,6 +121,8 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 			return ri, e
 		}
 	}
+
+	log.Debugf("finished migrating attributes for service: %s", ri.Name)
 
 	return ri, nil
 }
