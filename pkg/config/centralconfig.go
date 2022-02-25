@@ -114,11 +114,15 @@ type CentralConfig interface {
 	DeleteServicesURL() string
 	GetConsumerInstancesURL() string
 	GetAPIServerSubscriptionDefinitionURL() string
+	GetAPIServerAccessRequestDefinitionURL() string
 	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
 	GetCategoriesURL() string
 	GetSubscriptionURL() string
 	GetSubscriptionConfig() SubscriptionConfig
+	GetAccessRequestsURL() string
+	GetAccessRequestURL(string) string
+	GetAccessRequestStateURL(string) string
 	GetCatalogItemSubscriptionsURL(string) string
 	GetCatalogItemSubscriptionStatesURL(string, string) string
 	GetCatalogItemSubscriptionPropertiesURL(string, string) string
@@ -136,6 +140,7 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
+	IsUsingAccessRequests() bool
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -168,6 +173,7 @@ type CentralConfiguration struct {
 	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
+	UseAccessRequests         bool                 `config:"useAccessRequests"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
 	GRPCCfg                   GRPCConfig           `config:"grpc"`
 	CacheStoragePath          string               `config:"cacheStoragePath"`
@@ -316,6 +322,11 @@ func (c *CentralConfiguration) GetCatalogItemsURL() string {
 	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
 }
 
+// GetAccessRequestsURL - Returns the accessrequest URL for access request API
+func (c *CentralConfiguration) GetAccessRequestsURL() string {
+	return c.GetEnvironmentURL() + "/accessrequests"
+}
+
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
@@ -366,6 +377,11 @@ func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
 	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
 }
 
+// GetAPIServerAccessRequestDefinitionURL - Returns the APIServer URL for access request definitions
+func (c *CentralConfiguration) GetAPIServerAccessRequestDefinitionURL() string {
+	return c.GetEnvironmentURL() + "/accessrequestdefinitions"
+}
+
 // GetCategoriesURL - Returns the Categories URL
 func (c *CentralConfiguration) GetCategoriesURL() string {
 	return c.GetAPIServerCatalogURL() + "/categories"
@@ -396,9 +412,24 @@ func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID
 	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
 }
 
+// GetAccessRequestURL - Returns the access request URL for catalog item subscription states
+func (c *CentralConfiguration) GetAccessRequestURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/%s", c.GetAccessRequestsURL(), accessRequestName)
+}
+
+// GetAccessRequestStateURL - Returns the access request URL to update the state
+func (c *CentralConfiguration) GetAccessRequestStateURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/state", c.GetAccessRequestURL(accessRequestName))
+}
+
 // GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties
 func (c *CentralConfiguration) GetCatalogItemSubscriptionPropertiesURL(catalogItemID, subscriptionID string) string {
 	return fmt.Sprintf("%s/%s/properties", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
+}
+
+// GetAccessRequestSubscriptionPropertiesURL - Returns the access request URL for subscription properties
+func (c *CentralConfiguration) GetAccessRequestSubscriptionPropertiesURL(accessRequestName string) string {
+	return fmt.Sprintf("%s/%s", c.GetAccessRequestsURL(), accessRequestName)
 }
 
 // GetCatalogItemSubscriptionRelationshipURL - Returns the relationships URL for catalog item subscription
@@ -471,6 +502,11 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
+// IsUsingAccessRequests -
+func (c *CentralConfiguration) IsUsingAccessRequests() bool {
+	return c.UseAccessRequests
+}
+
 // IsUsingGRPC -
 func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.GRPCCfg.Enabled
@@ -527,6 +563,7 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathJobTimeout                = "central.jobTimeout"
+	pathUseAccessRequests         = "central.useAccessRequests"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
 	pathGRPCPort                  = "central.grpc.port"
@@ -665,6 +702,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
+	props.AddBoolProperty(pathUseAccessRequests, false, "Controls whether the agent should look for access requests for provisioning access on the dataplane")
 	// Watch stream config
 	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
@@ -712,6 +750,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
+		UseAccessRequests:         props.BoolPropertyValue(pathUseAccessRequests),
 		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),

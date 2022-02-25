@@ -4,29 +4,32 @@ package apic
 type SubscriptionSchemaBuilder interface {
 	Update(update bool) SubscriptionSchemaBuilder
 	SetName(name string) SubscriptionSchemaBuilder
-	AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder
+	AddProperty(property PropertyBuilder) SubscriptionSchemaBuilder
 	AddUniqueKey(keyName string) SubscriptionSchemaBuilder
+	SetJSONDraft07SchemaVersion() SubscriptionSchemaBuilder
 
 	Register() error
 }
 
 // schemaBuilder - hold all of the details needs to create a subscription schema
 type schemaBuilder struct {
-	err        error
-	name       string
-	update     bool
-	uniqueKeys []string
-	properties map[string]SubscriptionSchemaPropertyDefinition
-	apicClient Client
+	err           error
+	name          string
+	update        bool
+	uniqueKeys    []string
+	properties    map[string]SubscriptionSchemaPropertyDefinition
+	schemaVersion string
+	apicClient    Client
 }
 
 // NewSubscriptionSchemaBuilder - Creates a new subscription schema builder
 func NewSubscriptionSchemaBuilder(apicClient Client) SubscriptionSchemaBuilder {
 	return &schemaBuilder{
-		properties: make(map[string]SubscriptionSchemaPropertyDefinition, 0),
-		uniqueKeys: make([]string, 0),
-		apicClient: apicClient,
-		update:     true,
+		properties:    make(map[string]SubscriptionSchemaPropertyDefinition, 0),
+		uniqueKeys:    make([]string, 0),
+		apicClient:    apicClient,
+		schemaVersion: "http://json-schema.org/draft-04/schema#",
+		update:        true,
 	}
 }
 
@@ -43,7 +46,7 @@ func (s *schemaBuilder) SetName(name string) SubscriptionSchemaBuilder {
 }
 
 // AddProperty - adds a new subscription schema property to the schema
-func (s *schemaBuilder) AddProperty(property SubscriptionPropertyBuilder) SubscriptionSchemaBuilder {
+func (s *schemaBuilder) AddProperty(property PropertyBuilder) SubscriptionSchemaBuilder {
 	prop, err := property.Build()
 	if err == nil {
 		s.properties[prop.Name] = *prop
@@ -56,6 +59,12 @@ func (s *schemaBuilder) AddProperty(property SubscriptionPropertyBuilder) Subscr
 // AddUniqueKey - add a unique key to the schema
 func (s *schemaBuilder) AddUniqueKey(keyName string) SubscriptionSchemaBuilder {
 	s.uniqueKeys = append(s.uniqueKeys, keyName)
+	return s
+}
+
+//SetJSONDraft07SchemaVersion - set the JSON schema for the subscription definition to Draft-07
+func (s *schemaBuilder) SetJSONDraft07SchemaVersion() SubscriptionSchemaBuilder {
+	s.schemaVersion = "http://json-schema.org/draft-07/schema#"
 	return s
 }
 
@@ -75,7 +84,7 @@ func (s *schemaBuilder) Register() error {
 	schema := &subscriptionSchema{
 		SubscriptionName:  s.name,
 		SchemaType:        "object",
-		SchemaVersion:     "http://json-schema.org/draft-04/schema#",
+		SchemaVersion:     s.schemaVersion,
 		SchemaDescription: "Subscription specification for authentication",
 		Properties:        s.properties,
 		UniqueKeys:        s.uniqueKeys,

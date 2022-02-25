@@ -338,6 +338,20 @@ func updateAttrs(ri *v1.ResourceInstance) item {
 		}
 	}
 
+	var tags []string
+
+	for _, tag := range ri.Tags {
+		for _, reg := range tagRegexes {
+			if ok, _ := regexp.MatchString(reg, tag); ok {
+				item.update = true
+			} else {
+				tags = append(tags, tag)
+			}
+		}
+	}
+
+	ri.Tags = tags
+
 	util.SetAgentDetails(ri, details)
 
 	return item

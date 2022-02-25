@@ -10,6 +10,7 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // SubscriptionSchema -
@@ -18,22 +19,35 @@ type SubscriptionSchema interface {
 	GetProperty(name string) *SubscriptionSchemaPropertyDefinition
 	AddUniqueKey(keyName string)
 	GetSubscriptionName() string
+	SetSubscriptionName(name string)
 	mapStringInterface() (map[string]interface{}, error)
 	rawJSON() (json.RawMessage, error)
+	SetJSONDraft07SchemaVersion()
+}
+
+// AnyOfSubscriptionSchemaPropertyDefinitions - used for items of SubscriptionSchemaPropertyDefinition
+type AnyOfSubscriptionSchemaPropertyDefinitions struct {
+	AnyOf []SubscriptionSchemaPropertyDefinition `json:"anyOf,omitempty"`
 }
 
 // SubscriptionSchemaPropertyDefinition -
 type SubscriptionSchemaPropertyDefinition struct {
-	Type          string   `json:"type"`
-	Description   string   `json:"description"`
-	Enum          []string `json:"enum,omitempty"`
-	ReadOnly      bool     `json:"readOnly,omitempty"`
-	Format        string   `json:"format,omitempty"`
-	APICRef       string   `json:"x-axway-ref-apic,omitempty"`
-	Name          string   `json:"-"`
-	Required      bool     `json:"-"`
-	SortEnums     bool     `json:"-"`
-	FirstEnumItem string   `json:"-"`
+	Type               string                                          `json:"type"`
+	Title              string                                          `json:"title"`
+	Description        string                                          `json:"description"`
+	Enum               []string                                        `json:"enum,omitempty"`
+	ReadOnly           bool                                            `json:"readOnly,omitempty"`
+	Format             string                                          `json:"format,omitempty"`
+	Properties         map[string]SubscriptionSchemaPropertyDefinition `json:"properties,omitempty"`
+	RequiredProperties []string                                        `json:"required,omitempty"`
+	Items              *AnyOfSubscriptionSchemaPropertyDefinitions     `json:"items,omitempty"`    // We use a pointer to avoid generating an empty struct if not set
+	MinItems           *uint                                           `json:"minItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	MaxItems           *uint                                           `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Minimum            *float64                                        `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 min value
+	Maximum            *float64                                        `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a choosen 0 max value
+	APICRef            string                                          `json:"x-axway-ref-apic,omitempty"`
+	Name               string                                          `json:"-"`
+	Required           bool                                            `json:"-"`
 }
 
 type subscriptionSchema struct {
@@ -58,10 +72,16 @@ func NewSubscriptionSchema(name string) SubscriptionSchema {
 	}
 }
 
+//SetJSONDraft07SchemaVersion - set the JSON schema for the subscription definition to Draft-07
+func (ss *subscriptionSchema) SetJSONDraft07SchemaVersion() {
+	ss.SchemaVersion = "http://json-schema.org/draft-07/schema#"
+}
+
 // AddProperty -
 func (ss *subscriptionSchema) AddProperty(name, dataType, description, apicRefField string, isRequired bool, enums []string) {
 	newProp := SubscriptionSchemaPropertyDefinition{
 		Type:        dataType,
+		Title:       name,
 		Description: description,
 		APICRef:     apicRefField,
 	}
@@ -88,6 +108,11 @@ func (ss *subscriptionSchema) GetProperty(name string) *SubscriptionSchemaProper
 // GetSubscriptionName -
 func (ss *subscriptionSchema) GetSubscriptionName() string {
 	return ss.SubscriptionName
+}
+
+// SetSubscriptionName -
+func (ss *subscriptionSchema) SetSubscriptionName(name string) {
+	ss.SubscriptionName = name
 }
 
 // AddUniqueKey -
@@ -126,8 +151,13 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 	c.subscriptionRegistrationLock.Lock()
 	defer c.subscriptionRegistrationLock.Unlock()
 
+	return c.registerSubscriptionSchema(subscriptionSchema, update)
+}
+
+func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
 	var registeredSpecHash uint64
 	registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+
 	if registeredSchema != nil {
 		registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
 	} else {
@@ -138,6 +168,7 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 	if err != nil {
 		return err
 	}
+
 	// Create New definition
 	if registeredSchema == nil {
 		return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
@@ -145,9 +176,45 @@ func (c *ServiceClient) RegisterSubscriptionSchema(subscriptionSchema Subscripti
 
 	if update {
 		// Check if the schema definitions changed before update
-		currentHash, _ := util.ComputeHash(spec)
-		if currentHash != registeredSpecHash {
+		if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
 			return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+		}
+	}
+
+	return nil
+}
+
+func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
+	accReqDefNameSuffix := "-access-request"
+	subscriptionSchema.SetSubscriptionName(subscriptionSchema.GetSubscriptionName() + accReqDefNameSuffix)
+
+	var registeredSpecHash uint64
+	registeredAccessRequestSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+
+	spec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+	if registeredAccessRequestSchema != nil {
+		registeredSpecHash, _ = util.ComputeHash(registeredAccessRequestSchema.Spec)
+	} else {
+		update = true
+	}
+
+	accessRequestSpec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+
+	// Create New definition
+	if registeredAccessRequestSchema == nil {
+		return c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
+	}
+
+	if update {
+		// Check if the schema definitions changed before update
+		if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
+			return c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
 		}
 	}
 
@@ -164,6 +231,18 @@ func (c *ServiceClient) getCachedSubscriptionSchema(defName string) *v1alpha1.Co
 		return registeredSchema
 	}
 	return cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition)
+}
+
+func (c *ServiceClient) getCachedAccessRequestSubscriptionSchema(defName string) *v1alpha1.AccessRequestDefinition {
+	cachedSchema, err := c.subscriptionSchemaCache.Get(defName)
+	if err != nil {
+		registeredSchema, _ := c.getAccessRequestSubscriptionSchema(defName)
+		if registeredSchema != nil {
+			c.subscriptionSchemaCache.Set(defName, registeredSchema)
+		}
+		return registeredSchema
+	}
+	return cachedSchema.(*v1alpha1.AccessRequestDefinition)
 }
 
 func (c *ServiceClient) getSubscriptionSchema(schemaName string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
@@ -191,9 +270,38 @@ func (c *ServiceClient) getSubscriptionSchema(schemaName string) (*v1alpha1.Cons
 	return registeredSchema, nil
 }
 
+func (c *ServiceClient) getAccessRequestSubscriptionSchema(schemaName string) (*v1alpha1.AccessRequestDefinition, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.GET,
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL() + "/" + schemaName,
+		Headers: headers,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code != http.StatusOK {
+		readResponseErrors(response.Code, response.Body)
+		return nil, agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
+	}
+	registeredSchema := &v1alpha1.AccessRequestDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	return registeredSchema, nil
+}
+
 func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	//Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -221,9 +329,47 @@ func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.
 	return nil
 }
 
+func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
+	//Add API Server resource - SubscriptionDefinition
+	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
+
+	request := coreapi.Request{
+		Method:  coreapi.POST,
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL(),
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		log.Error(err.Error())
+		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
+	}
+	if response.Code != http.StatusCreated {
+		readResponseErrors(response.Code, response.Body)
+		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
+	}
+
+	registeredSchema := &v1alpha1.AccessRequestDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	c.subscriptionSchemaCache.Set(defName, registeredSchema)
+	return nil
+}
+
 func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) error {
 	// Add API Server resource - SubscriptionDefinition
 	buffer, err := c.marshalSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
 
 	headers, err := c.createHeader()
 	if err != nil {
@@ -250,6 +396,39 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *v1alpha1.
 	return nil
 }
 
+func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
+	// Add API Server resource - SubscriptionDefinition
+	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
+	if err != nil {
+		return err
+	}
+
+	headers, err := c.createHeader()
+	if err != nil {
+		return err
+	}
+	request := coreapi.Request{
+		Method:  coreapi.PUT,
+		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL() + "/" + defName,
+		Headers: headers,
+		Body:    buffer,
+	}
+
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
+	}
+	if !(response.Code == http.StatusOK) {
+		readResponseErrors(response.Code, response.Body)
+		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
+	}
+
+	registeredSchema := &v1alpha1.AccessRequestDefinition{}
+	json.Unmarshal(response.Body, registeredSchema)
+	c.subscriptionSchemaCache.Set(defName, registeredSchema)
+	return nil
+}
+
 // UpdateSubscriptionSchema - Updates a subscription schema in Publish to environment mode
 // creates a API Server resource for subscription definition
 func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
@@ -258,6 +437,16 @@ func (c *ServiceClient) UpdateSubscriptionSchema(subscriptionSchema Subscription
 		return err
 	}
 	return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+}
+
+// UpdateAccessRequestSubscriptionSchema - Updates an access request subscription schema in Publish to environment mode
+// creates a API Server resource for subscription definition
+func (c *ServiceClient) UpdateAccessRequestSubscriptionSchema(subscriptionSchema SubscriptionSchema) error {
+	spec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
+	if err != nil {
+		return err
+	}
+	return c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
 }
 
 func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1alpha1.ConsumerSubscriptionDefinition, subscriptionSchema SubscriptionSchema) (*v1alpha1.ConsumerSubscriptionDefinitionSpec, error) {
@@ -299,10 +488,38 @@ func (c *ServiceClient) prepareSubscriptionDefinitionSpec(registeredSchema *v1al
 	}, nil
 }
 
+func (c *ServiceClient) prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema SubscriptionSchema) (*v1alpha1.AccessRequestDefinitionSpec, error) {
+	subscriptionSchema.SetJSONDraft07SchemaVersion()
+	schema, err := subscriptionSchema.mapStringInterface()
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.AccessRequestDefinitionSpec{
+		Schema: schema,
+	}, nil
+}
+
 func (c *ServiceClient) marshalSubscriptionDefinition(defName string, spec *v1alpha1.ConsumerSubscriptionDefinitionSpec) ([]byte, error) {
 	apiServerService := v1alpha1.ConsumerSubscriptionDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.ConsumerSubscriptionDefinitionGVK(),
+			Name:             defName,
+			Title:            "Subscription definition created by agent",
+			Attributes:       nil,
+			Tags:             nil,
+		},
+		Spec: *spec,
+	}
+
+	return json.Marshal(apiServerService)
+}
+
+func (c *ServiceClient) marshalAccessRequestSubscriptionDefinition(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) ([]byte, error) {
+	apiServerService := v1alpha1.AccessRequestDefinition{
+
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
 			Name:             defName,
 			Title:            "Subscription definition created by agent",
 			Attributes:       nil,

@@ -45,6 +45,8 @@ func TestAttributeMigration(t *testing.T) {
 			name:            "should not call update when there are no attributes to move",
 			updateCalled:    false,
 			createSubCalled: false,
+			tags:            []string{"abc", "123"},
+			expectedTags:    2,
 			attrs: map[string]string{
 				"random": "abc",
 			},

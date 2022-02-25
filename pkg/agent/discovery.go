@@ -3,7 +3,6 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -90,7 +89,7 @@ func GetAttributeOnPublishedAPIByPrimaryKey(primaryKey string, attrName string) 
 }
 
 // GetOwnerOnPublishedAPIByName - Returns the owner spec of the published proxy
-func GetOwnerOnPublishedAPIByName(apiName string) *v1.Owner {
+func GetOwnerOnPublishedAPIByName(apiName string) *apiV1.Owner {
 	api := getAPIByName(apiName)
 	if api == nil {
 		return nil
@@ -99,7 +98,7 @@ func GetOwnerOnPublishedAPIByName(apiName string) *v1.Owner {
 }
 
 // GetOwnerOnPublishedAPIByID - Returns the owner spec of the published proxy
-func GetOwnerOnPublishedAPIByID(externalAPIID string) *v1.Owner {
+func GetOwnerOnPublishedAPIByID(externalAPIID string) *apiV1.Owner {
 	api := getAPIByID(externalAPIID)
 	if api == nil {
 		return nil
@@ -108,7 +107,7 @@ func GetOwnerOnPublishedAPIByID(externalAPIID string) *v1.Owner {
 }
 
 // GetOwnerOnPublishedAPIByPrimaryKey - Returns the owner spec of the published proxy
-func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *v1.Owner {
+func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 	api := getAPIByPrimaryKey(primaryKey)
 	if api == nil {
 		return nil
