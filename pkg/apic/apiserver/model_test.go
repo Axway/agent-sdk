@@ -186,7 +186,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 		Status: m.ApiServiceStatus{
 			Phase: m.ApiServiceStatusPhase{
 				Name:           "Create",
-				Level:          "warn",
+				Level:          "info",
 				Message:        "status ok",
 				TransitionTime: newTime,
 			},

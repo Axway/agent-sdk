@@ -124,29 +124,36 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 		return nil, err
 	}
 	svc.Name = serviceBody.serviceContext.serviceName
+	err = c.updateAPIServiceSubresources(svc)
+	if err != nil {
+		_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+		if e != nil {
+			return nil, errors.New(err.Error() + e.Error())
+		}
+	}
+	return svc, err
+}
 
-	if len(svc.SubResources) > 0 {
-		err = c.CreateSubResourceScoped(
+func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) error {
+	subResources := make(map[string]interface{})
+	subResources["status"] = svc.Status
+	for key, value := range svc.SubResources {
+		subResources[key] = value
+	}
+
+	if len(subResources) > 0 {
+		return c.CreateSubResourceScoped(
 			mv1a.EnvironmentResourceName,
 			c.cfg.GetEnvironmentName(),
 			svc.PluralName(),
 			svc.Name,
 			svc.Group,
 			svc.APIVersion,
-			svc.SubResources,
+			subResources,
 		)
-
-		if err != nil {
-			_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-			if e != nil {
-				return nil, errors.New(err.Error() + e.Error())
-			}
-		}
 	}
-
-	return svc, err
+	return nil
 }
-
 func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*mv1a.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
