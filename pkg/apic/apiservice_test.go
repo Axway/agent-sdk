@@ -860,6 +860,11 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 			Metadata: v1.Metadata{
 				ResourceVersion: "123",
 			},
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					"old_subresource_svc_key": "old_val",
+				},
+			},
 		},
 	}
 
@@ -899,6 +904,7 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 	assert.Equal(t, body.APIName, sub[defs.AttrExternalAPIName])
 	assert.Equal(t, body.CreatedBy, sub[defs.AttrCreatedBy])
 	assert.Contains(t, sub, "subresource_svc_key")
+	assert.Contains(t, sub, "old_subresource_svc_key")
 	assert.NotContains(t, sub, "subresource_instance_key")
 	assert.NotContains(t, sub, "subresource_revision_key")
 }
