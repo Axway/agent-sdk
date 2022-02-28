@@ -8,8 +8,9 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
+	"github.com/Axway/agent-sdk/pkg/util"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
@@ -351,10 +352,10 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 
 func (s *CentralSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
 	s.ApicID = apiServerResource.Metadata.ID
-	iAgentDetails := apiServerResource.GetSubResource(definitions.XAgentDetails)
-	agentDetails := iAgentDetails.(map[string]string)
-	s.RemoteAPIID = agentDetails[definitions.AttrExternalAPIID]
-	s.RemoteAPIStage = agentDetails[definitions.AttrExternalAPIStage]
+	apiID, _ := util.GetAgentDetailsValue(apiServerResource, defs.AttrExternalAPIID)
+	stage, _ := util.GetAgentDetailsValue(apiServerResource, defs.AttrExternalAPIStage)
+	s.RemoteAPIID = apiID
+	s.RemoteAPIStage = stage
 	s.RemoteAPIAttributes = apiServerResource.Attributes
 }
 
@@ -551,10 +552,10 @@ func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]inter
 
 func (s *AccessRequestSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
 	s.ApicID = apiServerResource.Metadata.ID
-	iAgentDetails := apiServerResource.GetSubResource(definitions.XAgentDetails)
-	agentDetails := iAgentDetails.(map[string]string)
-	s.RemoteAPIID = agentDetails[definitions.AttrExternalAPIID]
-	s.RemoteAPIStage = agentDetails[definitions.AttrExternalAPIStage]
+	apiID, _ := util.GetAgentDetailsValue(apiServerResource, defs.AttrExternalAPIID)
+	stage, _ := util.GetAgentDetailsValue(apiServerResource, defs.AttrExternalAPIStage)
+	s.RemoteAPIID = apiID
+	s.RemoteAPIStage = stage
 	s.RemoteAPIAttributes = apiServerResource.Attributes
 }
 
