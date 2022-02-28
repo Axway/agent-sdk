@@ -351,8 +351,10 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 
 func (s *CentralSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
 	s.ApicID = apiServerResource.Metadata.ID
-	s.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
-	s.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
+	iAgentDetails := apiServerResource.GetSubResource(definitions.XAgentDetails)
+	agentDetails := iAgentDetails.(map[string]string)
+	s.RemoteAPIID = agentDetails[definitions.AttrExternalAPIID]
+	s.RemoteAPIStage = agentDetails[definitions.AttrExternalAPIStage]
 	s.RemoteAPIAttributes = apiServerResource.Attributes
 }
 
@@ -549,8 +551,10 @@ func (s *AccessRequestSubscription) UpdatePropertyValues(values map[string]inter
 
 func (s *AccessRequestSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceInstance) {
 	s.ApicID = apiServerResource.Metadata.ID
-	s.RemoteAPIID = apiServerResource.Attributes[definitions.AttrExternalAPIID]
-	s.RemoteAPIStage = apiServerResource.Attributes[definitions.AttrExternalAPIStage]
+	iAgentDetails := apiServerResource.GetSubResource(definitions.XAgentDetails)
+	agentDetails := iAgentDetails.(map[string]string)
+	s.RemoteAPIID = agentDetails[definitions.AttrExternalAPIID]
+	s.RemoteAPIStage = agentDetails[definitions.AttrExternalAPIStage]
 	s.RemoteAPIAttributes = apiServerResource.Attributes
 }
 
