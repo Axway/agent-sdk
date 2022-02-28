@@ -1,0 +1,8 @@
+package provisioning
+
+type CredentialRequest interface {
+	GetApplicationName() string        // returns the name of the managed application for this credential
+	GetCredentialType() credentialType // returns the type of credential related to this request
+	GetRequestType() string            // returns the type of request being made Provision/Deprovision/Renew
+	GetCredentialReference() string    // returns the reference for an existing credential, on deprovisioning
+}
