@@ -105,152 +105,152 @@ type WatchTopicValues struct {
 func NewDiscoveryWatchTopic() string {
 	return `
 {
-  "group": "management",
-  "apiVersion": "v1alpha1",
-  "kind": "WatchTopic",
-  "name": "{{.Name}}",
-  "title": "{{.Title}}",
-  "spec": {
-    "filters": [
-      {
-        "group": "management",
-        "kind": "{{.AgentResourceKind}}",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "updated"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "AccessRequest",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "APIService",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "APIServiceInstance",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      },
-      {
-        "group": "catalog",
-        "kind": "Category",
-        "name": "*",
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      }
-    ],
-    "description": "Watch Topic used by a discovery agent for resources in the {{.Scope}} environment."
-  }
-}`
+	"group": "management",
+	"apiVersion": "v1alpha1",
+	"kind": "WatchTopic",
+	"name": "{{.Name}}",
+	"title": "{{.Title}}",
+	"spec": {
+		"filters": [
+			{
+				"group": "management",
+				"kind": "{{.AgentResourceKind}}",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["updated"]
+			},
+			{
+				"group": "management",
+				"kind": "AccessRequest",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "APIService",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "APIServiceInstance",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "catalog",
+				"kind": "Category",
+				"name": "*",
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "Credential",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "ManagedApplication",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			}
+		],
+		"description": "Watch Topic used by a discovery agent for resources in the {{.Scope}} environment."
+	}
+}
+`
 }
 
 // NewTraceWatchTopic creates a WatchTopic template string
 func NewTraceWatchTopic() string {
 	return `
 {
-  "group": "management",
-  "apiVersion": "v1alpha1",
-  "kind": "WatchTopic",
-  "name": "{{.Name}}",
-  "title": "{{.Title}}",
-  "spec": {
-    "filters": [
-      {
-        "group": "management",
-        "kind": "{{.AgentResourceKind}}",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "updated"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "AccessRequest",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "APIService",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      },
-      {
-        "group": "management",
-        "kind": "APIServiceInstance",
-        "name": "*",
-        "scope": {
-          "kind": "Environment",
-          "name": "{{.Scope}}"
-        },
-        "type": [
-          "created",
-          "updated",
-          "deleted"
-        ]
-      }
-    ],
-    "description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."
-  }
-}`
+	"group": "management",
+	"apiVersion": "v1alpha1",
+	"kind": "WatchTopic",
+	"name": "{{.Name}}",
+	"title": "{{.Title}}",
+	"spec": {
+		"filters": [
+			{
+				"group": "management",
+				"kind": "{{.AgentResourceKind}}",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["updated"]
+			},
+			{
+				"group": "management",
+				"kind": "AccessRequest",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "APIService",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "APIServiceInstance",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			},
+			{
+				"group": "management",
+				"kind": "ManagedApplication",
+				"name": "*",
+				"scope": {
+					"kind": "Environment",
+					"name": "{{.Scope}}"
+				},
+				"type": ["created", "updated", "deleted"]
+			}
+		],
+		"description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."
+	}
+}
+`
 }
 
 // NewGovernanceAgentWatchTopic creates a WatchTopic template string
