@@ -29,12 +29,12 @@ const (
 	RequestTypeRenew
 )
 
-// ProvisioningStatus - the status of the request
-type ProvisioningStatus int
+// status - the status of the request
+type status int
 
 const (
 	// Success - request was successful
-	Success ProvisioningStatus = iota + 1
+	Success status = iota + 1
 	// Failed - request failed
 	Failed
 )

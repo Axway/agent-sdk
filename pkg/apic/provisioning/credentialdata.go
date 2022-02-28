@@ -1,5 +1,6 @@
 package provisioning
 
+// CredentialRequest - interface for agents to use to get necessary credential request details
 type CredentialRequest interface {
 	GetApplicationName() string        // returns the name of the managed application for this credential
 	GetCredentialType() credentialType // returns the type of credential related to this request

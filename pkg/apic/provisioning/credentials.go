@@ -4,6 +4,7 @@ import "fmt"
 
 const credentialTypeSetError = "can not set credential as %s as its already set as another %s"
 
+// Credential - holds the details about the credential to send to encrypt and send to platform
 type Credential struct {
 	credentialType credentialType
 	data           interface{}
@@ -19,6 +20,7 @@ type apiKeyCredential struct {
 	key string
 }
 
+// CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
 	SetOAuth(id, secret string) CredentialBuilder
 	SetAPIKey(key string) CredentialBuilder
@@ -31,12 +33,14 @@ type credentialBuilder struct {
 	credential *Credential
 }
 
+// NewCredentialBuilder - create a credential builder
 func NewCredentialBuilder() CredentialBuilder {
 	return &credentialBuilder{
 		credential: &Credential{},
 	}
 }
 
+// Process - process the builder, returning errors
 func (c *credentialBuilder) Process() (*Credential, error) {
 	if c.err != nil {
 		return nil, c.err
@@ -56,6 +60,7 @@ func (c *credentialBuilder) hasError(credType credentialType) bool {
 	return false
 }
 
+// SetOauth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 	if c.hasError(credentialTypeOAuth) {
 		return c
@@ -69,6 +74,7 @@ func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 	return c
 }
 
+// SetAPIKey - set the credential as an API Key type
 func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
 	if c.hasError(credentialTypeAPIKey) {
 		return c
@@ -81,6 +87,7 @@ func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
 	return c
 }
 
+// SetCredentialReference - set reference data to map this credential to teh credentail object on the dataplane
 func (c *credentialBuilder) SetCredentialReference(reference string) CredentialBuilder {
 	if c.err != nil {
 		return c

@@ -4,11 +4,13 @@ import "fmt"
 
 const statusSetError = "can not set status as it's already been set"
 
+// RequestStatus - holds info about the status of the request
 type RequestStatus struct {
-	status  ProvisioningStatus
+	status  status
 	message string
 }
 
+// RequestStatusBuilder - builder to create new request status
 type RequestStatusBuilder interface {
 	Success() RequestStatusBuilder
 	Failed(message string) RequestStatusBuilder
@@ -20,12 +22,14 @@ type requestStatusBuilder struct {
 	status *RequestStatus
 }
 
+// NewRequestStatusBuilder - create a request status builder
 func NewRequestStatusBuilder() RequestStatusBuilder {
 	return &requestStatusBuilder{
 		status: &RequestStatus{},
 	}
 }
 
+// Process - process the builder, returning errors
 func (r *requestStatusBuilder) Process() (*RequestStatus, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -33,6 +37,7 @@ func (r *requestStatusBuilder) Process() (*RequestStatus, error) {
 	return r.status, r.err
 }
 
+// Success - set the request status as a success
 func (r *requestStatusBuilder) Success() RequestStatusBuilder {
 	if r.err != nil {
 		return r
@@ -47,6 +52,7 @@ func (r *requestStatusBuilder) Success() RequestStatusBuilder {
 	return r
 }
 
+// Failed - set the request status as failed and include a message
 func (r *requestStatusBuilder) Failed(message string) RequestStatusBuilder {
 	if r.err != nil {
 		return r

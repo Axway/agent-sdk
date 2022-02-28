@@ -44,7 +44,9 @@ func NewEventListener(source chan *proto.Event, ri ResourceClient, sequenceManag
 
 // Stop stops the listener
 func (em *EventListener) Stop() {
-	em.cancel()
+	if em != nil {
+		em.cancel()
+	}
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
