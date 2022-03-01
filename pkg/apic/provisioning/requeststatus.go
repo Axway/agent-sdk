@@ -32,19 +32,19 @@ func NewRequestStatusBuilder() RequestStatusBuilder {
 	}
 }
 
-// Failed - set the request status as failed and include a message
+// SetProperties - set the properties to be sent back to the resource
 func (r *requestStatusBuilder) SetProperties(properties map[string]string) RequestStatusBuilder {
 	r.status.properties = properties
 	return r
 }
 
-// Failed - set the request status as failed and include a message
+// Failed - add a property to be sent back to the resource
 func (r *requestStatusBuilder) AddProperty(key, value string) RequestStatusBuilder {
 	r.status.properties[key] = value
 	return r
 }
 
-// Failed - set the request status as failed and include a message
+// SetMessage - set the request status message
 func (r *requestStatusBuilder) SetMessage(message string) RequestStatusBuilder {
 	r.status.message = message
 	return r
@@ -56,7 +56,7 @@ func (r *requestStatusBuilder) Success() RequestStatus {
 	return r.status
 }
 
-// Failed - set the request status as failed and include a message
+// Failed - set the request status as failed
 func (r *requestStatusBuilder) Failed() RequestStatus {
 	r.status.status = Failed
 	return r.status
