@@ -4,5 +4,5 @@ package provisioning
 type ApplicationRequest interface {
 	GetManagedApplicationName() string      // returns the name of the managed application for this credential
 	GetApplicationName() string             // returns the name of the application on the dataplane
-	GetProperty(key string) (string, error) // return the value based on teh key
+	GetProperty(key string) (string, error) // return the value based on the key
 }
