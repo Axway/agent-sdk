@@ -1,0 +1,99 @@
+package provisioning
+
+import "fmt"
+
+// RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
+type RegisterCredentialRequestDefinition func(credentialRequestDefinition interface{}) error
+
+type credentialRequestDef struct {
+	name            string
+	requestSchema   *jsonSchema
+	provisionSchema *jsonSchema
+	maxAppCreds     int
+	webhooks        []string
+	registerFunc    RegisterCredentialRequestDefinition
+	err             error
+}
+
+// CredentialRequestBuilder - aids in creating a new credential request
+type CredentialRequestBuilder interface {
+	SetName(name string) CredentialRequestBuilder
+	SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder
+	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
+	SetMaxApplicationCredentials(max int) CredentialRequestBuilder
+	SetWebhooks(webhooks []string) CredentialRequestBuilder
+	AddWebhook(webhook string) CredentialRequestBuilder
+	Register() error
+}
+
+// NewCredentialRequestBuilder - called by the agent package and sends in the function that registers this credential request
+func NewCredentialRequestBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialRequestBuilder {
+	return &credentialRequestDef{
+		webhooks:     make([]string, 0),
+		registerFunc: registerFunc,
+	}
+}
+
+// SetName - set the name of the credential request
+func (c *credentialRequestDef) SetName(name string) CredentialRequestBuilder {
+	c.name = name
+	return c
+}
+
+// SetRequestSchema - set the schema to be used for credential requests
+func (c *credentialRequestDef) SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder {
+	if c.err != nil {
+		return c
+	}
+
+	if schema != nil {
+		c.requestSchema, c.err = schema.Build()
+	} else {
+		c.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
+	}
+
+	return c
+}
+
+// SetProvisionSchema - set the schema to be used when provisioning credentials
+func (c *credentialRequestDef) SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder {
+	if c.err != nil {
+		return c
+	}
+
+	if schema != nil {
+		c.provisionSchema, c.err = schema.Build()
+	} else {
+		c.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
+	}
+
+	return c
+}
+
+// SetMaxApplicationCredentials - set the maximum number of allowed applications for this credential
+func (c *credentialRequestDef) SetMaxApplicationCredentials(max int) CredentialRequestBuilder {
+	c.maxAppCreds = max
+	return c
+}
+
+// SetWebhooks - set a list of webhooks to be invoked when credential of this type created
+func (c *credentialRequestDef) SetWebhooks(webhooks []string) CredentialRequestBuilder {
+	if webhooks != nil {
+		c.webhooks = webhooks
+	}
+	return c
+}
+
+// AddWebhook - add a webhook to the list of webhooks to be invoked when a credential of this type is requested
+func (c *credentialRequestDef) AddWebhook(webhook string) CredentialRequestBuilder {
+	c.webhooks = append(c.webhooks, webhook)
+	return c
+}
+
+// Register - create the credential request defintion and send it to Central
+func (c *credentialRequestDef) Register() error {
+	if c.err != nil {
+		return c.err
+	}
+	return c.registerFunc(nil)
+}

@@ -3,6 +3,7 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -147,4 +148,9 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 // RegisterDeleteServiceValidator - DEPRECATED Registers callback for validating if the service should be deleted
 func RegisterDeleteServiceValidator(validator interface{}) {
 	log.Warnf("the RegisterDeleteServiceValidator is no longer used, please remove the call to it")
+}
+
+// NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
+func NewCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
+	return provisioning.NewCredentialRequestBuilder(nil)
 }
