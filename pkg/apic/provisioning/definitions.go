@@ -45,7 +45,7 @@ const (
 type Provisioning interface {
 	ApplicationRequestProvision(applicationRequest ApplicationRequest) (status RequestStatus)
 	ApplicationRequestDeprovision(applicationRequest ApplicationRequest) (status RequestStatus)
-	AccessRequestProvision(accessRequest AccessRequest) (status RequestStatus, data map[string]interface{})
+	AccessRequestProvision(accessRequest AccessRequest) (status RequestStatus)
 	AccessRequestDeprovision(accessRequest AccessRequest) (status RequestStatus)
 	CredentialProvision(credentialRequest CredentialRequest) (status RequestStatus, credentails Credential)
 	CredentialDeprovision(credentialRequest CredentialRequest) (status RequestStatus)

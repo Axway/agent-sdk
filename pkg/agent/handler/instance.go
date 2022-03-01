@@ -6,7 +6,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-
 const apiServiceInstance = "APIServiceInstance"
 
 type instanceHandler struct {

@@ -5,14 +5,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const credentialRequest = "CredentialRequest"
-
-// Handler interface used by the EventListener to process events.
-type Handler interface {
-	// Handle receives the type of the event (add, update, delete), event metadata and the API Server resource, if it exists.
-	Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
-}
-
 // ProxyHandler interface to represent the proxy resource handler.
 type ProxyHandler interface {
 	// RegisterTargetHandler adds the target handler

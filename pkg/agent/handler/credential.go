@@ -2,13 +2,20 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/util/log"
+	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
 const credentialKind = "Credential"
 
-type credentials struct{}
+type credentialProvision interface {
+	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
+	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
+}
+
+type credentials struct {
+	prov credentialProvision
+}
 
 // NewcredentialHandler creates a Handler for Access Requests
 func NewcredentialHandler() Handler {
@@ -21,11 +28,11 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 	}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		log.Info("Credentials Created or Updated")
+		h.prov.CredentialProvision(&prov.Creds{})
 	}
 
 	if action == proto.Event_DELETED {
-		log.Info("Credentials Deleted")
+		h.prov.CredentialDeprovision(&prov.Creds{})
 	}
 
 	return nil

@@ -1,69 +1,63 @@
 package provisioning
 
-import "fmt"
-
-const statusSetError = "can not set status as it's already been set"
-
 // RequestStatus - holds info about the status of the request
-type RequestStatus struct {
-	status  status
-	message string
+type RequestStatus interface{}
+
+type requestStatus struct {
+	RequestStatus
+	status     status
+	message    string
+	properties map[string]string
 }
 
 // RequestStatusBuilder - builder to create new request status
 type RequestStatusBuilder interface {
-	Success() RequestStatusBuilder
-	Failed(message string) RequestStatusBuilder
-	Process() (*RequestStatus, error)
+	Success() RequestStatus
+	Failed() RequestStatus
+	SetMessage(message string) RequestStatusBuilder
+	SetProperties(map[string]string) RequestStatusBuilder
+	AddProperty(key string, value string) RequestStatusBuilder
 }
 
 type requestStatusBuilder struct {
-	err    error
-	status *RequestStatus
+	status *requestStatus
 }
 
 // NewRequestStatusBuilder - create a request status builder
 func NewRequestStatusBuilder() RequestStatusBuilder {
 	return &requestStatusBuilder{
-		status: &RequestStatus{},
+		status: &requestStatus{
+			properties: make(map[string]string),
+		},
 	}
 }
 
-// Process - process the builder, returning errors
-func (r *requestStatusBuilder) Process() (*RequestStatus, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.status, r.err
+// SetProperties - set the properties to be sent back to the resource
+func (r *requestStatusBuilder) SetProperties(properties map[string]string) RequestStatusBuilder {
+	r.status.properties = properties
+	return r
+}
+
+// Failed - add a property to be sent back to the resource
+func (r *requestStatusBuilder) AddProperty(key, value string) RequestStatusBuilder {
+	r.status.properties[key] = value
+	return r
+}
+
+// SetMessage - set the request status message
+func (r *requestStatusBuilder) SetMessage(message string) RequestStatusBuilder {
+	r.status.message = message
+	return r
 }
 
 // Success - set the request status as a success
-func (r *requestStatusBuilder) Success() RequestStatusBuilder {
-	if r.err != nil {
-		return r
-	}
-
-	if r.status.status != 0 {
-		r.err = fmt.Errorf(statusSetError)
-		return r
-	}
-
+func (r *requestStatusBuilder) Success() RequestStatus {
 	r.status.status = Success
-	return r
+	return r.status
 }
 
-// Failed - set the request status as failed and include a message
-func (r *requestStatusBuilder) Failed(message string) RequestStatusBuilder {
-	if r.err != nil {
-		return r
-	}
-
-	if r.status.status != 0 {
-		r.err = fmt.Errorf(statusSetError)
-		return r
-	}
-
+// Failed - set the request status as failed
+func (r *requestStatusBuilder) Failed() RequestStatus {
 	r.status.status = Failed
-	r.status.message = message
-	return r
+	return r.status
 }
