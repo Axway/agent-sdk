@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -36,6 +38,34 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
+	req := newReq(ar)
+
+	var status prov.RequestStatus
+
+	// provision when status == pending, and state == provision
+	if ar.State.Name == "provision" {
+		status = h.prov.AccessRequestProvision(req)
+		// TODO: update AccessRequest status
+	}
+
+	// deprovision when status == pending, and state == deprovision
+
+	if ar.State.Name == "deprovision" {
+		status = h.prov.AccessRequestDeprovision(req)
+		// TODO: update AccessRequest status
+	}
+
+	fmt.Println("Status: %+v", status)
+
+	// TODO: Delete event probably isn't necessary. Remove it from the watch topic.
+
+	// TODO: add all StatusRequest fields to x-agent-details
+	// TODO: update the AccessRequest with changes to x-agent-details
+
+	return nil
+}
+
+func newReq(ar *mv1.AccessRequest) req {
 	instID := ""
 	managedAppName := ""
 	for _, ref := range ar.Metadata.References {
@@ -47,21 +77,11 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		}
 	}
 
-	r := &req{
+	return req{
 		apiID:   instID,
 		appName: managedAppName,
 		data:    ar.Spec.Data,
 	}
-
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		h.prov.AccessRequestProvision(r)
-	}
-
-	if action == proto.Event_DELETED {
-		h.prov.AccessRequestDeprovision(r)
-	}
-
-	return nil
 }
 
 type req struct {
@@ -70,14 +90,17 @@ type req struct {
 	data    map[string]interface{}
 }
 
+// GetApplicationName gets the application name the access request is linked too.
 func (r req) GetApplicationName() string {
-	return "app name"
+	return r.appName
 }
 
+// GetAPIID gets the api service instance id that the access request is linked too.
 func (r req) GetAPIID() string {
-	return "123"
+	return r.apiID
 }
 
+// GetProperty gets a property off of the access request data map.
 func (r req) GetProperty(key string) interface{} {
 	return r.data[key]
 }
