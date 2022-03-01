@@ -152,7 +152,7 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(subsRelations)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/11111") {
-			apiserverRes := v1alpha1.ConsumerInstance{
+			apiserverRes := &v1alpha1.ConsumerInstance{
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
 					Name:             "11111",
@@ -166,12 +166,17 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 							},
 						},
 					},
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID: "11111",
+						},
+					},
 				},
 			}
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/22222") {
-			apiserverRes := v1alpha1.ConsumerInstance{
+			apiserverRes := &v1alpha1.ConsumerInstance{
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
 					Name:             "22222",
@@ -185,12 +190,17 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 							},
 						},
 					},
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID: "22222",
+						},
+					},
 				},
 			}
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/apiserviceinstances/11111") {
-			apiserverRes := v1alpha1.APIServiceInstance{
+			apiserverRes := &v1alpha1.APIServiceInstance{
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
 					Name:             "11111",
@@ -198,15 +208,17 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 					Metadata: v1.Metadata{
 						ID: "11111",
 					},
-					Attributes: map[string]string{
-						definitions.AttrExternalAPIID: "1111",
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID: "1111",
+						},
 					},
 				},
 			}
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/apiserviceinstances/22222") {
-			apiserverRes := v1alpha1.APIServiceInstance{
+			apiserverRes := &v1alpha1.APIServiceInstance{
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
 					Name:             "22222",
@@ -214,8 +226,10 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 					Metadata: v1.Metadata{
 						ID: "22222",
 					},
-					Attributes: map[string]string{
-						definitions.AttrExternalAPIID: "2222",
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.AttrExternalAPIID: "2222",
+						},
 					},
 				},
 			}

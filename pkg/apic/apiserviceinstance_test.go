@@ -62,6 +62,7 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 			},
 		},
 	}
+
 	inst := client.buildAPIServiceInstance(body, "name", ep)
 
 	assert.Equal(t, mv1a.APIServiceInstanceGVK(), inst.GroupVersionKind)
@@ -74,6 +75,11 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 	assert.Contains(t, inst.Attributes, "instance_attribute")
 	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, inst.Attributes, defs.AttrCreatedBy)
 
 	assert.Equal(t, inst.Spec.Endpoint, ep)
 
@@ -86,6 +92,7 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 	assert.Contains(t, sub, "subresource_svc_key")
 	assert.Contains(t, sub, "subresource_instance_key")
 	assert.NotContains(t, sub, "subresource_revision_key")
+	assert.NotContains(t, sub, "revision_attribute")
 }
 
 func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
@@ -168,6 +175,11 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 	assert.NotContains(t, inst.Attributes, "service_attribute")
 	assert.NotContains(t, inst.Attributes, "revision_attribute")
 	assert.NotContains(t, inst.Attributes, "old_attr")
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIStage)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIPrimaryKey)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIID)
+	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIName)
+	assert.NotContains(t, inst.Attributes, defs.AttrCreatedBy)
 
 	sub := util.GetAgentDetails(inst)
 	assert.Equal(t, body.Stage, sub[defs.AttrExternalAPIStage])
@@ -178,4 +190,18 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 	assert.Contains(t, sub, "subresource_svc_key")
 	assert.Contains(t, sub, "subresource_instance_key")
 	assert.NotContains(t, sub, "subresource_revision_key")
+	assert.NotContains(t, sub, "revision_attribute")
+}
+
+func Test_buildAPIServiceInstanceNilAttributes(t *testing.T) {
+	client, _ := GetTestServiceClient()
+	body := &ServiceBody{}
+	ep := []mv1a.ApiServiceInstanceSpecEndpoint{}
+	inst := client.buildAPIServiceInstance(body, "name", ep)
+	assert.NotNil(t, inst.Attributes)
+
+	inst.Attributes = nil
+
+	inst = client.updateAPIServiceInstance(body, inst, ep)
+	assert.NotNil(t, inst.Attributes)
 }

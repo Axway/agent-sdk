@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -22,7 +23,7 @@ import (
 const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
-	apiServerFields     = "metadata,name,title,owner,attributes,x-agent-details"
+	apiServerFields     = "metadata,group,kind,name,title,owner,attributes,x-agent-details"
 	queryFormatString   = "%s>\"%s\""
 )
 
@@ -41,9 +42,12 @@ type discoveryCache struct {
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
+	migrator             migrate.AttrMigrator
 }
 
-func newDiscoveryCache(manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex) *discoveryCache {
+func newDiscoveryCache(
+	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
+) *discoveryCache {
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
@@ -52,6 +56,7 @@ func newDiscoveryCache(manager resource.Manager, getAll bool, instanceCacheLock 
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
+		migrator:             migrator,
 	}
 }
 
@@ -75,41 +80,48 @@ func (j *discoveryCache) Execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
 	log.Trace("executing API cache update job")
-	j.updateAPICache()
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-		j.updateAPIServiceInstancesCache()
-		j.updateCategoryCache()
+	err := j.updateAPICache()
+	if err != nil {
+		return err
 	}
-	if j.agentResourceManager != nil {
-		j.agentResourceManager.FetchAgentResource()
+
+	if !agent.cacheManager.HasLoadedPersistedCache() {
+		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+			j.updateAPIServiceInstancesCache()
+			j.updateCategoryCache()
+		}
+		if j.agentResourceManager != nil {
+			j.agentResourceManager.FetchAgentResource()
+		}
 	}
+
 	return nil
 }
 
-func (j *discoveryCache) updateAPICache() {
+func (j *discoveryCache) updateAPICache() error {
 	log.Trace("updating API cache")
 
-	// Update cache with published resources
 	existingAPIs := make(map[string]bool)
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
+	apiServices, err := j.getAPIServices()
+	if err != nil {
+		return err
 	}
-
-	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
-		)
-	}
-	apiServices, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetServicesURL(), apiServerPageSize,
-	)
 
 	for _, svc := range apiServices {
+		if j.migrator != nil {
+			var err error
+			svc, err = j.migrator.Migrate(svc)
+			if err != nil {
+				return fmt.Errorf("failed to migrate service: %s", err)
+			}
+		}
+
 		externalAPIID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 		// skip service without external api id
 		if externalAPIID == "" {
 			continue
 		}
+
 		// Update the lastServiceTime based on the newest service found
 		thisTime := time.Time(svc.Metadata.Audit.CreateTimestamp)
 		if j.lastServiceTime.Before(thisTime) {
@@ -134,6 +146,51 @@ func (j *discoveryCache) updateAPICache() {
 			}
 		}
 	}
+
+	return nil
+}
+
+func (j *discoveryCache) getAPIServices() ([]*apiV1.ResourceInstance, error) {
+	if agent.cacheManager.HasLoadedPersistedCache() {
+		return j.getCachedAPIServices(), nil
+	}
+	// Update cache with published resources
+	return j.fetchAPIServices()
+}
+
+func (j *discoveryCache) getCachedAPIServices() []*apiV1.ResourceInstance {
+	resources := make([]*apiV1.ResourceInstance, 0)
+	cache := agent.cacheManager.GetAPIServiceCache()
+
+	for _, key := range cache.GetKeys() {
+		item, _ := cache.Get(key)
+		if item == nil {
+			continue
+		}
+
+		apiSvc, ok := item.(*apiV1.ResourceInstance)
+		if ok {
+			resources = append(resources, apiSvc)
+		}
+	}
+
+	return resources
+}
+
+func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastServiceTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
+		)
+	}
+
+	return GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetServicesURL(), apiServerPageSize,
+	)
 }
 
 func (j *discoveryCache) updateAPIServiceInstancesCache() {

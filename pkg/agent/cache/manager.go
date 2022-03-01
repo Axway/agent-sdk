@@ -64,6 +64,7 @@ type Manager interface {
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
 	GetSequence(watchTopicName string) int64
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }

@@ -205,7 +205,7 @@ func MergeMapStringInterface(m ...map[string]interface{}) map[string]interface{}
 }
 
 // MergeMapStringString - merges the provided maps.
-// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1
+// If duplicate keys are found across the maps, then the keys in map n will be overwritten in keys in map n+1.
 func MergeMapStringString(m ...map[string]string) map[string]string {
 	attrs := make(map[string]string)
 
@@ -216,4 +216,13 @@ func MergeMapStringString(m ...map[string]string) map[string]string {
 	}
 
 	return attrs
+}
+
+// CheckEmptyMapStringString creates a new empty map if the provided map is nil
+func CheckEmptyMapStringString(m map[string]string) map[string]string {
+	if m == nil {
+		return make(map[string]string)
+	}
+
+	return m
 }

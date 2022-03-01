@@ -35,7 +35,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
-			Attributes:       serviceBody.ServiceAttributes,
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceSpec(serviceBody),
@@ -68,10 +68,11 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = c.getOwnerObject(serviceBody, true)
-	svc.Attributes = serviceBody.ServiceAttributes
+	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
-	util.SetAgentDetails(svc, svcDetails)
+	sub := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
+	util.SetAgentDetails(svc, sub)
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{
