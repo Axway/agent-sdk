@@ -11,54 +11,42 @@ func TestRequestStatusBuilder(t *testing.T) {
 	tests := []struct {
 		name    string
 		success bool
-		wantErr bool
+		message string
+		propKey string
+		propVal string
+		props   map[string]string
 	}{
 		{
 			name:    "Build Success Status",
+			message: "message",
+			propKey: "key",
+			propVal: "val",
 			success: true,
 		},
 		{
 			name:    "Build Failed Status",
+			message: "message",
+			propKey: "key",
+			propVal: "val",
+			props:   map[string]string{"a": "b"},
 			success: false,
-		},
-		{
-			name:    "Build Status 1 - error",
-			success: true,
-			wantErr: true,
-		},
-		{
-			name:    "Build Status 2 - error",
-			success: false,
-			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := provisioning.NewRequestStatusBuilder()
+			builder := provisioning.NewRequestStatusBuilder().SetMessage("").AddProperty(tt.propKey, tt.propVal)
+			if tt.props != nil {
+				builder.SetProperties(tt.props)
+			}
+
+			var req provisioning.RequestStatus
 			if tt.success {
-				builder.Success()
+				req = builder.Success()
 			} else {
-				builder.Failed("error")
+				req = builder.Failed()
 			}
 
-			if tt.wantErr {
-				if tt.success {
-					builder.Failed("error")
-					builder.Success()
-				} else {
-					builder.Success()
-					builder.Failed("error")
-				}
-			}
-
-			req, err := builder.Process()
-			if tt.wantErr {
-				assert.NotNil(t, err)
-				assert.Nil(t, req)
-			} else {
-				assert.Nil(t, err)
-				assert.NotNil(t, req)
-			}
+			assert.NotNil(t, req)
 		})
 	}
 }

@@ -18,20 +18,17 @@ func TestCredentialBuilder(t *testing.T) {
 		{
 			name: "Build API Key Credential",
 			key:  "api-key-data",
-			ref:  "creds",
 		},
 		{
 			name:   "Build OAuth Credential",
 			id:     "client-id",
 			secret: "secret",
-			ref:    "creds",
 		},
 		{
 			name:   "Build Multiple Credential - error",
 			key:    "api-key-data",
 			id:     "client-id",
 			secret: "secret",
-			ref:    "creds",
 		},
 	}
 	for _, tt := range tests {
@@ -48,7 +45,6 @@ func TestCredentialBuilder(t *testing.T) {
 				wantErr = true
 				builder.SetAPIKey(tt.key)
 			}
-			builder.SetCredentialReference(tt.ref)
 
 			cred, err := builder.Process()
 			if wantErr {
