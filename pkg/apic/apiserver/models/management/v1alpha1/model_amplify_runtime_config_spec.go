@@ -12,7 +12,8 @@ package v1alpha1
 // AmplifyRuntimeConfigSpec struct for AmplifyRuntimeConfigSpec
 type AmplifyRuntimeConfigSpec struct {
 	// The runtime config.
-	RuntimeConfig map[string]interface{} `json:"runtimeConfig"`
-	AmplifyConfig string                 `json:"amplifyConfig"`
-	Deployments   []string               `json:"deployments,omitempty"`
+	RuntimeConfig   map[string]interface{}   `json:"runtimeConfig"`
+	AmplifyConfig   string                   `json:"amplifyConfig"`
+	ExternalSecrets []map[string]interface{} `json:"externalSecrets,omitempty"`
+	Deployments     []string                 `json:"deployments,omitempty"`
 }
