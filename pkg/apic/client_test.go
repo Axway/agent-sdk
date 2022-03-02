@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
 	"github.com/stretchr/testify/assert"
@@ -46,10 +50,9 @@ func arrContains(arr []string, s string) bool {
 
 func TestMapTagsToArray(t *testing.T) {
 	svcClient, _ := GetTestServiceClient()
-
 	tag4Value := "value4"
 	tags := map[string]interface{}{"tag1": "value1", "tag2": "", "tag3": "value3", "tag4": &tag4Value}
-	result := svcClient.mapToTagsArray(tags)
+	result := mapToTagsArray(tags, svcClient.cfg.GetTagsToPublish())
 	assert.Equal(t, 4, len(result))
 	assert.True(t, arrContains(result, "tag1_value1"))
 	assert.True(t, arrContains(result, "tag2"))
@@ -57,7 +60,7 @@ func TestMapTagsToArray(t *testing.T) {
 
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	cfg.TagsToPublish = "bar"
-	result = svcClient.mapToTagsArray(tags)
+	result = mapToTagsArray(tags, cfg.GetTagsToPublish())
 	assert.Equal(t, 5, len(result))
 	assert.True(t, arrContains(result, "tag1_value1"))
 	assert.True(t, arrContains(result, "tag2"))
@@ -154,4 +157,92 @@ func TestHealthCheck(t *testing.T) {
 	mockHTTPClient.SetResponses(responses)
 	status = svcClient.Healthcheck("Client Test")
 	assert.Equal(t, status.Result, healthcheck.OK)
+}
+
+func TestCreateSubResourceScoped(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "mockenv"
+	cfg.PlatformURL = "http://foo.bar:4080"
+
+	// There should be one request for each sub resource of the ResourceInstance
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+	})
+
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:             "test-resource",
+			GroupVersionKind: mv1.APIServiceGVK(),
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					"externalAPIID":   "12345",
+					"externalAPIName": "daleapi",
+					"createdBy":       "",
+				},
+				"abc": map[string]interface{}{
+					"123": "132",
+				},
+			},
+		},
+	}
+
+	err := svcClient.CreateSubResourceScoped(
+		mv1.EnvironmentResourceName,
+		cfg.GetEnvironmentName(),
+		mv1.APIServiceResourceName,
+		ri.Name,
+		ri.Group,
+		ri.APIVersion,
+		ri.SubResources,
+	)
+	assert.Nil(t, err)
+}
+
+func TestCreateSubResourceUnscoped(t *testing.T) {
+	svcClient, mockHTTPClient := GetTestServiceClient()
+	cfg := GetTestServiceClientCentralConfiguration(svcClient)
+	cfg.Environment = "mockenv"
+	cfg.PlatformURL = "http://foo.bar:4080"
+
+	// There should be one request for each sub resource of the ResourceInstance
+	mockHTTPClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/agent-details-sr.json",
+			RespCode: http.StatusOK,
+		},
+	})
+
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:             "test-resource",
+			GroupVersionKind: mv1.APIServiceGVK(),
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					"externalAPIID":   "12345",
+					"externalAPIName": "daleapi",
+					"createdBy":       "",
+				},
+				"abc": map[string]interface{}{
+					"123": "132",
+				},
+			},
+		},
+	}
+
+	err := svcClient.CreateSubResourceUnscoped(
+		mv1.EnvironmentResourceName, ri.Name, ri.Group, ri.APIVersion, ri.SubResources,
+	)
+	assert.Nil(t, err)
 }

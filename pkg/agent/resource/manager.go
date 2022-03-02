@@ -8,7 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -196,15 +196,15 @@ func (a *agentResourceManager) updateAgentStatusAPI(resource interface{}, agentR
 
 func (a *agentResourceManager) createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) (*v1.ResourceInstance, error) {
 	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		agentRes := createDiscoveryAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		agentRes := createTraceabilityAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		agentRes := createGovernanceAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
@@ -220,11 +220,11 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 	}
 
 	switch a.getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)

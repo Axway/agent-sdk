@@ -138,3 +138,8 @@ func (res *AmplifyJWTAuthRule) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *AmplifyJWTAuthRule) PluralName() string {
+	return AmplifyJWTAuthRuleResourceName
+}

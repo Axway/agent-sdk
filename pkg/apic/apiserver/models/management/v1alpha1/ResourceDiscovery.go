@@ -138,3 +138,8 @@ func (res *ResourceDiscovery) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *ResourceDiscovery) PluralName() string {
+	return ResourceDiscoveryResourceName
+}

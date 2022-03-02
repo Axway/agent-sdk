@@ -156,8 +156,6 @@ func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error)
 	return "", nil
 }
 
-func (m *mockManager) OnRegisterSuccess(_ wm.WatchCallback) {}
-
 func (m *mockManager) CloseWatch(_ string) error {
 	return nil
 }

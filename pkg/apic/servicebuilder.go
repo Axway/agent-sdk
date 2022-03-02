@@ -46,7 +46,9 @@ type ServiceBuilder interface {
 	SetUnstructuredFilename(filename string) ServiceBuilder
 	SetTeamName(teamName string) ServiceBuilder
 	SetCategories(categories []string) ServiceBuilder
-
+	SetServiceAgentDetails(attr map[string]interface{}) ServiceBuilder
+	SetInstanceAgentDetails(attr map[string]interface{}) ServiceBuilder
+	SetRevisionAgentDetails(attr map[string]interface{}) ServiceBuilder
 	Build() (ServiceBody, error)
 }
 
@@ -59,19 +61,22 @@ type serviceBodyBuilder struct {
 func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
-			AuthPolicy:         Passthrough,
-			authPolicies:       make([]string, 0),
-			CreatedBy:          config.AgentTypeName,
-			State:              PublishedStatus,
-			Status:             PublishedStatus,
-			ServiceAttributes:  make(map[string]string),
-			RevisionAttributes: make(map[string]string),
-			InstanceAttributes: make(map[string]string),
-			StageDescriptor:    "Stage",
-			Endpoints:          make([]EndpointDefinition, 0),
-			UnstructuredProps:  &UnstructuredProperties{},
-			categoryTitles:     make([]string, 0),
-			categoryNames:      make([]string, 0),
+			AuthPolicy:           Passthrough,
+			authPolicies:         make([]string, 0),
+			CreatedBy:            config.AgentTypeName,
+			State:                PublishedStatus,
+			Status:               PublishedStatus,
+			ServiceAttributes:    make(map[string]string),
+			RevisionAttributes:   make(map[string]string),
+			InstanceAttributes:   make(map[string]string),
+			StageDescriptor:      "Stage",
+			Endpoints:            make([]EndpointDefinition, 0),
+			UnstructuredProps:    &UnstructuredProperties{},
+			categoryTitles:       make([]string, 0),
+			categoryNames:        make([]string, 0),
+			ServiceAgentDetails:  make(map[string]interface{}),
+			InstanceAgentDetails: make(map[string]interface{}),
+			RevisionAgentDetails: make(map[string]interface{}),
 		},
 	}
 }
@@ -179,18 +184,33 @@ func (b *serviceBodyBuilder) SetStatus(status string) ServiceBuilder {
 	return b
 }
 
-func (b *serviceBodyBuilder) SetServiceAttribute(serviceAttribute map[string]string) ServiceBuilder {
-	b.serviceBody.ServiceAttributes = serviceAttribute
+func (b *serviceBodyBuilder) SetServiceAttribute(attr map[string]string) ServiceBuilder {
+	b.serviceBody.ServiceAttributes = attr
 	return b
 }
 
-func (b *serviceBodyBuilder) SetInstanceAttribute(instanceAttribute map[string]string) ServiceBuilder {
-	b.serviceBody.InstanceAttributes = instanceAttribute
+func (b *serviceBodyBuilder) SetInstanceAttribute(attr map[string]string) ServiceBuilder {
+	b.serviceBody.InstanceAttributes = attr
 	return b
 }
 
-func (b *serviceBodyBuilder) SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder {
-	b.serviceBody.RevisionAttributes = revisionAttribute
+func (b *serviceBodyBuilder) SetRevisionAttribute(attr map[string]string) ServiceBuilder {
+	b.serviceBody.RevisionAttributes = attr
+	return b
+}
+
+func (b *serviceBodyBuilder) SetServiceAgentDetails(attr map[string]interface{}) ServiceBuilder {
+	b.serviceBody.ServiceAgentDetails = attr
+	return b
+}
+
+func (b *serviceBodyBuilder) SetInstanceAgentDetails(attr map[string]interface{}) ServiceBuilder {
+	b.serviceBody.InstanceAgentDetails = attr
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRevisionAgentDetails(attr map[string]interface{}) ServiceBuilder {
+	b.serviceBody.RevisionAgentDetails = attr
 	return b
 }
 
