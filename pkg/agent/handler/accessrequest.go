@@ -9,6 +9,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -23,6 +24,7 @@ type client interface {
 	GetResource(url string) (*v1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
 }
 
 type accessRequestHandler struct {
@@ -37,7 +39,7 @@ func NewAccessRequestHandler() Handler {
 }
 
 func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != accessRequest {
+	if resource.Kind != mv1.AccessRequestGVK().Kind {
 		return nil
 	}
 
@@ -47,12 +49,12 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	_, err = h.client.GetResource("/managedapplications/name")
+	app, err := h.client.GetResource("/managedapplications/name")
 	if err != nil {
 		return err
 	}
 
-	req, err := h.newReq(ar, map[string]interface{}{}) // pass in x-agent-details from the managed app
+	req, err := h.newReq(ar, util.GetAgentDetails(app))
 	if err != nil {
 		return err
 	}
@@ -92,6 +94,18 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	_, err = h.client.UpdateResource(ar.Metadata.SelfLink, bts)
 	// update x-agent-details
 
+	err = h.client.CreateSubResourceScoped(
+		mv1.EnvironmentResourceName,
+		ar.Metadata.Scope.Name,
+		ar.PluralName(),
+		ar.Name,
+		ar.Group,
+		ar.APIVersion,
+		map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(ar),
+		},
+	)
+
 	return err
 }
 
@@ -110,20 +124,19 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 		return nil, err
 	}
 
-	apiID := instance.Attributes[defs.AttrExternalAPIID]
-
-	// data := util.MergeMapStringInterface(util.GetAgentDetails(ar), appDetails)
+	apiID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+	data := util.MergeMapStringInterface(util.GetAgentDetails(ar), appDetails)
 
 	return &req{
 		apiID:      apiID,
-		data:       appDetails,
+		data:       data,
 		managedApp: managedAppName,
 	}, nil
 }
 
 type req struct {
 	apiID      string
-	data       map[string]interface{} // TODO: data should be x-agent-details from the AccessRequest
+	data       map[string]interface{}
 	managedApp string
 }
 
@@ -139,5 +152,8 @@ func (r req) GetAPIID() string {
 
 // GetProperty gets a property off of the access request data map.
 func (r req) GetProperty(key string) interface{} {
+	if r.data == nil {
+		return nil
+	}
 	return r.data[key]
 }
