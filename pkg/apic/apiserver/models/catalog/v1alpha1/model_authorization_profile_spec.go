@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// AuthorizationProfileSpec struct for AuthorizationProfileSpec
+type AuthorizationProfileSpec struct {
+	// Description of AuthorizationProfile that can be used to access Asset.
+	Description string `json:"description,omitempty"`
 }

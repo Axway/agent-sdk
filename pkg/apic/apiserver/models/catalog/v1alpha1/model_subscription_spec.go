@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// SubscriptionSpec struct for SubscriptionSpec
+type SubscriptionSpec struct {
+	// Reference to Product resource
+	Product string               `json:"product"`
+	Plan    SubscriptionSpecPlan `json:"plan"`
 }

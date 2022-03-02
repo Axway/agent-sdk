@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// SubscriptionApproval struct for SubscriptionApproval
+type SubscriptionApproval struct {
+	State string `json:"state,omitempty"`
+	// Reason for the state.
+	Reason string `json:"reason,omitempty"`
 }

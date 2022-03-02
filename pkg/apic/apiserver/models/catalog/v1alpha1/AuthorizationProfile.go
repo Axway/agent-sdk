@@ -11,42 +11,43 @@ import (
 )
 
 var (
-	_AccessControlListGVK = apiv1.GroupVersionKind{
+	_AuthorizationProfileGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "AccessControlList",
+			Kind:  "AuthorizationProfile",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Application", "Asset", "AssetRelease", "AuthorizationProfile", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage", "Subscription"}
+	AuthorizationProfileScopes = []string{""}
 )
 
-const AccessControlListResourceName = "accesscontrollists"
+const AuthorizationProfileResourceName = "authprofiles"
 
-func AccessControlListGVK() apiv1.GroupVersionKind {
-	return _AccessControlListGVK
+func AuthorizationProfileGVK() apiv1.GroupVersionKind {
+	return _AuthorizationProfileGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessControlListGVK, AccessControlListScopes[0], AccessControlListResourceName)
+	apiv1.RegisterGVK(_AuthorizationProfileGVK, AuthorizationProfileScopes[0], AuthorizationProfileResourceName)
 }
 
-// AccessControlList Resource
-type AccessControlList struct {
+// AuthorizationProfile Resource
+type AuthorizationProfile struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner          `json:"owner"`
-	Spec  AccessControlListSpec `json:"spec"`
+	Owner      *apiv1.Owner                   `json:"owner"`
+	References AuthorizationProfileReferences `json:"references"`
+	Spec       AuthorizationProfileSpec       `json:"spec"`
 }
 
-// AccessControlListFromInstanceArray converts a []*ResourceInstance to a []*AccessControlList
-func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessControlList, error) {
-	newArray := make([]*AccessControlList, 0)
+// AuthorizationProfileFromInstanceArray converts a []*ResourceInstance to a []*AuthorizationProfile
+func AuthorizationProfileFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AuthorizationProfile, error) {
+	newArray := make([]*AuthorizationProfile, 0)
 	for _, item := range fromArray {
-		res := &AccessControlList{}
+		res := &AuthorizationProfile{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessControlList, 0), err
+			return make([]*AuthorizationProfile, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -54,10 +55,10 @@ func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]
 	return newArray, nil
 }
 
-// AsInstance converts a AccessControlList to a ResourceInstance
-func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a AuthorizationProfile to a ResourceInstance
+func (res *AuthorizationProfile) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessControlListGVK()
+	meta.GroupVersionKind = AuthorizationProfileGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -74,8 +75,8 @@ func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessControlList
-func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a AuthorizationProfile
+func (res *AuthorizationProfile) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -93,7 +94,7 @@ func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessControlList) MarshalJSON() ([]byte, error) {
+func (res *AuthorizationProfile) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -106,13 +107,14 @@ func (res *AccessControlList) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessControlList) UnmarshalJSON(data []byte) error {
+func (res *AuthorizationProfile) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -136,10 +138,24 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessControlList) PluralName() string {
-	return AccessControlListResourceName
+func (res *AuthorizationProfile) PluralName() string {
+	return AuthorizationProfileResourceName
 }

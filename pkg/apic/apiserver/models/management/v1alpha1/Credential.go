@@ -11,45 +11,46 @@ import (
 )
 
 var (
-	_AssetRequestDefinitionGVK = apiv1.GroupVersionKind{
+	_CredentialGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
-			Group: "catalog",
-			Kind:  "AssetRequestDefinition",
+			Group: "management",
+			Kind:  "Credential",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AssetRequestDefinitionScopes = []string{"Asset", "AssetRelease"}
+	CredentialScopes = []string{"Environment"}
 )
 
-const AssetRequestDefinitionResourceName = "assetrequestdefinitions"
+const CredentialResourceName = "credentials"
 
-func AssetRequestDefinitionGVK() apiv1.GroupVersionKind {
-	return _AssetRequestDefinitionGVK
+func CredentialGVK() apiv1.GroupVersionKind {
+	return _CredentialGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AssetRequestDefinitionGVK, AssetRequestDefinitionScopes[0], AssetRequestDefinitionResourceName)
+	apiv1.RegisterGVK(_CredentialGVK, CredentialScopes[0], CredentialResourceName)
 }
 
-// AssetRequestDefinition Resource
-type AssetRequestDefinition struct {
+// Credential Resource
+type Credential struct {
 	apiv1.ResourceMeta
-	Authorization AssetRequestDefinitionAuthorization `json:"authorization"`
-	Owner         *apiv1.Owner                        `json:"owner"`
-	References    interface{}                         `json:"references"`
-	Spec          AssetRequestDefinitionSpec          `json:"spec"`
-	Webhooks      interface{}                         `json:"webhooks"`
+	Data       interface{}          `json:"data"`
+	Owner      *apiv1.Owner         `json:"owner"`
+	References CredentialReferences `json:"references"`
+	Request    CredentialRequest    `json:"request"`
+	Spec       CredentialSpec       `json:"spec"`
+	Status     CredentialStatus     `json:"status"`
 }
 
-// AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition
-func AssetRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetRequestDefinition, error) {
-	newArray := make([]*AssetRequestDefinition, 0)
+// CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential
+func CredentialFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Credential, error) {
+	newArray := make([]*Credential, 0)
 	for _, item := range fromArray {
-		res := &AssetRequestDefinition{}
+		res := &Credential{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AssetRequestDefinition, 0), err
+			return make([]*Credential, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -57,10 +58,10 @@ func AssetRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance
 	return newArray, nil
 }
 
-// AsInstance converts a AssetRequestDefinition to a ResourceInstance
-func (res *AssetRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Credential to a ResourceInstance
+func (res *Credential) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AssetRequestDefinitionGVK()
+	meta.GroupVersionKind = CredentialGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -77,8 +78,8 @@ func (res *AssetRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error)
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AssetRequestDefinition
-func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Credential
+func (res *Credential) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -96,7 +97,7 @@ func (res *AssetRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) erro
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
+func (res *Credential) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -108,17 +109,18 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["authorization"] = res.Authorization
+	out["data"] = res.Data
 	out["owner"] = res.Owner
 	out["references"] = res.References
+	out["request"] = res.Request
 	out["spec"] = res.Spec
-	out["webhooks"] = res.Webhooks
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
+func (res *Credential) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -142,15 +144,15 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource Authorization
-	if v, ok := aux.SubResources["authorization"]; ok {
+	// marshalling subresource Data
+	if v, ok := aux.SubResources["data"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "authorization")
-		err = json.Unmarshal(sr, &res.Authorization)
+		delete(aux.SubResources, "data")
+		err = json.Unmarshal(sr, &res.Data)
 		if err != nil {
 			return err
 		}
@@ -170,15 +172,29 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource Webhooks
-	if v, ok := aux.SubResources["webhooks"]; ok {
+	// marshalling subresource Request
+	if v, ok := aux.SubResources["request"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "webhooks")
-		err = json.Unmarshal(sr, &res.Webhooks)
+		delete(aux.SubResources, "request")
+		err = json.Unmarshal(sr, &res.Request)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "status")
+		err = json.Unmarshal(sr, &res.Status)
 		if err != nil {
 			return err
 		}
@@ -188,6 +204,6 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AssetRequestDefinition) PluralName() string {
-	return AssetRequestDefinitionResourceName
+func (res *Credential) PluralName() string {
+	return CredentialResourceName
 }

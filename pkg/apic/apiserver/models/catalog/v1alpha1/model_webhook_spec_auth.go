@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// WebhookSpecAuth Defines the authentication used to invoke the webhook. When invoking the webhook, the value from the secret/key will be sent in the Authorization header.
+type WebhookSpecAuth struct {
+	Secret WebhookSpecAuthSecret `json:"secret,omitempty"`
 }

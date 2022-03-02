@@ -11,45 +11,45 @@ import (
 )
 
 var (
-	_AccessRequestGVK = apiv1.GroupVersionKind{
+	_SubscriptionGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
-			Group: "management",
-			Kind:  "AccessRequest",
+			Group: "catalog",
+			Kind:  "Subscription",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessRequestScopes = []string{"Environment"}
+	SubscriptionScopes = []string{""}
 )
 
-const AccessRequestResourceName = "accessrequests"
+const SubscriptionResourceName = "subscriptions"
 
-func AccessRequestGVK() apiv1.GroupVersionKind {
-	return _AccessRequestGVK
+func SubscriptionGVK() apiv1.GroupVersionKind {
+	return _SubscriptionGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessRequestGVK, AccessRequestScopes[0], AccessRequestResourceName)
+	apiv1.RegisterGVK(_SubscriptionGVK, SubscriptionScopes[0], SubscriptionResourceName)
 }
 
-// AccessRequest Resource
-type AccessRequest struct {
+// Subscription Resource
+type Subscription struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec       `json:"spec"`
-	State      AccessRequestState      `json:"state"`
-	Status     AccessRequestStatus     `json:"status"`
+	Approval SubscriptionApproval `json:"approval"`
+	Owner    *apiv1.Owner         `json:"owner"`
+	Request  SubscriptionRequest  `json:"request"`
+	Spec     SubscriptionSpec     `json:"spec"`
+	Status   SubscriptionStatus   `json:"status"`
 }
 
-// AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
-func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequest, error) {
-	newArray := make([]*AccessRequest, 0)
+// SubscriptionFromInstanceArray converts a []*ResourceInstance to a []*Subscription
+func SubscriptionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Subscription, error) {
+	newArray := make([]*Subscription, 0)
 	for _, item := range fromArray {
-		res := &AccessRequest{}
+		res := &Subscription{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessRequest, 0), err
+			return make([]*Subscription, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -57,10 +57,10 @@ func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Acc
 	return newArray, nil
 }
 
-// AsInstance converts a AccessRequest to a ResourceInstance
-func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Subscription to a ResourceInstance
+func (res *Subscription) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessRequestGVK()
+	meta.GroupVersionKind = SubscriptionGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -77,8 +77,8 @@ func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessRequest
-func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Subscription
+func (res *Subscription) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -96,7 +96,7 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessRequest) MarshalJSON() ([]byte, error) {
+func (res *Subscription) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -108,17 +108,17 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["approval"] = res.Approval
 	out["owner"] = res.Owner
-	out["references"] = res.References
+	out["request"] = res.Request
 	out["spec"] = res.Spec
-	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessRequest) UnmarshalJSON(data []byte) error {
+func (res *Subscription) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -142,29 +142,29 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource References
-	if v, ok := aux.SubResources["references"]; ok {
+	// marshalling subresource Approval
+	if v, ok := aux.SubResources["approval"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "references")
-		err = json.Unmarshal(sr, &res.References)
+		delete(aux.SubResources, "approval")
+		err = json.Unmarshal(sr, &res.Approval)
 		if err != nil {
 			return err
 		}
 	}
 
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
+	// marshalling subresource Request
+	if v, ok := aux.SubResources["request"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
+		delete(aux.SubResources, "request")
+		err = json.Unmarshal(sr, &res.Request)
 		if err != nil {
 			return err
 		}
@@ -188,6 +188,6 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessRequest) PluralName() string {
-	return AccessRequestResourceName
+func (res *Subscription) PluralName() string {
+	return SubscriptionResourceName
 }

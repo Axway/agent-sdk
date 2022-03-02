@@ -35,6 +35,7 @@ func init() {
 // AssetRequest Resource
 type AssetRequest struct {
 	apiv1.ResourceMeta
+	Approval   AssetRequestApproval   `json:"approval"`
 	Owner      *apiv1.Owner           `json:"owner"`
 	References AssetRequestReferences `json:"references"`
 	Spec       AssetRequestSpec       `json:"spec"`
@@ -108,6 +109,7 @@ func (res *AssetRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["approval"] = res.Approval
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -140,6 +142,20 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Approval
+	if v, ok := aux.SubResources["approval"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "approval")
+		err = json.Unmarshal(sr, &res.Approval)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References

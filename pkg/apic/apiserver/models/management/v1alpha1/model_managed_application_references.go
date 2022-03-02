@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// ManagedApplicationReferences struct for ManagedApplicationReferences
+type ManagedApplicationReferences struct {
+	// Reference to Application resource
+	Application string `json:"application,omitempty"`
 }

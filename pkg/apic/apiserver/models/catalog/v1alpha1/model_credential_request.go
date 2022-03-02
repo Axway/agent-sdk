@@ -9,8 +9,11 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-}
+// CredentialRequest the model 'CredentialRequest'
+type CredentialRequest string
+
+// List of CredentialRequest
+const (
+	PROVISION CredentialRequest = "provision"
+	RENEW     CredentialRequest = "renew"
+)

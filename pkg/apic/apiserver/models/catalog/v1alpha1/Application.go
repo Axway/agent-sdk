@@ -11,42 +11,42 @@ import (
 )
 
 var (
-	_AccessControlListGVK = apiv1.GroupVersionKind{
+	_ApplicationGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "AccessControlList",
+			Kind:  "Application",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Application", "Asset", "AssetRelease", "AuthorizationProfile", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage", "Subscription"}
+	ApplicationScopes = []string{""}
 )
 
-const AccessControlListResourceName = "accesscontrollists"
+const ApplicationResourceName = "applications"
 
-func AccessControlListGVK() apiv1.GroupVersionKind {
-	return _AccessControlListGVK
+func ApplicationGVK() apiv1.GroupVersionKind {
+	return _ApplicationGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessControlListGVK, AccessControlListScopes[0], AccessControlListResourceName)
+	apiv1.RegisterGVK(_ApplicationGVK, ApplicationScopes[0], ApplicationResourceName)
 }
 
-// AccessControlList Resource
-type AccessControlList struct {
+// Application Resource
+type Application struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner          `json:"owner"`
-	Spec  AccessControlListSpec `json:"spec"`
+	Owner *apiv1.Owner    `json:"owner"`
+	Spec  ApplicationSpec `json:"spec"`
 }
 
-// AccessControlListFromInstanceArray converts a []*ResourceInstance to a []*AccessControlList
-func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessControlList, error) {
-	newArray := make([]*AccessControlList, 0)
+// ApplicationFromInstanceArray converts a []*ResourceInstance to a []*Application
+func ApplicationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Application, error) {
+	newArray := make([]*Application, 0)
 	for _, item := range fromArray {
-		res := &AccessControlList{}
+		res := &Application{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessControlList, 0), err
+			return make([]*Application, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -54,10 +54,10 @@ func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]
 	return newArray, nil
 }
 
-// AsInstance converts a AccessControlList to a ResourceInstance
-func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Application to a ResourceInstance
+func (res *Application) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessControlListGVK()
+	meta.GroupVersionKind = ApplicationGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -74,8 +74,8 @@ func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessControlList
-func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Application
+func (res *Application) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -93,7 +93,7 @@ func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessControlList) MarshalJSON() ([]byte, error) {
+func (res *Application) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (res *AccessControlList) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessControlList) UnmarshalJSON(data []byte) error {
+func (res *Application) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -140,6 +140,6 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessControlList) PluralName() string {
-	return AccessControlListResourceName
+func (res *Application) PluralName() string {
+	return ApplicationResourceName
 }

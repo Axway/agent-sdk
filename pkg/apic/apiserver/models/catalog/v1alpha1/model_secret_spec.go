@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// SecretSpec struct for SecretSpec
+type SecretSpec struct {
+	// Key value pairs. The value will be stored encrypted.
+	Data map[string]string `json:"data,omitempty"`
 }

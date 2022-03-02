@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
+// AuthorizationProfileReferences struct for AuthorizationProfileReferences
+type AuthorizationProfileReferences struct {
 	Kind string `json:"kind"`
 	Name string `json:"name,omitempty"`
 }

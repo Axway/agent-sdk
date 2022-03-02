@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// SubscriptionSpecPlanSetup struct for SubscriptionSpecPlanSetup
+type SubscriptionSpecPlanSetup struct {
+	// data requested by the Product owner (matching the Plan.spec.subscription.form field).
+	Form map[string]interface{} `json:"form,omitempty"`
 }

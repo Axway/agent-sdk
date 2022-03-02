@@ -11,42 +11,42 @@ import (
 )
 
 var (
-	_AccessControlListGVK = apiv1.GroupVersionKind{
+	_SecretGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "AccessControlList",
+			Kind:  "Secret",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Application", "Asset", "AssetRelease", "AuthorizationProfile", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage", "Subscription"}
+	SecretScopes = []string{"AuthorizationProfile"}
 )
 
-const AccessControlListResourceName = "accesscontrollists"
+const SecretResourceName = "secrets"
 
-func AccessControlListGVK() apiv1.GroupVersionKind {
-	return _AccessControlListGVK
+func SecretGVK() apiv1.GroupVersionKind {
+	return _SecretGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessControlListGVK, AccessControlListScopes[0], AccessControlListResourceName)
+	apiv1.RegisterGVK(_SecretGVK, SecretScopes[0], SecretResourceName)
 }
 
-// AccessControlList Resource
-type AccessControlList struct {
+// Secret Resource
+type Secret struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner          `json:"owner"`
-	Spec  AccessControlListSpec `json:"spec"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  SecretSpec   `json:"spec"`
 }
 
-// AccessControlListFromInstanceArray converts a []*ResourceInstance to a []*AccessControlList
-func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessControlList, error) {
-	newArray := make([]*AccessControlList, 0)
+// SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret
+func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, error) {
+	newArray := make([]*Secret, 0)
 	for _, item := range fromArray {
-		res := &AccessControlList{}
+		res := &Secret{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessControlList, 0), err
+			return make([]*Secret, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -54,10 +54,10 @@ func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]
 	return newArray, nil
 }
 
-// AsInstance converts a AccessControlList to a ResourceInstance
-func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Secret to a ResourceInstance
+func (res *Secret) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessControlListGVK()
+	meta.GroupVersionKind = SecretGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -74,8 +74,8 @@ func (res *AccessControlList) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessControlList
-func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Secret
+func (res *Secret) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -93,7 +93,7 @@ func (res *AccessControlList) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessControlList) MarshalJSON() ([]byte, error) {
+func (res *Secret) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (res *AccessControlList) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessControlList) UnmarshalJSON(data []byte) error {
+func (res *Secret) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -140,6 +140,6 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessControlList) PluralName() string {
-	return AccessControlListResourceName
+func (res *Secret) PluralName() string {
+	return SecretResourceName
 }

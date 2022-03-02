@@ -9,8 +9,11 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-}
+// SubscriptionRequest the model 'SubscriptionRequest'
+type SubscriptionRequest string
+
+// List of SubscriptionRequest
+const (
+	PROVISION SubscriptionRequest = "provision"
+	RENEW     SubscriptionRequest = "renew"
+)

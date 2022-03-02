@@ -138,3 +138,8 @@ func (res *ExternalSecret) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *ExternalSecret) PluralName() string {
+	return ExternalSecretResourceName
+}

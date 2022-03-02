@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
-type AccessRequestReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// CredentialReferences struct for CredentialReferences
+type CredentialReferences struct {
+	// Name of the catalog Application for which the initial Credential was generated
+	Application string `json:"application,omitempty"`
 }

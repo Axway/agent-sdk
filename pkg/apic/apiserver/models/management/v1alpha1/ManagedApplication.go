@@ -11,45 +11,44 @@ import (
 )
 
 var (
-	_AccessRequestGVK = apiv1.GroupVersionKind{
+	_ManagedApplicationGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "AccessRequest",
+			Kind:  "ManagedApplication",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessRequestScopes = []string{"Environment"}
+	ManagedApplicationScopes = []string{"Environment"}
 )
 
-const AccessRequestResourceName = "accessrequests"
+const ManagedApplicationResourceName = "managedapplications"
 
-func AccessRequestGVK() apiv1.GroupVersionKind {
-	return _AccessRequestGVK
+func ManagedApplicationGVK() apiv1.GroupVersionKind {
+	return _ManagedApplicationGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessRequestGVK, AccessRequestScopes[0], AccessRequestResourceName)
+	apiv1.RegisterGVK(_ManagedApplicationGVK, ManagedApplicationScopes[0], ManagedApplicationResourceName)
 }
 
-// AccessRequest Resource
-type AccessRequest struct {
+// ManagedApplication Resource
+type ManagedApplication struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec       `json:"spec"`
-	State      AccessRequestState      `json:"state"`
-	Status     AccessRequestStatus     `json:"status"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ManagedApplicationReferences `json:"references"`
+	Spec       ManagedApplicationSpec       `json:"spec"`
+	Status     ManagedApplicationStatus     `json:"status"`
 }
 
-// AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
-func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequest, error) {
-	newArray := make([]*AccessRequest, 0)
+// ManagedApplicationFromInstanceArray converts a []*ResourceInstance to a []*ManagedApplication
+func ManagedApplicationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ManagedApplication, error) {
+	newArray := make([]*ManagedApplication, 0)
 	for _, item := range fromArray {
-		res := &AccessRequest{}
+		res := &ManagedApplication{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessRequest, 0), err
+			return make([]*ManagedApplication, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -57,10 +56,10 @@ func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Acc
 	return newArray, nil
 }
 
-// AsInstance converts a AccessRequest to a ResourceInstance
-func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a ManagedApplication to a ResourceInstance
+func (res *ManagedApplication) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessRequestGVK()
+	meta.GroupVersionKind = ManagedApplicationGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -77,8 +76,8 @@ func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessRequest
-func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a ManagedApplication
+func (res *ManagedApplication) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -96,7 +95,7 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessRequest) MarshalJSON() ([]byte, error) {
+func (res *ManagedApplication) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -111,14 +110,13 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessRequest) UnmarshalJSON(data []byte) error {
+func (res *ManagedApplication) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -156,20 +154,6 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource Status
 	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
@@ -188,6 +172,6 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessRequest) PluralName() string {
-	return AccessRequestResourceName
+func (res *ManagedApplication) PluralName() string {
+	return ManagedApplicationResourceName
 }

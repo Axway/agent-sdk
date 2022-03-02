@@ -11,45 +11,43 @@ import (
 )
 
 var (
-	_AccessRequestGVK = apiv1.GroupVersionKind{
+	_CredentialRequestDefinitionGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "AccessRequest",
+			Kind:  "CredentialRequestDefinition",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AccessRequestScopes = []string{"Environment"}
+	CredentialRequestDefinitionScopes = []string{"Environment"}
 )
 
-const AccessRequestResourceName = "accessrequests"
+const CredentialRequestDefinitionResourceName = "credentialrequestdefinitions"
 
-func AccessRequestGVK() apiv1.GroupVersionKind {
-	return _AccessRequestGVK
+func CredentialRequestDefinitionGVK() apiv1.GroupVersionKind {
+	return _CredentialRequestDefinitionGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AccessRequestGVK, AccessRequestScopes[0], AccessRequestResourceName)
+	apiv1.RegisterGVK(_CredentialRequestDefinitionGVK, CredentialRequestDefinitionScopes[0], CredentialRequestDefinitionResourceName)
 }
 
-// AccessRequest Resource
-type AccessRequest struct {
+// CredentialRequestDefinition Resource
+type CredentialRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec       `json:"spec"`
-	State      AccessRequestState      `json:"state"`
-	Status     AccessRequestStatus     `json:"status"`
+	Owner      *apiv1.Owner                          `json:"owner"`
+	References CredentialRequestDefinitionReferences `json:"references"`
+	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
 }
 
-// AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
-func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequest, error) {
-	newArray := make([]*AccessRequest, 0)
+// CredentialRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*CredentialRequestDefinition
+func CredentialRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*CredentialRequestDefinition, error) {
+	newArray := make([]*CredentialRequestDefinition, 0)
 	for _, item := range fromArray {
-		res := &AccessRequest{}
+		res := &CredentialRequestDefinition{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AccessRequest, 0), err
+			return make([]*CredentialRequestDefinition, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -57,10 +55,10 @@ func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Acc
 	return newArray, nil
 }
 
-// AsInstance converts a AccessRequest to a ResourceInstance
-func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a CredentialRequestDefinition to a ResourceInstance
+func (res *CredentialRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AccessRequestGVK()
+	meta.GroupVersionKind = CredentialRequestDefinitionGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -77,8 +75,8 @@ func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AccessRequest
-func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a CredentialRequestDefinition
+func (res *CredentialRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -96,7 +94,7 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AccessRequest) MarshalJSON() ([]byte, error) {
+func (res *CredentialRequestDefinition) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -111,14 +109,12 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["state"] = res.State
-	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AccessRequest) UnmarshalJSON(data []byte) error {
+func (res *CredentialRequestDefinition) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -156,38 +152,10 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Status
-	if v, ok := aux.SubResources["status"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
 // PluralName returns the plural name of the resource
-func (res *AccessRequest) PluralName() string {
-	return AccessRequestResourceName
+func (res *CredentialRequestDefinition) PluralName() string {
+	return CredentialRequestDefinitionResourceName
 }
