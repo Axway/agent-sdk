@@ -107,3 +107,30 @@ for file in ${MODELS}; do
         fi
     done
 done
+
+
+######################
+# Update the Status subresource in generated model to use v1.ResourceStatus
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
+    ! -name 'model_*.go' \
+    ! -name 'AmplifyRuntimeConfig.go' \
+    ! -name 'AssetMapping.go' \
+    ! -name 'ConsumerInstance.go' \
+    ! -name 'DiscoveryAgent.go' \
+    ! -name 'GovernanceAgent.go' \
+    ! -name 'TraceabilityAgent.go'`
+
+# SEARCH="\(\s*\)\(.*\)\(\s*\)\(\`json:\"status\"\`\)$"
+SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
+REPLACE="Status apiv1.ResourceStatus \`json:\"status\"\`"
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done
