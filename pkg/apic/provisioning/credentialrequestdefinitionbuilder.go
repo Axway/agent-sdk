@@ -95,5 +95,11 @@ func (c *credentialRequestDef) Register() error {
 	if c.err != nil {
 		return c.err
 	}
+
+	if c.requestSchema == nil {
+		c.requestSchema, _ = NewSchemaBuilder().Build()
+	}
+
+	// TODO - build credential request defintion and send to register func
 	return c.registerFunc(nil)
 }

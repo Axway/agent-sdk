@@ -34,7 +34,8 @@ type propertyDefinition struct {
 	MaxItems           *uint                         `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
-	APICRef            string                        `json:"x-axway-ref-apic,omitempty"`
+	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
+	Label              string                        `json:"x-axway-label,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -47,6 +48,8 @@ type PropertyBuilder interface {
 
 // TypePropertyBuilder - common methods related to type property builders
 type TypePropertyBuilder interface {
+	// SetLabel - sets the label for the property
+	SetLabel(label string) TypePropertyBuilder
 	// SetName - sets the name of the property
 	SetName(name string) TypePropertyBuilder
 	// SetDescription - set the description of the property
@@ -66,7 +69,7 @@ type TypePropertyBuilder interface {
 	// IsArray - Set the property to be of type array
 	IsArray() ArrayPropertyBuilder
 	// IsObject - Set the property to be of type object
-	IsObject() ObjectPropertyBuilder
+	// IsObject() ObjectPropertyBuilder
 	PropertyBuilder
 }
 
@@ -80,6 +83,8 @@ type StringPropertyBuilder interface {
 	SetFirstEnumValue(value string) StringPropertyBuilder
 	// AddEnumValue - Add another value to the list of allowed values for the property
 	AddEnumValue(value string) StringPropertyBuilder
+	// IsEncrypted - Set that this field must be encrypted at rest
+	IsEncrypted() StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -121,14 +126,14 @@ type ArrayPropertyBuilder interface {
 
 // schemaProperty - holds basic info needed to create a subscription schema property
 type schemaProperty struct {
-	err          error
-	name         string
-	description  string
-	apicRefField string
-	required     bool
-	readOnly     bool
-	hidden       bool
-	dataType     string
+	err         error
+	name        string
+	label       string
+	description string
+	required    bool
+	readOnly    bool
+	hidden      bool
+	dataType    string
 	PropertyBuilder
 }
 
@@ -140,6 +145,12 @@ func NewSchemaPropertyBuilder() TypePropertyBuilder {
 // SetName - sets the name of the property
 func (p *schemaProperty) SetName(name string) TypePropertyBuilder {
 	p.name = name
+	return p
+}
+
+// SetLabel - sets the label of the property
+func (p *schemaProperty) SetLabel(label string) TypePropertyBuilder {
+	p.label = label
 	return p
 }
 
@@ -202,12 +213,12 @@ func (p *schemaProperty) IsArray() ArrayPropertyBuilder {
 }
 
 // IsObject - Set the property to be of type object
-func (p *schemaProperty) IsObject() ObjectPropertyBuilder {
-	p.dataType = DataTypeObject
-	return &objectSchemaProperty{
-		schemaProperty: p,
-	}
-}
+// func (p *schemaProperty) IsObject() ObjectPropertyBuilder {
+// 	p.dataType = DataTypeObject
+// 	return &objectSchemaProperty{
+// 		schemaProperty: p,
+// 	}
+// }
 
 // Build - create a string propertyDefinition for use in the subscription schema builder
 func (p *schemaProperty) Build() (*propertyDefinition, error) {
@@ -224,10 +235,10 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 
 	prop := &propertyDefinition{
 		Name:        p.name,
+		Label:       p.label,
 		Title:       p.name,
 		Type:        p.dataType,
 		Description: p.description,
-		APICRef:     p.apicRefField,
 		ReadOnly:    p.readOnly,
 		Required:    p.required,
 	}
@@ -245,6 +256,7 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 // stringSchemaProperty - adds specific info needed for a string schema property
 type stringSchemaProperty struct {
 	schemaProperty *schemaProperty
+	isEncrypted    bool
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
@@ -296,6 +308,12 @@ func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder 
 	return p
 }
 
+// IsEncrypted - Sets that this field needs to be encrypted at rest
+func (p *stringSchemaProperty) IsEncrypted() StringPropertyBuilder {
+	p.isEncrypted = true
+	return p
+}
+
 // Build - create a string propertyDefinition for use in the subscription schema builder
 func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
@@ -314,6 +332,9 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
+
+	// set if the property is encrypted at rest
+	def.IsEncrypted = p.isEncrypted
 	return def, err
 }
 
@@ -443,43 +464,43 @@ func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
   object property datatype builder
 */
 // objectSchemaProperty - adds specific info needed for an object schema property
-type objectSchemaProperty struct {
-	schemaProperty *schemaProperty
-	properties     map[string]propertyDefinition
-	PropertyBuilder
-}
+// type objectSchemaProperty struct {
+// 	schemaProperty *schemaProperty
+// 	properties     map[string]propertyDefinition
+// 	PropertyBuilder
+// }
 
-// AddProperty - Add a property in the object property
-func (p *objectSchemaProperty) AddProperty(property PropertyBuilder) ObjectPropertyBuilder {
-	def, err := property.Build()
-	if err == nil {
-		if p.properties == nil {
-			p.properties = make(map[string]propertyDefinition, 0)
-		}
-		p.properties[def.Name] = *def
-	} else {
-		p.schemaProperty.err = err
-	}
-	return p
-}
+// // AddProperty - Add a property in the object property
+// func (p *objectSchemaProperty) AddProperty(property PropertyBuilder) ObjectPropertyBuilder {
+// 	def, err := property.Build()
+// 	if err == nil {
+// 		if p.properties == nil {
+// 			p.properties = make(map[string]propertyDefinition, 0)
+// 		}
+// 		p.properties[def.Name] = *def
+// 	} else {
+// 		p.schemaProperty.err = err
+// 	}
+// 	return p
+// }
 
-// Build - create the propertyDefinition for use in the subscription schema builder
-func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
-	def, err = p.schemaProperty.Build()
-	if err != nil {
-		return
-	}
+// // Build - create the propertyDefinition for use in the subscription schema builder
+// func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
+// 	def, err = p.schemaProperty.Build()
+// 	if err != nil {
+// 		return
+// 	}
 
-	var requiredProperties []string
-	if p.properties != nil {
-		for _, property := range p.properties {
-			if property.Required {
-				requiredProperties = append(requiredProperties, property.Name)
-			}
-		}
-	}
+// 	var requiredProperties []string
+// 	if p.properties != nil {
+// 		for _, property := range p.properties {
+// 			if property.Required {
+// 				requiredProperties = append(requiredProperties, property.Name)
+// 			}
+// 		}
+// 	}
 
-	def.Properties = p.properties
-	def.RequiredProperties = requiredProperties
-	return def, err
-}
+// 	def.Properties = p.properties
+// 	def.RequiredProperties = requiredProperties
+// 	return def, err
+// }

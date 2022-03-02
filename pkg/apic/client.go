@@ -84,6 +84,7 @@ type Client interface {
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	RegisterCredentialRequestDefinition(data interface{}, update bool) error
 }
 
 // New creates a new Client
@@ -628,4 +629,37 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
+}
+
+// RegisterCredentialRequestDefinition - Adds or updates a credential request definition
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data interface{}, update bool) error {
+	//TODO - handle CredentialRequest and update properly
+
+	// var registeredSpecHash uint64
+	// registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+
+	// if registeredSchema != nil {
+	// 	registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
+	// } else {
+	// 	update = true
+	// }
+
+	// spec, err := c.prepareSubscriptionDefinitionSpec(registeredSchema, subscriptionSchema)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // Create New definition
+	// if registeredSchema == nil {
+	// 	return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+	// }
+
+	// if update {
+	// 	// Check if the schema definitions changed before update
+	// 	if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
+	// 		return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
+	// 	}
+	// }
+
+	return nil
 }

@@ -134,6 +134,10 @@ func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList)
 	return nil, nil
 }
 
+func (m *mockSvcClient) RegisterCredentialRequestDefinition(data interface{}, update bool) error {
+	return nil
+}
+
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	if method == api.PUT {
 		m.apiResponse = buffer

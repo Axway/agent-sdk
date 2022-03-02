@@ -6,14 +6,17 @@ package provisioning
 type credentialType int
 
 const (
+	// credentialTypeOther - Generic credentials
+	credentialTypeOther credentialType = iota + 1
 	// credentialTypeOAuth - OAuth credentials
-	credentialTypeOAuth credentialType = iota + 1
+	credentialTypeOAuth
 	// credentialTypeAPIKey - APIKey credentials
 	credentialTypeAPIKey
 )
 
 func (c credentialType) String() string {
 	return map[credentialType]string{
+		credentialTypeOther:  "Credentials",
 		credentialTypeOAuth:  "OAuth",
 		credentialTypeAPIKey: "API Key",
 	}[c]

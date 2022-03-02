@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"fmt"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -150,7 +152,61 @@ func RegisterDeleteServiceValidator(validator interface{}) {
 	log.Warnf("the RegisterDeleteServiceValidator is no longer used, please remove the call to it")
 }
 
+// credential request definitions
+
+// createOrUpdateCredentialRequestDefinition -
+func createOrUpdateCredentialRequestDefinition(data interface{}) error {
+	// TODO - check cache for credential request, update if needed
+	return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
+}
+
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
-	return provisioning.NewCredentialRequestBuilder(nil)
+	return provisioning.NewCredentialRequestBuilder(createOrUpdateCredentialRequestDefinition)
+}
+
+// NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
+func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
+	return NewCredentialRequestBuilder().
+		SetName(fmt.Sprintf("%s-api-key", agent.cfg.GetEnvironmentName())).
+		SetProvisionSchema(provisioning.NewSchemaBuilder().
+			AddProperty(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("key").
+					SetLabel("API Key").
+					SetRequired().
+					IsString().
+					IsEncrypted()).
+			AddProperty(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("name").
+					SetLabel("API Key Name").
+					SetRequired().
+					IsString()).
+			AddProperty(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("location").
+					SetLabel("API Key Location").
+					SetRequired().
+					IsString()))
+}
+
+// NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
+func NewOAuthCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
+	return NewCredentialRequestBuilder().
+		SetName(fmt.Sprintf("%s-api-key", agent.cfg.GetEnvironmentName())).
+		SetProvisionSchema(provisioning.NewSchemaBuilder().
+			AddProperty(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("id").
+					SetLabel("Client ID").
+					SetRequired().
+					IsString()).
+			AddProperty(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("secret").
+					SetLabel("Client Secret").
+					SetRequired().
+					IsString().
+					IsEncrypted()))
 }

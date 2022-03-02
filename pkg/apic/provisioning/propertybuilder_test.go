@@ -81,7 +81,6 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.False(t, prop.Required)
 	assert.False(t, prop.ReadOnly)
 	assert.Equal(t, prop.Format, "")
-	assert.Equal(t, "", prop.APICRef)
 
 	// good path, add enums
 	prop, err = NewSchemaPropertyBuilder().
@@ -101,7 +100,6 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.False(t, prop.Required)
 	assert.False(t, prop.ReadOnly)
 	assert.Equal(t, prop.Format, "")
-	assert.Equal(t, "", prop.APICRef)
 
 	// good path, sort enums & add first item
 	prop, err = NewSchemaPropertyBuilder().
@@ -122,7 +120,6 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.False(t, prop.Required)
 	assert.False(t, prop.ReadOnly)
 	assert.Equal(t, prop.Format, "")
-	assert.Equal(t, "", prop.APICRef)
 	assert.Equal(t, "xxx", prop.Enum[0])
 	assert.Equal(t, "a", prop.Enum[1])
 }
@@ -152,33 +149,39 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			}},
 		{"Full String property with unsorted enum and first value",
 			NewSchemaPropertyBuilder().
+				SetLabel("The Label").
 				SetName("TheName").
 				SetDescription("TheDescription").
 				SetRequired().
 				SetHidden().
 				SetReadOnly().
 				IsString().
+				IsEncrypted().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
 				SetFirstEnumValue("firstValue"),
 			propertyDefinition{
 				Name:        "TheName",
 				Title:       "TheName",
+				Label:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
 				ReadOnly:    true,
+				IsEncrypted: true,
 				Type:        DataTypeString,
 				Enum:        []string{"firstValue", "c", "a", "b", "addedValue"},
 			}},
 		{"Full String property with sorted enum and first value",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				SetDescription("TheDescription").
 				SetRequired().
 				SetHidden().
 				SetReadOnly().
 				IsString().
+				IsEncrypted().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
 				SetFirstEnumValue("firstValue").
@@ -186,10 +189,12 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			propertyDefinition{
 				Name:        "TheName",
 				Title:       "TheName",
+				Label:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
 				ReadOnly:    true,
+				IsEncrypted: true,
 				Type:        DataTypeString,
 				Enum:        []string{"firstValue", "a", "addedValue", "b", "c"},
 			}},
@@ -205,6 +210,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Full Number property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				SetDescription("TheDescription").
 				SetRequired().
 				SetHidden().
@@ -215,6 +221,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			propertyDefinition{
 				Name:        "TheName",
 				Title:       "TheName",
+				Label:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -235,6 +242,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Full Integer property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				SetDescription("TheDescription").
 				SetRequired().
 				SetHidden().
@@ -245,6 +253,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			propertyDefinition{
 				Name:        "TheName",
 				Title:       "TheName",
+				Label:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -265,6 +274,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Full Array property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				SetDescription("TheDescription").
 				SetRequired().
 				SetHidden().
@@ -278,6 +288,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			propertyDefinition{
 				Name:        "TheName",
 				Title:       "TheName",
+				Label:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -295,47 +306,47 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				MinItems: getUintPointer(0),
 				MaxItems: getUintPointer(1),
 			}},
-		{"Minimal Object property",
-			NewSchemaPropertyBuilder().
-				SetName("TheName").
-				IsObject(),
-			propertyDefinition{
-				Name:  "TheName",
-				Title: "TheName",
-				Type:  DataTypeObject,
-			}},
-		{"Full Object property",
-			NewSchemaPropertyBuilder().
-				SetName("TheName").
-				SetDescription("TheDescription").
-				SetRequired().
-				SetHidden().
-				SetReadOnly().
-				IsObject().
-				AddProperty(NewSchemaPropertyBuilder().
-					SetName("PropertyName").
-					SetRequired().
-					IsString()),
-			propertyDefinition{
-				Name:        "TheName",
-				Title:       "TheName",
-				Description: "TheDescription",
-				Required:    true,
-				Format:      "hidden",
-				ReadOnly:    true,
-				Type:        DataTypeObject,
-				Properties: map[string]propertyDefinition{
-					"PropertyName": {
-						Name:     "PropertyName",
-						Title:    "PropertyName",
-						Type:     DataTypeString,
-						Required: true,
-					},
-				},
-				RequiredProperties: []string{
-					"PropertyName",
-				},
-			}},
+		// {"Minimal Object property",
+		// 	NewSchemaPropertyBuilder().
+		// 		SetName("TheName").
+		// 		IsObject(),
+		// 	propertyDefinition{
+		// 		Name:  "TheName",
+		// 		Title: "TheName",
+		// 		Type:  DataTypeObject,
+		// 	}},
+		// {"Full Object property",
+		// 	NewSchemaPropertyBuilder().
+		// 		SetName("TheName").
+		// 		SetDescription("TheDescription").
+		// 		SetRequired().
+		// 		SetHidden().
+		// 		SetReadOnly().
+		// 		IsObject().
+		// 		AddProperty(NewSchemaPropertyBuilder().
+		// 			SetName("PropertyName").
+		// 			SetRequired().
+		// 			IsString()),
+		// 	propertyDefinition{
+		// 		Name:        "TheName",
+		// 		Title:       "TheName",
+		// 		Description: "TheDescription",
+		// 		Required:    true,
+		// 		Format:      "hidden",
+		// 		ReadOnly:    true,
+		// 		Type:        DataTypeObject,
+		// 		Properties: map[string]propertyDefinition{
+		// 			"PropertyName": {
+		// 				Name:     "PropertyName",
+		// 				Title:    "PropertyName",
+		// 				Type:     DataTypeString,
+		// 				Required: true,
+		// 			},
+		// 		},
+		// 		RequiredProperties: []string{
+		// 			"PropertyName",
+		// 		},
+		// }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -384,12 +395,12 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 			SetName("anArray").
 			IsArray().
 			AddItem(NewSchemaPropertyBuilder()), "without a name"},
-		{"Object property without name", NewSchemaPropertyBuilder().
-			IsObject(), "without a name"},
-		{"Object property with error on added property", NewSchemaPropertyBuilder().
-			SetName("anObject").
-			IsObject().
-			AddProperty(NewSchemaPropertyBuilder()), "without a name"},
+		// {"Object property without name", NewSchemaPropertyBuilder().
+		// 	IsObject(), "without a name"},
+		// {"Object property with error on added property", NewSchemaPropertyBuilder().
+		// 	SetName("anObject").
+		// 	IsObject().
+		// 	AddProperty(NewSchemaPropertyBuilder()), "without a name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

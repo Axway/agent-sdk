@@ -152,6 +152,10 @@ func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList)
 	return nil, nil
 }
 
+func (m *mockSvcClient) RegisterCredentialRequestDefinition(data interface{}, update bool) error {
+	return nil
+}
+
 func TestDiscoveryCache(t *testing.T) {
 	dcj := newDiscoveryCache(nil, true, &sync.Mutex{})
 	dcj.getHCStatus = func(_ string) hc.StatusLevel {

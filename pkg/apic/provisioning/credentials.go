@@ -22,10 +22,15 @@ type apiKeyCredential struct {
 	key string
 }
 
+type genericCredential struct {
+	data map[string]interface{}
+}
+
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
 	SetOAuth(id, secret string) CredentialBuilder
 	SetAPIKey(key string) CredentialBuilder
+	SetCredential(data map[string]interface{}) CredentialBuilder
 	Process() (Credential, error)
 }
 
@@ -84,6 +89,19 @@ func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
 	c.credential.credentialType = credentialTypeAPIKey
 	c.credential.data = &apiKeyCredential{
 		key: key,
+	}
+	return c
+}
+
+// SetCredential - set the credential
+func (c *credentialBuilder) SetCredential(data map[string]interface{}) CredentialBuilder {
+	if c.hasError(credentialTypeOther) {
+		return c
+	}
+
+	c.credential.credentialType = credentialTypeOther
+	c.credential.data = &genericCredential{
+		data: data,
 	}
 	return c
 }
