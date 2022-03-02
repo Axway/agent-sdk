@@ -40,7 +40,7 @@ type AssetRelease struct {
 	References AssetReleaseReferences `json:"references"`
 	Spec       AssetReleaseSpec       `json:"spec"`
 	// 	Status     AssetReleaseStatus     `json:"status"`
-	Status apiv1.ResourceStatus `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // AssetReleaseFromInstanceArray converts a []*ResourceInstance to a []*AssetRelease
@@ -179,7 +179,9 @@ func (res *AssetRelease) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

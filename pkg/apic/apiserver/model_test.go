@@ -56,7 +56,7 @@ func TestAPIServiceMarshal(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: v1.ResourceStatus{
+		Status: &v1.ResourceStatus{
 			Level: "Error",
 			Reasons: []v1.ResourceStatusReason{
 				{
@@ -110,7 +110,7 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 			Description: "desc",
 			Categories:  []string{"cat1", "cat2"},
 		},
-		Status: v1.ResourceStatus{
+		Status: &v1.ResourceStatus{
 			Level: "Error",
 			Reasons: []v1.ResourceStatusReason{
 				{
@@ -166,11 +166,11 @@ func TestAPIServiceAsInstance(t *testing.T) {
 					"x-agent-id": "123",
 				},
 				"status": map[string]interface{}{
-					"level": "Success",
+					"level": "Error",
 					"reasons": []interface{}{
 						map[string]interface{}{
-							"type":      "Success",
-							"detail":    "status ok",
+							"type":      "Error",
+							"detail":    "error",
 							"timestamp": time.Time(newTime).Format(v1.APIServerTimeFormat),
 						},
 					},
@@ -189,12 +189,12 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: v1.ResourceStatus{
-			Level: "Success",
+		Status: &v1.ResourceStatus{
+			Level: "Error",
 			Reasons: []v1.ResourceStatusReason{
 				{
-					Type:      "Success",
-					Detail:    "status ok",
+					Type:      "Error",
+					Detail:    "error",
 					Timestamp: newTime,
 				},
 			},
@@ -269,7 +269,7 @@ func TestAPIServiceFromInstance(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: v1.ResourceStatus{
+		Status: &v1.ResourceStatus{
 			Level: "Success",
 			Reasons: []v1.ResourceStatusReason{
 				{

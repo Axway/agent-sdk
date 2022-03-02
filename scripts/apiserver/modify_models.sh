@@ -121,15 +121,20 @@ MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
     ! -name 'GovernanceAgent.go' \
     ! -name 'TraceabilityAgent.go'`
 
-# SEARCH="\(\s*\)\(.*\)\(\s*\)\(\`json:\"status\"\`\)$"
 SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
-REPLACE="Status apiv1.ResourceStatus \`json:\"status\"\`"
+REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
+SEARCH_UNMARSHAL="\s*err\s=\sjson\.Unmarshal(sr,\s\&res.Status)$"
+REPLACE_UNMARSHAL="res.Status = &apiv1.ResourceStatus{}\nerr = json.Unmarshal(sr, res.Status)"
 for file in ${MODELS}; do
     if grep -e ${SEARCH} ${file} >> /dev/null; then
         # comment out the line we're changing
         $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
         # add in the new line we want
         $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # Update the unmarshal call
+        $SED -i -e "s/${SEARCH_UNMARSHAL}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH_UNMARSHAL}/a ${REPLACE_UNMARSHAL}" ${file}
         # reformat the code
         go fmt ${file}
     fi

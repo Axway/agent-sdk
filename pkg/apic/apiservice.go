@@ -90,30 +90,26 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 
 }
 
-func buildAPIServiceStatusSubResource(ownerErr error) v1.ResourceStatus {
-	// get current time
-	activityTime := time.Now()
-	newV1Time := v1.Time(activityTime)
-
-	// clear apiservice status
-	message := ""
-	level := "Success"
-
+func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
 	// only set status if ownerErr != nil
 	if ownerErr != nil {
-		message = ownerErr.Error()
-		level = "Error"
-	}
-	return v1.ResourceStatus{
-		Level: level,
-		Reasons: []v1.ResourceStatusReason{
-			{
-				Type:      level,
-				Detail:    message,
-				Timestamp: newV1Time,
+		// get current time
+		activityTime := time.Now()
+		newV1Time := v1.Time(activityTime)
+		message := ownerErr.Error()
+		level := "Error"
+		return &v1.ResourceStatus{
+			Level: level,
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      level,
+					Detail:    message,
+					Timestamp: newV1Time,
+				},
 			},
-		},
+		}
 	}
+	return nil
 }
 
 // processService -
@@ -161,7 +157,10 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 
 func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) error {
 	subResources := make(map[string]interface{})
-	subResources["status"] = svc.Status
+	if svc.Status != nil {
+		subResources["status"] = svc.Status
+	}
+
 	for key, value := range svc.SubResources {
 		subResources[key] = value
 	}

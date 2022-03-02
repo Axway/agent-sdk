@@ -40,7 +40,7 @@ type AssetRequest struct {
 	Spec       AssetRequestSpec       `json:"spec"`
 	State      AssetRequestState      `json:"state"`
 	// 	Status     AssetRequestStatus     `json:"status"`
-	Status apiv1.ResourceStatus `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // AssetRequestFromInstanceArray converts a []*ResourceInstance to a []*AssetRequest
@@ -179,7 +179,9 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}
