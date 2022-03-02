@@ -41,11 +41,9 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 			Attributes:       serviceBody.ServiceAttributes,
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  buildAPIServiceSpec(serviceBody),
-		Owner: ownerObject,
-		Status: mv1a.ApiServiceStatus{
-			Phase: buildAPIServiceStatusSubResource("Create", ownerErr),
-		},
+		Spec:   buildAPIServiceSpec(serviceBody),
+		Owner:  ownerObject,
+		Status: buildAPIServiceStatusSubResource(ownerErr),
 	}
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -78,7 +76,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner, ownerErr = c.getOwnerObject(serviceBody, true)
 	svc.Attributes = serviceBody.ServiceAttributes
-	svc.Status.Phase = buildAPIServiceStatusSubResource("Update", ownerErr)
+	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	util.SetAgentDetails(svc, svcDetails)
@@ -92,34 +90,30 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 
 }
 
-func buildAPIServiceStatusSubResource(name string, ownerErr error) v1alpha1.ApiServiceStatusPhase {
-
+func buildAPIServiceStatusSubResource(ownerErr error) v1.ResourceStatus {
 	// get current time
 	activityTime := time.Now()
 	newV1Time := v1.Time(activityTime)
 
-	// create status phase
-	status := v1alpha1.ApiServiceStatusPhase{}
-
 	// clear apiservice status
 	message := ""
-	level := "info"
+	level := "Success"
 
 	// only set status if ownerErr != nil
 	if ownerErr != nil {
 		message = ownerErr.Error()
-		level = "warn"
+		level = "Error"
 	}
-
-	// update apiservice status phase
-	status = v1alpha1.ApiServiceStatusPhase{
-		Name:           name,
-		Level:          level,
-		TransitionTime: newV1Time,
-		Message:        message,
+	return v1.ResourceStatus{
+		Level: level,
+		Reasons: []v1.ResourceStatusReason{
+			{
+				Type:      level,
+				Detail:    message,
+				Timestamp: newV1Time,
+			},
+		},
 	}
-
-	return status
 }
 
 // processService -

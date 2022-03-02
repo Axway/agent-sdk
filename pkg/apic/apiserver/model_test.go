@@ -56,12 +56,14 @@ func TestAPIServiceMarshal(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: m.ApiServiceStatus{
-			Phase: m.ApiServiceStatusPhase{
-				Name:           "Create",
-				Level:          "warn",
-				Message:        "",
-				TransitionTime: getTimestamp(),
+		Status: v1.ResourceStatus{
+			Level: "Error",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
 			},
 		},
 	}
@@ -108,12 +110,14 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 			Description: "desc",
 			Categories:  []string{"cat1", "cat2"},
 		},
-		Status: m.ApiServiceStatus{
-			Phase: m.ApiServiceStatusPhase{
-				Name:           "Create",
-				Level:          "warn",
-				Message:        "",
-				TransitionTime: getTimestamp(),
+		Status: v1.ResourceStatus{
+			Level: "Error",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
 			},
 		},
 	}
@@ -162,11 +166,13 @@ func TestAPIServiceAsInstance(t *testing.T) {
 					"x-agent-id": "123",
 				},
 				"status": map[string]interface{}{
-					"phase": map[string]interface{}{
-						"name":           "Create",
-						"level":          "info",
-						"message":        "status ok",
-						"transitionTime": time.Time(newTime).Format(v1.APIServerTimeFormat),
+					"level": "Success",
+					"reasons": []interface{}{
+						map[string]interface{}{
+							"type":      "Success",
+							"detail":    "status ok",
+							"timestamp": time.Time(newTime).Format(v1.APIServerTimeFormat),
+						},
 					},
 				},
 			},
@@ -183,12 +189,14 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: m.ApiServiceStatus{
-			Phase: m.ApiServiceStatusPhase{
-				Name:           "Create",
-				Level:          "info",
-				Message:        "status ok",
-				TransitionTime: newTime,
+		Status: v1.ResourceStatus{
+			Level: "Success",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Success",
+					Detail:    "status ok",
+					Timestamp: newTime,
+				},
 			},
 		},
 	}
@@ -261,12 +269,14 @@ func TestAPIServiceFromInstance(t *testing.T) {
 				Data:        "data",
 			},
 		},
-		Status: m.ApiServiceStatus{
-			Phase: m.ApiServiceStatusPhase{
-				Name:           "Create",
-				Level:          "warn",
-				Message:        "",
-				TransitionTime: getTimestamp(),
+		Status: v1.ResourceStatus{
+			Level: "Success",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
 			},
 		},
 	}
