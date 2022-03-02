@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,55 +17,55 @@ func TestNewAccessRequestHandler(t *testing.T) {
 		action   proto.Event_Type
 	}{
 		{
-			name:     "should save a category ResourceClient",
+			name:     "should handle a create event for an AccessRequest when status is pending, and state is provision",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			resource: &v1.ResourceInstance{
 				ResourceMeta: v1.ResourceMeta{
-					Name:  "name",
-					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
-						},
-					},
+					Name:             "name",
+					Title:            "title",
+					GroupVersionKind: mv1.AccessRequestGVK(),
 				},
 			},
 		},
 		{
-			name:     "should update a category ResourceClient",
+			name:     "should handle an update event for an AccessRequest when status is pending, and state is provision",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &v1.ResourceInstance{
 				ResourceMeta: v1.ResourceMeta{
-					Name:  "name",
-					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
-						},
-					},
+					Name:             "name",
+					Title:            "title",
+					GroupVersionKind: mv1.AccessRequestGVK(),
 				},
 			},
 		},
 		{
-			name:     "should delete a category ResourceClient",
+			name:     "should handle an update event for an AccessRequest when status is pending, and state is deprovision",
+			hasError: false,
+			action:   proto.Event_UPDATED,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:             "name",
+					Title:            "title",
+					GroupVersionKind: mv1.AccessRequestGVK(),
+				},
+			},
+		},
+		{
+			name:     "should deprovision when receiving a delete event",
 			hasError: false,
 			action:   proto.Event_DELETED,
 			resource: &v1.ResourceInstance{
 				ResourceMeta: v1.ResourceMeta{
-					Name:  "name",
-					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
-						},
-					},
+					Name:             "name",
+					Title:            "title",
+					GroupVersionKind: mv1.AccessRequestGVK(),
 				},
 			},
 		},
 		{
-			name:     "should return nil when the kind is not a Category",
+			name:     "should return nil when the kind is not a AccessRequest",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &v1.ResourceInstance{

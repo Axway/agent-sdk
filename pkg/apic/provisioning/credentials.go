@@ -9,7 +9,7 @@ type Credential interface{}
 
 type credential struct {
 	Credential
-	credentialType credentialType
+	credentialType CredentialType
 	data           interface{}
 }
 
@@ -49,7 +49,7 @@ func (c *credentialBuilder) Process() (Credential, error) {
 	return c.credential, nil
 }
 
-func (c *credentialBuilder) hasError(credType credentialType) bool {
+func (c *credentialBuilder) hasError(credType CredentialType) bool {
 	if c.err != nil {
 		return true
 	}
@@ -63,11 +63,11 @@ func (c *credentialBuilder) hasError(credType credentialType) bool {
 
 // SetOauth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
-	if c.hasError(credentialTypeOAuth) {
+	if c.hasError(OAuthCredential) {
 		return c
 	}
 
-	c.credential.credentialType = credentialTypeOAuth
+	c.credential.credentialType = OAuthCredential
 	c.credential.data = &oAuthCredential{
 		id:     id,
 		secret: secret,
@@ -77,11 +77,11 @@ func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 
 // SetAPIKey - set the credential as an API Key type
 func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
-	if c.hasError(credentialTypeAPIKey) {
+	if c.hasError(APIKeyCredential) {
 		return c
 	}
 
-	c.credential.credentialType = credentialTypeAPIKey
+	c.credential.credentialType = APIKeyCredential
 	c.credential.data = &apiKeyCredential{
 		key: key,
 	}

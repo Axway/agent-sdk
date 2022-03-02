@@ -13,8 +13,8 @@ import (
 )
 
 // getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
-func getOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType config.AgentType) (*mv1.WatchTopic, error) {
-	ri, err := rc.Get(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
+func getOrCreateWatchTopic(name, scope string, client apiClient, agentType config.AgentType) (*mv1.WatchTopic, error) {
+	ri, err := client.GetResource(fmt.Sprintf("/management/v1alpha1/watchtopics/%s", name))
 
 	if err == nil {
 		wt := &mv1.WatchTopic{}
@@ -43,7 +43,7 @@ func getOrCreateWatchTopic(name, scope string, rc ResourceClient, agentType conf
 		return nil, err
 	}
 
-	return createWatchTopic(bts, rc)
+	return createWatchTopic(bts, client)
 }
 
 // parseWatchTopicTemplate parses a WatchTopic from a template
@@ -65,8 +65,8 @@ func parseWatchTopicTemplate(name, scope, agentResourceKind string, tmplFunc fun
 }
 
 // createWatchTopic creates a WatchTopic
-func createWatchTopic(bts []byte, rc ResourceClient) (*mv1.WatchTopic, error) {
-	ri, err := rc.Create("/management/v1alpha1/watchtopics", bts)
+func createWatchTopic(bts []byte, rc apiClient) (*mv1.WatchTopic, error) {
+	ri, err := rc.CreateResource("/management/v1alpha1/watchtopics", bts)
 	if err != nil {
 		return nil, err
 	}

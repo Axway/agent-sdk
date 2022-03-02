@@ -2,20 +2,20 @@ package provisioning
 
 // enums
 
-// credentialType - the type fo credential
-type credentialType int
+// CredentialType - the type fo credential
+type CredentialType int
 
 const (
-	// credentialTypeOAuth - OAuth credentials
-	credentialTypeOAuth credentialType = iota + 1
-	// credentialTypeAPIKey - APIKey credentials
-	credentialTypeAPIKey
+	// OAuthCredential - OAuth credentials
+	OAuthCredential CredentialType = iota + 1
+	// APIKeyCredential - APIKey credentials
+	APIKeyCredential
 )
 
-func (c credentialType) String() string {
-	return map[credentialType]string{
-		credentialTypeOAuth:  "OAuth",
-		credentialTypeAPIKey: "API Key",
+func (c CredentialType) String() string {
+	return map[CredentialType]string{
+		OAuthCredential:  "OAuth",
+		APIKeyCredential: "API Key",
 	}[c]
 }
 

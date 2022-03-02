@@ -402,7 +402,7 @@ func startStreamMode(agent agentData) error {
 	}
 
 	cs, err := stream.NewStreamer(
-		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,

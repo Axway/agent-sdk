@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -17,9 +19,16 @@ type accessRequestProvision interface {
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
 
+type client interface {
+	GetResource(url string) (*v1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+}
+
 type accessRequestHandler struct {
-	prov  accessRequestProvision
-	cache agentcache.Manager
+	prov   accessRequestProvision
+	cache  agentcache.Manager
+	client client
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
@@ -38,61 +47,89 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	req := newReq(ar)
+	_, err = h.client.GetResource("/managedapplications/name")
+	if err != nil {
+		return err
+	}
+
+	req, err := h.newReq(ar, map[string]interface{}{}) // pass in x-agent-details from the managed app
+	if err != nil {
+		return err
+	}
 
 	var status prov.RequestStatus
 
 	// provision when status == pending, and state == provision
 	if ar.State.Name == "provision" {
 		status = h.prov.AccessRequestProvision(req)
-		// TODO: update AccessRequest status
 	}
 
 	// deprovision when status == pending, and state == deprovision
 
-	if ar.State.Name == "deprovision" {
+	if ar.State.Name == "deprovision" || action == proto.Event_DELETED {
 		status = h.prov.AccessRequestDeprovision(req)
-		// TODO: update AccessRequest status
 	}
+
+	if action == proto.Event_DELETED {
+		return nil
+	}
+
+	// TODO: update access request status.
+	//  ar.Status = status
+
+	// TODO: merge AccessRequest 'x-agent-details' with status.properties
+	// 	details = util.MergeMapStringInterface(util.GetAgentDetails(ar), status.properties)
+	// 	util.SetAgentDetails(ar, details)
 
 	fmt.Println("Status: %+v", status)
 
-	// TODO: Delete event probably isn't necessary. Remove it from the watch topic.
+	// TODO: update the AccessRequest with changes to x-agent-details and Status
+	bts, err := json.Marshal(ar)
+	if err != nil {
+		return err
+	}
 
-	// TODO: add all StatusRequest fields to x-agent-details
-	// TODO: update the AccessRequest with changes to x-agent-details
+	_, err = h.client.UpdateResource(ar.Metadata.SelfLink, bts)
+	// update x-agent-details
 
-	return nil
+	return err
 }
 
-func newReq(ar *mv1.AccessRequest) req {
+func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*req, error) {
 	instID := ""
-	managedAppName := ""
+	managedAppName := "" // ar.Spec.ManagedApplication
 	for _, ref := range ar.Metadata.References {
 		if ref.Name == ar.Spec.ApiServiceInstance {
 			instID = ref.ID
-		}
-		if ref.Kind == managedAppKind {
-			managedAppName = ref.Name
+			break
 		}
 	}
 
-	return req{
-		apiID:   instID,
-		appName: managedAppName,
-		data:    ar.Spec.Data,
+	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
+	if err != nil {
+		return nil, err
 	}
+
+	apiID := instance.Attributes[defs.AttrExternalAPIID]
+
+	// data := util.MergeMapStringInterface(util.GetAgentDetails(ar), appDetails)
+
+	return &req{
+		apiID:      apiID,
+		data:       appDetails,
+		managedApp: managedAppName,
+	}, nil
 }
 
 type req struct {
-	appName string
-	apiID   string
-	data    map[string]interface{}
+	apiID      string
+	data       map[string]interface{} // TODO: data should be x-agent-details from the AccessRequest
+	managedApp string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
 func (r req) GetApplicationName() string {
-	return r.appName
+	return r.managedApp
 }
 
 // GetAPIID gets the api service instance id that the access request is linked too.

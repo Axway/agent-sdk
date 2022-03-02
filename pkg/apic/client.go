@@ -84,6 +84,9 @@ type Client interface {
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	GetResource(url string) (*apiv1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 }
 
 // New creates a new Client
@@ -628,4 +631,40 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
+}
+
+// GetResource gets a single resource
+func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
+	response, err := c.ExecuteAPI(http.MethodGet, url, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	ri := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(response, ri)
+	return ri, err
+}
+
+// UpdateResource updates a resource
+func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
+	response, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+	if err != nil {
+		return nil, err
+	}
+	ri := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(response, ri)
+	return ri, err
+}
+
+// CreateResource deletes a resource
+func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
+	response, err := c.ExecuteAPI(http.MethodPost, url, nil, bts)
+	if err != nil {
+		return nil, err
+	}
+	ri := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(response, ri)
+	return ri, err
 }
