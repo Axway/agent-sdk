@@ -29,15 +29,29 @@ const (
 	RequestTypeRenew
 )
 
-// status - the status of the request
-type status int
+func (c RequestType) String() string {
+	return map[RequestType]string{
+		RequestTypeProvision: "provision",
+		RequestTypeRenew:     "renew",
+	}[c]
+}
+
+// Status - the Status of the request
+type Status int
 
 const (
 	// Success - request was successful
-	Success status = iota + 1
+	Success Status = iota + 1
 	// Failed - request failed
 	Failed
 )
+
+func (c Status) String() string {
+	return map[Status]string{
+		Success: "success",
+		Failed:  "failed",
+	}[c]
+}
 
 // interfaces
 

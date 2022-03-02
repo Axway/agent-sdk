@@ -7,8 +7,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const credentialKind = "Credential"
-
 type credentialProvision interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
@@ -24,7 +22,7 @@ func NewcredentialHandler() Handler {
 }
 
 func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != credentialKind {
+	if resource.Kind != mv1.CredentialGVK().Kind {
 		return nil
 	}
 
@@ -34,7 +32,7 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		return err
 	}
 
-	creds := &Creds{}
+	creds := &creds{}
 
 	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
 		h.prov.CredentialProvision(creds)
@@ -47,21 +45,40 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 	return nil
 }
 
-type Creds struct {
+type creds struct {
+	apiID       string
+	appDetails  map[string]interface{}
+	credDetails map[string]interface{}
+	managedApp  string
+	credType    prov.CredentialType
+	reqType     prov.RequestType
 }
 
-func (c Creds) GetApplicationName() string {
-	return "app name"
+func (c creds) GetApplicationName() string {
+	return c.managedApp
 }
 
-func (c Creds) GetCredentialType() prov.CredentialType {
-	return prov.APIKeyCredential
+func (c creds) GetCredentialType() prov.CredentialType {
+	return c.credType
 }
 
-func (c Creds) GetRequestType() string {
-	return "request type"
+// GetRequestType returns the type of request for the credentials
+func (c creds) GetRequestType() string {
+	return c.reqType.String()
 }
 
-func (c Creds) GetProperty(key string) string {
-	return "prop"
+// GetCredentialDetails returns a value found on the 'x-agent-details' sub resource of the Credentials.
+func (c creds) GetCredentialDetails(key string) interface{} {
+	if c.credDetails == nil {
+		return nil
+	}
+	return c.credDetails[key]
+}
+
+// GetApplicationDetails returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
+func (c creds) GetApplicationDetails(key string) interface{} {
+	if c.appDetails == nil {
+		return nil
+	}
+	return c.appDetails[key]
 }

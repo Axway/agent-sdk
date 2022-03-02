@@ -49,7 +49,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	app, err := h.client.GetResource("/managedapplications/name")
+	app, err := h.getManagedApp(ar)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	}
 
 	// TODO: update access request status.
-	//  ar.Status = status
+	//  ar.Status = prov.NewStatusReason(status)
 
 	// TODO: merge AccessRequest 'x-agent-details' with status.properties
 	// 	details = util.MergeMapStringInterface(util.GetAgentDetails(ar), status.properties)
@@ -92,7 +92,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	}
 
 	_, err = h.client.UpdateResource(ar.Metadata.SelfLink, bts)
-	// update x-agent-details
 
 	err = h.client.CreateSubResourceScoped(
 		mv1.EnvironmentResourceName,
@@ -107,6 +106,20 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	)
 
 	return err
+}
+
+func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
+	url := fmt.Sprintf(
+		"/management/v1alpha1/environments/%s/managedapplications/%s",
+		ar.Metadata.Scope.Name,
+		ar.Spec.ManagedApplication,
+	)
+	app, err := h.client.GetResource(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return app, nil
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*req, error) {
@@ -125,19 +138,20 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 	}
 
 	apiID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-	data := util.MergeMapStringInterface(util.GetAgentDetails(ar), appDetails)
 
 	return &req{
-		apiID:      apiID,
-		data:       data,
-		managedApp: managedAppName,
+		apiID:         apiID,
+		accessDetails: util.GetAgentDetails(ar),
+		appDetails:    appDetails,
+		managedApp:    managedAppName,
 	}, nil
 }
 
 type req struct {
-	apiID      string
-	data       map[string]interface{}
-	managedApp string
+	apiID         string
+	appDetails    map[string]interface{}
+	accessDetails map[string]interface{}
+	managedApp    string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -150,10 +164,18 @@ func (r req) GetAPIID() string {
 	return r.apiID
 }
 
-// GetProperty gets a property off of the access request data map.
-func (r req) GetProperty(key string) interface{} {
-	if r.data == nil {
+// GetApplicationDetails returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
+func (r req) GetApplicationDetails(key string) interface{} {
+	if r.appDetails == nil {
 		return nil
 	}
-	return r.data[key]
+	return r.appDetails[key]
+}
+
+// GetAccessRequestDetails returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
+func (r req) GetAccessRequestDetails(key string) interface{} {
+	if r.appDetails == nil {
+		return nil
+	}
+	return r.accessDetails[key]
 }

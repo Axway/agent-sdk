@@ -2,11 +2,10 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
-
-const managedAppKind = "ManagedApplication"
 
 type managedAppProvision interface {
 	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
@@ -23,7 +22,7 @@ func NewManagedApplicationHandler() Handler {
 }
 
 func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != managedAppKind {
+	if resource.Kind != mv1.ManagedApplicationGVK().Kind {
 		return nil
 	}
 
