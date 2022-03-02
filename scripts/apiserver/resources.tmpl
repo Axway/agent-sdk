@@ -151,16 +151,24 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
         {{else if eq $keyName "spec"}}
         {{else}}
         // marshalling subresource {{$fieldName}}
-        sr, err = json.Marshal(aux.SubResources["{{$keyName}}"])
-        if err != nil {
-            return err
-        }
+        if v, ok := aux.SubResources["{{$keyName}}"]; ok {
+            sr, err = json.Marshal(v)
+            if err != nil {
+                return err
+            }
 
-        err = json.Unmarshal(sr, &res.{{$fieldName}})
-        if err != nil {
-            return err
+            delete(aux.SubResources, "{{$keyName}}")
+            err = json.Unmarshal(sr, &res.{{$fieldName}})
+            if err != nil {
+                return err
+            }
         }
         {{end}}
     {{end}}
     return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *{{.res.kind}}) PluralName() string {
+	return {{.res.kind}}ResourceName
 }

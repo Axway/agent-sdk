@@ -168,7 +168,8 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		if cfgAgent.isDocker {
 			deploymentType = "docker"
 		}
-		req.Header.Set("User-Agent", fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType))
+		ua := fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType)
+		req.Header.Set("User-Agent", ua)
 	}
 	return req, err
 }
@@ -181,7 +182,7 @@ func (c *httpClient) prepareAPIResponse(res *http.Response, timer *time.Timer) (
 		// Reset the timeout timer for reading the response
 		timer.Reset(c.timeout)
 		_, err = io.CopyN(writer, res.Body, responseBufferSize)
-		if err == io.EOF || err != nil {
+		if err != nil {
 			if err == io.EOF {
 				err = nil
 			}

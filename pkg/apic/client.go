@@ -6,15 +6,16 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -48,45 +49,45 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	SetConfig(cfg corecfg.CentralConfig)
-	PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error)
+	PublishService(serviceBody *ServiceBody) (*mv1a.APIService, error)
 	RegisterSubscriptionWebhook() error
-	RegisterSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error
-	UpdateSubscriptionSchema(subscriptionSchema SubscriptionSchema) error
+	RegisterSubscriptionSchema(schema SubscriptionSchema, update bool) error
+	UpdateSubscriptionSchema(schema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
-	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error)
+	GetConsumerInstanceByID(id string) (*mv1a.ConsumerInstance, error)
+	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddress(ID string) (string, error)
 	GetUserName(ID string) (string, error)
 	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
 	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
-	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error
+	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, schema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
-	GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error)
-	GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
-	GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
-	GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error)
-	GetAPIServiceInstanceByName(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
-	GetAPIRevisionByName(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
-	CreateCategory(categoryName string) (*catalog.Category, error)
+	GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
+	GetAPIServiceInstances(query map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIServiceByName(name string) (*mv1a.APIService, error)
+	GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error)
+	GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error)
+	CreateCategory(name string) (*catalog.Category, error)
 	GetOrCreateCategory(category string) string
-	GetEnvironment() (*v1alpha1.Environment, error)
-	GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error)
-	GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error)
-	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
-	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	GetResource(url string) (*apiv1.ResourceInstance, error)
-	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	GetEnvironment() (*mv1a.Environment, error)
+	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
+	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
+	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
+	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error
 }
 
 // New creates a new Client
@@ -102,9 +103,9 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 }
 
 // getTeamFromCache -
-func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
-	var team *definitions.PlatformTeam
-	if teamName == "" {
+func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
+	var team *defs.PlatformTeam
+	if name == "" {
 		team = c.caches.GetDefaultTeam()
 		if team == nil {
 			return "", false
@@ -112,7 +113,7 @@ func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
 		return team.ID, true
 	}
 
-	team = c.caches.GetTeamByName(teamName)
+	team = c.caches.GetTeamByName(name)
 	if team == nil {
 		return "", false
 	}
@@ -121,27 +122,27 @@ func (c *ServiceClient) getTeamFromCache(teamName string) (string, bool) {
 }
 
 // GetOrCreateCategory - Returns the value on published proxy
-func (c *ServiceClient) GetOrCreateCategory(category string) string {
-	categoryResource := c.caches.GetCategoryWithTitle(category)
-	if categoryResource == nil {
+func (c *ServiceClient) GetOrCreateCategory(title string) string {
+	category := c.caches.GetCategoryWithTitle(title)
+	if category == nil {
 		if !corecfg.IsCategoryAutocreationEnabled() {
-			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", category)
+			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", title)
 			return ""
 		}
 
 		// create the category and add it to the cache
-		newCategory, err := c.CreateCategory(category)
+		newCategory, err := c.CreateCategory(title)
 		if err != nil {
-			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(category).Error())
+			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(title).Error())
 			return ""
 		}
-		categoryResource, err = newCategory.AsInstance()
+		category, err = newCategory.AsInstance()
 		if err == nil {
-			c.caches.AddCategory(categoryResource)
+			c.caches.AddCategory(category)
 		}
 	}
 
-	return categoryResource.Name
+	return category.Name
 }
 
 // initClient - config change handler
@@ -182,7 +183,7 @@ func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
 }
 
 // mapToTagsArray -
-func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
+func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
 	strArr := []string{}
 
 	for key, val := range m {
@@ -204,7 +205,6 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	}
 
 	// Add any tags from config
-	additionalTags := c.cfg.GetTagsToPublish()
 	if additionalTags != "" {
 		additionalTagsArray := strings.Split(additionalTags, ",")
 
@@ -216,16 +216,16 @@ func (c *ServiceClient) mapToTagsArray(m map[string]interface{}) []string {
 	return strArr
 }
 
-func readResponseErrors(statuscode int, body []byte) string {
+func readResponseErrors(status int, body []byte) string {
 	// Return error string only for error status code
-	if statuscode < http.StatusBadRequest {
+	if status < http.StatusBadRequest {
 		return ""
 	}
 
 	responseErr := &ResponseError{}
 	err := json.Unmarshal(body, &responseErr)
 	if err != nil || len(responseErr.Errors) == 0 {
-		errStr := getHTTPResponseErrorString(statuscode, body)
+		errStr := getHTTPResponseErrorString(status, body)
 		log.Tracef("HTTP response error: %v", string(errStr))
 		return errStr
 	}
@@ -236,7 +236,7 @@ func readResponseErrors(statuscode int, body []byte) string {
 	return errStr
 }
 
-func getHTTPResponseErrorString(statuscode int, body []byte) string {
+func getHTTPResponseErrorString(status int, body []byte) string {
 	detail := make(map[string]*json.RawMessage)
 	json.Unmarshal(body, &detail)
 	errorMsg := ""
@@ -245,7 +245,7 @@ func getHTTPResponseErrorString(statuscode int, body []byte) string {
 		errorMsg = string(buffer)
 	}
 
-	errStr := "status - " + strconv.Itoa(statuscode)
+	errStr := "status - " + strconv.Itoa(status)
 	if errorMsg != "" {
 		errStr += ", detail - " + errorMsg
 	}
@@ -337,7 +337,7 @@ func (c *ServiceClient) setTeamCache() error {
 }
 
 // GetEnvironment get an environment
-func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
+func (c *ServiceClient) GetEnvironment() (*mv1a.Environment, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -352,7 +352,7 @@ func (c *ServiceClient) GetEnvironment() (*v1alpha1.Environment, error) {
 	}
 
 	// Get env id from apiServerEnvByte
-	env := &v1alpha1.Environment{}
+	env := &mv1a.Environment{}
 	err = json.Unmarshal(bytes, env)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
@@ -391,7 +391,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 }
 
 // GetPlatformUserInfo - request the platform user info
-func (c *ServiceClient) getPlatformUserInfo(id string) (*definitions.PlatformUserInfo, error) {
+func (c *ServiceClient) getPlatformUserInfo(id string) (*defs.PlatformUserInfo, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -408,7 +408,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*definitions.PlatformUse
 		return nil, reqErr
 	}
 
-	var platformUserInfo definitions.PlatformUserInfo
+	var platformUserInfo defs.PlatformUserInfo
 	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
 	if err != nil {
 		return nil, err
@@ -446,13 +446,13 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 }
 
 // GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetCentralTeamByName(name string) (*defs.PlatformTeam, error) {
 	// Query for the default, if no teamName is given
 	queryParams := map[string]string{}
 
-	if teamName != "" {
+	if name != "" {
 		queryParams = map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", teamName),
+			"query": fmt.Sprintf("name==\"%s\"", name),
 		}
 	}
 
@@ -462,11 +462,11 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.Plat
 	}
 
 	if len(platformTeams) == 0 {
-		return nil, ErrTeamNotFound.FormatError(teamName)
+		return nil, ErrTeamNotFound.FormatError(name)
 	}
 
 	team := platformTeams[0]
-	if teamName == "" {
+	if name == "" {
 		// Loop through to find the default team
 		for i, platformTeam := range platformTeams {
 			if platformTeam.Default {
@@ -481,7 +481,7 @@ func (c *ServiceClient) GetCentralTeamByName(teamName string) (*definitions.Plat
 }
 
 // GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definitions.PlatformTeam, error) {
+func (c *ServiceClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -491,12 +491,12 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definiti
 	// Platform teams API require access and DOSA account will not have the access
 	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
 
-	response, reqErr := c.sendServerRequest(platformURL, headers, filterQueryParams)
+	response, reqErr := c.sendServerRequest(platformURL, headers, query)
 	if reqErr != nil {
 		return nil, reqErr
 	}
 
-	var platformTeams []definitions.PlatformTeam
+	var platformTeams []defs.PlatformTeam
 	err = json.Unmarshal(response, &platformTeams)
 	if err != nil {
 		return nil, err
@@ -505,8 +505,8 @@ func (c *ServiceClient) GetTeam(filterQueryParams map[string]string) ([]definiti
 	return platformTeams, nil
 }
 
-//GetAccessControlList -
-func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+// GetAccessControlList -
+func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -514,7 +514,7 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 
 	request := coreapi.Request{
 		Method:  http.MethodGet,
-		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), aclName),
+		URL:     fmt.Sprintf("%s/%s", c.cfg.GetEnvironmentACLsURL(), name),
 		Headers: headers,
 	}
 
@@ -528,7 +528,7 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var acl *v1alpha1.AccessControlList
+	var acl *mv1a.AccessControlList
 	err = json.Unmarshal(response.Body, &acl)
 	if err != nil {
 		return nil, err
@@ -538,7 +538,7 @@ func (c *ServiceClient) GetAccessControlList(aclName string) (*v1alpha1.AccessCo
 }
 
 //UpdateAccessControlList - removes existing then creates new AccessControlList
-func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
 	// first delete the existing access control list
 	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
 		return nil, err
@@ -546,12 +546,12 @@ func (c *ServiceClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList)
 	return c.deployAccessControl(acl, http.MethodPost)
 }
 
-//CreateAccessControlList -
-func (c *ServiceClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+// CreateAccessControlList -
+func (c *ServiceClient) CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPost)
 }
 
-func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, method string) (*v1alpha1.AccessControlList, error) {
+func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method string) (*mv1a.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -590,9 +590,9 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var updatedACL *v1alpha1.AccessControlList
+	var updatedACL *mv1a.AccessControlList
 	if method == http.MethodPut || method == http.MethodPost {
-		updatedACL = &v1alpha1.AccessControlList{}
+		updatedACL = &mv1a.AccessControlList{}
 		err = json.Unmarshal(response.Body, updatedACL)
 		if err != nil {
 			return nil, err
@@ -603,7 +603,7 @@ func (c *ServiceClient) deployAccessControl(acl *v1alpha1.AccessControlList, met
 }
 
 // ExecuteAPI - execute the api
-func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -612,7 +612,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 	request := coreapi.Request{
 		Method:      method,
 		URL:         url,
-		QueryParams: queryParam,
+		QueryParams: query,
 		Headers:     headers,
 		Body:        buffer,
 	}
@@ -631,6 +631,101 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
+}
+
+// linkSubResource creates a sub resource by calling the provided url. url should be the link to the resource.
+// subResourceName is the name of the sub resource to add to the resource found at the given url.
+// subResourceName will be appended to the end of the url for the PUT request.
+// body is the payload of the subresource to create.
+func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
+	// https://apicentral.axway.com/apis/management/v1alpha1/environments/wc-env/apiservices/eeeee/:extension
+	bts, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
+func (c *ServiceClient) CreateSubResourceUnscoped(
+	kindPlural, name, group, version string, subs map[string]interface{},
+) error {
+	var execErr error
+	wg := &sync.WaitGroup{}
+
+	for subName, sub := range subs {
+		wg.Add(1)
+
+		base := c.cfg.GetURL()
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, group, version, kindPlural, name, subName)
+
+		r := map[string]interface{}{
+			subName: sub,
+		}
+		bts, err := json.Marshal(r)
+		if err != nil {
+			return err
+		}
+
+		go func(wg *sync.WaitGroup, sn string) {
+			defer wg.Done()
+			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			if err != nil {
+				if execErr == nil {
+					execErr = err
+				}
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+			}
+		}(wg, subName)
+	}
+
+	wg.Wait()
+
+	return execErr
+}
+
+// CreateSubResourceScoped creates a sub resource on th provided scoped resource.
+func (c *ServiceClient) CreateSubResourceScoped(
+	scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{},
+) error {
+	var execErr error
+	wg := &sync.WaitGroup{}
+
+	for subName, sub := range subs {
+		if strings.HasPrefix(subName, "x-") {
+			wg.Add(1)
+
+			base := c.cfg.GetURL()
+			url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
+
+			r := map[string]interface{}{
+				subName: sub,
+			}
+			bts, err := json.Marshal(r)
+			if err != nil {
+				return err
+			}
+
+			go func(sn string) {
+				defer wg.Done()
+				_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+				if err != nil {
+					execErr = err
+					log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				}
+			}(subName)
+		}
+	}
+
+	wg.Wait()
+
+	return execErr
 }
 
 // GetResource gets a single resource

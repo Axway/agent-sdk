@@ -8,18 +8,18 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) v1alpha1.ConsumerInstanceSpec {
+func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) mv1a.ConsumerInstanceSpec {
 	subscriptionDefinitionName := serviceBody.SubscriptionName
 
 	autoSubscribe := false
@@ -51,7 +51,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		}
 	}
 
-	return v1alpha1.ConsumerInstanceSpec{
+	return mv1a.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		ApiServiceInstance: serviceBody.serviceContext.instanceName,
 		Description:        serviceBody.Description,
@@ -59,10 +59,10 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		Version:            serviceBody.Version,
 		State:              serviceBody.State,
 		Status:             serviceBody.Status,
-		Tags:               c.mapToTagsArray(serviceBody.Tags),
+		Tags:               mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		Documentation:      doc,
 		OwningTeam:         owningTeam,
-		Subscription: v1alpha1.ConsumerInstanceSpecSubscription{
+		Subscription: mv1a.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
 			AutoSubscribe:          autoSubscribe,
 			SubscriptionDefinition: subscriptionDefinitionName,
@@ -72,14 +72,14 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 	}
 }
 
-//buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
-func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties {
+// buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
+func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) mv1a.ConsumerInstanceSpecUnstructuredDataProperties {
 	if serviceBody.ResourceType != Unstructured {
-		return v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{}
+		return mv1a.ConsumerInstanceSpecUnstructuredDataProperties{}
 	}
 
 	const defType = "Asset"
-	unstructuredDataProperties := v1alpha1.ConsumerInstanceSpecUnstructuredDataProperties{
+	unstructuredDataProperties := mv1a.ConsumerInstanceSpecUnstructuredDataProperties{
 		Type:        defType,
 		ContentType: mimetype.Detect(serviceBody.SpecDefinition).String(),
 		Label:       defType,
@@ -130,36 +130,45 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, consumerInstanceName string, instAttributes map[string]string, doc string) *v1alpha1.ConsumerInstance {
-	return &v1alpha1.ConsumerInstance{
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *mv1a.ConsumerInstance {
+	ci := &mv1a.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
-			Name:             consumerInstanceName,
+			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
+			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, instAttributes, false),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 		Owner: c.getOwnerObject(serviceBody, false),
 	}
+
+	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
+	util.SetAgentDetails(ci, agentDetails)
+
+	return ci
 }
 
-func (c *ServiceClient) updateConsumerInstanceResource(consumerInstance *v1alpha1.ConsumerInstance, serviceBody *ServiceBody, instAttributes map[string]string, doc string) {
-	consumerInstance.ResourceMeta.Metadata.ResourceVersion = ""
-	consumerInstance.Title = serviceBody.NameToPush
-	for k, v := range instAttributes {
-		consumerInstance.ResourceMeta.Attributes[k] = v
-	}
-	consumerInstance.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, consumerInstance.ResourceMeta.Attributes, false)
-	consumerInstance.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
+func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1a.ConsumerInstance, doc string) {
+	ci.GroupVersionKind = mv1a.ConsumerInstanceGVK()
+	ci.Metadata.ResourceVersion = ""
+	ci.Title = serviceBody.NameToPush
+	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	ci.Owner = c.getOwnerObject(serviceBody, false)
+	ci.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
+
+	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
+	util.SetAgentDetails(ci, agentDetails)
+
 	// use existing categories only if mappings have not been configured
-	categories := consumerInstance.Spec.Categories
+	categories := ci.Spec.Categories
 	if corecfg.IsMappingConfigured() {
 		// use only mapping categories if mapping was configured
 		categories = serviceBody.categoryNames
 	}
-	consumerInstance.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
-	consumerInstance.Owner = c.getOwnerObject(serviceBody, false)
+	ci.Spec = c.buildConsumerInstanceSpec(serviceBody, doc, categories)
 }
 
 // processConsumerInstance - deal with either a create or update of a consumerInstance
@@ -189,11 +198,6 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 	}
 
-	instAttributes := serviceBody.InstanceAttributes
-	if instAttributes == nil {
-		instAttributes = make(map[string]string)
-	}
-
 	consumerInstanceName := serviceBody.serviceContext.serviceName
 	if serviceBody.Stage != "" {
 		consumerInstanceName = sanitizeAPIName(fmt.Sprintf("%s-%s", serviceBody.serviceContext.serviceName, serviceBody.Stage))
@@ -202,24 +206,24 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	httpMethod := http.MethodPost
 	consumerInstanceURL := c.cfg.GetConsumerInstancesURL()
 
-	var consumerInstance *v1alpha1.ConsumerInstance
+	var instance *mv1a.ConsumerInstance
 	var err error
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		consumerInstance, err = c.getConsumerInstanceByName(consumerInstanceName)
+		instance, err = c.getConsumerInstanceByName(consumerInstanceName)
 		if err != nil {
 			return err
 		}
 	}
 
-	if consumerInstance != nil {
+	if instance != nil {
 		httpMethod = http.MethodPut
 		consumerInstanceURL += "/" + consumerInstanceName
-		c.updateConsumerInstanceResource(consumerInstance, serviceBody, instAttributes, doc)
+		c.updateConsumerInstance(serviceBody, instance, doc)
 	} else {
-		consumerInstance = c.buildConsumerInstance(serviceBody, consumerInstanceName, instAttributes, doc)
+		instance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 	}
 
-	buffer, err := json.Marshal(consumerInstance)
+	buffer, err := json.Marshal(instance)
 	if err != nil {
 		return err
 	}
@@ -227,12 +231,32 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	_, err = c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
 		}
 		return err
+	}
+
+	if err == nil {
+		if len(instance.SubResources) > 0 {
+			err = c.CreateSubResourceScoped(
+				mv1a.EnvironmentResourceName,
+				c.cfg.GetEnvironmentName(),
+				instance.PluralName(),
+				instance.Name,
+				instance.Group,
+				instance.APIVersion,
+				instance.SubResources,
+			)
+			if err != nil {
+				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+				if rollbackErr != nil {
+					return errors.New(err.Error() + rollbackErr.Error())
+				}
+			}
+		}
 	}
 
 	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
@@ -241,19 +265,19 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 }
 
 // getAPIServerConsumerInstance -
-func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string, queryParams map[string]string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[string]string) (*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstanceName
+	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + name
 
 	request := coreapi.Request{
 		Method:      coreapi.GET,
 		URL:         consumerInstanceURL,
 		Headers:     headers,
-		QueryParams: queryParams,
+		QueryParams: query,
 	}
 
 	response, err := c.apiClient.Send(request)
@@ -267,9 +291,9 @@ func (c *ServiceClient) getAPIServerConsumerInstance(consumerInstanceName string
 		}
 		return nil, nil
 	}
-	consumerInstance := new(v1alpha1.ConsumerInstance)
-	json.Unmarshal(response.Body, consumerInstance)
-	return consumerInstance, nil
+	consumerInstance := new(mv1a.ConsumerInstance)
+	err = json.Unmarshal(response.Body, consumerInstance)
+	return consumerInstance, err
 }
 
 // UpdateConsumerInstanceSubscriptionDefinition -
@@ -284,7 +308,7 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 		return nil // no updates to be made
 	}
 
-	consumerInstance[0].ResourceMeta.Metadata.ResourceVersion = ""
+	consumerInstance[0].Metadata.ResourceVersion = ""
 	consumerInstance[0].Spec.Subscription.SubscriptionDefinition = subscriptionDefinitionName
 
 	consumerInstanceURL := c.cfg.GetConsumerInstancesURL() + "/" + consumerInstance[0].Name
@@ -298,17 +322,22 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	return err
 }
 
-// getConsumerInstancesByExternalAPIID gets consumer instances
-func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+// getConsumerInstancesByExternalAPIID gets consumer instances.
+func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
+	svc := c.caches.GetAPIServiceWithAPIID(externalAPIID)
+	if svc == nil {
+		return nil, fmt.Errorf("api service with external api id %s not found in the cache", externalAPIID)
+	}
+
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("metadata.references.name==%s", svc.Name),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -327,7 +356,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
+	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
 	err = json.Unmarshal(response.Body, &consumerInstances)
 	if err != nil {
 		return nil, err
@@ -340,7 +369,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 }
 
 // getConsumerInstanceByID
-func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -368,26 +397,26 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*v1alpha1.Co
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
-	json.Unmarshal(response.Body, &consumerInstances)
+	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
+	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, errors.New("Unable to find consumerInstance using instanceID " + instanceID)
 	}
 
-	return consumerInstances[0], nil
+	return consumerInstances[0], err
 }
 
 // getConsumerInstanceByName
-func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstanceByName(name string) (*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	log.Tracef("Get consumer instance by name: %s", consumerInstanceName)
+	log.Tracef("Get consumer instance by name: %s", name)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("name==%s", consumerInstanceName),
+		"query": fmt.Sprintf("name==%s", name),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,
@@ -406,13 +435,13 @@ func (c *ServiceClient) getConsumerInstanceByName(consumerInstanceName string) (
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*v1alpha1.ConsumerInstance, 0)
-	json.Unmarshal(response.Body, &consumerInstances)
+	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
+	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, nil
 	}
 
-	return consumerInstances[0], nil
+	return consumerInstances[0], err
 }
 
 // deleteConsumerInstance -

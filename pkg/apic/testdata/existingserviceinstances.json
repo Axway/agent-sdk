@@ -28,10 +28,7 @@
                 }
             ]
         },
-        "attributes": {
-            "createdBy": "",
-            "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
-        },
+        "attributes": {},
         "tags": [
             "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17"
         ],
@@ -47,6 +44,10 @@
                 }
             ],
             "apiServiceRevision": "daleapi"
+        },
+        "x-agent-details": {
+            "createdBy": "",
+            "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
         }
     }
 ]

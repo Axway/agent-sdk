@@ -141,26 +141,37 @@ func (res *Document) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Icon
-	sr, err = json.Marshal(aux.SubResources["icon"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["icon"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Icon)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "icon")
+		err = json.Unmarshal(sr, &res.Icon)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status
-	sr, err = json.Marshal(aux.SubResources["status"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Status)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "status")
+		err = json.Unmarshal(sr, &res.Status)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *Document) PluralName() string {
+	return DocumentResourceName
 }
