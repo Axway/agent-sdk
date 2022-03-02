@@ -39,7 +39,8 @@ type AssetRequest struct {
 	References AssetRequestReferences `json:"references"`
 	Spec       AssetRequestSpec       `json:"spec"`
 	State      AssetRequestState      `json:"state"`
-	Status     AssetRequestStatus     `json:"status"`
+	// 	Status     AssetRequestStatus     `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // AssetRequestFromInstanceArray converts a []*ResourceInstance to a []*AssetRequest

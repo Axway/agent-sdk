@@ -35,10 +35,11 @@ func init() {
 // ProductRelease Resource
 type ProductRelease struct {
 	apiv1.ResourceMeta
-	Icon   interface{}          `json:"icon"`
-	Owner  *apiv1.Owner         `json:"owner"`
-	Spec   ProductReleaseSpec   `json:"spec"`
-	Status ProductReleaseStatus `json:"status"`
+	Icon  interface{}        `json:"icon"`
+	Owner *apiv1.Owner       `json:"owner"`
+	Spec  ProductReleaseSpec `json:"spec"`
+	// 	Status ProductReleaseStatus `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // ProductReleaseFromInstanceArray converts a []*ResourceInstance to a []*ProductRelease

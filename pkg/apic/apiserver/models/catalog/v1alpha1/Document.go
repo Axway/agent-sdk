@@ -35,10 +35,11 @@ func init() {
 // Document Resource
 type Document struct {
 	apiv1.ResourceMeta
-	Icon   interface{}    `json:"icon"`
-	Owner  *apiv1.Owner   `json:"owner"`
-	Spec   DocumentSpec   `json:"spec"`
-	Status DocumentStatus `json:"status"`
+	Icon  interface{}  `json:"icon"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  DocumentSpec `json:"spec"`
+	// 	Status DocumentStatus `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // DocumentFromInstanceArray converts a []*ResourceInstance to a []*Document

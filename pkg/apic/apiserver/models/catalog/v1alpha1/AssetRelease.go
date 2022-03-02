@@ -39,7 +39,8 @@ type AssetRelease struct {
 	Owner      *apiv1.Owner           `json:"owner"`
 	References AssetReleaseReferences `json:"references"`
 	Spec       AssetReleaseSpec       `json:"spec"`
-	Status     AssetReleaseStatus     `json:"status"`
+	// 	Status     AssetReleaseStatus     `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // AssetReleaseFromInstanceArray converts a []*ResourceInstance to a []*AssetRelease

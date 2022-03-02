@@ -38,7 +38,8 @@ type AddOn struct {
 	Owner      *apiv1.Owner    `json:"owner"`
 	References AddOnReferences `json:"references"`
 	Spec       AddOnSpec       `json:"spec"`
-	Status     AddOnStatus     `json:"status"`
+	// 	Status     AddOnStatus     `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // AddOnFromInstanceArray converts a []*ResourceInstance to a []*AddOn

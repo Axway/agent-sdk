@@ -38,7 +38,8 @@ type Deployment struct {
 	Owner      *apiv1.Owner         `json:"owner"`
 	References DeploymentReferences `json:"references"`
 	Spec       DeploymentSpec       `json:"spec"`
-	Status     DeploymentStatus     `json:"status"`
+	// 	Status     DeploymentStatus     `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // DeploymentFromInstanceArray converts a []*ResourceInstance to a []*Deployment

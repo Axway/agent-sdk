@@ -35,9 +35,10 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	Owner  *apiv1.Owner     `json:"owner"`
-	Spec   ApiServiceSpec   `json:"spec"`
-	Status ApiServiceStatus `json:"status"`
+	Owner *apiv1.Owner   `json:"owner"`
+	Spec  ApiServiceSpec `json:"spec"`
+	// 	Status ApiServiceStatus `json:"status"`
+	Status apiv1.ResourceStatus `json:"status"`
 }
 
 // APIServiceFromInstanceArray converts a []*ResourceInstance to a []*APIService
