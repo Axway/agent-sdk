@@ -39,7 +39,8 @@ type Subscription struct {
 	Owner    *apiv1.Owner         `json:"owner"`
 	Request  SubscriptionRequest  `json:"request"`
 	Spec     SubscriptionSpec     `json:"spec"`
-	Status   SubscriptionStatus   `json:"status"`
+	// 	Status   SubscriptionStatus   `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // SubscriptionFromInstanceArray converts a []*ResourceInstance to a []*Subscription
@@ -178,7 +179,9 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

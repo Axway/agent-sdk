@@ -35,10 +35,11 @@ func init() {
 // ReleaseTag Resource
 type ReleaseTag struct {
 	apiv1.ResourceMeta
-	Owner  *apiv1.Owner     `json:"owner"`
-	Spec   ReleaseTagSpec   `json:"spec"`
-	State  interface{}      `json:"state"`
-	Status ReleaseTagStatus `json:"status"`
+	Owner *apiv1.Owner   `json:"owner"`
+	Spec  ReleaseTagSpec `json:"spec"`
+	State interface{}    `json:"state"`
+	// 	Status ReleaseTagStatus `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // ReleaseTagFromInstanceArray converts a []*ResourceInstance to a []*ReleaseTag
@@ -162,7 +163,9 @@ func (res *ReleaseTag) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

@@ -39,7 +39,8 @@ type AccessRequest struct {
 	References AccessRequestReferences `json:"references"`
 	Spec       AccessRequestSpec       `json:"spec"`
 	State      AccessRequestState      `json:"state"`
-	Status     AccessRequestStatus     `json:"status"`
+	// 	Status     AccessRequestStatus     `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
@@ -178,7 +179,9 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

@@ -39,7 +39,8 @@ type Credential struct {
 	Owner   *apiv1.Owner      `json:"owner"`
 	Request CredentialRequest `json:"request"`
 	Spec    CredentialSpec    `json:"spec"`
-	Status  CredentialStatus  `json:"status"`
+	// 	Status  CredentialStatus  `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential
@@ -178,7 +179,9 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		err = json.Unmarshal(sr, &res.Status)
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}
