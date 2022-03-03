@@ -10,4 +10,6 @@ type AccessRequest interface {
 	GetApplicationDetails(key string) interface{}
 	// GetAccessRequestDetails returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
 	GetAccessRequestDetails(key string) interface{}
+	// GetStage returns the api stage
+	GetStage() string
 }

@@ -53,7 +53,6 @@ func TestAccessRequestHandler(t *testing.T) {
 		hasError  bool
 		getErr    error
 		createErr error
-		updateErr error
 		subError  error
 		status    prov.Status
 	}{
@@ -325,45 +324,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			},
 		},
 		{
-			name:      "should handle an error when updating the AccessRequest",
-			hasError:  true,
-			updateErr: fmt.Errorf("error updating access request"),
-			action:    proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
-		},
-		{
 			name:     "should handle an error when updating the AccessRequest x-agent-details",
 			hasError: true,
 			subError: fmt.Errorf("error updating x-agent-details"),
@@ -486,7 +446,6 @@ func TestAccessRequestHandler(t *testing.T) {
 				getRI:     mApp,
 				getErr:    tc.getErr,
 				createErr: tc.createErr,
-				updateErr: tc.updateErr,
 				subError:  tc.subError,
 			}
 

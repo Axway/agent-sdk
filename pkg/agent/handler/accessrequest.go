@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -91,16 +90,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
 	util.SetAgentDetails(ar, details)
 
-	bts, err := json.Marshal(ar)
-	if err != nil {
-		return err
-	}
-
-	_, err = h.client.UpdateResource(ar.Metadata.SelfLink, bts)
-	if err != nil {
-		return err
-	}
-
 	err = h.client.CreateSubResourceScoped(
 		mv1.EnvironmentResourceName,
 		ar.Metadata.Scope.Name,
@@ -110,6 +99,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		ar.APIVersion,
 		map[string]interface{}{
 			defs.XAgentDetails: util.GetAgentDetails(ar),
+			"status":           ar.Status,
 		},
 	)
 
@@ -145,11 +135,13 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 	}
 
 	apiID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+	stage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 
 	return &arReq{
 		apiID:         apiID,
-		accessDetails: util.GetAgentDetails(ar),
 		appDetails:    appDetails,
+		stage:         stage,
+		accessDetails: util.GetAgentDetails(ar),
 		managedApp:    ar.Spec.ManagedApplication,
 	}, nil
 }
@@ -159,6 +151,7 @@ type arReq struct {
 	appDetails    map[string]interface{}
 	accessDetails map[string]interface{}
 	managedApp    string
+	stage         string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -185,4 +178,8 @@ func (r arReq) GetAccessRequestDetails(key string) interface{} {
 		return nil
 	}
 	return r.accessDetails[key]
+}
+
+func (r arReq) GetStage() string {
+	return r.stage
 }

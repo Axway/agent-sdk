@@ -87,7 +87,7 @@ func (r *requestStatusBuilder) Success() RequestStatus {
 
 // Failed - set the request Status as failed
 func (r *requestStatusBuilder) Failed() RequestStatus {
-	r.status.status = Failed
+	r.status.status = Error
 	return r.status
 }
 
@@ -106,7 +106,7 @@ func NewStatusReason(r RequestStatus) apiv1.ResourceStatus {
 	}
 
 	return apiv1.ResourceStatus{
-		Level:   msg,
+		Level:   r.GetStatus().String(),
 		Reasons: reasons,
 	}
 }

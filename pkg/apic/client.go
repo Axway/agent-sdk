@@ -701,29 +701,27 @@ func (c *ServiceClient) CreateSubResourceScoped(
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
-		if strings.HasPrefix(subName, "x-") {
-			wg.Add(1)
+		wg.Add(1)
 
-			base := c.cfg.GetURL()
-			url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
+		base := c.cfg.GetURL()
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
 
-			r := map[string]interface{}{
-				subName: sub,
-			}
-			bts, err := json.Marshal(r)
-			if err != nil {
-				return err
-			}
-
-			go func(sn string) {
-				defer wg.Done()
-				_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
-				if err != nil {
-					execErr = err
-					log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
-				}
-			}(subName)
+		r := map[string]interface{}{
+			subName: sub,
 		}
+		bts, err := json.Marshal(r)
+		if err != nil {
+			return err
+		}
+
+		go func(sn string) {
+			defer wg.Done()
+			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			if err != nil {
+				execErr = err
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+			}
+		}(subName)
 	}
 
 	wg.Wait()

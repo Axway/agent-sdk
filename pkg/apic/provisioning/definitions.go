@@ -39,17 +39,38 @@ func (c RequestType) String() string {
 // Status - the Status of the request
 type Status int
 
+type State int
+
 const (
 	// Success - request was successful
 	Success Status = iota + 1
-	// Failed - request failed
-	Failed
+	// Error - request failed
+	Error
+	// Pending - request is pending
+	Pending
 )
 
+// String returns the string value of the Status
 func (c Status) String() string {
 	return map[Status]string{
-		Success: "success",
-		Failed:  "failed",
+		Success: "Success",
+		Error:   "Error",
+		Pending: "Pending",
+	}[c]
+}
+
+const (
+	// Provision - state is waiting to provision
+	Provision = iota + 1
+	// Deprovision - state is waiting to deprovision
+	Deprovision
+)
+
+// String returns the string value of the State
+func (c State) String() string {
+	return map[State]string{
+		Provision:   "Provision",
+		Deprovision: "Deprovision",
 	}[c]
 }
 
