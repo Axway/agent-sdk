@@ -256,6 +256,10 @@ func TestGetters(t *testing.T) {
 	assert.Equal(t, "33333", subscription.GetPropertyValue("orgId"))
 	assert.Equal(t, "", subscription.GetPropertyValue("foo"))
 
+	subscriptionWithValues := createSubscription("11111", "APPROVED", "22222", map[string]interface{}{"orgId": []interface{}{"33333", "22222"}})
+	assert.Equal(t, []interface{}{"33333", "22222"}, subscriptionWithValues.GetPropertyValues("orgId"))
+	assert.Equal(t, []interface{}(nil), subscriptionWithValues.GetPropertyValues("foo"))
+
 	accReq := createAccessRequestSubscription("access-request", string(AccessRequestProvisioning), "service-instance", map[string]interface{}{"orgId": "33333"})
 	assert.Equal(t, "bbunny", accReq.GetCreatedUserID())
 	assert.Equal(t, "access-request", accReq.GetID())

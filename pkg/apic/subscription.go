@@ -80,6 +80,7 @@ type Subscription interface {
 	GetCreatedUserID() string
 	GetState() SubscriptionState
 	GetPropertyValue(propertyKey string) string
+	GetPropertyValues(propertyKey string) []interface{}
 	UpdateState(newState SubscriptionState, description string) error
 	UpdateStateWithProperties(newState SubscriptionState, description string, properties map[string]interface{}) error
 	UpdateEnumProperty(key, value, dataType string) error
@@ -154,6 +155,19 @@ func (s *CentralSubscription) GetPropertyValue(propertyKey string) string {
 		}
 	}
 	return ""
+}
+
+// GetPropertyValues - Returns subscription Property value based on the key
+func (s *CentralSubscription) GetPropertyValues(propertyKey string) []interface{} {
+	if len(s.CatalogItemSubscription.Properties) > 0 {
+		subscriptionProperty := s.CatalogItemSubscription.Properties[0]
+		if valueI, ok := subscriptionProperty.Value[propertyKey]; ok {
+			if valueA, isArray := valueI.([]interface{}); isArray && len(valueA) > 0 {
+				return valueA
+			}
+		}
+	}
+	return nil
 }
 
 func (s *CentralSubscription) updateProperties(properties map[string]interface{}) error {
