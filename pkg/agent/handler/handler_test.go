@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/stretchr/testify/assert"
@@ -30,7 +32,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiService,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -50,7 +52,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiService,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -71,7 +73,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiService,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -88,7 +90,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiService,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -108,7 +110,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: v1.ResourceMeta{
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{},
@@ -150,7 +152,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -166,7 +168,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -182,7 +184,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -198,7 +200,7 @@ func TestNewCategoryHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiService,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 				},
@@ -242,7 +244,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiServiceInstance,
+							Kind: mv1.APIServiceInstanceGVK().Kind,
 						},
 					},
 				},
@@ -261,7 +263,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiServiceInstance,
+							Kind: mv1.APIServiceInstanceGVK().Kind,
 						},
 					},
 				},
@@ -280,7 +282,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: apiServiceInstance,
+							Kind: mv1.APIServiceInstanceGVK().Kind,
 						},
 					},
 				},
@@ -299,7 +301,7 @@ func TestNewInstanceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -400,7 +402,7 @@ func TestAgentResourceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
