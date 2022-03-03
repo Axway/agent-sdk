@@ -63,8 +63,11 @@ func (s *ServiceBody) GetAPIKeyInfo() []APIKeyInfo {
 //GetCredentialRequestDefinitions - returns the array of all credential request policies
 func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 	for _, policy := range s.authPolicies {
-		if policy == Apikey || policy == Oauth {
-			s.credentialRequestPolicies = append(s.credentialRequestPolicies, policy)
+		if policy == Apikey {
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "api-key")
+		}
+		if policy == Oauth {
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "oauth")
 		}
 	}
 	return s.credentialRequestPolicies

@@ -6,5 +6,5 @@ type CredentialRequestDefinitionSpec struct {
 	Schema       map[string]interface{}                       `json:"schema"`
 	Provision    *CredentialRequestDefinitionSpecProvision    `json:"provision,omitempty"`
 	Capabilities *CredentialRequestDefinitionSpecCapabilities `json:"capabilities,omitempty"`
-	Webhooks     []CredentialRequestDefinitionSpecWebhook     `json:"webhooks"`
+	Webhooks     []CredentialRequestDefinitionSpecWebhook     `json:"webhooks,omitempty"`
 }
