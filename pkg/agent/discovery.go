@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"fmt"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -169,7 +167,7 @@ func NewCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
 func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 	return NewCredentialRequestBuilder().
-		SetName(fmt.Sprintf("%s-api-key", agent.cfg.GetEnvironmentName())).
+		SetName("api-key").
 		SetProvisionSchema(provisioning.NewSchemaBuilder().
 			AddProperty(
 				provisioning.NewSchemaPropertyBuilder().
@@ -195,7 +193,7 @@ func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 	return NewCredentialRequestBuilder().
-		SetName(fmt.Sprintf("%s-api-key", agent.cfg.GetEnvironmentName())).
+		SetName("oauth").
 		SetProvisionSchema(provisioning.NewSchemaBuilder().
 			AddProperty(
 				provisioning.NewSchemaPropertyBuilder().

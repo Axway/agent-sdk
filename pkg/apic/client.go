@@ -633,33 +633,18 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
 func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error {
-	//TODO - handle CredentialRequest and update properly
+	crdBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
 
-	// var registeredSpecHash uint64
-	// registeredSchema := c.getCachedSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/credentialrequestdefinitions")
 
-	// if registeredSchema != nil {
-	// 	registeredSpecHash, _ = util.ComputeHash(registeredSchema.Spec)
-	// } else {
-	// 	update = true
-	// }
+	_, err = c.ExecuteAPI(coreapi.POST, url, nil, crdBytes)
+	if err != nil {
+		return err
+	}
 
-	// spec, err := c.prepareSubscriptionDefinitionSpec(registeredSchema, subscriptionSchema)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Create New definition
-	// if registeredSchema == nil {
-	// 	return c.createSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-	// }
-
-	// if update {
-	// 	// Check if the schema definitions changed before update
-	// 	if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
-	// 		return c.updateSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), spec)
-	// 	}
-	// }
-
+	//TODO check for return code
 	return nil
 }
