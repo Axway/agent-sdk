@@ -57,6 +57,8 @@ type StringPropertyBuilder interface {
 	SetFirstEnumValue(value string) StringPropertyBuilder
 	// AddEnumValue - Add another value to the list of allowed values for the property
 	AddEnumValue(value string) StringPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value string) StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -66,6 +68,8 @@ type NumberPropertyBuilder interface {
 	SetMinValue(min float64) NumberPropertyBuilder
 	// SetMaxValue - Set the maximum allowed number value
 	SetMaxValue(min float64) NumberPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value float64) NumberPropertyBuilder
 	PropertyBuilder
 }
 
@@ -75,6 +79,8 @@ type IntegerPropertyBuilder interface {
 	SetMinValue(min int64) IntegerPropertyBuilder
 	// SetMaxValue - Set the maximum allowed integer value
 	SetMaxValue(min int64) IntegerPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value int64) IntegerPropertyBuilder
 	PropertyBuilder
 }
 
@@ -231,6 +237,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	defaultValue   string
 	StringPropertyBuilder
 }
 
@@ -279,6 +286,12 @@ func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder 
 	return p
 }
 
+// SetDefaultValue - Define the initial value for the property
+func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuilder {
+	p.defaultValue = value
+	return p
+}
+
 // Build - create a string SubscriptionSchemaPropertyDefinition for use in the subscription schema builder
 func (p *stringSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinition, err error) {
 
@@ -297,6 +310,24 @@ func (p *stringSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinitio
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
+
+	if len(p.defaultValue) > 0 {
+		if len(p.enums) > 0 {
+			// Check validity for defaultValue
+			isDefaultValueValid := false
+			for _, x := range p.enums {
+				if x == p.defaultValue {
+					isDefaultValueValid = true
+					break
+				}
+			}
+			if isDefaultValueValid == false {
+				return nil, fmt.Errorf("Default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
+			}
+		}
+		def.DefaultValue = p.defaultValue
+	}
+
 	return def, err
 }
 
@@ -308,6 +339,7 @@ type numberSchemaProperty struct {
 	schemaProperty *schemaProperty
 	minValue       *float64 // We use a pointer to differentiate the "blank value" from a choosen 0 min value
 	maxValue       *float64 // We use a pointer to differentiate the "blank value" from a choosen 0 max value
+	defaultValue   *float64
 	SubscriptionPropertyBuilder
 }
 
@@ -323,6 +355,12 @@ func (p *numberSchemaProperty) SetMaxValue(max float64) NumberPropertyBuilder {
 	return p
 }
 
+// SetDefaultValue - Define the initial value for the property
+func (p *numberSchemaProperty) SetDefaultValue(value float64) NumberPropertyBuilder {
+	p.defaultValue = &value
+	return p
+}
+
 // Build - create the SubscriptionSchemaPropertyDefinition for use in the subscription schema builder
 func (p *numberSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
@@ -332,6 +370,16 @@ func (p *numberSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinitio
 
 	if p.minValue != nil && p.maxValue != nil && *p.minValue > *p.maxValue {
 		return nil, fmt.Errorf("Max value (%f) must be greater than min value (%f)", *p.maxValue, *p.minValue)
+	}
+
+	if p.defaultValue != nil {
+		if p.minValue != nil && *p.defaultValue < *p.minValue {
+			return nil, fmt.Errorf("Default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
+		}
+		if p.maxValue != nil && *p.defaultValue > *p.maxValue {
+			return nil, fmt.Errorf("Default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
+		}
+		def.DefaultValue = p.defaultValue
 	}
 
 	def.Minimum = p.minValue
@@ -358,6 +406,13 @@ func (p *integerSchemaProperty) SetMinValue(min int64) IntegerPropertyBuilder {
 func (p *integerSchemaProperty) SetMaxValue(max int64) IntegerPropertyBuilder {
 	maximum := float64(max)
 	p.maxValue = &maximum
+	return p
+}
+
+// SetDefaultValue - Define the initial value for the property
+func (p *integerSchemaProperty) SetDefaultValue(value int64) IntegerPropertyBuilder {
+	defaultValue := float64(value)
+	p.defaultValue = &defaultValue
 	return p
 }
 
