@@ -39,6 +39,8 @@ type ServiceBuilder interface {
 	SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder
 	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
+	SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder
+	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -59,19 +61,20 @@ type serviceBodyBuilder struct {
 func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
-			AuthPolicy:         Passthrough,
-			authPolicies:       make([]string, 0),
-			CreatedBy:          config.AgentTypeName,
-			State:              PublishedStatus,
-			Status:             PublishedStatus,
-			ServiceAttributes:  make(map[string]string),
-			RevisionAttributes: make(map[string]string),
-			InstanceAttributes: make(map[string]string),
-			StageDescriptor:    "Stage",
-			Endpoints:          make([]EndpointDefinition, 0),
-			UnstructuredProps:  &UnstructuredProperties{},
-			categoryTitles:     make([]string, 0),
-			categoryNames:      make([]string, 0),
+			AuthPolicy:                Passthrough,
+			authPolicies:              make([]string, 0),
+			CreatedBy:                 config.AgentTypeName,
+			State:                     PublishedStatus,
+			Status:                    PublishedStatus,
+			ServiceAttributes:         make(map[string]string),
+			RevisionAttributes:        make(map[string]string),
+			InstanceAttributes:        make(map[string]string),
+			StageDescriptor:           "Stage",
+			Endpoints:                 make([]EndpointDefinition, 0),
+			UnstructuredProps:         &UnstructuredProperties{},
+			categoryTitles:            make([]string, 0),
+			categoryNames:             make([]string, 0),
+			credentialRequestPolicies: make([]string, 0),
 		},
 	}
 }
@@ -280,4 +283,16 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 
 	return b.serviceBody, nil
+}
+
+// SetCredentialRequestDefinitions -
+func (b *serviceBodyBuilder) SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder {
+	b.serviceBody.credentialRequestPolicies = credentialRequestDefNames
+	return b
+}
+
+// AddCredentialRequestDefinition -
+func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder {
+	b.serviceBody.credentialRequestPolicies = append(b.serviceBody.credentialRequestPolicies, credentialRequestDefName)
+	return b
 }

@@ -19,8 +19,9 @@ func (c *ServiceClient) buildAPIServiceInstanceSpec(
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) v1alpha1.ApiServiceInstanceSpec {
 	return v1alpha1.ApiServiceInstanceSpec{
-		ApiServiceRevision: serviceBody.serviceContext.revisionName,
-		Endpoint:           endPoints,
+		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
+		Endpoint:                     endPoints,
+		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
 	}
 }
 

@@ -12,41 +12,42 @@ type APIKeyInfo struct {
 
 //ServiceBody -
 type ServiceBody struct {
-	NameToPush         string
-	APIName            string
-	RestAPIID          string
-	PrimaryKey         string
-	URL                string
-	Stage              string
-	StageDescriptor    string
-	Description        string
-	Version            string
-	AuthPolicy         string
-	authPolicies       []string
-	apiKeyInfo         []APIKeyInfo
-	SpecDefinition     []byte
-	Documentation      []byte
-	Tags               map[string]interface{}
-	AgentMode          corecfg.AgentMode
-	Image              string
-	ImageContentType   string
-	CreatedBy          string
-	ResourceType       string
-	AltRevisionPrefix  string
-	SubscriptionName   string
-	APIUpdateSeverity  string
-	State              string
-	Status             string
-	ServiceAttributes  map[string]string
-	RevisionAttributes map[string]string
-	InstanceAttributes map[string]string
-	serviceContext     serviceContext
-	Endpoints          []EndpointDefinition
-	UnstructuredProps  *UnstructuredProperties
-	TeamName           string
-	teamID             string
-	categoryTitles     []string //Titles will be set via the service body builder
-	categoryNames      []string //Names will be determined based the Title
+	NameToPush                string
+	APIName                   string
+	RestAPIID                 string
+	PrimaryKey                string
+	URL                       string
+	Stage                     string
+	StageDescriptor           string
+	Description               string
+	Version                   string
+	AuthPolicy                string
+	authPolicies              []string
+	apiKeyInfo                []APIKeyInfo
+	SpecDefinition            []byte
+	Documentation             []byte
+	Tags                      map[string]interface{}
+	AgentMode                 corecfg.AgentMode
+	Image                     string
+	ImageContentType          string
+	CreatedBy                 string
+	ResourceType              string
+	AltRevisionPrefix         string
+	SubscriptionName          string
+	APIUpdateSeverity         string
+	State                     string
+	Status                    string
+	ServiceAttributes         map[string]string
+	RevisionAttributes        map[string]string
+	InstanceAttributes        map[string]string
+	serviceContext            serviceContext
+	Endpoints                 []EndpointDefinition
+	UnstructuredProps         *UnstructuredProperties
+	TeamName                  string
+	teamID                    string
+	categoryTitles            []string //Titles will be set via the service body builder
+	categoryNames             []string //Names will be determined based the Title
+	credentialRequestPolicies []string
 }
 
 //GetAuthPolicies - returns the array of all auth policies in the ServiceBody
@@ -57,4 +58,14 @@ func (s *ServiceBody) GetAuthPolicies() []string {
 //GetAPIKeyInfo - returns the array of locations and argument names for the api key
 func (s *ServiceBody) GetAPIKeyInfo() []APIKeyInfo {
 	return s.apiKeyInfo
+}
+
+//GetCredentialRequestDefinitions - returns the array of all credential request policies
+func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
+	for _, policy := range s.authPolicies {
+		if policy == Apikey || policy == Oauth {
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, policy)
+		}
+	}
+	return s.credentialRequestPolicies
 }
