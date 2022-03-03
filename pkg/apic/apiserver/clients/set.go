@@ -45,6 +45,8 @@ type Set struct {
 	AmplifyRuntimeConfigManagementV1alpha1           *management_v1alpha1.UnscopedAmplifyRuntimeConfigClient
 	VirtualHostManagementV1alpha1                    *management_v1alpha1.UnscopedVirtualHostClient
 	ExternalSecretManagementV1alpha1                 *management_v1alpha1.UnscopedExternalSecretClient
+	ManagedApplicationManagementV1alpha1             *management_v1alpha1.UnscopedManagedApplicationClient
+	CredentialManagementV1alpha1                     *management_v1alpha1.UnscopedCredentialClient
 	VirtualAPIManagementV1alpha1                     *management_v1alpha1.VirtualAPIClient
 	VirtualAPIReleaseManagementV1alpha1              *management_v1alpha1.VirtualAPIReleaseClient
 	CorsRuleManagementV1alpha1                       *management_v1alpha1.UnscopedCorsRuleClient
@@ -55,12 +57,17 @@ type Set struct {
 	OAS3DocumentManagementV1alpha1                   *management_v1alpha1.UnscopedOAS3DocumentClient
 	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
 	ReleaseTagManagementV1alpha1                     *management_v1alpha1.UnscopedReleaseTagClient
+	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
 	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
 	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
 	StageCatalogV1alpha1                             *catalog_v1alpha1.StageClient
 	AssetCatalogV1alpha1                             *catalog_v1alpha1.AssetClient
 	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
 	CategoryCatalogV1alpha1                          *catalog_v1alpha1.CategoryClient
+	AuthorizationProfileCatalogV1alpha1              *catalog_v1alpha1.AuthorizationProfileClient
+	ApplicationCatalogV1alpha1                       *catalog_v1alpha1.ApplicationClient
+	CredentialCatalogV1alpha1                        *catalog_v1alpha1.UnscopedCredentialClient
+	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
@@ -73,7 +80,10 @@ type Set struct {
 	AssetRequestCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetRequestClient
 	DocumentCatalogV1alpha1                          *catalog_v1alpha1.UnscopedDocumentClient
 	ResourceCatalogV1alpha1                          *catalog_v1alpha1.UnscopedResourceClient
+	WebhookCatalogV1alpha1                           *catalog_v1alpha1.UnscopedWebhookClient
 	ReleaseTagCatalogV1alpha1                        *catalog_v1alpha1.UnscopedReleaseTagClient
+	CredentialRequestDefinitionCatalogV1alpha1       *catalog_v1alpha1.UnscopedCredentialRequestDefinitionClient
+	SecretCatalogV1alpha1                            *catalog_v1alpha1.UnscopedSecretClient
 	AccessControlListCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                                *catalog_v1.CategoryClient
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
@@ -213,6 +223,14 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ExternalSecret: %s", err))
 	}
+	s.ManagedApplicationManagementV1alpha1, err = management_v1alpha1.NewManagedApplicationClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ManagedApplication: %s", err))
+	}
+	s.CredentialManagementV1alpha1, err = management_v1alpha1.NewCredentialClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Credential: %s", err))
+	}
 	s.VirtualAPIManagementV1alpha1, err = management_v1alpha1.NewVirtualAPIClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualAPI: %s", err))
@@ -253,6 +271,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ReleaseTag: %s", err))
 	}
+	s.CredentialRequestDefinitionManagementV1alpha1, err = management_v1alpha1.NewCredentialRequestDefinitionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.CredentialRequestDefinition: %s", err))
+	}
 	s.SecretManagementV1alpha1, err = management_v1alpha1.NewSecretClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Secret: %s", err))
@@ -276,6 +298,22 @@ func New(b cAPIV1.Base) *Set {
 	s.CategoryCatalogV1alpha1, err = catalog_v1alpha1.NewCategoryClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Category: %s", err))
+	}
+	s.AuthorizationProfileCatalogV1alpha1, err = catalog_v1alpha1.NewAuthorizationProfileClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.AuthorizationProfile: %s", err))
+	}
+	s.ApplicationCatalogV1alpha1, err = catalog_v1alpha1.NewApplicationClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Application: %s", err))
+	}
+	s.CredentialCatalogV1alpha1, err = catalog_v1alpha1.NewCredentialClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Credential: %s", err))
+	}
+	s.SubscriptionCatalogV1alpha1, err = catalog_v1alpha1.NewSubscriptionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Subscription: %s", err))
 	}
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {
@@ -325,9 +363,21 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Resource: %s", err))
 	}
+	s.WebhookCatalogV1alpha1, err = catalog_v1alpha1.NewWebhookClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Webhook: %s", err))
+	}
 	s.ReleaseTagCatalogV1alpha1, err = catalog_v1alpha1.NewReleaseTagClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ReleaseTag: %s", err))
+	}
+	s.CredentialRequestDefinitionCatalogV1alpha1, err = catalog_v1alpha1.NewCredentialRequestDefinitionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.CredentialRequestDefinition: %s", err))
+	}
+	s.SecretCatalogV1alpha1, err = catalog_v1alpha1.NewSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Secret: %s", err))
 	}
 	s.AccessControlListCatalogV1alpha1, err = catalog_v1alpha1.NewAccessControlListClient(b)
 	if err != nil {

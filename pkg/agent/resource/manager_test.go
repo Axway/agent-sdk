@@ -134,7 +134,7 @@ func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList)
 	return nil, nil
 }
 
-func (m *mockSvcClient) RegisterCredentialRequestDefinition(data interface{}, update bool) error {
+func (m *mockSvcClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error {
 	return nil
 }
 

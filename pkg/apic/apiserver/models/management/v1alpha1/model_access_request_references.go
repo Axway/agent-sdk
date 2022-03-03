@@ -11,6 +11,6 @@ package v1alpha1
 
 // AccessRequestReferences struct for AccessRequestReferences
 type AccessRequestReferences struct {
-	// The name of the assetRequest resource from which this access request is created.
-	AssetRequest string `json:"assetRequest,omitempty"`
+	Kind string `json:"kind"`
+	Name string `json:"name,omitempty"`
 }

@@ -9,10 +9,10 @@
 
 package v1alpha1
 
-// GovernanceAgentSpec struct for GovernanceAgentSpec
+// GovernanceAgentSpec  (management.v1alpha1.GovernanceAgent)
 type GovernanceAgentSpec struct {
 	// The dataplane type that this agent connects to
 	DataplaneType string `json:"dataplaneType"`
-	// Represents the governance agent config
+	// Represents the governance agent config (management.v1alpha1.GovernanceAgent)
 	Config map[string]interface{} `json:"config,omitempty"`
 }

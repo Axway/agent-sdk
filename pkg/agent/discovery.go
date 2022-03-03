@@ -5,6 +5,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -155,7 +156,7 @@ func RegisterDeleteServiceValidator(validator interface{}) {
 // credential request definitions
 
 // createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data interface{}) error {
+func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) error {
 	// TODO - check cache for credential request, update if needed
 	return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
 }

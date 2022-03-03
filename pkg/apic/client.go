@@ -84,7 +84,7 @@ type Client interface {
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	RegisterCredentialRequestDefinition(data interface{}, update bool) error
+	RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error
 }
 
 // New creates a new Client
@@ -632,7 +632,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 }
 
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data interface{}, update bool) error {
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error {
 	//TODO - handle CredentialRequest and update properly
 
 	// var registeredSpecHash uint64

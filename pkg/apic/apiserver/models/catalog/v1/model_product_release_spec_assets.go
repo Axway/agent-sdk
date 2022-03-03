@@ -9,7 +9,7 @@
 
 package v1
 
-// ProductReleaseSpecAssets struct for ProductReleaseSpecAssets
+// ProductReleaseSpecAssets  (catalog.v1.ProductRelease)
 type ProductReleaseSpecAssets struct {
 	// The Asset name
 	Name    string                    `json:"name,omitempty"`

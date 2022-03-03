@@ -3,6 +3,7 @@ package provisioning
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +25,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
 			// builtDef := struct{}{}
-			registerFunc := func(credentialRequestDefinition interface{}) error {
+			registerFunc := func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) error {
 				// TODO - validate that the credentialRequestDefinition is built properly
 				// builtDef = credentialRequestDefinition.(struct{})
 				registerFuncCalled = true

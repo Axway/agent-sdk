@@ -1,14 +1,19 @@
 package provisioning
 
-import "fmt"
+import (
+	"fmt"
+
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+)
 
 // RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
-type RegisterCredentialRequestDefinition func(credentialRequestDefinition interface{}) error
+type RegisterCredentialRequestDefinition func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) error
 
 type credentialRequestDef struct {
 	name            string
-	requestSchema   *jsonSchema
-	provisionSchema *jsonSchema
+	provisionSchema map[string]interface{}
+	requestSchema   map[string]interface{}
 	maxAppCreds     int
 	webhooks        []string
 	registerFunc    RegisterCredentialRequestDefinition
@@ -100,6 +105,21 @@ func (c *credentialRequestDef) Register() error {
 		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
-	// TODO - build credential request defintion and send to register func
-	return c.registerFunc(nil)
+	crd := &v1alpha1.CredentialRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
+		},
+		Spec: v1alpha1.CredentialRequestDefinitionSpec{
+			Schema: c.requestSchema,
+			Provision: &v1alpha1.CredentialRequestDefinitionSpecProvision{
+				Schema: c.provisionSchema,
+			},
+			Capabilities: &v1alpha1.CredentialRequestDefinitionSpecCapabilities{
+				MaxApplicationCredentials: c.maxAppCreds,
+			},
+			// Webhooks: c.webhooks,
+		},
+	}
+
+	return c.registerFunc(crd)
 }

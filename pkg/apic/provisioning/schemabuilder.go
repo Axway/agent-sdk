@@ -1,5 +1,7 @@
 package provisioning
 
+import "encoding/json"
+
 // SchemaBuilder - used to build a subscription schema for API Central
 type SchemaBuilder interface {
 	SetName(name string) SchemaBuilder
@@ -7,7 +9,7 @@ type SchemaBuilder interface {
 	AddProperty(property PropertyBuilder) SchemaBuilder
 	AddUniqueKey(keyName string) SchemaBuilder
 	// Builds the json schema - this is called automatically by the resource builder
-	Build() (*jsonSchema, error)
+	Build() (map[string]interface{}, error)
 }
 
 // schemaBuilder - hold all of the details needs to create a subscription schema
@@ -69,7 +71,7 @@ func (s *schemaBuilder) AddUniqueKey(keyName string) SchemaBuilder {
 }
 
 // Register - build and register the subscription schema
-func (s *schemaBuilder) Build() (*jsonSchema, error) {
+func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -89,5 +91,15 @@ func (s *schemaBuilder) Build() (*jsonSchema, error) {
 		Properties:        s.properties,
 		Required:          required,
 	}
-	return schema, nil
+
+	schemaBytes, err := json.Marshal(schema)
+	if err != nil {
+		return nil, err
+	}
+	schemaMap := map[string]interface{}{}
+	err = json.Unmarshal(schemaBytes, &schemaMap)
+	if err != nil {
+		return nil, err
+	}
+	return schemaMap, nil
 }

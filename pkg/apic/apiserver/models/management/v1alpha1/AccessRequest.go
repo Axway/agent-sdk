@@ -39,6 +39,7 @@ type AccessRequest struct {
 	References AccessRequestReferences `json:"references"`
 	Spec       AccessRequestSpec       `json:"spec"`
 	State      AccessRequestState      `json:"state"`
+	Status     AccessRequestStatus     `json:"status"`
 }
 
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
@@ -111,6 +112,7 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["state"] = res.State
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -158,6 +160,17 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 	}
 
 	err = json.Unmarshal(sr, &res.State)
+	if err != nil {
+		return err
+	}
+
+	// marshalling subresource Status
+	sr, err = json.Marshal(aux.SubResources["status"])
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(sr, &res.Status)
 	if err != nil {
 		return err
 	}

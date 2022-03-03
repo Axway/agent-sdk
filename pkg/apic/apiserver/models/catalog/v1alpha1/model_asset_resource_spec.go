@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetResourceSpec struct for AssetResourceSpec
+// AssetResourceSpec  (catalog.v1alpha1.AssetResource)
 type AssetResourceSpec struct {
 	// The Stage this Asset Resource is deployed on.
 	Stage                  string `json:"stage,omitempty"`
@@ -22,5 +22,6 @@ type AssetResourceSpec struct {
 	// Resource availabiltiy
 	Status string `json:"status"`
 	// information to access the definition.
-	AccessInfo []AssetResourceSpecAccessInfo `json:"accessInfo,omitempty"`
+	AccessInfo           []AssetResourceSpecAccessInfo         `json:"accessInfo,omitempty"`
+	AuthorizationProfile AssetResourceSpecAuthorizationProfile `json:"authorizationProfile,omitempty"`
 }

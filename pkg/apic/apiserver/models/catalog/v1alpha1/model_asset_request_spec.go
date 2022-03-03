@@ -9,11 +9,16 @@
 
 package v1alpha1
 
-// AssetRequestSpec struct for AssetRequestSpec
+// AssetRequestSpec  (catalog.v1alpha1.AssetRequest)
 type AssetRequestSpec struct {
+	//  (catalog.v1alpha1.AssetRequest)
 	Data                   map[string]interface{} `json:"data"`
 	AssetResource          string                 `json:"assetResource"`
 	AssetRequestDefinition string                 `json:"assetRequestDefinition,omitempty"`
 	// Reference to Release that got created from this asset request.
 	AssetRelease string `json:"assetRelease,omitempty"`
+	// Reference to application.
+	Application string `json:"application"`
+	// reference to the Subscription to be used to access the Asset Resource.
+	Subscription string `json:"subscription,omitempty"`
 }

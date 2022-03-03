@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// PublishedProductReferences struct for PublishedProductReferences
+// PublishedProductReferences  (catalog.v1alpha1.PublishedProduct)
 type PublishedProductReferences struct {
 	Release PublishedProductReferencesRelease `json:"release"`
 }
