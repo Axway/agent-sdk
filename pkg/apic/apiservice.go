@@ -33,16 +33,16 @@ func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 }
 
 func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
-	ownerObject, ownerErr := c.getOwnerObject(serviceBody, true)
+	owner, ownerErr := c.getOwnerObject(serviceBody, true)
 	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
-			Attributes:       serviceBody.ServiceAttributes,
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:   buildAPIServiceSpec(serviceBody),
-		Owner:  ownerObject,
+		Owner:  owner,
 		Status: buildAPIServiceStatusSubResource(ownerErr),
 	}
 
@@ -68,14 +68,15 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (
 }
 
 func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
-	var ownerErr error
+	owner, ownerErr := c.getOwnerObject(serviceBody, true)
+
 	svc.GroupVersionKind = mv1a.APIServiceGVK()
 	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
 	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
-	svc.Owner, ownerErr = c.getOwnerObject(serviceBody, true)
-	svc.Attributes = serviceBody.ServiceAttributes
+	svc.Owner = owner
+	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
 	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -88,7 +89,6 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 			Data:        serviceBody.Image,
 		}
 	}
-
 }
 
 func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
