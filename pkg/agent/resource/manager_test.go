@@ -143,6 +143,18 @@ func (m *mockSvcClient) CreateAccessControlList(_ *v1alpha1.AccessControlList) (
 	return nil, nil
 }
 
+func (m *mockSvcClient) UpdateAPIV1ResourceInstance(_ string, _ *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+	return nil
+}
+
+func (m *mockSvcClient) CreateSubResourceUnscoped(_, _, _, _ string, _ map[string]interface{}) error {
+	return nil
+}
+
 func (m *mockSvcClient) ExecuteAPI(method, _ string, _ map[string]string, buffer []byte) ([]byte, error) {
 	if method == api.PUT {
 		m.apiResponse = buffer

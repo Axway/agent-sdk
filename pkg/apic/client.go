@@ -20,7 +20,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -86,6 +85,9 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error
 }
 
 // New creates a new Client
@@ -384,7 +386,7 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		return nil, ErrAuthentication
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 }
 
@@ -523,7 +525,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlLi
 
 	if response.Code != http.StatusOK {
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
 	var acl *mv1a.AccessControlList
@@ -535,9 +537,13 @@ func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlLi
 	return acl, err
 }
 
-// UpdateAccessControlList -
+//UpdateAccessControlList - removes existing then creates new AccessControlList
 func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
-	return c.deployAccessControl(acl, http.MethodPut)
+	// first delete the existing access control list
+	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
+		return nil, err
+	}
+	return c.deployAccessControl(acl, http.MethodPost)
 }
 
 // CreateAccessControlList -
@@ -551,13 +557,8 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		return nil, err
 	}
 
-	data, err := json.Marshal(*acl)
-	if err != nil {
-		return nil, err
-	}
-
 	url := c.cfg.GetEnvironmentACLsURL()
-	if method == http.MethodPut {
+	if method == http.MethodPut || method == http.MethodDelete {
 		url = fmt.Sprintf("%s/%s", url, acl.Name)
 	}
 
@@ -565,7 +566,14 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		Method:  method,
 		URL:     url,
 		Headers: headers,
-		Body:    data,
+	}
+
+	if method == http.MethodPut || method == http.MethodPost {
+		data, err := json.Marshal(*acl)
+		if err != nil {
+			return nil, err
+		}
+		request.Body = data
 	}
 
 	response, err := c.apiClient.Send(request)
@@ -573,15 +581,22 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		return nil, err
 	}
 
-	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
-		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	if response.Code == http.StatusNoContent && method == http.MethodDelete {
+		return nil, nil
 	}
 
-	updatedACL := &mv1a.AccessControlList{}
-	err = json.Unmarshal(response.Body, updatedACL)
-	if err != nil {
-		return nil, err
+	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	var updatedACL *mv1a.AccessControlList
+	if method == http.MethodPut || method == http.MethodPost {
+		updatedACL = &mv1a.AccessControlList{}
+		err = json.Unmarshal(response.Body, updatedACL)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return updatedACL, err
@@ -614,7 +629,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 		return nil, ErrAuthentication
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 }
 
@@ -665,7 +680,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(
 				if execErr == nil {
 					execErr = err
 				}
-				log.Errorf("failed to link sub resource %s to resource %s - unscoped: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
 			}
 		}(wg, subName)
 	}
@@ -683,27 +698,29 @@ func (c *ServiceClient) CreateSubResourceScoped(
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
-		wg.Add(1)
+		if strings.HasPrefix(subName, "x-") {
+			wg.Add(1)
 
-		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
+			base := c.cfg.GetURL()
+			url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
 
-		r := map[string]interface{}{
-			subName: sub,
-		}
-		bts, err := json.Marshal(r)
-		if err != nil {
-			return err
-		}
-
-		go func(sn string) {
-			defer wg.Done()
-			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
-			if err != nil {
-				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s - scoped: %v", sn, name, err)
+			r := map[string]interface{}{
+				subName: sub,
 			}
-		}(subName)
+			bts, err := json.Marshal(r)
+			if err != nil {
+				return err
+			}
+
+			go func(sn string) {
+				defer wg.Done()
+				_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+				if err != nil {
+					execErr = err
+					log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				}
+			}(subName)
+		}
 	}
 
 	wg.Wait()

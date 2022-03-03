@@ -37,6 +37,7 @@ type APIDetails struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Revision int    `json:"revision"`
+	TeamID   string `json:"teamId"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions
@@ -92,6 +93,28 @@ type LighthouseUsageEvent struct {
 	SchemaID    string                           `json:"schemaId"`
 	Report      map[string]LighthouseUsageReport `json:"report"`
 	Meta        map[string]interface{}           `json:"meta"`
+}
+
+// AppDetails - struct for app details to report
+type AppDetails struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Data - struct for data to report as API Metrics
+type Data struct {
+	APIDetails APIDetails
+	StatusCode string
+	Duration   int64
+	UsageBytes int64
+	AppDetails AppDetails
+	TeamName   string
+}
+
+// AppUsage - struct to hold metric specific for app usage
+type AppUsage struct {
+	App   AppDetails `json:"app"`
+	Count int64      `json:"count"`
 }
 
 // ISO8601 - time format

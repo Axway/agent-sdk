@@ -15,13 +15,13 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
-
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -146,7 +146,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	if !agent.isInitialized {
 		setupSignalProcessor()
-		// only do the periodic healthcheck stuff if NOT in unit tests and running binary agents
+		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
 			hc.StartPeriodicHealthCheck()
 		}
@@ -154,9 +154,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 			startAPIServiceCache()
-			startTeamACLCache(agent.cfg, agent.apicClient, agent.cacheManager)
+			startTeamACLCache()
 
-			err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 			if err != nil {
 				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 			}
@@ -237,17 +237,22 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache() {
+func startAPIServiceCache() error {
+	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 	// register the update cache job
-	newDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock)
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
+	err := discoveryCache.Execute()
+	if err != nil {
+		return err
+	}
+
 	if !agent.cfg.IsUsingGRPC() {
-		// healthcheck for central in gRPC mode is registered by streamer
+		// health check for central in gRPC mode is registered by streamer
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
 
-		id, err := jobs.RegisterIntervalJobWithName(newDiscoveryCacheJob, agent.cfg.GetPollInterval(), "New APIs Cache")
+		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
-			log.Errorf("could not start the New APIs cache update job: %v", err.Error())
-			return
+			return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
 		}
 		// Start the full update after the first interval
 		go startDiscoveryCache(agent.instanceCacheLock)
@@ -255,21 +260,17 @@ func startAPIServiceCache() {
 	} else {
 		// Load cache from API initially. Following updates to cache will be done using watch events
 		if !agent.cacheManager.HasLoadedPersistedCache() {
-			err := newDiscoveryCacheJob.Execute()
-			if err != nil {
-				log.Error(err)
-				return
-			}
 			// trigger early saving for the initialized cache, following save will be done by interval job
 			agent.cacheManager.SaveCache()
 		}
 
 		err := startStreamMode(agent)
 		if err != nil {
-			log.Error(err)
-			return
+			return err
 		}
 	}
+
+	return nil
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -279,17 +280,13 @@ func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error 
 	return nil
 }
 
-func startTeamACLCache(cfg config.CentralConfig, client apic.Client, caches agentcache.Manager) {
-	// register the team cache and acl update jobs
-	var teamChannel chan string
-
+func startTeamACLCache() {
 	// Only discovery agents need to start the ACL handler
-	if cfg.GetAgentType() == config.DiscoveryAgent {
-		teamChannel = make(chan string)
-		registerAccessControlListHandler(teamChannel)
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		registerAccessControlListHandler()
 	}
 
-	registerTeamMapCacheJob(teamChannel, caches, client)
+	registerTeamMapCacheJob()
 }
 
 func isRunningInDockerContainer() bool {
@@ -387,7 +384,7 @@ func cleanUp() {
 
 func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())

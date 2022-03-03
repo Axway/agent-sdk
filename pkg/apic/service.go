@@ -11,6 +11,7 @@ import (
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -120,11 +121,12 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
-	return c.getConsumerInstanceByID((consumerInstanceID))
+	return c.getConsumerInstanceByID(consumerInstanceID)
 }
 
-// GetConsumerInstancesByExternalAPIID -
+// GetConsumerInstancesByExternalAPIID - DEPRECATED
 func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+	log.DeprecationWarningReplace("GetConsumerInstancesByExternalAPIID", "")
 	return c.getConsumerInstancesByExternalAPIID(externalAPIID)
 }
 

@@ -23,7 +23,7 @@ import (
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string)
+	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
 }
 
 // collector - collects the metrics for transactions events
@@ -175,7 +175,7 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName, teamName string) {
+func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
@@ -282,14 +282,16 @@ func (c *collector) generateEvents() {
 }
 
 func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
-	switch name {
-	case transactionCountMetric:
+	switch {
+	case name == transactionCountMetric:
 		if c.usageConfig.CanPublishUsage() {
 			c.generateUsageEvent(c.orgGUID)
 		} else {
 			log.Info("Publishing the usage event is turned off")
 		}
-	case transactionVolumeMetric:
+
+	// case transactionVolumeMetric:
+	case name == transactionVolumeMetric:
 		return // skip volume metric as it is handled with Count metric
 	default:
 		c.processTransactionMetric(name, metric)

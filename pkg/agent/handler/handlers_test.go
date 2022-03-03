@@ -539,3 +539,7 @@ func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Clie
 func (m *mockResourceManager) FetchAgentResource() error { return nil }
 
 func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return nil }
+
+func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
+	return "", nil
+}

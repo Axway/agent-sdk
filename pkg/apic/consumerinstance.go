@@ -10,8 +10,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -139,7 +137,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes),
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
@@ -150,31 +148,20 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
 
-	// add all agent details keys to the ci attributes
-	for k, v := range agentDetails {
-		ci.Attributes[k] = v.(string)
-	}
-
 	return ci
 }
 
 func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1a.ConsumerInstance, doc string) {
-	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	ci.GroupVersionKind = mv1a.ConsumerInstanceGVK()
 	ci.Metadata.ResourceVersion = ""
 	ci.Title = serviceBody.NameToPush
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
-	ci.Owner = owner
-	ci.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.InstanceAttributes)
+	ci.Owner, _ = c.getOwnerObject(serviceBody, false)
+	ci.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
-
-	// add all agent details keys to the ci attributes
-	for k, v := range agentDetails {
-		ci.Attributes[k] = v.(string)
-	}
 
 	// use existing categories only if mappings have not been configured
 	categories := ci.Spec.Categories
@@ -336,17 +323,22 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 	return err
 }
 
-// getConsumerInstancesByExternalAPIID gets consumer instances
+// getConsumerInstancesByExternalAPIID gets consumer instances.
 func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
+	svc := c.caches.GetAPIServiceWithAPIID(externalAPIID)
+	if svc == nil {
+		return nil, fmt.Errorf("api service with external api id %s not found in the cache", externalAPIID)
+	}
+
 	log.Tracef("Get consumer instance by external api id: %s", externalAPIID)
 
 	params := map[string]string{
-		"query": fmt.Sprintf("attributes."+definitions.AttrExternalAPIID+"==\"%s\"", externalAPIID),
+		"query": fmt.Sprintf("metadata.references.name==%s", svc.Name),
 	}
 	request := coreapi.Request{
 		Method:      coreapi.GET,

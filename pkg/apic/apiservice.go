@@ -79,7 +79,8 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
-	util.SetAgentDetails(svc, svcDetails)
+	sub := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
+	util.SetAgentDetails(svc, sub)
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{

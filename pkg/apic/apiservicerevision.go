@@ -62,7 +62,7 @@ func (c *ServiceClient) buildAPIServiceRevision(
 			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
 			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
-			Attributes:       util.MergeMapStringString(map[string]string{}, serviceBody.RevisionAttributes),
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.RevisionAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceRevisionSpec(serviceBody),
@@ -79,14 +79,13 @@ func (c *ServiceClient) buildAPIServiceRevision(
 func (c *ServiceClient) updateAPIServiceRevision(
 	serviceBody *ServiceBody, revision *mv1a.APIServiceRevision,
 ) *mv1a.APIServiceRevision {
-	owner, _ := c.getOwnerObject(serviceBody, false)
 	revision.GroupVersionKind = mv1a.APIServiceRevisionGVK()
 	revision.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
-	revision.Attributes = util.MergeMapStringString(map[string]string{}, serviceBody.RevisionAttributes)
+	revision.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
 	revision.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
-	revision.Owner = owner
+	revision.Owner, _ = c.getOwnerObject(serviceBody, false)
 
 	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
 	details := buildAgentDetailsSubResource(serviceBody, false, revDetails)
