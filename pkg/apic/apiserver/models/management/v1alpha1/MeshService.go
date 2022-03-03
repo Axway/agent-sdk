@@ -138,3 +138,8 @@ func (res *MeshService) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *MeshService) PluralName() string {
+	return MeshServiceResourceName
+}

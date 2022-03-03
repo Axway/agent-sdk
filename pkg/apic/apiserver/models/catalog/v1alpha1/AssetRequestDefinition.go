@@ -35,9 +35,11 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner               `json:"owner"`
-	References interface{}                `json:"references"`
-	Spec       AssetRequestDefinitionSpec `json:"spec"`
+	Authorization AssetRequestDefinitionAuthorization `json:"authorization"`
+	Owner         *apiv1.Owner                        `json:"owner"`
+	References    interface{}                         `json:"references"`
+	Spec          AssetRequestDefinitionSpec          `json:"spec"`
+	Webhooks      interface{}                         `json:"webhooks"`
 }
 
 // AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition
@@ -106,9 +108,11 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["authorization"] = res.Authorization
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["webhooks"] = res.Webhooks
 
 	return json.Marshal(out)
 }
@@ -138,16 +142,52 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource References
-	sr, err = json.Marshal(aux.SubResources["references"])
-	if err != nil {
-		return err
+	// marshalling subresource Authorization
+	if v, ok := aux.SubResources["authorization"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "authorization")
+		err = json.Unmarshal(sr, &res.Authorization)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = json.Unmarshal(sr, &res.References)
-	if err != nil {
-		return err
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AssetRequestDefinition) PluralName() string {
+	return AssetRequestDefinitionResourceName
 }

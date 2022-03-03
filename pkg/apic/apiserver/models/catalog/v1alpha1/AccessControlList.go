@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Asset", "AssetRelease", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage"}
+	AccessControlListScopes = []string{"Application", "Asset", "AssetRelease", "AuthorizationProfile", "Category", "Marketplace", "Product", "ProductPlan", "ProductPlanUnit", "ProductRelease", "Stage", "Subscription"}
 )
 
 const AccessControlListResourceName = "accesscontrollists"
@@ -137,4 +137,9 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AccessControlList) PluralName() string {
+	return AccessControlListResourceName
 }

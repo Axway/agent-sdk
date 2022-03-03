@@ -39,6 +39,8 @@ type AccessRequest struct {
 	References AccessRequestReferences `json:"references"`
 	Spec       AccessRequestSpec       `json:"spec"`
 	State      AccessRequestState      `json:"state"`
+	// 	Status     AccessRequestStatus     `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
@@ -111,6 +113,7 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["state"] = res.State
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -141,26 +144,53 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource References
-	sr, err = json.Marshal(aux.SubResources["references"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.References)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource State
-	sr, err = json.Marshal(aux.SubResources["state"])
-	if err != nil {
-		return err
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = json.Unmarshal(sr, &res.State)
-	if err != nil {
-		return err
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "status")
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AccessRequest) PluralName() string {
+	return AccessRequestResourceName
 }

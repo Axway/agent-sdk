@@ -35,8 +35,9 @@ func init() {
 // AccessRequestDefinition Resource
 type AccessRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner                `json:"owner"`
-	Spec  AccessRequestDefinitionSpec `json:"spec"`
+	Owner    *apiv1.Owner                `json:"owner"`
+	Spec     AccessRequestDefinitionSpec `json:"spec"`
+	Webhooks interface{}                 `json:"webhooks"`
 }
 
 // AccessRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AccessRequestDefinition
@@ -107,6 +108,7 @@ func (res *AccessRequestDefinition) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
+	out["webhooks"] = res.Webhooks
 
 	return json.Marshal(out)
 }
@@ -136,5 +138,24 @@ func (res *AccessRequestDefinition) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AccessRequestDefinition) PluralName() string {
+	return AccessRequestDefinitionResourceName
 }
