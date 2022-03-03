@@ -3,7 +3,6 @@ package apic
 import (
 	"encoding/json"
 	"strconv"
-
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -59,7 +58,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 }
 
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
-func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, queryPageSize int) ([]*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
 
@@ -68,7 +67,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 	for morePages {
 		query := map[string]string{
 			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(queryPageSize),
+			"pageSize": strconv.Itoa(pageSize),
 		}
 
 		// Add query params for getting revisions for the service and use the latest one as last reference
@@ -88,7 +87,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 
-		if len(resourceInstancePage) < queryPageSize {
+		if len(resourceInstancePage) < pageSize {
 			morePages = false
 		} else {
 			log.Trace("More resource instance pages exist.  Continue retrieval of resource instances.")
@@ -98,4 +97,20 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 	}
 
 	return resourceInstance, nil
+}
+
+// UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
+func (c *ServiceClient) UpdateAPIV1ResourceInstance(
+	url string,
+	ri *apiv1.ResourceInstance,
+) (*apiv1.ResourceInstance, error) {
+	ri.Metadata.ResourceVersion = ""
+	bts, err := json.Marshal(ri)
+	if err != nil {
+		return nil, err
+	}
+	bts, err = c.ExecuteAPI(coreapi.PUT, url, nil, bts)
+	r := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(bts, r)
+	return r, err
 }

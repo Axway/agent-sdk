@@ -2,41 +2,50 @@ package apic
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func (c *ServiceClient) buildAPIServiceSpec(serviceBody *ServiceBody) v1alpha1.ApiServiceSpec {
+func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 	if serviceBody.Image != "" {
-		return v1alpha1.ApiServiceSpec{
+		return mv1a.ApiServiceSpec{
 			Description: serviceBody.Description,
-			Icon: v1alpha1.ApiServiceSpecIcon{
+			Icon: mv1a.ApiServiceSpecIcon{
 				ContentType: serviceBody.ImageContentType,
 				Data:        serviceBody.Image,
 			},
 		}
 	}
-	return v1alpha1.ApiServiceSpec{
+	return mv1a.ApiServiceSpec{
 		Description: serviceBody.Description,
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceResource(serviceBody *ServiceBody) *v1alpha1.APIService {
-	return &v1alpha1.APIService{
+func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
+	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.APIServiceGVK(),
+			GroupVersionKind: mv1a.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, nil, true),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  c.buildAPIServiceSpec(serviceBody),
+		Spec:  buildAPIServiceSpec(serviceBody),
 		Owner: c.getOwnerObject(serviceBody, true),
 	}
+
+	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
+	util.SetAgentDetails(svc, svcDetails)
+
+	return svc
 }
 
 func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *v1.Owner {
@@ -52,15 +61,21 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *
 	return nil
 }
 
-func (c *ServiceClient) updateAPIServiceResource(apiSvc *v1alpha1.APIService, serviceBody *ServiceBody) {
-	apiSvc.ResourceMeta.Metadata.ResourceVersion = ""
-	apiSvc.Title = serviceBody.NameToPush
-	apiSvc.ResourceMeta.Attributes = c.buildAPIResourceAttributes(serviceBody, apiSvc.ResourceMeta.Attributes, true)
-	apiSvc.ResourceMeta.Tags = c.mapToTagsArray(serviceBody.Tags)
-	apiSvc.Spec.Description = serviceBody.Description
-	apiSvc.Owner = c.getOwnerObject(serviceBody, true)
+func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
+	svc.GroupVersionKind = mv1a.APIServiceGVK()
+	svc.Metadata.ResourceVersion = ""
+	svc.Title = serviceBody.NameToPush
+	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	svc.Spec.Description = serviceBody.Description
+	svc.Owner = c.getOwnerObject(serviceBody, true)
+	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
+
+	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
+	sub := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
+	util.SetAgentDetails(svc, sub)
+
 	if serviceBody.Image != "" {
-		apiSvc.Spec.Icon = v1alpha1.ApiServiceSpecIcon{
+		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
 		}
@@ -75,52 +90,75 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	serviceBody.serviceContext.serviceAction = addAPI
 
 	// If service exists, update existing service
-	apiService, err := c.getAPIServiceFromCache(serviceBody)
+	svc, err := c.getAPIServiceFromCache(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 
-	if apiService != nil {
+	if svc != nil {
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
-		serviceURL += "/" + apiService.Name
-		c.updateAPIServiceResource(apiService, serviceBody)
+		serviceURL += "/" + svc.Name
+		c.updateAPIService(serviceBody, svc)
 	} else {
-		apiService = c.buildAPIServiceResource(serviceBody)
+		svc = c.buildAPIService(serviceBody)
 	}
 
 	// spec needs to adhere to environment schema
 
-	buffer, err := json.Marshal(apiService)
+	buffer, err := json.Marshal(svc)
 	if err != nil {
 		return nil, err
 	}
 	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
-	apiService.Name = serviceBody.serviceContext.serviceName
-	return apiService, err
+	if err != nil {
+		return nil, err
+	}
+	svc.Name = serviceBody.serviceContext.serviceName
+
+	if len(svc.SubResources) > 0 {
+		err = c.CreateSubResourceScoped(
+			mv1a.EnvironmentResourceName,
+			c.cfg.GetEnvironmentName(),
+			svc.PluralName(),
+			svc.Name,
+			svc.Group,
+			svc.APIVersion,
+			svc.SubResources,
+		)
+
+		if err != nil {
+			_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if e != nil {
+				return nil, errors.New(err.Error() + e.Error())
+			}
+		}
+	}
+
+	return svc, err
 }
 
-func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*mv1a.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
 		return nil, nil
 	}
-	apiSvc := &v1alpha1.APIService{}
+	apiSvc := &mv1a.APIService{}
 	err := apiSvc.FromInstance(ri)
 	return apiSvc, err
 }
 
-func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*mv1a.APIService, error) {
 	ri := c.caches.GetAPIServiceWithPrimaryKey(primaryKey)
 	if ri == nil {
 		return nil, nil
 	}
-	apiSvc := &v1alpha1.APIService{}
+	apiSvc := &mv1a.APIService{}
 	err := apiSvc.FromInstance(ri)
 	return apiSvc, err
 }
 
-func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*mv1a.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
 		apiService, err := c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
 		if apiService != nil && err == nil {
@@ -131,19 +169,19 @@ func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*v1alp
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(serviceBody ServiceBody, name string) (string, error) {
+func (c *ServiceClient) rollbackAPIService(name string) (string, error) {
 	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, nil)
 }
 
 // GetAPIServiceByName - Returns the API service based on its name
-func (c *ServiceClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) GetAPIServiceByName(name string) (*mv1a.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetServicesURL() + "/" + serviceName,
+		URL:     c.cfg.GetServicesURL() + "/" + name,
 		Headers: headers,
 	}
 	response, err := c.apiClient.Send(request)
@@ -157,7 +195,7 @@ func (c *ServiceClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APISe
 		}
 		return nil, nil
 	}
-	apiService := new(v1alpha1.APIService)
-	json.Unmarshal(response.Body, apiService)
-	return apiService, nil
+	apiService := new(mv1a.APIService)
+	err = json.Unmarshal(response.Body, apiService)
+	return apiService, err
 }

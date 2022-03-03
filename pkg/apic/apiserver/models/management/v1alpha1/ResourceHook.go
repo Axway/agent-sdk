@@ -138,3 +138,8 @@ func (res *ResourceHook) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *ResourceHook) PluralName() string {
+	return ResourceHookResourceName
+}
