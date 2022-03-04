@@ -1,25 +1,23 @@
 package provisioning
 
-import "fmt"
-
 const credentialTypeSetError = "can not set credential as %s as its already set as another %s"
 
+const apiKey = "api-key"
+const oauth = "oauth"
+
 // Credential - holds the details about the credential to send to encrypt and send to platform
-type Credential interface{}
+type Credential interface {
+	GetData() map[string]interface{}
+}
 
 type credential struct {
 	Credential
-	credentialType CredentialType
-	data           interface{}
+	credentialType string
+	data           map[string]interface{}
 }
 
-type oAuthCredential struct {
-	id     string
-	secret string
-}
-
-type apiKeyCredential struct {
-	key string
+func (c credential) GetData() map[string]interface{} {
+	return c.data
 }
 
 // CredentialBuilder - builder to create new credentials to send to Central
@@ -49,26 +47,22 @@ func (c *credentialBuilder) Process() (Credential, error) {
 	return c.credential, nil
 }
 
-func (c *credentialBuilder) hasError(credType CredentialType) bool {
-	if c.err != nil {
-		return true
-	}
-
-	if c.credential.credentialType != 0 {
-		c.err = fmt.Errorf(credentialTypeSetError, credType, c.credential.credentialType)
-		return true
-	}
+func (c *credentialBuilder) hasError(credType string) bool {
+	// if c.err != nil {
+	// 	return true
+	// }
+	//
+	// if c.credential.credentialType != 0 {
+	// 	c.err = fmt.Errorf(credentialTypeSetError, credType, c.credential.credentialType)
+	// 	return true
+	// }
 	return false
 }
 
 // SetOauth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
-	if c.hasError(OAuthCredential) {
-		return c
-	}
-
-	c.credential.credentialType = OAuthCredential
-	c.credential.data = &oAuthCredential{
+	c.credential.credentialType = oauth
+	c.credential.data = map[string]interface{}{
 		id:     id,
 		secret: secret,
 	}
@@ -77,12 +71,8 @@ func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 
 // SetAPIKey - set the credential as an API Key type
 func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
-	if c.hasError(APIKeyCredential) {
-		return c
-	}
-
-	c.credential.credentialType = APIKeyCredential
-	c.credential.data = &apiKeyCredential{
+	c.credential.credentialType = apiKey
+	c.credential.data = map[string]interface{}{
 		key: key,
 	}
 	return c

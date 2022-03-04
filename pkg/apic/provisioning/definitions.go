@@ -2,23 +2,6 @@ package provisioning
 
 // enums
 
-// CredentialType - the type fo credential
-type CredentialType int
-
-const (
-	// OAuthCredential - OAuth credentials
-	OAuthCredential CredentialType = iota + 1
-	// APIKeyCredential - APIKey credentials
-	APIKeyCredential
-)
-
-func (c CredentialType) String() string {
-	return map[CredentialType]string{
-		OAuthCredential:  "OAuth",
-		APIKeyCredential: "API Key",
-	}[c]
-}
-
 // RequestType - the type of credential request being sent
 type RequestType int
 
@@ -39,8 +22,6 @@ func (c RequestType) String() string {
 // Status - the Status of the request
 type Status int
 
-type State int
-
 const (
 	// Success - request was successful
 	Success Status = iota + 1
@@ -59,6 +40,9 @@ func (c Status) String() string {
 	}[c]
 }
 
+// State is the provisioning state
+type State int
+
 const (
 	// Provision - state is waiting to provision
 	Provision = iota + 1
@@ -73,8 +57,6 @@ func (c State) String() string {
 		Deprovision: "Deprovision",
 	}[c]
 }
-
-// interfaces
 
 // Provisioning - interface to be implemented by agents for access provisioning
 type Provisioning interface {

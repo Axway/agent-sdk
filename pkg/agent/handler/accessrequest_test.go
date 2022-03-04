@@ -47,14 +47,13 @@ func TestAccessRequestHandler(t *testing.T) {
 	}
 
 	tests := []struct {
+		action    proto.Event_Type
+		createErr error
+		getErr    error
+		hasError  bool
 		name      string
 		resource  *mv1.AccessRequest
-		action    proto.Event_Type
-		hasError  bool
-		getErr    error
-		createErr error
 		subError  error
-		status    prov.Status
 	}{
 		{
 			name:     "should handle a create event for an AccessRequest when status is pending, and state is provision",
@@ -324,9 +323,9 @@ func TestAccessRequestHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should handle an error when updating the AccessRequest x-agent-details",
+			name:     "should handle an error when updating the AccessRequest subresources",
 			hasError: true,
-			subError: fmt.Errorf("error updating x-agent-details"),
+			subError: fmt.Errorf("error updating subresources"),
 			action:   proto.Event_CREATED,
 			resource: &mv1.AccessRequest{
 				ResourceMeta: v1.ResourceMeta{
@@ -457,7 +456,7 @@ func TestAccessRequestHandler(t *testing.T) {
 				expectedAppDetails:    util.GetAgentDetails(mApp),
 				state:                 tc.resource.State.Name,
 				status: mockRequestStatus{
-					status: tc.status,
+					status: prov.Success,
 					msg:    "msg",
 					properties: map[string]interface{}{
 						"status_key": "status_val",
@@ -506,13 +505,13 @@ func Test_arReq(t *testing.T) {
 
 	assert.Equal(t, r.apiID, r.GetAPIID())
 	assert.Equal(t, r.managedApp, r.GetApplicationName())
-	assert.Equal(t, r.appDetails["app_details_key"], r.GetApplicationDetails("app_details_key"))
-	assert.Equal(t, r.accessDetails["access_details_key"], r.GetAccessRequestDetails("access_details_key"))
+	assert.Equal(t, r.appDetails["app_details_key"], r.GetApplicationDetailsValue("app_details_key"))
+	assert.Equal(t, r.accessDetails["access_details_key"], r.GetAccessRequestDetailsValue("access_details_key"))
 
 	r.accessDetails = nil
 	r.appDetails = nil
-	assert.Nil(t, r.GetApplicationDetails("app_details_key"))
-	assert.Nil(t, r.GetAccessRequestDetails("access_details_key"))
+	assert.Nil(t, r.GetApplicationDetailsValue("app_details_key"))
+	assert.Nil(t, r.GetAccessRequestDetailsValue("access_details_key"))
 }
 
 type mockClient struct {

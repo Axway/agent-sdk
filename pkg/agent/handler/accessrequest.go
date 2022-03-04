@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -9,12 +10,13 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
 const (
-	provision     = "Provision"
-	deprovision   = "Deprovision"
+	provision     = "provision"
+	deprovision   = "deprovision"
 	statusErr     = "Error"
 	statusSuccess = "Success"
 	statusPending = "Pending"
@@ -41,7 +43,7 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 }
 
 func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.AccessRequestGVK().Kind {
+	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
 		return nil
 	}
 
@@ -51,9 +53,9 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	if ar.Status.Level == statusErr || ar.Status.Level == statusSuccess {
-		return nil
-	}
+	log.Infof("Received a %s event for a AccessRequest", action.String())
+	bts, _ := json.MarshalIndent(ar, "", "\t")
+	log.Info(string(bts))
 
 	app, err := h.getManagedApp(ar)
 	if err != nil {
@@ -65,22 +67,31 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
+	// TODO: what to do for a delete event is still a question
+	if action == proto.Event_DELETED {
+		log.Info("Deprovisioning the AccessRequest")
+		h.prov.AccessRequestDeprovision(req)
+		return nil
+	}
+
 	if ar.Status == nil || ar.Status.Level == "" {
 		return fmt.Errorf("unable to provision AccessRequest %s. Status not found", ar.Name)
 	}
 
-	if action == proto.Event_DELETED {
-		h.prov.AccessRequestDeprovision(req)
+	if ar.Status.Level == statusErr || ar.Status.Level == statusSuccess {
 		return nil
 	}
 
 	var status prov.RequestStatus
 
 	if ar.Status.Level == statusPending && ar.State.Name == provision {
+		log.Info("Provisioning the AccessRequest")
+		log.Infof("%+v", req)
 		status = h.prov.AccessRequestProvision(req)
 	}
 
 	if ar.Status.Level == statusPending && ar.State.Name == deprovision {
+		log.Info("Deprovisioning the AccessRequest")
 		status = h.prov.AccessRequestDeprovision(req)
 	}
 
@@ -112,12 +123,7 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 		ar.Metadata.Scope.Name,
 		ar.Spec.ManagedApplication,
 	)
-	app, err := h.client.GetResource(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return app, nil
+	return h.client.GetResource(url)
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*arReq, error) {
@@ -164,16 +170,16 @@ func (r arReq) GetAPIID() string {
 	return r.apiID
 }
 
-// GetApplicationDetails returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (r arReq) GetApplicationDetails(key string) interface{} {
+// GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
+func (r arReq) GetApplicationDetailsValue(key string) interface{} {
 	if r.appDetails == nil {
 		return nil
 	}
 	return r.appDetails[key]
 }
 
-// GetAccessRequestDetails returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
-func (r arReq) GetAccessRequestDetails(key string) interface{} {
+// GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
+func (r arReq) GetAccessRequestDetailsValue(key string) interface{} {
 	if r.appDetails == nil {
 		return nil
 	}

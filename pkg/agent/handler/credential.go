@@ -1,82 +1,155 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-type credentialProvision interface {
+type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
 }
 
 type credentials struct {
-	prov credentialProvision
+	prov   credProv
+	client client
 }
 
-// NewcredentialHandler creates a Handler for Access Requests
-func NewcredentialHandler() Handler {
-	return &credentials{}
+// NewCredentialHandler creates a Handler for Access Requests
+func NewCredentialHandler(prov credProv, client client) Handler {
+	return &credentials{
+		prov:   prov,
+		client: client,
+	}
 }
 
+// Handle processes grpc events triggered for Credentials
 func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.CredentialGVK().Kind {
+	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
 		return nil
 	}
 
-	ar := &mv1.AccessRequest{}
-	err := ar.FromInstance(resource)
+	cr := &mv1.Credential{}
+	err := cr.FromInstance(resource)
 	if err != nil {
 		return err
 	}
 
-	creds := &creds{}
+	log.Infof("Received a %s event for a AccessRequest", action.String())
+	bts, _ := json.MarshalIndent(cr, "", "\t")
+	log.Info(string(bts))
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		h.prov.CredentialProvision(creds)
+	app, err := h.getManagedApp(cr)
+	if err != nil {
+		return err
+	}
+
+	credDetails := util.GetAgentDetails(cr)
+	appDetails := util.GetAgentDetails(app)
+
+	creds := &creds{
+		appDetails:  appDetails,
+		credDetails: credDetails,
+		credType:    cr.Spec.CredentialRequestDefinition,
+		managedApp:  cr.Spec.ManagedApplication,
+		requestType: string(cr.Request),
 	}
 
 	if action == proto.Event_DELETED {
+		log.Info("Deprovisioning the Credentials")
 		h.prov.CredentialDeprovision(creds)
+		return nil
 	}
 
-	return nil
+	if cr.Status == nil || cr.Status.Level == "" {
+		return fmt.Errorf("unable to provision Credential %s. Status not found", cr.Name)
+	}
+
+	if cr.Status.Level == statusErr || cr.Status.Level == statusSuccess {
+		return nil
+	}
+
+	var status prov.RequestStatus
+	var credentialData prov.Credential
+
+	if cr.Status.Level == statusPending {
+		log.Info("Provisioning the Credentials")
+		log.Infof("%+v", creds)
+		status, credentialData = h.prov.CredentialProvision(creds)
+		cr.Data = credentialData.GetData()
+	}
+
+	s := prov.NewStatusReason(status)
+	cr.Status = &s
+
+	details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
+	util.SetAgentDetails(cr, details)
+
+	err = h.client.CreateSubResourceScoped(
+		mv1.EnvironmentResourceName,
+		cr.Metadata.Scope.Name,
+		cr.PluralName(),
+		cr.Name,
+		cr.Group,
+		cr.APIVersion,
+		map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(cr),
+			"status":           cr.Status,
+			"data":             cr.Data,
+		},
+	)
+
+	return err
+}
+
+func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance, error) {
+	url := fmt.Sprintf(
+		"/management/v1alpha1/environments/%s/managedapplications/%s",
+		cred.Metadata.Scope.Name,
+		cred.Spec.ManagedApplication,
+	)
+	return h.client.GetResource(url)
 }
 
 type creds struct {
-	apiID       string
-	appDetails  map[string]interface{}
-	credDetails map[string]interface{}
 	managedApp  string
-	credType    prov.CredentialType
-	reqType     prov.RequestType
+	credType    string
+	requestType string
+	credDetails map[string]interface{}
+	appDetails  map[string]interface{}
 }
 
 func (c creds) GetApplicationName() string {
 	return c.managedApp
 }
 
-func (c creds) GetCredentialType() prov.CredentialType {
+func (c creds) GetCredentialType() string {
 	return c.credType
 }
 
 // GetRequestType returns the type of request for the credentials
 func (c creds) GetRequestType() string {
-	return c.reqType.String()
+	return c.requestType
 }
 
-// GetCredentialDetails returns a value found on the 'x-agent-details' sub resource of the Credentials.
-func (c creds) GetCredentialDetails(key string) interface{} {
+// GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
+func (c creds) GetCredentialDetailsValue(key string) interface{} {
 	if c.credDetails == nil {
 		return nil
 	}
 	return c.credDetails[key]
 }
 
-// GetApplicationDetails returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (c creds) GetApplicationDetails(key string) interface{} {
+// GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
+func (c creds) GetApplicationDetailsValue(key string) interface{} {
 	if c.appDetails == nil {
 		return nil
 	}
