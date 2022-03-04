@@ -169,13 +169,13 @@ func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(cat
 }
 
 // CreateCategory - Adds a new category
-func (c *ServiceClient) CreateCategory(categoryName string) (*v1alpha1.Category, error) {
+func (c *ServiceClient) CreateCategory(title string) (*v1alpha1.Category, error) {
 	spec := v1alpha1.CategorySpec{
 		Description: "",
 	}
 
 	category := v1alpha1.Category{
-		ResourceMeta: v1.ResourceMeta{Title: categoryName},
+		ResourceMeta: v1.ResourceMeta{Title: title},
 		Spec:         spec,
 	}
 

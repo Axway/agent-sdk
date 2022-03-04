@@ -157,8 +157,10 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 							GroupVersionKind: v1alpha1.APIServiceGVK(),
 							Name:             team,
 							Title:            team,
-							Attributes: map[string]string{
-								definitions.AttrExternalAPIID: team,
+							SubResources: map[string]interface{}{
+								definitions.XAgentDetails: map[string]interface{}{
+									definitions.AttrExternalAPIID: team,
+								},
 							},
 						},
 						Owner: &v1.Owner{
