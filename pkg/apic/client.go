@@ -698,7 +698,6 @@ func (c *ServiceClient) CreateSubResourceScoped(
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
-		// if strings.HasPrefix(subName, "x-") {
 		wg.Add(1)
 
 		base := c.cfg.GetURL()
@@ -720,7 +719,6 @@ func (c *ServiceClient) CreateSubResourceScoped(
 				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
 			}
 		}(subName)
-		// }
 	}
 
 	wg.Wait()
