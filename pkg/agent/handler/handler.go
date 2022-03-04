@@ -61,7 +61,7 @@ func (f FakeProvisioner) CredentialDeprovision(credentialRequest prov.Credential
 	return &FakeStatus{}
 }
 
-// FakeStatus
+// FakeStatus -
 type FakeStatus struct {
 }
 
