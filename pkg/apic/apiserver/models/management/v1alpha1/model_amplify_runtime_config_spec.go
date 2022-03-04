@@ -9,9 +9,9 @@
 
 package v1alpha1
 
-// AmplifyRuntimeConfigSpec struct for AmplifyRuntimeConfigSpec
+// AmplifyRuntimeConfigSpec  (management.v1alpha1.AmplifyRuntimeConfig)
 type AmplifyRuntimeConfigSpec struct {
-	// The runtime config.
+	// The runtime config. (management.v1alpha1.AmplifyRuntimeConfig)
 	RuntimeConfig   map[string]interface{}   `json:"runtimeConfig"`
 	AmplifyConfig   string                   `json:"amplifyConfig"`
 	ExternalSecrets []map[string]interface{} `json:"externalSecrets,omitempty"`

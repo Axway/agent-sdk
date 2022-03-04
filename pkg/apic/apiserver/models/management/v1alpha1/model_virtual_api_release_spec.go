@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// VirtualApiReleaseSpec struct for VirtualApiReleaseSpec
+// VirtualApiReleaseSpec  (management.v1alpha1.VirtualAPIRelease)
 type VirtualApiReleaseSpec struct {
 	// description of the asset.
 	Description string `json:"description,omitempty"`

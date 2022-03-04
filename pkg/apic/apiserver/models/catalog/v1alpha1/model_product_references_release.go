@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductReferencesRelease struct for ProductReferencesRelease
+// ProductReferencesRelease  (catalog.v1alpha1.Product)
 type ProductReferencesRelease struct {
 	// The latest AssetRelease computed based on the provided Asset filters.
 	Name string `json:"name,omitempty"`

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetResourceSpecAuthorizationProfile struct for AssetResourceSpecAuthorizationProfile
+// AssetResourceSpecAuthorizationProfile  (catalog.v1alpha1.AssetResource)
 type AssetResourceSpecAuthorizationProfile struct {
-	CredentialDefinitions []string `json:"credentialDefinitions,omitempty"`
+	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
 }

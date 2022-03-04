@@ -14,6 +14,8 @@ type SubscriptionRequest string
 
 // List of SubscriptionRequest
 const (
-	PROVISION SubscriptionRequest = "provision"
-	RENEW     SubscriptionRequest = "renew"
+	// GENERATE: The following code has been modified after code generation
+	SubscriptionRequestPROVISION SubscriptionRequest = "provision"
+	// GENERATE: The following code has been modified after code generation
+	SubscriptionRequestRENEW SubscriptionRequest = "renew"
 )

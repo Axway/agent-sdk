@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetRequestState struct for AssetRequestState
+// AssetRequestState  (catalog.v1alpha1.AssetRequest)
 type AssetRequestState struct {
 	Name string `json:"name"`
 	// Description of the phase.

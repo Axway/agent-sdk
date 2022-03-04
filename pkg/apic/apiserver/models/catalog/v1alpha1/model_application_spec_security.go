@@ -9,12 +9,10 @@
 
 package v1alpha1
 
-// ApplicationSpecSecurity struct for ApplicationSpecSecurity
+// ApplicationSpecSecurity  (catalog.v1alpha1.Application)
 type ApplicationSpecSecurity struct {
 	// public key to be used to encrypt the credentials linked to this Application.
-	EncryptionKey       map[string]interface{} `json:"encryptionKey"`
-	EncryptionAlgorithm string                 `json:"encryptionAlgorithm,omitempty"`
-	EncryptionHash      string                 `json:"encryptionHash,omitempty"`
-	// additional metadata to access the key.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	EncryptionKey       string `json:"encryptionKey"`
+	EncryptionAlgorithm string `json:"encryptionAlgorithm,omitempty"`
+	EncryptionHash      string `json:"encryptionHash,omitempty"`
 }
