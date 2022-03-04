@@ -143,25 +143,45 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Authorization
-	sr, err = json.Marshal(aux.SubResources["authorization"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["authorization"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Authorization)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "authorization")
+		err = json.Unmarshal(sr, &res.Authorization)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References
-	sr, err = json.Marshal(aux.SubResources["references"])
-	if err != nil {
-		return err
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = json.Unmarshal(sr, &res.References)
-	if err != nil {
-		return err
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Webhooks
@@ -176,4 +196,9 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AssetRequestDefinition) PluralName() string {
+	return AssetRequestDefinitionResourceName
 }

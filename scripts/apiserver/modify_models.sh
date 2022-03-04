@@ -7,15 +7,15 @@ COMMENT="// GENERATE: The following code has been modified after code generation
 SEARCH="\s*AutoSubscribe\s*bool.*"
 REPLACE="AutoSubscribe bool \`json:\"autoSubscribe\"\`"
 
-# Ubuntu ships with GNU sed, where the suffix for the -i option is optional. 
+# Ubuntu ships with GNU sed, where the suffix for the -i option is optional.
 # OS X ships with BSD sed, where the suffix is mandatory, and a backup will be created.
-# Using GNU sed prevents the script from breaking, and will not create a backup file. 
+# Using GNU sed prevents the script from breaking, and will not create a backup file.
 SED=sed
 OS=`uname`
 if [[ "$OS" == "Darwin" ]] ; then
     SED=gsed
     type $SED >/dev/null 2>&1 || {
-        echo -e >&2 "$SED it not installed. Try: brew install gnu-sed" ;        
+        echo -e >&2 "$SED it not installed. Try: brew install gnu-sed" ;
         exit 1;
     }
 fi
@@ -51,7 +51,7 @@ go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
 
 ######################
 # Update any time imports in the models, we want to turn "time" into
-# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
+# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 ######################
 MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
 
@@ -106,6 +106,38 @@ for file in ${MODELS}; do
             go fmt ${file}
         fi
     done
+done
+
+
+######################
+# Update the Status subresource in generated model to use v1.ResourceStatus
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
+    ! -name 'model_*.go' \
+    ! -name 'AmplifyRuntimeConfig.go' \
+    ! -name 'AssetMapping.go' \
+    ! -name 'ConsumerInstance.go' \
+    ! -name 'DiscoveryAgent.go' \
+    ! -name 'GovernanceAgent.go' \
+    ! -name 'TraceabilityAgent.go'`
+
+SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
+REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
+SEARCH_UNMARSHAL="\s*err\s=\sjson\.Unmarshal(sr,\s\&res.Status)$"
+REPLACE_UNMARSHAL="res.Status = &apiv1.ResourceStatus{}\nerr = json.Unmarshal(sr, res.Status)"
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # Update the unmarshal call
+        $SED -i -e "s/${SEARCH_UNMARSHAL}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH_UNMARSHAL}/a ${REPLACE_UNMARSHAL}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
 done
 
 ######################

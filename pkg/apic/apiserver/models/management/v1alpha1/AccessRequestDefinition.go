@@ -139,15 +139,23 @@ func (res *AccessRequestDefinition) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Webhooks
-	sr, err = json.Marshal(aux.SubResources["webhooks"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Webhooks)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *AccessRequestDefinition) PluralName() string {
+	return AccessRequestDefinitionResourceName
 }

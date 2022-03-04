@@ -138,3 +138,8 @@ func (res *VirtualHost) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *VirtualHost) PluralName() string {
+	return VirtualHostResourceName
+}

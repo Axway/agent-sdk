@@ -138,3 +138,8 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *APIServiceInstance) PluralName() string {
+	return APIServiceInstanceResourceName
+}

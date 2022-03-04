@@ -39,7 +39,8 @@ type Subscription struct {
 	Owner    *apiv1.Owner         `json:"owner"`
 	Request  SubscriptionRequest  `json:"request"`
 	Spec     SubscriptionSpec     `json:"spec"`
-	Status   SubscriptionStatus   `json:"status"`
+	// 	Status   SubscriptionStatus   `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // SubscriptionFromInstanceArray converts a []*ResourceInstance to a []*Subscription
@@ -143,37 +144,53 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Approval
-	sr, err = json.Marshal(aux.SubResources["approval"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["approval"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Approval)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "approval")
+		err = json.Unmarshal(sr, &res.Approval)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Request
-	sr, err = json.Marshal(aux.SubResources["request"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["request"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Request)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "request")
+		err = json.Unmarshal(sr, &res.Request)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status
-	sr, err = json.Marshal(aux.SubResources["status"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Status)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "status")
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *Subscription) PluralName() string {
+	return SubscriptionResourceName
 }

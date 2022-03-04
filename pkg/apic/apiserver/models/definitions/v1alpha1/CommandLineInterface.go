@@ -138,3 +138,8 @@ func (res *CommandLineInterface) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// PluralName returns the plural name of the resource
+func (res *CommandLineInterface) PluralName() string {
+	return CommandLineInterfaceResourceName
+}

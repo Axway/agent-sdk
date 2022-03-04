@@ -39,7 +39,8 @@ type Credential struct {
 	Owner   *apiv1.Owner      `json:"owner"`
 	Request CredentialRequest `json:"request"`
 	Spec    CredentialSpec    `json:"spec"`
-	Status  CredentialStatus  `json:"status"`
+	// 	Status  CredentialStatus  `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential
@@ -143,37 +144,53 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 	}
 
 	// marshalling subresource Data
-	sr, err = json.Marshal(aux.SubResources["data"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["data"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Data)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "data")
+		err = json.Unmarshal(sr, &res.Data)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Request
-	sr, err = json.Marshal(aux.SubResources["request"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["request"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Request)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "request")
+		err = json.Unmarshal(sr, &res.Request)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status
-	sr, err = json.Marshal(aux.SubResources["status"])
-	if err != nil {
-		return err
-	}
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(sr, &res.Status)
-	if err != nil {
-		return err
+		delete(aux.SubResources, "status")
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// PluralName returns the plural name of the resource
+func (res *Credential) PluralName() string {
+	return CredentialResourceName
 }
