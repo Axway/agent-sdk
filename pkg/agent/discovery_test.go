@@ -26,13 +26,9 @@ type mockSvcClient struct {
 }
 
 func (m mockSvcClient) SetTokenGetter(_ auth.PlatformTokenGetter) {
-	// TODO implement me
-	panic("implement me")
 }
 
 func (m mockSvcClient) SetConfig(_ corecfg.CentralConfig) {
-	// TODO implement me
-	panic("implement me")
 }
 
 func (m mockSvcClient) PublishService(_ *apic.ServiceBody) (*v1alpha1.APIService, error) {
