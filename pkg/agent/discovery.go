@@ -175,19 +175,7 @@ func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 					SetLabel("API Key").
 					SetRequired().
 					IsString().
-					IsEncrypted()).
-			AddProperty(
-				provisioning.NewSchemaPropertyBuilder().
-					SetName("name").
-					SetLabel("API Key Name").
-					SetRequired().
-					IsString()).
-			AddProperty(
-				provisioning.NewSchemaPropertyBuilder().
-					SetName("location").
-					SetLabel("API Key Location").
-					SetRequired().
-					IsString()))
+					IsEncrypted()))
 }
 
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
