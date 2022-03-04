@@ -28,6 +28,7 @@ const (
 	SubscriptionUnsubscribeInitiated  = SubscriptionState("UNSUBSCRIBE_INITIATED")
 	SubscriptionFailedToSubscribe     = SubscriptionState("FAILED_TO_SUBSCRIBE")
 	SubscriptionFailedToUnsubscribe   = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
+	SubscriptionChangeRequested      = SubscriptionState("CHANGE_REQUESTED")
 	AccessRequestProvisioning         = SubscriptionState("provisioning")
 	AccessRequestProvisioned          = SubscriptionState("provisioned")
 	AccessRequestFailedProvisioning   = SubscriptionState("failedProvisioning")
