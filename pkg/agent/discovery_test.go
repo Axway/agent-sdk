@@ -15,7 +15,6 @@ import (
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
@@ -26,155 +25,182 @@ type mockSvcClient struct {
 	err    error
 }
 
-func (m *mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
-	return nil, nil
+func (m mockSvcClient) SetTokenGetter(_ auth.PlatformTokenGetter) {
+	// TODO implement me
+	panic("implement me")
 }
 
-func (m *mockSvcClient) GetCentralTeamByName(_ string) (*definitions.PlatformTeam, error) {
-	return nil, nil
+func (m mockSvcClient) SetConfig(_ corecfg.CentralConfig) {
+	// TODO implement me
+	panic("implement me")
 }
 
-func (m *mockSvcClient) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) CreateCategory(categoryName string) (*catalog.Category, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) AddCache(categoryCache, teamCache cache.Cache) {}
-
-func (m *mockSvcClient) GetOrCreateCategory(category string) string {
-	return ""
-}
-
-func (m *mockSvcClient) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {}
-
-func (m *mockSvcClient) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m mockSvcClient) PublishService(_ *apic.ServiceBody) (*v1alpha1.APIService, error) {
 	return m.apiSvc, nil
 }
 
-func (m *mockSvcClient) RegisterSubscriptionWebhook() error {
+func (m mockSvcClient) RegisterSubscriptionWebhook() error {
 	return m.err
 }
 
-func (m *mockSvcClient) RegisterSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema, update bool) error {
+func (m mockSvcClient) RegisterSubscriptionSchema(schema apic.SubscriptionSchema, update bool) error {
 	return nil
 }
 
-func (m *mockSvcClient) UpdateSubscriptionSchema(subscriptionSchema apic.SubscriptionSchema) error {
+func (m mockSvcClient) UpdateSubscriptionSchema(schema apic.SubscriptionSchema) error {
 	return nil
 }
 
-func (m *mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager { return nil }
+func (m mockSvcClient) GetSubscriptionManager() apic.SubscriptionManager {
+	return nil
+}
 
-func (m *mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
+func (m mockSvcClient) GetCatalogItemIDForConsumerInstance(instanceID string) (string, error) {
 	return "", nil
 }
 
-func (m *mockSvcClient) DeleteServiceByName(_ string) error { return nil }
-
-func (m *mockSvcClient) DeleteConsumerInstance(instanceName string) error { return nil }
-
-func (m *mockSvcClient) DeleteAPIServiceInstance(instanceName string) error { return nil }
-
-func (m *mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
+func (m mockSvcClient) DeleteAPIServiceInstance(name string) error {
 	return nil
 }
 
-func (m *mockSvcClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetConsumerInstancesByExternalAPIID(consumerInstanceID string) ([]*v1alpha1.ConsumerInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetUserName(ID string) (string, error) { return "", nil }
-
-func (m *mockSvcClient) GetUserEmailAddress(ID string) (string, error) { return "", nil }
-
-func (m *mockSvcClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]apic.CentralSubscription, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) Healthcheck(name string) *hc.Status {
-	return &hc.Status{Result: hc.OK}
-}
-
-// UpdateSubscriptionDefinitionPropertiesForCatalogItem -
-func (m *mockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema apic.SubscriptionSchema) error {
+func (m mockSvcClient) DeleteConsumerInstance(name string) error {
 	return nil
 }
 
-func (m *mockSvcClient) GetCatalogItemName(ID string) (string, error) { return "", nil }
-
-func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) OnConfigChange(cfg corecfg.CentralConfig) {}
-
-func (m *mockSvcClient) SetConfig(cfg corecfg.CentralConfig) {}
-
-func (m *mockSvcClient) GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) UpdateAPIV1ResourceInstance(_ string, _ *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	return nil, nil
-}
-
-func (m *mockSvcClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+func (m mockSvcClient) DeleteServiceByName(name string) error {
 	return nil
 }
 
-func (m *mockSvcClient) CreateSubResourceUnscoped(_, _, _, _ string, _ map[string]interface{}) error {
+func (m mockSvcClient) GetConsumerInstanceByID(id string) (*v1alpha1.ConsumerInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error {
 	return nil
+}
+
+func (m mockSvcClient) GetUserEmailAddress(ID string) (string, error) {
+	return "", nil
+}
+
+func (m mockSvcClient) GetUserName(ID string) (string, error) {
+	return "", nil
+}
+
+func (m mockSvcClient) GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]apic.CentralSubscription, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (apic.SubscriptionSchema, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, schema apic.SubscriptionSchema) error {
+	return nil
+}
+
+func (m mockSvcClient) GetCatalogItemName(ID string) (string, error) {
+	return "", nil
+}
+
+func (m mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) Healthcheck(name string) *hc.Status {
+	return nil
+}
+
+func (m mockSvcClient) GetAPIRevisions(query map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIServiceInstances(query map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIServiceByName(name string) (*v1alpha1.APIService, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIServiceInstanceByName(name string) (*v1alpha1.APIServiceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAPIRevisionByName(name string) (*v1alpha1.APIServiceRevision, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) CreateCategory(name string) (*catalog.Category, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetOrCreateCategory(category string) string {
+	return ""
+}
+
+func (m mockSvcClient) GetEnvironment() (*v1alpha1.Environment, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetCentralTeamByName(name string) (*definitions.PlatformTeam, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetTeam(query map[string]string) ([]definitions.PlatformTeam, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error {
+	return nil
+}
+
+func (m mockSvcClient) CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error {
+	return nil
+}
+
+func (m mockSvcClient) GetResource(url string) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) CreateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
+func (m mockSvcClient) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	return nil, nil
 }
 
 func TestDiscoveryCache(t *testing.T) {

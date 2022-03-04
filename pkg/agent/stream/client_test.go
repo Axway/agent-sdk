@@ -1,11 +1,10 @@
 package stream
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
@@ -13,8 +12,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-
-	"github.com/Axway/agent-sdk/pkg/api"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 
@@ -34,14 +31,12 @@ var cfg = &config.CentralConfiguration{
 // should create a new streamer and call Start
 func TestNewStreamer(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	httpClient := &api.MockHTTPClient{}
 	wt := &mv1.WatchTopic{}
-	bts, _ := json.Marshal(wt)
-	httpClient.Response = &api.Response{
-		Code:    200,
-		Body:    bts,
-		Headers: nil,
+	ri, _ := wt.AsInstance()
+	httpClient := &mockAPIClient{
+		ri: ri,
 	}
+
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	onStreamConnection := func(s Streamer) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
@@ -117,11 +112,16 @@ func Test_getAgentSequenceManager(t *testing.T) {
 }
 
 func Test_getWatchTopic(t *testing.T) {
-	wt, err := getWatchTopic(cfg, &mockRI{})
+	wt := &mv1.WatchTopic{}
+	ri, _ := wt.AsInstance()
+	httpClient := &mockAPIClient{
+		ri: ri,
+	}
+	wt, err := getWatchTopic(cfg, httpClient)
 	assert.NotNil(t, wt)
 	assert.Nil(t, err)
 
-	wt, err = getWatchTopic(cfg, &mockRI{err: fmt.Errorf("error")})
+	wt, err = getWatchTopic(cfg, httpClient)
 	assert.NotNil(t, wt)
 	assert.Nil(t, err)
 }
@@ -165,4 +165,23 @@ func (m *mockManager) CloseConn() {
 
 func (m *mockManager) Status() bool {
 	return m.status
+}
+
+type mockAPIClient struct {
+	ri        *apiv1.ResourceInstance
+	getErr    error
+	createErr error
+	updateErr error
+}
+
+func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return m.ri, m.getErr
+}
+
+func (m mockAPIClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	return m.ri, m.createErr
+}
+
+func (m mockAPIClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+	return m.ri, m.updateErr
 }
