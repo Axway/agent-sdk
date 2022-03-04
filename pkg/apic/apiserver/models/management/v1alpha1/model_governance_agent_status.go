@@ -15,7 +15,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// GovernanceAgentStatus struct for GovernanceAgentStatus
+// GovernanceAgentStatus  (management.v1alpha1.GovernanceAgent)
 type GovernanceAgentStatus struct {
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`

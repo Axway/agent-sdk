@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// ResourceDiscoverySpecResourceFilter Resource filter.
+// ResourceDiscoverySpecResourceFilter Resource filter. (management.v1alpha1.ResourceDiscovery)
 type ResourceDiscoverySpecResourceFilter struct {
-	Names       []string          `json:"names,omitempty"`
+	Names []string `json:"names,omitempty"`
+	//  (management.v1alpha1.ResourceDiscovery)
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }

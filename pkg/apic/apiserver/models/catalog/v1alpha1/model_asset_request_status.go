@@ -21,5 +21,6 @@ type AssetRequestStatus struct {
 	// Details of the error.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time `json:"timestamp"`
+	Timestamp time.Time                         `json:"timestamp"`
+	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

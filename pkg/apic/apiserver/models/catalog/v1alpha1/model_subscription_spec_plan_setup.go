@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// SubscriptionSpecPlanSetup struct for SubscriptionSpecPlanSetup
+// SubscriptionSpecPlanSetup  (catalog.v1alpha1.Subscription)
 type SubscriptionSpecPlanSetup struct {
-	// data requested by the Product owner (matching the Plan.spec.subscription.form field).
+	// data requested by the Product owner (matching the Plan.spec.subscription.form field). (catalog.v1alpha1.Subscription)
 	Form map[string]interface{} `json:"form,omitempty"`
 }

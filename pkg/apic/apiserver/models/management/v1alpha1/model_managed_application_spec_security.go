@@ -9,10 +9,10 @@
 
 package v1alpha1
 
-// ManagedApplicationSpecSecurity struct for ManagedApplicationSpecSecurity
+// ManagedApplicationSpecSecurity  (management.v1alpha1.ManagedApplication)
 type ManagedApplicationSpecSecurity struct {
-	// public key to be used to encrypt the credentials linked to this ManagedApplication.
+	// public key to be used to encrypt the credentials linked to this ManagedApplication. (management.v1alpha1.ManagedApplication)
 	EncryptionKey map[string]interface{} `json:"encryptionKey"`
-	// additional metadata to access the key.
+	// additional metadata to access the key. (management.v1alpha1.ManagedApplication)
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
