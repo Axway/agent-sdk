@@ -43,6 +43,15 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		return err
 	}
 
+	ok := isStatusFound(cr.Status)
+	if !ok {
+		return nil
+	}
+
+	if cr.Status.Level != statusPending {
+		return nil
+	}
+
 	log.Infof("Received a %s event for a AccessRequest", action.String())
 	bts, _ := json.MarshalIndent(cr, "", "\t")
 	log.Info(string(bts))
@@ -66,14 +75,6 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 	if action == proto.Event_DELETED {
 		log.Info("Deprovisioning the Credentials")
 		h.prov.CredentialDeprovision(creds)
-		return nil
-	}
-
-	if cr.Status == nil || cr.Status.Level == "" {
-		return fmt.Errorf("unable to provision Credential %s. Status not found", cr.Name)
-	}
-
-	if cr.Status.Level == statusErr || cr.Status.Level == statusSuccess {
 		return nil
 	}
 

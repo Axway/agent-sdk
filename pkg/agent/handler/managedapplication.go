@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -42,6 +41,15 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 		return err
 	}
 
+	ok := isStatusFound(app.Status)
+	if !ok {
+		return nil
+	}
+
+	if app.Status.Level != statusPending {
+		return nil
+	}
+
 	log.Infof("Received a %s event for a ManagedApplication", action.String())
 	bts, _ := json.MarshalIndent(app, "", "\t")
 	log.Info(string(bts))
@@ -54,14 +62,6 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 	if action == proto.Event_DELETED {
 		log.Info("Deprovisioning the ManagedApplication")
 		h.prov.ApplicationRequestDeprovision(ma)
-		return nil
-	}
-
-	if app.Status == nil || app.Status.Level == "" {
-		return fmt.Errorf("unable to provision ManagedApplication %s. Status not found", app.Name)
-	}
-
-	if app.Status.Level == statusErr || app.Status.Level == statusSuccess {
 		return nil
 	}
 

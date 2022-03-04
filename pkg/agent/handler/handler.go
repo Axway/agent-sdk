@@ -18,3 +18,10 @@ type client interface {
 	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
 	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
 }
+
+func isStatusFound(rs *v1.ResourceStatus) bool {
+	if rs == nil || rs.Level == "" {
+		return false
+	}
+	return true
+}

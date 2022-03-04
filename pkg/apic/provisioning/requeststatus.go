@@ -93,6 +93,9 @@ func (r *requestStatusBuilder) Failed() RequestStatus {
 
 // NewStatusReason converts a RequestStatus into a ResourceStatus
 func NewStatusReason(r RequestStatus) apiv1.ResourceStatus {
+	if r == nil {
+		return apiv1.ResourceStatus{}
+	}
 	msg := r.GetMessage()
 	var reasons []apiv1.ResourceStatusReason
 	if msg != "" {

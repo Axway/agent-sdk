@@ -53,7 +53,20 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	log.Infof("Received a %s event for a AccessRequest", action.String())
+	ok := isStatusFound(ar.Status)
+	if !ok {
+		return nil
+	}
+
+	if ar.State.Name == "" {
+		return fmt.Errorf("unable to provision AccessRequest %s. State not found", ar.Name)
+	}
+
+	if ar.Status.Level != statusPending {
+		return nil
+	}
+
+	log.Infof("Received a %s event for an AccessRequest", action.String())
 	bts, _ := json.MarshalIndent(ar, "", "\t")
 	log.Info(string(bts))
 
@@ -71,14 +84,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	if action == proto.Event_DELETED {
 		log.Info("Deprovisioning the AccessRequest")
 		h.prov.AccessRequestDeprovision(req)
-		return nil
-	}
-
-	if ar.Status == nil || ar.Status.Level == "" {
-		return fmt.Errorf("unable to provision AccessRequest %s. Status not found", ar.Name)
-	}
-
-	if ar.Status.Level == statusErr || ar.Status.Level == statusSuccess {
 		return nil
 	}
 
