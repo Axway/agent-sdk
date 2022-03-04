@@ -3,10 +3,12 @@ package models
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,6 +56,16 @@ func TestAPIServiceMarshal(t *testing.T) {
 				Data:        "data",
 			},
 		},
+		Status: &v1.ResourceStatus{
+			Level: "Error",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
+			},
+		},
 	}
 
 	bts, err := json.Marshal(svc1)
@@ -84,10 +96,29 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 			Metadata: apiv1.Metadata{
 				ID: "123",
 			},
+			Finalizers: []apiv1.Finalizer{
+				{Name: "finalizer1"},
+				{Name: "finalizer2"},
+			},
+			SubResources: map[string]interface{}{
+				"x-agent-details": map[string]interface{}{
+					"x-agent-id": "123",
+				},
+			},
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
 			Categories:  []string{"cat1", "cat2"},
+		},
+		Status: &v1.ResourceStatus{
+			Level: "Error",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
+			},
 		},
 	}
 
@@ -108,6 +139,7 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 
 // should convert an APIService to a ResourceInstance
 func TestAPIServiceAsInstance(t *testing.T) {
+	newTime := getTimestamp()
 	svc := &m.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: apiv1.GroupVersionKind{
@@ -133,6 +165,16 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
 				},
+				"status": map[string]interface{}{
+					"level": "Error",
+					"reasons": []interface{}{
+						map[string]interface{}{
+							"type":      "Error",
+							"detail":    "error",
+							"timestamp": time.Time(newTime).Format(v1.APIServerTimeFormat),
+						},
+					},
+				},
 			},
 		},
 		Owner: &apiv1.Owner{
@@ -145,6 +187,16 @@ func TestAPIServiceAsInstance(t *testing.T) {
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
+			},
+		},
+		Status: &v1.ResourceStatus{
+			Level: "Error",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "error",
+					Timestamp: newTime,
+				},
 			},
 		},
 	}
@@ -215,6 +267,16 @@ func TestAPIServiceFromInstance(t *testing.T) {
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
+			},
+		},
+		Status: &v1.ResourceStatus{
+			Level: "Success",
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      "Error",
+					Detail:    "",
+					Timestamp: getTimestamp(),
+				},
 			},
 		},
 	}
@@ -296,4 +358,15 @@ func TestGovernanceAgentResource(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, ri1.GetRawResource(), ri2.GetRawResource())
+}
+
+// getTimestamp - Returns current timestamp formatted for API Server
+func getTimestamp() v1.Time {
+	activityTime := time.Now()
+	newV1Time := v1.Time(activityTime)
+
+	// marshall the time in and out of JSON to get same format
+	timeBytes, _ := newV1Time.MarshalJSON()
+	newV1Time.UnmarshalJSON(timeBytes)
+	return newV1Time
 }

@@ -62,7 +62,6 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 			},
 		},
 	}
-
 	inst := client.buildAPIServiceInstance(body, "name", ep)
 
 	assert.Equal(t, mv1a.APIServiceInstanceGVK(), inst.GroupVersionKind)

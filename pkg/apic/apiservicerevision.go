@@ -56,6 +56,7 @@ var apiSvcRevTitleDateMap = map[string]string{
 func (c *ServiceClient) buildAPIServiceRevision(
 	serviceBody *ServiceBody, name string,
 ) *mv1a.APIServiceRevision {
+	owner, _ := c.getOwnerObject(serviceBody, false)
 	rev := &mv1a.APIServiceRevision{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
@@ -65,7 +66,7 @@ func (c *ServiceClient) buildAPIServiceRevision(
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceRevisionSpec(serviceBody),
-		Owner: c.getOwnerObject(serviceBody, false),
+		Owner: owner,
 	}
 
 	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
@@ -84,7 +85,7 @@ func (c *ServiceClient) updateAPIServiceRevision(
 	revision.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
 	revision.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
-	revision.Owner = c.getOwnerObject(serviceBody, false)
+	revision.Owner, _ = c.getOwnerObject(serviceBody, false)
 
 	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
 	details := buildAgentDetailsSubResource(serviceBody, false, revDetails)

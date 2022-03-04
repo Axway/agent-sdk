@@ -3,7 +3,9 @@ package apic
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -31,6 +33,7 @@ func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
 }
 
 func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
+	owner, ownerErr := c.getOwnerObject(serviceBody, true)
 	svc := &mv1a.APIService{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceGVK(),
@@ -38,8 +41,9 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
-		Spec:  buildAPIServiceSpec(serviceBody),
-		Owner: c.getOwnerObject(serviceBody, true),
+		Spec:   buildAPIServiceSpec(serviceBody),
+		Owner:  owner,
+		Status: buildAPIServiceStatusSubResource(ownerErr),
 	}
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -48,27 +52,32 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 	return svc
 }
 
-func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) *v1.Owner {
+func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (*v1.Owner, error) {
 	if id, found := c.getTeamFromCache(serviceBody.TeamName); found {
 		return &v1.Owner{
 			Type: v1.TeamOwner,
 			ID:   id,
-		}
+		}, nil
 	} else if warning {
 		// warning is only true when creating service, revision and instance will not print it
-		log.Warnf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
+		warnMsg := fmt.Sprintf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
+		log.Warnf(warnMsg)
+		return nil, errors.New(warnMsg)
 	}
-	return nil
+	return nil, nil
 }
 
 func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
+	owner, ownerErr := c.getOwnerObject(serviceBody, true)
+
 	svc.GroupVersionKind = mv1a.APIServiceGVK()
 	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
 	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	svc.Spec.Description = serviceBody.Description
-	svc.Owner = c.getOwnerObject(serviceBody, true)
+	svc.Owner = owner
 	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
+	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	sub := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
@@ -80,6 +89,28 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 			Data:        serviceBody.Image,
 		}
 	}
+}
+
+func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
+	// only set status if ownerErr != nil
+	if ownerErr != nil {
+		// get current time
+		activityTime := time.Now()
+		newV1Time := v1.Time(activityTime)
+		message := ownerErr.Error()
+		level := "Error"
+		return &v1.ResourceStatus{
+			Level: level,
+			Reasons: []v1.ResourceStatusReason{
+				{
+					Type:      level,
+					Detail:    message,
+					Timestamp: newV1Time,
+				},
+			},
+		}
+	}
+	return nil
 }
 
 // processService -
@@ -115,29 +146,39 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 		return nil, err
 	}
 	svc.Name = serviceBody.serviceContext.serviceName
+	err = c.updateAPIServiceSubresources(svc)
+	if err != nil {
+		_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+		if e != nil {
+			return nil, errors.New(err.Error() + e.Error())
+		}
+	}
+	return svc, err
+}
 
-	if len(svc.SubResources) > 0 {
-		err = c.CreateSubResourceScoped(
+func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) error {
+	subResources := make(map[string]interface{})
+	if svc.Status != nil {
+		subResources["status"] = svc.Status
+	}
+
+	for key, value := range svc.SubResources {
+		subResources[key] = value
+	}
+
+	if len(subResources) > 0 {
+		return c.CreateSubResourceScoped(
 			mv1a.EnvironmentResourceName,
 			c.cfg.GetEnvironmentName(),
 			svc.PluralName(),
 			svc.Name,
 			svc.Group,
 			svc.APIVersion,
-			svc.SubResources,
+			subResources,
 		)
-
-		if err != nil {
-			_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-			if e != nil {
-				return nil, errors.New(err.Error() + e.Error())
-			}
-		}
 	}
-
-	return svc, err
+	return nil
 }
-
 func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*mv1a.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
