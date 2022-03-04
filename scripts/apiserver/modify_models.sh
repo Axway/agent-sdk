@@ -107,3 +107,35 @@ for file in ${MODELS}; do
         fi
     done
 done
+
+
+######################
+# Update the Status subresource in generated model to use v1.ResourceStatus
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
+    ! -name 'model_*.go' \
+    ! -name 'AmplifyRuntimeConfig.go' \
+    ! -name 'AssetMapping.go' \
+    ! -name 'ConsumerInstance.go' \
+    ! -name 'DiscoveryAgent.go' \
+    ! -name 'GovernanceAgent.go' \
+    ! -name 'TraceabilityAgent.go'`
+
+SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
+REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
+SEARCH_UNMARSHAL="\s*err\s=\sjson\.Unmarshal(sr,\s\&res.Status)$"
+REPLACE_UNMARSHAL="res.Status = &apiv1.ResourceStatus{}\nerr = json.Unmarshal(sr, res.Status)"
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # Update the unmarshal call
+        $SED -i -e "s/${SEARCH_UNMARSHAL}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH_UNMARSHAL}/a ${REPLACE_UNMARSHAL}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done

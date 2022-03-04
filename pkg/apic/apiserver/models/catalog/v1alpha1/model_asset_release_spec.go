@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetReleaseSpec struct for AssetReleaseSpec
+// AssetReleaseSpec  (catalog.v1alpha1.AssetRelease)
 type AssetReleaseSpec struct {
 	// Description of the asset release.
 	Description string `json:"description,omitempty"`

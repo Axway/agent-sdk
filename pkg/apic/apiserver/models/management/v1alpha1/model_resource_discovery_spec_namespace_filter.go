@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ResourceDiscoverySpecNamespaceFilter Namespace filter.
+// ResourceDiscoverySpecNamespaceFilter Namespace filter. (management.v1alpha1.ResourceDiscovery)
 type ResourceDiscoverySpecNamespaceFilter struct {
 	Names []string `json:"names,omitempty"`
 }

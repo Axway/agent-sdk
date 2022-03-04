@@ -15,13 +15,12 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ConsumerInstanceStatusPhase  (management.v1alpha1.ConsumerInstance)
-type ConsumerInstanceStatusPhase struct {
-	Name string `json:"name"`
-	// The criticality of the last update
-	Level string `json:"level"`
-	// Time of the current phase.
-	TransitionTime time.Time `json:"transitionTime"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
+// ApiServiceStatus struct for ApiServiceStatus
+type ApiServiceStatus struct {
+	Type string `json:"type"`
+	// Details of the error.
+	Detail string `json:"detail"`
+	// Time when the change occurred.
+	Timestamp time.Time                         `json:"timestamp"`
+	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

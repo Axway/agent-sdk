@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetRequestReferences struct for AssetRequestReferences
+// AssetRequestReferences  (catalog.v1alpha1.AssetRequest)
 type AssetRequestReferences struct {
 	// Reference to Access Request resource
 	AccessRequest string `json:"accessRequest,omitempty"`

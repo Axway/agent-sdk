@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AccessRequestState struct for AccessRequestState
+// AccessRequestState  (management.v1alpha1.AccessRequest)
 type AccessRequestState struct {
 	Name string `json:"name"`
 	// Description of the phase.
