@@ -2,6 +2,7 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -24,4 +25,56 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 		return false
 	}
 	return true
+}
+
+type FakeProvisioner struct {
+}
+
+func (f FakeProvisioner) ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
+	return &FakeStatus{}
+}
+
+func (f FakeProvisioner) ApplicationRequestDeprovision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
+	return &FakeStatus{}
+}
+
+func (f FakeProvisioner) AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
+	return &FakeStatus{}
+}
+
+func (f FakeProvisioner) AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
+	return &FakeStatus{}
+}
+
+func (f FakeProvisioner) CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
+	return &FakeStatus{}, &FakeCredential{}
+}
+
+func (f FakeProvisioner) CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus) {
+	return &FakeStatus{}
+}
+
+type FakeStatus struct {
+}
+
+func (f FakeStatus) GetStatus() prov.Status {
+	return prov.Success
+}
+
+func (f FakeStatus) GetMessage() string {
+	return "message"
+}
+
+func (f FakeStatus) GetProperties() map[string]interface{} {
+	return map[string]interface{}{
+		"status_key": "status_val",
+	}
+}
+
+type FakeCredential struct{}
+
+func (f FakeCredential) GetData() map[string]interface{} {
+	return map[string]interface{}{
+		"credential_key": "credential_value",
+	}
 }

@@ -59,7 +59,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	}
 
 	if ar.State.Name == "" {
-		return fmt.Errorf("unable to provision AccessRequest %s. State not found", ar.Name)
+		return nil
 	}
 
 	if ar.Status.Level != statusPending {
@@ -90,13 +90,10 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	var status prov.RequestStatus
 
 	if ar.Status.Level == statusPending && ar.State.Name == provision {
-		log.Info("Provisioning the AccessRequest")
-		log.Infof("%+v", req)
 		status = h.prov.AccessRequestProvision(req)
 	}
 
 	if ar.Status.Level == statusPending && ar.State.Name == deprovision {
-		log.Info("Deprovisioning the AccessRequest")
 		status = h.prov.AccessRequestDeprovision(req)
 	}
 

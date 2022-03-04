@@ -37,11 +37,13 @@ func TestCredentialHandler(t *testing.T) {
 		name      string
 		resource  *mv1.Credential
 		subError  error
+		provType  string
 	}{
 		{
 			name:     "should handle a create event for a Credential when status is pending",
 			hasError: false,
 			action:   proto.Event_CREATED,
+			provType: provision,
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -71,6 +73,7 @@ func TestCredentialHandler(t *testing.T) {
 			name:     "should handle an update event for a Credential when status is pending",
 			hasError: false,
 			action:   proto.Event_UPDATED,
+			provType: provision,
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -100,6 +103,7 @@ func TestCredentialHandler(t *testing.T) {
 			name:     "should deprovision when a delete event is received",
 			hasError: false,
 			action:   proto.Event_DELETED,
+			provType: deprovision,
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -129,6 +133,7 @@ func TestCredentialHandler(t *testing.T) {
 			name:     "should return nil when the Credential status is set to Error",
 			hasError: false,
 			action:   proto.Event_CREATED,
+			provType: "",
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -158,6 +163,7 @@ func TestCredentialHandler(t *testing.T) {
 			name:     "should return nil when the Credential status is set to Success",
 			hasError: false,
 			action:   proto.Event_CREATED,
+			provType: "",
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -188,6 +194,7 @@ func TestCredentialHandler(t *testing.T) {
 			hasError: true,
 			getErr:   fmt.Errorf("error getting managed app"),
 			action:   proto.Event_CREATED,
+			provType: "",
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -218,6 +225,7 @@ func TestCredentialHandler(t *testing.T) {
 			hasError: true,
 			subError: fmt.Errorf("error updating subresources"),
 			action:   proto.Event_CREATED,
+			provType: provision,
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -244,9 +252,10 @@ func TestCredentialHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should handle an error when the Credential does not have a Status.Level field",
-			hasError: true,
+			name:     "should return nil error when the Credential does not have a Status.Level field",
 			action:   proto.Event_CREATED,
+			hasError: false,
+			provType: "",
 			resource: &mv1.Credential{
 				ResourceMeta: v1.ResourceMeta{
 					Metadata: v1.Metadata{
@@ -272,6 +281,96 @@ func TestCredentialHandler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "should return nil error when status is Success",
+			action:   proto.Event_CREATED,
+			hasError: false,
+			provType: "",
+			resource: &mv1.Credential{
+				ResourceMeta: v1.ResourceMeta{
+					Metadata: v1.Metadata{
+						ID: "11",
+						Scope: v1.MetadataScope{
+							Kind: mv1.EnvironmentGVK().Kind,
+							Name: "env-1",
+						},
+					},
+					SubResources: map[string]interface{}{
+						defs.XAgentDetails: map[string]interface{}{
+							"sub_credential_key": "sub_credential_val",
+						},
+					},
+				},
+				Spec: mv1.CredentialSpec{
+					CredentialRequestDefinition: "api-key",
+					ManagedApplication:          managedAppRefName,
+					Data:                        nil,
+				},
+				Status: &v1.ResourceStatus{
+					Level: statusSuccess,
+				},
+			},
+		},
+		{
+			name:     "should return nil error when status is Error",
+			action:   proto.Event_CREATED,
+			hasError: false,
+			provType: "",
+			resource: &mv1.Credential{
+				ResourceMeta: v1.ResourceMeta{
+					Metadata: v1.Metadata{
+						ID: "11",
+						Scope: v1.MetadataScope{
+							Kind: mv1.EnvironmentGVK().Kind,
+							Name: "env-1",
+						},
+					},
+					SubResources: map[string]interface{}{
+						defs.XAgentDetails: map[string]interface{}{
+							"sub_credential_key": "sub_credential_val",
+						},
+					},
+				},
+				Spec: mv1.CredentialSpec{
+					CredentialRequestDefinition: "api-key",
+					ManagedApplication:          managedAppRefName,
+					Data:                        nil,
+				},
+				Status: &v1.ResourceStatus{
+					Level: statusErr,
+				},
+			},
+		},
+		{
+			name:     "should return nil when the event is for subresources",
+			hasError: false,
+			action:   proto.Event_SUBRESOURCEUPDATED,
+			provType: "",
+			resource: &mv1.Credential{
+				ResourceMeta: v1.ResourceMeta{
+					Metadata: v1.Metadata{
+						ID: "11",
+						Scope: v1.MetadataScope{
+							Kind: mv1.EnvironmentGVK().Kind,
+							Name: "env-1",
+						},
+					},
+					SubResources: map[string]interface{}{
+						defs.XAgentDetails: map[string]interface{}{
+							"sub_credential_key": "sub_credential_val",
+						},
+					},
+				},
+				Spec: mv1.CredentialSpec{
+					CredentialRequestDefinition: "api-key",
+					ManagedApplication:          managedAppRefName,
+					Data:                        nil,
+				},
+				Status: &v1.ResourceStatus{
+					Level: statusPending,
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -289,6 +388,7 @@ func TestCredentialHandler(t *testing.T) {
 				expectedCredDetails: util.GetAgentDetails(tc.resource),
 				expectedManagedApp:  managedAppRefName,
 				expectedCredType:    tc.resource.Spec.CredentialRequestDefinition,
+				prov:                tc.provType,
 			}
 			c := &mockClient{
 				getRI:     mApp,
@@ -350,9 +450,11 @@ type mockCredProv struct {
 	expectedCredDetails map[string]interface{}
 	expectedManagedApp  string
 	expectedCredType    string
+	prov                string
 }
 
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
+	m.prov = provision
 	v := cr.(*creds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
@@ -362,6 +464,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 }
 
 func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status prov.RequestStatus) {
+	m.prov = deprovision
 	v := cr.(*creds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)

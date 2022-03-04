@@ -85,6 +85,9 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		log.Info("Provisioning the Credentials")
 		log.Infof("%+v", creds)
 		status, credentialData = h.prov.CredentialProvision(creds)
+		// loop through all credentialData fields and check for x-axway-encrypted
+		// encrypt based on CredentialRequestDefinition
+		// update Credential.Data with new values
 		cr.Data = credentialData.GetData()
 	}
 

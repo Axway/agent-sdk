@@ -6,4 +6,6 @@ type ApplicationRequest interface {
 	GetManagedApplicationName() string
 	// GetAgentDetailsValue return the value based on the key
 	GetAgentDetailsValue(key string) interface{}
+	// GetTeamName gets the owning team name for the managed application
+	GetTeamName() string
 }

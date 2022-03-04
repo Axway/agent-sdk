@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -19,13 +20,15 @@ type managedAppProvision interface {
 
 type managedApplication struct {
 	prov   managedAppProvision
+	cache  agentcache.Manager
 	client client
 }
 
 // NewManagedApplicationHandler creates a Handler for Access Requests
-func NewManagedApplicationHandler(prov managedAppProvision, client client) Handler {
+func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Manager, client client) Handler {
 	return &managedApplication{
 		prov:   prov,
+		cache:  cache,
 		client: client,
 	}
 }
@@ -54,8 +57,17 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 	bts, _ := json.MarshalIndent(app, "", "\t")
 	log.Info(string(bts))
 
+	teamName := ""
+	if app.Owner != nil && app.Owner.ID != "" {
+		team := h.cache.GetTeamByID(app.Owner.ID)
+		if team != nil {
+			teamName = team.Name
+		}
+	}
+
 	ma := managedApp{
 		managedAppName: app.Name,
+		teamName:       teamName,
 		data:           util.GetAgentDetails(app),
 	}
 
@@ -66,7 +78,6 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 	}
 
 	var status prov.RequestStatus
-
 	if app.Status.Level == statusPending {
 		log.Info("Provisioning the ManagedApplication")
 		log.Infof("%+v", ma)
@@ -97,6 +108,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 
 type managedApp struct {
 	managedAppName string
+	teamName       string
 	data           map[string]interface{}
 }
 
@@ -105,62 +117,15 @@ func (a managedApp) GetManagedApplicationName() string {
 	return a.managedAppName
 }
 
-// GetAgentDetailsValue returns a value found on the managed app
+// GetTeamName gets the owning team name for the managed application
+func (a managedApp) GetTeamName() string {
+	return a.teamName
+}
+
+// GetAgentDetailsValue returns a value found on the managed application
 func (a managedApp) GetAgentDetailsValue(key string) interface{} {
 	if a.data == nil {
 		return nil
 	}
 	return a.data[key]
-}
-
-type FakeProvisioner struct {
-}
-
-func (f FakeProvisioner) ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-func (f FakeProvisioner) ApplicationRequestDeprovision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-func (f FakeProvisioner) AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-func (f FakeProvisioner) AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-func (f FakeProvisioner) CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
-	return &FakeStatus{}, &FakeCredential{}
-}
-
-func (f FakeProvisioner) CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-type FakeStatus struct {
-}
-
-func (f FakeStatus) GetStatus() prov.Status {
-	return prov.Success
-}
-
-func (f FakeStatus) GetMessage() string {
-	return "message"
-}
-
-func (f FakeStatus) GetProperties() map[string]interface{} {
-	return map[string]interface{}{
-		"status_key": "status_val",
-	}
-}
-
-type FakeCredential struct{}
-
-func (f FakeCredential) GetData() map[string]interface{} {
-	return map[string]interface{}{
-		"credential_key": "credential_value",
-	}
 }
