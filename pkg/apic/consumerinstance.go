@@ -131,6 +131,7 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 }
 
 func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *mv1a.ConsumerInstance {
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	ci := &mv1a.ConsumerInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
@@ -140,7 +141,7 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
-		Owner: c.getOwnerObject(serviceBody, false),
+		Owner: owner,
 	}
 
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
@@ -155,7 +156,7 @@ func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1
 	ci.Metadata.ResourceVersion = ""
 	ci.Title = serviceBody.NameToPush
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
-	ci.Owner = c.getOwnerObject(serviceBody, false)
+	ci.Owner, _ = c.getOwnerObject(serviceBody, false)
 	ci.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)

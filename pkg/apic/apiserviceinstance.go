@@ -31,6 +31,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	name string,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
@@ -40,7 +41,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
-		Owner: c.getOwnerObject(serviceBody, false),
+		Owner: owner,
 	}
 
 	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
@@ -55,13 +56,14 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance *mv1a.APIServiceInstance,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
+	owner, _ := c.getOwnerObject(serviceBody, false)
 	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
 	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
-	instance.Owner = c.getOwnerObject(serviceBody, false)
+	instance.Owner = owner
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
