@@ -187,17 +187,6 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource Status
-	sr, err = json.Marshal(aux.SubResources["status"])
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(sr, &res.Status)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

@@ -184,17 +184,6 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource Webhooks
-	sr, err = json.Marshal(aux.SubResources["webhooks"])
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(sr, &res.Webhooks)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
