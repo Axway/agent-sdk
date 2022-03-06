@@ -7,10 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewCredentialRequestBuilder(t *testing.T) {
+func TestNewAccessRequestBuilder(t *testing.T) {
 	tests := []struct {
-		name    string
-		wantErr bool
+		name     string
+		noSchema bool
+		wantErr  bool
 	}{
 		{
 			name:    "Success",
@@ -20,41 +21,40 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			name:    "Fail",
 			wantErr: true,
 		},
+		{
+			name:     "Fail",
+			noSchema: true,
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
 			// builtDef := struct{}{}
-			registerFunc := func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-				// TODO - validate that the credentialRequestDefinition is built properly
-				// builtDef = credentialRequestDefinition.(struct{})
+			registerFunc := func(accessRequestDefinition *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
+				// TODO - validate that the accessRequestDefinition is built properly
+				// builtDef = accessRequestDefinition.(struct{})
 				registerFuncCalled = true
 				return nil, nil
 			}
 
-			builder := NewCredentialRequestBuilder(registerFunc).
-				SetName(tt.name).
-				SetProvisionSchema(
-					NewSchemaBuilder().
-						SetName("schema").
-						AddProperty(
-							NewSchemaPropertyBuilder().
-								SetName("prop").
-								IsString())).
-				SetRequestSchema(
-					NewSchemaBuilder().
-						SetName("schema").
-						AddProperty(
-							NewSchemaPropertyBuilder().
-								SetName("prop").
-								IsString())).
-				SetMaxApplicationCredentials(1).
-				SetWebhooks([]string{"webhook1", "webhook2"}).
-				AddWebhook("webhook3")
+			builder := NewAccessRequestBuilder(registerFunc).
+				SetName(tt.name)
 
 			if tt.wantErr {
-				builder = builder.SetProvisionSchema(nil)
+				builder = builder.SetSchema(nil)
 			}
+
+			if !tt.noSchema {
+				builder.SetSchema(
+					NewSchemaBuilder().
+						SetName("schema").
+						AddProperty(
+							NewSchemaPropertyBuilder().
+								SetName("prop").
+								IsString()))
+			}
+
 			_, err := builder.Register()
 
 			if tt.wantErr {

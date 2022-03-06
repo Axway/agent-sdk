@@ -112,6 +112,15 @@ func (c *ServiceClient) DeleteConsumerInstance(instanceName string) error {
 
 // DeleteAPIServiceInstance deletes an api service instance in central by name
 func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
+	// Get finalizers
+	finalizers, _ := c.getFinalizers(c.cfg.GetInstancesURL() + "/" + name)
+
+	for _, f := range finalizers {
+		if f.Name == "agent.cleanup.accessrequestdefinition" {
+			c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
+		}
+	}
+
 	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetInstancesURL()+"/"+name, nil)
 	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
 		return err
@@ -267,6 +276,36 @@ func (c *ServiceClient) executeAPIServiceAPI(method, url string, buffer []byte) 
 	ri := &v1.ResourceInstance{}
 	json.Unmarshal(response.Body, ri)
 	return ri, nil
+}
+
+// getFinalizers - get the finalizers from the resource
+func (c *ServiceClient) getFinalizers(url string) ([]v1.Finalizer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method: http.MethodGet,
+		URL:    url,
+		QueryParams: map[string]string{
+			FieldsKey: "finalizers",
+		},
+		Headers: headers,
+	}
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code >= http.StatusBadRequest {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	ri := &v1.ResourceInstance{}
+	json.Unmarshal(response.Body, ri)
+	return ri.Finalizers, nil
 }
 
 // create the on-and-only secret for the environment

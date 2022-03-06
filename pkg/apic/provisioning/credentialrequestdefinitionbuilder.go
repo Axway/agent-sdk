@@ -8,7 +8,7 @@ import (
 )
 
 // RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
-type RegisterCredentialRequestDefinition func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) error
+type RegisterCredentialRequestDefinition func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error)
 
 type credentialRequestDef struct {
 	name            string
@@ -28,7 +28,7 @@ type CredentialRequestBuilder interface {
 	SetMaxApplicationCredentials(max int) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
-	Register() error
+	Register() (*v1alpha1.CredentialRequestDefinition, error)
 }
 
 // NewCredentialRequestBuilder - called by the agent package and sends in the function that registers this credential request
@@ -96,9 +96,9 @@ func (c *credentialRequestDef) AddWebhook(webhook string) CredentialRequestBuild
 }
 
 // Register - create the credential request defintion and send it to Central
-func (c *credentialRequestDef) Register() error {
+func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition, error) {
 	if c.err != nil {
-		return c.err
+		return nil, c.err
 	}
 
 	if c.requestSchema == nil {

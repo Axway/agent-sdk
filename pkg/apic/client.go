@@ -84,7 +84,8 @@ type Client interface {
 	GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error
+	RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error)
+	RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error)
 }
 
 // New creates a new Client
@@ -622,6 +623,8 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 
 	switch response.Code {
 	case http.StatusOK:
+		fallthrough
+	case http.StatusCreated:
 		return response.Body, nil
 	case http.StatusUnauthorized:
 		return nil, ErrAuthentication
@@ -632,19 +635,47 @@ func (c *ServiceClient) ExecuteAPI(method, url string, queryParam map[string]str
 }
 
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error {
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
 	crdBytes, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/credentialrequestdefinitions")
 
-	_, err = c.ExecuteAPI(coreapi.POST, url, nil, crdBytes)
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, crdBytes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	//TODO check for return code
-	return nil
+	newCRD := &v1alpha1.CredentialRequestDefinition{}
+	err = json.Unmarshal(response, newCRD)
+	if err != nil {
+		return nil, err
+	}
+
+	return newCRD, nil
+}
+
+// RegisterAccessRequestDefinition - Adds or updates a access request definition
+func (c *ServiceClient) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error) {
+	ardBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
+
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newARD := &v1alpha1.AccessRequestDefinition{}
+	err = json.Unmarshal(response, newARD)
+	if err != nil {
+		return nil, err
+	}
+
+	return newARD, nil
 }

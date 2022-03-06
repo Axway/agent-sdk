@@ -134,8 +134,12 @@ func (m *mockSvcClient) CreateAccessControlList(acl *v1alpha1.AccessControlList)
 	return nil, nil
 }
 
-func (m *mockSvcClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) error {
-	return nil
+func (m *mockSvcClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
+	return nil, nil
+}
+
+func (m *mockSvcClient) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error) {
+	return nil, nil
 }
 
 func (m *mockSvcClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {

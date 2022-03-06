@@ -10,6 +10,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -22,6 +23,7 @@ func (c *ServiceClient) buildAPIServiceInstanceSpec(
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endPoints,
 		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
+		AccessRequestDefinition:      serviceBody.ardName,
 	}
 }
 
@@ -31,6 +33,13 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 	instanceAttributes map[string]string,
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
 ) *v1alpha1.APIServiceInstance {
+	finalizer := make([]v1.Finalizer, 0)
+	if serviceBody.uniqueARD {
+		finalizer = append(finalizer, v1.Finalizer{
+			Name:        "agent.cleanup.accessrequestdefinition",
+			Description: serviceBody.ardName,
+		})
+	}
 	return &v1alpha1.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
@@ -38,6 +47,7 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Title:            serviceBody.NameToPush,
 			Attributes:       c.buildAPIResourceAttributes(serviceBody, instanceAttributes, false),
 			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Finalizers:       finalizer,
 		},
 		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
 		Owner: c.getOwnerObject(serviceBody, false),
@@ -58,8 +68,62 @@ func (c *ServiceClient) updateInstanceResource(
 	return instance
 }
 
+func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
+	// TODO - check cache for access request, update if needed
+	ardBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
+
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newARD := &v1alpha1.AccessRequestDefinition{}
+	err = json.Unmarshal(response, newARD)
+	if err != nil {
+		return nil, err
+	}
+
+	return newARD, nil
+}
+
+func (c *ServiceClient) createAccessRequestDefintion(serviceBody *ServiceBody) error {
+	oauthScopes := make([]string, 0)
+	for scope := range serviceBody.GetScopes() {
+		oauthScopes = append(oauthScopes, scope)
+	}
+	if len(oauthScopes) > 0 {
+		newARD, err := provisioning.NewAccessRequestBuilder(c.createOrUpdateAccessRequestDefinition).
+			SetName(serviceBody.NameToPush).
+			SetSchema(
+				provisioning.NewSchemaBuilder().
+					AddProperty(
+						provisioning.NewSchemaPropertyBuilder().
+							SetName("scopes").
+							SetLabel("Scopes").
+							IsArray().
+							AddItem(
+								provisioning.NewSchemaPropertyBuilder().
+									SetName("scope").
+									IsString().
+									SetEnumValues(oauthScopes)))).Register()
+		if err != nil {
+			return err
+		}
+		serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
+	}
+	return nil
+}
+
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
+	// check if a new AccessRequestDefinition is needed
+	c.createAccessRequestDefintion(serviceBody)
+
 	instanceEndpoints, err := c.createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err

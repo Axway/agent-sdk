@@ -76,7 +76,7 @@ func (j *instanceValidator) shouldDeleteService(externalAPIPrimaryKey, externalA
 
 	log.Tracef("Instances count : %d", instanceCount)
 
-	return instanceCount <= 1
+	return instanceCount == 0
 }
 
 func (j *instanceValidator) getServiceInstanceCount(attName, attValue string) int {
@@ -94,10 +94,6 @@ func (j *instanceValidator) getServiceInstanceCount(attName, attValue string) in
 }
 
 func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIPrimaryKey, externalAPIID, externalAPIStage string) {
-	msg := ""
-	var err error
-	var agentError *utilErrors.AgentError
-
 	defer func() {
 		// remove the api service instance from the cache for both scenarios
 		if j.isAgentPollMode {
@@ -106,10 +102,19 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 		}
 	}()
 
+	// delete if it is an api service instance
+	log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", resource.Title)
+	msg := "Deleted catalog item %s from Amplify Central"
+
+	err := agent.apicClient.DeleteAPIServiceInstance(resource.Name)
+	if err != nil {
+		log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(resource.Title))
+		return
+	}
+
 	// delete if it is an api service
 	if j.shouldDeleteService(externalAPIPrimaryKey, externalAPIID, externalAPIStage) {
 		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", resource.Title)
-		agentError = ErrDeletingService
 		msg = "Deleted API Service for catalog item %s from Amplify Central"
 
 		svc := agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
@@ -123,18 +128,11 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 		if j.isAgentPollMode {
 			agent.cacheManager.DeleteAPIService(externalAPIID)
 		}
-	} else {
-		// delete if it is an api service instance
-		log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", resource.Title)
-		agentError = ErrDeletingCatalogItem
-		msg = "Deleted catalog item %s from Amplify Central"
 
-		err = agent.apicClient.DeleteAPIServiceInstance(resource.Name)
-	}
-
-	if err != nil {
-		log.Error(utilErrors.Wrap(agentError, err.Error()).FormatError(resource.Title))
-		return
+		if err != nil {
+			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(resource.Title))
+			return
+		}
 	}
 
 	log.Debugf(msg, resource.Title)

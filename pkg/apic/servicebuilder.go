@@ -66,6 +66,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			CreatedBy:                 config.AgentTypeName,
 			State:                     PublishedStatus,
 			Status:                    PublishedStatus,
+			scopes:                    make(map[string]string),
 			ServiceAttributes:         make(map[string]string),
 			RevisionAttributes:        make(map[string]string),
 			InstanceAttributes:        make(map[string]string),
@@ -273,13 +274,21 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 
 	var i interface{} = specProcessor
 	if val, ok := i.(oasSpecProcessor); ok {
+		val.parseAuthInfo()
+
 		// get the auth policy from the spec
-		b.serviceBody.authPolicies, b.serviceBody.apiKeyInfo = val.getAuthInfo()
+		b.serviceBody.authPolicies = val.getAuthPolicies()
 
 		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
 		if len(b.serviceBody.authPolicies) > 0 {
 			b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
 		}
+
+		// get the apikey info
+		b.serviceBody.apiKeyInfo = val.getAPIKeyInfo()
+
+		// get oauth scopes
+		b.serviceBody.scopes = val.getOAuthScopes()
 	}
 
 	return b.serviceBody, nil
