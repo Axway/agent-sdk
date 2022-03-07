@@ -53,7 +53,7 @@ type ServiceBody struct {
 	uniqueARD                 bool
 }
 
-//GetAuthPolicies - returns the array of all auth policies in the ServiceBody
+//SetAccessRequestDefintionName - set the name of the access request definition for this service body
 func (s *ServiceBody) SetAccessRequestDefintionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
@@ -69,7 +69,7 @@ func (s *ServiceBody) GetAPIKeyInfo() []APIKeyInfo {
 	return s.apiKeyInfo
 }
 
-//GetAPIKeyInfo - returns the array of locations and argument names for the api key
+//GetScopes - returns the array of scopes for this service instance
 func (s *ServiceBody) GetScopes() map[string]string {
 	return s.scopes
 }
