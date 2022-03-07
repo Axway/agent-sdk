@@ -3,11 +3,9 @@ package handler
 import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
-
-
-const apiServiceInstance = "APIServiceInstance"
 
 type instanceHandler struct {
 	agentCacheManager agentcache.Manager
@@ -21,7 +19,7 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 func (h *instanceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != apiServiceInstance {
+	if resource.Kind != mv1.APIServiceInstanceGVK().Kind {
 		return nil
 	}
 

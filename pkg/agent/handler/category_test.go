@@ -3,12 +3,16 @@ package handler
 import (
 	"testing"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewAccessRequestHandler(t *testing.T) {
+func TestNewCategoryHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
@@ -25,7 +29,7 @@ func TestNewAccessRequestHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -41,7 +45,7 @@ func TestNewAccessRequestHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -57,7 +61,7 @@ func TestNewAccessRequestHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: accessRequest,
+							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
 				},
@@ -73,7 +77,7 @@ func TestNewAccessRequestHandler(t *testing.T) {
 					Title: "title",
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: category,
+							Kind: mv1.APIServiceGVK().Kind,
 						},
 					},
 				},
@@ -81,9 +85,10 @@ func TestNewAccessRequestHandler(t *testing.T) {
 		},
 	}
 
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewAccessRequestHandler()
+			handler := NewCategoryHandler(cacheManager)
 
 			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {

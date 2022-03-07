@@ -43,7 +43,7 @@ func TestCreateWatchTopic(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			rc := &fakeRI{
+			rc := &mockAPIClient{
 				ri:        tc.ri,
 				createErr: tc.err,
 			}
@@ -130,7 +130,7 @@ func Test_parseWatchTopic(t *testing.T) {
 func TestGetOrCreateWatchTopic(t *testing.T) {
 	tests := []struct {
 		name      string
-		rc        *fakeRI
+		client    *mockAPIClient
 		hasErr    bool
 		agentType config.AgentType
 	}{
@@ -138,7 +138,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should retrieve a watch topic if it exists",
 			hasErr:    false,
 			agentType: config.DiscoveryAgent,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
 						Name: "wt-name",
@@ -150,7 +150,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a trace agent if it does not exist",
 			agentType: config.TraceabilityAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -163,7 +163,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a discovery agent if it does not exist",
 			agentType: config.DiscoveryAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -176,7 +176,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a governance agent if it does not exist",
 			agentType: config.GovernanceAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -191,29 +191,15 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
 
-			wt, err := getOrCreateWatchTopic(name, "scope", tc.rc, tc.agentType)
+			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, tc.agentType)
 			if tc.hasErr == true {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tc.rc.ri.Name, wt.Name)
+				assert.Equal(t, tc.client.ri.Name, wt.Name)
 			}
 		})
 	}
-}
-
-type fakeRI struct {
-	createErr error
-	getErr    error
-	ri        *apiv1.ResourceInstance
-}
-
-func (m fakeRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
-	return m.ri, m.createErr
-}
-
-func (m fakeRI) Get(_ string) (*apiv1.ResourceInstance, error) {
-	return m.ri, m.getErr
 }
 
 type mockCacheGet struct {

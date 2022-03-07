@@ -16,6 +16,10 @@ type handler interface {
 
 // GetAgentDetails get all the values for the x-agent-details sub resource
 func GetAgentDetails(h handler) map[string]interface{} {
+	if h == nil {
+		return nil
+	}
+
 	item := h.GetSubResource(defs.XAgentDetails)
 	if item == nil {
 		return nil

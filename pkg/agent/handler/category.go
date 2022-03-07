@@ -3,10 +3,9 @@ package handler
 import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
-
-const category = "Category"
 
 type categoryHandler struct {
 	agentCacheManager agentcache.Manager
@@ -20,7 +19,7 @@ func NewCategoryHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 func (c *categoryHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != category {
+	if resource.Kind != catalog.CategoryGVK().Kind {
 		return nil
 	}
 

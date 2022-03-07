@@ -25,23 +25,26 @@ var AgentTypesMap = map[config.AgentType]string{
 // Manager - interface to manage agent resource
 type Manager interface {
 	OnConfigChange(cfg config.CentralConfig, apicClient apic.Client)
-
 	GetAgentResource() *v1.ResourceInstance
 	SetAgentResource(agentResource *v1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
 }
 
+type executeAPIClient interface {
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
+}
+
 type agentResourceManager struct {
 	agentResource              *v1.ResourceInstance
 	prevAgentResHash           uint64
-	apicClient                 apic.Client
+	apicClient                 executeAPIClient
 	cfg                        config.CentralConfig
 	agentResourceChangeHandler func()
 }
 
 // NewAgentResourceManager - Create a new agent resource manager
-func NewAgentResourceManager(cfg config.CentralConfig, apicClient apic.Client, agentResourceChangeHandler func()) (Manager, error) {
+func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClient, agentResourceChangeHandler func()) (Manager, error) {
 	m := &agentResourceManager{
 		cfg:                        cfg,
 		apicClient:                 apicClient,

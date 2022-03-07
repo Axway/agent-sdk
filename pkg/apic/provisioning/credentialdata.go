@@ -2,8 +2,14 @@ package provisioning
 
 // CredentialRequest - interface for agents to use to get necessary credential request details
 type CredentialRequest interface {
-	GetApplicationName() string        // returns the name of the managed application for this credential
-	GetCredentialType() credentialType // returns the type of credential related to this request
-	GetRequestType() string            // returns the type of request being made Provision/Deprovision/Renew
-	GetProperty(key string) string     // returns the value for the key
+	// GetApplicationName returns the name of the managed application for this credential
+	GetApplicationName() string
+	// GetCredentialType returns the type of credential related to this request
+	GetCredentialType() string
+	// GetRequestType returns the type of request being made Provision/Deprovision/Renew
+	GetRequestType() string
+	// GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
+	GetCredentialDetailsValue(key string) interface{}
+	// GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
+	GetApplicationDetailsValue(key string) interface{}
 }

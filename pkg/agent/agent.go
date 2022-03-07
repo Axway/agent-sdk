@@ -394,16 +394,21 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 func startStreamMode(agent agentData) error {
+	provisioner := &handler.FakeProvisioner{}
+
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
 		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		handler.NewManagedApplicationHandler(provisioner, agent.cacheManager, agent.apicClient),
+		handler.NewAccessRequestHandler(provisioner, agent.cacheManager, agent.apicClient),
+		handler.NewCredentialHandler(provisioner, agent.apicClient),
 		agent.proxyResourceHandler,
 	}
 
 	cs, err := stream.NewStreamer(
-		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
