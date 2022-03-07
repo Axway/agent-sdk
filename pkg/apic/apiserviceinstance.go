@@ -36,7 +36,7 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 	finalizer := make([]v1.Finalizer, 0)
 	if serviceBody.uniqueARD {
 		finalizer = append(finalizer, v1.Finalizer{
-			Name:        "agent.cleanup.accessrequestdefinition",
+			Name:        AccessRequestDefinitionFinalizer,
 			Description: serviceBody.ardName,
 		})
 	}

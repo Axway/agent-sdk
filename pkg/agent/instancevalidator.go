@@ -94,14 +94,6 @@ func (j *instanceValidator) getServiceInstanceCount(attName, attValue string) in
 }
 
 func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.ResourceInstance, externalAPIPrimaryKey, externalAPIID, externalAPIStage string) {
-	defer func() {
-		// remove the api service instance from the cache for both scenarios
-		if j.isAgentPollMode {
-			// In GRPC mode delete is done on receiving delete event from service
-			agent.cacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
-		}
-	}()
-
 	// delete if it is an api service instance
 	log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", resource.Title)
 	msg := "Deleted catalog item %s from Amplify Central"
@@ -110,6 +102,10 @@ func (j *instanceValidator) deleteServiceInstanceOrService(resource *apiV1.Resou
 	if err != nil {
 		log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(resource.Title))
 		return
+	}
+	if j.isAgentPollMode {
+		// In GRPC mode delete is done on receiving delete event from service
+		agent.cacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
 	}
 
 	// delete if it is an api service

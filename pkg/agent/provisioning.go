@@ -5,6 +5,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
+// TODO - tests
+
 // credential request definitions
 
 // createOrUpdateCredentialRequestDefinition -

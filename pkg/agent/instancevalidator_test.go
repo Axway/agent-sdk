@@ -79,6 +79,12 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	setupCache("12345", "test")
 	setupAPICClient([]api.MockResponse{
 		{
+			RespCode: http.StatusOK, // get instance finalizers
+		},
+		{
+			RespCode: http.StatusNoContent, // delete instance
+		},
+		{
 			RespCode: http.StatusNoContent, // delete service
 		},
 	})
@@ -110,6 +116,9 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 	}
 	agent.cacheManager.AddAPIServiceInstance(instance)
 	setupAPICClient([]api.MockResponse{
+		{
+			RespCode: http.StatusOK, // get finalizers
+		},
 		{
 			RespCode: http.StatusNoContent, // delete instance
 		},

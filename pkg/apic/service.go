@@ -116,7 +116,7 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 	finalizers, _ := c.getFinalizers(c.cfg.GetInstancesURL() + "/" + name)
 
 	for _, f := range finalizers {
-		if f.Name == "agent.cleanup.accessrequestdefinition" {
+		if f.Name == AccessRequestDefinitionFinalizer {
 			c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
 		}
 	}
