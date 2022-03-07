@@ -1,14 +1,23 @@
 package handler
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cat "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -397,6 +406,10 @@ func TestCredentialHandler(t *testing.T) {
 				subError:  tc.subError,
 			}
 			handler := NewCredentialHandler(p, c)
+			v := handler.(*credentials)
+			v.encrypt = func(_ cat.ApplicationSpecSecurity, _, data map[string]interface{}) map[string]interface{} {
+				return data
+			}
 
 			ri, _ := tc.resource.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
@@ -479,4 +492,103 @@ type mockProvCredential struct {
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func newPrivateKey() *rsa.PrivateKey {
+	privateKey, err := ioutil.ReadFile("./testdata/private_key.pem")
+	if err != nil {
+		panic(fmt.Sprintf("failed to read private key file: %s", err))
+	}
+	block, _ := pem.Decode([]byte(privateKey))
+	if block == nil {
+		panic("failed to parse PEM block containing the public key")
+	}
+
+	pk, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		panic("failed to parse private key: " + err.Error())
+	}
+
+	priv := pk.(*rsa.PrivateKey)
+	return priv
+}
+
+func decrypt(data map[string]interface{}) map[string]interface{} {
+	pk := newPrivateKey()
+
+	for key, value := range data {
+		v, ok := value.(string)
+		if !ok {
+			continue
+		}
+		txt, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, []byte(v), nil)
+		if err != nil {
+			log.Errorf("Failed to decrypt: %s\n", err)
+			continue
+		}
+		data[key] = string(txt)
+	}
+
+	return data
+}
+
+func Test_encrypt(t *testing.T) {
+	var crdSchema = `{
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "required": [
+        "abc"
+    ],
+    "properties": {
+        "one": {
+            "type": "string",
+            "description": "abc.",
+						"x-agent-encrypted": "x-agent-encrypted"
+        },
+        "two": {
+            "type": "string",
+            "description": "def."
+        },
+        "three": {
+            "type": "string",
+            "description": "ghi.",
+						"x-agent-encrypted": "x-agent-encrypted"
+        }
+    },
+    "description": "sample."
+}`
+
+	publicKey, err := ioutil.ReadFile("./testdata/public_key.pem")
+	if err != nil {
+		panic(fmt.Sprintf("failed to read public key file: %s", err))
+	}
+	cApp := cat.Application{
+		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
+			EncryptionKey:       string(publicKey),
+			EncryptionAlgorithm: "PKCS",
+			EncryptionHash:      "SHA256",
+		}},
+	}
+
+	crd := map[string]interface{}{}
+	err = json.Unmarshal([]byte(crdSchema), &crd)
+	assert.Nil(t, err)
+
+	schemaData := map[string]interface{}{
+		"one":   "abc",
+		"two":   "def",
+		"three": "ghi",
+	}
+
+	props := crd["properties"]
+	p := props.(map[string]interface{})
+	encrypted := encryptMap(cApp.Spec.Security, p, schemaData)
+	assert.NotEqual(t, "abc", schemaData["one"])
+	assert.Equal(t, "def", schemaData["two"])
+	assert.NotEqual(t, "ghi", schemaData["three"])
+
+	decrypted := decrypt(encrypted)
+	assert.Equal(t, "abc", decrypted["one"])
+	assert.Equal(t, "def", decrypted["two"])
+	assert.Equal(t, "ghi", decrypted["three"])
 }
