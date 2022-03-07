@@ -437,7 +437,7 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_creds(t *testing.T) {
-	c := creds{
+	c := provCreds{
 		managedApp:  "app-name",
 		credType:    "api-key",
 		requestType: "Provision",
@@ -468,7 +468,7 @@ type mockCredProv struct {
 
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.prov = provision
-	v := cr.(*creds)
+	v := cr.(*provCreds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
@@ -478,7 +478,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 
 func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := cr.(*creds)
+	v := cr.(*provCreds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)

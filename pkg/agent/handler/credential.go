@@ -86,16 +86,7 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		return err
 	}
 
-	credDetails := util.GetAgentDetails(cr)
-	appDetails := util.GetAgentDetails(app)
-
-	creds := &creds{
-		appDetails:  appDetails,
-		credDetails: credDetails,
-		credType:    cr.Spec.CredentialRequestDefinition,
-		managedApp:  cr.Spec.ManagedApplication,
-		requestType: string(cr.Request),
-	}
+	creds := newProvCreds(cr, util.GetAgentDetails(app))
 
 	if action == proto.Event_DELETED {
 		log.Info("Deprovisioning the Credentials")
@@ -213,7 +204,7 @@ func encryptStr(encKey, encHash, str string) (string, error) {
 	return string(bts), nil
 }
 
-type creds struct {
+type provCreds struct {
 	managedApp  string
 	credType    string
 	requestType string
@@ -221,23 +212,35 @@ type creds struct {
 	appDetails  map[string]interface{}
 }
 
+func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCreds {
+	credDetails := util.GetAgentDetails(cr)
+
+	return &provCreds{
+		appDetails:  appDetails,
+		credDetails: credDetails,
+		credType:    cr.Spec.CredentialRequestDefinition,
+		managedApp:  cr.Spec.ManagedApplication,
+		requestType: string(cr.Request),
+	}
+}
+
 // GetApplicationName gets the name of the managed application
-func (c creds) GetApplicationName() string {
+func (c provCreds) GetApplicationName() string {
 	return c.managedApp
 }
 
 // GetCredentialType gets the type of the credential
-func (c creds) GetCredentialType() string {
+func (c provCreds) GetCredentialType() string {
 	return c.credType
 }
 
 // GetRequestType returns the type of request for the credentials
-func (c creds) GetRequestType() string {
+func (c provCreds) GetRequestType() string {
 	return c.requestType
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
-func (c creds) GetCredentialDetailsValue(key string) interface{} {
+func (c provCreds) GetCredentialDetailsValue(key string) interface{} {
 	if c.credDetails == nil {
 		return nil
 	}
@@ -245,7 +248,7 @@ func (c creds) GetCredentialDetailsValue(key string) interface{} {
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (c creds) GetApplicationDetailsValue(key string) interface{} {
+func (c provCreds) GetApplicationDetailsValue(key string) interface{} {
 	if c.appDetails == nil {
 		return nil
 	}

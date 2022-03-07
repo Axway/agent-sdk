@@ -580,7 +580,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_arReq(t *testing.T) {
-	r := arReq{
+	r := provAccReq{
 		apiID: "123",
 		appDetails: map[string]interface{}{
 			"app_details_key": "app_details_value",
@@ -639,7 +639,7 @@ type mockARProvision struct {
 
 func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.prov = provision
-	v := ar.(*arReq)
+	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
@@ -650,7 +650,7 @@ func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status 
 
 func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := ar.(*arReq)
+	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)

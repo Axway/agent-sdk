@@ -271,7 +271,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_managedApp(t *testing.T) {
-	m := managedApp{
+	m := provManagedApp{
 		managedAppName: "managed-app-name",
 		teamName:       "123",
 		data:           map[string]interface{}{"abc": "123"},
@@ -293,7 +293,7 @@ type mockManagedAppProv struct {
 
 func (m *mockManagedAppProv) ApplicationRequestProvision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
 	m.prov = provision
-	v := ma.(managedApp)
+	v := ma.(provManagedApp)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
 	assert.Equal(m.t, m.expectedManagedAppData, v.data)
 	assert.Equal(m.t, m.expectedTeamName, v.teamName)
@@ -302,7 +302,7 @@ func (m *mockManagedAppProv) ApplicationRequestProvision(ma prov.ApplicationRequ
 
 func (m *mockManagedAppProv) ApplicationRequestDeprovision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := ma.(managedApp)
+	v := ma.(provManagedApp)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
 	assert.Equal(m.t, m.expectedManagedAppData, v.data)
 	assert.Equal(m.t, m.expectedTeamName, v.teamName)

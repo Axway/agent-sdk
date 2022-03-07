@@ -65,7 +65,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 		}
 	}
 
-	ma := managedApp{
+	ma := provManagedApp{
 		managedAppName: app.Name,
 		teamName:       teamName,
 		data:           util.GetAgentDetails(app),
@@ -106,24 +106,24 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 	return err
 }
 
-type managedApp struct {
+type provManagedApp struct {
 	managedAppName string
 	teamName       string
 	data           map[string]interface{}
 }
 
 // GetManagedApplicationName returns the name of the managed application
-func (a managedApp) GetManagedApplicationName() string {
+func (a provManagedApp) GetManagedApplicationName() string {
 	return a.managedAppName
 }
 
 // GetTeamName gets the owning team name for the managed application
-func (a managedApp) GetTeamName() string {
+func (a provManagedApp) GetTeamName() string {
 	return a.teamName
 }
 
 // GetAgentDetailsValue returns a value found on the managed application
-func (a managedApp) GetAgentDetailsValue(key string) interface{} {
+func (a provManagedApp) GetAgentDetailsValue(key string) interface{} {
 	if a.data == nil {
 		return nil
 	}
