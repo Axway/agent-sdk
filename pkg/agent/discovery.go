@@ -4,6 +4,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -67,11 +68,12 @@ func GetAttributeOnPublishedAPI(externalAPIID string, attrName string) string {
 	return GetAttributeOnPublishedAPIByID(externalAPIID, attrName)
 }
 
-func getAttributeFromResource(apiResource *apiV1.ResourceInstance, attrName string) string {
-	if apiResource != nil && apiResource.Attributes != nil {
-		return apiResource.Attributes[attrName]
+func getAttributeFromResource(resource *apiV1.ResourceInstance, attrName string) string {
+	if resource == nil {
+		return ""
 	}
-	return ""
+	v, _ := util.GetAgentDetailsValue(resource, attrName)
+	return v
 }
 
 // GetAttributeOnPublishedAPIByID - Returns the value on published proxy
@@ -119,9 +121,15 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
-			apiSvc, e := ret.AsInstance()
-			if e == nil {
-				agent.cacheManager.AddAPIService(apiSvc)
+			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
+			if !agent.cfg.IsUsingGRPC() {
+				apiSvc, e := ret.AsInstance()
+				if e == nil {
+					addErr := agent.cacheManager.AddAPIService(apiSvc)
+					if addErr != nil {
+						log.Error(addErr)
+					}
+				}
 			}
 		} else {
 			return err
@@ -135,8 +143,8 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 
 	if agent.instanceValidatorJobID == "" && apiValidator != nil {
-		instanceValidatorJob := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
-		jobID, err := jobs.RegisterIntervalJobWithName(instanceValidatorJob, agent.cfg.GetPollInterval(), "API service instance validator")
+		validator := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		jobID, err := jobs.RegisterIntervalJobWithName(validator, agent.cfg.GetPollInterval(), "API service instance validator")
 		agent.instanceValidatorJobID = jobID
 		if err != nil {
 			log.Error(err)

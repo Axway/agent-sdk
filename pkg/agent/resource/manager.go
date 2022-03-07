@@ -8,7 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -25,23 +25,26 @@ var AgentTypesMap = map[config.AgentType]string{
 // Manager - interface to manage agent resource
 type Manager interface {
 	OnConfigChange(cfg config.CentralConfig, apicClient apic.Client)
-
 	GetAgentResource() *v1.ResourceInstance
 	SetAgentResource(agentResource *v1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
 }
 
+type executeAPIClient interface {
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
+}
+
 type agentResourceManager struct {
 	agentResource              *v1.ResourceInstance
 	prevAgentResHash           uint64
-	apicClient                 apic.Client
+	apicClient                 executeAPIClient
 	cfg                        config.CentralConfig
 	agentResourceChangeHandler func()
 }
 
 // NewAgentResourceManager - Create a new agent resource manager
-func NewAgentResourceManager(cfg config.CentralConfig, apicClient apic.Client, agentResourceChangeHandler func()) (Manager, error) {
+func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClient, agentResourceChangeHandler func()) (Manager, error) {
 	m := &agentResourceManager{
 		cfg:                        cfg,
 		apicClient:                 apicClient,
@@ -196,15 +199,15 @@ func (a *agentResourceManager) updateAgentStatusAPI(resource interface{}, agentR
 
 func (a *agentResourceManager) createAgentStatusSubResource(agentResourceType, status, prevStatus, message string) (*v1.ResourceInstance, error) {
 	switch agentResourceType {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		agentRes := createDiscoveryAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		agentRes := createTraceabilityAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		agentRes := createGovernanceAgentStatusResource(a.cfg.GetAgentName(), status, prevStatus, message)
 		resourceInstance, _ := agentRes.AsInstance()
 		return resourceInstance, nil
@@ -220,11 +223,11 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 	}
 
 	switch a.getAgentResourceType() {
-	case v1alpha1.DiscoveryAgentResourceName:
+	case mv1a.DiscoveryAgentResourceName:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.TraceabilityAgentResourceName:
+	case mv1a.TraceabilityAgentResourceName:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case v1alpha1.GovernanceAgentResourceName:
+	case mv1a.GovernanceAgentResourceName:
 		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)

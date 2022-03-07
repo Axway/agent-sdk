@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AccessRequestReferences struct for AccessRequestReferences
+// AccessRequestReferences  (management.v1alpha1.AccessRequest)
 type AccessRequestReferences struct {
 	Kind string `json:"kind"`
 	Name string `json:"name,omitempty"`

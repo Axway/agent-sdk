@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
+
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // MockHTTPClient - use for mocking the HTTP client
@@ -16,8 +19,8 @@ type MockHTTPClient struct {
 
 	RespCount int
 	Responses []MockResponse
-
-	Requests []Request // lists all requests the client has received
+	Requests  []Request // lists all requests the client has received
+	sync.Mutex
 }
 
 // MockResponse - use for mocking the MockHTTPClient responses
@@ -56,12 +59,17 @@ func (c *MockHTTPClient) SetResponse(filepath string, code int) {
 // if you care about the response content and the code, pass both in
 // if you only care about the code, pass "" for the filepath
 func (c *MockHTTPClient) SetResponses(responses []MockResponse) {
+	c.Lock()
+	defer c.Unlock()
 	c.RespCount = 0
 	c.Responses = responses
 }
 
 // Send -
 func (c *MockHTTPClient) Send(request Request) (*Response, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	c.Requests = append(c.Requests, request)
 	if c.Responses != nil && len(c.Responses) > 0 {
 		return c.sendMultiple(request)
@@ -81,8 +89,29 @@ func (c *MockHTTPClient) Send(request Request) (*Response, error) {
 }
 
 func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
-	responseFile, _ := os.Open(c.Responses[c.RespCount].FileName) // APIC Environments
-	dat, _ := ioutil.ReadAll(responseFile)
+	var err error
+	if c.RespCount >= len(c.Responses) {
+		err := fmt.Errorf("error: received more requests than saved responses. failed on request: %s", request.URL)
+		log.Error(err)
+		return nil, err
+	}
+
+	fileName := c.Responses[c.RespCount].FileName
+
+	var responseFile *os.File
+	var dat []byte
+
+	if fileName != "" {
+		responseFile, err = os.Open(fileName)
+		if err != nil {
+			return nil, err
+		}
+
+		dat, err = ioutil.ReadAll(responseFile)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	response := Response{
 		Code:    c.Responses[c.RespCount].RespCode,
@@ -90,7 +119,6 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 		Headers: map[string][]string{},
 	}
 
-	var err error
 	if c.Responses[c.RespCount].ErrString != "" {
 		err = fmt.Errorf(c.Responses[c.RespCount].ErrString)
 	}

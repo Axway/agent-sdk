@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/api"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
@@ -40,6 +40,12 @@ var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    "discoveryagents",
 	config.TraceabilityAgent: "traceabilityagents",
 	config.GovernanceAgent:   "governanceagents",
+}
+
+type apiClient interface {
+	GetResource(url string) (*apiv1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 }
 
 // Streamer interface for starting a service
@@ -119,7 +125,7 @@ type streamer struct {
 	handlers           []handler.Handler
 	listener           Listener
 	manager            wm.Manager
-	rc                 ResourceClient
+	apiClient          apiClient
 	topicSelfLink      string
 	watchCfg           *wm.Config
 	watchOpts          []wm.Option
@@ -132,24 +138,16 @@ type streamer struct {
 
 // NewStreamer creates a Streamer
 func NewStreamer(
-	apiClient api.Client,
+	apiClient apiClient,
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
 	handlers ...handler.Handler,
 ) (Streamer, error) {
-	apiServerHost := cfg.GetURL() + "/apis"
 	tenant := cfg.GetTenantID()
 
-	rc := NewResourceClient(
-		apiServerHost,
-		tenant,
-		apiClient,
-		getToken,
-	)
-
-	wt, err := getWatchTopic(cfg, rc)
+	wt, err := getWatchTopic(cfg, apiClient)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +170,7 @@ func NewStreamer(
 
 	return &streamer{
 		handlers:           handlers,
-		rc:                 rc,
+		apiClient:          apiClient,
 		topicSelfLink:      wt.Metadata.SelfLink,
 		watchCfg:           watchCfg,
 		watchOpts:          watchOpts,
@@ -209,7 +207,7 @@ func (c *streamer) Start() error {
 
 	c.listener = c.newListener(
 		events,
-		c.rc,
+		c.apiClient,
 		c.sequenceManager,
 		c.handlers...,
 	)
@@ -223,18 +221,10 @@ func (c *streamer) Start() error {
 
 	listenCh := c.listener.Listen()
 
+	// lock the cache until all harvester events have been saved
 	c.cacheManager.ApplyResourceReadLock()
-	// defer release the resource cache lock just in case if there are error
-	// while registering the watch
-	defer c.cacheManager.ReleaseResourceReadLock()
-
-	// Register the callback to release the resource cache lock on
-	// successful registration and reading events from harvester
-	c.manager.OnRegisterSuccess(func() {
-		c.cacheManager.ReleaseResourceReadLock()
-	})
-
 	_, err = c.manager.RegisterWatch(c.topicSelfLink, events, eventErrorCh)
+	c.cacheManager.ReleaseResourceReadLock()
 	if err != nil {
 		return err
 	}
@@ -283,14 +273,14 @@ func (c *streamer) Healthcheck(_ string) *hc.Status {
 	}
 }
 
-func getWatchTopic(cfg config.CentralConfig, rc ResourceClient) (*v1alpha1.WatchTopic, error) {
+func getWatchTopic(cfg config.CentralConfig, client apiClient) (*v1alpha1.WatchTopic, error) {
 	env := cfg.GetEnvironmentName()
 	agentName := cfg.GetAgentName()
 
 	wtName := getWatchTopicName(env, agentName, cfg.GetAgentType())
 	wt, err := getCachedWatchTopic(cache.New(), wtName)
 	if err != nil || wt == nil {
-		wt, err = getOrCreateWatchTopic(wtName, env, rc, cfg.GetAgentType())
+		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg.GetAgentType())
 		if err != nil {
 			return nil, err
 		}

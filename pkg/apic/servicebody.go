@@ -4,13 +4,13 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
-//APIKeyInfo -
+// APIKeyInfo -
 type APIKeyInfo struct {
 	Name     string
 	Location string
 }
 
-//ServiceBody -
+// ServiceBody - details about a service to create
 type ServiceBody struct {
 	NameToPush                string
 	APIName                   string
@@ -41,6 +41,9 @@ type ServiceBody struct {
 	ServiceAttributes         map[string]string
 	RevisionAttributes        map[string]string
 	InstanceAttributes        map[string]string
+	ServiceAgentDetails       map[string]interface{}
+	InstanceAgentDetails      map[string]interface{}
+	RevisionAgentDetails      map[string]interface{}
 	serviceContext            serviceContext
 	Endpoints                 []EndpointDefinition
 	UnstructuredProps         *UnstructuredProperties
@@ -59,12 +62,12 @@ func (s *ServiceBody) SetAccessRequestDefintionName(ardName string, isUnique boo
 	s.uniqueARD = isUnique
 }
 
-//GetAuthPolicies - returns the array of all auth policies in the ServiceBody
+// GetAuthPolicies - returns the array of all auth policies in the ServiceBody
 func (s *ServiceBody) GetAuthPolicies() []string {
 	return s.authPolicies
 }
 
-//GetAPIKeyInfo - returns the array of locations and argument names for the api key
+// GetAPIKeyInfo - returns the array of locations and argument names for the api key
 func (s *ServiceBody) GetAPIKeyInfo() []APIKeyInfo {
 	return s.apiKeyInfo
 }

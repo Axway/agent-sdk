@@ -52,6 +52,12 @@ type Client struct {
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error)
 	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error)
+	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	CreateSubResourceScopedMock                              func(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceUnscopedMock                            func(kindPlural, name, group, version string, subs map[string]interface{}) error
+	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
+	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 }
 
 func (m *Client) GetEnvironment() (*v1alpha1.Environment, error) {
@@ -326,6 +332,48 @@ func (m *Client) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRe
 func (m *Client) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error) {
 	if m.RegisterAccessRequestDefinitionMock != nil {
 		return m.RegisterAccessRequestDefinitionMock(data, update)
+	}
+	return nil, nil
+}
+
+func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	if m.UpdateAPIV1ResourceInstanceMock != nil {
+		return m.UpdateAPIV1ResourceInstanceMock(url, ri)
+	}
+	return nil, nil
+}
+
+func (m *Client) CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error {
+	if m.CreateSubResourceScopedMock != nil {
+		return m.CreateSubResourceScopedMock(scopeKindPlural, scopeName, resKindPlural, name, group, version, subs)
+	}
+	return nil
+}
+
+func (m *Client) CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error {
+	if m.CreateSubResourceUnscopedMock != nil {
+		return m.CreateSubResourceUnscopedMock(kindPlural, name, group, version, subs)
+	}
+	return nil
+}
+
+func (m *Client) GetResource(url string) (*v1.ResourceInstance, error) {
+	if m.GetResourceMock != nil {
+		return m.GetResourceMock(url)
+	}
+	return nil, nil
+}
+
+func (m *Client) CreateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	if m.CreateResourceMock != nil {
+		return m.CreateResourceMock(url, bts)
+	}
+	return nil, nil
+}
+
+func (m *Client) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	if m.UpdateResourceMock != nil {
+		return m.UpdateResourceMock(url, bts)
 	}
 	return nil, nil
 }

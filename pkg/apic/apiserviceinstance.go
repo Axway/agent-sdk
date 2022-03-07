@@ -7,18 +7,21 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Axway/agent-sdk/pkg/util"
+
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func (c *ServiceClient) buildAPIServiceInstanceSpec(
+func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
 	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) v1alpha1.ApiServiceInstanceSpec {
+) mv1a.ApiServiceInstanceSpec {
 	return v1alpha1.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endPoints,
@@ -27,12 +30,11 @@ func (c *ServiceClient) buildAPIServiceInstanceSpec(
 	}
 }
 
-func (c *ServiceClient) buildAPIServiceInstanceResource(
+func (c *ServiceClient) buildAPIServiceInstance(
 	serviceBody *ServiceBody,
-	instanceName string,
-	instanceAttributes map[string]string,
-	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) *v1alpha1.APIServiceInstance {
+	name string,
+	endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
+) *mv1a.APIServiceInstance {
 	finalizer := make([]v1.Finalizer, 0)
 	if serviceBody.uniqueARD {
 		finalizer = append(finalizer, v1.Finalizer{
@@ -40,31 +42,45 @@ func (c *ServiceClient) buildAPIServiceInstanceResource(
 			Description: serviceBody.ardName,
 		})
 	}
-	return &v1alpha1.APIServiceInstance{
+
+	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
+	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
-			Name:             instanceName,
+			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
+			Name:             name,
 			Title:            serviceBody.NameToPush,
-			Attributes:       c.buildAPIResourceAttributes(serviceBody, instanceAttributes, false),
-			Tags:             c.mapToTagsArray(serviceBody.Tags),
+			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 			Finalizers:       finalizer,
 		},
-		Spec:  c.buildAPIServiceInstanceSpec(serviceBody, endPoints),
-		Owner: c.getOwnerObject(serviceBody, false),
+		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
+		Owner: owner,
 	}
+
+	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	details := buildAgentDetailsSubResource(serviceBody, false, instDetails)
+	util.SetAgentDetails(instance, details)
+
+	return instance
 }
 
-func (c *ServiceClient) updateInstanceResource(
-	instance *v1alpha1.APIServiceInstance,
+func (c *ServiceClient) updateAPIServiceInstance(
 	serviceBody *ServiceBody,
-	endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
-) *v1alpha1.APIServiceInstance {
-	instance.ResourceMeta.Metadata.ResourceVersion = ""
+	instance *mv1a.APIServiceInstance,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+) *mv1a.APIServiceInstance {
+	owner, _ := c.getOwnerObject(serviceBody, false)
+	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
+	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
-	instance.Attributes = c.buildAPIResourceAttributes(serviceBody, instance.Attributes, false)
-	instance.Tags = c.mapToTagsArray(serviceBody.Tags)
-	instance.Spec = c.buildAPIServiceInstanceSpec(serviceBody, endpoints)
-	instance.Owner = c.getOwnerObject(serviceBody, false)
+	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
+	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	instance.Owner = owner
+
+	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
+	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
+
 	return instance
 }
 
@@ -124,25 +140,21 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	// check if a new AccessRequestDefinition is needed
 	c.createAccessRequestDefintion(serviceBody)
 
-	instanceEndpoints, err := c.createInstanceEndpoint(serviceBody.Endpoints)
+	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err
 	}
 
 	var httpMethod string
-	var instance *v1alpha1.APIServiceInstance
+	var instance *mv1a.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
-	instancePrefix := c.getRevisionPrefix(serviceBody)
+	instancePrefix := getRevisionPrefix(serviceBody)
 	instanceName := instancePrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
-		instanceAttributes := serviceBody.InstanceAttributes
-		if instanceAttributes == nil {
-			instanceAttributes = make(map[string]string)
-		}
-		instance = c.buildAPIServiceInstanceResource(serviceBody, instanceName, instanceAttributes, instanceEndpoints)
+		instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
 	}
 
 	if serviceBody.serviceContext.revisionAction == updateAPI {
@@ -155,7 +167,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
 		}
 		instanceURL = instanceURL + "/" + instanceName
-		instance = c.updateInstanceResource(instances[0], serviceBody, instanceEndpoints)
+		instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
 	}
 
 	buffer, err := json.Marshal(instance)
@@ -166,12 +178,30 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	ri, err := c.executeAPIServiceAPI(httpMethod, instanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(*serviceBody, serviceBody.serviceContext.serviceName)
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 			if rollbackErr != nil {
 				return errors.New(err.Error() + rollbackErr.Error())
 			}
 		}
 		return err
+	}
+
+	if err == nil {
+		err = c.CreateSubResourceScoped(
+			mv1a.EnvironmentResourceName,
+			c.cfg.GetEnvironmentName(),
+			instance.PluralName(),
+			instance.Name,
+			instance.Group,
+			instance.APIVersion,
+			instance.SubResources,
+		)
+		if err != nil {
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				return errors.New(err.Error() + rollbackErr.Error())
+			}
+		}
 	}
 
 	c.caches.AddAPIServiceInstance(ri)
@@ -180,19 +210,19 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	return err
 }
 
-func (c *ServiceClient) createInstanceEndpoint(endpoints []EndpointDefinition) ([]v1alpha1.ApiServiceInstanceSpecEndpoint, error) {
-	endPoints := make([]v1alpha1.ApiServiceInstanceSpecEndpoint, 0)
+func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceInstanceSpecEndpoint, error) {
+	endPoints := make([]mv1a.ApiServiceInstanceSpecEndpoint, 0)
 	var err error
 
 	// To set your own endpoints call AddServiceEndpoint/SetServiceEndpoint on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(endpoints) > 0 {
 		for _, endpointDef := range endpoints {
-			ep := v1alpha1.ApiServiceInstanceSpecEndpoint{
+			ep := mv1a.ApiServiceInstanceSpecEndpoint{
 				Host:     endpointDef.Host,
 				Port:     endpointDef.Port,
 				Protocol: endpointDef.Protocol,
-				Routing: v1alpha1.ApiServiceInstanceSpecRouting{
+				Routing: mv1a.ApiServiceInstanceSpecRouting{
 					BasePath: endpointDef.BasePath,
 				},
 			}
@@ -209,17 +239,17 @@ func (c *ServiceClient) createInstanceEndpoint(endpoints []EndpointDefinition) (
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getRevisionInstances(instanceName, url string) ([]*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) getRevisionInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
 	// Check if instances exist for the current revision.
 	queryParams := map[string]string{
-		"query": "name==" + instanceName,
+		"query": "name==" + name,
 	}
 
 	return c.GetAPIServiceInstances(queryParams, url)
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
-func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
+func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -227,7 +257,7 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alp
 
 	request := coreapi.Request{
 		Method:  coreapi.GET,
-		URL:     c.cfg.GetInstancesURL() + "/" + instanceName,
+		URL:     c.cfg.GetInstancesURL() + "/" + name,
 		Headers: headers,
 	}
 
@@ -242,7 +272,7 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(instanceName string) (*v1alp
 		}
 		return nil, nil
 	}
-	apiInstance := new(v1alpha1.APIServiceInstance)
-	json.Unmarshal(response.Body, apiInstance)
-	return apiInstance, nil
+	apiInstance := new(mv1a.APIServiceInstance)
+	err = json.Unmarshal(response.Body, apiInstance)
+	return apiInstance, err
 }

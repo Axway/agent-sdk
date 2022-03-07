@@ -21,10 +21,12 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 			Metadata: v1.Metadata{
 				ID: "svc-" + externalAPIID,
 			},
-			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:         externalAPIID,
-				definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
-				definitions.AttrExternalAPIName:       externalAPIName,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.AttrExternalAPIID:         externalAPIID,
+					definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
+					definitions.AttrExternalAPIName:       externalAPIName,
+				},
 			},
 		},
 	}
@@ -33,10 +35,12 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 			Metadata: v1.Metadata{
 				ID: "instance-" + externalAPIID,
 			},
-			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:         externalAPIID,
-				definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
-				definitions.AttrExternalAPIName:       externalAPIName,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.AttrExternalAPIID:         externalAPIID,
+					definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
+					definitions.AttrExternalAPIName:       externalAPIName,
+				},
 			},
 		},
 	}
@@ -99,18 +103,20 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 }
 
 func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
-	// Setup
 	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
+
 	setupCache("12345", "test")
 	instance := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: "instance-" + "123456",
 			},
-			Attributes: map[string]string{
-				definitions.AttrExternalAPIID:         "123456",
-				definitions.AttrExternalAPIPrimaryKey: "primary-12345",
-				definitions.AttrExternalAPIName:       "test",
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.AttrExternalAPIID:         "123456",
+					definitions.AttrExternalAPIPrimaryKey: "primary-12345",
+					definitions.AttrExternalAPIName:       "test",
+				},
 			},
 		},
 	}
