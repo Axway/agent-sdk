@@ -15,7 +15,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -771,7 +770,7 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 }
 
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error) {
 	crdBytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -784,7 +783,7 @@ func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.Crede
 		return nil, err
 	}
 
-	newCRD := &v1alpha1.CredentialRequestDefinition{}
+	newCRD := &mv1a.CredentialRequestDefinition{}
 	err = json.Unmarshal(response, newCRD)
 	if err != nil {
 		return nil, err
@@ -794,7 +793,7 @@ func (c *ServiceClient) RegisterCredentialRequestDefinition(data *v1alpha1.Crede
 }
 
 // RegisterAccessRequestDefinition - Adds or updates a access request definition
-func (c *ServiceClient) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error) {
 	ardBytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -807,7 +806,7 @@ func (c *ServiceClient) RegisterAccessRequestDefinition(data *v1alpha1.AccessReq
 		return nil, err
 	}
 
-	newARD := &v1alpha1.AccessRequestDefinition{}
+	newARD := &mv1a.AccessRequestDefinition{}
 	err = json.Unmarshal(response, newARD)
 	if err != nil {
 		return nil, err

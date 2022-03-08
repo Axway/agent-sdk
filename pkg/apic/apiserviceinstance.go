@@ -11,7 +11,6 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -20,11 +19,11 @@ import (
 
 func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
-	endPoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) mv1a.ApiServiceInstanceSpec {
-	return v1alpha1.ApiServiceInstanceSpec{
+	return mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
-		Endpoint:                     endPoints,
+		Endpoint:                     endpoints,
 		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
 		AccessRequestDefinition:      serviceBody.ardName,
 	}
@@ -33,7 +32,7 @@ func buildAPIServiceInstanceSpec(
 func (c *ServiceClient) buildAPIServiceInstance(
 	serviceBody *ServiceBody,
 	name string,
-	endpoints []v1alpha1.ApiServiceInstanceSpecEndpoint,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
 	finalizer := make([]v1.Finalizer, 0)
 	if serviceBody.uniqueARD {
@@ -84,7 +83,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	return instance
 }
 
-func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
+func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	// TODO - check cache for access request, update if needed
 	ardBytes, err := json.Marshal(data)
 	if err != nil {
@@ -98,7 +97,7 @@ func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *v1alpha1.Acc
 		return nil, err
 	}
 
-	newARD := &v1alpha1.AccessRequestDefinition{}
+	newARD := &mv1a.AccessRequestDefinition{}
 	err = json.Unmarshal(response, newARD)
 	if err != nil {
 		return nil, err
