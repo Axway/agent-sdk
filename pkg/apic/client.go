@@ -14,6 +14,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -56,6 +57,7 @@ type Client interface {
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
+	DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
 	GetConsumerInstanceByID(id string) (*mv1a.ConsumerInstance, error)
@@ -785,11 +787,8 @@ func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.Credentia
 
 	newCRD := &mv1a.CredentialRequestDefinition{}
 	err = json.Unmarshal(response, newCRD)
-	if err != nil {
-		return nil, err
-	}
 
-	return newCRD, nil
+	return newCRD, err
 }
 
 // RegisterAccessRequestDefinition - Adds or updates a access request definition

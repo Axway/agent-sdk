@@ -32,7 +32,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 				return nil, nil
 			}
 
-			builder := NewCredentialRequestBuilder(registerFunc).
+			builder := NewCRDBuilder(registerFunc).
 				SetName(tt.name).
 				SetProvisionSchema(
 					NewSchemaBuilder().

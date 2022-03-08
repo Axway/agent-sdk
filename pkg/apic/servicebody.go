@@ -1,6 +1,8 @@
 package apic
 
 import (
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -54,6 +56,7 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
+	accessRequestDefinition   *mv1a.AccessRequestDefinition
 }
 
 //SetAccessRequestDefintionName - set the name of the access request definition for this service body
@@ -89,4 +92,36 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 		}
 	}
 	return s.credentialRequestPolicies
+}
+
+func (s *ServiceBody) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+	s.accessRequestDefinition = accessRequestDefinition
+	return s.accessRequestDefinition, nil
+}
+
+func (s *ServiceBody) createAccessRequestDefintion() error {
+	oauthScopes := make([]string, 0)
+	for scope := range s.GetScopes() {
+		oauthScopes = append(oauthScopes, scope)
+	}
+	if len(oauthScopes) > 0 {
+		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefintion).
+			SetName(s.NameToPush).
+			SetSchema(
+				provisioning.NewSchemaBuilder().
+					AddProperty(
+						provisioning.NewSchemaPropertyBuilder().
+							SetName("scopes").
+							SetLabel("Scopes").
+							IsArray().
+							AddItem(
+								provisioning.NewSchemaPropertyBuilder().
+									SetName("scope").
+									IsString().
+									SetEnumValues(oauthScopes)))).Register()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

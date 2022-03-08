@@ -100,15 +100,18 @@ func (j *instanceValidator) deleteServiceInstanceOrService(ri *apiV1.ResourceIns
 	log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", ri.Title)
 	msg := "Deleted catalog item %s from Amplify Central"
 
-	err := agent.apicClient.DeleteAPIServiceInstance(ri.Name)
+	var err error
+
+	if len(ri.Finalizers) == 0 {
+		err = agent.apicClient.DeleteAPIServiceInstance(ri.Name)
+	} else {
+		err = agent.apicClient.DeleteAPIServiceInstanceWithFinalizers(ri)
+	}
 	if err != nil {
 		log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(ri.Title))
 		return
 	}
-	if j.isAgentPollMode {
-		// In GRPC mode delete is done on receiving delete event from service
-		agent.cacheManager.DeleteAPIServiceInstance(ri.Metadata.ID)
-	}
+	agent.cacheManager.DeleteAPIServiceInstance(ri.Metadata.ID)
 
 	// delete if it is an api service
 	if j.shouldDeleteService(primaryKey, apiID) {

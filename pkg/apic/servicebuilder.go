@@ -309,6 +309,11 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 
 		// get oauth scopes
 		b.serviceBody.scopes = val.getOAuthScopes()
+
+		err := b.serviceBody.createAccessRequestDefintion()
+		if err != nil {
+			return b.serviceBody, err
+		}
 	}
 
 	return b.serviceBody, nil

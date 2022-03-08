@@ -15,7 +15,7 @@ func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestD
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
-	return provisioning.NewCredentialRequestBuilder(createOrUpdateCredentialRequestDefinition)
+	return provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition)
 }
 
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema

@@ -31,8 +31,8 @@ type CredentialRequestBuilder interface {
 	Register() (*v1alpha1.CredentialRequestDefinition, error)
 }
 
-// NewCredentialRequestBuilder - called by the agent package and sends in the function that registers this credential request
-func NewCredentialRequestBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialRequestBuilder {
+// NewCRDBuilder - called by the agent package and sends in the function that registers this credential request
+func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialRequestBuilder {
 	return &credentialRequestDef{
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,

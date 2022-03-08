@@ -112,20 +112,49 @@ func (c *ServiceClient) DeleteConsumerInstance(name string) error {
 
 // DeleteAPIServiceInstance deletes an api service instance in central by name
 func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
-	// Get finalizers
-	finalizers, _ := c.getFinalizers(c.cfg.GetInstancesURL() + "/" + name)
-
-	for _, f := range finalizers {
-		if f.Name == AccessRequestDefinitionFinalizer {
-			c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
-		}
-	}
-
 	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetInstancesURL()+"/"+name, nil)
 	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
 		return err
 	}
 	return nil
+}
+
+// DeleteAPIServiceInstanceWithFinalizers deletes an api service instance in central, handling finalizers
+func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error {
+	url := c.cfg.GetInstancesURL() + "/" + ri.Name
+	finalizers := ri.Finalizers
+	ri.Finalizers = make([]v1.Finalizer, 0)
+
+	// handle finalizers
+	for _, f := range finalizers {
+		if f.Name == AccessRequestDefinitionFinalizer {
+			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
+			if err == nil {
+				continue
+			}
+		}
+		ri.Finalizers = append(ri.Finalizers, f)
+	}
+
+	// get the full instance
+	currentRI, err := c.executeAPIServiceAPI(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	// update the finalizers in the instance from central
+	currentRI.Finalizers = ri.Finalizers
+
+	// update instance
+	updatedInstance, err := json.Marshal(currentRI)
+	if err != nil {
+		return err
+	}
+	_, err = c.apiServiceDeployAPI(http.MethodPut, url, updatedInstance)
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
+		return err
+	}
+
+	return c.DeleteAPIServiceInstance(ri.Name)
 }
 
 // GetConsumerInstanceByID -

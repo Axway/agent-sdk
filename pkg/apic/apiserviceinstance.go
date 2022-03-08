@@ -12,7 +12,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -106,38 +105,16 @@ func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *mv1a.AccessR
 	return newARD, nil
 }
 
-func (c *ServiceClient) createAccessRequestDefintion(serviceBody *ServiceBody) error {
-	oauthScopes := make([]string, 0)
-	for scope := range serviceBody.GetScopes() {
-		oauthScopes = append(oauthScopes, scope)
-	}
-	if len(oauthScopes) > 0 {
-		newARD, err := provisioning.NewAccessRequestBuilder(c.createOrUpdateAccessRequestDefinition).
-			SetName(serviceBody.NameToPush).
-			SetSchema(
-				provisioning.NewSchemaBuilder().
-					AddProperty(
-						provisioning.NewSchemaPropertyBuilder().
-							SetName("scopes").
-							SetLabel("Scopes").
-							IsArray().
-							AddItem(
-								provisioning.NewSchemaPropertyBuilder().
-									SetName("scope").
-									IsString().
-									SetEnumValues(oauthScopes)))).Register()
+// processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
+func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
+	if serviceBody.accessRequestDefinition != nil {
+		// check if a new AccessRequestDefinition is needed
+		newARD, err := c.createOrUpdateAccessRequestDefinition(serviceBody.accessRequestDefinition)
 		if err != nil {
 			return err
 		}
 		serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
 	}
-	return nil
-}
-
-// processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
-func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	// check if a new AccessRequestDefinition is needed
-	c.createAccessRequestDefintion(serviceBody)
 
 	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
