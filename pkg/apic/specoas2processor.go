@@ -19,7 +19,10 @@ const (
 
 // oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
 type oas2SpecProcessor struct {
-	spec *oas2Swagger
+	spec         *oas2Swagger
+	scopes       map[string]string
+	authPolicies []string
+	apiKeyInfo   []APIKeyInfo
 }
 
 func newOas2Processor(oas2Spec *oas2Swagger) *oas2SpecProcessor {
@@ -65,9 +68,10 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	return endPoints, nil
 }
 
-func (p *oas2SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
+func (p *oas2SpecProcessor) parseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
+	scopes := make(map[string]string)
 	for _, scheme := range p.spec.SecurityDefinitions {
 		switch scheme.Type {
 		case oasSecurityAPIKey:
@@ -78,11 +82,27 @@ func (p *oas2SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
 			})
 		case oasSecurityOauth:
 			authPolicies = append(authPolicies, Oauth)
+			for scope, val := range scheme.Scopes {
+				scopes[strings.TrimSpace(scope)] = strings.TrimSpace(val)
+			}
 		}
 	}
-	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
-	sort.Strings(authPolicies)
-	return authPolicies, keyInfo
+	p.authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
+	sort.Strings(p.authPolicies)
+	p.apiKeyInfo = keyInfo
+	p.scopes = scopes
+}
+
+func (p *oas2SpecProcessor) getAuthPolicies() []string {
+	return p.authPolicies
+}
+
+func (p *oas2SpecProcessor) getOAuthScopes() map[string]string {
+	return p.scopes
+}
+
+func (p *oas2SpecProcessor) getAPIKeyInfo() []APIKeyInfo {
+	return p.apiKeyInfo
 }
 
 func createEndpointDefinition(scheme, host string, port int, basePath string) EndpointDefinition {

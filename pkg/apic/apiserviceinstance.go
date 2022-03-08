@@ -21,8 +21,10 @@ func buildAPIServiceInstanceSpec(
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) mv1a.ApiServiceInstanceSpec {
 	return mv1a.ApiServiceInstanceSpec{
-		ApiServiceRevision: serviceBody.serviceContext.revisionName,
-		Endpoint:           endpoints,
+		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
+		Endpoint:                     endpoints,
+		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
+		AccessRequestDefinition:      serviceBody.ardName,
 	}
 }
 
@@ -31,6 +33,14 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	name string,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
+	finalizer := make([]v1.Finalizer, 0)
+	if serviceBody.uniqueARD {
+		finalizer = append(finalizer, v1.Finalizer{
+			Name:        AccessRequestDefinitionFinalizer,
+			Description: serviceBody.ardName,
+		})
+	}
+
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
@@ -39,6 +49,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Finalizers:       finalizer,
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
 		Owner: owner,
@@ -71,8 +82,40 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	return instance
 }
 
+func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+	// TODO - check cache for access request, update if needed
+	ardBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
+
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newARD := &mv1a.AccessRequestDefinition{}
+	err = json.Unmarshal(response, newARD)
+	if err != nil {
+		return nil, err
+	}
+
+	return newARD, nil
+}
+
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
+	if serviceBody.accessRequestDefinition != nil {
+		// check if a new AccessRequestDefinition is needed
+		newARD, err := c.createOrUpdateAccessRequestDefinition(serviceBody.accessRequestDefinition)
+		if err != nil {
+			return err
+		}
+		serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
+	}
+
 	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err

@@ -15,7 +15,10 @@ import (
 
 // oas3SpecProcessor parses and validates an OAS3 spec, and exposes methods to modify the content of the spec.
 type oas3SpecProcessor struct {
-	spec *openapi3.T
+	spec         *openapi3.T
+	scopes       map[string]string
+	authPolicies []string
+	apiKeyInfo   []APIKeyInfo
 }
 
 func newOas3Processor(oas3Obj *openapi3.T) *oas3SpecProcessor {
@@ -132,9 +135,7 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 		// If the URL is the default URL put it at the front of the array
 		if urlStr == defaultURL {
 			newEndPoints := []EndpointDefinition{endPoint}
-			for _, oldEndpoint := range endPoints {
-				newEndPoints = append(newEndPoints, oldEndpoint)
-			}
+			newEndPoints = append(newEndPoints, endPoints...)
 			endPoints = newEndPoints
 		} else {
 			endPoints = append(endPoints, endPoint)
@@ -144,9 +145,10 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 	return endPoints, nil
 }
 
-func (p *oas3SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
+func (p *oas3SpecProcessor) parseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
+	scopes := make(map[string]string)
 	for _, scheme := range p.spec.Components.SecuritySchemes {
 		switch scheme.Value.Type {
 		case oasSecurityAPIKey:
@@ -157,9 +159,25 @@ func (p *oas3SpecProcessor) getAuthInfo() ([]string, []APIKeyInfo) {
 			})
 		case oasSecurityOauth:
 			authPolicies = append(authPolicies, Oauth)
+			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.ClientCredentials.Scopes)
+			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.Implicit.Scopes)
+			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.AuthorizationCode.Scopes)
 		}
 	}
 	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
 	sort.Strings(authPolicies)
-	return authPolicies, keyInfo
+	p.apiKeyInfo = keyInfo
+	p.scopes = scopes
+}
+
+func (p *oas3SpecProcessor) getAuthPolicies() []string {
+	return p.authPolicies
+}
+
+func (p *oas3SpecProcessor) getOAuthScopes() map[string]string {
+	return p.scopes
+}
+
+func (p *oas3SpecProcessor) getAPIKeyInfo() []APIKeyInfo {
+	return p.apiKeyInfo
 }

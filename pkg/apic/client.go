@@ -14,6 +14,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
@@ -56,6 +57,7 @@ type Client interface {
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
+	DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
 	GetConsumerInstanceByID(id string) (*mv1a.ConsumerInstance, error)
@@ -91,6 +93,8 @@ type Client interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error)
+	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error)
 }
 
 // New creates a new Client
@@ -627,6 +631,8 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 
 	switch response.Code {
 	case http.StatusOK:
+		fallthrough
+	case http.StatusCreated:
 		return response.Body, nil
 	case http.StatusUnauthorized:
 		return nil, ErrAuthentication
@@ -763,4 +769,47 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
+}
+
+// RegisterCredentialRequestDefinition - Adds or updates a credential request definition
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error) {
+	crdBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/credentialrequestdefinitions")
+
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, crdBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newCRD := &mv1a.CredentialRequestDefinition{}
+	err = json.Unmarshal(response, newCRD)
+
+	return newCRD, err
+}
+
+// RegisterAccessRequestDefinition - Adds or updates a access request definition
+func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error) {
+	ardBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
+
+	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newARD := &mv1a.AccessRequestDefinition{}
+	err = json.Unmarshal(response, newARD)
+	if err != nil {
+		return nil, err
+	}
+
+	return newARD, nil
 }

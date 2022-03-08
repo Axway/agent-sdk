@@ -2,8 +2,11 @@ package provisioning
 
 const credentialTypeSetError = "can not set credential as %s as its already set as another %s"
 
-const apiKey = "api-key"
-const oauth = "oauth"
+const (
+	apiKey = "api-key"
+	oauth  = "oauth"
+	other  = "other"
+)
 
 // Credential - holds the details about the credential to send to encrypt and send to platform
 type Credential interface {
@@ -20,10 +23,15 @@ func (c credential) GetData() map[string]interface{} {
 	return c.data
 }
 
+type genericCredential struct {
+	data map[string]interface{}
+}
+
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
 	SetOAuth(id, secret string) CredentialBuilder
 	SetAPIKey(key string) CredentialBuilder
+	SetCredential(data map[string]interface{}) CredentialBuilder
 	Process() (Credential, error)
 }
 
@@ -47,18 +55,6 @@ func (c *credentialBuilder) Process() (Credential, error) {
 	return c.credential, nil
 }
 
-func (c *credentialBuilder) hasError(credType string) bool {
-	// if c.err != nil {
-	// 	return true
-	// }
-	//
-	// if c.credential.credentialType != 0 {
-	// 	c.err = fmt.Errorf(credentialTypeSetError, credType, c.credential.credentialType)
-	// 	return true
-	// }
-	return false
-}
-
 // SetOauth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
 	c.credential.credentialType = oauth
@@ -75,5 +71,12 @@ func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
 	c.credential.data = map[string]interface{}{
 		key: key,
 	}
+	return c
+}
+
+// SetCredential - set the credential
+func (c *credentialBuilder) SetCredential(data map[string]interface{}) CredentialBuilder {
+	c.credential.credentialType = other
+	c.credential.data = data
 	return c
 }
