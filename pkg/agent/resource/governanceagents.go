@@ -27,6 +27,5 @@ func createGovernanceAgentStatusResource(agentName, status, prevStatus, message 
 
 func mergeGovernanceAgentWithConfig(agentRes *apiV1.ResourceInstance, cfg *config.CentralConfiguration) {
 	governanceAgent(agentRes)
-	resCfgLogLevel := "info"
-	applyResConfigToCentralConfig(cfg, "", "", resCfgLogLevel)
+	applyResConfigToCentralConfig(cfg, "", "", "")
 }
