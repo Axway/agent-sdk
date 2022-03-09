@@ -1,26 +1,18 @@
 package resource
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/mock"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/json"
 )
-
-type mockSvcClient struct {
-	apiResponse []byte
-}
-
-func (m *mockSvcClient) ExecuteAPI(method, _ string, _ map[string]string, buffer []byte) ([]byte, error) {
-	if method == api.PUT {
-		m.apiResponse = buffer
-	}
-	return m.apiResponse, nil
-}
 
 func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
 	res := &v1alpha1.DiscoveryAgent{
@@ -91,8 +83,14 @@ func TestNewManager(t *testing.T) {
 	assert.Nil(t, m)
 
 	resource := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
-	svcClient := &mockSvcClient{}
-	svcClient.apiResponse, _ = json.Marshal(resource)
+	svcClient := &mock.Client{
+		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+			if method == api.PUT {
+				return buffer, nil
+			}
+			return json.Marshal(resource)
+		},
+	}
 	agentResChangeHandlerCall := 0
 	f := func() { agentResChangeHandlerCall++ }
 	cfg.AgentType = config.DiscoveryAgent
@@ -141,8 +139,16 @@ func TestAgentConfigOverride(t *testing.T) {
 			cfg.AgentName = tc.agentName
 			cfg.AgentType = tc.agentType
 
-			svcClient := &mockSvcClient{}
-			svcClient.apiResponse, _ = json.Marshal(tc.resource)
+			var resource *v1.ResourceInstance
+			svcClient := &mock.Client{
+				ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+					if method == api.PUT {
+						return buffer, nil
+					}
+					return json.Marshal(resource)
+				},
+			}
+			resource = tc.resource
 
 			agentResChangeHandlerCall := 0
 			f := func() { agentResChangeHandlerCall++ }
@@ -161,7 +167,7 @@ func TestAgentConfigOverride(t *testing.T) {
 			assert.Equal(t, 0, agentResChangeHandlerCall)
 
 			// Updated resource invokes change handler
-			svcClient.apiResponse, _ = json.Marshal(tc.updatedResource)
+			resource = tc.updatedResource
 			m.FetchAgentResource()
 
 			res = m.GetAgentResource()
@@ -204,15 +210,24 @@ func TestAgentUpdateStatus(t *testing.T) {
 			cfg.AgentName = tc.agentName
 			cfg.AgentType = tc.agentType
 
-			svcClient := &mockSvcClient{}
-			svcClient.apiResponse, _ = json.Marshal(tc.resource)
+			var response []byte
+			svcClient := &mock.Client{
+				ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+					if method == api.PUT {
+						response = buffer
+						return buffer, nil
+					}
+					response, _ = json.Marshal(tc.resource)
+					return response, nil
+				},
+			}
 
 			m, err := NewAgentResourceManager(cfg, svcClient, nil)
 
 			assert.Nil(t, err)
 			assert.NotNil(t, m)
 			m.UpdateAgentStatus("stopped", "running", "test")
-			assertAgentStatusResource(t, svcClient.apiResponse, tc.agentName, "stopped", "running", "test")
+			assertAgentStatusResource(t, response, tc.agentName, "stopped", "running", "test")
 		})
 	}
 }
@@ -228,11 +243,12 @@ func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 
 func assertAgentStatusResource(t *testing.T, res []byte, agentName, state, previousState, message string) {
 	var agentRes map[string]interface{}
+	fmt.Println(string(res))
 	json.Unmarshal(res, &agentRes)
 	statusSubRes := agentRes["status"].(map[string]interface{})
 
 	assert.NotNil(t, statusSubRes)
-	assert.Equal(t, statusSubRes["state"], state)
-	assert.Equal(t, statusSubRes["previousState"], previousState)
-	assert.Equal(t, statusSubRes["message"], message)
+	assert.Equal(t, state, statusSubRes["state"])
+	assert.Equal(t, previousState, statusSubRes["previousState"])
+	assert.Equal(t, message, statusSubRes["message"])
 }

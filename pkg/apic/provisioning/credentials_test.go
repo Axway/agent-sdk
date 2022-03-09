@@ -15,7 +15,7 @@ func TestCredentialBuilder(t *testing.T) {
 		key    string
 		id     string
 		secret string
-		ref    string
+		other  map[string]interface{}
 	}{
 		{
 			name: "Build API Key Credential",
@@ -27,10 +27,25 @@ func TestCredentialBuilder(t *testing.T) {
 			secret: "secret",
 		},
 		{
-			name:   "Build Multiple Credential - error",
+			name: "Build Other Credential",
+			other: map[string]interface{}{
+				"data1": "data1",
+				"data2": "data2",
+			},
+		},
+		{
+			name:   "Build Multiple Credential - error 1",
 			key:    "api-key-data",
 			id:     "client-id",
 			secret: "secret",
+		},
+		{
+			name: "Build Multiple Credential - error 2",
+			key:  "api-key-data",
+			other: map[string]interface{}{
+				"data1": "data1",
+				"data2": "data2",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -43,7 +58,11 @@ func TestCredentialBuilder(t *testing.T) {
 			if tt.id != "" {
 				builder.SetOAuth(tt.key, tt.secret)
 			}
-			if tt.key != "" && tt.id != "" {
+			if tt.other != nil {
+				builder.SetCredential(tt.other)
+			}
+
+			if (tt.key != "" && tt.id != "") || (tt.key != "" && tt.other != nil) {
 				wantErr = true
 				builder.SetAPIKey(tt.key)
 			}

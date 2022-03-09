@@ -19,7 +19,10 @@ type specProcessor interface {
 }
 
 type oasSpecProcessor interface {
-	getAuthInfo() ([]string, []APIKeyInfo)
+	parseAuthInfo()
+	getAuthPolicies() []string
+	getAPIKeyInfo() []APIKeyInfo
+	getOAuthScopes() map[string]string
 }
 
 type specResourceParser struct {
@@ -99,7 +102,7 @@ func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
 		if strings.HasPrefix(openapi, "2.") {
 			return s.parseOAS2Spec()
 		}
-		return nil, errors.New("Invalid openapi specification")
+		return nil, errors.New("invalid openapi specification")
 	}
 
 	specType, ok = specDef["swagger"]
@@ -108,14 +111,14 @@ func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
 		if swagger == "2.0" {
 			return s.parseOAS2Spec()
 		}
-		return nil, errors.New("Invalid swagger 2.0 specification")
+		return nil, errors.New("invalid swagger 2.0 specification")
 	}
 
-	specType, ok = specDef["asyncapi"]
+	_, ok = specDef["asyncapi"]
 	if ok {
 		return newAsyncAPIProcessor(specDef), nil
 	}
-	return nil, errors.New("Unknown yaml or json based specification")
+	return nil, errors.New("unknown yaml or json based specification")
 }
 
 func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
@@ -138,7 +141,7 @@ func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 		}
 	}
 	if swaggerObj.Info.Title == "" {
-		return nil, errors.New("Invalid openapi 2.0 specification")
+		return nil, errors.New("invalid openapi 2.0 specification")
 	}
 	return newOas2Processor(swaggerObj), nil
 }
@@ -165,7 +168,7 @@ func (s *specResourceParser) parseAsyncAPISpec() (specProcessor, error) {
 	if ok {
 		return newAsyncAPIProcessor(specDef), nil
 	}
-	return nil, errors.New("Invalid asyncapi specification")
+	return nil, errors.New("invalid asyncapi specification")
 }
 
 func (s *specResourceParser) parseProtobufSpec() (specProcessor, error) {
@@ -179,6 +182,6 @@ func (s *specResourceParser) parseProtobufSpec() (specProcessor, error) {
 	if len(definition.Elements) > 0 {
 		return newProtobufProcessor(definition), nil
 	}
-	return nil, errors.New("Invalid protobuf specification")
+	return nil, errors.New("invalid protobuf specification")
 
 }
