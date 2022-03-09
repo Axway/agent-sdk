@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -10,7 +9,6 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -42,6 +40,7 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 	}
 }
 
+// Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
 		return nil
@@ -66,10 +65,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return nil
 	}
 
-	log.Infof("Received a %s event for an AccessRequest", action.String())
-	bts, _ := json.MarshalIndent(ar, "", "\t")
-	log.Info(string(bts))
-
 	app, err := h.getManagedApp(ar)
 	if err != nil {
 		return err
@@ -80,9 +75,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return err
 	}
 
-	// TODO: what to do for a delete event is still a question
 	if action == proto.Event_DELETED {
-		log.Info("Deprovisioning the AccessRequest")
 		h.prov.AccessRequestDeprovision(req)
 		return nil
 	}
@@ -128,7 +121,7 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 	return h.client.GetResource(url)
 }
 
-func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*arReq, error) {
+func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
 	instID := ""
 	for _, ref := range ar.Metadata.References {
 		if ref.Name == ar.Spec.ApiServiceInstance {
@@ -145,7 +138,7 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 	apiID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 	stage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 
-	return &arReq{
+	return &provAccReq{
 		apiID:         apiID,
 		appDetails:    appDetails,
 		stage:         stage,
@@ -154,7 +147,7 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 	}, nil
 }
 
-type arReq struct {
+type provAccReq struct {
 	apiID         string
 	appDetails    map[string]interface{}
 	accessDetails map[string]interface{}
@@ -163,17 +156,17 @@ type arReq struct {
 }
 
 // GetApplicationName gets the application name the access request is linked too.
-func (r arReq) GetApplicationName() string {
+func (r provAccReq) GetApplicationName() string {
 	return r.managedApp
 }
 
 // GetAPIID gets the api service instance id that the access request is linked too.
-func (r arReq) GetAPIID() string {
+func (r provAccReq) GetAPIID() string {
 	return r.apiID
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (r arReq) GetApplicationDetailsValue(key string) interface{} {
+func (r provAccReq) GetApplicationDetailsValue(key string) interface{} {
 	if r.appDetails == nil {
 		return nil
 	}
@@ -181,13 +174,13 @@ func (r arReq) GetApplicationDetailsValue(key string) interface{} {
 }
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
-func (r arReq) GetAccessRequestDetailsValue(key string) interface{} {
+func (r provAccReq) GetAccessRequestDetailsValue(key string) interface{} {
 	if r.appDetails == nil {
 		return nil
 	}
 	return r.accessDetails[key]
 }
 
-func (r arReq) GetStage() string {
+func (r provAccReq) GetStage() string {
 	return r.stage
 }

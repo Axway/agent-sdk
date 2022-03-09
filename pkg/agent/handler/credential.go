@@ -1,10 +1,16 @@
 package handler
 
 import (
-	"encoding/json"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"hash"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cat "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -13,21 +19,27 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+const xAgentEncrypted = "x-agent-encrypted"
+
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
 }
 
+type encryptFunc func(enc encryptStr, schema, data map[string]interface{}) map[string]interface{}
+
 type credentials struct {
-	prov   credProv
-	client client
+	prov    credProv
+	client  client
+	encrypt encryptFunc
 }
 
 // NewCredentialHandler creates a Handler for Access Requests
 func NewCredentialHandler(prov credProv, client client) Handler {
 	return &credentials{
-		prov:   prov,
-		client: client,
+		prov:    prov,
+		client:  client,
+		encrypt: encryptMap,
 	}
 }
 
@@ -35,6 +47,13 @@ func NewCredentialHandler(prov credProv, client client) Handler {
 func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
 		return nil
+	}
+	cApp := cat.Application{
+		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
+			EncryptionKey:       "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr0uezHaYsIvhPMYZjSLd\nmMi3GiKTi9e4dGaqZ/xxs7MytlO7eMKTjQ/JQLQcZ3p6JyaeGy2ya4f69Ppcfmgs\n+Iq+vbLrvgZCKiktn8DEB+DTI6uhvfbR9agVyx6MK3NHT8tNMX1no+paZA//G3V9\nT5k9Y0HkC4wOO3OCdUPBF9Q/SaUPy6NJxoFgn/uzu3vUEcF/dlMsJytlo4FvjUsG\nibsfYBsAKyLoEFNFuuQCAuFcmbS0mNw8ULnXYYfXdo/b9OBIEpLmKxsvw/Ov+WtU\n7c+IzOpY0Hbr7O4R+kxiFJNxlV7Cv3Rsw7Y0mNe5qKfgNu9gIixmJuhsOWzRU6U5\n1QIDAQAB\n-----END PUBLIC KEY-----\n",
+			EncryptionAlgorithm: "PKCS",
+			EncryptionHash:      "SHA256",
+		}},
 	}
 
 	cr := &mv1.Credential{}
@@ -52,28 +71,19 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		return nil
 	}
 
-	log.Infof("Received a %s event for a AccessRequest", action.String())
-	bts, _ := json.MarshalIndent(cr, "", "\t")
-	log.Info(string(bts))
-
 	app, err := h.getManagedApp(cr)
 	if err != nil {
 		return err
 	}
 
-	credDetails := util.GetAgentDetails(cr)
-	appDetails := util.GetAgentDetails(app)
-
-	creds := &creds{
-		appDetails:  appDetails,
-		credDetails: credDetails,
-		credType:    cr.Spec.CredentialRequestDefinition,
-		managedApp:  cr.Spec.ManagedApplication,
-		requestType: string(cr.Request),
+	crd, err := h.getCRD(cr)
+	if err != nil {
+		return err
 	}
 
+	creds := newProvCreds(cr, util.GetAgentDetails(app))
+
 	if action == proto.Event_DELETED {
-		log.Info("Deprovisioning the Credentials")
 		h.prov.CredentialDeprovision(creds)
 		return nil
 	}
@@ -82,13 +92,13 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 	var credentialData prov.Credential
 
 	if cr.Status.Level == statusPending {
-		log.Info("Provisioning the Credentials")
-		log.Infof("%+v", creds)
 		status, credentialData = h.prov.CredentialProvision(creds)
-		// loop through all credentialData fields and check for x-axway-encrypted
-		// encrypt based on CredentialRequestDefinition
-		// update Credential.Data with new values
-		cr.Data = credentialData.GetData()
+		sec := cApp.Spec.Security
+		enc, err := newEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
+		if err != nil {
+			return err
+		}
+		cr.Data = h.encrypt(enc, crd.Spec.Provision.Schema, credentialData.GetData())
 	}
 
 	s := prov.NewStatusReason(status)
@@ -123,7 +133,51 @@ func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance,
 	return h.client.GetResource(url)
 }
 
-type creds struct {
+func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
+	url := fmt.Sprintf(
+		"/management/v1alpha1/environments/%s/credentialrequestdefinitions/%s",
+		cred.Metadata.Scope.Name,
+		cred.Spec.CredentialRequestDefinition,
+	)
+	ri, err := h.client.GetResource(url)
+	if err != nil {
+		return nil, err
+	}
+
+	crd := &mv1.CredentialRequestDefinition{}
+	err = crd.FromInstance(ri)
+	return crd, err
+}
+
+// encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
+func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]interface{} {
+	for key, value := range data {
+		schemaValue := schema[key]
+		v, ok := schemaValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if _, ok := v[xAgentEncrypted]; ok {
+			v, ok := value.(string)
+			if !ok {
+				continue
+			}
+
+			str, err := enc.encrypt(v)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+
+			data[key] = str
+		}
+	}
+
+	return data
+}
+
+type provCreds struct {
 	managedApp  string
 	credType    string
 	requestType string
@@ -131,21 +185,35 @@ type creds struct {
 	appDetails  map[string]interface{}
 }
 
-func (c creds) GetApplicationName() string {
+func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCreds {
+	credDetails := util.GetAgentDetails(cr)
+
+	return &provCreds{
+		appDetails:  appDetails,
+		credDetails: credDetails,
+		credType:    cr.Spec.CredentialRequestDefinition,
+		managedApp:  cr.Spec.ManagedApplication,
+		requestType: string(cr.Request),
+	}
+}
+
+// GetApplicationName gets the name of the managed application
+func (c provCreds) GetApplicationName() string {
 	return c.managedApp
 }
 
-func (c creds) GetCredentialType() string {
+// GetCredentialType gets the type of the credential
+func (c provCreds) GetCredentialType() string {
 	return c.credType
 }
 
 // GetRequestType returns the type of request for the credentials
-func (c creds) GetRequestType() string {
+func (c provCreds) GetRequestType() string {
 	return c.requestType
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
-func (c creds) GetCredentialDetailsValue(key string) interface{} {
+func (c provCreds) GetCredentialDetailsValue(key string) interface{} {
 	if c.credDetails == nil {
 		return nil
 	}
@@ -153,9 +221,106 @@ func (c creds) GetCredentialDetailsValue(key string) interface{} {
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (c creds) GetApplicationDetailsValue(key string) interface{} {
+func (c provCreds) GetApplicationDetailsValue(key string) interface{} {
 	if c.appDetails == nil {
 		return nil
 	}
 	return c.appDetails[key]
+}
+
+// encryptStr is an interface for encrypting strings
+type encryptStr interface {
+	encrypt(str string) (string, error)
+}
+
+// encryptor implements the encryptStr interface
+type encryptor struct {
+	alg  string
+	key  *rsa.PublicKey
+	hash hash.Hash
+}
+
+// newEncryptor creates a struct to handle encryption based on the provided key, algorithm, and hash.
+func newEncryptor(key, alg, hash string) (*encryptor, error) {
+	enc := &encryptor{
+		alg: alg,
+	}
+
+	pub, err := enc.newPub(key)
+	if err != nil {
+		return nil, err
+	}
+
+	h, err := enc.newHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	ok := enc.validateAlg()
+	if !ok {
+		return nil, fmt.Errorf("unexpected encryption algorithm: %s", alg)
+	}
+
+	enc.hash = h
+	enc.key = pub
+	return enc, nil
+}
+
+// encryptStr encrypts a string based on the provided app security
+func (e *encryptor) encrypt(str string) (string, error) {
+	bts, err := e.encAlgorithm(str)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt: %s", err)
+	}
+
+	return string(bts), nil
+}
+
+func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(key))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key: %s", err)
+	}
+
+	p, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("expected public key type to be *rsa.PublicKey but received %T", pub)
+	}
+
+	return p, nil
+}
+
+func (e *encryptor) newHash(hash string) (hash.Hash, error) {
+	switch hash {
+	case "SHA256":
+		return sha256.New(), nil
+	default:
+		return nil, fmt.Errorf("unexpected encryption hash: %s", hash)
+	}
+}
+
+func (e *encryptor) validateAlg() bool {
+	switch e.alg {
+	case "RSA-OAEP":
+		return true
+	case "PKCS":
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *encryptor) encAlgorithm(msg string) ([]byte, error) {
+	switch e.alg {
+	case "RSA-OAEP":
+		return rsa.EncryptOAEP(e.hash, rand.Reader, e.key, []byte(msg), nil)
+	case "PKCS":
+		return rsa.EncryptPKCS1v15(rand.Reader, e.key, []byte(msg))
+	default:
+		return nil, fmt.Errorf("unexpected encryption algorithm: %s", e.alg)
+	}
 }

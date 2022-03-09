@@ -1,15 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -33,6 +30,7 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 	}
 }
 
+// Handle processes grpc events triggered for ManagedApplications
 func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
 		return nil
@@ -53,34 +51,19 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 		return nil
 	}
 
-	log.Infof("Received a %s event for a ManagedApplication", action.String())
-	bts, _ := json.MarshalIndent(app, "", "\t")
-	log.Info(string(bts))
-
-	teamName := ""
-	if app.Owner != nil && app.Owner.ID != "" {
-		team := h.cache.GetTeamByID(app.Owner.ID)
-		if team != nil {
-			teamName = team.Name
-		}
-	}
-
-	ma := managedApp{
+	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       teamName,
+		teamName:       h.getTeamName(app.Owner),
 		data:           util.GetAgentDetails(app),
 	}
 
 	if action == proto.Event_DELETED {
-		log.Info("Deprovisioning the ManagedApplication")
 		h.prov.ApplicationRequestDeprovision(ma)
 		return nil
 	}
 
 	var status prov.RequestStatus
 	if app.Status.Level == statusPending {
-		log.Info("Provisioning the ManagedApplication")
-		log.Infof("%+v", ma)
 		status = h.prov.ApplicationRequestProvision(ma)
 	}
 
@@ -106,24 +89,35 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 	return err
 }
 
-type managedApp struct {
+func (h *managedApplication) getTeamName(owner *v1.Owner) string {
+	teamName := ""
+	if owner != nil && owner.ID != "" {
+		team := h.cache.GetTeamByID(owner.ID)
+		if team != nil {
+			teamName = team.Name
+		}
+	}
+	return teamName
+}
+
+type provManagedApp struct {
 	managedAppName string
 	teamName       string
 	data           map[string]interface{}
 }
 
 // GetManagedApplicationName returns the name of the managed application
-func (a managedApp) GetManagedApplicationName() string {
+func (a provManagedApp) GetManagedApplicationName() string {
 	return a.managedAppName
 }
 
 // GetTeamName gets the owning team name for the managed application
-func (a managedApp) GetTeamName() string {
+func (a provManagedApp) GetTeamName() string {
 	return a.teamName
 }
 
 // GetAgentDetailsValue returns a value found on the managed application
-func (a managedApp) GetAgentDetailsValue(key string) interface{} {
+func (a provManagedApp) GetAgentDetailsValue(key string) interface{} {
 	if a.data == nil {
 		return nil
 	}

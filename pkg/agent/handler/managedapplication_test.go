@@ -22,16 +22,41 @@ func TestManagedApplicationHandler(t *testing.T) {
 		Default: true,
 	}
 
+	managedApp := mv1.ManagedApplication{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: "11",
+				Scope: v1.MetadataScope{
+					Kind: mv1.EnvironmentGVK().Kind,
+					Name: "env-1",
+				},
+			},
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					"sub_manage_app_key": "sub_manage_app_val",
+				},
+			},
+		},
+		Owner: &v1.Owner{
+			Type: 0,
+			ID:   team.ID,
+		},
+		Spec: mv1.ManagedApplicationSpec{},
+		Status: &v1.ResourceStatus{
+			Level: statusPending,
+		},
+	}
+
 	tests := []struct {
 		action    proto.Event_Type
 		createErr error
 		getErr    error
 		hasError  bool
 		name      string
-		resource  *mv1.ManagedApplication
 		subError  error
 		teamName  string
 		provType  string
+		status    string
 	}{
 		{
 			name:     "should handle a create event for a ManagedApplication when status is pending",
@@ -39,188 +64,53 @@ func TestManagedApplicationHandler(t *testing.T) {
 			action:   proto.Event_CREATED,
 			teamName: teamName,
 			provType: provision,
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Owner: &v1.Owner{
-					Type: 0,
-					ID:   team.ID,
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should handle an update event for a ManagedApplication when status is pending",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			provType: provision,
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should return nil when the event is for subresources",
 			hasError: false,
 			action:   proto.Event_SUBRESOURCEUPDATED,
 			provType: "",
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
 		},
 		{
 			name:     "should deprovision when a delete event is received",
 			hasError: false,
 			provType: deprovision,
 			action:   proto.Event_DELETED,
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should return nil when status field is empty",
 			action:   proto.Event_CREATED,
 			provType: "",
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: "",
-				},
-			},
+			status:   "",
 		},
 		{
 			name:     "should return nil when status field is Success",
 			action:   proto.Event_CREATED,
 			provType: "",
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusSuccess,
-				},
-			},
+			status:   statusSuccess,
 		},
 		{
 			name:     "should return nil when status field is Error",
 			action:   proto.Event_CREATED,
 			provType: "",
-			resource: &mv1.ManagedApplication{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_manage_app_key": "sub_manage_app_val",
-						},
-					},
-				},
-				Spec: mv1.ManagedApplicationSpec{},
-				Status: &v1.ResourceStatus{
-					Level: statusErr,
-				},
-			},
+			status:   statusErr,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			app := managedApp
+			app.Status.Level = tc.status
+
 			p := &mockManagedAppProv{
 				t: t,
 				status: mockRequestStatus{
@@ -230,9 +120,9 @@ func TestManagedApplicationHandler(t *testing.T) {
 						"status_key": "status_val",
 					},
 				},
-				expectedManagedApp:     tc.resource.Name,
+				expectedManagedApp:     app.Name,
 				expectedTeamName:       tc.teamName,
-				expectedManagedAppData: util.GetAgentDetails(tc.resource),
+				expectedManagedAppData: util.GetAgentDetails(&app),
 			}
 			c := &mockClient{
 				subError: tc.subError,
@@ -244,7 +134,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			}
 			handler := NewManagedApplicationHandler(p, cm, c)
 
-			ri, _ := tc.resource.AsInstance()
+			ri, _ := app.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
 			assert.Equal(t, tc.provType, p.prov)
 			if tc.hasError {
@@ -271,7 +161,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_managedApp(t *testing.T) {
-	m := managedApp{
+	m := provManagedApp{
 		managedAppName: "managed-app-name",
 		teamName:       "123",
 		data:           map[string]interface{}{"abc": "123"},
@@ -293,7 +183,7 @@ type mockManagedAppProv struct {
 
 func (m *mockManagedAppProv) ApplicationRequestProvision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
 	m.prov = provision
-	v := ma.(managedApp)
+	v := ma.(provManagedApp)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
 	assert.Equal(m.t, m.expectedManagedAppData, v.data)
 	assert.Equal(m.t, m.expectedTeamName, v.teamName)
@@ -302,7 +192,7 @@ func (m *mockManagedAppProv) ApplicationRequestProvision(ma prov.ApplicationRequ
 
 func (m *mockManagedAppProv) ApplicationRequestDeprovision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := ma.(managedApp)
+	v := ma.(provManagedApp)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
 	assert.Equal(m.t, m.expectedManagedAppData, v.data)
 	assert.Equal(m.t, m.expectedTeamName, v.teamName)
