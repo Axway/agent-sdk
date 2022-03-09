@@ -244,7 +244,7 @@ func NewTraceWatchTopic() string {
 					"kind": "Environment",
 					"name": "{{.Scope}}"
 				},
-				"type": ["created", "updated", "deleted"]
+				"type": ["created", "updated"]
 			}
 		],
 		"description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."
