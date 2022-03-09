@@ -14,5 +14,4 @@ type ProductPlanSpecSubscription struct {
 	Interval ProductPlanSpecSubscriptionInterval `json:"interval,omitempty"`
 	Renewal  string                              `json:"renewal,omitempty"`
 	Approval string                              `json:"approval,omitempty"`
-	Setup    ProductPlanSpecSubscriptionSetup    `json:"setup,omitempty"`
 }

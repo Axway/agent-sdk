@@ -18,6 +18,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -63,6 +64,7 @@ type agentData struct {
 
 	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
+	provisioner            provisioning.Provisioning
 }
 
 var agent agentData
@@ -394,16 +396,11 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 }
 
 func startStreamMode(agent agentData) error {
-	provisioner := &handler.FakeProvisioner{}
-
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
 		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
-		handler.NewManagedApplicationHandler(provisioner, agent.cacheManager, agent.apicClient),
-		handler.NewAccessRequestHandler(provisioner, agent.cacheManager, agent.apicClient),
-		handler.NewCredentialHandler(provisioner, agent.apicClient),
 		agent.proxyResourceHandler,
 	}
 

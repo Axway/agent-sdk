@@ -35,11 +35,10 @@ func init() {
 // Credential Resource
 type Credential struct {
 	apiv1.ResourceMeta
-	Data    interface{}       `json:"data"`
-	Owner   *apiv1.Owner      `json:"owner"`
-	Request CredentialRequest `json:"request"`
-	Spec    CredentialSpec    `json:"spec"`
-	// 	Status  CredentialStatus  `json:"status"`
+	Data  interface{}    `json:"data"`
+	Owner *apiv1.Owner   `json:"owner"`
+	Spec  CredentialSpec `json:"spec"`
+	// 	Status CredentialStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -111,7 +110,6 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 
 	out["data"] = res.Data
 	out["owner"] = res.Owner
-	out["request"] = res.Request
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -152,20 +150,6 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "data")
 		err = json.Unmarshal(sr, &res.Data)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Request
-	if v, ok := aux.SubResources["request"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "request")
-		err = json.Unmarshal(sr, &res.Request)
 		if err != nil {
 			return err
 		}

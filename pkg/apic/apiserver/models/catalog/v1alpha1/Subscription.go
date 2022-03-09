@@ -37,7 +37,6 @@ type Subscription struct {
 	apiv1.ResourceMeta
 	Approval SubscriptionApproval `json:"approval"`
 	Owner    *apiv1.Owner         `json:"owner"`
-	Request  SubscriptionRequest  `json:"request"`
 	Spec     SubscriptionSpec     `json:"spec"`
 	// 	Status   SubscriptionStatus   `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
@@ -111,7 +110,6 @@ func (res *Subscription) MarshalJSON() ([]byte, error) {
 
 	out["approval"] = res.Approval
 	out["owner"] = res.Owner
-	out["request"] = res.Request
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -152,20 +150,6 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "approval")
 		err = json.Unmarshal(sr, &res.Approval)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Request
-	if v, ok := aux.SubResources["request"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "request")
-		err = json.Unmarshal(sr, &res.Request)
 		if err != nil {
 			return err
 		}

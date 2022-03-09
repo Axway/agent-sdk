@@ -9,7 +9,8 @@
 
 package v1alpha1
 
-// ApplicationSpec  (catalog.v1alpha1.Application)
-type ApplicationSpec struct {
-	Security ApplicationSpecSecurity `json:"security"`
+// ApplicationMarketplace Marketplace in which the Application was created. (catalog.v1alpha1.Application)
+type ApplicationMarketplace struct {
+	// The name of the Marketplace.
+	Name string `json:"name"`
 }

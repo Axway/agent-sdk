@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// AuthorizationProfileReferences struct for AuthorizationProfileReferences
+// AuthorizationProfileReferences  (catalog.v1alpha1.AuthorizationProfile)
 type AuthorizationProfileReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+	Environment string `json:"environment,omitempty"`
 }

@@ -69,7 +69,6 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
 		managedApp:  cr.Spec.ManagedApplication,
-		requestType: string(cr.Request),
 	}
 
 	if action == proto.Event_DELETED {
@@ -126,7 +125,6 @@ func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance,
 type creds struct {
 	managedApp  string
 	credType    string
-	requestType string
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
 }
@@ -137,11 +135,6 @@ func (c creds) GetApplicationName() string {
 
 func (c creds) GetCredentialType() string {
 	return c.credType
-}
-
-// GetRequestType returns the type of request for the credentials
-func (c creds) GetRequestType() string {
-	return c.requestType
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.

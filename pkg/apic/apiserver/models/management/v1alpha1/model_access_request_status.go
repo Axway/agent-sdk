@@ -15,12 +15,14 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AccessRequestStatus struct for AccessRequestStatus
+// AccessRequestStatus  (management.v1alpha1.AccessRequest)
 type AccessRequestStatus struct {
-	Type string `json:"type"`
-	// Details of the error.
+	// The current status level, indicating progress towards consistency.
+	Level string `json:"level"`
+	// Time when the change occured.
+	Timestamp time.Time `json:"timestamp"`
+	// message of the pending status
 	Detail string `json:"detail"`
-	// Time when the update occurred.
-	Timestamp time.Time                         `json:"timestamp"`
-	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
+	// any additional metadata to add. (management.v1alpha1.AccessRequest)
+	Meta map[string]interface{} `json:"meta,omitempty"`
 }
