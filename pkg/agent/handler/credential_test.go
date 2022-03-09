@@ -1,7 +1,15 @@
 package handler
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"strings"
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -9,6 +17,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,13 +38,62 @@ func TestCredentialHandler(t *testing.T) {
 		},
 	}
 
+	crd := &mv1.CredentialRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			Name: managedAppRefName,
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					"sub_crd_key": "sub_crd_val",
+				},
+			},
+		},
+		Owner:      nil,
+		References: mv1.CredentialRequestDefinitionReferences{},
+		Spec: mv1.CredentialRequestDefinitionSpec{
+			Schema: nil,
+			Provision: &mv1.CredentialRequestDefinitionSpecProvision{
+				Schema: map[string]interface{}{},
+			},
+			Capabilities: nil,
+			Webhooks:     nil,
+		},
+	}
+
+	crdRI, _ := crd.AsInstance()
+
+	credential := mv1.Credential{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: "11",
+				Scope: v1.MetadataScope{
+					Kind: mv1.EnvironmentGVK().Kind,
+					Name: "env-1",
+				},
+			},
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					"sub_credential_key": "sub_credential_val",
+				},
+			},
+		},
+		Spec: mv1.CredentialSpec{
+			CredentialRequestDefinition: "api-key",
+			ManagedApplication:          managedAppRefName,
+			Data:                        nil,
+		},
+		Status: &v1.ResourceStatus{
+			Level: "",
+		},
+	}
+
 	tests := []struct {
 		action    proto.Event_Type
 		createErr error
-		getErr    error
+		getAppErr error
+		getCrdErr error
 		hasError  bool
 		name      string
-		resource  *mv1.Credential
+		status    string
 		subError  error
 		provType  string
 	}{
@@ -44,181 +102,51 @@ func TestCredentialHandler(t *testing.T) {
 			hasError: false,
 			action:   proto.Event_CREATED,
 			provType: provision,
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should handle an update event for a Credential when status is pending",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			provType: provision,
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should deprovision when a delete event is received",
 			hasError: false,
 			action:   proto.Event_DELETED,
 			provType: deprovision,
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should return nil when the Credential status is set to Error",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusErr,
-				},
-			},
+			status:   statusErr,
 		},
 		{
 			name:     "should return nil when the Credential status is set to Success",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusSuccess,
-				},
-			},
+			status:   statusSuccess,
 		},
 		{
-			name:     "should handle an error when retrieving the managed app",
-			hasError: true,
-			getErr:   fmt.Errorf("error getting managed app"),
-			action:   proto.Event_CREATED,
-			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:      "should handle an error when retrieving the managed app",
+			hasError:  true,
+			getAppErr: fmt.Errorf("error getting managed app"),
+			action:    proto.Event_CREATED,
+			provType:  "",
+			status:    statusPending,
+		},
+		{
+			name:      "should handle an error when retrieving the credential request definition",
+			hasError:  true,
+			getCrdErr: fmt.Errorf("error getting credential request definition"),
+			action:    proto.Event_CREATED,
+			provType:  "",
+			status:    statusPending,
 		},
 		{
 			name:     "should handle an error when updating the Credential subresources",
@@ -226,155 +154,27 @@ func TestCredentialHandler(t *testing.T) {
 			subError: fmt.Errorf("error updating subresources"),
 			action:   proto.Event_CREATED,
 			provType: provision,
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
 		},
 		{
 			name:     "should return nil error when the Credential does not have a Status.Level field",
 			action:   proto.Event_CREATED,
 			hasError: false,
 			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: "",
-				},
-			},
-		},
-		{
-			name:     "should return nil error when status is Success",
-			action:   proto.Event_CREATED,
-			hasError: false,
-			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusSuccess,
-				},
-			},
-		},
-		{
-			name:     "should return nil error when status is Error",
-			action:   proto.Event_CREATED,
-			hasError: false,
-			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusErr,
-				},
-			},
+			status:   "",
 		},
 		{
 			name:     "should return nil when the event is for subresources",
 			hasError: false,
 			action:   proto.Event_SUBRESOURCEUPDATED,
-			provType: "",
-			resource: &mv1.Credential{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_credential_key": "sub_credential_val",
-						},
-					},
-				},
-				Spec: mv1.CredentialSpec{
-					CredentialRequestDefinition: "api-key",
-					ManagedApplication:          managedAppRefName,
-					Data:                        nil,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			cred := credential
+			cred.Status.Level = tc.status
+
 			p := &mockCredProv{
 				t: t,
 				status: mockRequestStatus{
@@ -385,21 +185,29 @@ func TestCredentialHandler(t *testing.T) {
 					},
 				},
 				expectedAppDetails:  util.GetAgentDetails(mApp),
-				expectedCredDetails: util.GetAgentDetails(tc.resource),
+				expectedCredDetails: util.GetAgentDetails(&cred),
 				expectedManagedApp:  managedAppRefName,
-				expectedCredType:    tc.resource.Spec.CredentialRequestDefinition,
-				prov:                tc.provType,
+				expectedCredType:    cred.Spec.CredentialRequestDefinition,
 			}
-			c := &mockClient{
-				getRI:     mApp,
-				getErr:    tc.getErr,
-				createErr: tc.createErr,
-				subError:  tc.subError,
-			}
-			handler := NewCredentialHandler(p, c)
 
-			ri, _ := tc.resource.AsInstance()
+			c := &credClient{
+				managedApp: mApp,
+				crd:        crdRI,
+				getAppErr:  tc.getAppErr,
+				getCrdErr:  tc.getCrdErr,
+				createErr:  tc.createErr,
+				subError:   tc.subError,
+			}
+
+			handler := NewCredentialHandler(p, c)
+			v := handler.(*credentials)
+			v.encrypt = func(_ encryptStr, _, data map[string]interface{}) map[string]interface{} {
+				return data
+			}
+
+			ri, _ := cred.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
+			assert.Equal(t, tc.provType, p.prov)
 
 			if tc.hasError {
 				assert.NotNil(t, err)
@@ -453,7 +261,7 @@ type mockCredProv struct {
 
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.prov = provision
-	v := cr.(*creds)
+	v := cr.(*provCreds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
@@ -463,7 +271,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 
 func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := cr.(*creds)
+	v := cr.(*provCreds)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
@@ -477,4 +285,231 @@ type mockProvCredential struct {
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[string]interface{} {
+	enc := func(v string) ([]byte, error) {
+		switch alg {
+		case "RSA-OAEP":
+			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, []byte(v), nil)
+		case "PKCS":
+			return rsa.DecryptPKCS1v15(rand.Reader, pk, []byte(v))
+		default:
+			return nil, fmt.Errorf("unexpected algorithm")
+		}
+	}
+
+	for key, value := range data {
+		v, ok := value.(string)
+		if !ok {
+			continue
+		}
+
+		bts, err := enc(v)
+		if err != nil {
+			log.Errorf("Failed to decrypt: %s\n", err)
+			continue
+		}
+		data[key] = string(bts)
+	}
+
+	return data
+}
+
+func Test_encrypt(t *testing.T) {
+	var crdSchema = `{
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "required": [
+        "abc"
+    ],
+    "properties": {
+        "one": {
+            "type": "string",
+            "description": "abc.",
+						"x-agent-encrypted": "x-agent-encrypted"
+        },
+        "two": {
+            "type": "string",
+            "description": "def."
+        },
+        "three": {
+            "type": "string",
+            "description": "ghi.",
+						"x-agent-encrypted": "x-agent-encrypted"
+        }
+    },
+    "description": "sample."
+}`
+
+	crd := map[string]interface{}{}
+	err := json.Unmarshal([]byte(crdSchema), &crd)
+	assert.Nil(t, err)
+
+	pub, priv, err := newKeyPair()
+	assert.Nil(t, err)
+
+	tests := []struct {
+		alg           string
+		hasErr        bool
+		hasEncryptErr bool
+		hash          string
+		name          string
+		publicKey     string
+		privateKey    string
+	}{
+		{
+			name:       "should encrypt when the algorithm is PKCS",
+			alg:        "PKCS",
+			hash:       "SHA256",
+			publicKey:  pub,
+			privateKey: priv,
+		},
+		{
+			name:       "should encrypt when the algorithm is RSA-OAEP",
+			alg:        "RSA-OAEP",
+			hash:       "SHA256",
+			publicKey:  pub,
+			privateKey: priv,
+		},
+		{
+			name:       "should return an error when the algorithm is unknown",
+			hasErr:     true,
+			alg:        "fake",
+			hash:       "SHA256",
+			publicKey:  pub,
+			privateKey: priv,
+		},
+		{
+			name:       "should return an error when the hash is unknown",
+			hasErr:     true,
+			alg:        "RSA-OAEP",
+			hash:       "fake",
+			publicKey:  pub,
+			privateKey: priv,
+		},
+		{
+			name:       "should return an error when the public key cannot be parsed",
+			hasErr:     true,
+			alg:        "RSA-OAEP",
+			hash:       "SHA256",
+			publicKey:  "fake",
+			privateKey: priv,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			schemaData := map[string]interface{}{
+				"one":   "abc",
+				"two":   "def",
+				"three": "ghi",
+			}
+
+			props := crd["properties"]
+			p := props.(map[string]interface{})
+
+			enc, err := newEncryptor(tc.publicKey, tc.alg, tc.hash)
+			if tc.hasErr {
+				assert.NotNil(t, err)
+				return
+			}
+
+			encrypted := encryptMap(enc, p, schemaData)
+			assert.NotEqual(t, "abc", schemaData["one"])
+			assert.Equal(t, "def", schemaData["two"])
+			assert.NotEqual(t, "ghi", schemaData["three"])
+
+			decrypted := decrypt(parsePrivateKey(tc.privateKey), tc.alg, encrypted)
+			assert.Equal(t, "abc", decrypted["one"])
+			assert.Equal(t, "def", decrypted["two"])
+			assert.Equal(t, "ghi", decrypted["three"])
+		})
+	}
+
+}
+
+type credClient struct {
+	managedApp *v1.ResourceInstance
+	crd        *v1.ResourceInstance
+	getAppErr  error
+	getCrdErr  error
+	createErr  error
+	updateErr  error
+	subError   error
+}
+
+func (m credClient) GetResource(url string) (*v1.ResourceInstance, error) {
+	if strings.Contains(url, "/managedapplications") {
+		return m.managedApp, m.getAppErr
+	}
+	if strings.Contains(url, "/credentialrequestdefinitions") {
+		return m.crd, m.getCrdErr
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+func (m credClient) CreateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
+	return nil, m.createErr
+}
+
+func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
+	return nil, m.updateErr
+}
+
+func (m credClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+	return m.subError
+}
+
+func parsePrivateKey(priv string) *rsa.PrivateKey {
+	block, _ := pem.Decode([]byte(priv))
+	if block == nil {
+		panic("failed to parse PEM block containing the public key")
+	}
+
+	pk, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		panic("failed to parse private key: " + err.Error())
+	}
+
+	return pk
+}
+
+func newKeyPair() (public string, private string, err error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", err
+	}
+
+	pkBts := x509.MarshalPKCS1PrivateKey(priv)
+	fmt.Println(pkBts)
+	pvBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: pkBts,
+	}
+
+	privBuff := bytes.NewBuffer([]byte{})
+	err = pem.Encode(privBuff, pvBlock)
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKeyBts, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKeyBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBts,
+	}
+
+	pubKeyBuff := bytes.NewBuffer([]byte{})
+	err = pem.Encode(pubKeyBuff, pubKeyBlock)
+	if err != nil {
+		return "", "", err
+	}
+
+	return pubKeyBuff.String(), privBuff.String(), nil
 }

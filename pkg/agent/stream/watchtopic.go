@@ -130,7 +130,7 @@ func NewDiscoveryWatchTopic() string {
 					"kind": "Environment",
 					"name": "{{.Scope}}"
 				},
-				"type": ["created", "updated", "deleted"]
+				"type": ["created", "updated"]
 			},
 			{
 				"group": "management",
@@ -166,7 +166,7 @@ func NewDiscoveryWatchTopic() string {
 					"kind": "Environment",
 					"name": "{{.Scope}}"
 				},
-				"type": ["created", "updated", "deleted"]
+				"type": ["created", "updated"]
 			},
 			{
 				"group": "management",
@@ -176,7 +176,7 @@ func NewDiscoveryWatchTopic() string {
 					"kind": "Environment",
 					"name": "{{.Scope}}"
 				},
-				"type": ["created", "updated", "deleted"]
+				"type": ["created", "updated"]
 			}
 		],
 		"description": "Watch Topic used by a discovery agent for resources in the {{.Scope}} environment."
@@ -244,7 +244,7 @@ func NewTraceWatchTopic() string {
 					"kind": "Environment",
 					"name": "{{.Scope}}"
 				},
-				"type": ["created", "updated", "deleted"]
+				"type": ["created", "updated"]
 			}
 		],
 		"description": "Watch Topic used by a traceability agent for resources in the {{.Scope}} environment."

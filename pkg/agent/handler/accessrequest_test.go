@@ -46,484 +46,166 @@ func TestAccessRequestHandler(t *testing.T) {
 		},
 	}
 
+	accessReq := mv1.AccessRequest{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: "11",
+				References: []v1.Reference{
+					{
+						ID:   instRefID,
+						Name: instRefName,
+					},
+				},
+				Scope: v1.MetadataScope{
+					Kind: mv1.EnvironmentGVK().Kind,
+					Name: "env-1",
+				},
+			},
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					"sub_access_request_key": "sub_access_request_val",
+				},
+			},
+		},
+		References: mv1.AccessRequestReferences{},
+		Spec: mv1.AccessRequestSpec{
+			ApiServiceInstance: instRefName,
+			ManagedApplication: managedAppRefName,
+		},
+		State: mv1.AccessRequestState{
+			Name: provision,
+		},
+		Status: &v1.ResourceStatus{
+			Level: statusPending,
+		},
+	}
+
 	tests := []struct {
-		action    proto.Event_Type
-		createErr error
-		getErr    error
-		hasError  bool
-		name      string
-		resource  *mv1.AccessRequest
-		subError  error
-		provType  string
+		action     proto.Event_Type
+		createErr  error
+		getErr     error
+		hasError   bool
+		name       string
+		status     string
+		state      string
+		subError   error
+		provType   string
+		references []v1.Reference
 	}{
 		{
-			name:     "should handle a create event for an AccessRequest when status is pending, and state is provision",
-			provType: provision,
-			hasError: false,
-			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should handle a create event for an AccessRequest when status is pending, and state is provision",
+			provType:   provision,
+			hasError:   false,
+			action:     proto.Event_CREATED,
+			status:     statusPending,
+			state:      provision,
+			references: accessReq.Metadata.References,
 		},
 		{
-			name:     "should handle an update event for an AccessRequest when status is pending, and state is provision",
-			provType: provision,
-			hasError: false,
-			action:   proto.Event_UPDATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should handle an update event for an AccessRequest when status is pending, and state is provision",
+			provType:   provision,
+			hasError:   false,
+			action:     proto.Event_UPDATED,
+			status:     statusPending,
+			state:      provision,
+			references: accessReq.Metadata.References,
 		},
 		{
-			name:     "should handle an update event for an AccessRequest when status is pending, and state is deprovision",
-			provType: deprovision,
-			hasError: false,
-			action:   proto.Event_UPDATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: deprovision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should handle an update event for an AccessRequest when status is pending, and state is deprovision",
+			provType:   deprovision,
+			hasError:   false,
+			action:     proto.Event_UPDATED,
+			status:     statusPending,
+			state:      deprovision,
+			references: accessReq.Metadata.References,
 		},
 		{
-			name:     "should deprovision when receiving a delete event",
-			provType: deprovision,
-			hasError: false,
-			action:   proto.Event_DELETED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: deprovision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should deprovision when receiving a delete event",
+			provType:   deprovision,
+			hasError:   false,
+			action:     proto.Event_DELETED,
+			state:      deprovision,
+			status:     statusPending,
+			references: accessReq.Metadata.References,
 		},
 		{
 			name:     "should return nil when the event is for subresources",
 			hasError: false,
 			action:   proto.Event_SUBRESOURCEUPDATED,
 			provType: "",
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
 		},
 		{
-			name:     "should return nil when status is set to Error",
-			provType: "",
-			hasError: false,
-			action:   proto.Event_UPDATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusErr,
-				},
-			},
+			name:       "should return nil when status is set to Error",
+			provType:   "",
+			hasError:   false,
+			action:     proto.Event_UPDATED,
+			status:     statusErr,
+			references: accessReq.Metadata.References,
+			state:      provision,
 		},
 		{
-			name:     "should return nil when the status is set to Success",
-			provType: "",
-			hasError: false,
-			action:   proto.Event_UPDATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: "Success",
-				},
-			},
+			name:       "should return nil when the status is set to Success",
+			provType:   "",
+			hasError:   false,
+			action:     proto.Event_UPDATED,
+			status:     statusSuccess,
+			references: accessReq.Metadata.References,
+			state:      provision,
 		},
 		{
-			name:     "should return nil when the status field is empty",
-			provType: "",
-			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: "",
-				},
-			},
+			name:       "should return nil when the status field is empty",
+			provType:   "",
+			action:     proto.Event_CREATED,
+			status:     "",
+			state:      provision,
+			references: accessReq.Metadata.References,
 		},
 		{
-			name:     "should handle an error when retrieving the managed app",
-			provType: "",
-			hasError: true,
-			getErr:   fmt.Errorf("error getting managed app"),
-			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should handle an error when retrieving the managed app",
+			provType:   "",
+			hasError:   true,
+			getErr:     fmt.Errorf("error getting managed app"),
+			action:     proto.Event_CREATED,
+			references: accessReq.Metadata.References,
+			status:     statusPending,
+			state:      provision,
 		},
 		{
-			name:     "should handle an error when updating the AccessRequest subresources",
-			provType: provision,
-			hasError: true,
-			subError: fmt.Errorf("error updating subresources"),
-			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should handle an error when updating the AccessRequest subresources",
+			provType:   provision,
+			hasError:   true,
+			subError:   fmt.Errorf("error updating subresources"),
+			action:     proto.Event_CREATED,
+			references: accessReq.Metadata.References,
+			status:     statusPending,
+			state:      provision,
 		},
 		{
 			name:     "should handle an error when the instance is not found in the cache",
 			provType: "",
 			hasError: true,
 			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID:         "11",
-						References: []v1.Reference{},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: provision,
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			status:   statusPending,
+			state:    provision,
 		},
 		{
-			name:     "should return nil when the AccessRequest does not have a State.Name field",
-			provType: "",
-			action:   proto.Event_CREATED,
-			resource: &mv1.AccessRequest{
-				ResourceMeta: v1.ResourceMeta{
-					Metadata: v1.Metadata{
-						ID: "11",
-						References: []v1.Reference{
-							{
-								ID:   instRefID,
-								Name: instRefName,
-							},
-						},
-						Scope: v1.MetadataScope{
-							Kind: mv1.EnvironmentGVK().Kind,
-							Name: "env-1",
-						},
-					},
-					SubResources: map[string]interface{}{
-						defs.XAgentDetails: map[string]interface{}{
-							"sub_access_request_key": "sub_access_request_val",
-						},
-					},
-				},
-				References: mv1.AccessRequestReferences{},
-				Spec: mv1.AccessRequestSpec{
-					ApiServiceInstance: instRefName,
-					ManagedApplication: managedAppRefName,
-				},
-				State: mv1.AccessRequestState{
-					Name: "",
-				},
-				Status: &v1.ResourceStatus{
-					Level: statusPending,
-				},
-			},
+			name:       "should return nil when the AccessRequest does not have a State.Name field",
+			provType:   "",
+			action:     proto.Event_CREATED,
+			status:     statusPending,
+			state:      "",
+			references: accessReq.Metadata.References,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+			ar := accessReq
+			ar.Status.Level = tc.status
+			ar.State.Name = tc.state
+			ar.Metadata.References = tc.references
 
 			instanceRI, _ := instance.AsInstance()
 			cm.AddAPIServiceInstance(instanceRI)
@@ -539,9 +221,9 @@ func TestAccessRequestHandler(t *testing.T) {
 				t:                     t,
 				expectedAPIID:         instRefID,
 				expectedAppName:       managedAppRefName,
-				expectedAccessDetails: util.GetAgentDetails(tc.resource),
+				expectedAccessDetails: util.GetAgentDetails(&ar),
 				expectedAppDetails:    util.GetAgentDetails(mApp),
-				state:                 tc.resource.State.Name,
+				state:                 ar.State.Name,
 				status: mockRequestStatus{
 					status: prov.Success,
 					msg:    "msg",
@@ -552,7 +234,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			}
 			handler := NewAccessRequestHandler(arp, cm, c)
 
-			ri, _ := tc.resource.AsInstance()
+			ri, _ := ar.AsInstance()
 
 			err := handler.Handle(tc.action, nil, ri)
 			assert.Equal(t, tc.provType, arp.prov)
@@ -580,7 +262,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_arReq(t *testing.T) {
-	r := arReq{
+	r := provAccReq{
 		apiID: "123",
 		appDetails: map[string]interface{}{
 			"app_details_key": "app_details_value",
@@ -639,7 +321,7 @@ type mockARProvision struct {
 
 func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.prov = provision
-	v := ar.(*arReq)
+	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
@@ -650,7 +332,7 @@ func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status 
 
 func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.prov = deprovision
-	v := ar.(*arReq)
+	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
