@@ -12,6 +12,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -119,20 +120,25 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	if err == nil {
-		err = c.CreateSubResourceScoped(
-			mv1a.EnvironmentResourceName,
-			c.cfg.GetEnvironmentName(),
-			instance.PluralName(),
-			instance.Name,
-			instance.Group,
-			instance.APIVersion,
-			instance.SubResources,
-		)
-		if err != nil {
-			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-			if rollbackErr != nil {
-				return errors.New(err.Error() + rollbackErr.Error())
+	if err == nil && len(instance.SubResources) > 0 {
+		if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
+			subResources := map[string]interface{}{
+				defs.XAgentDetails: xAgentDetail,
+			}
+			err = c.CreateSubResourceScoped(
+				mv1a.EnvironmentResourceName,
+				c.cfg.GetEnvironmentName(),
+				instance.PluralName(),
+				instance.Name,
+				instance.Group,
+				instance.APIVersion,
+				subResources,
+			)
+			if err != nil {
+				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+				if rollbackErr != nil {
+					return errors.New(err.Error() + rollbackErr.Error())
+				}
 			}
 		}
 	}

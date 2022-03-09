@@ -13,6 +13,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -240,8 +241,11 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
-	if err == nil {
-		if len(instance.SubResources) > 0 {
+	if err == nil && len(instance.SubResources) > 0 {
+		if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
+			subResources := map[string]interface{}{
+				defs.XAgentDetails: xAgentDetail,
+			}
 			err = c.CreateSubResourceScoped(
 				mv1a.EnvironmentResourceName,
 				c.cfg.GetEnvironmentName(),
@@ -249,7 +253,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 				instance.Name,
 				instance.Group,
 				instance.APIVersion,
-				instance.SubResources,
+				subResources,
 			)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)

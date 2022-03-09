@@ -281,6 +281,10 @@ func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
 		return err
 	}
 
+	subResources := map[string]interface{}{
+		defs.XAgentDetails: ri.SubResources[defs.XAgentDetails],
+	}
+
 	err = m.client.CreateSubResourceScoped(
 		mv1a.EnvironmentResourceName,
 		m.cfg.GetEnvironmentName(),
@@ -288,7 +292,7 @@ func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
 		ri.Name,
 		ri.Group,
 		ri.APIVersion,
-		ri.SubResources,
+		subResources,
 	)
 
 	return err
