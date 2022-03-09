@@ -13,6 +13,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -162,8 +163,10 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) e
 		subResources["status"] = svc.Status
 	}
 
-	for key, value := range svc.SubResources {
-		subResources[key] = value
+	if len(svc.SubResources) > 0 {
+		if xAgentDetail, ok := svc.SubResources[defs.XAgentDetails]; ok {
+			subResources[defs.XAgentDetails] = xAgentDetail
+		}
 	}
 
 	if len(subResources) > 0 {
