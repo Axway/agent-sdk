@@ -425,9 +425,8 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 
 func Test_creds(t *testing.T) {
 	c := creds{
-		managedApp:  "app-name",
-		credType:    "api-key",
-		requestType: "Provision",
+		managedApp: "app-name",
+		credType:   "api-key",
 		credDetails: map[string]interface{}{
 			"abc": "123",
 		},
@@ -438,7 +437,6 @@ func Test_creds(t *testing.T) {
 
 	assert.Equal(t, c.managedApp, c.GetApplicationName())
 	assert.Equal(t, c.credType, c.GetCredentialType())
-	assert.Equal(t, c.requestType, c.GetRequestType())
 	assert.Equal(t, c.credDetails["abc"], c.GetCredentialDetailsValue("abc"))
 	assert.Equal(t, c.appDetails["def"], c.GetApplicationDetailsValue("def"))
 }
