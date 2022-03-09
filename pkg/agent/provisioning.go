@@ -67,6 +67,7 @@ func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
 }
 
+// RegisterProvisioner - allow the agent to register a provisioner
 func RegisterProvisioner(provisioner provisioning.Provisioning) {
 	agent.provisioner = provisioner
 	agent.proxyResourceHandler.RegisterTargetHandler("accessrequesthandler",
