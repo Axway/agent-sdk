@@ -31,8 +31,8 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 }
 
 // Handle processes grpc events triggered for ManagedApplications
-func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -67,8 +67,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 		status = h.prov.ApplicationRequestProvision(ma)
 	}
 
-	s := prov.NewStatusReason(status)
-	app.Status = &s
+	app.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
 	util.SetAgentDetails(app, details)

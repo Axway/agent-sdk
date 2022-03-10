@@ -365,14 +365,14 @@ func Test_encrypt(t *testing.T) {
 			name:       "should encrypt when the algorithm is PKCS",
 			alg:        "PKCS",
 			hash:       "SHA256",
-			publicKey:  pub,
+			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
 			privateKey: priv,
 		},
 		{
 			name:       "should encrypt when the algorithm is RSA-OAEP",
 			alg:        "RSA-OAEP",
 			hash:       "SHA256",
-			publicKey:  pub,
+			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
 			privateKey: priv,
 		},
 		{
@@ -380,7 +380,7 @@ func Test_encrypt(t *testing.T) {
 			hasErr:     true,
 			alg:        "fake",
 			hash:       "SHA256",
-			publicKey:  pub,
+			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
 			privateKey: priv,
 		},
 		{
@@ -388,7 +388,7 @@ func Test_encrypt(t *testing.T) {
 			hasErr:     true,
 			alg:        "RSA-OAEP",
 			hash:       "fake",
-			publicKey:  pub,
+			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
 			privateKey: priv,
 		},
 		{
@@ -409,16 +409,13 @@ func Test_encrypt(t *testing.T) {
 				"three": "ghi",
 			}
 
-			props := crd["properties"]
-			p := props.(map[string]interface{})
-
 			enc, err := newEncryptor(tc.publicKey, tc.alg, tc.hash)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 				return
 			}
 
-			encrypted := encryptMap(enc, p, schemaData)
+			encrypted := encryptMap(enc, crd, schemaData)
 			assert.NotEqual(t, "abc", schemaData["one"])
 			assert.Equal(t, "def", schemaData["two"])
 			assert.NotEqual(t, "ghi", schemaData["three"])

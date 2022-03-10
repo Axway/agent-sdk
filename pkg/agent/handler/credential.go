@@ -20,7 +20,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const xAgentEncrypted = "x-axway-encrypted"
+const xAxwayEncrypted = "x-axway-encrypted"
 
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
@@ -45,13 +45,14 @@ func NewCredentialHandler(prov credProv, client client) Handler {
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
+	// TODO - Use managed app instead
 	cApp := cat.Application{
 		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
-			EncryptionKey:       "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr0uezHaYsIvhPMYZjSLd\nmMi3GiKTi9e4dGaqZ/xxs7MytlO7eMKTjQ/JQLQcZ3p6JyaeGy2ya4f69Ppcfmgs\n+Iq+vbLrvgZCKiktn8DEB+DTI6uhvfbR9agVyx6MK3NHT8tNMX1no+paZA//G3V9\nT5k9Y0HkC4wOO3OCdUPBF9Q/SaUPy6NJxoFgn/uzu3vUEcF/dlMsJytlo4FvjUsG\nibsfYBsAKyLoEFNFuuQCAuFcmbS0mNw8ULnXYYfXdo/b9OBIEpLmKxsvw/Ov+WtU\n7c+IzOpY0Hbr7O4R+kxiFJNxlV7Cv3Rsw7Y0mNe5qKfgNu9gIixmJuhsOWzRU6U5\n1QIDAQAB\n-----END PUBLIC KEY-----\n",
+			EncryptionKey:       "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFyMHVlekhhWXNJdmhQTVlaalNMZAptTWkzR2lLVGk5ZTRkR2FxWi94eHM3TXl0bE83ZU1LVGpRL0pRTFFjWjNwNkp5YWVHeTJ5YTRmNjlQcGNmbWdzCitJcSt2YkxydmdaQ0tpa3RuOERFQitEVEk2dWh2ZmJSOWFnVnl4Nk1LM05IVDh0Tk1YMW5vK3BhWkEvL0czVjkKVDVrOVkwSGtDNHdPTzNPQ2RVUEJGOVEvU2FVUHk2Tkp4b0Znbi91enUzdlVFY0YvZGxNc0p5dGxvNEZ2alVzRwppYnNmWUJzQUt5TG9FRk5GdXVRQ0F1RmNtYlMwbU53OFVMblhZWWZYZG8vYjlPQklFcExtS3hzdncvT3YrV3RVCjdjK0l6T3BZMEhicjdPNFIra3hpRkpOeGxWN0N2M1JzdzdZMG1OZTVxS2ZnTnU5Z0lpeG1KdWhzT1d6UlU2VTUKMVFJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCgo=",
 			EncryptionAlgorithm: "PKCS",
 			EncryptionHash:      "SHA256",
 		}},
@@ -104,8 +105,7 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		}
 	}
 
-	s := prov.NewStatusReason(status)
-	cr.Status = &s
+	cr.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
 	util.SetAgentDetails(cr, details)
@@ -154,19 +154,20 @@ func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefini
 
 // encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
 func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]interface{} {
+	properties, ok := schema["properties"]
+	if !ok {
+		return data
+	}
 
+	props := properties.(map[string]interface{})
 	for key, value := range data {
-		schemaValue := schema[key]
+		schemaValue := props[key]
 		v, ok := schemaValue.(map[string]interface{})
 		if !ok {
 			continue
 		}
 
-		val, ok := v[xAgentEncrypted]
-		if ok {
-			if isEncrypted, ok := val.(bool); !ok || !isEncrypted {
-				continue
-			}
+		if _, ok := v[xAxwayEncrypted]; ok {
 			v, ok := value.(string)
 			if !ok {
 				continue
@@ -178,7 +179,7 @@ func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]
 				continue
 			}
 
-			data[key] = str
+			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
 		}
 	}
 
@@ -274,11 +275,15 @@ func (e *encryptor) encrypt(str string) (string, error) {
 		return "", fmt.Errorf("failed to encrypt: %s", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(bts), nil
+	return string(bts), nil
 }
 
 func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode([]byte(key))
+	b64DecodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode public key, %s", err.Error())
+	}
+	block, _ := pem.Decode([]byte(b64DecodedKey))
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode public key")
 	}
@@ -297,6 +302,8 @@ func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
 
 func (e *encryptor) newHash(hash string) (hash.Hash, error) {
 	switch hash {
+	case "":
+		fallthrough
 	case "SHA256":
 		return sha256.New(), nil
 	default:
@@ -306,6 +313,8 @@ func (e *encryptor) newHash(hash string) (hash.Hash, error) {
 
 func (e *encryptor) validateAlg() bool {
 	switch e.alg {
+	case "":
+		fallthrough
 	case "RSA-OAEP":
 		return true
 	case "PKCS":
@@ -317,6 +326,8 @@ func (e *encryptor) validateAlg() bool {
 
 func (e *encryptor) encAlgorithm(msg string) ([]byte, error) {
 	switch e.alg {
+	case "":
+		fallthrough
 	case "RSA-OAEP":
 		return rsa.EncryptOAEP(e.hash, rand.Reader, e.key, []byte(msg), nil)
 	case "PKCS":

@@ -9,7 +9,6 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -42,8 +41,8 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -86,13 +85,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 	if ar.Status.Level == statusPending {
 		status = h.prov.AccessRequestDeprovision(req)
 	}
-	if status == nil {
-		log.Error("ERROR")
-		return nil
-	}
 
-	s := prov.NewStatusReason(status)
-	ar.Status = &s
+	ar.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
 	util.SetAgentDetails(ar, details)
