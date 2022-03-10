@@ -533,11 +533,9 @@ func (c *cacheManager) GetSequence(watchTopicName string) int64 {
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {
-	log.Trace("LOCKED")
 	c.resourceCacheReadLock.Lock()
 }
 
 func (c *cacheManager) ReleaseResourceReadLock() {
-	log.Trace("UNLOCKED")
 	c.resourceCacheReadLock.Unlock()
 }
