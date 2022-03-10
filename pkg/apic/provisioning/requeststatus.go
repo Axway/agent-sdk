@@ -97,9 +97,8 @@ func NewStatusReason(r RequestStatus) apiv1.ResourceStatus {
 		return apiv1.ResourceStatus{}
 	}
 	msg := r.GetMessage()
-	var reasons []apiv1.ResourceStatusReason
+	reasons := make([]apiv1.ResourceStatusReason, 0)
 	if msg != "" {
-		reasons = make([]apiv1.ResourceStatusReason, 0)
 		rsr := apiv1.ResourceStatusReason{
 			Type:      r.GetStatus().String(),
 			Detail:    msg,

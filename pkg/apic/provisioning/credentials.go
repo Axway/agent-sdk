@@ -29,14 +29,12 @@ type genericCredential struct {
 
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
-	SetOAuth(id, secret string) CredentialBuilder
-	SetAPIKey(key string) CredentialBuilder
-	SetCredential(data map[string]interface{}) CredentialBuilder
-	Process() (Credential, error)
+	SetOAuth(id, secret string) Credential
+	SetAPIKey(key string) Credential
+	SetCredential(data map[string]interface{}) Credential
 }
 
 type credentialBuilder struct {
-	err        error
 	credential *credential
 }
 
@@ -47,36 +45,28 @@ func NewCredentialBuilder() CredentialBuilder {
 	}
 }
 
-// Process - process the builder, returning errors
-func (c *credentialBuilder) Process() (Credential, error) {
-	if c.err != nil {
-		return nil, c.err
-	}
-	return c.credential, nil
-}
-
 // SetOauth - set the credential as an Oauth type
-func (c *credentialBuilder) SetOAuth(id, secret string) CredentialBuilder {
+func (c *credentialBuilder) SetOAuth(id, secret string) Credential {
 	c.credential.credentialType = oauth
 	c.credential.data = map[string]interface{}{
-		id:     id,
-		secret: secret,
+		"id":     id,
+		"secret": secret,
 	}
-	return c
+	return c.credential
 }
 
 // SetAPIKey - set the credential as an API Key type
-func (c *credentialBuilder) SetAPIKey(key string) CredentialBuilder {
+func (c *credentialBuilder) SetAPIKey(key string) Credential {
 	c.credential.credentialType = apiKey
 	c.credential.data = map[string]interface{}{
-		key: key,
+		"key": key,
 	}
-	return c
+	return c.credential
 }
 
 // SetCredential - set the credential
-func (c *credentialBuilder) SetCredential(data map[string]interface{}) CredentialBuilder {
+func (c *credentialBuilder) SetCredential(data map[string]interface{}) Credential {
 	c.credential.credentialType = other
 	c.credential.data = data
-	return c
+	return c.credential
 }

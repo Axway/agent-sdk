@@ -9,6 +9,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -57,10 +58,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 		return nil
 	}
 
-	if ar.State.Name == "" {
-		return nil
-	}
-
 	if ar.Status.Level != statusPending {
 		return nil
 	}
@@ -82,12 +79,16 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 
 	var status prov.RequestStatus
 
-	if ar.Status.Level == statusPending && ar.State.Name == provision {
+	if ar.Status.Level == statusPending {
 		status = h.prov.AccessRequestProvision(req)
 	}
 
-	if ar.Status.Level == statusPending && ar.State.Name == deprovision {
+	if ar.Status.Level == statusPending {
 		status = h.prov.AccessRequestDeprovision(req)
+	}
+	if status == nil {
+		log.Error("ERROR")
+		return nil
 	}
 
 	s := prov.NewStatusReason(status)

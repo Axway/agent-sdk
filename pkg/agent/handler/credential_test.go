@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -232,7 +233,7 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 }
 
 func Test_creds(t *testing.T) {
-	c := creds{
+	c := provCreds{
 		managedApp: "app-name",
 		credType:   "api-key",
 		credDetails: map[string]interface{}{
@@ -291,9 +292,11 @@ func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[st
 	enc := func(v string) ([]byte, error) {
 		switch alg {
 		case "RSA-OAEP":
-			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, []byte(v), nil)
+			bts, _ := base64.StdEncoding.DecodeString(v)
+			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, bts, nil)
 		case "PKCS":
-			return rsa.DecryptPKCS1v15(rand.Reader, pk, []byte(v))
+			bts, _ := base64.StdEncoding.DecodeString(v)
+			return rsa.DecryptPKCS1v15(rand.Reader, pk, bts)
 		default:
 			return nil, fmt.Errorf("unexpected algorithm")
 		}
@@ -327,7 +330,7 @@ func Test_encrypt(t *testing.T) {
         "one": {
             "type": "string",
             "description": "abc.",
-						"x-agent-encrypted": "x-agent-encrypted"
+						"x-axway-encrypted": true
         },
         "two": {
             "type": "string",
@@ -336,7 +339,7 @@ func Test_encrypt(t *testing.T) {
         "three": {
             "type": "string",
             "description": "ghi.",
-						"x-agent-encrypted": "x-agent-encrypted"
+						"x-axway-encrypted": true
         }
     },
     "description": "sample."

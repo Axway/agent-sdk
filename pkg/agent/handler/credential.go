@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"hash"
@@ -19,7 +20,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const xAgentEncrypted = "x-agent-encrypted"
+const xAgentEncrypted = "x-axway-encrypted"
 
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
@@ -98,7 +99,9 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		if err != nil {
 			return err
 		}
-		cr.Data = h.encrypt(enc, crd.Spec.Provision.Schema, credentialData.GetData())
+		if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
+			cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
+		}
 	}
 
 	s := prov.NewStatusReason(status)
@@ -151,6 +154,7 @@ func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefini
 
 // encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
 func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]interface{} {
+
 	for key, value := range data {
 		schemaValue := schema[key]
 		v, ok := schemaValue.(map[string]interface{})
@@ -158,7 +162,11 @@ func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]
 			continue
 		}
 
-		if _, ok := v[xAgentEncrypted]; ok {
+		val, ok := v[xAgentEncrypted]
+		if ok {
+			if isEncrypted, ok := val.(bool); !ok || !isEncrypted {
+				continue
+			}
 			v, ok := value.(string)
 			if !ok {
 				continue
@@ -192,7 +200,6 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
 		managedApp:  cr.Spec.ManagedApplication,
-		requestType: string(cr.Request),
 	}
 }
 
@@ -267,7 +274,7 @@ func (e *encryptor) encrypt(str string) (string, error) {
 		return "", fmt.Errorf("failed to encrypt: %s", err)
 	}
 
-	return string(bts), nil
+	return base64.StdEncoding.EncodeToString(bts), nil
 }
 
 func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
