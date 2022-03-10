@@ -130,7 +130,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	}
 
 	// check for deleting state on success status
-	if cr.Status.Level == statusSuccess && cr.Metadata.State == "DELETING" {
+	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.CredentialDeprovision(creds)
 
 		// TODO remoce finalizer

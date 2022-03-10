@@ -81,7 +81,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	// check for deleting state on success status
-	if app.Status.Level == statusSuccess && app.Metadata.State == "DELETING" {
+	if app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.ApplicationRequestDeprovision(ma)
 
 		// TODO remove finalizer

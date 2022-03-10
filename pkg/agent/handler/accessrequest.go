@@ -103,7 +103,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	}
 
 	// check for deleting state on success status
-	if ar.Status.Level == statusSuccess && ar.Metadata.State == "DELETING" {
+	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.AccessRequestDeprovision(req)
 
 		// TODO remove finalizer

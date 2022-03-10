@@ -2,6 +2,8 @@ package v1
 
 import "encoding/json"
 
+const ResourceDeleting = "DELETING"
+
 // Meta interface for API Server resource metadata
 type Meta interface {
 	GetName() string
