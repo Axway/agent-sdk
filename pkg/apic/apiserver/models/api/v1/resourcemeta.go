@@ -2,6 +2,8 @@ package v1
 
 import "encoding/json"
 
+const ResourceDeleting = "DELETING"
+
 // Meta interface for API Server resource metadata
 type Meta interface {
 	GetName() string
@@ -192,7 +194,7 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 
 	// all contains all keys but the sub resources. rawSubs contains all keys, but should only contain the subresource keys.
 	// delete the keys from subs that are not sub resource keys
-	for k, _ := range all {
+	for k := range all {
 		delete(rawSubs, k)
 	}
 	delete(rawSubs, "owner")

@@ -6,8 +6,6 @@ type CredentialRequest interface {
 	GetApplicationName() string
 	// GetCredentialType returns the type of credential related to this request
 	GetCredentialType() string
-	// GetRequestType returns the type of request being made Provision/Deprovision/Renew
-	GetRequestType() string
 	// GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
 	GetCredentialDetailsValue(key string) interface{}
 	// GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.

@@ -11,7 +11,7 @@ package v1alpha1
 
 // AssetRequestApprovalState  (catalog.v1alpha1.AssetRequest)
 type AssetRequestApprovalState struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Additional info on the state.
 	Reason string `json:"reason,omitempty"`
 }

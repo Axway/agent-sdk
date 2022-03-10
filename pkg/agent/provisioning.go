@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
@@ -64,4 +65,15 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 // NewAccessRequestBuilder - called by the agents to build and register a new access reqest definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+}
+
+// RegisterProvisioner - allow the agent to register a provisioner
+func RegisterProvisioner(provisioner provisioning.Provisioning) {
+	agent.provisioner = provisioner
+	agent.proxyResourceHandler.RegisterTargetHandler("accessrequesthandler",
+		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient))
+	agent.proxyResourceHandler.RegisterTargetHandler("managedappHandler",
+		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient))
+	agent.proxyResourceHandler.RegisterTargetHandler("credentialHandler",
+		handler.NewCredentialHandler(agent.provisioner, agent.apicClient))
 }

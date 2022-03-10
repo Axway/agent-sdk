@@ -203,7 +203,7 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (c *streamer) Start() error {
-	events, eventErrorCh := make(chan *proto.Event), make(chan error)
+	events, eventErrorCh := make(chan *proto.Event, 100), make(chan error, 100)
 
 	c.listener = c.newListener(
 		events,

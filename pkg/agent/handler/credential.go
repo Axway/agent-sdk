@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"hash"
@@ -19,7 +20,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const xAgentEncrypted = "x-agent-encrypted"
+const xAxwayEncrypted = "x-axway-encrypted"
 
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
@@ -44,10 +45,11 @@ func NewCredentialHandler(prov credProv, client client) Handler {
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
+	// TODO - Use managed app instead
 	cApp := cat.Application{
 		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
 			EncryptionKey:       "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr0uezHaYsIvhPMYZjSLd\nmMi3GiKTi9e4dGaqZ/xxs7MytlO7eMKTjQ/JQLQcZ3p6JyaeGy2ya4f69Ppcfmgs\n+Iq+vbLrvgZCKiktn8DEB+DTI6uhvfbR9agVyx6MK3NHT8tNMX1no+paZA//G3V9\nT5k9Y0HkC4wOO3OCdUPBF9Q/SaUPy6NJxoFgn/uzu3vUEcF/dlMsJytlo4FvjUsG\nibsfYBsAKyLoEFNFuuQCAuFcmbS0mNw8ULnXYYfXdo/b9OBIEpLmKxsvw/Ov+WtU\n7c+IzOpY0Hbr7O4R+kxiFJNxlV7Cv3Rsw7Y0mNe5qKfgNu9gIixmJuhsOWzRU6U5\n1QIDAQAB\n-----END PUBLIC KEY-----\n",
@@ -96,32 +98,46 @@ func (h *credentials) Handle(action proto.Event_Type, _ *proto.EventMeta, resour
 		sec := cApp.Spec.Security
 		enc, err := newEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
 		if err != nil {
-			return err
+			status = prov.NewRequestStatusBuilder().SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).Failed()
+		} else {
+			if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
+				cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
+			}
 		}
-		cr.Data = h.encrypt(enc, crd.Spec.Provision.Schema, credentialData.GetData())
+
+		cr.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
+		util.SetAgentDetails(cr, details)
+
+		// TODO add finalizer
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			cr.Metadata.Scope.Name,
+			cr.PluralName(),
+			cr.Name,
+			cr.Group,
+			cr.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(cr),
+				"status":           cr.Status,
+				"data":             cr.Data,
+			},
+		)
+
+		return err
 	}
 
-	s := prov.NewStatusReason(status)
-	cr.Status = &s
+	// check for deleting state on success status
+	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
+		status = h.prov.CredentialDeprovision(creds)
 
-	details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
-	util.SetAgentDetails(cr, details)
+		// TODO remoce finalizer
+		_ = status
+	}
 
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		cr.Metadata.Scope.Name,
-		cr.PluralName(),
-		cr.Name,
-		cr.Group,
-		cr.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(cr),
-			"status":           cr.Status,
-			"data":             cr.Data,
-		},
-	)
-
-	return err
+	return nil
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance, error) {
@@ -151,14 +167,20 @@ func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefini
 
 // encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
 func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]interface{} {
+	properties, ok := schema["properties"]
+	if !ok {
+		return data
+	}
+
+	props := properties.(map[string]interface{})
 	for key, value := range data {
-		schemaValue := schema[key]
+		schemaValue := props[key]
 		v, ok := schemaValue.(map[string]interface{})
 		if !ok {
 			continue
 		}
 
-		if _, ok := v[xAgentEncrypted]; ok {
+		if _, ok := v[xAxwayEncrypted]; ok {
 			v, ok := value.(string)
 			if !ok {
 				continue
@@ -170,7 +192,7 @@ func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]
 				continue
 			}
 
-			data[key] = str
+			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
 		}
 	}
 
@@ -180,7 +202,6 @@ func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]
 type provCreds struct {
 	managedApp  string
 	credType    string
-	requestType string
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
 }
@@ -193,7 +214,6 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
 		managedApp:  cr.Spec.ManagedApplication,
-		requestType: string(cr.Request),
 	}
 }
 
@@ -205,11 +225,6 @@ func (c provCreds) GetApplicationName() string {
 // GetCredentialType gets the type of the credential
 func (c provCreds) GetCredentialType() string {
 	return c.credType
-}
-
-// GetRequestType returns the type of request for the credentials
-func (c provCreds) GetRequestType() string {
-	return c.requestType
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
@@ -296,6 +311,8 @@ func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
 
 func (e *encryptor) newHash(hash string) (hash.Hash, error) {
 	switch hash {
+	case "":
+		fallthrough
 	case "SHA256":
 		return sha256.New(), nil
 	default:
@@ -305,6 +322,8 @@ func (e *encryptor) newHash(hash string) (hash.Hash, error) {
 
 func (e *encryptor) validateAlg() bool {
 	switch e.alg {
+	case "":
+		fallthrough
 	case "RSA-OAEP":
 		return true
 	case "PKCS":
@@ -316,6 +335,8 @@ func (e *encryptor) validateAlg() bool {
 
 func (e *encryptor) encAlgorithm(msg string) ([]byte, error) {
 	switch e.alg {
+	case "":
+		fallthrough
 	case "RSA-OAEP":
 		return rsa.EncryptOAEP(e.hash, rand.Reader, e.key, []byte(msg), nil)
 	case "PKCS":

@@ -143,19 +143,19 @@ done
 ######################
 # Update the following REQUEST states to include the type infront of the constant
 ######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*_request.go"`
-REQUESTS="PROVISION RENEW"
+# MODELS=`find ${OUTDIR}/models -type f -name "model_*_request.go"`
+# REQUESTS="PROVISION RENEW"
 
-for file in ${MODELS}; do
-    requestType=`grep "List of" ${file} | awk '{print $4}'`
-    for request in ${REQUESTS}; do
-        if grep -e ${request} ${file} >> /dev/null; then
-            # add a comment to the code
-            $SED -i -e "/${request}/i ${COMMENT}" ${file}
-            # replace the Oneof type
-            $SED -i -e "s/${request}/${requestType}${request}/g" ${file}
-            # reformat the code
-            go fmt ${file}
-        fi
-    done
-done
+# for file in ${MODELS}; do
+#     requestType=`grep "List of" ${file} | awk '{print $4}'`
+#     for request in ${REQUESTS}; do
+#         if grep -e ${request} ${file} >> /dev/null; then
+#             # add a comment to the code
+#             $SED -i -e "/${request}/i ${COMMENT}" ${file}
+#             # replace the Oneof type
+#             $SED -i -e "s/${request}/${requestType}${request}/g" ${file}
+#             # reformat the code
+#             go fmt ${file}
+#         fi
+#     done
+# done

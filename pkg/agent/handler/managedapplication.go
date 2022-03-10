@@ -31,8 +31,8 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 }
 
 // Handle processes grpc events triggered for ManagedApplications
-func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -57,34 +57,36 @@ func (h *managedApplication) Handle(action proto.Event_Type, _ *proto.EventMeta,
 		data:           util.GetAgentDetails(app),
 	}
 
-	if action == proto.Event_DELETED {
-		h.prov.ApplicationRequestDeprovision(ma)
-		return nil
-	}
-
 	var status prov.RequestStatus
 	if app.Status.Level == statusPending {
 		status = h.prov.ApplicationRequestProvision(ma)
+
+		app.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
+		util.SetAgentDetails(app, details)
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			app.Metadata.Scope.Name,
+			app.PluralName(),
+			app.Name,
+			app.Group,
+			app.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(app),
+				"status":           app.Status,
+			},
+		)
 	}
 
-	s := prov.NewStatusReason(status)
-	app.Status = &s
+	// check for deleting state on success status
+	if app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting {
+		status = h.prov.ApplicationRequestDeprovision(ma)
 
-	details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
-	util.SetAgentDetails(app, details)
-
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		app.Metadata.Scope.Name,
-		app.PluralName(),
-		app.Name,
-		app.Group,
-		app.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(app),
-			"status":           app.Status,
-		},
-	)
+		// TODO remove finalizer
+		_ = status
+	}
 
 	return err
 }

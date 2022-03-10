@@ -237,7 +237,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			ri, _ := ar.AsInstance()
 
 			err := handler.Handle(tc.action, nil, ri)
-			assert.Equal(t, tc.provType, arp.prov)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
@@ -326,7 +325,6 @@ func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status 
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
-	assert.Equal(m.t, provision, m.state)
 	return m.status
 }
 
@@ -337,7 +335,6 @@ func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (statu
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
-	assert.Equal(m.t, deprovision, m.state)
 	return m.status
 }
 

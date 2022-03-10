@@ -38,7 +38,6 @@ type Credential struct {
 	Data       interface{}          `json:"data"`
 	Owner      *apiv1.Owner         `json:"owner"`
 	References CredentialReferences `json:"references"`
-	Request    CredentialRequest    `json:"request"`
 	Spec       CredentialSpec       `json:"spec"`
 	// 	Status     CredentialStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
@@ -113,7 +112,6 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 	out["data"] = res.Data
 	out["owner"] = res.Owner
 	out["references"] = res.References
-	out["request"] = res.Request
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -168,20 +166,6 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Request
-	if v, ok := aux.SubResources["request"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "request")
-		err = json.Unmarshal(sr, &res.Request)
 		if err != nil {
 			return err
 		}

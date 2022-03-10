@@ -35,8 +35,9 @@ func init() {
 // Application Resource
 type Application struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner    `json:"owner"`
-	Spec  ApplicationSpec `json:"spec"`
+	Marketplace ApplicationMarketplace `json:"marketplace"`
+	Owner       *apiv1.Owner           `json:"owner"`
+	Spec        ApplicationSpec        `json:"spec"`
 }
 
 // ApplicationFromInstanceArray converts a []*ResourceInstance to a []*Application
@@ -105,6 +106,7 @@ func (res *Application) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -134,6 +136,20 @@ func (res *Application) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Marketplace
+	if v, ok := aux.SubResources["marketplace"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "marketplace")
+		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

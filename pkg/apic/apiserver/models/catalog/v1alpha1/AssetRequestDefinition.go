@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AssetRequestDefinitionScopes = []string{"Asset", "AssetRelease"}
+	AssetRequestDefinitionScopes = []string{"AuthorizationProfile"}
 )
 
 const AssetRequestDefinitionResourceName = "assetrequestdefinitions"

@@ -41,8 +41,8 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || action == proto.Event_SUBRESOURCEUPDATED {
+func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -54,10 +54,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 
 	ok := isStatusFound(ar.Status)
 	if !ok {
-		return nil
-	}
-
-	if ar.State.Name == "" {
 		return nil
 	}
 
@@ -82,32 +78,37 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, _ *proto.EventMet
 
 	var status prov.RequestStatus
 
-	if ar.Status.Level == statusPending && ar.State.Name == provision {
+	if ar.Status.Level == statusPending {
 		status = h.prov.AccessRequestProvision(req)
+
+		ar.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
+		util.SetAgentDetails(ar, details)
+
+		//TODO add finalizer
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			ar.Metadata.Scope.Name,
+			ar.PluralName(),
+			ar.Name,
+			ar.Group,
+			ar.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(ar),
+				"status":           ar.Status,
+			},
+		)
 	}
 
-	if ar.Status.Level == statusPending && ar.State.Name == deprovision {
+	// check for deleting state on success status
+	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.AccessRequestDeprovision(req)
+
+		// TODO remove finalizer
+		_ = status
 	}
-
-	s := prov.NewStatusReason(status)
-	ar.Status = &s
-
-	details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
-	util.SetAgentDetails(ar, details)
-
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		ar.Metadata.Scope.Name,
-		ar.PluralName(),
-		ar.Name,
-		ar.Group,
-		ar.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(ar),
-			"status":           ar.Status,
-		},
-	)
 
 	return err
 }

@@ -27,6 +27,13 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 	return true
 }
 
+func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
+	if meta != nil {
+		return (action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status")
+	}
+	return false
+}
+
 // FakeProvisioner -
 type FakeProvisioner struct {
 }

@@ -92,24 +92,19 @@ func (r *requestStatusBuilder) Failed() RequestStatus {
 }
 
 // NewStatusReason converts a RequestStatus into a ResourceStatus
-func NewStatusReason(r RequestStatus) apiv1.ResourceStatus {
+func NewStatusReason(r RequestStatus) *apiv1.ResourceStatus {
 	if r == nil {
-		return apiv1.ResourceStatus{}
-	}
-	msg := r.GetMessage()
-	var reasons []apiv1.ResourceStatusReason
-	if msg != "" {
-		reasons = make([]apiv1.ResourceStatusReason, 0)
-		rsr := apiv1.ResourceStatusReason{
-			Type:      r.GetStatus().String(),
-			Detail:    msg,
-			Timestamp: apiv1.Time{},
-		}
-		reasons = append(reasons, rsr)
+		return nil
 	}
 
-	return apiv1.ResourceStatus{
-		Level:   r.GetStatus().String(),
-		Reasons: reasons,
+	return &apiv1.ResourceStatus{
+		Level: r.GetStatus().String(),
+		Reasons: []apiv1.ResourceStatusReason{
+			{
+				Type:      r.GetStatus().String(),
+				Detail:    r.GetMessage(),
+				Timestamp: apiv1.Time{},
+			},
+		},
 	}
 }

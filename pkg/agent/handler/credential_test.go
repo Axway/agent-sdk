@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -233,9 +234,8 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 
 func Test_creds(t *testing.T) {
 	c := provCreds{
-		managedApp:  "app-name",
-		credType:    "api-key",
-		requestType: "Provision",
+		managedApp: "app-name",
+		credType:   "api-key",
 		credDetails: map[string]interface{}{
 			"abc": "123",
 		},
@@ -246,7 +246,6 @@ func Test_creds(t *testing.T) {
 
 	assert.Equal(t, c.managedApp, c.GetApplicationName())
 	assert.Equal(t, c.credType, c.GetCredentialType())
-	assert.Equal(t, c.requestType, c.GetRequestType())
 	assert.Equal(t, c.credDetails["abc"], c.GetCredentialDetailsValue("abc"))
 	assert.Equal(t, c.appDetails["def"], c.GetApplicationDetailsValue("def"))
 }
@@ -293,9 +292,11 @@ func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[st
 	enc := func(v string) ([]byte, error) {
 		switch alg {
 		case "RSA-OAEP":
-			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, []byte(v), nil)
+			bts, _ := base64.StdEncoding.DecodeString(v)
+			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, bts, nil)
 		case "PKCS":
-			return rsa.DecryptPKCS1v15(rand.Reader, pk, []byte(v))
+			bts, _ := base64.StdEncoding.DecodeString(v)
+			return rsa.DecryptPKCS1v15(rand.Reader, pk, bts)
 		default:
 			return nil, fmt.Errorf("unexpected algorithm")
 		}
@@ -329,7 +330,7 @@ func Test_encrypt(t *testing.T) {
         "one": {
             "type": "string",
             "description": "abc.",
-						"x-agent-encrypted": "x-agent-encrypted"
+						"x-axway-encrypted": true
         },
         "two": {
             "type": "string",
@@ -338,7 +339,7 @@ func Test_encrypt(t *testing.T) {
         "three": {
             "type": "string",
             "description": "ghi.",
-						"x-agent-encrypted": "x-agent-encrypted"
+						"x-axway-encrypted": true
         }
     },
     "description": "sample."
@@ -408,16 +409,13 @@ func Test_encrypt(t *testing.T) {
 				"three": "ghi",
 			}
 
-			props := crd["properties"]
-			p := props.(map[string]interface{})
-
 			enc, err := newEncryptor(tc.publicKey, tc.alg, tc.hash)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 				return
 			}
 
-			encrypted := encryptMap(enc, p, schemaData)
+			encrypted := encryptMap(enc, crd, schemaData)
 			assert.NotEqual(t, "abc", schemaData["one"])
 			assert.Equal(t, "def", schemaData["two"])
 			assert.NotEqual(t, "ghi", schemaData["three"])

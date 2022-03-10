@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AssetRequestScopes = []string{"Asset"}
+	AssetRequestScopes = []string{"Application"}
 )
 
 const AssetRequestResourceName = "assetrequests"
