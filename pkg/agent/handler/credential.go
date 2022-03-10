@@ -97,11 +97,12 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		status, credentialData = h.prov.CredentialProvision(creds)
 		sec := cApp.Spec.Security
 		enc, err := newEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
-		if err != nil {
-			return err
-		}
-		if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
-			cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
+		if err == nil {
+			if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
+				cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
+			}
+		} else {
+			status = prov.NewRequestStatusBuilder().SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).Failed()
 		}
 
 		cr.Status = prov.NewStatusReason(status)
