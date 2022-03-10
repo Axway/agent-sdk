@@ -48,7 +48,7 @@ commit_promotion() {
     cd ${BASE_DIR}
     git add version
     git commit -m "INT - ${MSG}"
-    git push origin main
+    git push --force origin main
 }
 
 main() {
