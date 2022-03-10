@@ -80,29 +80,35 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 
 	if ar.Status.Level == statusPending {
 		status = h.prov.AccessRequestProvision(req)
+
+		ar.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
+		util.SetAgentDetails(ar, details)
+
+		//TODO add finalizer
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			ar.Metadata.Scope.Name,
+			ar.PluralName(),
+			ar.Name,
+			ar.Group,
+			ar.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(ar),
+				"status":           ar.Status,
+			},
+		)
 	}
 
-	if ar.Status.Level == statusPending {
+	// check for deleting state on success status
+	if ar.Status.Level == statusSuccess && ar.Metadata.State == "DELETING" {
 		status = h.prov.AccessRequestDeprovision(req)
+
+		// TODO remove finalizer
+		_ = status
 	}
-
-	ar.Status = prov.NewStatusReason(status)
-
-	details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
-	util.SetAgentDetails(ar, details)
-
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		ar.Metadata.Scope.Name,
-		ar.PluralName(),
-		ar.Name,
-		ar.Group,
-		ar.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(ar),
-			"status":           ar.Status,
-		},
-	)
 
 	return err
 }

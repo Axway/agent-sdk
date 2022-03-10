@@ -103,28 +103,40 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
 			cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
 		}
+
+		cr.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
+		util.SetAgentDetails(cr, details)
+
+		// TODO add finalizer
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			cr.Metadata.Scope.Name,
+			cr.PluralName(),
+			cr.Name,
+			cr.Group,
+			cr.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(cr),
+				"status":           cr.Status,
+				"data":             cr.Data,
+			},
+		)
+
+		return err
 	}
 
-	cr.Status = prov.NewStatusReason(status)
+	// check for deleting state on success status
+	if cr.Status.Level == statusSuccess && cr.Metadata.State == "DELETING" {
+		status = h.prov.CredentialDeprovision(creds)
 
-	details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
-	util.SetAgentDetails(cr, details)
+		// TODO remoce finalizer
+		_ = status
+	}
 
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		cr.Metadata.Scope.Name,
-		cr.PluralName(),
-		cr.Name,
-		cr.Group,
-		cr.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(cr),
-			"status":           cr.Status,
-			"data":             cr.Data,
-		},
-	)
-
-	return err
+	return nil
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance, error) {

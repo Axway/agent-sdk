@@ -57,33 +57,36 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		data:           util.GetAgentDetails(app),
 	}
 
-	if action == proto.Event_DELETED {
-		h.prov.ApplicationRequestDeprovision(ma)
-		return nil
-	}
-
 	var status prov.RequestStatus
 	if app.Status.Level == statusPending {
 		status = h.prov.ApplicationRequestProvision(ma)
+
+		app.Status = prov.NewStatusReason(status)
+
+		details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
+		util.SetAgentDetails(app, details)
+
+		err = h.client.CreateSubResourceScoped(
+			mv1.EnvironmentResourceName,
+			app.Metadata.Scope.Name,
+			app.PluralName(),
+			app.Name,
+			app.Group,
+			app.APIVersion,
+			map[string]interface{}{
+				defs.XAgentDetails: util.GetAgentDetails(app),
+				"status":           app.Status,
+			},
+		)
 	}
 
-	app.Status = prov.NewStatusReason(status)
+	// check for deleting state on success status
+	if app.Status.Level == statusSuccess && app.Metadata.State == "DELETING" {
+		status = h.prov.ApplicationRequestDeprovision(ma)
 
-	details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
-	util.SetAgentDetails(app, details)
-
-	err = h.client.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		app.Metadata.Scope.Name,
-		app.PluralName(),
-		app.Name,
-		app.Group,
-		app.APIVersion,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(app),
-			"status":           app.Status,
-		},
-	)
+		// TODO remove finalizer
+		_ = status
+	}
 
 	return err
 }
