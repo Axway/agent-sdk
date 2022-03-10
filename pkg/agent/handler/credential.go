@@ -52,7 +52,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	// TODO - Use managed app instead
 	cApp := cat.Application{
 		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
-			EncryptionKey:       "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFyMHVlekhhWXNJdmhQTVlaalNMZAptTWkzR2lLVGk5ZTRkR2FxWi94eHM3TXl0bE83ZU1LVGpRL0pRTFFjWjNwNkp5YWVHeTJ5YTRmNjlQcGNmbWdzCitJcSt2YkxydmdaQ0tpa3RuOERFQitEVEk2dWh2ZmJSOWFnVnl4Nk1LM05IVDh0Tk1YMW5vK3BhWkEvL0czVjkKVDVrOVkwSGtDNHdPTzNPQ2RVUEJGOVEvU2FVUHk2Tkp4b0Znbi91enUzdlVFY0YvZGxNc0p5dGxvNEZ2alVzRwppYnNmWUJzQUt5TG9FRk5GdXVRQ0F1RmNtYlMwbU53OFVMblhZWWZYZG8vYjlPQklFcExtS3hzdncvT3YrV3RVCjdjK0l6T3BZMEhicjdPNFIra3hpRkpOeGxWN0N2M1JzdzdZMG1OZTVxS2ZnTnU5Z0lpeG1KdWhzT1d6UlU2VTUKMVFJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCgo=",
+			EncryptionKey:       "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr0uezHaYsIvhPMYZjSLd\nmMi3GiKTi9e4dGaqZ/xxs7MytlO7eMKTjQ/JQLQcZ3p6JyaeGy2ya4f69Ppcfmgs\n+Iq+vbLrvgZCKiktn8DEB+DTI6uhvfbR9agVyx6MK3NHT8tNMX1no+paZA//G3V9\nT5k9Y0HkC4wOO3OCdUPBF9Q/SaUPy6NJxoFgn/uzu3vUEcF/dlMsJytlo4FvjUsG\nibsfYBsAKyLoEFNFuuQCAuFcmbS0mNw8ULnXYYfXdo/b9OBIEpLmKxsvw/Ov+WtU\n7c+IzOpY0Hbr7O4R+kxiFJNxlV7Cv3Rsw7Y0mNe5qKfgNu9gIixmJuhsOWzRU6U5\n1QIDAQAB\n-----END PUBLIC KEY-----\n",
 			EncryptionAlgorithm: "PKCS",
 			EncryptionHash:      "SHA256",
 		}},
@@ -291,11 +291,7 @@ func (e *encryptor) encrypt(str string) (string, error) {
 }
 
 func (e *encryptor) newPub(key string) (*rsa.PublicKey, error) {
-	b64DecodedKey, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode public key, %s", err.Error())
-	}
-	block, _ := pem.Decode([]byte(b64DecodedKey))
+	block, _ := pem.Decode([]byte(key))
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode public key")
 	}

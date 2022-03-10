@@ -365,14 +365,14 @@ func Test_encrypt(t *testing.T) {
 			name:       "should encrypt when the algorithm is PKCS",
 			alg:        "PKCS",
 			hash:       "SHA256",
-			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
+			publicKey:  pub,
 			privateKey: priv,
 		},
 		{
 			name:       "should encrypt when the algorithm is RSA-OAEP",
 			alg:        "RSA-OAEP",
 			hash:       "SHA256",
-			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
+			publicKey:  pub,
 			privateKey: priv,
 		},
 		{
@@ -380,7 +380,7 @@ func Test_encrypt(t *testing.T) {
 			hasErr:     true,
 			alg:        "fake",
 			hash:       "SHA256",
-			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
+			publicKey:  pub,
 			privateKey: priv,
 		},
 		{
@@ -388,7 +388,7 @@ func Test_encrypt(t *testing.T) {
 			hasErr:     true,
 			alg:        "RSA-OAEP",
 			hash:       "fake",
-			publicKey:  base64.StdEncoding.EncodeToString([]byte(pub)),
+			publicKey:  pub,
 			privateKey: priv,
 		},
 		{
