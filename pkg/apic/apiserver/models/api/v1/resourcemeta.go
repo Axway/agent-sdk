@@ -2,7 +2,7 @@ package v1
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 )
 
 const ResourceDeleting = "DELETING"
@@ -78,7 +78,7 @@ func (rm *ResourceMeta) GetSelfLink() string {
 	}
 
 	if kindLink := rm.GetKindLink(); kindLink != "" {
-		return fmt.Sprintf("%s/%s", kindLink, rm.Name)
+		return strings.Join([]string{kindLink, rm.Name}, "/")
 	}
 	return ""
 }
@@ -94,16 +94,20 @@ func (rm *ResourceMeta) GetKindLink() string {
 		return ""
 	}
 
-	path := fmt.Sprintf("/%s/%s", rm.Group, rm.APIVersion)
-	scope, scoped := GetScope(rm.GetGroupVersionKind().GroupKind)
+	// empty string to prepend with /
+	pathItems := []string{"", rm.Group, rm.APIVersion}
+
 	plural, _ := GetPluralFromKind(rm.Kind)
+
+	scope, scoped := GetScope(rm.GetGroupVersionKind().GroupKind)
 	if scoped {
 		scopePlural, _ := GetPluralFromKind(scope)
-		path = fmt.Sprintf("%s/%s/%s/%s", path, scopePlural, rm.Metadata.Scope.Name, plural)
-	} else {
-		path = fmt.Sprintf("%s/%s", path, plural)
+		pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
 	}
-	return path
+
+	pathItems = append(pathItems, plural)
+
+	return strings.Join(pathItems, "/")
 }
 
 // GetGroupVersionKind gets thee group, version, and kind of the resource
