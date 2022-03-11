@@ -2,7 +2,6 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -32,69 +31,4 @@ func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta
 		return (action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status")
 	}
 	return false
-}
-
-// FakeProvisioner -
-type FakeProvisioner struct {
-}
-
-// ApplicationRequestProvision -
-func (f FakeProvisioner) ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-// ApplicationRequestDeprovision -
-func (f FakeProvisioner) ApplicationRequestDeprovision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-// AccessRequestProvision -
-func (f FakeProvisioner) AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-// AccessRequestDeprovision -
-func (f FakeProvisioner) AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-// CredentialProvision -
-func (f FakeProvisioner) CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
-	return &FakeStatus{}, &FakeCredential{}
-}
-
-// CredentialDeprovision -
-func (f FakeProvisioner) CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus) {
-	return &FakeStatus{}
-}
-
-// FakeStatus -
-type FakeStatus struct {
-}
-
-// GetStatus -
-func (f FakeStatus) GetStatus() prov.Status {
-	return prov.Success
-}
-
-// GetMessage -
-func (f FakeStatus) GetMessage() string {
-	return "message"
-}
-
-// GetProperties -
-func (f FakeStatus) GetProperties() map[string]interface{} {
-	return map[string]interface{}{
-		"status_key": "status_val",
-	}
-}
-
-// FakeCredential -
-type FakeCredential struct{}
-
-// GetData -
-func (f FakeCredential) GetData() map[string]interface{} {
-	return map[string]interface{}{
-		"credential_key": "credential_value",
-	}
 }

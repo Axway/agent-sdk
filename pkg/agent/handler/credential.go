@@ -127,7 +127,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.CredentialDeprovision(creds)
 
-		// TODO remoce finalizer
+		// TODO remove finalizer
 		_ = status
 	}
 
