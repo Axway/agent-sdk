@@ -766,7 +766,7 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, fin
 		return nil, err
 	}
 
-	return c.UpdateResource(res.GetAPIPath(), bts)
+	return c.UpdateResource(res.GetSelfLink(), bts)
 }
 
 // UpdateResource updates a resource

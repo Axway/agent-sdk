@@ -118,17 +118,3 @@ func (ri *ResourceInstance) FromInstance(from *ResourceInstance) error {
 func (ri *ResourceInstance) GetRawResource() json.RawMessage {
 	return ri.rawResource
 }
-
-// GetRawResource gets the resource as bytes
-func (ri *ResourceInstance) GetAPIPath() string {
-	path := fmt.Sprintf("/%s/%s", ri.Group, ri.APIVersion)
-	scope, scoped := GetScope(ri.GetGroupVersionKind().GroupKind)
-	plural, _ := GetPluralFromKind(ri.Kind)
-	if scoped {
-		scopePlural, _ := GetPluralFromKind(scope)
-		path = fmt.Sprintf("%s/%s/%s/%s/%s", path, scopePlural, ri.Metadata.Scope.Name, plural, ri.Name)
-	} else {
-		path = fmt.Sprintf("%s/%s/%s", path, plural, ri.Name)
-	}
-	return path
-}

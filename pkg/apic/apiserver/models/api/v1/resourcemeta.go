@@ -1,6 +1,9 @@
 package v1
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const ResourceDeleting = "DELETING"
 
@@ -9,6 +12,7 @@ type Meta interface {
 	GetName() string
 	GetGroupVersionKind() GroupVersionKind
 	GetMetadata() Metadata
+	SetScopeName(string)
 	GetAttributes() map[string]string
 	SetAttributes(map[string]string)
 	GetTags() []string
@@ -48,6 +52,11 @@ func (rm *ResourceMeta) SetName(name string) {
 	rm.Name = name
 }
 
+// SetName sets the name of a resource
+func (rm *ResourceMeta) SetScopeName(name string) {
+	rm.Metadata.Scope.Name = name
+}
+
 // GetMetadata gets the resource metadata
 func (rm *ResourceMeta) GetMetadata() Metadata {
 	if rm == nil {
@@ -55,6 +64,31 @@ func (rm *ResourceMeta) GetMetadata() Metadata {
 	}
 
 	return rm.Metadata
+}
+
+// GetSelfLink gets the resource metadata selflink
+func (rm *ResourceMeta) GetSelfLink() string {
+	if rm != nil {
+		if rm.Metadata.SelfLink != "" {
+			return rm.Metadata.SelfLink
+		}
+	}
+
+	// can't continue if group kind or version are blank
+	if rm.Group == "" || rm.Kind == "" || rm.APIVersion == "" {
+		return ""
+	}
+
+	path := fmt.Sprintf("/%s/%s", rm.Group, rm.APIVersion)
+	scope, scoped := GetScope(rm.GetGroupVersionKind().GroupKind)
+	plural, _ := GetPluralFromKind(rm.Kind)
+	if scoped {
+		scopePlural, _ := GetPluralFromKind(scope)
+		path = fmt.Sprintf("%s/%s/%s/%s/%s", path, scopePlural, rm.Metadata.Scope.Name, plural, rm.Name)
+	} else {
+		path = fmt.Sprintf("%s/%s/%s", path, plural, rm.Name)
+	}
+	return path
 }
 
 // GetGroupVersionKind gets thee group, version, and kind of the resource
