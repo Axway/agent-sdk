@@ -68,10 +68,13 @@ func (rm *ResourceMeta) GetMetadata() Metadata {
 
 // GetSelfLink gets the resource metadata selflink
 func (rm *ResourceMeta) GetSelfLink() string {
-	if rm != nil {
-		if rm.Metadata.SelfLink != "" {
-			return rm.Metadata.SelfLink
-		}
+	if rm == nil {
+		return ""
+	}
+
+	// return the self lnk if we have it
+	if rm.GetMetadata().SelfLink != "" {
+		return rm.Metadata.SelfLink
 	}
 
 	// can't continue if group kind or version are blank
