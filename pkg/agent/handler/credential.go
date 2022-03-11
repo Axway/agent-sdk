@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"hash"
@@ -13,6 +14,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -60,7 +62,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return nil
 	}
 
-	if cr.Status.Level != statusPending {
+	if cr.Status.Level != statusPending && !(cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting) {
 		return nil
 	}
 
@@ -99,7 +101,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
 		util.SetAgentDetails(cr, details)
 
-		// TODO add finalizer
+		h.updateResourceFinalizer(cr, true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -122,11 +124,40 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.CredentialDeprovision(creds)
 
-		// TODO remoce finalizer
-		_ = status
+		if status.GetStatus() == provisioning.Success {
+			h.updateResourceFinalizer(cr, false)
+		}
 	}
 
 	return nil
+}
+
+func (h *credentials) updateResourceFinalizer(cr *mv1.Credential, add bool) error {
+	const finalizer = "agent.credential.provisioned"
+
+	url := fmt.Sprintf(
+		"/management/v1alpha1/environments/%s/credentials/%s",
+		cr.Metadata.Scope.Name,
+		cr.Name,
+	)
+
+	if add {
+		cr.Finalizers = append(cr.Finalizers, v1.Finalizer{Name: finalizer})
+	} else {
+		cr.Finalizers = make([]v1.Finalizer, 0)
+		for _, f := range cr.Finalizers {
+			if f.Name != finalizer {
+				cr.Finalizers = append(cr.Finalizers, f)
+			}
+		}
+	}
+	bts, err := json.Marshal(cr)
+	if err != nil {
+		return err
+	}
+
+	_, err = h.client.UpdateResource(url, bts)
+	return err
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {

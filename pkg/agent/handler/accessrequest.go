@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -57,7 +59,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
-	if ar.Status.Level != statusPending {
+	if ar.Status.Level != statusPending && !(ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting) {
 		return nil
 	}
 
@@ -86,7 +88,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
 		util.SetAgentDetails(ar, details)
 
-		//TODO add finalizer
+		// add a finalizer
+		h.updateResourceFinalizer(ar, true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -106,8 +109,9 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.AccessRequestDeprovision(req)
 
-		// TODO remove finalizer
-		_ = status
+		if status.GetStatus() == provisioning.Success {
+			h.updateResourceFinalizer(ar, false)
+		}
 	}
 
 	return err
@@ -120,6 +124,34 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 		ar.Spec.ManagedApplication,
 	)
 	return h.client.GetResource(url)
+}
+
+func (h *accessRequestHandler) updateResourceFinalizer(ar *mv1.AccessRequest, add bool) error {
+	const finalizer = "agent.accessrequest.provisioned"
+
+	url := fmt.Sprintf(
+		"/management/v1alpha1/environments/%s/accessrequests/%s",
+		ar.Metadata.Scope.Name,
+		ar.Name,
+	)
+
+	if add {
+		ar.Finalizers = append(ar.Finalizers, v1.Finalizer{Name: finalizer})
+	} else {
+		ar.Finalizers = make([]v1.Finalizer, 0)
+		for _, f := range ar.Finalizers {
+			if f.Name != finalizer {
+				ar.Finalizers = append(ar.Finalizers, f)
+			}
+		}
+	}
+	bts, err := json.Marshal(ar)
+	if err != nil {
+		return err
+	}
+
+	_, err = h.client.UpdateResource(url, bts)
+	return err
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
