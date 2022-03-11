@@ -1,7 +1,5 @@
 package provisioning
 
-// enums
-
 // RequestType - the type of credential request being sent
 type RequestType int
 
@@ -12,6 +10,7 @@ const (
 	RequestTypeRenew
 )
 
+// String returns the string value of the RequestType enum
 func (c RequestType) String() string {
 	return map[RequestType]string{
 		RequestTypeProvision: "provision",
@@ -60,10 +59,10 @@ func (c State) String() string {
 
 // Provisioning - interface to be implemented by agents for access provisioning
 type Provisioning interface {
-	ApplicationRequestProvision(applicationRequest ApplicationRequest) (status RequestStatus)
-	ApplicationRequestDeprovision(applicationRequest ApplicationRequest) (status RequestStatus)
-	AccessRequestProvision(accessRequest AccessRequest) (status RequestStatus)
-	AccessRequestDeprovision(accessRequest AccessRequest) (status RequestStatus)
-	CredentialProvision(credentialRequest CredentialRequest) (status RequestStatus, credentails Credential)
-	CredentialDeprovision(credentialRequest CredentialRequest) (status RequestStatus)
+	AccessRequestDeprovision(AccessRequest) RequestStatus
+	AccessRequestProvision(AccessRequest) RequestStatus
+	ApplicationRequestDeprovision(ApplicationRequest) RequestStatus
+	ApplicationRequestProvision(ApplicationRequest) RequestStatus
+	CredentialDeprovision(CredentialRequest) RequestStatus
+	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
 }

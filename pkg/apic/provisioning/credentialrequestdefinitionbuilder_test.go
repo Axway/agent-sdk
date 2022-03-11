@@ -24,10 +24,8 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
-			// builtDef := struct{}{}
 			registerFunc := func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
 				// TODO - validate that the credentialRequestDefinition is built properly
-				// builtDef = credentialRequestDefinition.(struct{})
 				registerFuncCalled = true
 				return nil, nil
 			}
@@ -63,7 +61,6 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			} else {
 				assert.Nil(t, err)
 				assert.True(t, registerFuncCalled)
-				// assert.NotNil(t, builtDef)
 			}
 		})
 	}
