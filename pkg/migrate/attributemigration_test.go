@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -183,7 +184,7 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	return nil, nil
 }
 
-func (m *mockClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+func (m *mockClient) CreateSubResourceScoped(_, _ string, _ v1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }

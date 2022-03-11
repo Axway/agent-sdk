@@ -107,15 +107,12 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
 		util.SetAgentDetails(cr, details)
 
-		// TODO add finalizer
+		// TODO: add finalizer
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
-			cr.Metadata.Scope.Name,
 			cr.PluralName(),
-			cr.Name,
-			cr.Group,
-			cr.APIVersion,
+			cr.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(cr),
 				"status":           cr.Status,
@@ -170,14 +167,8 @@ func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefini
 
 // encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
 func encryptMap(enc encryptStr, schema, data map[string]interface{}) map[string]interface{} {
-	properties, ok := schema["properties"]
-	if !ok {
-		return data
-	}
-
-	props := properties.(map[string]interface{})
 	for key, value := range data {
-		schemaValue := props[key]
+		schemaValue := schema[key]
 		v, ok := schemaValue.(map[string]interface{})
 		if !ok {
 			continue

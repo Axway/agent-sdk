@@ -71,11 +71,8 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
-			app.Metadata.Scope.Name,
 			app.PluralName(),
-			app.Name,
-			app.Group,
-			app.APIVersion,
+			app.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(app),
 				"status":           app.Status,

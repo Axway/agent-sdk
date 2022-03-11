@@ -409,13 +409,16 @@ func Test_encrypt(t *testing.T) {
 				"three": "ghi",
 			}
 
+			props := crd["properties"]
+			p := props.(map[string]interface{})
+
 			enc, err := newEncryptor(tc.publicKey, tc.alg, tc.hash)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 				return
 			}
 
-			encrypted := encryptMap(enc, crd, schemaData)
+			encrypted := encryptMap(enc, p, schemaData)
 			assert.NotEqual(t, "abc", schemaData["one"])
 			assert.Equal(t, "def", schemaData["two"])
 			assert.NotEqual(t, "ghi", schemaData["three"])
@@ -458,7 +461,7 @@ func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, er
 	return nil, m.updateErr
 }
 
-func (m credClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+func (m credClient) CreateSubResourceScoped(_, _ string, _ v1.ResourceMeta, _ map[string]interface{}) error {
 	return m.subError
 }
 

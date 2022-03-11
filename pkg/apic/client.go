@@ -88,8 +88,8 @@ type Client interface {
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
-	CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceScoped(scopeKindPlural, resKindPlural string, rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResourceUnscoped(kindPlural string, rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -663,7 +663,7 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
 func (c *ServiceClient) CreateSubResourceUnscoped(
-	kindPlural, name, group, version string, subs map[string]interface{},
+	kindPlural string, rm v1.ResourceMeta, subs map[string]interface{},
 ) error {
 	var execErr error
 	wg := &sync.WaitGroup{}
@@ -672,7 +672,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(
 		wg.Add(1)
 
 		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, group, version, kindPlural, name, subName)
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s", base, rm.Group, rm.APIVersion, kindPlural, rm.Name, subName)
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -689,7 +689,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(
 				if execErr == nil {
 					execErr = err
 				}
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
 			}
 		}(wg, subName)
 	}
@@ -701,7 +701,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(
 
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
 func (c *ServiceClient) CreateSubResourceScoped(
-	scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{},
+	scopeKindPlural, resKindPlural string, rm v1.ResourceMeta, subs map[string]interface{},
 ) error {
 	var execErr error
 	wg := &sync.WaitGroup{}
@@ -710,7 +710,9 @@ func (c *ServiceClient) CreateSubResourceScoped(
 		wg.Add(1)
 
 		base := c.cfg.GetURL()
-		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s", base, group, version, scopeKindPlural, scopeName, resKindPlural, name, subName)
+		url := fmt.Sprintf("%s/apis/%s/%s/%s/%s/%s/%s/%s",
+			base, rm.Group, rm.APIVersion, scopeKindPlural, rm.Metadata.Scope.Name, resKindPlural, rm.Name, subName,
+		)
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -725,7 +727,7 @@ func (c *ServiceClient) CreateSubResourceScoped(
 			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, name, err)
+				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
 			}
 		}(subName)
 	}

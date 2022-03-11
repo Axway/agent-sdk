@@ -17,7 +17,7 @@ type client interface {
 	GetResource(url string) (*v1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
-	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceScoped(scopeKindPlural, resKindPlural string, rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 func isStatusFound(rs *v1.ResourceStatus) bool {

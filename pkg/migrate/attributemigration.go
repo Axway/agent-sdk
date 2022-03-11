@@ -52,7 +52,7 @@ type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceScoped(scopeKindPlural, resKindPlural string, rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type item struct {
@@ -287,11 +287,8 @@ func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
 
 	err = m.client.CreateSubResourceScoped(
 		mv1a.EnvironmentResourceName,
-		m.cfg.GetEnvironmentName(),
 		plural,
-		ri.Name,
-		ri.Group,
-		ri.APIVersion,
+		ri.ResourceMeta,
 		subResources,
 	)
 

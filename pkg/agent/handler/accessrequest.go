@@ -89,15 +89,12 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
 		util.SetAgentDetails(ar, details)
 
-		//TODO add finalizer
+		// TODO: add finalizer
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
-			ar.Metadata.Scope.Name,
 			ar.PluralName(),
-			ar.Name,
-			ar.Group,
-			ar.APIVersion,
+			ar.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(ar),
 				"status":           ar.Status,

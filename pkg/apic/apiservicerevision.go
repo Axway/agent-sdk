@@ -170,13 +170,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 				defs.XAgentDetails: xAgentDetail,
 			}
 			err = c.CreateSubResourceScoped(
-				mv1a.EnvironmentResourceName,
-				c.cfg.GetEnvironmentName(),
-				revision.PluralName(),
-				revision.Name,
-				revision.Group,
-				revision.APIVersion,
-				subResources,
+				mv1a.EnvironmentResourceName, revision.PluralName(), revision.ResourceMeta, subResources,
 			)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)

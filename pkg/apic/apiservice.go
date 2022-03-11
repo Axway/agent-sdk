@@ -171,13 +171,7 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) e
 
 	if len(subResources) > 0 {
 		return c.CreateSubResourceScoped(
-			mv1a.EnvironmentResourceName,
-			c.cfg.GetEnvironmentName(),
-			svc.PluralName(),
-			svc.Name,
-			svc.Group,
-			svc.APIVersion,
-			subResources,
+			mv1a.EnvironmentResourceName, svc.PluralName(), svc.ResourceMeta, subResources,
 		)
 	}
 	return nil
