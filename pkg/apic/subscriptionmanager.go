@@ -50,16 +50,15 @@ type subscriptionManager struct {
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:         false,
-		apicClient:        apicClient,
-		processorMap:      make(map[SubscriptionState][]SubscriptionProcessor),
-		ucStatesToQuery:   make([]string, 0),
-		arStatesToQuery:   make([]string, 0),
-		locklist:          make(map[string]string),
-		locklistLock:      &sync.RWMutex{},
-		pollingEnabled:    apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
-		pollInterval:      apicClient.cfg.GetPollInterval(),
-		useAccessRequests: apicClient.cfg.IsUsingAccessRequests(),
+		isRunning:       false,
+		apicClient:      apicClient,
+		processorMap:    make(map[SubscriptionState][]SubscriptionProcessor),
+		ucStatesToQuery: make([]string, 0),
+		arStatesToQuery: make([]string, 0),
+		locklist:        make(map[string]string),
+		locklistLock:    &sync.RWMutex{},
+		pollingEnabled:  apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:    apicClient.cfg.GetPollInterval(),
 	}
 
 	return subscriptionMgr
