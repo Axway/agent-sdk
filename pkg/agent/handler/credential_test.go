@@ -202,7 +202,7 @@ func TestCredentialHandler(t *testing.T) {
 
 			handler := NewCredentialHandler(p, c)
 			v := handler.(*credentials)
-			v.encrypt = func(_ encryptStr, _, data map[string]interface{}) map[string]interface{} {
+			v.encrypt = func(_ util.Encryptor, _, data map[string]interface{}) map[string]interface{} {
 				return data
 			}
 
@@ -412,7 +412,7 @@ func Test_encrypt(t *testing.T) {
 			props := crd["properties"]
 			p := props.(map[string]interface{})
 
-			enc, err := newEncryptor(tc.publicKey, tc.alg, tc.hash)
+			enc, err := util.NewEncryptor(tc.publicKey, tc.alg, tc.hash)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 				return
