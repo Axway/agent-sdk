@@ -11,7 +11,6 @@ import (
 	"hash"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cat "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -49,14 +48,8 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
-	// TODO - Use managed app instead
-	cApp := cat.Application{
-		Spec: cat.ApplicationSpec{Security: cat.ApplicationSpecSecurity{
-			EncryptionKey:       "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr0uezHaYsIvhPMYZjSLd\nmMi3GiKTi9e4dGaqZ/xxs7MytlO7eMKTjQ/JQLQcZ3p6JyaeGy2ya4f69Ppcfmgs\n+Iq+vbLrvgZCKiktn8DEB+DTI6uhvfbR9agVyx6MK3NHT8tNMX1no+paZA//G3V9\nT5k9Y0HkC4wOO3OCdUPBF9Q/SaUPy6NJxoFgn/uzu3vUEcF/dlMsJytlo4FvjUsG\nibsfYBsAKyLoEFNFuuQCAuFcmbS0mNw8ULnXYYfXdo/b9OBIEpLmKxsvw/Ov+WtU\n7c+IzOpY0Hbr7O4R+kxiFJNxlV7Cv3Rsw7Y0mNe5qKfgNu9gIixmJuhsOWzRU6U5\n1QIDAQAB\n-----END PUBLIC KEY-----\n",
-			EncryptionAlgorithm: "PKCS",
-			EncryptionHash:      "SHA256",
-		}},
-	}
+
+	log.Info("%s event for Credential", action.String())
 
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)
@@ -95,13 +88,17 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 
 	if cr.Status.Level == statusPending {
 		status, credentialData = h.prov.CredentialProvision(creds)
-		sec := cApp.Spec.Security
+		sec := app.Spec.Security
 		enc, err := newEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).Failed()
 		} else {
-			if scheamProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
-				cr.Data = h.encrypt(enc, scheamProps.(map[string]interface{}), credentialData.GetData())
+			if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
+				props, ok := schemaProps.(map[string]interface{})
+				if !ok {
+					props = make(map[string]interface{})
+				}
+				cr.Data = h.encrypt(enc, props, credentialData.GetData())
 			}
 		}
 
@@ -140,13 +137,19 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	return nil
 }
 
-func (h *credentials) getManagedApp(cred *mv1.Credential) (*v1.ResourceInstance, error) {
+func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {
 	url := fmt.Sprintf(
 		"/management/v1alpha1/environments/%s/managedapplications/%s",
 		cred.Metadata.Scope.Name,
 		cred.Spec.ManagedApplication,
 	)
-	return h.client.GetResource(url)
+	ri, err := h.client.GetResource(url)
+	if err != nil {
+		return nil, err
+	}
+	app := &mv1.ManagedApplication{}
+	err = app.FromInstance(ri)
+	return app, err
 }
 
 func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {

@@ -7,6 +7,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -35,6 +36,8 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
+
+	log.Info("%s event for ManagedApplication", action.String())
 
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)

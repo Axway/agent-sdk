@@ -9,6 +9,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -45,6 +46,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
+
+	log.Info("%s event for AccessRequest", action.String())
 
 	ar := &mv1.AccessRequest{}
 	err := ar.FromInstance(resource)
