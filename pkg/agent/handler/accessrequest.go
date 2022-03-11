@@ -138,12 +138,13 @@ func (h *accessRequestHandler) updateResourceFinalizer(ar *mv1.AccessRequest, ad
 	if add {
 		ar.Finalizers = append(ar.Finalizers, v1.Finalizer{Name: finalizer})
 	} else {
-		ar.Finalizers = make([]v1.Finalizer, 0)
+		cleanedFinalizer := make([]v1.Finalizer, 0)
 		for _, f := range ar.Finalizers {
 			if f.Name != finalizer {
-				ar.Finalizers = append(ar.Finalizers, f)
+				cleanedFinalizer = append(cleanedFinalizer, f)
 			}
 		}
+		ar.Finalizers = cleanedFinalizer
 	}
 	bts, err := json.Marshal(ar)
 	if err != nil {

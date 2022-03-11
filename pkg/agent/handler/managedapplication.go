@@ -111,12 +111,13 @@ func (h *managedApplication) updateResourceFinalizer(ma *mv1.ManagedApplication,
 	if add {
 		ma.Finalizers = append(ma.Finalizers, v1.Finalizer{Name: finalizer})
 	} else {
-		ma.Finalizers = make([]v1.Finalizer, 0)
+		cleanedFinalizer := make([]v1.Finalizer, 0)
 		for _, f := range ma.Finalizers {
 			if f.Name != finalizer {
-				ma.Finalizers = append(ma.Finalizers, f)
+				cleanedFinalizer = append(cleanedFinalizer, f)
 			}
 		}
+		ma.Finalizers = cleanedFinalizer
 	}
 	bts, err := json.Marshal(ma)
 	if err != nil {

@@ -144,12 +144,13 @@ func (h *credentials) updateResourceFinalizer(cr *mv1.Credential, add bool) erro
 	if add {
 		cr.Finalizers = append(cr.Finalizers, v1.Finalizer{Name: finalizer})
 	} else {
-		cr.Finalizers = make([]v1.Finalizer, 0)
+		cleanedFinalizer := make([]v1.Finalizer, 0)
 		for _, f := range cr.Finalizers {
 			if f.Name != finalizer {
-				cr.Finalizers = append(cr.Finalizers, f)
+				cleanedFinalizer = append(cleanedFinalizer, f)
 			}
 		}
+		cr.Finalizers = cleanedFinalizer
 	}
 	bts, err := json.Marshal(cr)
 	if err != nil {
