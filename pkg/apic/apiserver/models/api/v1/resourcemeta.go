@@ -77,6 +77,18 @@ func (rm *ResourceMeta) GetSelfLink() string {
 		return rm.Metadata.SelfLink
 	}
 
+	if kindLink := rm.GetKindLink(); kindLink != "" {
+		return fmt.Sprintf("%s/%s", kindLink, rm.Name)
+	}
+	return ""
+}
+
+// GetKindLink gets the link to resource kind
+func (rm *ResourceMeta) GetKindLink() string {
+	if rm == nil {
+		return ""
+	}
+
 	// can't continue if group kind or version are blank
 	if rm.Group == "" || rm.Kind == "" || rm.APIVersion == "" {
 		return ""
@@ -87,9 +99,9 @@ func (rm *ResourceMeta) GetSelfLink() string {
 	plural, _ := GetPluralFromKind(rm.Kind)
 	if scoped {
 		scopePlural, _ := GetPluralFromKind(scope)
-		path = fmt.Sprintf("%s/%s/%s/%s/%s", path, scopePlural, rm.Metadata.Scope.Name, plural, rm.Name)
+		path = fmt.Sprintf("%s/%s/%s/%s", path, scopePlural, rm.Metadata.Scope.Name, plural)
 	} else {
-		path = fmt.Sprintf("%s/%s/%s", path, plural, rm.Name)
+		path = fmt.Sprintf("%s/%s", path, plural)
 	}
 	return path
 }
