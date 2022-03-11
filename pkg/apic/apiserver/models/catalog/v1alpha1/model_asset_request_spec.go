@@ -17,8 +17,8 @@ type AssetRequestSpec struct {
 	AssetRequestDefinition string                 `json:"assetRequestDefinition,omitempty"`
 	// Reference to Release that got created from this asset request.
 	AssetRelease string `json:"assetRelease"`
-	// Reference to application.
-	Application string `json:"application"`
+	// Reference to Release that got created from this asset request.
+	Asset string `json:"asset,omitempty"`
 	// reference to the Subscription to be used to access the Asset Resource.
 	Subscription string `json:"subscription,omitempty"`
 }

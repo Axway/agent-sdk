@@ -16,34 +16,19 @@ func TestUpdatePropertyValues(t *testing.T) {
 	assert.NotNil(t, mockHTTPClient)
 
 	testCases := []struct {
-		name            string
-		wantErr         bool
-		responseCode    int
-		isAccessRequest bool
+		name         string
+		wantErr      bool
+		responseCode int
 	}{
 		{
-			name:            "UC Sub Bad Response",
-			responseCode:    http.StatusBadRequest,
-			wantErr:         true,
-			isAccessRequest: false,
+			name:         "UC Sub Bad Response",
+			responseCode: http.StatusBadRequest,
+			wantErr:      true,
 		},
 		{
-			name:            "UC Sub Success",
-			responseCode:    http.StatusOK,
-			wantErr:         false,
-			isAccessRequest: false,
-		},
-		{
-			name:            "AR Sub Bad Response 1",
-			responseCode:    http.StatusBadRequest,
-			wantErr:         true,
-			isAccessRequest: true,
-		},
-		{
-			name:            "AR Sub Success",
-			responseCode:    http.StatusOK,
-			wantErr:         false,
-			isAccessRequest: true,
+			name:         "UC Sub Success",
+			responseCode: http.StatusOK,
+			wantErr:      false,
 		},
 	}
 	for _, tt := range testCases {
@@ -51,11 +36,6 @@ func TestUpdatePropertyValues(t *testing.T) {
 			subscription := createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"})
 			cs := subscription.(*CentralSubscription)
 			cs.apicClient = svcClient
-			if tt.isAccessRequest {
-				subscription = createAccessRequestSubscription("access-request", string(AccessRequestProvisioning), "service-instance", map[string]interface{}{"orgId": "33333"})
-				ars := subscription.(*AccessRequestSubscription)
-				ars.apicClient = svcClient
-			}
 
 			// setup API responses
 			mockHTTPClient.SetResponses([]api.MockResponse{{RespCode: tt.responseCode}})
@@ -67,16 +47,8 @@ func TestUpdatePropertyValues(t *testing.T) {
 			if err := subscription.UpdatePropertyValues(values); (err != nil) != tt.wantErr {
 				t.Errorf("CentralSubscription.UpdatePropertyValues() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
-				for key, val := range values {
-					if tt.isAccessRequest {
-						ars := subscription.(*AccessRequestSubscription)
-						assert.Contains(t, ars.AccessRequest.Spec.Data, key)
-						assert.Exactly(t, val, ars.AccessRequest.Spec.Data[key])
-					} else {
-						cs := subscription.(*CentralSubscription)
-						assert.NotNil(t, cs)
-					}
-				}
+				cs := subscription.(*CentralSubscription)
+				assert.NotNil(t, cs)
 			}
 		})
 	}
@@ -96,39 +68,28 @@ func TestUpdateProperties(t *testing.T) {
 		isAccessRequest bool
 	}{
 		{
-			name:            "UC Sub Bad Response 1",
-			filenames:       []string{""},
-			responseCodes:   []int{http.StatusBadRequest},
-			wantErr:         true,
-			isAccessRequest: false,
+			name:          "UC Sub Bad Response 1",
+			filenames:     []string{""},
+			responseCodes: []int{http.StatusBadRequest},
+			wantErr:       true,
 		},
 		{
-			name:            "UC Sub Bad Response 2",
-			filenames:       []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", ""},
-			responseCodes:   []int{http.StatusOK, http.StatusBadRequest},
-			wantErr:         true,
-			isAccessRequest: false,
+			name:          "UC Sub Bad Response 2",
+			filenames:     []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", ""},
+			responseCodes: []int{http.StatusOK, http.StatusBadRequest},
+			wantErr:       true,
 		},
 		{
-			name:            "UC Sub Bad Response 3",
-			filenames:       []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", "", ""},
-			responseCodes:   []int{http.StatusOK, http.StatusOK, http.StatusBadRequest},
-			wantErr:         true,
-			isAccessRequest: false,
+			name:          "UC Sub Bad Response 3",
+			filenames:     []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", "", ""},
+			responseCodes: []int{http.StatusOK, http.StatusOK, http.StatusBadRequest},
+			wantErr:       true,
 		},
 		{
-			name:            "UC Sub Success",
-			filenames:       []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", "", ""},
-			responseCodes:   []int{http.StatusOK, http.StatusOK, http.StatusOK},
-			wantErr:         false,
-			isAccessRequest: false,
-		},
-		{
-			name:            "AR Update Properties",
-			filenames:       []string{""},
-			responseCodes:   []int{},
-			wantErr:         false,
-			isAccessRequest: true,
+			name:          "UC Sub Success",
+			filenames:     []string{wd + "/testdata/catalogitemsubscriptiondefprofile.json", "", ""},
+			responseCodes: []int{http.StatusOK, http.StatusOK, http.StatusOK},
+			wantErr:       false,
 		},
 	}
 	for _, tt := range testCases {
@@ -136,11 +97,6 @@ func TestUpdateProperties(t *testing.T) {
 			subscription := createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"})
 			cs := subscription.(*CentralSubscription)
 			cs.apicClient = svcClient
-			if tt.isAccessRequest {
-				subscription = createAccessRequestSubscription("access-request", string(AccessRequestProvisioning), "service-instance", map[string]interface{}{"orgId": "33333"})
-				ars := subscription.(*AccessRequestSubscription)
-				ars.apicClient = svcClient
-			}
 
 			// setup API responses
 			mockResponses := make([]api.MockResponse, 0)
@@ -166,52 +122,39 @@ func TestUpdateState(t *testing.T) {
 	assert.NotNil(t, mockHTTPClient)
 
 	testCases := []struct {
-		name            string
-		responseCodes   []int
-		wantErr         bool
-		state           SubscriptionState
-		message         string
-		isAccessRequest bool
+		name          string
+		responseCodes []int
+		wantErr       bool
+		state         SubscriptionState
+		message       string
 	}{
 		{
-			name:            "UC Sub Failed",
-			responseCodes:   []int{http.StatusBadRequest},
-			state:           SubscriptionFailedToSubscribe,
-			message:         "failed",
-			wantErr:         true,
-			isAccessRequest: false,
+			name:          "UC Sub Failed",
+			responseCodes: []int{http.StatusBadRequest},
+			state:         SubscriptionFailedToSubscribe,
+			message:       "failed",
+			wantErr:       true,
 		},
 		{
-			name:            "UC Sub Success",
-			responseCodes:   []int{http.StatusOK},
-			state:           SubscriptionActive,
-			message:         "",
-			wantErr:         false,
-			isAccessRequest: false,
+			name:          "UC Sub Success",
+			responseCodes: []int{http.StatusOK},
+			state:         SubscriptionActive,
+			message:       "",
+			wantErr:       false,
 		},
 		{
-			name:            "AR Failed 1",
-			responseCodes:   []int{http.StatusBadRequest},
-			state:           AccessRequestFailedProvisioning,
-			message:         "failed",
-			wantErr:         true,
-			isAccessRequest: true,
+			name:          "AR Failed 1",
+			responseCodes: []int{http.StatusBadRequest},
+			state:         AccessRequestFailedProvisioning,
+			message:       "failed",
+			wantErr:       true,
 		},
 		{
-			name:            "AR Failed 2",
-			responseCodes:   []int{http.StatusOK, http.StatusBadRequest},
-			state:           AccessRequestFailedProvisioning,
-			message:         "failed",
-			wantErr:         true,
-			isAccessRequest: true,
-		},
-		{
-			name:            "AR Success",
-			responseCodes:   []int{http.StatusOK, http.StatusOK},
-			state:           AccessRequestProvisioned,
-			message:         "",
-			wantErr:         false,
-			isAccessRequest: true,
+			name:          "AR Failed 2",
+			responseCodes: []int{http.StatusOK, http.StatusBadRequest},
+			state:         AccessRequestFailedProvisioning,
+			message:       "failed",
+			wantErr:       true,
 		},
 	}
 
@@ -220,11 +163,6 @@ func TestUpdateState(t *testing.T) {
 			subscription := createSubscription("11111", "APPROVED", "11111", map[string]interface{}{"orgId": "11111"})
 			cs := subscription.(*CentralSubscription)
 			cs.apicClient = svcClient
-			if tt.isAccessRequest {
-				subscription = createAccessRequestSubscription("access-request", string(AccessRequestProvisioning), "service-instance", map[string]interface{}{"orgId": "33333"})
-				ars := subscription.(*AccessRequestSubscription)
-				ars.apicClient = svcClient
-			}
 
 			// setup API responses
 			mockResponses := make([]api.MockResponse, 0)
@@ -255,18 +193,6 @@ func TestGetters(t *testing.T) {
 	assert.Equal(t, SubscriptionApproved, subscription.GetState())
 	assert.Equal(t, "33333", subscription.GetPropertyValue("orgId"))
 	assert.Equal(t, "", subscription.GetPropertyValue("foo"))
-
-	accReq := createAccessRequestSubscription("access-request", string(AccessRequestProvisioning), "service-instance", map[string]interface{}{"orgId": "33333"})
-	assert.Equal(t, "bbunny", accReq.GetCreatedUserID())
-	assert.Equal(t, "access-request", accReq.GetID())
-	assert.Equal(t, "access-request", accReq.GetName())
-	assert.Equal(t, "service-instance", accReq.GetApicID())
-	assert.Equal(t, "2222", accReq.GetRemoteAPIID())
-	assert.Equal(t, "stage", accReq.GetRemoteAPIStage())
-	assert.Equal(t, "access-request", accReq.GetCatalogItemID())
-	assert.Equal(t, AccessRequestProvisioning, accReq.GetState())
-	assert.Equal(t, "33333", accReq.GetPropertyValue("orgId"))
-	assert.Equal(t, "", accReq.GetPropertyValue("foo"))
 }
 
 func TestCentralSubscription_UpdatePropertyValues(t *testing.T) {

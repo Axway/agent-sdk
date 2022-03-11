@@ -70,39 +70,6 @@ func createSubscription(ID, state, catalogID string, subscriptionProps map[strin
 	}
 }
 
-func createAccessRequestSubscription(name, state, instanceID string, subscriptionProps map[string]interface{}) Subscription {
-	return &AccessRequestSubscription{
-		ApicID:         "1111",
-		RemoteAPIID:    "2222",
-		RemoteAPIStage: "stage",
-		AccessRequest: &v1alpha1.AccessRequest{
-			ResourceMeta: v1.ResourceMeta{
-				GroupVersionKind: v1.GroupVersionKind{
-					GroupKind: v1.GroupKind{
-						Group: "management",
-						Kind:  "AccessRequest",
-					},
-					APIVersion: "v1alpha1",
-				},
-				Name:  name,
-				Title: name,
-				Metadata: v1.Metadata{
-					Audit: v1.AuditMetadata{
-						CreateUserID: "bbunny",
-					},
-				},
-			},
-			Spec: v1alpha1.AccessRequestSpec{
-				Data:               subscriptionProps,
-				ApiServiceInstance: instanceID,
-			},
-			State: v1alpha1.AccessRequestState{
-				Name: state,
-			},
-		},
-	}
-}
-
 func createServiceClientForSubscriptions(server *httptest.Server) (*ServiceClient, *corecfg.CentralConfiguration) {
 	client, _ := GetTestServiceClient()
 	cfg := GetTestServiceClientCentralConfiguration(client)

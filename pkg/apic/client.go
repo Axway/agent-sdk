@@ -93,6 +93,7 @@ type Client interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
 	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error)
 	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error)
 }
@@ -745,6 +746,27 @@ func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error)
 	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
+}
+
+// Add or remove a finalizer from a resource
+func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error) {
+	if addAction {
+		res.Finalizers = append(res.Finalizers, v1.Finalizer{Name: finalizer, Description: description})
+	} else {
+		cleanedFinalizer := make([]v1.Finalizer, 0)
+		for _, f := range res.Finalizers {
+			if f.Name != finalizer {
+				cleanedFinalizer = append(cleanedFinalizer, f)
+			}
+		}
+		res.Finalizers = cleanedFinalizer
+	}
+	bts, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.UpdateResource(res.GetAPIPath(), bts)
 }
 
 // UpdateResource updates a resource

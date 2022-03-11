@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"hash"
@@ -135,29 +134,13 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 func (h *credentials) updateResourceFinalizer(cr *mv1.Credential, add bool) error {
 	const finalizer = "agent.credential.provisioned"
 
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/credentials/%s",
-		cr.Metadata.Scope.Name,
-		cr.Name,
-	)
-
-	if add {
-		cr.Finalizers = append(cr.Finalizers, v1.Finalizer{Name: finalizer})
-	} else {
-		cleanedFinalizer := make([]v1.Finalizer, 0)
-		for _, f := range cr.Finalizers {
-			if f.Name != finalizer {
-				cleanedFinalizer = append(cleanedFinalizer, f)
-			}
-		}
-		cr.Finalizers = cleanedFinalizer
-	}
-	bts, err := json.Marshal(cr)
+	ri, err := cr.AsInstance()
 	if err != nil {
 		return err
 	}
 
-	_, err = h.client.UpdateResource(url, bts)
+	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
+
 	return err
 }
 

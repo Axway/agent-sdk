@@ -462,6 +462,10 @@ func (m credClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[strin
 	return m.subError
 }
 
+func (m credClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string, _ bool) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
 func parsePrivateKey(priv string) *rsa.PrivateKey {
 	block, _ := pem.Decode([]byte(priv))
 	if block == nil {

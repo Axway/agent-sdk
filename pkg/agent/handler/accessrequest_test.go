@@ -72,9 +72,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			ApiServiceInstance: instRefName,
 			ManagedApplication: managedAppRefName,
 		},
-		State: mv1.AccessRequestState{
-			Name: provision,
-		},
 		Status: &v1.ResourceStatus{
 			Level: statusPending,
 		},
@@ -204,7 +201,6 @@ func TestAccessRequestHandler(t *testing.T) {
 
 			ar := accessReq
 			ar.Status.Level = tc.status
-			ar.State.Name = tc.state
 			ar.Metadata.References = tc.references
 
 			instanceRI, _ := instance.AsInstance()
@@ -223,7 +219,6 @@ func TestAccessRequestHandler(t *testing.T) {
 				expectedAppName:       managedAppRefName,
 				expectedAccessDetails: util.GetAgentDetails(&ar),
 				expectedAppDetails:    util.GetAgentDetails(mApp),
-				state:                 ar.State.Name,
 				status: mockRequestStatus{
 					status: prov.Success,
 					msg:    "msg",
@@ -305,6 +300,10 @@ func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, e
 
 func (m *mockClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
 	return m.subError
+}
+
+func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string, _ bool) (*v1.ResourceInstance, error) {
+	return nil, nil
 }
 
 type mockARProvision struct {

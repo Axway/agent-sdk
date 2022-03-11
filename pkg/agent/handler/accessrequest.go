@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -129,29 +128,13 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 func (h *accessRequestHandler) updateResourceFinalizer(ar *mv1.AccessRequest, add bool) error {
 	const finalizer = "agent.accessrequest.provisioned"
 
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/accessrequests/%s",
-		ar.Metadata.Scope.Name,
-		ar.Name,
-	)
-
-	if add {
-		ar.Finalizers = append(ar.Finalizers, v1.Finalizer{Name: finalizer})
-	} else {
-		cleanedFinalizer := make([]v1.Finalizer, 0)
-		for _, f := range ar.Finalizers {
-			if f.Name != finalizer {
-				cleanedFinalizer = append(cleanedFinalizer, f)
-			}
-		}
-		ar.Finalizers = cleanedFinalizer
-	}
-	bts, err := json.Marshal(ar)
+	ri, err := ar.AsInstance()
 	if err != nil {
 		return err
 	}
 
-	_, err = h.client.UpdateResource(url, bts)
+	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
+
 	return err
 }
 

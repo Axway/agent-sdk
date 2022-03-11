@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
-	"fmt"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -102,29 +99,13 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 func (h *managedApplication) updateResourceFinalizer(ma *mv1.ManagedApplication, add bool) error {
 	const finalizer = "agent.managedapplication.provisioned"
 
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/managedapplications/%s",
-		ma.Metadata.Scope.Name,
-		ma.Name,
-	)
-
-	if add {
-		ma.Finalizers = append(ma.Finalizers, v1.Finalizer{Name: finalizer})
-	} else {
-		cleanedFinalizer := make([]v1.Finalizer, 0)
-		for _, f := range ma.Finalizers {
-			if f.Name != finalizer {
-				cleanedFinalizer = append(cleanedFinalizer, f)
-			}
-		}
-		ma.Finalizers = cleanedFinalizer
-	}
-	bts, err := json.Marshal(ma)
+	ri, err := ma.AsInstance()
 	if err != nil {
 		return err
 	}
 
-	_, err = h.client.UpdateResource(url, bts)
+	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
+
 	return err
 }
 
