@@ -142,20 +142,6 @@ func TestUpdateState(t *testing.T) {
 			message:       "",
 			wantErr:       false,
 		},
-		{
-			name:          "AR Failed 1",
-			responseCodes: []int{http.StatusBadRequest},
-			state:         AccessRequestFailedProvisioning,
-			message:       "failed",
-			wantErr:       true,
-		},
-		{
-			name:          "AR Failed 2",
-			responseCodes: []int{http.StatusOK, http.StatusBadRequest},
-			state:         AccessRequestFailedProvisioning,
-			message:       "failed",
-			wantErr:       true,
-		},
 	}
 
 	for _, tt := range testCases {

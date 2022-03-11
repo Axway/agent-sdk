@@ -748,7 +748,7 @@ func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error)
 	return ri, err
 }
 
-// Add or remove a finalizer from a resource
+// UpdateResourceFinalizer - Add or remove a finalizer from a resource
 func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error) {
 	if addAction {
 		res.Finalizers = append(res.Finalizers, v1.Finalizer{Name: finalizer, Description: description})
