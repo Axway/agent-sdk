@@ -45,7 +45,7 @@ func NewCredentialBuilder() CredentialBuilder {
 	}
 }
 
-// SetOauth - set the credential as an Oauth type
+// SetOAuth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) Credential {
 	c.credential.credentialType = oauth
 	c.credential.data = map[string]interface{}{
