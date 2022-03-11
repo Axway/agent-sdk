@@ -280,9 +280,7 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 	return m.status
 }
 
-type mockProvCredential struct {
-	data map[string]interface{}
-}
+type mockProvCredential struct{}
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}

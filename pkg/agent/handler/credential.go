@@ -13,14 +13,16 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const xAxwayEncrypted = "x-axway-encrypted"
+const (
+	xAxwayEncrypted = "x-axway-encrypted"
+	crFinalizer     = "agent.credential.provisioned"
+)
 
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
@@ -100,7 +102,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
 		util.SetAgentDetails(cr, details)
 
-		h.updateResourceFinalizer(cr, true)
+		h.client.UpdateResourceFinalizer(resource, crFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -123,25 +125,12 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.CredentialDeprovision(creds)
 
-		if status.GetStatus() == provisioning.Success {
-			h.updateResourceFinalizer(cr, false)
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, crFinalizer, "", false)
 		}
 	}
 
 	return nil
-}
-
-func (h *credentials) updateResourceFinalizer(cr *mv1.Credential, add bool) error {
-	const finalizer = "agent.credential.provisioned"
-
-	ri, err := cr.AsInstance()
-	if err != nil {
-		return err
-	}
-
-	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
-
-	return err
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {

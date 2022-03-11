@@ -7,7 +7,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -19,6 +18,7 @@ const (
 	statusErr     = "Error"
 	statusSuccess = "Success"
 	statusPending = "Pending"
+	arFinalizer   = "agent.accessrequest.provisioned"
 )
 
 type arProvisioner interface {
@@ -88,7 +88,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		util.SetAgentDetails(ar, details)
 
 		// add a finalizer
-		h.updateResourceFinalizer(ar, true)
+		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -108,8 +108,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.AccessRequestDeprovision(req)
 
-		if status.GetStatus() == provisioning.Success {
-			h.updateResourceFinalizer(ar, false)
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, arFinalizer, "", false)
 		}
 	}
 
@@ -123,19 +123,6 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 		ar.Spec.ManagedApplication,
 	)
 	return h.client.GetResource(url)
-}
-
-func (h *accessRequestHandler) updateResourceFinalizer(ar *mv1.AccessRequest, add bool) error {
-	const finalizer = "agent.accessrequest.provisioned"
-
-	ri, err := ar.AsInstance()
-	if err != nil {
-		return err
-	}
-
-	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
-
-	return err
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {

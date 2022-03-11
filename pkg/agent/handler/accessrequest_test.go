@@ -312,7 +312,6 @@ type mockARProvision struct {
 	expectedAppName       string
 	expectedAppDetails    map[string]interface{}
 	expectedAccessDetails map[string]interface{}
-	state                 string
 	status                mockRequestStatus
 	prov                  string
 }

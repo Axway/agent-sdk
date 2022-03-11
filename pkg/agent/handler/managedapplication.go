@@ -5,11 +5,12 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
+
+const maFinalizer = "agent.managedapplication.provisioned"
 
 type managedAppProvision interface {
 	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
@@ -68,7 +69,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		util.SetAgentDetails(app, details)
 
 		// add finalizer
-		h.updateResourceFinalizer(app, true)
+		h.client.UpdateResourceFinalizer(resource, maFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -88,23 +89,10 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	if app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.ApplicationRequestDeprovision(ma)
 
-		if status.GetStatus() == provisioning.Success {
-			h.updateResourceFinalizer(app, false)
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, maFinalizer, "", false)
 		}
 	}
-
-	return err
-}
-
-func (h *managedApplication) updateResourceFinalizer(ma *mv1.ManagedApplication, add bool) error {
-	const finalizer = "agent.managedapplication.provisioned"
-
-	ri, err := ma.AsInstance()
-	if err != nil {
-		return err
-	}
-
-	h.client.UpdateResourceFinalizer(ri, finalizer, "", add)
 
 	return err
 }
