@@ -37,7 +37,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	log.Info("%s event for ManagedApplication", action.String())
+	log.Infof("%s event for ManagedApplication", action.String())
 
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)

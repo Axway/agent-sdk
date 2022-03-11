@@ -47,7 +47,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
-	log.Info("%s event for AccessRequest", action.String())
+	log.Infof("%s event for AccessRequest", action.String())
 
 	ar := &mv1.AccessRequest{}
 	err := ar.FromInstance(resource)
