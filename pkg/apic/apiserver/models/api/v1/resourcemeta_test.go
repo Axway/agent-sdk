@@ -143,13 +143,7 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 	plurals["kind"] = "kinds"
 	plurals["scopeKind"] = "scopeKinds"
 
-	meta := &ResourceMeta{}
-
-	// nil meta
-	link := meta.GetSelfLink()
-	assert.Equal(t, "", link)
-
-	meta = &ResourceMeta{
+	meta := &ResourceMeta{
 		GroupVersionKind: GroupVersionKind{
 			GroupKind: GroupKind{
 				Group: "group",
@@ -164,7 +158,7 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 	}
 
 	// no version
-	link = meta.GetSelfLink()
+	link := meta.GetSelfLink()
 	assert.Equal(t, "", link)
 
 	meta.APIVersion = "v1"
@@ -183,4 +177,9 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 	// no scope kind
 	link = meta.GetSelfLink()
 	assert.Equal(t, "/group/v1/scopeKinds/scope/kinds/name", link)
+
+	// selflink
+	meta.Metadata.SelfLink = "/selflink"
+	link = meta.GetSelfLink()
+	assert.Equal(t, "/selflink", link)
 }
