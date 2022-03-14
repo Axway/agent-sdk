@@ -56,12 +56,11 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return err
 	}
 
-	ok := isStatusFound(ar.Status)
-	if !ok {
+	if ok := isStatusFound(ar.Status); !ok {
 		return nil
 	}
 
-	if ar.Status.Level != statusPending && !(ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting) {
+	if ok := shouldProcess(ar.Status.Level, ar.Metadata.State); !ok {
 		return nil
 	}
 

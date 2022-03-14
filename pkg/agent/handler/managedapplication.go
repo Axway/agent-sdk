@@ -47,12 +47,11 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return err
 	}
 
-	ok := isStatusFound(app.Status)
-	if !ok {
+	if ok := isStatusFound(app.Status); !ok {
 		return nil
 	}
 
-	if app.Status.Level != statusPending && !(app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting) {
+	if ok := shouldProcess(app.Status.Level, app.Metadata.State); !ok {
 		return nil
 	}
 

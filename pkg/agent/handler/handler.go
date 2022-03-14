@@ -33,3 +33,10 @@ func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta
 	}
 	return false
 }
+
+func shouldProcess(status, state string) bool {
+	if status != statusPending && !(status == statusSuccess && state == v1.ResourceDeleting) {
+		return false
+	}
+	return true
+}

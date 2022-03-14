@@ -54,12 +54,11 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return err
 	}
 
-	ok := isStatusFound(cr.Status)
-	if !ok {
+	if ok := isStatusFound(cr.Status); !ok {
 		return nil
 	}
 
-	if cr.Status.Level != statusPending && !(cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting) {
+	if ok := shouldProcess(cr.Status.Level, cr.Metadata.State); !ok {
 		return nil
 	}
 
