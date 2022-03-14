@@ -46,7 +46,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return nil
 	}
 
-	log.Infof("%s event for Credential", action.String())
+	log.Debugf("%s event for Credential", action.String())
 
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)

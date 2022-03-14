@@ -39,7 +39,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	log.Infof("%s event for ManagedApplication", action.String())
+	log.Debugf("%s event for ManagedApplication", action.String())
 
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)
@@ -121,8 +121,8 @@ func (a provManagedApp) GetTeamName() string {
 	return a.teamName
 }
 
-// GetAgentDetailsValue returns a value found on the managed application
-func (a provManagedApp) GetAgentDetailsValue(key string) string {
+// GetApplicationDetailsValue returns a value found on the managed application
+func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 	if a.data == nil {
 		return ""
 	}
