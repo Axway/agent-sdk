@@ -64,6 +64,10 @@ func (a *APIMetric) GetStartTime() time.Time {
 	return a.StartTime
 }
 
+func (a *APIMetric) GetType() string {
+	return "APIMetric"
+}
+
 // APIMetric - struct to hold metric specific for status code based API transactions
 type SubscriptionMetric struct {
 	Subscription SubscriptionDetails `json:"subscription"`
@@ -77,6 +81,10 @@ type SubscriptionMetric struct {
 
 func (a *SubscriptionMetric) GetStartTime() time.Time {
 	return a.StartTime
+}
+
+func (a *SubscriptionMetric) GetType() string {
+	return "SubscriptionMetric"
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
@@ -96,6 +104,7 @@ type V4EventDistribution struct {
 
 type V4Data interface {
 	GetStartTime() time.Time
+	GetType() string
 }
 
 // V4Event - represents V7 event
@@ -136,11 +145,14 @@ type AppDetails struct {
 
 // AppDetails - struct for app details to report
 type SubscriptionDetails struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	AppID           string `json:"appId"`
-	AppName         string `json:"appName"`
-	ConsumerOrgGUID string `json:"-"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	AppID              string `json:"appId"`
+	AppName            string `json:"appName"`
+	ConsumerOrgGUID    string `json:"-"`
+	APIID              string `json:"apiId"`
+	APIName            string `json:"apiName"`
+	APIServiceInstance string `json:"apiServiceInstance"`
 }
 
 // Data - struct for data to report as API Metrics
