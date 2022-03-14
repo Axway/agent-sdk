@@ -43,7 +43,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	j.cacheLock.Lock()
 	defer j.cacheLock.Unlock()
 
-	log.Info("validating api service instance on dataplane")
+	log.Debug("validating api service instance on dataplane")
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
 		instance, err := agent.cacheManager.GetAPIServiceInstanceByID(key)

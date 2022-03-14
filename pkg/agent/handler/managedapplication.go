@@ -10,6 +10,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+const maFinalizer = "agent.managedapplication.provisioned"
+
 type managedAppProvision interface {
 	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
 	ApplicationRequestDeprovision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
@@ -47,7 +49,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	if app.Status.Level != statusPending {
+	if app.Status.Level != statusPending && !(app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting) {
 		return nil
 	}
 
@@ -65,6 +67,9 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 
 		details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
 		util.SetAgentDetails(app, details)
+
+		// add finalizer
+		h.client.UpdateResourceFinalizer(resource, maFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -84,8 +89,9 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	if app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.ApplicationRequestDeprovision(ma)
 
-		// TODO remove finalizer
-		_ = status
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, maFinalizer, "", false)
+		}
 	}
 
 	return err

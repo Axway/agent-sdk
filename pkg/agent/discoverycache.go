@@ -194,10 +194,6 @@ func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
 }
 
 func (j *discoveryCache) updateAPIServiceInstancesCache() {
-	if agent.apiValidator == nil {
-		return
-	}
-
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}

@@ -59,6 +59,7 @@ type Client struct {
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResourceFinalizerMock                              func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 }
 
 func (m *Client) GetEnvironment() (*v1alpha1.Environment, error) {
@@ -382,6 +383,13 @@ func (m *Client) CreateResource(url string, bts []byte) (*v1.ResourceInstance, e
 func (m *Client) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
 	if m.UpdateResourceMock != nil {
 		return m.UpdateResourceMock(url, bts)
+	}
+	return nil, nil
+}
+
+func (m *Client) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error) {
+	if m.UpdateResourceFinalizerMock != nil {
+		return m.UpdateResourceFinalizerMock(res, finalizer, description, addAction)
 	}
 	return nil, nil
 }

@@ -38,7 +38,6 @@ type AccessRequest struct {
 	Owner      *apiv1.Owner            `json:"owner"`
 	References AccessRequestReferences `json:"references"`
 	Spec       AccessRequestSpec       `json:"spec"`
-	State      AccessRequestState      `json:"state"`
 	// 	Status     AccessRequestStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
@@ -112,7 +111,6 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
@@ -152,20 +150,6 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}
