@@ -170,7 +170,7 @@ func Test_managedApp(t *testing.T) {
 
 	assert.Equal(t, m.managedAppName, m.GetManagedApplicationName())
 	assert.Equal(t, m.teamName, m.GetTeamName())
-	assert.Equal(t, m.data["123"], m.GetAgentDetailsValue("123"))
+	assert.Equal(t, m.data["abc"].(string), m.GetAgentDetailsValue("abc"))
 }
 
 type mockManagedAppProv struct {

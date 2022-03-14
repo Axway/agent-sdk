@@ -274,8 +274,8 @@ func Test_arReq(t *testing.T) {
 
 	r.accessDetails = nil
 	r.appDetails = nil
-	assert.Nil(t, r.GetApplicationDetailsValue("app_details_key"))
-	assert.Nil(t, r.GetAccessRequestDetailsValue("access_details_key"))
+	assert.Empty(t, r.GetApplicationDetailsValue("app_details_key"))
+	assert.Empty(t, r.GetAccessRequestDetailsValue("access_details_key"))
 }
 
 type mockClient struct {
