@@ -93,8 +93,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
-			mv1.EnvironmentResourceName,
-			ar.PluralName(),
 			ar.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(ar),

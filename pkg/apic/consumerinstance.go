@@ -140,6 +140,12 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Kind: mv1a.EnvironmentGVK().Kind,
+					Name: c.cfg.GetEnvironmentName(),
+				},
+			},
 		},
 		Spec:  c.buildConsumerInstanceSpec(serviceBody, doc, serviceBody.categoryNames),
 		Owner: owner,
@@ -246,9 +252,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
 			}
-			err = c.CreateSubResourceScoped(
-				mv1a.EnvironmentResourceName, instance.PluralName(), instance.ResourceMeta, subResources,
-			)
+			err = c.CreateSubResourceScoped(instance.ResourceMeta, subResources)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 				if rollbackErr != nil {

@@ -106,8 +106,6 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		h.client.UpdateResourceFinalizer(resource, crFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
-			mv1.EnvironmentResourceName,
-			cr.PluralName(),
 			cr.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(cr),

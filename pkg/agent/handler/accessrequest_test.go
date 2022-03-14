@@ -298,7 +298,7 @@ func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, e
 	return nil, m.updateErr
 }
 
-func (m *mockClient) CreateSubResourceScoped(_, _ string, _ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	return m.subError
 }
 

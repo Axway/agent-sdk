@@ -41,6 +41,12 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIServi
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Kind: mv1a.EnvironmentGVK().Kind,
+					Name: c.cfg.GetEnvironmentName(),
+				},
+			},
 		},
 		Spec:   buildAPIServiceSpec(serviceBody),
 		Owner:  owner,
@@ -136,16 +142,16 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 		svc = c.buildAPIService(serviceBody)
 	}
 
-	// spec needs to adhere to environment schema
-
 	buffer, err := json.Marshal(svc)
 	if err != nil {
 		return nil, err
 	}
+
 	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
 	if err != nil {
 		return nil, err
 	}
+
 	svc.Name = serviceBody.serviceContext.serviceName
 	err = c.updateAPIServiceSubresources(svc)
 	if err != nil {
@@ -170,9 +176,7 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) e
 	}
 
 	if len(subResources) > 0 {
-		return c.CreateSubResourceScoped(
-			mv1a.EnvironmentResourceName, svc.PluralName(), svc.ResourceMeta, subResources,
-		)
+		return c.CreateSubResourceScoped(svc.ResourceMeta, subResources)
 	}
 	return nil
 }

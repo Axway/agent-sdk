@@ -51,6 +51,12 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 			Finalizers:       finalizer,
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Kind: mv1a.EnvironmentGVK().Kind,
+					Name: c.cfg.GetEnvironmentName(),
+				},
+			},
 		},
 		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
 		Owner: owner,
@@ -168,9 +174,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
 			}
-			err = c.CreateSubResourceScoped(
-				mv1a.EnvironmentResourceName, instance.PluralName(), instance.ResourceMeta, subResources,
-			)
+			err = c.CreateSubResourceScoped(instance.ResourceMeta, subResources)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 				if rollbackErr != nil {

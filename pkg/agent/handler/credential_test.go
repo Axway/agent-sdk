@@ -459,7 +459,7 @@ func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, er
 	return nil, m.updateErr
 }
 
-func (m credClient) CreateSubResourceScoped(_, _ string, _ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m credClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	return m.subError
 }
 
