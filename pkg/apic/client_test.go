@@ -194,15 +194,7 @@ func TestCreateSubResourceScoped(t *testing.T) {
 		},
 	}
 
-	err := svcClient.CreateSubResourceScoped(
-		mv1.EnvironmentResourceName,
-		cfg.GetEnvironmentName(),
-		mv1.APIServiceResourceName,
-		ri.Name,
-		ri.Group,
-		ri.APIVersion,
-		ri.SubResources,
-	)
+	err := svcClient.CreateSubResourceScoped(ri.ResourceMeta, ri.SubResources)
 	assert.Nil(t, err)
 }
 
@@ -241,8 +233,6 @@ func TestCreateSubResourceUnscoped(t *testing.T) {
 		},
 	}
 
-	err := svcClient.CreateSubResourceUnscoped(
-		mv1.EnvironmentResourceName, ri.Name, ri.Group, ri.APIVersion, ri.SubResources,
-	)
+	err := svcClient.CreateSubResourceUnscoped(ri.ResourceMeta, ri.SubResources)
 	assert.Nil(t, err)
 }

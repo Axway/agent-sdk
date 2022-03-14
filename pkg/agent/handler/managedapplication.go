@@ -7,6 +7,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -38,18 +39,19 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
+	log.Debugf("%s event for ManagedApplication", action.String())
+
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)
 	if err != nil {
 		return err
 	}
 
-	ok := isStatusFound(app.Status)
-	if !ok {
+	if ok := isStatusFound(app.Status); !ok {
 		return nil
 	}
 
-	if app.Status.Level != statusPending && !(app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting) {
+	if ok := shouldProcess(app.Status.Level, app.Metadata.State); !ok {
 		return nil
 	}
 
@@ -72,12 +74,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		h.client.UpdateResourceFinalizer(resource, maFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
-			mv1.EnvironmentResourceName,
-			app.Metadata.Scope.Name,
-			app.PluralName(),
-			app.Name,
-			app.Group,
-			app.APIVersion,
+			app.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(app),
 				"status":           app.Status,
@@ -124,10 +121,11 @@ func (a provManagedApp) GetTeamName() string {
 	return a.teamName
 }
 
-// GetAgentDetailsValue returns a value found on the managed application
-func (a provManagedApp) GetAgentDetailsValue(key string) interface{} {
+// GetApplicationDetailsValue returns a value found on the managed application
+func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 	if a.data == nil {
-		return nil
+		return ""
 	}
-	return a.data[key]
+
+	return util.ToString(a.data[key])
 }

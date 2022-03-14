@@ -9,6 +9,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -47,18 +48,19 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
+	log.Debugf("%s event for AccessRequest", action.String())
+
 	ar := &mv1.AccessRequest{}
 	err := ar.FromInstance(resource)
 	if err != nil {
 		return err
 	}
 
-	ok := isStatusFound(ar.Status)
-	if !ok {
+	if ok := isStatusFound(ar.Status); !ok {
 		return nil
 	}
 
-	if ar.Status.Level != statusPending && !(ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting) {
+	if ok := shouldProcess(ar.Status.Level, ar.Metadata.State); !ok {
 		return nil
 	}
 
@@ -91,12 +93,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
-			mv1.EnvironmentResourceName,
-			ar.Metadata.Scope.Name,
-			ar.PluralName(),
-			ar.Name,
-			ar.Group,
-			ar.APIVersion,
+			ar.ResourceMeta,
 			map[string]interface{}{
 				defs.XAgentDetails: util.GetAgentDetails(ar),
 				"status":           ar.Status,
@@ -170,19 +167,21 @@ func (r provAccReq) GetAPIID() string {
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (r provAccReq) GetApplicationDetailsValue(key string) interface{} {
+func (r provAccReq) GetApplicationDetailsValue(key string) string {
 	if r.appDetails == nil {
-		return nil
+		return ""
 	}
-	return r.appDetails[key]
+
+	return util.ToString(r.appDetails[key])
 }
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
-func (r provAccReq) GetAccessRequestDetailsValue(key string) interface{} {
+func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
 	if r.appDetails == nil {
-		return nil
+		return ""
 	}
-	return r.accessDetails[key]
+
+	return util.ToString(r.accessDetails[key])
 }
 
 func (r provAccReq) GetStage() string {

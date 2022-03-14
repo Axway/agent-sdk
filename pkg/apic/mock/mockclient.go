@@ -54,8 +54,8 @@ type Client struct {
 	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error)
 	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error)
 	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	CreateSubResourceScopedMock                              func(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
-	CreateSubResourceUnscopedMock                            func(kindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceScopedMock                              func(rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResourceUnscopedMock                            func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
@@ -352,16 +352,16 @@ func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance
 	return nil, nil
 }
 
-func (m *Client) CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error {
+func (m *Client) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
 	if m.CreateSubResourceScopedMock != nil {
-		return m.CreateSubResourceScopedMock(scopeKindPlural, scopeName, resKindPlural, name, group, version, subs)
+		return m.CreateSubResourceScopedMock(rm, subs)
 	}
 	return nil
 }
 
-func (m *Client) CreateSubResourceUnscoped(kindPlural, name, group, version string, subs map[string]interface{}) error {
+func (m *Client) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
 	if m.CreateSubResourceUnscopedMock != nil {
-		return m.CreateSubResourceUnscopedMock(kindPlural, name, group, version, subs)
+		return m.CreateSubResourceUnscopedMock(rm, subs)
 	}
 	return nil
 }

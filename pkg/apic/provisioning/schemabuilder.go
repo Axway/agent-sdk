@@ -8,11 +8,11 @@ type SchemaBuilder interface {
 	SetDescription(description string) SchemaBuilder
 	AddProperty(property PropertyBuilder) SchemaBuilder
 	AddUniqueKey(keyName string) SchemaBuilder
-	// Builds the json schema - this is called automatically by the resource builder
+	// Build builds the json schema - this is called automatically by the resource builder
 	Build() (map[string]interface{}, error)
 }
 
-// schemaBuilder - hold all of the details needs to create a subscription schema
+// schemaBuilder - holds all the details needs to create a subscription schema
 type schemaBuilder struct {
 	err           error
 	name          string

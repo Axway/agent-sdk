@@ -226,3 +226,15 @@ func CheckEmptyMapStringString(m map[string]string) map[string]string {
 
 	return m
 }
+
+// ToString converts an interface{} to a string
+func ToString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}

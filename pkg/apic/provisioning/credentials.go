@@ -1,7 +1,5 @@
 package provisioning
 
-const credentialTypeSetError = "can not set credential as %s as its already set as another %s"
-
 const (
 	apiKey = "api-key"
 	oauth  = "oauth"
@@ -23,10 +21,6 @@ func (c credential) GetData() map[string]interface{} {
 	return c.data
 }
 
-type genericCredential struct {
-	data map[string]interface{}
-}
-
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
 	SetOAuth(id, secret string) Credential
@@ -45,7 +39,7 @@ func NewCredentialBuilder() CredentialBuilder {
 	}
 }
 
-// SetOauth - set the credential as an Oauth type
+// SetOAuth - set the credential as an Oauth type
 func (c *credentialBuilder) SetOAuth(id, secret string) Credential {
 	c.credential.credentialType = oauth
 	c.credential.data = map[string]interface{}{

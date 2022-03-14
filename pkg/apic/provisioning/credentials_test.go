@@ -8,8 +8,6 @@ import (
 )
 
 func TestCredentialBuilder(t *testing.T) {
-	t.Skip()
-
 	tests := []struct {
 		name   string
 		key    string

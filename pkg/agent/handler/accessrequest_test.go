@@ -274,8 +274,8 @@ func Test_arReq(t *testing.T) {
 
 	r.accessDetails = nil
 	r.appDetails = nil
-	assert.Nil(t, r.GetApplicationDetailsValue("app_details_key"))
-	assert.Nil(t, r.GetAccessRequestDetailsValue("access_details_key"))
+	assert.Empty(t, r.GetApplicationDetailsValue("app_details_key"))
+	assert.Empty(t, r.GetAccessRequestDetailsValue("access_details_key"))
 }
 
 type mockClient struct {
@@ -298,7 +298,7 @@ func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, e
 	return nil, m.updateErr
 }
 
-func (m *mockClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	return m.subError
 }
 

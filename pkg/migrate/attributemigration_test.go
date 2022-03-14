@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -120,24 +121,6 @@ func TestMigrate(t *testing.T) {
 	assert.NotNil(t, util.GetAgentDetails(svc))
 }
 
-func Test_getPlural(t *testing.T) {
-	kind, _ := getPlural(mv1a.APIServiceGVK().Kind)
-	assert.Equal(t, mv1a.APIServiceResourceName, kind)
-
-	kind, _ = getPlural(mv1a.APIServiceRevisionGVK().Kind)
-	assert.Equal(t, mv1a.APIServiceRevisionResourceName, kind)
-
-	kind, _ = getPlural(mv1a.APIServiceInstanceGVK().Kind)
-	assert.Equal(t, mv1a.APIServiceInstanceResourceName, kind)
-
-	kind, _ = getPlural(mv1a.ConsumerInstanceGVK().Kind)
-	assert.Equal(t, mv1a.ConsumerInstanceResourceName, kind)
-
-	kind, err := getPlural("abc")
-	assert.Empty(t, kind)
-	assert.Error(t, err)
-}
-
 type mockClient struct {
 	res             []*apiv1.ResourceInstance
 	t               *testing.T
@@ -183,7 +166,7 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	return nil, nil
 }
 
-func (m *mockClient) CreateSubResourceScoped(_, _, _, _, _, _ string, _ map[string]interface{}) error {
+func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }
