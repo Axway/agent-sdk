@@ -58,4 +58,7 @@ replace (
 	github.com/tonistiigi/fifo => github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c
 )
 
-retract [v1.1.4, v1.1.9] // errored versions
+retract ( // errored versions
+	[v1.1.4, v1.1.9]
+	v1.1.16
+)
