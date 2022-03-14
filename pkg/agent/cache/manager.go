@@ -8,6 +8,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -65,6 +66,25 @@ type Manager interface {
 	AddSequence(watchTopicName string, sequenceID int64)
 	GetSequence(watchTopicName string) int64
 
+	// ManagedApplication cache related methods
+	GetManagedApplicationCacheKeys() []string
+	AddManagedApplication(resource *v1.ResourceInstance)
+	GetManagedApplication(id string) *v1.ResourceInstance
+	GetManagedApplicationByName(name string) *v1.ResourceInstance
+	DeleteManagedApplication(id string) error
+
+	// AccessRequest cache related methods
+	AddAccessRequest(resource *v1.ResourceInstance)
+	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID string) *mv1.AccessRequest
+	GetAccessRequest(id string) *mv1.AccessRequest
+	DeleteAccessRequest(id string) error
+
+	// Subscription cache related methods
+	AddSubscription(resource *v1.ResourceInstance)
+	GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance
+	GetSubscription(id string) *v1.ResourceInstance
+	DeleteSubscription(id string) error
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -74,6 +94,9 @@ type cacheManager struct {
 	apiMap                  cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
+	managedApplicationMap   cache.Cache
+	accessRequestMap        cache.Cache
+	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
@@ -87,12 +110,15 @@ type cacheManager struct {
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	m := &cacheManager{
-		apiMap:         cache.New(),
-		instanceMap:    cache.New(),
-		categoryMap:    cache.New(),
-		sequenceCache:  cache.New(),
-		teams:          cache.New(),
-		isCacheUpdated: false,
+		apiMap:                cache.New(),
+		instanceMap:           cache.New(),
+		categoryMap:           cache.New(),
+		managedApplicationMap: cache.New(),
+		accessRequestMap:      cache.New(),
+		subscriptionMap:       cache.New(),
+		sequenceCache:         cache.New(),
+		teams:                 cache.New(),
+		isCacheUpdated:        false,
 	}
 
 	if cfg.IsUsingGRPC() && persistCache {
@@ -530,6 +556,129 @@ func (c *cacheManager) GetSequence(watchTopicName string) int64 {
 		}
 	}
 	return 0
+}
+
+// ManagedApplication cache related methods
+func (c *cacheManager) GetManagedApplicationCacheKeys() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	return c.managedApplicationMap.GetKeys()
+}
+
+func (c *cacheManager) AddManagedApplication(resource *v1.ResourceInstance) {
+	c.managedApplicationMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+}
+
+func (c *cacheManager) GetManagedApplication(id string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	managedApp, _ := c.managedApplicationMap.Get(id)
+	if managedApp != nil {
+		ri, ok := managedApp.(*v1.ResourceInstance)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) GetManagedApplicationByName(name string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	managedApp, _ := c.managedApplicationMap.GetBySecondaryKey(name)
+	if managedApp != nil {
+		ri, ok := managedApp.(*v1.ResourceInstance)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) DeleteManagedApplication(id string) error {
+	return c.managedApplicationMap.Delete(id)
+}
+
+// AccessRequest cache related methods
+func (c *cacheManager) AddAccessRequest(resource *v1.ResourceInstance) {
+	ac := &mv1.AccessRequest{}
+	ac.FromInstance(resource)
+	appName := ac.Spec.ManagedApplication
+	apiID, _ := util.GetAgentDetailsValue(ac, "apiID")
+
+	c.accessRequestMap.SetWithSecondaryKey(resource.Metadata.ID, appName+":"+apiID, ac)
+}
+
+func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, instanceName string) *mv1.AccessRequest {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + instanceName)
+	if accessRequest != nil {
+		ri, ok := accessRequest.(*mv1.AccessRequest)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) GetAccessRequest(id string) *mv1.AccessRequest {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	accessRequest, _ := c.accessRequestMap.Get(id)
+	if accessRequest != nil {
+		ri, ok := accessRequest.(*mv1.AccessRequest)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) DeleteAccessRequest(id string) error {
+	return c.accessRequestMap.Delete(id)
+}
+
+// Subscription cache related methods - Temporary
+func (c *cacheManager) AddSubscription(resource *v1.ResourceInstance) {
+	c.subscriptionMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+}
+
+func (c *cacheManager) GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	subscription, _ := c.subscriptionMap.GetBySecondaryKey(subscriptionName)
+	if subscription != nil {
+		ri, ok := subscription.(*v1.ResourceInstance)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) GetSubscription(id string) *v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	subscription, _ := c.subscriptionMap.Get(id)
+	if subscription != nil {
+		ri, ok := subscription.(*v1.ResourceInstance)
+		if ok {
+			return ri
+		}
+	}
+	return nil
+}
+
+func (c *cacheManager) DeleteSubscription(id string) error {
+	return c.subscriptionMap.Delete(id)
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {

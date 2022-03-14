@@ -80,6 +80,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 				"status":           app.Status,
 			},
 		)
+		h.cache.AddManagedApplication(resource)
 	}
 
 	// check for deleting state on success status

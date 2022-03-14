@@ -99,6 +99,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 				"status":           ar.Status,
 			},
 		)
+		h.cache.AddAccessRequest(resource)
+		h.addSubscription(ar)
 	}
 
 	// check for deleting state on success status
@@ -120,6 +122,36 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 		ar.Spec.ManagedApplication,
 	)
 	return h.client.GetResource(url)
+}
+
+func (h *accessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
+	ars := ar.GetSubResource("x-marketplace-subscription")
+	if ars != nil {
+		arSubscription := ars.(map[string]interface{})
+		propertyVal := arSubscription["name"]
+		if propertyVal == nil {
+			return
+		}
+		subscriptionName := propertyVal.(string)
+		subscription := h.cache.GetSubscriptionByName(subscriptionName)
+		if subscription == nil {
+			subscription, err := h.fetchSubscription(subscriptionName)
+			if err == nil {
+				h.cache.AddSubscription(subscription)
+			}
+		}
+	}
+}
+
+func (h *accessRequestHandler) fetchSubscription(subscriptionName string) (*v1.ResourceInstance, error) {
+	if subscriptionName != "" {
+		url := fmt.Sprintf(
+			"/catalog/v1alpha1/subscriptions/%s",
+			subscriptionName,
+		)
+		return h.client.GetResource(url)
+	}
+	return nil, nil
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {

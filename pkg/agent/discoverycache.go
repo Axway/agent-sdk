@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -93,6 +94,8 @@ func (j *discoveryCache) Execute() error {
 		if j.agentResourceManager != nil {
 			j.agentResourceManager.FetchAgentResource()
 		}
+		j.updateManagedApplicationCache()
+		j.updateAccessRequestCache()
 	}
 
 	return nil
@@ -272,4 +275,95 @@ func (j *discoveryCache) updateCategoryCache() {
 			}
 		}
 	}
+}
+
+func (j *discoveryCache) updateManagedApplicationCache() {
+	log.Trace("updating managed application cache")
+
+	// Update cache with published resources
+	existingManagedApplications := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + ",x-marketplace-subject",
+	}
+
+	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/managedapplications", apiServerPageSize,
+	)
+
+	for _, managedApp := range managedApps {
+		agent.cacheManager.AddManagedApplication(managedApp)
+		existingManagedApplications[managedApp.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove managed applications that no longer exist
+		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingManagedApplications[key]; !ok {
+				agent.cacheManager.DeleteManagedApplication(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateAccessRequestCache() {
+	log.Trace("updating access request cache")
+
+	// Update cache with published resources
+	existingAccessRequests := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + ",spec,x-marketplace-subscription",
+	}
+
+	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/accessrequests", apiServerPageSize,
+	)
+
+	for _, accessRequest := range accessRequests {
+		agent.cacheManager.AddAccessRequest(accessRequest)
+		ar := &mv1.AccessRequest{}
+		ar.FromInstance(accessRequest)
+		existingAccessRequests[accessRequest.Metadata.ID] = true
+		j.addSubscription(ar)
+	}
+
+	if j.refreshAll {
+		// Remove access requests that no longer exist
+		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingAccessRequests[key]; !ok {
+				agent.cacheManager.DeleteAccessRequest(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
+	ars := ar.GetSubResource("x-marketplace-subscription")
+	if ars != nil {
+		arSubscription := ars.(map[string]interface{})
+		propertyVal := arSubscription["name"]
+		if propertyVal == nil {
+			return
+		}
+		subscriptionName := propertyVal.(string)
+		subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
+		if subscription == nil {
+			subscription, err := j.fetchSubscription(subscriptionName)
+			if err == nil {
+				agent.cacheManager.AddSubscription(subscription)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.ResourceInstance, error) {
+	if subscriptionName != "" {
+		url := fmt.Sprintf(
+			"/catalog/v1alpha1/subscriptions/%s",
+			subscriptionName,
+		)
+		return GetCentralClient().GetResource(url)
+	}
+	return nil, nil
 }

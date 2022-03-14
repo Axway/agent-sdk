@@ -76,17 +76,22 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 		}
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
-		appName := ""
 		appDetails := metric.AppDetails{}
 		if summaryEvent.TransactionSummary.Application != nil {
-			appName = summaryEvent.TransactionSummary.Application.Name
 			appDetails.Name = summaryEvent.TransactionSummary.Application.Name
 			appDetails.ID = strings.TrimLeft(summaryEvent.TransactionSummary.Application.ID, SummaryEventApplicationIDPrefix)
 		}
 
 		collector := metric.GetMetricCollector()
 		if collector != nil {
-			collector.AddMetric(apiDetails, statusCode, int64(duration), bytes, appName)
+			metricDetail := metric.MetricDetail{
+				APIDetails: apiDetails,
+				StatusCode: statusCode,
+				Duration:   int64(duration),
+				Bytes:      bytes,
+				AppDetails: appDetails,
+			}
+			collector.AddConsumerMetric(metricDetail)
 		}
 	}
 }

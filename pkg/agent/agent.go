@@ -342,6 +342,14 @@ func GetAPICache() cache.Cache {
 	return agent.cacheManager.GetAPIServiceCache()
 }
 
+// GetCacheManager - Returns the cache
+func GetCacheManager() agentcache.Manager {
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
+	}
+	return agent.cacheManager
+}
+
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
 	if agent.agentResourceManager == nil {

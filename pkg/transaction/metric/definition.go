@@ -8,6 +8,7 @@ var now = time.Now
 const (
 	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
+	subscriptionMetricEvent = "subscription.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
 	metricFlow              = "api-central-metric"
@@ -18,6 +19,14 @@ const (
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
 )
+
+type MetricDetail struct {
+	APIDetails APIDetails
+	StatusCode string
+	Duration   int64
+	Bytes      int64
+	AppDetails AppDetails
+}
 
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
@@ -51,6 +60,25 @@ type APIMetric struct {
 	StartTime   time.Time          `json:"-"`
 }
 
+func (a *APIMetric) GetStartTime() time.Time {
+	return a.StartTime
+}
+
+// APIMetric - struct to hold metric specific for status code based API transactions
+type SubscriptionMetric struct {
+	Subscription SubscriptionDetails `json:"subscription"`
+	StatusCode   string              `json:"statusCode"`
+	Status       string              `json:"status"`
+	Count        int64               `json:"count"`
+	Response     ResponseMetrics     `json:"response"`
+	Observation  ObservationDetails  `json:"observation"`
+	StartTime    time.Time           `json:"-"`
+}
+
+func (a *SubscriptionMetric) GetStartTime() time.Time {
+	return a.StartTime
+}
+
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
 	API        APIDetails `json:"api"`
@@ -66,6 +94,10 @@ type V4EventDistribution struct {
 	Version     string `json:"version"`
 }
 
+type V4Data interface {
+	GetStartTime() time.Time
+}
+
 // V4Event - represents V7 event
 type V4Event struct {
 	ID           string               `json:"id"`
@@ -74,7 +106,7 @@ type V4Event struct {
 	App          string               `json:"app"` // ORG GUID
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
-	Data         *APIMetric           `json:"data"`
+	Data         V4Data               `json:"data"`
 }
 
 // LighthouseUsageReport -Lighthouse Usage report
@@ -97,8 +129,18 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
+	Key  string `json:"-"`
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// AppDetails - struct for app details to report
+type SubscriptionDetails struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	AppID           string `json:"appId"`
+	AppName         string `json:"appName"`
+	ConsumerOrgGUID string `json:"-"`
 }
 
 // Data - struct for data to report as API Metrics
