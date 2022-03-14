@@ -134,7 +134,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			if tc.teamName != "" {
 				cm.AddTeam(team)
 			}
-			handler := NewManagedApplicationHandler(p, cm, c)
+			handler := NewManagedApplicationHandler(p, cm, c, config.DiscoveryAgent)
 
 			ri, _ := app.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
@@ -152,7 +152,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	p := &mockManagedAppProv{}
-	handler := NewManagedApplicationHandler(p, cm, c)
+	handler := NewManagedApplicationHandler(p, cm, c, config.DiscoveryAgent)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),

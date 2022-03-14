@@ -228,7 +228,7 @@ func TestAccessRequestHandler(t *testing.T) {
 					},
 				},
 			}
-			handler := NewAccessRequestHandler(arp, cm, c)
+			handler := NewAccessRequestHandler(arp, cm, c, config.DiscoveryAgent)
 
 			ri, _ := ar.AsInstance()
 
@@ -246,7 +246,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	ar := &mockARProvision{}
-	handler := NewAccessRequestHandler(ar, cm, c)
+	handler := NewAccessRequestHandler(ar, cm, c, config.DiscoveryAgent)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),

@@ -8,6 +8,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -28,22 +29,27 @@ type arProvisioner interface {
 }
 
 type accessRequestHandler struct {
-	prov   arProvisioner
-	cache  agentcache.Manager
-	client client
+	prov      arProvisioner
+	cache     agentcache.Manager
+	agentType config.AgentType
+	client
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, agentType config.AgentType) Handler {
 	return &accessRequestHandler{
-		prov:   prov,
-		cache:  cache,
-		client: client,
+		prov:      prov,
+		cache:     cache,
+		agentType: agentType,
+		client:    client,
 	}
 }
 
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if h.agentType == config.TraceabilityAgent {
+		return h.handleForTrace(action, meta, resource)
+	}
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
@@ -99,8 +105,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 				"status":           ar.Status,
 			},
 		)
-		h.cache.AddAccessRequest(resource)
-		h.addSubscription(ar)
 	}
 
 	// check for deleting state on success status
@@ -113,6 +117,37 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	}
 
 	return err
+}
+
+func (h *accessRequestHandler) handleForTrace(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.AccessRequestGVK().Kind {
+		return nil
+	}
+
+	if action == proto.Event_DELETED {
+		h.cache.DeleteAccessRequest(resource.Metadata.ID)
+		return nil
+	}
+
+	ar := &mv1.AccessRequest{}
+	err := ar.FromInstance(resource)
+	if err != nil {
+		return err
+	}
+
+	ok := isStatusFound(ar.Status)
+	if !ok {
+		return nil
+	}
+
+	if ar.Status.Level == statusSuccess && ar.Metadata.State != v1.ResourceDeleting {
+		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
+		if cachedAccessReq == nil {
+			h.cache.AddAccessRequest(resource)
+			h.addSubscription(ar)
+		}
+	}
+	return nil
 }
 
 func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
