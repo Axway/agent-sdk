@@ -14,5 +14,5 @@ type CredentialStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []map[string]map[string]interface{} `json:"reasons,omitempty"`
+	Reasons []CredentialStatusReasons `json:"reasons,omitempty"`
 }

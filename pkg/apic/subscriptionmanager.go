@@ -50,16 +50,15 @@ type subscriptionManager struct {
 // newSubscriptionManager - Creates a new subscription manager
 func newSubscriptionManager(apicClient *ServiceClient) SubscriptionManager {
 	subscriptionMgr := &subscriptionManager{
-		isRunning:         false,
-		apicClient:        apicClient,
-		processorMap:      make(map[SubscriptionState][]SubscriptionProcessor),
-		ucStatesToQuery:   make([]string, 0),
-		arStatesToQuery:   make([]string, 0),
-		locklist:          make(map[string]string),
-		locklistLock:      &sync.RWMutex{},
-		pollingEnabled:    apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
-		pollInterval:      apicClient.cfg.GetPollInterval(),
-		useAccessRequests: apicClient.cfg.IsUsingAccessRequests(),
+		isRunning:       false,
+		apicClient:      apicClient,
+		processorMap:    make(map[SubscriptionState][]SubscriptionProcessor),
+		ucStatesToQuery: make([]string, 0),
+		arStatesToQuery: make([]string, 0),
+		locklist:        make(map[string]string),
+		locklistLock:    &sync.RWMutex{},
+		pollingEnabled:  apicClient.cfg.GetSubscriptionConfig().PollingEnabled(),
+		pollInterval:    apicClient.cfg.GetPollInterval(),
 	}
 
 	return subscriptionMgr
@@ -116,33 +115,17 @@ func (sm *subscriptionManager) Execute() error {
 	for _, subscription := range subscriptions {
 		sm.ucSubPublishChan <- subscription
 	}
-	if sm.useAccessRequests {
-		// query for central access requests
-		accessRequests, err := sm.apicClient.getAccessRequests(sm.arStatesToQuery)
-		if err == nil {
-			for _, accessRequest := range accessRequests {
-				sm.accReqPublishChan <- accessRequest
-			}
-		}
-	}
 	return err
 }
 
 func (sm *subscriptionManager) processSubscriptions() {
 	for {
 		var subscription Subscription
-		isAccessRequest := false
 		select {
 		case msg, ok := <-sm.ucSubReceiveChannel:
 			if ok {
 				centralSub := msg.(CentralSubscription)
 				subscription = &centralSub
-			}
-		case msg, ok := <-sm.accReqReceiveChannel:
-			isAccessRequest = true
-			if ok {
-				accReq := msg.(AccessRequestSubscription)
-				subscription = &accReq
 			}
 		case <-sm.receiverQuitChannel:
 			return
@@ -153,13 +136,8 @@ func (sm *subscriptionManager) processSubscriptions() {
 				sm.addLocklistItem(id)
 				log.Tracef("checking if we should handle subscription %s", subscription.GetName())
 				var err error
-				if isAccessRequest {
-					accessReq := subscription.(*AccessRequestSubscription)
-					err = sm.preprocessAccessRequest(accessReq)
-				} else {
-					centralSub := subscription.(*CentralSubscription)
-					err = sm.preprocessSubscription(centralSub)
-				}
+				centralSub := subscription.(*CentralSubscription)
+				err = sm.preprocessSubscription(centralSub)
 				if err != nil {
 					log.Error(err)
 				}
@@ -193,27 +171,6 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 		return errors.New("associated catalog item is not created by agent - skipping")
 	}
 	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
-
-	return nil
-}
-
-func (sm *subscriptionManager) preprocessAccessRequest(subscription *AccessRequestSubscription) error {
-	subscription.ApicID = subscription.GetApicID()
-	subscription.apicClient = sm.apicClient
-	apiSI, err := sm.apicClient.GetAPIServiceInstanceByName(subscription.ApicID)
-	if err != nil {
-		log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
-		return err
-	}
-	if apiSI == nil {
-		return utilerrors.Wrap(ErrGetAPIServiceInstanceByName, "APIServiceInstance is nil")
-	}
-	apiSIR, err := apiSI.AsInstance()
-	if err != nil {
-		log.Error(utilerrors.Wrap(ErrGetAPIServiceInstanceByName, err.Error()))
-		return err
-	}
-	sm.setSubscriptionInfo(subscription, apiSIR)
 
 	return nil
 }

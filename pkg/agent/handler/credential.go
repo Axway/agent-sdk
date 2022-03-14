@@ -13,7 +13,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const xAxwayEncrypted = "x-axway-encrypted"
+const (
+	xAxwayEncrypted = "x-axway-encrypted"
+	crFinalizer     = "agent.credential.provisioned"
+)
 
 type credProv interface {
 	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
@@ -56,7 +59,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return nil
 	}
 
-	if cr.Status.Level != statusPending {
+	if cr.Status.Level != statusPending && !(cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting) {
 		return nil
 	}
 
@@ -101,7 +104,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
 		util.SetAgentDetails(cr, details)
 
-		// TODO: add finalizer
+		h.client.UpdateResourceFinalizer(resource, crFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -121,8 +124,9 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.CredentialDeprovision(creds)
 
-		// TODO remove finalizer
-		_ = status
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, crFinalizer, "", false)
+		}
 	}
 
 	return nil

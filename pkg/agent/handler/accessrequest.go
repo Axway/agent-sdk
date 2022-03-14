@@ -19,6 +19,7 @@ const (
 	statusErr     = "Error"
 	statusSuccess = "Success"
 	statusPending = "Pending"
+	arFinalizer   = "agent.accessrequest.provisioned"
 )
 
 type arProvisioner interface {
@@ -60,7 +61,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
-	if ar.Status.Level != statusPending {
+	if ar.Status.Level != statusPending && !(ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting) {
 		return nil
 	}
 
@@ -89,7 +90,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
 		util.SetAgentDetails(ar, details)
 
-		// TODO: add finalizer
+		// add a finalizer
+		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)
 
 		err = h.client.CreateSubResourceScoped(
 			mv1.EnvironmentResourceName,
@@ -106,8 +108,9 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
 		status = h.prov.AccessRequestDeprovision(req)
 
-		// TODO remove finalizer
-		_ = status
+		if status.GetStatus() == prov.Success {
+			h.client.UpdateResourceFinalizer(resource, arFinalizer, "", false)
+		}
 	}
 
 	return err

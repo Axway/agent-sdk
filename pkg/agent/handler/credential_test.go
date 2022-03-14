@@ -280,9 +280,7 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 	return m.status
 }
 
-type mockProvCredential struct {
-	data map[string]interface{}
-}
+type mockProvCredential struct{}
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}
@@ -463,6 +461,10 @@ func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, er
 
 func (m credClient) CreateSubResourceScoped(_, _ string, _ v1.ResourceMeta, _ map[string]interface{}) error {
 	return m.subError
+}
+
+func (m credClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string, _ bool) (*v1.ResourceInstance, error) {
+	return nil, nil
 }
 
 func parsePrivateKey(priv string) *rsa.PrivateKey {

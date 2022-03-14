@@ -138,3 +138,48 @@ func TestResourceMetaNilReference(t *testing.T) {
 	assert.Equal(t, []string{}, meta.GetTags())
 	assert.Nil(t, meta.GetSubResource("abc"))
 }
+
+func TestResourceMetaGetSelfLink(t *testing.T) {
+	plurals["kind"] = "kinds"
+	plurals["scopeKind"] = "scopeKinds"
+
+	meta := &ResourceMeta{
+		GroupVersionKind: GroupVersionKind{
+			GroupKind: GroupKind{
+				Group: "group",
+				Kind:  "kind",
+			},
+		},
+		Title: "title",
+		Metadata: Metadata{
+			ID: "333",
+		},
+		Name: "name",
+	}
+
+	// no version
+	link := meta.GetSelfLink()
+	assert.Equal(t, "", link)
+
+	meta.APIVersion = "v1"
+
+	// no scope
+	link = meta.GetSelfLink()
+	assert.Equal(t, "/group/v1/kinds/name", link)
+
+	meta.Metadata.Scope = MetadataScope{
+		Name: "scope",
+		Kind: "scopeKind",
+	}
+
+	scopeKindMap[meta.GroupKind] = "scopeKind"
+
+	// no scope kind
+	link = meta.GetSelfLink()
+	assert.Equal(t, "/group/v1/scopeKinds/scope/kinds/name", link)
+
+	// selflink
+	meta.Metadata.SelfLink = "/selflink"
+	link = meta.GetSelfLink()
+	assert.Equal(t, "/selflink", link)
+}

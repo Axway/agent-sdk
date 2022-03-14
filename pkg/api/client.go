@@ -36,6 +36,7 @@ type Request struct {
 	QueryParams map[string]string
 	Headers     map[string]string
 	Body        []byte
+	FormData    map[string]string
 }
 
 // Response - the response object given back when communicating to an API
@@ -152,7 +153,20 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
-	req, err := http.NewRequestWithContext(ctx, request.Method, requestURL, bytes.NewBuffer(request.Body))
+	var req *http.Request
+	var err error
+	if request.FormData != nil {
+		formData := make(url.Values)
+		for k, v := range request.FormData {
+			formData.Add(k, v)
+		}
+
+		req, err = http.NewRequestWithContext(ctx, request.Method, requestURL, strings.NewReader(formData.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req, err = http.NewRequestWithContext(ctx, request.Method, requestURL, bytes.NewBuffer(request.Body))
+	}
+
 	if err != nil {
 		return req, err
 	}
@@ -218,7 +232,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	// Logging for the HTTP request
 	statusCode := 0
 	defer func() {
-		duration := time.Now().Sub(startTime)
+		duration := time.Since(startTime)
 		if err != nil {
 			log.Tracef("[ID:%s] %s [%dms] - ERR - %s - %s", reqID, req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
 		} else {
