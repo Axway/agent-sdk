@@ -122,9 +122,10 @@ func (a provManagedApp) GetTeamName() string {
 }
 
 // GetAgentDetailsValue returns a value found on the managed application
-func (a provManagedApp) GetAgentDetailsValue(key string) interface{} {
+func (a provManagedApp) GetAgentDetailsValue(key string) string {
 	if a.data == nil {
-		return nil
+		return ""
 	}
-	return a.data[key]
+
+	return util.ToString(a.data[key])
 }

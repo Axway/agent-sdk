@@ -167,19 +167,21 @@ func (r provAccReq) GetAPIID() string {
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (r provAccReq) GetApplicationDetailsValue(key string) interface{} {
+func (r provAccReq) GetApplicationDetailsValue(key string) string {
 	if r.appDetails == nil {
-		return nil
+		return ""
 	}
-	return r.appDetails[key]
+
+	return util.ToString(r.appDetails[key])
 }
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
-func (r provAccReq) GetAccessRequestDetailsValue(key string) interface{} {
+func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
 	if r.appDetails == nil {
-		return nil
+		return ""
 	}
-	return r.accessDetails[key]
+
+	return util.ToString(r.accessDetails[key])
 }
 
 func (r provAccReq) GetStage() string {

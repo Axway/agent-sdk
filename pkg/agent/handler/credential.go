@@ -217,17 +217,19 @@ func (c provCreds) GetCredentialType() string {
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
-func (c provCreds) GetCredentialDetailsValue(key string) interface{} {
+func (c provCreds) GetCredentialDetailsValue(key string) string {
 	if c.credDetails == nil {
-		return nil
+		return ""
 	}
-	return c.credDetails[key]
+
+	return util.ToString(c.credDetails[key])
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
-func (c provCreds) GetApplicationDetailsValue(key string) interface{} {
+func (c provCreds) GetApplicationDetailsValue(key string) string {
 	if c.appDetails == nil {
-		return nil
+		return ""
 	}
-	return c.appDetails[key]
+
+	return util.ToString(c.appDetails[key])
 }
