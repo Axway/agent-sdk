@@ -26,7 +26,7 @@ variables:
 ############################################################
 include:
   - project: "apigov/beano_cicd"
-    ref: APIGOV-11111
+    ref: master
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
@@ -34,7 +34,7 @@ include:
       - "/gitlabci/jobs.yml"
       - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
-    ref: APIGOV-dtest
+    ref: master
     file:
       - "/.gitlab-ci-prepcsr.yml"
       - "/.gitlab-ci-fortify.yml"
@@ -122,24 +122,3 @@ twistlock:on-schedule:
 
 twistlock-master:
   extends: .dummy
-
-error-check:
-  stage: test
-  script:
-    - ""
-
-lint-test:
-  stage: test
-  script:
-    - ""
-
-test:
-  stage: test
-  script:
-    - ""
-
-sonar:
-  stage: sonar
-  script:
-    - ""
-
