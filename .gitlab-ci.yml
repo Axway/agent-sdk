@@ -116,6 +116,8 @@ trigger-azure-discovery-agent:
 fetch-iriusrisk:
   before_script:
     - "***********fetch**********"
+    - echo "***************sdk dummy2************"
+    - echo "ref $CI_COMMIT_REF_NAME ************"
 
 twistlock:
   stage: security-scans
