@@ -107,33 +107,23 @@ trigger-azure-discovery-agent:
   stage: security-scans
   only:
     refs:
-      - "xxxxx"
+      - xxxxx
   script:
     - ""
-    - echo "***************sdk dummy************"
-    - echo "ref $CI_COMMIT_REF_NAME ************"
+
+fetch-iriusrisk:
+  extends: .dummy
 
 twistlock:
   extends: .dummy
-  # stage: security-scans
   only:
     refs:
-      - "xxxxx"
-  # script:
-  #   - ""
-  #   - echo "***************sdk dummy************"
-  #   - echo "ref $CI_COMMIT_REF_NAME ************"
-  # extends: .dummy
-  # before_script:
-  #   - echo "*******8before"""""""""""
+      - xxxxx
 
 twistlock:on-schedule:
   extends: .dummy
 
 twistlock-master:
-  extends: .dummy
-
-fetch-iriusrisk:
   extends: .dummy
 
 error-check:
