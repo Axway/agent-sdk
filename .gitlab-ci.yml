@@ -117,14 +117,15 @@ fetch-iriusrisk:
   extends: .dummy
 
 twistlock:
-  stage: security-scans
-  only:
-    refs:
-      - "xxxxx"
-  script:
-    - ""
-    - echo "***************sdk dummy************"
-    - echo "ref $CI_COMMIT_REF_NAME ************"
+  extends: .dummy
+  # stage: security-scans
+  # only:
+  #   refs:
+  #     - "xxxxx"
+  # script:
+  #   - ""
+  #   - echo "***************sdk dummy************"
+  #   - echo "ref $CI_COMMIT_REF_NAME ************"
   # extends: .dummy
   # before_script:
   #   - echo "*******8before"""""""""""
