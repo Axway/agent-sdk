@@ -116,6 +116,7 @@ trigger-azure-discovery-agent:
 fetch-iriusrisk:
   before_script:
     - "***********fetch**********"
+  script:
     - echo "***************sdk dummy2************"
     - echo "ref $CI_COMMIT_REF_NAME ************"
 
