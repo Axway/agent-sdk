@@ -107,7 +107,7 @@ trigger-azure-discovery-agent:
   stage: security-scans
   only:
     refs:
-      - xxxx
+      - xxxxx
   script:
     - ""
     - echo "***************sdk dummy************"
