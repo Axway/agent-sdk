@@ -133,6 +133,9 @@ twistlock:on-schedule:
 twistlock-master:
   extends: .dummy
 
+fetch-iriusrisk:
+  extends: .dummy
+
 error-check:
   stage: test
   script:
