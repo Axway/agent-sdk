@@ -34,7 +34,6 @@ func GetAgentDetails(h handler) map[string]interface{} {
 }
 
 // GetAgentDetailStrings get all the values for the x-agent-details sub resource as string
-// if a value can not be parsed to a string its value is ignored
 func GetAgentDetailStrings(h handler) map[string]string {
 	details := GetAgentDetails(h)
 	if details == nil {
@@ -44,9 +43,7 @@ func GetAgentDetailStrings(h handler) map[string]string {
 	strMap := make(map[string]string)
 
 	for k, v := range details {
-		if vStr, ok := v.(string); ok {
-			strMap[k] = vStr
-		}
+		strMap[k] = fmt.Sprint(v)
 	}
 	return strMap
 }

@@ -54,7 +54,7 @@ func TestGetAgentDetailStrings(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "should return nil the agent-details key is found, but is not a map[string]interface{}",
+			name: "should return nil when the agent-details key is found, but is not a map[string]interface{}",
 			ri: &mockRI{subResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]string{},
 			}},
@@ -68,14 +68,17 @@ func TestGetAgentDetailStrings(t *testing.T) {
 			expected: map[string]string{},
 		},
 		{
-			name: "should map the agent details sub resource as a map[string]string skipping non-string",
+			name: "should map the agent details sub resource as a map[string]string",
 			ri: &mockRI{subResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
 					"key1": "val1",
 					"key2": []string{"val2a", "val2b"},
 				},
 			}},
-			expected: map[string]string{"key1": "val1"},
+			expected: map[string]string{
+				"key1": "val1",
+				"key2": "[val2a val2b]",
+			},
 		},
 	}
 
