@@ -110,6 +110,7 @@ trigger-azure-discovery-agent:
       - xxxx
   script:
     - ""
+    - echo "***************sdk dummy************"
 
 fetch-iriusrisk:
   extends: .dummy
@@ -122,3 +123,24 @@ twistlock:on-schedule:
 
 twistlock-master:
   extends: .dummy
+
+error-check:
+  stage: test
+  script:
+    - ""
+
+lint-test:
+  stage: test
+  script:
+    - ""
+
+test:
+  stage: test
+  script:
+    - ""
+
+sonar:
+  stage: sonar
+  script:
+    - ""
+
