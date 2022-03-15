@@ -32,6 +32,7 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
+      - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
     ref: APIGOV-dtest
     file:
@@ -39,11 +40,6 @@ include:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
-  - project: "apigov/beano_cicd"
-    ref: APIGOV-11111
-    # the order of these include files is important
-    file:
-      - "/gitlabci/csrjobs.yml"
 
 stages:
   - test
@@ -120,9 +116,9 @@ trigger-azure-discovery-agent:
 twistlock:
   extends: .dummy
   # stage: security-scans
-  # only:
-  #   refs:
-  #     - "xxxxx"
+  only:
+    refs:
+      - "xxxxx"
   # script:
   #   - ""
   #   - echo "***************sdk dummy************"
@@ -135,9 +131,6 @@ twistlock:on-schedule:
   extends: .dummy
 
 twistlock-master:
-  extends: .dummy
-
-fetch-iriusrisk:
   extends: .dummy
 
 error-check:
