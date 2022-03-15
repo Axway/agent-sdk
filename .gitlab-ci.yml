@@ -107,11 +107,11 @@ trigger-azure-discovery-agent:
   stage: security-scans
   only:
     refs:
-      - xxxxx
+      - "foobar"
   script:
     - ""
     - echo "***************sdk dummy************"
-
+    - echo "ref $CI_COMMIT_REF_NAME ************"
 fetch-iriusrisk:
   extends: .dummy
 
