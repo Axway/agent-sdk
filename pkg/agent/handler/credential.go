@@ -100,8 +100,8 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 
 		cr.Status = prov.NewStatusReason(status)
 
-		details := util.MergeMapStringInterface(util.GetAgentDetails(cr), status.GetProperties())
-		util.SetAgentDetails(cr, details)
+		details := util.MergeMapStringString(util.GetAgentDetailStrings(cr), status.GetProperties())
+		util.SetAgentDetails(cr, util.MapStringStringToMapStringInterface(details))
 
 		h.client.UpdateResourceFinalizer(resource, crFinalizer, "", true)
 

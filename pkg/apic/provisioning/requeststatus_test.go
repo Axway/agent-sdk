@@ -14,7 +14,7 @@ func TestRequestStatusBuilder(t *testing.T) {
 		message string
 		propKey string
 		propVal string
-		props   map[string]interface{}
+		props   map[string]string
 	}{
 		{
 			name:    "Build Success Status",
@@ -28,7 +28,7 @@ func TestRequestStatusBuilder(t *testing.T) {
 			message: "message",
 			propKey: "key",
 			propVal: "val",
-			props:   map[string]interface{}{"a": "b"},
+			props:   map[string]string{"a": "b"},
 			success: false,
 		},
 	}

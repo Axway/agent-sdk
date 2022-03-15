@@ -8,6 +8,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -114,10 +115,10 @@ func TestManagedApplicationHandler(t *testing.T) {
 
 			p := &mockManagedAppProv{
 				t: t,
-				status: mockRequestStatus{
-					status: prov.Success,
-					msg:    "msg",
-					properties: map[string]interface{}{
+				status: mock.MockRequestStatus{
+					Status: prov.Success,
+					Msg:    "msg",
+					Properties: map[string]string{
 						"status_key": "status_val",
 					},
 				},
@@ -175,7 +176,7 @@ func Test_managedApp(t *testing.T) {
 
 type mockManagedAppProv struct {
 	t                      *testing.T
-	status                 mockRequestStatus
+	status                 mock.MockRequestStatus
 	expectedManagedApp     string
 	expectedManagedAppData map[string]interface{}
 	expectedTeamName       string

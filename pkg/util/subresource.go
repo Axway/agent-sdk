@@ -33,6 +33,21 @@ func GetAgentDetails(h handler) map[string]interface{} {
 	return sub
 }
 
+// GetAgentDetailStrings get all the values for the x-agent-details sub resource as string
+func GetAgentDetailStrings(h handler) map[string]string {
+	details := GetAgentDetails(h)
+	if details == nil {
+		return nil
+	}
+
+	strMap := make(map[string]string)
+
+	for k, v := range details {
+		strMap[k] = fmt.Sprint(v)
+	}
+	return strMap
+}
+
 // GetAgentDetailsValue gets a single string value fom the x-agent-details sub resource.
 // Returns nil for error if x-agent-details does not exist.
 // Returns errors if unable to perform type conversion.
