@@ -32,7 +32,6 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
-      - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
     ref: APIGOV-dtest
     file:
@@ -40,6 +39,11 @@ include:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
+  - project: "apigov/beano_cicd"
+    ref: APIGOV-11111
+    # the order of these include files is important
+    file:
+      - "/gitlabci/csrjobs.yml"
 
 stages:
   - test
