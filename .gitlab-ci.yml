@@ -117,6 +117,8 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .dummy
+  before_script:
+    - echo "*******8before"""""""""""
 
 twistlock:on-schedule:
   extends: .dummy
