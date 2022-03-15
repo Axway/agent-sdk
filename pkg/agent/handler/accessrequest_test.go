@@ -9,6 +9,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -219,10 +220,10 @@ func TestAccessRequestHandler(t *testing.T) {
 				expectedAppName:       managedAppRefName,
 				expectedAccessDetails: util.GetAgentDetails(&ar),
 				expectedAppDetails:    util.GetAgentDetails(mApp),
-				status: mockRequestStatus{
-					status: prov.Success,
-					msg:    "msg",
-					properties: map[string]interface{}{
+				status: mock.MockRequestStatus{
+					Status: prov.Success,
+					Msg:    "msg",
+					Properties: map[string]string{
 						"status_key": "status_val",
 					},
 				},
@@ -312,7 +313,7 @@ type mockARProvision struct {
 	expectedAppName       string
 	expectedAppDetails    map[string]interface{}
 	expectedAccessDetails map[string]interface{}
-	status                mockRequestStatus
+	status                mock.MockRequestStatus
 	prov                  string
 }
 
@@ -334,22 +335,4 @@ func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (statu
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
 	return m.status
-}
-
-type mockRequestStatus struct {
-	status     prov.Status
-	msg        string
-	properties map[string]interface{}
-}
-
-func (m mockRequestStatus) GetStatus() prov.Status {
-	return m.status
-}
-
-func (m mockRequestStatus) GetMessage() string {
-	return m.msg
-}
-
-func (m mockRequestStatus) GetProperties() map[string]interface{} {
-	return m.properties
 }

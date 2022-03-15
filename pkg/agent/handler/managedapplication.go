@@ -67,8 +67,8 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 
 		app.Status = prov.NewStatusReason(status)
 
-		details := util.MergeMapStringInterface(util.GetAgentDetails(app), status.GetProperties())
-		util.SetAgentDetails(app, details)
+		details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
+		util.SetAgentDetails(app, util.MapStringStringToMapStringInterface(details))
 
 		// add finalizer
 		h.client.UpdateResourceFinalizer(resource, maFinalizer, "", true)

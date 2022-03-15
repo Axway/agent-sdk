@@ -86,8 +86,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 
 		ar.Status = prov.NewStatusReason(status)
 
-		details := util.MergeMapStringInterface(util.GetAgentDetails(ar), status.GetProperties())
-		util.SetAgentDetails(ar, details)
+		details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())
+		util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
 
 		// add a finalizer
 		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)

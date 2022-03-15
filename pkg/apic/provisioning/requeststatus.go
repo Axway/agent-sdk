@@ -9,14 +9,14 @@ type RequestStatus interface {
 	// GetMessage returns the status message
 	GetMessage() string
 	// GetProperties returns additional details about a status.
-	GetProperties() map[string]interface{}
+	GetProperties() map[string]string
 }
 
 type requestStatus struct {
 	RequestStatus
 	status     Status
 	message    string
-	properties map[string]interface{}
+	properties map[string]string
 }
 
 // GetStatus returns the Status level
@@ -30,7 +30,7 @@ func (rs *requestStatus) GetMessage() string {
 }
 
 // GetProperties returns additional details about a status.
-func (rs *requestStatus) GetProperties() map[string]interface{} {
+func (rs *requestStatus) GetProperties() map[string]string {
 	return rs.properties
 }
 
@@ -43,7 +43,7 @@ type RequestStatusBuilder interface {
 	// SetMessage - set the request Status message
 	SetMessage(message string) RequestStatusBuilder
 	// SetProperties - set the properties of the RequestStatus
-	SetProperties(map[string]interface{}) RequestStatusBuilder
+	SetProperties(map[string]string) RequestStatusBuilder
 	// AddProperty - add a new property on the RequestStatus
 	AddProperty(key string, value string) RequestStatusBuilder
 }
@@ -56,13 +56,13 @@ type requestStatusBuilder struct {
 func NewRequestStatusBuilder() RequestStatusBuilder {
 	return &requestStatusBuilder{
 		status: &requestStatus{
-			properties: make(map[string]interface{}),
+			properties: make(map[string]string),
 		},
 	}
 }
 
 // SetProperties - set the properties to be sent back to the resource
-func (r *requestStatusBuilder) SetProperties(properties map[string]interface{}) RequestStatusBuilder {
+func (r *requestStatusBuilder) SetProperties(properties map[string]string) RequestStatusBuilder {
 	r.status.properties = properties
 	return r
 }

@@ -17,6 +17,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -178,10 +179,10 @@ func TestCredentialHandler(t *testing.T) {
 
 			p := &mockCredProv{
 				t: t,
-				status: mockRequestStatus{
-					status: prov.Success,
-					msg:    "msg",
-					properties: map[string]interface{}{
+				status: mock.MockRequestStatus{
+					Status: prov.Success,
+					Msg:    "msg",
+					Properties: map[string]string{
 						"status_key": "status_val",
 					},
 				},
@@ -252,7 +253,7 @@ func Test_creds(t *testing.T) {
 
 type mockCredProv struct {
 	t                   *testing.T
-	status              mockRequestStatus
+	status              mock.MockRequestStatus
 	expectedAppDetails  map[string]interface{}
 	expectedCredDetails map[string]interface{}
 	expectedManagedApp  string
