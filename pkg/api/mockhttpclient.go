@@ -26,6 +26,7 @@ type MockHTTPClient struct {
 // MockResponse - use for mocking the MockHTTPClient responses
 type MockResponse struct {
 	FileName  string
+	RespData  string
 	RespCode  int
 	ErrString string
 }
@@ -98,8 +99,9 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 
 	fileName := c.Responses[c.RespCount].FileName
 
+	dat := []byte(c.Responses[c.RespCount].RespData)
+
 	var responseFile *os.File
-	var dat []byte
 
 	if fileName != "" {
 		responseFile, err = os.Open(fileName)
