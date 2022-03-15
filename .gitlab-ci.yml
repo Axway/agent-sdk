@@ -116,9 +116,6 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .dummy
-  only:
-    refs:
-      - xxxxx
 
 twistlock:on-schedule:
   extends: .dummy
