@@ -17,6 +17,7 @@ variables:
 
   # Whitesource
   WS_PROJECT_ID: "APIC_Agents_SDK"
+  WS_BRANCH: main
 
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
