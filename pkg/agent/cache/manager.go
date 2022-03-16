@@ -59,12 +59,12 @@ type Manager interface {
 
 	// AccessRequestDefintion cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
-	GetAccessRequestDefinitionByName(name string) *v1.ResourceInstance
+	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 	DeleteAccessRequestDefinitionByName(name string) error
 
 	// CredentialRequestDefintion cache related methods
 	AddCredentialRequestDefinition(resource *v1.ResourceInstance)
-	GetCredentialRequestDefinitionByName(name string) *v1.ResourceInstance
+	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 	DeleteCredentialRequestDefinitionByName(name string) error
 
 	// Watch Sequence cache related methods

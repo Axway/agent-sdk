@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestARDHandler(t *testing.T) {
+func TestCRDHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
@@ -20,7 +20,7 @@ func TestARDHandler(t *testing.T) {
 		action   proto.Event_Type
 	}{
 		{
-			name:     "should save an Access Request Definition",
+			name:     "should save an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_CREATED,
 			resource: &v1.ResourceInstance{
@@ -32,14 +32,14 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
 			},
 		},
 		{
-			name:     "should update an Access Request Definition",
+			name:     "should update an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &v1.ResourceInstance{
@@ -51,14 +51,14 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
 			},
 		},
 		{
-			name:     "should delete an Access Request Definition",
+			name:     "should delete an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_DELETED,
 			resource: &v1.ResourceInstance{
@@ -70,14 +70,14 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
 			},
 		},
 		{
-			name:     "should return nil when the kind is not an Access Request Definition",
+			name:     "should return nil when the kind is not an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_UPDATED,
 			resource: &v1.ResourceInstance{

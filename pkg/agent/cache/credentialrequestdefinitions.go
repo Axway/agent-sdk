@@ -8,22 +8,21 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 func (c *cacheManager) AddCredentialRequestDefinition(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
-	c.crdMap.Set(resource.Metadata.ID, resource)
+	c.crdMap.Set(resource.Name, resource)
 }
 
 // GetCredentialRequestDefinitionByName - returns resource from CredentialRequestDefinition cache based on resource name
-func (c *cacheManager) GetCredentialRequestDefinitionByName(name string) *v1.ResourceInstance {
+func (c *cacheManager) GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error) {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, _ := c.crdMap.Get(name)
+	item, err := c.crdMap.Get(name)
 	if item != nil {
-		ard, ok := item.(*v1.ResourceInstance)
-		if ok {
-			return ard
+		if ard, ok := item.(*v1.ResourceInstance); ok {
+			return ard, nil
 		}
 	}
-	return nil
+	return nil, err
 }
 
 // DeleteCredentialRequestDefinitionByName - deletes the CredentialRequestDefinition cache based on resource name

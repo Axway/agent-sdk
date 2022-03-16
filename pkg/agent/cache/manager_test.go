@@ -258,3 +258,55 @@ func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual 
 	assert.Equal(t, expected.Spec, actual.Spec)
 	assert.Equal(t, expected.SubResources, actual.SubResources)
 }
+
+func createRequestDefinition(name string) *v1.ResourceInstance {
+	return &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name: name,
+		},
+	}
+}
+
+func TestAccessRequestDefinitionCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	ard1 := createRequestDefinition("name1")
+	ard2 := createRequestDefinition("name2")
+
+	m.AddAccessRequestDefinition(ard1)
+	m.AddAccessRequestDefinition(ard2)
+
+	cachedARD, err := m.GetAccessRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+	assert.Equal(t, ard1, cachedARD)
+
+	err = m.DeleteAccessRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+
+	cachedARD, err = m.GetAccessRequestDefinitionByName("name1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedARD)
+}
+
+func TestCredentialRequestDefinitionCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	crd1 := createRequestDefinition("name1")
+	crd2 := createRequestDefinition("name2")
+
+	m.AddCredentialRequestDefinition(crd1)
+	m.AddCredentialRequestDefinition(crd2)
+
+	cachedARD, err := m.GetCredentialRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+	assert.Equal(t, crd1, cachedARD)
+
+	err = m.DeleteCredentialRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+
+	cachedARD, err = m.GetCredentialRequestDefinitionByName("name1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedARD)
+}
