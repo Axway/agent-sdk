@@ -314,7 +314,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec,references,x-marketplace-subscription",
+		apic.FieldsKey: apiServerFields + ",spec,x-marketplace-subscription",
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
