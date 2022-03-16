@@ -20,7 +20,9 @@ const (
 	transactionVolumeMetric = "transaction.volume"
 )
 
-type MetricDetail struct {
+// Detail - holds the details for computing metrics
+// for API and consumer subscriptions
+type Detail struct {
 	APIDetails APIDetails
 	StatusCode string
 	Duration   int64
@@ -60,15 +62,17 @@ type APIMetric struct {
 	StartTime   time.Time          `json:"-"`
 }
 
+// GetStartTime - Returns the start time for API metric
 func (a *APIMetric) GetStartTime() time.Time {
 	return a.StartTime
 }
 
+// GetType - Returns APIMetric
 func (a *APIMetric) GetType() string {
 	return "APIMetric"
 }
 
-// APIMetric - struct to hold metric specific for status code based API transactions
+// SubscriptionMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type SubscriptionMetric struct {
 	Subscription SubscriptionDetails `json:"subscription"`
 	StatusCode   string              `json:"statusCode"`
@@ -79,10 +83,12 @@ type SubscriptionMetric struct {
 	StartTime    time.Time           `json:"-"`
 }
 
+// GetStartTime - Returns the start time for subscription metric
 func (a *SubscriptionMetric) GetStartTime() time.Time {
 	return a.StartTime
 }
 
+// GetType - Returns SubscriptionMetric
 func (a *SubscriptionMetric) GetType() string {
 	return "SubscriptionMetric"
 }
@@ -102,6 +108,7 @@ type V4EventDistribution struct {
 	Version     string `json:"version"`
 }
 
+// V4Data - Interface for representing the metric data
 type V4Data interface {
 	GetStartTime() time.Time
 	GetType() string
@@ -143,7 +150,7 @@ type AppDetails struct {
 	Name string `json:"name"`
 }
 
-// AppDetails - struct for app details to report
+// SubscriptionDetails - struct for subscription metric detail
 type SubscriptionDetails struct {
 	ID                 string `json:"id"`
 	Name               string `json:"name"`

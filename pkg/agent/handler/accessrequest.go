@@ -160,6 +160,8 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 }
 
 func (h *accessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
+	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
+	// once controller starts to populate it.
 	ars := ar.GetSubResource("x-marketplace-subscription")
 	if ars != nil {
 		arSubscription := ars.(map[string]interface{})

@@ -339,6 +339,8 @@ func (j *discoveryCache) updateAccessRequestCache() {
 }
 
 func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
+	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
+	// once controller starts to populate it.
 	ars := ar.GetSubResource("x-marketplace-subscription")
 	if ars != nil {
 		arSubscription := ars.(map[string]interface{})

@@ -84,14 +84,14 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 
 		collector := metric.GetMetricCollector()
 		if collector != nil {
-			metricDetail := metric.MetricDetail{
+			metricDetail := metric.Detail{
 				APIDetails: apiDetails,
 				StatusCode: statusCode,
 				Duration:   int64(duration),
 				Bytes:      bytes,
 				AppDetails: appDetails,
 			}
-			collector.AddConsumerMetric(metricDetail)
+			collector.AddMetricDetail(metricDetail)
 		}
 	}
 }

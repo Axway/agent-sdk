@@ -27,7 +27,7 @@ import (
 // Collector - interface for collecting metrics
 type Collector interface {
 	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
-	AddConsumerMetric(metricDetail MetricDetail)
+	AddMetricDetail(metricDetail Detail)
 }
 
 // collector - collects the metrics for transactions events
@@ -184,8 +184,8 @@ func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration
 	c.updateMetric(apiDetails, statusCode, duration)
 }
 
-// AddConsumerMetric - add metric for API transaction to collection
-func (c *collector) AddConsumerMetric(metricDetail MetricDetail) {
+// AddMetricDetail - add metric for API transaction and consumer subscription to collection
+func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.updateConsumerMetric(metricDetail)
 }
@@ -205,7 +205,7 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateConsumerMetric(metricAppDetail MetricDetail) {
+func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
 	if !c.usageConfig.CanPublishMetric() {
 		return // no need to update metrics with publish off
 	}
@@ -252,22 +252,22 @@ func (c *collector) updateConsumerMetric(metricAppDetail MetricDetail) {
 		c.consumerMetricMap[subscriptionID] = consumerAppMap
 	}
 
-	consumerApiMap, ok := consumerAppMap[appID]
+	consumerAPIMap, ok := consumerAppMap[appID]
 	if !ok {
-		consumerApiMap = make(map[string]map[string]*SubscriptionMetric)
-		consumerAppMap[appID] = consumerApiMap
+		consumerAPIMap = make(map[string]map[string]*SubscriptionMetric)
+		consumerAppMap[appID] = consumerAPIMap
 	}
 
-	consumerApiStatusMap, ok := consumerApiMap[apiID]
+	consumerAPIStatusMap, ok := consumerAPIMap[apiID]
 	if !ok {
-		consumerApiStatusMap = make(map[string]*SubscriptionMetric)
-		consumerApiMap[apiID] = consumerApiStatusMap
+		consumerAPIStatusMap = make(map[string]*SubscriptionMetric)
+		consumerAPIMap[apiID] = consumerAPIStatusMap
 	}
 
-	if _, ok := consumerApiStatusMap[statusCode]; !ok {
+	if _, ok := consumerAPIStatusMap[statusCode]; !ok {
 		// First api metric for api+statuscode,
 		// setup the start time to be used for reporting metric event
-		consumerApiStatusMap[statusCode] = &SubscriptionMetric{
+		consumerAPIStatusMap[statusCode] = &SubscriptionMetric{
 			Subscription: SubscriptionDetails{
 				ID:                 subscriptionID,
 				Name:               subscriptionName,
@@ -616,6 +616,7 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4D
 				delete(c.consumerMetricMap, subID)
 			}
 		}
+		log.Infof("Published metrics report for subscription %s [start timestamp: %d, end timestamp: %d]", subscriptionMetric.Subscription.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 	}
 	histogram.Clear()
 }
@@ -638,6 +639,7 @@ func (c *collector) getConsumerOrgGUID(managedApp *v1.ResourceInstance) string {
 	consumerOrgGUID := ""
 	if managedApp != nil {
 		// Lookup Subscription
+		// TODO - Use subject subresource on managed application once model includes it.
 		mas := managedApp.GetSubResource("x-marketplace-subject")
 		if mas != nil {
 			managedAppSubject := mas.(map[string]interface{})
@@ -664,6 +666,7 @@ func (c *collector) getSubscriptionFromAccessReq(accessRequest *v1alpha1.AccessR
 	if accessRequest != nil {
 		// Lookup Subscription
 		// Temporary using custom subresource, use subscription reference in AccessRequest
+		// TODO - Use subscription reference subresource on AccessRequest once controller starts to populate it.
 		accReqSubresource := accessRequest.GetSubResource("x-marketplace-subscription")
 		if accReqSubresource != nil {
 			accReqSubscriptionDetail := accReqSubresource.(map[string]interface{})
