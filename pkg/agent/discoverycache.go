@@ -87,8 +87,8 @@ func (j *discoveryCache) Execute() error {
 	}
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
+		j.updateAPIServiceInstancesCache()
 		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-			j.updateAPIServiceInstancesCache()
 			j.updateCategoryCache()
 		}
 		if j.agentResourceManager != nil {
