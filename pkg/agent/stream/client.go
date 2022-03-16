@@ -275,9 +275,8 @@ func (c *streamer) Healthcheck(_ string) *hc.Status {
 
 func getWatchTopic(cfg config.CentralConfig, client apiClient) (*v1alpha1.WatchTopic, error) {
 	env := cfg.GetEnvironmentName()
-	agentName := cfg.GetAgentName()
 
-	wtName := getWatchTopicName(env, agentName, cfg.GetAgentType())
+	wtName := getWatchTopicName(env, cfg.GetAgentType())
 	wt, err := getCachedWatchTopic(cache.New(), wtName)
 	if err != nil || wt == nil {
 		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg.GetAgentType())
@@ -289,12 +288,8 @@ func getWatchTopic(cfg config.CentralConfig, client apiClient) (*v1alpha1.WatchT
 	return wt, err
 }
 
-func getWatchTopicName(envName, agentName string, agentType config.AgentType) string {
-	wtName := agentName
-	if wtName == "" {
-		wtName = envName
-	}
-	return wtName + getWatchTopicNameSuffix(agentType)
+func getWatchTopicName(envName string, agentType config.AgentType) string {
+	return envName + getWatchTopicNameSuffix(agentType)
 }
 
 func getWatchTopicNameSuffix(agentType config.AgentType) string {
