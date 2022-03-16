@@ -186,30 +186,6 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 	return m.token, m.err
 }
 
-type mockRI struct {
-	err error
-}
-
-func (m mockRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
-	return nil, nil
-}
-
-func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
-	return &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind: apiv1.GroupKind{
-					Kind: "kind",
-				},
-			},
-			Name:  "name",
-			Title: "title",
-		},
-		Owner: nil,
-		Spec:  nil,
-	}, m.err
-}
-
 type mockHandler struct {
 	err error
 }
