@@ -22,21 +22,15 @@ const (
 	"name": "{{.Name}}",
 	"title": "{{.Title}}",
 	"spec": {
-		"filters": [
+		"filters": [{{range $index, $kind := .Kinds}}{{if $index}},{{end}}
 			{
-				"group": "catalog",
-				"kind": "Category",
-				"name": "*",
-				"type": ["created", "updated", "deleted"]
-			},{{range $index, $kind := .Kinds}}{{if $index}},{{end}}
-			{
-				"group": "management",
+				"group": "{{if .Group}}{{.Group}}{{else}}management{{end}}",
 				"kind": "{{.KindName}}",
 				"name": "*",
-				"scope": {
-					"kind": "Environment",
-					"name": "{{.Scope}}"
-				},
+				{{if .ScopeName}}"scope": {
+					"kind": "{{if .ScopeKind}}{{.ScopeKind}}{{else}}Environment{{end}}",
+					"name": "{{.ScopeName}}"
+				},{{end}}
 				"type": ["{{ StringsJoin .EventTypes "\",\""}}"]
 			}{{end}}
 		],
@@ -65,23 +59,23 @@ func getOrCreateWatchTopic(name, scope string, client apiClient, agentType confi
 		return wt, err
 	}
 
-	var tmplFunc func(string, string, string) ([]byte, error)
+	var tmplValuesFunc func(string, string, string) WatchTopicValues
 	agentResourceKind := ""
 	switch agentType {
 	case config.DiscoveryAgent:
 		agentResourceKind = "DiscoveryAgent"
-		tmplFunc = NewDiscoveryWatchTopic
+		tmplValuesFunc = NewDiscoveryWatchTopic
 	case config.TraceabilityAgent:
 		agentResourceKind = "TraceabilityAgent"
-		tmplFunc = NewTraceWatchTopic
+		tmplValuesFunc = NewTraceWatchTopic
 	case config.GovernanceAgent:
 		agentResourceKind = "GovernanceAgent"
-		tmplFunc = NewGovernanceAgentWatchTopic
+		tmplValuesFunc = NewGovernanceAgentWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
 	}
 
-	bts, err := tmplFunc(name, scope, agentResourceKind)
+	bts, err := parseWatchTopicTemplate(tmplValuesFunc(name, scope, agentResourceKind))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +92,7 @@ func emptyWatchTopic() *mv1.WatchTopic {
 }
 
 // executeTemplate parses a WatchTopic from a template
-func executeTemplate(values WatchTopicValues) ([]byte, error) {
+func parseWatchTopicTemplate(values WatchTopicValues) ([]byte, error) {
 	tmpl, err := template.New("watch-topic-tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(agentTemplate)
 	if err != nil {
 		return nil, err
@@ -141,76 +135,69 @@ func getCachedWatchTopic(c cache.GetItem, key string) (*mv1.WatchTopic, error) {
 type kindValues struct {
 	KindName   string
 	EventTypes []string
-	Scope      string
+	Group      string // blank defaults to management in template
+	ScopeKind  string // blank defaults to Environment in template
+	ScopeName  string // blank generates no scope in template
 }
 
 // WatchTopicValues values to populate the watch topic template
 type WatchTopicValues struct {
-	Name              string
-	Title             string
-	AgentResourceKind string
-	Description       string
-	Kinds             []kindValues
+	Name        string
+	Title       string
+	Description string
+	Kinds       []kindValues
 }
 
 // NewDiscoveryWatchTopic creates a WatchTopic template string.
 // Using a template instead of unmarshalling into a struct to avoid sending a request with empty fields
-func NewDiscoveryWatchTopic(name, scope, agentResourceKind string) ([]byte, error) {
-	wtValues := WatchTopicValues{
-		Name:              name,
-		Title:             name,
-		Description:       fmt.Sprintf(desc, "discovery", scope),
-		AgentResourceKind: agentResourceKind,
+func NewDiscoveryWatchTopic(name, scope, agentResourceKind string) WatchTopicValues {
+	return WatchTopicValues{
+		Name:        name,
+		Title:       name,
+		Description: fmt.Sprintf(desc, "discovery", scope),
 		Kinds: []kindValues{
-			{KindName: agentResourceKind, Scope: scope, EventTypes: updated},
-			{KindName: "APIService", Scope: scope, EventTypes: all},
-			{KindName: "APIServiceInstance", Scope: scope, EventTypes: all},
-			{KindName: "Credential", Scope: scope, EventTypes: createdOrUpdated},
-			{KindName: "AccessRequest", Scope: scope, EventTypes: createdOrUpdated},
-			{KindName: "ManagedApplication", Scope: scope, EventTypes: createdOrUpdated},
-			{KindName: "CredentialRequestDefinition", Scope: scope, EventTypes: all},
-			{KindName: "AccessRequestDefinition", Scope: scope, EventTypes: all},
+			{KindName: agentResourceKind, ScopeName: scope, EventTypes: updated},
+			{KindName: "Category", Group: "category", EventTypes: all},
+			{KindName: "APIService", ScopeName: scope, EventTypes: all},
+			{KindName: "APIServiceInstance", ScopeName: scope, EventTypes: all},
+			{KindName: "Credential", ScopeName: scope, EventTypes: createdOrUpdated},
+			{KindName: "AccessRequest", ScopeName: scope, EventTypes: createdOrUpdated},
+			{KindName: "ManagedApplication", ScopeName: scope, EventTypes: createdOrUpdated},
+			{KindName: "CredentialRequestDefinition", ScopeName: scope, EventTypes: all},
+			{KindName: "AccessRequestDefinition", ScopeName: scope, EventTypes: all},
 		},
 	}
-
-	return executeTemplate(wtValues)
 }
 
 // NewTraceWatchTopic creates a WatchTopic template string
-func NewTraceWatchTopic(name, scope, agentResourceKind string) ([]byte, error) {
-	wtValues := WatchTopicValues{
-		Name:              name,
-		Title:             name,
-		Description:       fmt.Sprintf(desc, "traceability", scope),
-		AgentResourceKind: agentResourceKind,
+func NewTraceWatchTopic(name, scope, agentResourceKind string) WatchTopicValues {
+	return WatchTopicValues{
+		Name:        name,
+		Title:       name,
+		Description: fmt.Sprintf(desc, "traceability", scope),
 		Kinds: []kindValues{
-			{KindName: agentResourceKind, Scope: scope, EventTypes: updated},
-			{KindName: "APIService", Scope: scope, EventTypes: all},
-			{KindName: "APIServiceInstance", Scope: scope, EventTypes: all},
-			{KindName: "AccessRequest", Scope: scope, EventTypes: all},
-			{KindName: "ManagedApplication", Scope: scope, EventTypes: createdOrUpdated},
+			{KindName: agentResourceKind, ScopeName: scope, EventTypes: updated},
+			{KindName: "APIService", ScopeName: scope, EventTypes: all},
+			{KindName: "APIServiceInstance", ScopeName: scope, EventTypes: all},
+			{KindName: "AccessRequest", ScopeName: scope, EventTypes: all},
+			{KindName: "ManagedApplication", ScopeName: scope, EventTypes: createdOrUpdated},
 		},
 	}
-
-	return executeTemplate(wtValues)
 }
 
 // NewGovernanceAgentWatchTopic creates a WatchTopic template string
-func NewGovernanceAgentWatchTopic(name, scope, agentResourceKind string) ([]byte, error) {
-	wtValues := WatchTopicValues{
-		Name:              name,
-		Title:             name,
-		Description:       fmt.Sprintf(desc, "governance", scope),
-		AgentResourceKind: agentResourceKind,
+func NewGovernanceAgentWatchTopic(name, scope, agentResourceKind string) WatchTopicValues {
+	return WatchTopicValues{
+		Name:        name,
+		Title:       name,
+		Description: fmt.Sprintf(desc, "governance", scope),
 		Kinds: []kindValues{
-			{KindName: agentResourceKind, Scope: scope, EventTypes: updated},
-			{KindName: "AmplifyRuntimeConfig", Scope: scope, EventTypes: all},
-			{KindName: "AccessRequest", Scope: scope, EventTypes: all},
-			{KindName: "APIService", Scope: scope, EventTypes: all},
-			{KindName: "APIServiceInstance", Scope: scope, EventTypes: all},
-			{KindName: "ManagedApplication", Scope: scope, EventTypes: createdOrUpdated},
+			{KindName: agentResourceKind, ScopeName: scope, EventTypes: updated},
+			{KindName: "AmplifyRuntimeConfig", ScopeName: scope, EventTypes: all},
+			{KindName: "AccessRequest", ScopeName: scope, EventTypes: all},
+			{KindName: "APIService", ScopeName: scope, EventTypes: all},
+			{KindName: "APIServiceInstance", ScopeName: scope, EventTypes: all},
+			{KindName: "ManagedApplication", ScopeName: scope, EventTypes: createdOrUpdated},
 		},
 	}
-
-	return executeTemplate(wtValues)
 }
