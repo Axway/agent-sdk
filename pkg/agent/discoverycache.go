@@ -281,6 +281,7 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	log.Trace("updating managed application cache")
 
 	// Update cache with published resources
+	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + ",x-marketplace-subject",
@@ -310,9 +311,10 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	log.Trace("updating access request cache")
 
 	// Update cache with published resources
+	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec,x-marketplace-subscription",
+		apic.FieldsKey: apiServerFields + ",spec,references,x-marketplace-subscription",
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -320,16 +322,16 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	)
 
 	for _, accessRequest := range accessRequests {
-		agent.cacheManager.AddAccessRequest(accessRequest)
 		ar := &mv1.AccessRequest{}
 		ar.FromInstance(accessRequest)
+		agent.cacheManager.AddAccessRequest(ar)
 		existingAccessRequests[accessRequest.Metadata.ID] = true
 		j.addSubscription(ar)
 	}
 
 	if j.refreshAll {
 		// Remove access requests that no longer exist
-		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
+		cacheKeys := agent.cacheManager.GetAccessRequestCacheKeys()
 		for _, key := range cacheKeys {
 			if _, ok := existingAccessRequests[key]; !ok {
 				agent.cacheManager.DeleteAccessRequest(key)

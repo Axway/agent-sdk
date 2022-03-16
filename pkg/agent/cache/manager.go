@@ -74,8 +74,9 @@ type Manager interface {
 	DeleteManagedApplication(id string) error
 
 	// AccessRequest cache related methods
-	AddAccessRequest(resource *v1.ResourceInstance)
-	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID string) *mv1.AccessRequest
+	GetAccessRequestCacheKeys() []string
+	AddAccessRequest(resource *mv1.AccessRequest)
+	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest
 	GetAccessRequest(id string) *mv1.AccessRequest
 	DeleteAccessRequest(id string) error
 
@@ -603,20 +604,39 @@ func (c *cacheManager) DeleteManagedApplication(id string) error {
 }
 
 // AccessRequest cache related methods
-func (c *cacheManager) AddAccessRequest(resource *v1.ResourceInstance) {
-	ac := &mv1.AccessRequest{}
-	ac.FromInstance(resource)
-	appName := ac.Spec.ManagedApplication
-	apiID, _ := util.GetAgentDetailsValue(ac, "apiID")
-
-	c.accessRequestMap.SetWithSecondaryKey(resource.Metadata.ID, appName+":"+apiID, ac)
-}
-
-func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, instanceName string) *mv1.AccessRequest {
+func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + instanceName)
+	return c.managedApplicationMap.GetKeys()
+}
+
+func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {
+	appName := ar.Spec.ManagedApplication
+	instID := ""
+	for _, ref := range ar.Metadata.References {
+		if ref.Name == ar.Spec.ApiServiceInstance {
+			instID = ref.ID
+			break
+		}
+	}
+
+	instance, _ := c.GetAPIServiceInstanceByID(instID)
+	apiID := ""
+	apiStage := ""
+	if instance != nil {
+		apiID, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+		apiStage, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
+	}
+
+	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ar)
+}
+
+func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
 	if accessRequest != nil {
 		ri, ok := accessRequest.(*mv1.AccessRequest)
 		if ok {

@@ -143,7 +143,7 @@ func (h *accessRequestHandler) handleForTrace(action proto.Event_Type, meta *pro
 	if ar.Status.Level == statusSuccess && ar.Metadata.State != v1.ResourceDeleting {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if cachedAccessReq == nil {
-			h.cache.AddAccessRequest(resource)
+			h.cache.AddAccessRequest(ar)
 			h.addSubscription(ar)
 		}
 	}

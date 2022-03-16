@@ -218,10 +218,11 @@ func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
 
 	// Lookup Managed App
 	apiID := metricAppDetail.APIDetails.ID
+	stage := metricAppDetail.APIDetails.Stage
 
 	managedApp := cacheManager.GetManagedApplicationByName(metricAppDetail.AppDetails.Name)
 	consumerOrgGUID := c.getConsumerOrgGUID(managedApp)
-	accessRequest := c.getAccessRequest(cacheManager, managedApp, apiID)
+	accessRequest := c.getAccessRequest(cacheManager, managedApp, apiID, stage)
 	subscription := c.getSubscription(cacheManager, accessRequest)
 
 	appID := "unkown"
@@ -652,10 +653,11 @@ func (c *collector) getConsumerOrgGUID(managedApp *v1.ResourceInstance) string {
 	return consumerOrgGUID
 }
 
-func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID string) *v1alpha1.AccessRequest {
+func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
 	if managedApp != nil {
 		// Lookup Access Request
-		accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, strings.TrimPrefix(apiID, "remoteApiId_"))
+		apiID = strings.TrimPrefix(apiID, "remoteApiId_")
+		accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
 		return accessReq
 	}
 	return nil

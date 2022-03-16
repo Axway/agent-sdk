@@ -49,6 +49,7 @@ type APIDetails struct {
 	Name     string `json:"name"`
 	Revision int    `json:"revision"`
 	TeamID   string `json:"teamId"`
+	Stage    string `json:"-"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions

@@ -73,6 +73,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 			Name:     summaryEvent.TransactionSummary.Proxy.Name,
 			Revision: summaryEvent.TransactionSummary.Proxy.Revision,
 			TeamID:   summaryEvent.TransactionSummary.Team.ID,
+			Stage:    summaryEvent.TransactionSummary.Proxy.Stage,
 		}
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
