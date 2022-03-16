@@ -24,7 +24,7 @@ type managedApplication struct {
 	client client
 }
 
-// NewManagedApplicationHandler creates a Handler for Access Requests
+// NewManagedApplicationHandler creates a Handler for Credentials
 func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Manager, client client) Handler {
 	return &managedApplication{
 		prov:   prov,

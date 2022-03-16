@@ -31,7 +31,7 @@ type credentials struct {
 	encrypt encryptFunc
 }
 
-// NewCredentialHandler creates a Handler for Access Requests
+// NewCredentialHandler creates a Handler for Credentials
 func NewCredentialHandler(prov credProv, client client) Handler {
 	return &credentials{
 		prov:    prov,
