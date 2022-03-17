@@ -62,7 +62,7 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 	return agent.apicClient.RegisterAccessRequestDefinition(data, true)
 }
 
-// NewAccessRequestBuilder - called by the agents to build and register a new access reqest definition
+// NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
 }

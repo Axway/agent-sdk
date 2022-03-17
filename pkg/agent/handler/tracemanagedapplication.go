@@ -25,8 +25,7 @@ func (h *traceManagedApplication) Handle(action proto.Event_Type, meta *proto.Ev
 	}
 
 	if action == proto.Event_DELETED {
-		h.cache.DeleteManagedApplication(resource.Metadata.ID)
-		return nil
+		return h.cache.DeleteManagedApplication(resource.Metadata.ID)
 	}
 
 	app := &mv1.ManagedApplication{}

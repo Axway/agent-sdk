@@ -39,8 +39,6 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	log.Debugf("%s event for ManagedApplication", action.String())
-
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)
 	if err != nil {
@@ -51,47 +49,54 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	if ok := shouldProcess(app.Status.Level, app.Metadata.State); !ok {
-		return nil
-	}
-
 	ma := provManagedApp{
 		managedAppName: app.Name,
 		teamName:       h.getTeamName(app.Owner),
 		data:           util.GetAgentDetails(app),
 	}
 
-	var status prov.RequestStatus
-	if app.Status.Level == statusPending {
-		status = h.prov.ApplicationRequestProvision(ma)
-
-		app.Status = prov.NewStatusReason(status)
-
-		details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
-		util.SetAgentDetails(app, util.MapStringStringToMapStringInterface(details))
-
-		// add finalizer
-		h.client.UpdateResourceFinalizer(resource, maFinalizer, "", true)
-
-		err = h.client.CreateSubResourceScoped(
-			app.ResourceMeta,
-			map[string]interface{}{
-				defs.XAgentDetails: util.GetAgentDetails(app),
-				"status":           app.Status,
-			},
-		)
+	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
+		log.Tracef("managed application handler - processing resource in pending status")
+		return h.onPending(app, ma)
 	}
 
-	// check for deleting state on success status
-	if app.Status.Level == statusSuccess && app.Metadata.State == v1.ResourceDeleting {
-		status = h.prov.ApplicationRequestDeprovision(ma)
-
-		if status.GetStatus() == prov.Success {
-			h.client.UpdateResourceFinalizer(resource, maFinalizer, "", false)
-		}
+	if ok := shouldProcessDeleting(app.Status.Level, app.Metadata.State, len(app.Finalizers)); ok {
+		log.Tracef("managed application handler - processing resource in deleting state")
+		h.onDeleting(app, ma)
 	}
 
-	return err
+	return nil
+}
+
+func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provManagedApp) error {
+	status := h.prov.ApplicationRequestProvision(pma)
+
+	app.Status = prov.NewStatusReason(status)
+
+	details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
+	util.SetAgentDetails(app, util.MapStringStringToMapStringInterface(details))
+
+	// add finalizer
+	ri, _ := app.AsInstance()
+	h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+
+	return h.client.CreateSubResourceScoped(
+		app.ResourceMeta,
+		map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(app),
+			"status":           app.Status,
+		},
+	)
+}
+
+func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provManagedApp) {
+	status := h.prov.ApplicationRequestDeprovision(pma)
+
+	if status.GetStatus() == prov.Success {
+		ri, _ := app.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
+	}
+
 }
 
 func (h *managedApplication) getTeamName(owner *v1.Owner) string {
