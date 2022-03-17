@@ -6,6 +6,8 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -57,31 +59,28 @@ func (h *traceAccessRequestHandler) Handle(action proto.Event_Type, meta *proto.
 func (h *traceAccessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
 	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
 	// once controller starts to populate it.
-	ars := ar.GetSubResource("x-marketplace-subscription")
-	if ars != nil {
-		arSubscription := ars.(map[string]interface{})
-		propertyVal := arSubscription["name"]
-		if propertyVal == nil {
-			return
-		}
-		subscriptionName := propertyVal.(string)
-		subscription := h.cache.GetSubscriptionByName(subscriptionName)
-		if subscription == nil {
-			subscription, err := h.fetchSubscription(subscriptionName)
-			if err == nil {
-				h.cache.AddSubscription(subscription)
-			}
+	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
+		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	if subscriptionName == "" {
+		return
+	}
+
+	subscription := h.cache.GetSubscriptionByName(subscriptionName)
+	if subscription == nil {
+		subscription, err := h.fetchSubscription(subscriptionName)
+		if err == nil {
+			h.cache.AddSubscription(subscription)
 		}
 	}
 }
 
 func (h *traceAccessRequestHandler) fetchSubscription(subscriptionName string) (*v1.ResourceInstance, error) {
-	if subscriptionName != "" {
-		url := fmt.Sprintf(
-			"/catalog/v1alpha1/subscriptions/%s",
-			subscriptionName,
-		)
-		return h.client.GetResource(url)
+	if subscriptionName == "" {
+		return nil, nil
 	}
-	return nil, nil
+	url := fmt.Sprintf(
+		"/catalog/v1alpha1/subscriptions/%s",
+		subscriptionName,
+	)
+	return h.client.GetResource(url)
 }

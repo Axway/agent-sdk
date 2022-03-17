@@ -16,6 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -637,54 +638,46 @@ func (c *collector) getStatusText(statusCode string) string {
 }
 
 func (c *collector) getConsumerOrgGUID(managedApp *v1.ResourceInstance) string {
-	consumerOrgGUID := ""
-	if managedApp != nil {
-		// Lookup Subscription
-		// TODO - Use subject subresource on managed application once model includes it.
-		mas := managedApp.GetSubResource("x-marketplace-subject")
-		if mas != nil {
-			managedAppSubject := mas.(map[string]interface{})
-			subjectOrg := managedAppSubject["organizationGUID"]
-			if subjectOrg != nil {
-				consumerOrgGUID = subjectOrg.(string)
-			}
-		}
+	if managedApp == nil {
+		return ""
 	}
+
+	// Lookup Subscription
+	// TODO - Use subject subresource on managed application once model includes it.
+	consumerOrgGUID, _ := util.GetSubResourcePropertyValue(managedApp,
+		defs.XMarketplaceSubject, defs.AttrSubjectOrgGUID)
 	return consumerOrgGUID
 }
 
 func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
-	if managedApp != nil {
-		// Lookup Access Request
-		apiID = strings.TrimPrefix(apiID, "remoteApiId_")
-		accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
-		return accessReq
+	if managedApp == nil {
+		return nil
 	}
-	return nil
+
+	// Lookup Access Request
+	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
+	accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
+	return accessReq
 }
 
 func (c *collector) getSubscriptionFromAccessReq(accessRequest *v1alpha1.AccessRequest) string {
 	// Lookup Access Request
-	if accessRequest != nil {
-		// Lookup Subscription
-		// Temporary using custom subresource, use subscription reference in AccessRequest
-		// TODO - Use subscription reference subresource on AccessRequest once controller starts to populate it.
-		accReqSubresource := accessRequest.GetSubResource("x-marketplace-subscription")
-		if accReqSubresource != nil {
-			accReqSubscriptionDetail := accReqSubresource.(map[string]interface{})
-			subscriptionName := accReqSubscriptionDetail["name"]
-			if subscriptionName != nil {
-				return subscriptionName.(string)
-			}
-		}
+	if accessRequest == nil {
+		return ""
 	}
-	return ""
+	// Lookup Subscription
+	// Temporary using custom subresource, use subscription reference in AccessRequest
+	// TODO - Use subscription reference subresource on AccessRequest once controller starts to populate it.
+	subscriptionName, _ := util.GetSubResourcePropertyValue(accessRequest,
+		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	return subscriptionName
 }
 
 func (c *collector) getSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
 	if accessRequest == nil {
 		return nil
 	}
+
 	subscriptionName := c.getSubscriptionFromAccessReq(accessRequest)
 	subscription := cacheManager.GetSubscriptionByName(subscriptionName)
 	if subscription == nil {

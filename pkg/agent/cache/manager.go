@@ -666,7 +666,9 @@ func (c *cacheManager) DeleteAccessRequest(id string) error {
 
 // Subscription cache related methods - Temporary
 func (c *cacheManager) AddSubscription(resource *v1.ResourceInstance) {
-	c.subscriptionMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+	if resource != nil {
+		c.subscriptionMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+	}
 }
 
 func (c *cacheManager) GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance {

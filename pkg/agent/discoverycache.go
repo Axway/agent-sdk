@@ -284,7 +284,7 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",x-marketplace-subject",
+		apic.FieldsKey: apiServerFields + "," + defs.XMarketplaceSubject,
 	}
 
 	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -314,7 +314,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec,x-marketplace-subscription",
+		apic.FieldsKey: apiServerFields + ",spec," + defs.XMarketplaceSubscription,
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -343,31 +343,29 @@ func (j *discoveryCache) updateAccessRequestCache() {
 func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
 	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
 	// once controller starts to populate it.
-	ars := ar.GetSubResource("x-marketplace-subscription")
-	if ars != nil {
-		arSubscription := ars.(map[string]interface{})
-		propertyVal := arSubscription["name"]
-		if propertyVal == nil {
-			return
-		}
-		subscriptionName := propertyVal.(string)
-		subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
-		if subscription == nil {
-			subscription, err := j.fetchSubscription(subscriptionName)
-			if err == nil {
-				agent.cacheManager.AddSubscription(subscription)
-			}
+	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
+		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	if subscriptionName == "" {
+		return
+	}
+
+	subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
+	if subscription == nil {
+		subscription, err := j.fetchSubscription(subscriptionName)
+		if err == nil {
+			agent.cacheManager.AddSubscription(subscription)
 		}
 	}
 }
 
 func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.ResourceInstance, error) {
-	if subscriptionName != "" {
-		url := fmt.Sprintf(
-			"/catalog/v1alpha1/subscriptions/%s",
-			subscriptionName,
-		)
-		return GetCentralClient().GetResource(url)
+	if subscriptionName == "" {
+		return nil, nil
 	}
-	return nil, nil
+
+	url := fmt.Sprintf(
+		"/catalog/v1alpha1/subscriptions/%s",
+		subscriptionName,
+	)
+	return GetCentralClient().GetResource(url)
 }

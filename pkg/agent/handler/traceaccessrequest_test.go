@@ -43,8 +43,8 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 				},
 			},
 			SubResources: map[string]interface{}{
-				"x-marketplace-subscription": map[string]interface{}{
-					"name": "subscription",
+				defs.XMarketplaceSubscription: map[string]interface{}{
+					defs.AttrSubscriptionName: "subscription",
 				},
 			},
 			Name: "ar",
