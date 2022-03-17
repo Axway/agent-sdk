@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"reflect"
-
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -22,11 +20,7 @@ func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestD
 	if crdRI == nil {
 		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
 	}
-	if reflect.DeepEqual(crdRI.Spec, data.Spec) {
-		err := data.FromInstance(crdRI)
-		return data, err
-	}
-	return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
+	return nil, nil
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
@@ -79,11 +73,7 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 	if ardRI == nil {
 		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
 	}
-	if reflect.DeepEqual(ardRI.Spec, data.Spec) {
-		err := data.FromInstance(ardRI)
-		return data, err
-	}
-	return agent.apicClient.RegisterAccessRequestDefinition(data, true)
+	return nil, nil
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access reqest definition

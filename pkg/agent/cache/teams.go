@@ -77,9 +77,15 @@ func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
 
 // GetAccessControlList gets the Access Control List from the cache
 func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
-	item, err := c.teams.Get(accessControlList)
-	if err != nil {
-		return nil
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	item, _ := c.teams.Get(accessControlList)
+	if item != nil {
+		instance, ok := item.(*v1.ResourceInstance)
+		if ok {
+			return instance
+		}
 	}
-	return item.(*v1.ResourceInstance)
+	return nil
 }

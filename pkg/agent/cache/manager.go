@@ -119,45 +119,29 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	c.cacheFilename = c.getCacheFileName(cfg)
 
-	pRICache := map[string]cache.Cache{
-		"apiServices":         c.apiMap,
-		"apiServiceInstances": c.instanceMap,
-		"categories":          c.categoryMap,
-		"credReqDef":          c.crdMap,
-		"accReqDef":           c.ardMap,
-	}
-
-	pCache := map[string]cache.Cache{
-		"watchSequence": c.sequenceCache,
-		"teamCache":     c.teams,
-	}
-
 	cacheMap := cache.New()
-	err := cacheMap.Load(c.cacheFilename)
-	if err == nil {
-		c.hasLoadedPersistedCache = true
-		c.isCacheUpdated = false
-		for res, _ := range pRICache {
-			if loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, res); isNew {
-				c.hasLoadedPersistedCache = false
-			} else {
-				pRICache[res] = loadedMap
-			}
-		}
-		for res, _ := range pCache {
-			if loadedMap, isNew := c.loadPersistedCache(cacheMap, res); !isNew {
-				c.hasLoadedPersistedCache = false
-			} else {
-				pCache[res] = loadedMap
-			}
-		}
+	cacheMap.Load(c.cacheFilename)
+
+	cacheKeys := map[string]func(cache.Cache){
+		"apiServices":         func(loaded cache.Cache) { c.apiMap = loaded },
+		"apiServiceInstances": func(loaded cache.Cache) { c.instanceMap = loaded },
+		"categories":          func(loaded cache.Cache) { c.categoryMap = loaded },
+		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
+		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
+		"teams":               func(loaded cache.Cache) { c.teams = loaded },
+		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
 	}
 
-	cacheMap.Set("apiServices", c.apiMap)
-	cacheMap.Set("apiServiceInstances", c.instanceMap)
-	cacheMap.Set("categories", c.categoryMap)
-	cacheMap.Set("watchSequence", c.sequenceCache)
-	cacheMap.Set("teams", c.teams)
+	c.hasLoadedPersistedCache = true
+	c.isCacheUpdated = false
+	for key := range cacheKeys {
+		loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, key)
+		if isNew {
+			c.hasLoadedPersistedCache = false
+		}
+		cacheKeys[key](loadedMap)
+	}
+
 	c.persistedCache = cacheMap
 	if util.IsNotTest() {
 		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
@@ -192,9 +176,11 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 		item, _ := riCache.Get(key)
 		rawResource, _ := json.Marshal(item)
 		ri := &v1.ResourceInstance{}
-		json.Unmarshal(rawResource, ri)
-		riCache.Set(key, ri)
+		if json.Unmarshal(rawResource, ri) == nil {
+			riCache.Set(key, ri)
+		}
 	}
+	cacheMap.Set(cacheKey, riCache)
 	return riCache, isNew
 }
 
