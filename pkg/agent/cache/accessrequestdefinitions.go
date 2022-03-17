@@ -8,7 +8,15 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 func (c *cacheManager) AddAccessRequestDefinition(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
-	c.ardMap.Set(resource.Name, resource)
+	c.ardMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+}
+
+// GetAccessRequestDefinitionKeys - returns keys for AccessRequestDefinition cache
+func (c *cacheManager) GetAccessRequestDefinitionKeys() []string {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	return c.ardMap.GetKeys()
 }
 
 // GetAccessRequestDefinitionByName - returns resource from AccessRequestDefinition cache based on resource name
@@ -16,7 +24,7 @@ func (c *cacheManager) GetAccessRequestDefinitionByName(name string) (*v1.Resour
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, err := c.ardMap.Get(name)
+	item, err := c.ardMap.GetBySecondaryKey(name)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
 			return ard, nil
@@ -25,9 +33,23 @@ func (c *cacheManager) GetAccessRequestDefinitionByName(name string) (*v1.Resour
 	return nil, err
 }
 
-// DeleteAccessRequestDefinitionByName - deletes the AccessRequestDefinition cache based on resource name
-func (c *cacheManager) DeleteAccessRequestDefinitionByName(name string) error {
+// GetAccessRequestDefinitionByID - returns resource from AccessRequestDefinition cache based on resource id
+func (c *cacheManager) GetAccessRequestDefinitionByID(id string) (*v1.ResourceInstance, error) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	item, err := c.ardMap.Get(id)
+	if item != nil {
+		if ard, ok := item.(*v1.ResourceInstance); ok {
+			return ard, nil
+		}
+	}
+	return nil, err
+}
+
+// DeleteAccessRequestDefinition - deletes the AccessRequestDefinition cache based on resource id
+func (c *cacheManager) DeleteAccessRequestDefinition(id string) error {
 	defer c.setCacheUpdated(true)
 
-	return c.ardMap.Delete(name)
+	return c.ardMap.Delete(id)
 }

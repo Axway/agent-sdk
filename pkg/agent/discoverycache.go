@@ -13,6 +13,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -38,6 +40,8 @@ type discoveryCache struct {
 	lastServiceTime      time.Time
 	lastInstanceTime     time.Time
 	lastCategoryTime     time.Time
+	lastARDTime          time.Time
+	lastCRDTime          time.Time
 	refreshAll           bool
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
@@ -52,6 +56,8 @@ func newDiscoveryCache(
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
 		lastCategoryTime:     time.Time{},
+		lastARDTime:          time.Time{},
+		lastCRDTime:          time.Time{},
 		refreshAll:           getAll,
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
@@ -89,6 +95,8 @@ func (j *discoveryCache) Execute() error {
 		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 			j.updateAPIServiceInstancesCache()
 			j.updateCategoryCache()
+			j.updateCRDCache()
+			j.updateARDCache()
 		}
 		if j.agentResourceManager != nil {
 			j.agentResourceManager.FetchAgentResource()
@@ -269,6 +277,98 @@ func (j *discoveryCache) updateCategoryCache() {
 		for _, key := range cacheKeys {
 			if _, ok := existingCategories[key]; !ok {
 				agent.cacheManager.DeleteCategory(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateARDCache() {
+	log.Trace("updating access request definition cache")
+
+	// create an empty accessrequestdef to gen url
+	emptyARD := mv1.AccessRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: mv1.AccessRequestDefinitionGVK(),
+		},
+	}
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyARD.GetKindLink())
+
+	// Update cache with published resources
+	existingARDs := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastARDTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastARDTime.Format(apiV1.APIServerTimeFormat),
+		)
+	}
+	ards, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+
+	for _, ard := range ards {
+		// Update the lastARDTime based on the newest category found
+		thisTime := time.Time(ard.Metadata.Audit.CreateTimestamp)
+		if j.lastARDTime.Before(thisTime) {
+			j.lastARDTime = thisTime
+		}
+
+		agent.cacheManager.AddAccessRequestDefinition(ard)
+		existingARDs[ard.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.cacheManager.GetAccessRequestDefinitionKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingARDs[key]; !ok {
+				agent.cacheManager.DeleteAccessRequestDefinition(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateCRDCache() {
+	log.Trace("updating credential request definition cache")
+
+	// create an empty credentialrequestdef to gen url
+	emptyCRD := mv1.CredentialRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: mv1.CredentialRequestDefinitionGVK(),
+		},
+	}
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyCRD.GetKindLink())
+
+	// Update cache with published resources
+	existingCRDs := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastARDTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastARDTime.Format(apiV1.APIServerTimeFormat),
+		)
+	}
+	crds, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+
+	for _, crd := range crds {
+		// Update the lastARDTime based on the newest category found
+		thisTime := time.Time(crd.Metadata.Audit.CreateTimestamp)
+		if j.lastARDTime.Before(thisTime) {
+			j.lastARDTime = thisTime
+		}
+
+		agent.cacheManager.AddCredentialRequestDefinition(crd)
+		existingCRDs[crd.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.cacheManager.GetCredentialRequestDefinitionKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingCRDs[key]; !ok {
+				agent.cacheManager.DeleteCredentialRequestDefinition(key)
 			}
 		}
 	}

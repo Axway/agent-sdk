@@ -59,13 +59,17 @@ type Manager interface {
 
 	// AccessRequestDefintion cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
+	GetAccessRequestDefinitionKeys() []string
 	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
-	DeleteAccessRequestDefinitionByName(name string) error
+	GetAccessRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteAccessRequestDefinition(id string) error
 
 	// CredentialRequestDefintion cache related methods
 	AddCredentialRequestDefinition(resource *v1.ResourceInstance)
+	GetCredentialRequestDefinitionKeys() []string
 	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
-	DeleteCredentialRequestDefinitionByName(name string) error
+	GetCredentialRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteCredentialRequestDefinition(id string) error
 
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)

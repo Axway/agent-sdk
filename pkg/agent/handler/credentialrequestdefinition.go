@@ -29,7 +29,7 @@ func (h *crdHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, reso
 	}
 
 	if action == proto.Event_DELETED {
-		return h.agentCacheManager.DeleteCredentialRequestDefinitionByName(resource.Name)
+		return h.agentCacheManager.DeleteCredentialRequestDefinition(resource.Metadata.ID)
 	}
 
 	return nil

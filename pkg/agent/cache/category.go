@@ -11,8 +11,6 @@ import (
 
 // AddCategory - add/update Category resource in cache
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
 	defer c.setCacheUpdated(true)
 
 	c.categoryMap.SetWithSecondaryKey(resource.Name, fmt.Sprintf("title-%s", resource.Title), resource)

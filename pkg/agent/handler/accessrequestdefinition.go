@@ -29,7 +29,7 @@ func (h *ardHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, reso
 	}
 
 	if action == proto.Event_DELETED {
-		return h.agentCacheManager.DeleteAccessRequestDefinitionByName(resource.Name)
+		return h.agentCacheManager.DeleteAccessRequestDefinition(resource.Metadata.ID)
 	}
 
 	return nil
