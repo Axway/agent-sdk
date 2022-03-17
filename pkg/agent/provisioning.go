@@ -3,6 +3,7 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
@@ -20,7 +21,14 @@ func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestD
 	if crdRI == nil {
 		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
 	}
-	return nil, nil
+	if data.SubResources[definitions.AttrSpecHash] != crdRI.SubResources[definitions.AttrSpecHash] {
+		return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
+	}
+	err := data.FromInstance(crdRI)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
@@ -73,7 +81,14 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 	if ardRI == nil {
 		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
 	}
-	return nil, nil
+	if data.SubResources[definitions.AttrSpecHash] != ardRI.SubResources[definitions.AttrSpecHash] {
+		return agent.apicClient.RegisterAccessRequestDefinition(data, true)
+	}
+	err := data.FromInstance(ardRI)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access reqest definition

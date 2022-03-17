@@ -5,6 +5,8 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
@@ -105,22 +107,27 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
+	spec := v1alpha1.CredentialRequestDefinitionSpec{
+		Schema: c.requestSchema,
+		Provision: &v1alpha1.CredentialRequestDefinitionSpecProvision{
+			Schema: c.provisionSchema,
+		},
+	}
+
+	hashInt, _ := util.ComputeHash(spec)
+
 	crd := &v1alpha1.CredentialRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
 			Title:            c.name,
 			Name:             c.name,
-		},
-		Spec: v1alpha1.CredentialRequestDefinitionSpec{
-			Schema: c.requestSchema,
-			Provision: &v1alpha1.CredentialRequestDefinitionSpecProvision{
-				Schema: c.provisionSchema,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.AttrSpecHash: fmt.Sprint(hashInt),
+				},
 			},
-			Capabilities: &v1alpha1.CredentialRequestDefinitionSpecCapabilities{
-				MaxApplicationCredentials: c.maxAppCreds,
-			},
-			// Webhooks: c.webhooks,
 		},
+		Spec: spec,
 	}
 
 	return c.registerFunc(crd)

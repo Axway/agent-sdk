@@ -5,6 +5,8 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // RegisterAccessRequestDefinition - the function signature used when calling the NewAccessRequestBuilder function
@@ -62,15 +64,24 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.schema, _ = NewSchemaBuilder().Build()
 	}
 
+	spec := v1alpha1.AccessRequestDefinitionSpec{
+		Schema: a.schema,
+	}
+
+	hashInt, _ := util.ComputeHash(spec)
+
 	ard := &v1alpha1.AccessRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
 			Title:            a.name,
 			Name:             a.name,
+			SubResources: map[string]interface{}{
+				definitions.XAgentDetails: map[string]interface{}{
+					definitions.AttrSpecHash: fmt.Sprint(hashInt),
+				},
+			},
 		},
-		Spec: v1alpha1.AccessRequestDefinitionSpec{
-			Schema: a.schema,
-		},
+		Spec: spec,
 	}
 
 	return a.registerFunc(ard)

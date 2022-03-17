@@ -458,7 +458,6 @@ func (c *itemCache) save(thisAction cacheAction) (thisReply cacheReply) {
 	}
 
 	cacheBytes, err := json.Marshal(c)
-	fmt.Println(string(cacheBytes))
 	if err != nil {
 		file.Close()
 		thisReply.err = err
