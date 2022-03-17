@@ -48,8 +48,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
-	log.Debugf("%s event for AccessRequest", action.String())
-
 	ar := &mv1.AccessRequest{}
 	err := ar.FromInstance(resource)
 	if err != nil {
@@ -61,10 +59,12 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	}
 
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
+		log.Tracef("access request handler - processing resource in pending status")
 		return h.onPending(ar)
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
+		log.Tracef("access request handler - processing resource in deleting state")
 		return h.onDeleting(ar)
 	}
 
@@ -83,7 +83,6 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
 	}
 
 	status := h.prov.AccessRequestProvision(req)
-
 	ar.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())

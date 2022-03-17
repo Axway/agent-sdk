@@ -39,8 +39,6 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 		return nil
 	}
 
-	log.Debugf("%s event for ManagedApplication", action.String())
-
 	app := &mv1.ManagedApplication{}
 	err := app.FromInstance(resource)
 	if err != nil {
@@ -58,10 +56,12 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
+		log.Tracef("managed application handler - processing resource in pending status")
 		return h.onPending(app, ma)
 	}
 
 	if ok := shouldProcessDeleting(app.Status.Level, app.Metadata.State, len(app.Finalizers)); ok {
+		log.Tracef("managed application handler - processing resource in deleting state")
 		h.onDeleting(app, ma)
 	}
 

@@ -45,5 +45,5 @@ func shouldProcessDeleting(status, state string, finalizerCount int) bool {
 }
 
 func shouldProcessForTrace(status, state string) bool {
-	return (status == statusSuccess && state != v1.ResourceDeleting)
+	return status == statusSuccess && state != v1.ResourceDeleting
 }

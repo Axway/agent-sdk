@@ -46,8 +46,6 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return nil
 	}
 
-	log.Debugf("%s event for Credential", action.String())
-
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
@@ -59,11 +57,13 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	}
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
+		log.Tracef("credential handler - processing resource in pending status")
 		return h.onPending(cr)
 	}
 
 	// check for deleting state on success status
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
+		log.Tracef("credential handler - processing resource in deleting state")
 		h.onDeleting(cr)
 	}
 
