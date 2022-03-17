@@ -31,8 +31,7 @@ func (h *traceAccessRequestHandler) Handle(action proto.Event_Type, meta *proto.
 	}
 
 	if action == proto.Event_DELETED {
-		h.cache.DeleteAccessRequest(resource.Metadata.ID)
-		return nil
+		return h.cache.DeleteAccessRequest(resource.Metadata.ID)
 	}
 
 	ar := &mv1.AccessRequest{}
