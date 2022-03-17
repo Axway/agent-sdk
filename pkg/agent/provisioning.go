@@ -1,16 +1,31 @@
 package agent
 
 import (
+	"reflect"
+
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+)
+
+const (
+	apikeyARD = "api-key"
+	apikeyCRD = "api-key"
+	oauthCRD  = "oauth"
 )
 
 // credential request definitions
 
 // createOrUpdateCredentialRequestDefinition -
 func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	// TODO - check cache for credential request, update if needed
+	crdRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(data.Name)
+	if crdRI == nil {
+		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
+	}
+	if reflect.DeepEqual(crdRI.Spec, data.Spec) {
+		err := data.FromInstance(crdRI)
+		return data, err
+	}
 	return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
 }
 
@@ -21,9 +36,11 @@ func NewCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
 func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
-	NewAccessRequestBuilder().SetName("api-key").Register()
+	if _, err := agent.cacheManager.GetAccessRequestDefinitionByName(apikeyARD); err != nil {
+		NewAccessRequestBuilder().SetName(apikeyARD).Register()
+	}
 	return NewCredentialRequestBuilder().
-		SetName("api-key").
+		SetName(apikeyCRD).
 		SetProvisionSchema(provisioning.NewSchemaBuilder().
 			AddProperty(
 				provisioning.NewSchemaPropertyBuilder().
@@ -37,7 +54,7 @@ func NewAPIKeyCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 	return NewCredentialRequestBuilder().
-		SetName("oauth").
+		SetName(oauthCRD).
 		SetProvisionSchema(provisioning.NewSchemaBuilder().
 			AddProperty(
 				provisioning.NewSchemaPropertyBuilder().
@@ -58,7 +75,14 @@ func NewOAuthCredentialRequestBuilder() provisioning.CredentialRequestBuilder {
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	// TODO - check cache for access request, update if needed
+	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(data.Name)
+	if ardRI == nil {
+		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
+	}
+	if reflect.DeepEqual(ardRI.Spec, data.Spec) {
+		err := data.FromInstance(ardRI)
+		return data, err
+	}
 	return agent.apicClient.RegisterAccessRequestDefinition(data, true)
 }
 

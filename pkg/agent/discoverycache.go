@@ -289,6 +289,11 @@ func (j *discoveryCache) updateARDCache() {
 	emptyARD := mv1.AccessRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.AccessRequestDefinitionGVK(),
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Name: agent.cfg.GetEnvironmentName(),
+				},
+			},
 		},
 	}
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyARD.GetKindLink())
@@ -335,6 +340,11 @@ func (j *discoveryCache) updateCRDCache() {
 	emptyCRD := mv1.CredentialRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.CredentialRequestDefinitionGVK(),
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Name: agent.cfg.GetEnvironmentName(),
+				},
+			},
 		},
 	}
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyCRD.GetKindLink())
@@ -345,9 +355,9 @@ func (j *discoveryCache) updateCRDCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
-	if !j.lastARDTime.IsZero() && !j.refreshAll {
+	if !j.lastCRDTime.IsZero() && !j.refreshAll {
 		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastARDTime.Format(apiV1.APIServerTimeFormat),
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastCRDTime.Format(apiV1.APIServerTimeFormat),
 		)
 	}
 	crds, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
@@ -355,8 +365,8 @@ func (j *discoveryCache) updateCRDCache() {
 	for _, crd := range crds {
 		// Update the lastARDTime based on the newest category found
 		thisTime := time.Time(crd.Metadata.Audit.CreateTimestamp)
-		if j.lastARDTime.Before(thisTime) {
-			j.lastARDTime = thisTime
+		if j.lastCRDTime.Before(thisTime) {
+			j.lastCRDTime = thisTime
 		}
 
 		agent.cacheManager.AddCredentialRequestDefinition(crd)

@@ -108,6 +108,7 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 	crd := &v1alpha1.CredentialRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
+			Title:            c.name,
 			Name:             c.name,
 		},
 		Spec: v1alpha1.CredentialRequestDefinitionSpec{

@@ -119,16 +119,38 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	c.cacheFilename = c.getCacheFileName(cfg)
 
+	pRICache := map[string]cache.Cache{
+		"apiServices":         c.apiMap,
+		"apiServiceInstances": c.instanceMap,
+		"categories":          c.categoryMap,
+		"credReqDef":          c.crdMap,
+		"accReqDef":           c.ardMap,
+	}
+
+	pCache := map[string]cache.Cache{
+		"watchSequence": c.sequenceCache,
+		"teamCache":     c.teams,
+	}
+
 	cacheMap := cache.New()
 	err := cacheMap.Load(c.cacheFilename)
 	if err == nil {
-		c.apiMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServices")
-		c.instanceMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServiceInstances")
-		c.categoryMap = c.loadPersistedResourceInstanceCache(cacheMap, "categories")
-		c.sequenceCache = c.loadPersistedCache(cacheMap, "watchSequence")
-		c.teams = c.loadPersistedCache(cacheMap, "teamCache")
 		c.hasLoadedPersistedCache = true
 		c.isCacheUpdated = false
+		for res, _ := range pRICache {
+			if loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, res); isNew {
+				c.hasLoadedPersistedCache = false
+			} else {
+				pRICache[res] = loadedMap
+			}
+		}
+		for res, _ := range pCache {
+			if loadedMap, isNew := c.loadPersistedCache(cacheMap, res); !isNew {
+				c.hasLoadedPersistedCache = false
+			} else {
+				pCache[res] = loadedMap
+			}
+		}
 	}
 
 	cacheMap.Set("apiServices", c.apiMap)
@@ -154,17 +176,17 @@ func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
 	return cachePath + "/" + cfg.GetEnvironmentName() + ".cache"
 }
 
-func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) cache.Cache {
+func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) (cache.Cache, bool) {
 	itemCache, _ := cacheMap.Get(key)
 	if itemCache != nil {
 		raw, _ := json.Marshal(itemCache)
-		return cache.LoadFromBuffer(raw)
+		return cache.LoadFromBuffer(raw), false
 	}
-	return cache.New()
+	return cache.New(), true
 }
 
-func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, cacheKey string) cache.Cache {
-	riCache := c.loadPersistedCache(cacheMap, cacheKey)
+func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, cacheKey string) (cache.Cache, bool) {
+	riCache, isNew := c.loadPersistedCache(cacheMap, cacheKey)
 	keys := riCache.GetKeys()
 	for _, key := range keys {
 		item, _ := riCache.Get(key)
@@ -173,7 +195,7 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 		json.Unmarshal(rawResource, ri)
 		riCache.Set(key, ri)
 	}
-	return riCache
+	return riCache, isNew
 }
 
 func (c *cacheManager) setCacheUpdated(updated bool) {

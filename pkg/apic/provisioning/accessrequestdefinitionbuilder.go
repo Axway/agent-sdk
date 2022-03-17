@@ -66,6 +66,7 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
 			Title:            a.name,
+			Name:             a.name,
 		},
 		Spec: v1alpha1.AccessRequestDefinitionSpec{
 			Schema: a.schema,
