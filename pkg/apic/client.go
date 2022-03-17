@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -785,45 +786,82 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 	return ri, err
 }
 
+// updateORCreateResourceInstance
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance, update bool) (*apiv1.ResourceInstance, error) {
+	// default to post
+	url := fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetKindLink())
+	method := coreapi.POST
+
+	if update {
+		// get the existing RI and update it
+		url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
+		method = coreapi.PUT
+
+		response, err := c.ExecuteAPI(coreapi.GET, url, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		existingRI := &apiv1.ResourceInstance{}
+		err = json.Unmarshal(response, existingRI)
+		if err != nil {
+			return nil, err
+		}
+
+		if reflect.DeepEqual(existingRI.Spec, data.Spec) {
+			return existingRI, nil
+		}
+
+		// Update the spec from the data sent in
+		existingRI.Spec = data.Spec
+		data = existingRI
+	}
+
+	reqBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.ExecuteAPI(method, url, nil, reqBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newRI := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(response, newRI)
+
+	return newRI, err
+}
+
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
 func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error) {
-	crdBytes, err := json.Marshal(data)
+	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
+	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/credentialrequestdefinitions")
-
-	response, err := c.ExecuteAPI(coreapi.POST, url, nil, crdBytes)
+	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
 	if err != nil {
 		return nil, err
 	}
 
-	newCRD := &mv1a.CredentialRequestDefinition{}
-	err = json.Unmarshal(response, newCRD)
-
-	return newCRD, err
+	err = data.FromInstance(ri)
+	return data, err
 }
 
 // RegisterAccessRequestDefinition - Adds or updates a access request definition
 func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error) {
-	ardBytes, err := json.Marshal(data)
+	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
+	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
-
-	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
+	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
 	if err != nil {
 		return nil, err
 	}
 
-	newARD := &mv1a.AccessRequestDefinition{}
-	err = json.Unmarshal(response, newARD)
-	if err != nil {
-		return nil, err
-	}
-
-	return newARD, nil
+	err = data.FromInstance(ri)
+	return data, err
 }

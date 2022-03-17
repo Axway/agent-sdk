@@ -31,6 +31,7 @@ const (
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"
 	AttrCreatedBy                    = "createdBy"
+	AttrSpecHash                     = "specHash"
 
 	XMarketplaceSubject = "x-marketplace-subject"
 	AttrSubjectOrgGUID  = "organizationGUID"

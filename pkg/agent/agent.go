@@ -409,6 +409,8 @@ func startStreamMode(agent agentData) error {
 		handler.NewInstanceHandler(agent.cacheManager),
 		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		handler.NewCRDHandler(agent.cacheManager),
+		handler.NewARDHandler(agent.cacheManager),
 		agent.proxyResourceHandler,
 	}
 

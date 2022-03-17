@@ -276,3 +276,74 @@ func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual 
 	assert.Equal(t, expected.Spec, actual.Spec)
 	assert.Equal(t, expected.SubResources, actual.SubResources)
 }
+
+func createRequestDefinition(name, id string) *v1.ResourceInstance {
+	return &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name: name,
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+		},
+	}
+}
+
+func TestAccessRequestDefinitionCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	ard1 := createRequestDefinition("name1", "id1")
+	ard2 := createRequestDefinition("name2", "id2")
+
+	m.AddAccessRequestDefinition(ard1)
+	m.AddAccessRequestDefinition(ard2)
+
+	cachedARD, err := m.GetAccessRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+	assert.Equal(t, ard1, cachedARD)
+
+	cachedARD, err = m.GetAccessRequestDefinitionByID("id1")
+	assert.Nil(t, err)
+	assert.Equal(t, ard1, cachedARD)
+
+	err = m.DeleteAccessRequestDefinition("id1")
+	assert.Nil(t, err)
+
+	cachedARD, err = m.GetAccessRequestDefinitionByName("name1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedARD)
+
+	cachedARD, err = m.GetAccessRequestDefinitionByID("id1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedARD)
+}
+
+func TestCredentialRequestDefinitionCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	crd1 := createRequestDefinition("name1", "id1")
+	crd2 := createRequestDefinition("name2", "id2")
+
+	m.AddCredentialRequestDefinition(crd1)
+	m.AddCredentialRequestDefinition(crd2)
+
+	cachedCRD, err := m.GetCredentialRequestDefinitionByName("name1")
+	assert.Nil(t, err)
+	assert.Equal(t, crd1, cachedCRD)
+
+	cachedCRD, err = m.GetCredentialRequestDefinitionByID("id1")
+	assert.Nil(t, err)
+	assert.Equal(t, crd1, cachedCRD)
+
+	err = m.DeleteCredentialRequestDefinition("id1")
+	assert.Nil(t, err)
+
+	cachedCRD, err = m.GetCredentialRequestDefinitionByName("name1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedCRD)
+
+	cachedCRD, err = m.GetCredentialRequestDefinitionByName("id1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedCRD)
+}
