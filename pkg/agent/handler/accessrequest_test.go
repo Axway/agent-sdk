@@ -118,15 +118,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			references: accessReq.Metadata.References,
 		},
 		{
-			name:       "should deprovision when receiving a delete event",
-			provType:   deprovision,
-			hasError:   false,
-			action:     proto.Event_DELETED,
-			state:      deprovision,
-			status:     statusPending,
-			references: accessReq.Metadata.References,
-		},
-		{
 			name:     "should return nil when the event is for subresources",
 			hasError: false,
 			action:   proto.Event_SUBRESOURCEUPDATED,

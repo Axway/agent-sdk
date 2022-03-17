@@ -58,75 +58,75 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 		return nil
 	}
 
-	if ok := shouldProcess(cr.Status.Level, cr.Metadata.State); !ok {
-		return nil
-	}
-
-	app, err := h.getManagedApp(cr)
-	if err != nil {
-		return err
-	}
-
-	crd, err := h.getCRD(cr)
-	if err != nil {
-		return err
-	}
-
-	creds := newProvCreds(cr, util.GetAgentDetails(app))
-
-	if action == proto.Event_DELETED {
-		h.prov.CredentialDeprovision(creds)
-		return nil
-	}
-
-	var status prov.RequestStatus
-	var credentialData prov.Credential
-
-	if cr.Status.Level == statusPending {
-		status, credentialData = h.prov.CredentialProvision(creds)
-		sec := app.Spec.Security
-		enc, err := util.NewEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
-		if err != nil {
-			status = prov.NewRequestStatusBuilder().SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).Failed()
-		} else {
-			if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
-				props, ok := schemaProps.(map[string]interface{})
-				if !ok {
-					props = make(map[string]interface{})
-				}
-				cr.Data = h.encrypt(enc, props, credentialData.GetData())
-			}
-		}
-
-		cr.Status = prov.NewStatusReason(status)
-
-		details := util.MergeMapStringString(util.GetAgentDetailStrings(cr), status.GetProperties())
-		util.SetAgentDetails(cr, util.MapStringStringToMapStringInterface(details))
-
-		h.client.UpdateResourceFinalizer(resource, crFinalizer, "", true)
-
-		err = h.client.CreateSubResourceScoped(
-			cr.ResourceMeta,
-			map[string]interface{}{
-				defs.XAgentDetails: util.GetAgentDetails(cr),
-				"status":           cr.Status,
-				"data":             cr.Data,
-			},
-		)
-
-		return err
+	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
+		return h.onPending(cr)
 	}
 
 	// check for deleting state on success status
-	if cr.Status.Level == statusSuccess && cr.Metadata.State == v1.ResourceDeleting {
-		status = h.prov.CredentialDeprovision(creds)
-
-		if status.GetStatus() == prov.Success {
-			h.client.UpdateResourceFinalizer(resource, crFinalizer, "", false)
-		}
+	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
+		h.onDeleting(cr)
 	}
 
 	return nil
+}
+
+func (h *credentials) onPending(cred *mv1.Credential) error {
+	app, err := h.getManagedApp(cred)
+	if err != nil {
+		return err
+	}
+
+	crd, err := h.getCRD(cred)
+	if err != nil {
+		return err
+	}
+
+	provCreds := newProvCreds(cred, util.GetAgentDetails(app))
+	status, credentialData := h.prov.CredentialProvision(provCreds)
+
+	sec := app.Spec.Security
+	enc, err := util.NewEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
+
+	if err != nil {
+		status = prov.NewRequestStatusBuilder().
+			SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
+			Failed()
+	} else {
+		if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
+			props, ok := schemaProps.(map[string]interface{})
+			if !ok {
+				props = make(map[string]interface{})
+			}
+			cred.Data = h.encrypt(enc, props, credentialData.GetData())
+		}
+	}
+
+	cred.Status = prov.NewStatusReason(status)
+
+	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
+	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
+
+	ri, _ := cred.AsInstance()
+	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+
+	return h.client.CreateSubResourceScoped(
+		cred.ResourceMeta,
+		map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(cred),
+			"status":           cred.Status,
+			"data":             cred.Data,
+		},
+	)
+}
+
+func (h *credentials) onDeleting(cred *mv1.Credential) {
+	provCreds := newProvCreds(cred, map[string]interface{}{})
+	status := h.prov.CredentialDeprovision(provCreds)
+
+	if status.GetStatus() == prov.Success {
+		ri, _ := cred.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+	}
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {

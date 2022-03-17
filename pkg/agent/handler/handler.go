@@ -28,15 +28,18 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 }
 
 func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
-	if meta != nil {
-		return (action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status")
-	}
-	return false
-}
-
-func shouldProcess(status, state string) bool {
-	if status != statusPending && !(status == statusSuccess && state == v1.ResourceDeleting) {
+	if meta == nil {
 		return false
 	}
-	return true
+	return action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status"
+}
+
+// shouldProcessPending returns true when the resource is pending, and is not in a deleting state
+func shouldProcessPending(status, state string) bool {
+	return status == statusPending && state != v1.ResourceDeleting
+}
+
+// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers
+func shouldProcessDeleting(status, state string, finalizerCount int) bool {
+	return status == statusSuccess && state == v1.ResourceDeleting && finalizerCount > 0
 }

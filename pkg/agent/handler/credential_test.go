@@ -114,13 +114,6 @@ func TestCredentialHandler(t *testing.T) {
 			status:   statusPending,
 		},
 		{
-			name:     "should deprovision when a delete event is received",
-			hasError: false,
-			action:   proto.Event_DELETED,
-			provType: deprovision,
-			status:   statusPending,
-		},
-		{
 			name:     "should return nil when the Credential status is set to Error",
 			hasError: false,
 			action:   proto.Event_CREATED,

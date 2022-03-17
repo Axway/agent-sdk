@@ -60,10 +60,18 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return nil
 	}
 
-	if ok := shouldProcess(ar.Status.Level, ar.Metadata.State); !ok {
-		return nil
+	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
+		return h.onPending(ar)
 	}
 
+	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
+		return h.onDeleting(ar)
+	}
+
+	return nil
+}
+
+func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
 	app, err := h.getManagedApp(ar)
 	if err != nil {
 		return err
@@ -74,43 +82,39 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 		return err
 	}
 
-	if action == proto.Event_DELETED {
-		h.prov.AccessRequestDeprovision(req)
-		return nil
+	status := h.prov.AccessRequestProvision(req)
+
+	ar.Status = prov.NewStatusReason(status)
+
+	details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())
+	util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
+
+	// add a finalizer
+	ri, _ := ar.AsInstance()
+	h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+
+	return h.client.CreateSubResourceScoped(
+		ar.ResourceMeta,
+		map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(ar),
+			"status":           ar.Status,
+		},
+	)
+}
+
+func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) error {
+	req, err := h.newReq(ar, map[string]interface{}{})
+	if err != nil {
+		return err
+	}
+	status := h.prov.AccessRequestDeprovision(req)
+
+	ri, _ := ar.AsInstance()
+	if status.GetStatus() == prov.Success {
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 	}
 
-	var status prov.RequestStatus
-
-	if ar.Status.Level == statusPending {
-		status = h.prov.AccessRequestProvision(req)
-
-		ar.Status = prov.NewStatusReason(status)
-
-		details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())
-		util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
-
-		// add a finalizer
-		h.client.UpdateResourceFinalizer(resource, arFinalizer, "", true)
-
-		err = h.client.CreateSubResourceScoped(
-			ar.ResourceMeta,
-			map[string]interface{}{
-				defs.XAgentDetails: util.GetAgentDetails(ar),
-				"status":           ar.Status,
-			},
-		)
-	}
-
-	// check for deleting state on success status
-	if ar.Status.Level == statusSuccess && ar.Metadata.State == v1.ResourceDeleting {
-		status = h.prov.AccessRequestDeprovision(req)
-
-		if status.GetStatus() == prov.Success {
-			h.client.UpdateResourceFinalizer(resource, arFinalizer, "", false)
-		}
-	}
-
-	return err
+	return nil
 }
 
 func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
