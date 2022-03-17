@@ -414,8 +414,7 @@ func startStreamMode(agent agentData) error {
 
 	// Register managed application and access handler for traceability agent
 	// For discovery agent, the handlers gets registered while setting up provisioner
-	agentType := agent.cfg.GetAgentType()
-	if agentType == config.TraceabilityAgent {
+	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
 		handlers = append(handlers, handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
 		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
 	}
