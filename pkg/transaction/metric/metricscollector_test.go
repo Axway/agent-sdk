@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/paths"
@@ -34,6 +37,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
 	usgCfg.Publish = true
 	usgCfg.PublishMetric = true
+	usgCfg.PublishSubscriptionMetric = true
 	return cfg
 }
 
@@ -114,6 +118,66 @@ func cleanUpReportfiles() {
 	os.RemoveAll("./reports")
 }
 
+func createRI(id, name string, subRes map[string]interface{}) *v1.ResourceInstance {
+	return &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+			SubResources: subRes,
+			Name:         name,
+		},
+	}
+}
+
+func createAPIServiceInstance(id, name string, apiID string) *v1.ResourceInstance {
+	sub := map[string]interface{}{
+		defs.XAgentDetails: map[string]interface{}{
+			defs.AttrExternalAPIID: apiID,
+		},
+	}
+	return createRI(id, name, sub)
+}
+
+func createManagedApplication(id, name, consumerOrgGUID string) *v1.ResourceInstance {
+	var subjectSubRes map[string]interface{}
+	if consumerOrgGUID != "" {
+		subjectSubRes = map[string]interface{}{
+			defs.XMarketplaceSubject: map[string]interface{}{
+				defs.AttrSubjectOrgGUID: consumerOrgGUID,
+			},
+		}
+	}
+	return createRI(id, name, subjectSubRes)
+}
+
+func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *mv1.AccessRequest {
+	subscriptionSubRes := map[string]interface{}{
+		defs.XMarketplaceSubscription: map[string]interface{}{
+			defs.AttrSubscriptionName: subscriptionName,
+		},
+	}
+	return &mv1.AccessRequest{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: id,
+				References: []v1.Reference{
+					{
+						ID:   instanceID,
+						Name: instanceName,
+					},
+				},
+			},
+			SubResources: subscriptionSubRes,
+			Name:         name,
+		},
+		Spec: mv1.AccessRequestSpec{
+			ManagedApplication: appName,
+			ApiServiceInstance: instanceName,
+		},
+	}
+}
+
 func TestMetricCollector(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
@@ -127,6 +191,18 @@ func TestMetricCollector(t *testing.T) {
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
+
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+
+	cm.AddSubscription(createRI("sub-1", "subscription-1", nil))
+	cm.AddSubscription(createRI("sub-2", "subscription-2", nil))
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
@@ -142,7 +218,21 @@ func TestMetricCollector(t *testing.T) {
 		trackVolume               bool
 		expectedTransactionVolume []int
 		expectedMetricEventsAcked int
+		appName                   string
 	}{
+		// Success case with no app detail
+		{
+			name:                      "WithLighthouse",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
+		},
 		// Success case
 		{
 			name:                      "WithLighthouse",
@@ -154,7 +244,22 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1,
+			expectedMetricEventsAcked: 2, // API metric + Provider subscription metric
+			appName:                   "managed-app-1",
+		},
+		// Success case with consumer metric event
+		{
+			name:                      "WithLighthouse",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 3, // API metric + Provider + Consumer subscription metric
+			appName:                   "managed-app-2",
 		},
 		// Success case with no usage report
 		{
@@ -180,7 +285,8 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
-			expectedMetricEventsAcked: 1,
+			expectedMetricEventsAcked: 2,
+			appName:                   "unknown",
 		},
 		// Success case, retry metrics
 		{
@@ -193,7 +299,8 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 1,
+			expectedMetricEventsAcked: 2,
+			appName:                   "unknown",
 		},
 		// Retry limit hit
 		{
@@ -216,7 +323,17 @@ func TestMetricCollector(t *testing.T) {
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
-					metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
+					metricDetail := Detail{
+						APIDetails: APIDetails{"111", "111", 1, teamID, ""},
+						StatusCode: "200",
+						Duration:   10,
+						Bytes:      10,
+						AppDetails: AppDetails{
+							ID:   "111",
+							Name: test.appName,
+						},
+					}
+					metricCollector.AddMetricDetail(metricDetail)
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				metricCollector.Execute()
@@ -263,12 +380,12 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 10, 10, "")
 			metricCollector.Execute()
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 10, 10, "")
 
 			// No event generation/publish, store the cache
 			metricCollector.storage.save()
@@ -284,11 +401,11 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "200", 10, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 10, 10, "")
 
 			metricCollector.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
@@ -398,7 +515,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			reportGenerator := metricCollector.reports.(*cacheOfflineReport)
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123"}, "200", 10, 10, "")
+					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123", ""}, "200", 10, 10, "")
 				}
 				metricCollector.Execute()
 				testLoops++

@@ -28,7 +28,7 @@ func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogr
 	cme := &CondorMetricEvent{
 		Message:   string(metricData),
 		Fields:    make(map[string]interface{}),
-		Timestamp: metricEvent.Data.StartTime,
+		Timestamp: metricEvent.Data.GetStartTime(),
 		ID:        metricEvent.ID,
 	}
 	event, err := cme.CreateEvent()

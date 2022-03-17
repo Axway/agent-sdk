@@ -342,6 +342,14 @@ func GetAPICache() cache.Cache {
 	return agent.cacheManager.GetAPIServiceCache()
 }
 
+// GetCacheManager - Returns the cache
+func GetCacheManager() agentcache.Manager {
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
+	}
+	return agent.cacheManager
+}
+
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
 	if agent.agentResourceManager == nil {
@@ -402,6 +410,13 @@ func startStreamMode(agent agentData) error {
 		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		agent.proxyResourceHandler,
+	}
+
+	// Register managed application and access handler for traceability agent
+	// For discovery agent, the handlers gets registered while setting up provisioner
+	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
+		handlers = append(handlers, handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
+		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
 	}
 
 	cs, err := stream.NewStreamer(

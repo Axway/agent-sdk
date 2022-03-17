@@ -25,7 +25,7 @@ func GetAgentDetails(h handler) map[string]interface{} {
 		return nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(defs.XAgentDetails, item)
 	if err != nil {
 		return nil
 	}
@@ -53,19 +53,27 @@ func GetAgentDetailStrings(h handler) map[string]string {
 // Returns errors if unable to perform type conversion.
 // Returns an empty string if the value does not exist, or if there is an error.
 func GetAgentDetailsValue(h handler, key string) (string, error) {
-	item := h.GetSubResource(defs.XAgentDetails)
+	return GetSubResourcePropertyValue(h, defs.XAgentDetails, key)
+}
+
+// GetSubResourcePropertyValue gets a single string value fom the specified sub resource.
+// Returns nil for error if specified does not exist.
+// Returns errors if unable to perform type conversion.
+// Returns an empty string if the value does not exist, or if there is an error.
+func GetSubResourcePropertyValue(h handler, subRes, key string) (string, error) {
+	item := h.GetSubResource(subRes)
 	if item == nil {
 		return "", nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(subRes, item)
 	if err != nil {
 		return "", err
 	}
 
 	item, ok := sub[key]
 	if !ok {
-		return "", fmt.Errorf("key %s not found in %s", key, defs.XAgentDetails)
+		return "", fmt.Errorf("key %s not found in %s", key, subRes)
 	}
 
 	switch v := item.(type) {
@@ -76,7 +84,7 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 	default:
 		return "", fmt.Errorf(
 			"%s keys should be a string or int. Received type %T for key %s",
-			defs.XAgentDetails,
+			subRes,
 			v,
 			key,
 		)
@@ -92,7 +100,7 @@ func SetAgentDetailsKey(h handler, key, value string) error {
 		return nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(defs.XAgentDetails, item)
 	if err != nil {
 		return err
 	}
@@ -108,14 +116,14 @@ func SetAgentDetails(h handler, details map[string]interface{}) {
 	h.SetSubResource(defs.XAgentDetails, details)
 }
 
-func convert(item interface{}) (map[string]interface{}, error) {
+func convert(subResName string, item interface{}) (map[string]interface{}, error) {
 	switch v := item.(type) {
 	case map[string]interface{}:
 		return v, nil
 	default:
 		return nil, fmt.Errorf(
 			"unable to convert %s to type 'AgentDetails'. Received type %T",
-			defs.XAgentDetails,
+			subResName,
 			item,
 		)
 	}
