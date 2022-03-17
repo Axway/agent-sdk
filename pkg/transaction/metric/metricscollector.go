@@ -207,7 +207,7 @@ func (c *collector) updateUsage(count int64) {
 }
 
 func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
-	if !c.usageConfig.CanPublishMetric() {
+	if !c.usageConfig.CanPublishSubscriptionMetric() {
 		return // no need to update metrics with publish off
 	}
 
@@ -483,7 +483,7 @@ func (c *collector) generateAppMetricEvent(histogram metrics.Histogram, subscrip
 	c.generateAppV4Event(histogram, subscriptionStatusMetric, c.orgGUID)
 
 	// Generate app subscription metric for consumer
-	if subscriptionStatusMetric.Subscription.ConsumerOrgGUID != "" {
+	if subscriptionStatusMetric.Subscription.ConsumerOrgGUID != "" && subscriptionStatusMetric.Subscription.ConsumerOrgGUID != c.orgGUID {
 		c.generateAppV4Event(histogram, subscriptionStatusMetric, subscriptionStatusMetric.Subscription.ConsumerOrgGUID)
 	}
 }
