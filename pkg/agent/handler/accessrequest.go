@@ -32,7 +32,7 @@ type accessRequestHandler struct {
 	prov      arProvisioner
 	cache     agentcache.Manager
 	agentType config.AgentType
-	client
+	client    client
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
