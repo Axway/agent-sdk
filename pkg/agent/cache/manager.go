@@ -7,6 +7,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -75,6 +76,26 @@ type Manager interface {
 	AddSequence(watchTopicName string, sequenceID int64)
 	GetSequence(watchTopicName string) int64
 
+	// ManagedApplication cache related methods
+	GetManagedApplicationCacheKeys() []string
+	AddManagedApplication(resource *v1.ResourceInstance)
+	GetManagedApplication(id string) *v1.ResourceInstance
+	GetManagedApplicationByName(name string) *v1.ResourceInstance
+	DeleteManagedApplication(id string) error
+
+	// AccessRequest cache related methods
+	GetAccessRequestCacheKeys() []string
+	AddAccessRequest(resource *mv1.AccessRequest)
+	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest
+	GetAccessRequest(id string) *mv1.AccessRequest
+	DeleteAccessRequest(id string) error
+
+	// Subscription cache related methods
+	AddSubscription(resource *v1.ResourceInstance)
+	GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance
+	GetSubscription(id string) *v1.ResourceInstance
+	DeleteSubscription(id string) error
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -84,6 +105,9 @@ type cacheManager struct {
 	apiMap                  cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
+	managedApplicationMap   cache.Cache
+	accessRequestMap        cache.Cache
+	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
@@ -99,14 +123,17 @@ type cacheManager struct {
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	m := &cacheManager{
-		apiMap:         cache.New(),
-		instanceMap:    cache.New(),
-		categoryMap:    cache.New(),
-		sequenceCache:  cache.New(),
-		teams:          cache.New(),
-		ardMap:         cache.New(),
-		crdMap:         cache.New(),
-		isCacheUpdated: false,
+		apiMap:                cache.New(),
+		instanceMap:           cache.New(),
+		categoryMap:           cache.New(),
+		managedApplicationMap: cache.New(),
+		accessRequestMap:      cache.New(),
+		subscriptionMap:       cache.New(),
+		sequenceCache:         cache.New(),
+		teams:                 cache.New(),
+		ardMap:                cache.New(),
+		crdMap:                cache.New(),
+		isCacheUpdated:        false,
 	}
 
 	if cfg.IsUsingGRPC() && persistCache {
@@ -129,6 +156,9 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
 		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
 		"teams":               func(loaded cache.Cache) { c.teams = loaded },
+		"managedApp":          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
+		"subscriptions":       func(loaded cache.Cache) { c.subscriptionMap = loaded },
+		"accReq":              func(loaded cache.Cache) { c.accessRequestMap = loaded },
 		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
 	}
 

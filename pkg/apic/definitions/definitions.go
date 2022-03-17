@@ -31,4 +31,10 @@ const (
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"
 	AttrCreatedBy                    = "createdBy"
+
+	XMarketplaceSubject = "x-marketplace-subject"
+	AttrSubjectOrgGUID  = "organizationGUID"
+
+	XMarketplaceSubscription = "x-marketplace-subscription"
+	AttrSubscriptionName     = "name"
 )

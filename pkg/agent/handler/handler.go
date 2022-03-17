@@ -40,3 +40,7 @@ func shouldProcess(status, state string) bool {
 	}
 	return true
 }
+
+func shouldProcessForTrace(status, state string) bool {
+	return (status == statusSuccess && state != v1.ResourceDeleting)
+}

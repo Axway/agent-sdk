@@ -30,11 +30,18 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	}
 }
 
-func createAPIServiceInstance(id string) *v1.ResourceInstance {
+func createAPIServiceInstance(id, apiID, stage string) *v1.ResourceInstance {
+	sub := map[string]interface{}{
+		defs.AttrExternalAPIID:    apiID,
+		defs.AttrExternalAPIStage: stage,
+	}
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
+			},
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: sub,
 			},
 		},
 	}
@@ -45,6 +52,17 @@ func createCategory(name, title string) *v1.ResourceInstance {
 		ResourceMeta: v1.ResourceMeta{
 			Name:  name,
 			Title: title,
+		},
+	}
+}
+
+func createRI(id, name string) *v1.ResourceInstance {
+	return &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+			Name: name,
 		},
 	}
 }
@@ -120,10 +138,10 @@ func TestAPIServiceCache(t *testing.T) {
 func TestAPIServiceInstanceCache(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
-	assert.Equal(t, []string{}, m.GetAPIServiceKeys())
+	assert.Equal(t, []string{}, m.GetAPIServiceInstanceKeys())
 
-	instance1 := createAPIServiceInstance("id1")
-	instance2 := createAPIServiceInstance("id2")
+	instance1 := createAPIServiceInstance("id1", "apiID1", "stage1")
+	instance2 := createAPIServiceInstance("id2", "apiID2", "stage2")
 
 	m.AddAPIServiceInstance(instance1)
 	m.AddAPIServiceInstance(instance2)
@@ -211,7 +229,7 @@ func TestCachePersistenc(t *testing.T) {
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
 
-	instance1 := createAPIServiceInstance("id1")
+	instance1 := createAPIServiceInstance("id1", "apiID", "stage")
 	m.AddAPIServiceInstance(instance1)
 
 	category1 := createCategory("c1", "category 1")

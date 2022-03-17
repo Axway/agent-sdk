@@ -82,6 +82,7 @@ type SummaryBuilder interface {
 	SetProduct(id, version string) SummaryBuilder
 	SetTeam(teamID string) SummaryBuilder
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
+	SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
 	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
@@ -473,6 +474,10 @@ func (b *transactionSummaryBuilder) SetTeam(teamID string) SummaryBuilder {
 }
 
 func (b *transactionSummaryBuilder) SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder {
+	return b.SetProxyWithStage(proxyID, proxyName, "", proxyRevision)
+}
+
+func (b *transactionSummaryBuilder) SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -483,6 +488,7 @@ func (b *transactionSummaryBuilder) SetProxy(proxyID, proxyName string, proxyRev
 		ID:       proxyID,
 		Revision: proxyRevision,
 		Name:     proxyName,
+		Stage:    proxyStage,
 	}
 	return b
 }
