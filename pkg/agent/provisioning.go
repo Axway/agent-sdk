@@ -70,14 +70,13 @@ func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 // RegisterProvisioner - allow the agent to register a provisioner
 func RegisterProvisioner(provisioner provisioning.Provisioning) {
 	agent.provisioner = provisioner
-	agentType := agent.cfg.GetAgentType()
 	agent.proxyResourceHandler.RegisterTargetHandler(
 		"accessrequesthandler",
-		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agentType),
+		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
 	)
 	agent.proxyResourceHandler.RegisterTargetHandler(
 		"managedappHandler",
-		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agentType),
+		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
 	)
 	agent.proxyResourceHandler.RegisterTargetHandler(
 		"credentialHandler",

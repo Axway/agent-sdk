@@ -6,7 +6,6 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -20,28 +19,22 @@ type managedAppProvision interface {
 }
 
 type managedApplication struct {
-	prov      managedAppProvision
-	cache     agentcache.Manager
-	agentType config.AgentType
-	client    client
+	prov   managedAppProvision
+	cache  agentcache.Manager
+	client client
 }
 
 // NewManagedApplicationHandler creates a Handler for Access Requests
-func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Manager, client client, agentType config.AgentType) Handler {
+func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Manager, client client) Handler {
 	return &managedApplication{
-		prov:      prov,
-		cache:     cache,
-		agentType: agentType,
-		client:    client,
+		prov:   prov,
+		cache:  cache,
+		client: client,
 	}
 }
 
 // Handle processes grpc events triggered for ManagedApplications
 func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if h.agentType == config.TraceabilityAgent {
-		return h.handleForTrace(action, meta, resource)
-	}
-
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
@@ -99,36 +92,6 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	return err
-}
-
-func (h *managedApplication) handleForTrace(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind {
-		return nil
-	}
-
-	if action == proto.Event_DELETED {
-		h.cache.DeleteManagedApplication(resource.Metadata.ID)
-		return nil
-	}
-
-	app := &mv1.ManagedApplication{}
-	err := app.FromInstance(resource)
-	if err != nil {
-		return err
-	}
-
-	ok := isStatusFound(app.Status)
-	if !ok {
-		return nil
-	}
-
-	if app.Status.Level == statusSuccess && app.Metadata.State != v1.ResourceDeleting {
-		cachedApp := h.cache.GetManagedApplication(resource.Metadata.ID)
-		if cachedApp == nil {
-			h.cache.AddManagedApplication(resource)
-		}
-	}
-	return nil
 }
 
 func (h *managedApplication) getTeamName(owner *v1.Owner) string {

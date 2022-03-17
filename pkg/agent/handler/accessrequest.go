@@ -8,7 +8,6 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -29,27 +28,22 @@ type arProvisioner interface {
 }
 
 type accessRequestHandler struct {
-	prov      arProvisioner
-	cache     agentcache.Manager
-	agentType config.AgentType
-	client    client
+	prov   arProvisioner
+	cache  agentcache.Manager
+	client client
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, agentType config.AgentType) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client) Handler {
 	return &accessRequestHandler{
-		prov:      prov,
-		cache:     cache,
-		agentType: agentType,
-		client:    client,
+		prov:   prov,
+		cache:  cache,
+		client: client,
 	}
 }
 
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if h.agentType == config.TraceabilityAgent {
-		return h.handleForTrace(action, meta, resource)
-	}
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
@@ -119,37 +113,6 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	return err
 }
 
-func (h *accessRequestHandler) handleForTrace(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != mv1.AccessRequestGVK().Kind {
-		return nil
-	}
-
-	if action == proto.Event_DELETED {
-		h.cache.DeleteAccessRequest(resource.Metadata.ID)
-		return nil
-	}
-
-	ar := &mv1.AccessRequest{}
-	err := ar.FromInstance(resource)
-	if err != nil {
-		return err
-	}
-
-	ok := isStatusFound(ar.Status)
-	if !ok {
-		return nil
-	}
-
-	if ar.Status.Level == statusSuccess && ar.Metadata.State != v1.ResourceDeleting {
-		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
-		if cachedAccessReq == nil {
-			h.cache.AddAccessRequest(ar)
-			h.addSubscription(ar)
-		}
-	}
-	return nil
-}
-
 func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
 	url := fmt.Sprintf(
 		"/management/v1alpha1/environments/%s/managedapplications/%s",
@@ -157,38 +120,6 @@ func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.Resourc
 		ar.Spec.ManagedApplication,
 	)
 	return h.client.GetResource(url)
-}
-
-func (h *accessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
-	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
-	// once controller starts to populate it.
-	ars := ar.GetSubResource("x-marketplace-subscription")
-	if ars != nil {
-		arSubscription := ars.(map[string]interface{})
-		propertyVal := arSubscription["name"]
-		if propertyVal == nil {
-			return
-		}
-		subscriptionName := propertyVal.(string)
-		subscription := h.cache.GetSubscriptionByName(subscriptionName)
-		if subscription == nil {
-			subscription, err := h.fetchSubscription(subscriptionName)
-			if err == nil {
-				h.cache.AddSubscription(subscription)
-			}
-		}
-	}
-}
-
-func (h *accessRequestHandler) fetchSubscription(subscriptionName string) (*v1.ResourceInstance, error) {
-	if subscriptionName != "" {
-		url := fmt.Sprintf(
-			"/catalog/v1alpha1/subscriptions/%s",
-			subscriptionName,
-		)
-		return h.client.GetResource(url)
-	}
-	return nil, nil
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {

@@ -134,7 +134,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			if tc.teamName != "" {
 				cm.AddTeam(team)
 			}
-			handler := NewManagedApplicationHandler(p, cm, c, config.DiscoveryAgent)
+			handler := NewManagedApplicationHandler(p, cm, c)
 
 			ri, _ := app.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
@@ -152,7 +152,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	p := &mockManagedAppProv{}
-	handler := NewManagedApplicationHandler(p, cm, c, config.DiscoveryAgent)
+	handler := NewManagedApplicationHandler(p, cm, c)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),
@@ -172,59 +172,6 @@ func Test_managedApp(t *testing.T) {
 	assert.Equal(t, m.managedAppName, m.GetManagedApplicationName())
 	assert.Equal(t, m.teamName, m.GetTeamName())
 	assert.Equal(t, m.data["abc"].(string), m.GetApplicationDetailsValue("abc"))
-}
-
-func TestManagedApplicationTraceHandler_wrong_kind(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewManagedApplicationHandler(nil, cm, c, config.TraceabilityAgent)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
-		},
-	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-}
-
-func TestManagedApplicationTraceHandler(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewManagedApplicationHandler(nil, cm, c, config.TraceabilityAgent)
-	managedApp := &mv1.ManagedApplication{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				ID: "appId",
-			},
-			Name: "appName",
-		},
-	}
-
-	ri, _ := managedApp.AsInstance()
-	// no status
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
-
-	managedApp.Status = &v1.ResourceStatus{
-		Level: "Success",
-	}
-
-	ri, _ = managedApp.AsInstance()
-
-	err = handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-	cachedApp := cm.GetManagedApplication("appId")
-	assert.NotNil(t, cachedApp)
-
-	cachedApp = cm.GetManagedApplicationByName("appName")
-	assert.NotNil(t, cachedApp)
-
-	err = handler.Handle(proto.Event_DELETED, nil, ri)
-	assert.Nil(t, err)
-
-	cachedApp = cm.GetManagedApplication("appId")
-	assert.Nil(t, cachedApp)
 }
 
 type mockManagedAppProv struct {

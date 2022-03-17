@@ -228,7 +228,7 @@ func TestAccessRequestHandler(t *testing.T) {
 					},
 				},
 			}
-			handler := NewAccessRequestHandler(arp, cm, c, config.DiscoveryAgent)
+			handler := NewAccessRequestHandler(arp, cm, c)
 
 			ri, _ := ar.AsInstance()
 
@@ -246,7 +246,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	ar := &mockARProvision{}
-	handler := NewAccessRequestHandler(ar, cm, c, config.DiscoveryAgent)
+	handler := NewAccessRequestHandler(ar, cm, c)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),
@@ -277,113 +277,6 @@ func Test_arReq(t *testing.T) {
 	r.appDetails = nil
 	assert.Empty(t, r.GetApplicationDetailsValue("app_details_key"))
 	assert.Empty(t, r.GetAccessRequestDetailsValue("access_details_key"))
-}
-
-func TestAccessRequestTraceHandler_wrong_kind(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewAccessRequestHandler(nil, cm, c, config.TraceabilityAgent)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
-		},
-	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-}
-
-func TestAccessRequestTraceHandler(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewAccessRequestHandler(nil, cm, c, config.TraceabilityAgent)
-	ar := &mv1.AccessRequest{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.AccessRequestGVK(),
-			Metadata: v1.Metadata{
-				ID: "ar",
-				References: []v1.Reference{
-					{
-						ID:   "instanceId",
-						Name: "instance",
-						Kind: "APIServiceInstance",
-					},
-				},
-			},
-			SubResources: map[string]interface{}{
-				"x-marketplace-subscription": map[string]interface{}{
-					"name": "subscription",
-				},
-			},
-			Name: "ar",
-		},
-		Spec: mv1.AccessRequestSpec{
-			ManagedApplication: "app",
-			ApiServiceInstance: "instance",
-		},
-	}
-	ri, _ := ar.AsInstance()
-
-	// no status
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
-
-	ar.Status = &v1.ResourceStatus{
-		Level: "Success",
-	}
-	ri, _ = ar.AsInstance()
-
-	inst := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				ID: "instanceId",
-			},
-			Name: "instance",
-			SubResources: map[string]interface{}{
-				defs.XAgentDetails: map[string]interface{}{
-					defs.AttrExternalAPIID: "api",
-				},
-			},
-		},
-	}
-	cm.AddAPIServiceInstance(inst)
-
-	managedApp := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				ID: "app",
-			},
-			Name: "app",
-		},
-	}
-	cm.AddManagedApplication(managedApp)
-
-	c.getRI = &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				ID: "subscription",
-			},
-			Name: "subscription",
-		},
-	}
-
-	err = handler.Handle(proto.Event_CREATED, nil, ri)
-	assert.Nil(t, err)
-	cachedAR := cm.GetAccessRequest("ar")
-	assert.NotNil(t, cachedAR)
-
-	cachedAR = cm.GetAccessRequestByAppAndAPI("app", "api", "")
-	assert.NotNil(t, cachedAR)
-
-	cachedRI := cm.GetSubscription("subscription")
-	assert.NotNil(t, cachedRI)
-
-	err = handler.Handle(proto.Event_DELETED, nil, ri)
-	assert.Nil(t, err)
-
-	cachedAR = cm.GetAccessRequest("ar")
-	assert.Nil(t, cachedAR)
-
 }
 
 type mockClient struct {
