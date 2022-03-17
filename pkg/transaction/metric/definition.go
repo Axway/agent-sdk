@@ -146,7 +146,6 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
-	Key  string `json:"-"`
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
