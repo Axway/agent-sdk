@@ -8,6 +8,7 @@ var now = time.Now
 const (
 	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
+	subscriptionMetricEvent = "subscription.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
 	metricFlow              = "api-central-metric"
@@ -18,6 +19,16 @@ const (
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
 )
+
+// Detail - holds the details for computing metrics
+// for API and consumer subscriptions
+type Detail struct {
+	APIDetails APIDetails
+	StatusCode string
+	Duration   int64
+	Bytes      int64
+	AppDetails AppDetails
+}
 
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
@@ -38,6 +49,7 @@ type APIDetails struct {
 	Name     string `json:"name"`
 	Revision int    `json:"revision"`
 	TeamID   string `json:"teamId"`
+	Stage    string `json:"-"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions
@@ -49,6 +61,37 @@ type APIMetric struct {
 	Response    ResponseMetrics    `json:"response"`
 	Observation ObservationDetails `json:"observation"`
 	StartTime   time.Time          `json:"-"`
+}
+
+// GetStartTime - Returns the start time for API metric
+func (a *APIMetric) GetStartTime() time.Time {
+	return a.StartTime
+}
+
+// GetType - Returns APIMetric
+func (a *APIMetric) GetType() string {
+	return "APIMetric"
+}
+
+// SubscriptionMetric - struct to hold metric aggregated for subscription,application,api,statuscode
+type SubscriptionMetric struct {
+	Subscription SubscriptionDetails `json:"subscription"`
+	StatusCode   string              `json:"statusCode"`
+	Status       string              `json:"status"`
+	Count        int64               `json:"count"`
+	Response     ResponseMetrics     `json:"response"`
+	Observation  ObservationDetails  `json:"observation"`
+	StartTime    time.Time           `json:"-"`
+}
+
+// GetStartTime - Returns the start time for subscription metric
+func (a *SubscriptionMetric) GetStartTime() time.Time {
+	return a.StartTime
+}
+
+// GetType - Returns SubscriptionMetric
+func (a *SubscriptionMetric) GetType() string {
+	return "SubscriptionMetric"
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
@@ -66,6 +109,12 @@ type V4EventDistribution struct {
 	Version     string `json:"version"`
 }
 
+// V4Data - Interface for representing the metric data
+type V4Data interface {
+	GetStartTime() time.Time
+	GetType() string
+}
+
 // V4Event - represents V7 event
 type V4Event struct {
 	ID           string               `json:"id"`
@@ -74,7 +123,7 @@ type V4Event struct {
 	App          string               `json:"app"` // ORG GUID
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
-	Data         *APIMetric           `json:"data"`
+	Data         V4Data               `json:"data"`
 }
 
 // LighthouseUsageReport -Lighthouse Usage report
@@ -99,6 +148,18 @@ type LighthouseUsageEvent struct {
 type AppDetails struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// SubscriptionDetails - struct for subscription metric detail
+type SubscriptionDetails struct {
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	AppID              string `json:"appId"`
+	AppName            string `json:"appName"`
+	ConsumerOrgGUID    string `json:"-"`
+	APIID              string `json:"apiId"`
+	APIName            string `json:"apiName"`
+	APIServiceInstance string `json:"apiServiceInstance"`
 }
 
 // Data - struct for data to report as API Metrics

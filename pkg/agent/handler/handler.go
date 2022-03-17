@@ -43,3 +43,7 @@ func shouldProcessPending(status, state string) bool {
 func shouldProcessDeleting(status, state string, finalizerCount int) bool {
 	return status == statusSuccess && state == v1.ResourceDeleting && finalizerCount > 0
 }
+
+func shouldProcessForTrace(status, state string) bool {
+	return (status == statusSuccess && state != v1.ResourceDeleting)
+}

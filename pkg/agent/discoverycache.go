@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -86,10 +87,16 @@ func (j *discoveryCache) Execute() error {
 	}
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-			j.updateAPIServiceInstancesCache()
+		j.updateAPIServiceInstancesCache()
+
+		switch agent.cfg.GetAgentType() {
+		case config.DiscoveryAgent:
 			j.updateCategoryCache()
+		case config.TraceabilityAgent:
+			j.updateManagedApplicationCache()
+			j.updateAccessRequestCache()
 		}
+
 		if j.agentResourceManager != nil {
 			j.agentResourceManager.FetchAgentResource()
 		}
@@ -272,4 +279,97 @@ func (j *discoveryCache) updateCategoryCache() {
 			}
 		}
 	}
+}
+
+func (j *discoveryCache) updateManagedApplicationCache() {
+	log.Trace("updating managed application cache")
+
+	// Update cache with published resources
+	// TODO - Remove custom subresource and include subject subresource when added to model
+	existingManagedApplications := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + "," + defs.XMarketplaceSubject,
+	}
+
+	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/managedapplications", apiServerPageSize,
+	)
+
+	for _, managedApp := range managedApps {
+		agent.cacheManager.AddManagedApplication(managedApp)
+		existingManagedApplications[managedApp.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove managed applications that no longer exist
+		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingManagedApplications[key]; !ok {
+				agent.cacheManager.DeleteManagedApplication(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateAccessRequestCache() {
+	log.Trace("updating access request cache")
+
+	// Update cache with published resources
+	// TODO - Remove custom subresource and include references
+	existingAccessRequests := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + ",spec," + defs.XMarketplaceSubscription,
+	}
+
+	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/accessrequests", apiServerPageSize,
+	)
+
+	for _, accessRequest := range accessRequests {
+		ar := &mv1.AccessRequest{}
+		ar.FromInstance(accessRequest)
+		agent.cacheManager.AddAccessRequest(ar)
+		existingAccessRequests[accessRequest.Metadata.ID] = true
+		j.addSubscription(ar)
+	}
+
+	if j.refreshAll {
+		// Remove access requests that no longer exist
+		cacheKeys := agent.cacheManager.GetAccessRequestCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingAccessRequests[key]; !ok {
+				agent.cacheManager.DeleteAccessRequest(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
+	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
+	// once controller starts to populate it.
+	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
+		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	if subscriptionName == "" {
+		return
+	}
+
+	subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
+	if subscription == nil {
+		subscription, err := j.fetchSubscription(subscriptionName)
+		if err == nil {
+			agent.cacheManager.AddSubscription(subscription)
+		}
+	}
+}
+
+func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.ResourceInstance, error) {
+	if subscriptionName == "" {
+		return nil, nil
+	}
+
+	url := fmt.Sprintf(
+		"/catalog/v1alpha1/subscriptions/%s",
+		subscriptionName,
+	)
+	return GetCentralClient().GetResource(url)
 }
