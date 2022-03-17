@@ -7,7 +7,6 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,27 +63,6 @@ func createRI(id, name string) *v1.ResourceInstance {
 				ID: id,
 			},
 			Name: name,
-		},
-	}
-}
-
-func createAccessRequest(id, name, appName, instanceID, instanceName string) *mv1.AccessRequest {
-	return &mv1.AccessRequest{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				ID: id,
-				References: []v1.Reference{
-					{
-						ID:   instanceID,
-						Name: instanceName,
-					},
-				},
-			},
-			Name: name,
-		},
-		Spec: mv1.AccessRequestSpec{
-			ManagedApplication: appName,
-			ApiServiceInstance: instanceName,
 		},
 	}
 }
@@ -221,120 +199,6 @@ func TestCategoryCache(t *testing.T) {
 	assert.Nil(t, cachedCategory)
 
 	err = m.DeleteCategory("c1")
-	assert.NotNil(t, err)
-}
-
-// add managed application
-// get managed application by id
-// get managed application by name
-// delete managed application
-func TestManagedApplicationCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	assert.NotNil(t, m)
-
-	assert.Equal(t, []string{}, m.GetManagedApplicationCacheKeys())
-
-	app1 := createRI("m1", "app-1")
-	app2 := createRI("m2", "app-2")
-
-	m.AddManagedApplication(app1)
-	assert.ElementsMatch(t, []string{"m1"}, m.GetManagedApplicationCacheKeys())
-	m.AddManagedApplication(app2)
-	assert.ElementsMatch(t, []string{"m1", "m2"}, m.GetManagedApplicationCacheKeys())
-
-	cachedApp := m.GetManagedApplication("m1")
-	assert.Equal(t, app1, cachedApp)
-
-	cachedApp = m.GetManagedApplicationByName("app-2")
-	assert.Equal(t, app2, cachedApp)
-
-	err := m.DeleteManagedApplication("m1")
-	assert.Nil(t, err)
-	assert.ElementsMatch(t, []string{"m2"}, m.GetManagedApplicationCacheKeys())
-
-	cachedApp = m.GetManagedApplication("m1")
-	assert.Nil(t, cachedApp)
-
-	err = m.DeleteManagedApplication("m1")
-	assert.NotNil(t, err)
-}
-
-// add access request
-// get access request by id
-// get access request by app name and api id
-// delete access request
-func TestAccessRequestCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	assert.NotNil(t, m)
-
-	cachedAccessReq := m.GetAccessRequest("ac1")
-	assert.Nil(t, cachedAccessReq)
-	instance1 := createAPIServiceInstance("inst-1", "testAPI", "")
-	instance2 := createAPIServiceInstance("inst-2", "testAPI", "testStage")
-	m.AddAPIServiceInstance(instance1)
-	m.AddAPIServiceInstance(instance2)
-
-	accReq1 := createAccessRequest("ac1", "access-request-1", "app1", "inst-1", "inst-1")
-	accReq2 := createAccessRequest("ac2", "access-request-2", "app2", "inst-2", "inst-2")
-
-	m.AddAccessRequest(accReq1)
-	m.AddAccessRequest(accReq2)
-
-	cachedAccessReq = m.GetAccessRequest("ac1")
-	assert.Equal(t, accReq1, cachedAccessReq)
-
-	cachedAccessReq = m.GetAccessRequestByAppAndAPI("app1", "testAPI", "")
-	assert.Equal(t, accReq1, cachedAccessReq)
-
-	cachedAccessReq = m.GetAccessRequestByAppAndAPI("app2", "testAPI", "testStage")
-	assert.Equal(t, accReq2, cachedAccessReq)
-
-	err := m.DeleteAccessRequest("ac1")
-	assert.Nil(t, err)
-
-	cachedAccessReq = m.GetAccessRequest("ac1")
-	assert.Nil(t, cachedAccessReq)
-
-	cachedAccessReq = m.GetAccessRequest("ac2")
-	assert.NotNil(t, cachedAccessReq)
-
-	err = m.DeleteAccessRequest("ac1")
-	assert.NotNil(t, err)
-}
-
-// add subscription
-// get subscription by id
-// get subscription by name
-// delete subscription
-func TestSubscriptionCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	assert.NotNil(t, m)
-
-	cachedSubscription := m.GetSubscription("s1")
-	assert.Nil(t, cachedSubscription)
-
-	subscription1 := createRI("s1", "subscription-1")
-	subscription2 := createRI("s2", "subscription-2")
-
-	m.AddSubscription(subscription1)
-	m.AddSubscription(subscription2)
-
-	cachedApp := m.GetSubscription("s1")
-	assert.Equal(t, subscription1, cachedApp)
-
-	cachedApp = m.GetSubscriptionByName("subscription-2")
-	assert.Equal(t, subscription2, cachedApp)
-
-	err := m.DeleteSubscription("s1")
-	assert.Nil(t, err)
-
-	cachedApp = m.GetSubscription("s1")
-	assert.Nil(t, cachedApp)
-
-	cachedApp = m.GetSubscription("s2")
-	assert.NotNil(t, cachedApp)
-
-	err = m.DeleteSubscription("s1")
 	assert.NotNil(t, err)
 }
 
