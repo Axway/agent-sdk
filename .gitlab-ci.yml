@@ -17,6 +17,7 @@ variables:
 
   # Whitesource
   WS_PROJECT_ID: "APIC_Agents_SDK"
+  WS_BRANCH: main
 
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
@@ -107,7 +108,7 @@ trigger-azure-discovery-agent:
   stage: security-scans
   only:
     refs:
-      - xxxx
+      - xxxxx
   script:
     - ""
 
@@ -116,6 +117,10 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .dummy
+  # For some reason, twistlock always wants to run on branch pipelines unless this "only" section is here
+  only:
+    refs:
+      - xxxxx
 
 twistlock:on-schedule:
   extends: .dummy
