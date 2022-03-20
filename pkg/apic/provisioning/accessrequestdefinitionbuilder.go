@@ -14,6 +14,7 @@ type RegisterAccessRequestDefinition func(accessRequestDefinition *v1alpha1.Acce
 
 type accessRequestDef struct {
 	name         string
+	title        string
 	schema       map[string]interface{}
 	registerFunc RegisterAccessRequestDefinition
 	err          error
@@ -22,6 +23,7 @@ type accessRequestDef struct {
 // AccessRequestBuilder - aids in creating a new access request
 type AccessRequestBuilder interface {
 	SetName(name string) AccessRequestBuilder
+	SetTitle(title string) AccessRequestBuilder
 	SetSchema(schema SchemaBuilder) AccessRequestBuilder
 	Register() (*v1alpha1.AccessRequestDefinition, error)
 }
@@ -35,7 +37,17 @@ func NewAccessRequestBuilder(registerFunc RegisterAccessRequestDefinition) Acces
 
 // SetName - set the name of the access request
 func (a *accessRequestDef) SetName(name string) AccessRequestBuilder {
+	if a.title == "" {
+		a.title = name
+	}
+
 	a.name = name
+	return a
+}
+
+// SetTitle - set the title of the access request
+func (a *accessRequestDef) SetTitle(title string) AccessRequestBuilder {
+	a.title = title
 	return a
 }
 
@@ -64,6 +76,10 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.schema, _ = NewSchemaBuilder().Build()
 	}
 
+	if a.title == "" {
+		a.title = a.name
+	}
+
 	spec := v1alpha1.AccessRequestDefinitionSpec{
 		Schema: a.schema,
 	}
@@ -73,8 +89,8 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 	ard := &v1alpha1.AccessRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
-			Title:            a.name,
 			Name:             a.name,
+			Title:            a.title,
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{
 					definitions.AttrSpecHash: fmt.Sprint(hashInt),

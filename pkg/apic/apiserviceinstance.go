@@ -89,40 +89,8 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	return instance
 }
 
-func (c *ServiceClient) createOrUpdateAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
-	// TODO - check cache for access request, update if needed
-	ardBytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf(c.cfg.GetEnvironmentURL() + "/accessrequestdefinitions")
-
-	response, err := c.ExecuteAPI(coreapi.POST, url, nil, ardBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	newARD := &mv1a.AccessRequestDefinition{}
-	err = json.Unmarshal(response, newARD)
-	if err != nil {
-		return nil, err
-	}
-
-	return newARD, nil
-}
-
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
-	if serviceBody.accessRequestDefinition != nil {
-		// check if a new AccessRequestDefinition is needed
-		newARD, err := c.createOrUpdateAccessRequestDefinition(serviceBody.accessRequestDefinition)
-		if err != nil {
-			return err
-		}
-		serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
-	}
-
 	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err

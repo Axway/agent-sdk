@@ -118,6 +118,20 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
+		if serviceBody.GetAccessRequestDefintion() != nil {
+			newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefintion())
+			if err != nil {
+				return err
+			}
+			serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
+			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
+			if !agent.cfg.IsUsingGRPC() {
+				ard, err := newARD.AsInstance()
+				if err == nil {
+					agent.cacheManager.AddAccessRequestDefinition(ard)
+				}
+			}
+		}
 		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())

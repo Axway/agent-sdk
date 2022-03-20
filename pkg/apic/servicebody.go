@@ -99,6 +99,10 @@ func (s *ServiceBody) setAccessRequestDefintion(accessRequestDefinition *mv1a.Ac
 	return s.accessRequestDefinition, nil
 }
 
+func (s *ServiceBody) GetAccessRequestDefintion() *mv1a.AccessRequestDefinition {
+	return s.accessRequestDefinition
+}
+
 func (s *ServiceBody) createAccessRequestDefintion() error {
 	oauthScopes := make([]string, 0)
 	for scope := range s.GetScopes() {
@@ -106,7 +110,7 @@ func (s *ServiceBody) createAccessRequestDefintion() error {
 	}
 	if len(oauthScopes) > 0 {
 		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefintion).
-			SetName(s.NameToPush).
+			SetTitle(s.NameToPush).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
