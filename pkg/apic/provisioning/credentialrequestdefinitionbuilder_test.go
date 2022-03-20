@@ -46,7 +46,6 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 							NewSchemaPropertyBuilder().
 								SetName("prop").
 								IsString())).
-				SetMaxApplicationCredentials(1).
 				SetWebhooks([]string{"webhook1", "webhook2"}).
 				AddWebhook("webhook3")
 
