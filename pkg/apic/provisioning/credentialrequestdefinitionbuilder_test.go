@@ -25,7 +25,11 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
 			registerFunc := func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-				// TODO - validate that the credentialRequestDefinition is built properly
+				assert.NotNil(t, credentialRequestDefinition)
+				assert.Len(t, credentialRequestDefinition.Spec.Provision.Schema["properties"], 1)
+				assert.Len(t, credentialRequestDefinition.Spec.Schema["properties"], 1)
+				assert.NotNil(t, credentialRequestDefinition.Spec.Provision.Schema["properties"].(map[string]interface{})["prop"])
+				assert.NotNil(t, credentialRequestDefinition.Spec.Schema["properties"].(map[string]interface{})["prop"])
 				registerFuncCalled = true
 				return nil, nil
 			}
