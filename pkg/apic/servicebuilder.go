@@ -307,15 +307,17 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 
 		// get the apikey info
 		b.serviceBody.apiKeyInfo = val.getAPIKeyInfo()
-		if len(b.serviceBody.apiKeyInfo) > 0 && b.serviceBody.ardName == "" {
-			b.serviceBody.ardName = "api-key"
-		}
 
 		// get oauth scopes
 		b.serviceBody.scopes = val.getOAuthScopes()
 
 		// only set ard name based on spec if not already set
 		if b.serviceBody.ardName == "" {
+			if len(b.serviceBody.apiKeyInfo) > 0 {
+				b.serviceBody.ardName = "api-key"
+			}
+
+			// if the spec has api key and oauth use the oauth ard
 			err := b.serviceBody.createAccessRequestDefintion()
 			if err != nil {
 				return b.serviceBody, err
