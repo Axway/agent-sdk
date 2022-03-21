@@ -60,7 +60,8 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
 		log.Tracef("access request handler - processing resource in pending status")
-		return h.onPending(ar)
+		ar := h.onPending(ar)
+		return h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
@@ -71,15 +72,17 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
+func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessRequest {
 	app, err := h.getManagedApp(ar)
 	if err != nil {
-		return err
+		h.onError(ar, err)
+		return ar
 	}
 
 	req, err := h.newReq(ar, util.GetAgentDetails(app))
 	if err != nil {
-		return err
+		h.onError(ar, err)
+		return ar
 	}
 
 	status := h.prov.AccessRequestProvision(req)
@@ -92,15 +95,25 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
 	ri, _ := ar.AsInstance()
 	h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
 
-	return h.client.CreateSubResourceScoped(
-		ar.ResourceMeta,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(ar),
-			"status":           ar.Status,
-		},
-	)
+	ar.ResourceMeta.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(ar),
+		"status":           ar.Status,
+	}
+
+	return ar
 }
 
+// onError updates the AccessRequest with an error status
+func (h *accessRequestHandler) onError(ar *mv1.AccessRequest, err error) {
+	ps := prov.NewRequestStatusBuilder()
+	status := ps.SetMessage(err.Error()).Failed()
+	ar.Status = prov.NewStatusReason(status)
+	ar.SubResources = map[string]interface{}{
+		"status": ar.Status,
+	}
+}
+
+// onDeleting deprovisions an access request and removes the finalizer
 func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) error {
 	req, err := h.newReq(ar, map[string]interface{}{})
 	if err != nil {

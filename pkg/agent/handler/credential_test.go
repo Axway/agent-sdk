@@ -460,12 +460,14 @@ func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, er
 }
 
 func (m credClient) CreateSubResourceScoped(_ v1.ResourceMeta, subs map[string]interface{}) error {
+	// TODO: assert status is correct
 	status := subs["status"].(*v1.ResourceStatus)
 	assert.Equal(m.t, m.expectedStatus.String(), status.Level)
 	return m.subError
 }
 
 func (m credClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string, _ bool) (*v1.ResourceInstance, error) {
+	// TODO: assert finalizer is correct for provision/deprovision
 	return nil, nil
 }
 
