@@ -159,9 +159,17 @@ func (p *oas3SpecProcessor) parseAuthInfo() {
 			})
 		case oasSecurityOauth:
 			authPolicies = append(authPolicies, Oauth)
-			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.ClientCredentials.Scopes)
-			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.Implicit.Scopes)
-			scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.AuthorizationCode.Scopes)
+			if scheme.Value.Flows != nil {
+				if scheme.Value.Flows.ClientCredentials != nil {
+					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.ClientCredentials.Scopes)
+				}
+				if scheme.Value.Flows.Implicit != nil {
+					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.Implicit.Scopes)
+				}
+				if scheme.Value.Flows.AuthorizationCode != nil {
+					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.AuthorizationCode.Scopes)
+				}
+			}
 		}
 	}
 	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)

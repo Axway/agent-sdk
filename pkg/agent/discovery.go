@@ -118,20 +118,12 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		if serviceBody.GetAccessRequestDefintion() != nil {
-			newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefintion())
-			if err != nil {
-				return err
-			}
-			serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
-			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
-			if !agent.cfg.IsUsingGRPC() {
-				ard, err := newARD.AsInstance()
-				if err == nil {
-					agent.cacheManager.AddAccessRequestDefinition(ard)
-				}
-			}
+		// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
+		accReqDef, err := publishAccessRequestDefinition(&serviceBody)
+		if err != nil {
+			return err
 		}
+
 		ret, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
@@ -146,10 +138,33 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 				}
 			}
 		} else {
+			if accReqDef != nil {
+				// rollback the access request definition if an error was hit publishing the linked service
+				agent.apicClient.DeleteResourceInstance(accReqDef)
+			}
 			return err
 		}
 	}
 	return nil
+}
+
+func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.ResourceInstance, error) {
+	if serviceBody.GetAccessRequestDefintion() != nil {
+		newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefintion())
+		if err == nil && newARD != nil {
+			serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
+
+			ard, err := newARD.AsInstance()
+			if err == nil {
+				if !agent.cfg.IsUsingGRPC() {
+					agent.cacheManager.AddAccessRequestDefinition(ard)
+				}
+			}
+			return ard, err
+		}
+		return nil, err
+	}
+	return nil, nil
 }
 
 // RegisterAPIValidator - Registers callback for validating the API on gateway
