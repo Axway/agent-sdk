@@ -99,6 +99,7 @@ func (s *ServiceBody) setAccessRequestDefintion(accessRequestDefinition *mv1a.Ac
 	return s.accessRequestDefinition, nil
 }
 
+// GetAccessRequestDefintion -
 func (s *ServiceBody) GetAccessRequestDefintion() *mv1a.AccessRequestDefinition {
 	return s.accessRequestDefinition
 }
