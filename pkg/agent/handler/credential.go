@@ -26,17 +26,21 @@ type credProv interface {
 type encryptFunc func(enc util.Encryptor, schema, data map[string]interface{}) map[string]interface{}
 
 type credentials struct {
-	prov    credProv
-	client  client
-	encrypt encryptFunc
+	prov        credProv
+	client      client
+	encrypt     encryptFunc
+	encryptFunc newEncryptFunc
 }
+
+type newEncryptFunc func(key, alg, hash string) (util.Encryptor, error)
 
 // NewCredentialHandler creates a Handler for Credentials
 func NewCredentialHandler(prov credProv, client client) Handler {
 	return &credentials{
-		prov:    prov,
-		client:  client,
-		encrypt: encryptMap,
+		prov:        prov,
+		client:      client,
+		encrypt:     encryptMap,
+		encryptFunc: util.NewEncryptor,
 	}
 }
 
@@ -85,14 +89,15 @@ func (h *credentials) onPending(cred *mv1.Credential) error {
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
 	sec := app.Spec.Security
-	enc, err := util.NewEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
-	if err != nil {
-		status = prov.NewRequestStatusBuilder().
-			SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
-			Failed()
-	}
 
 	if status.GetStatus() == prov.Success {
+		enc, err := h.encryptFunc(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
+		if err != nil {
+			status = prov.NewRequestStatusBuilder().
+				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
+				Failed()
+		}
+
 		if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
 			props, ok := schemaProps.(map[string]interface{})
 			if !ok {

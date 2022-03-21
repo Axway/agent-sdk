@@ -54,7 +54,9 @@ func TestCredentialHandler(t *testing.T) {
 		Spec: mv1.CredentialRequestDefinitionSpec{
 			Schema: nil,
 			Provision: &mv1.CredentialRequestDefinitionSpecProvision{
-				Schema: map[string]interface{}{},
+				Schema: map[string]interface{}{
+					"properties": map[string]interface{}{},
+				},
 			},
 			Capabilities: nil,
 			Webhooks:     nil,
@@ -186,16 +188,21 @@ func TestCredentialHandler(t *testing.T) {
 			}
 
 			c := &credClient{
-				managedApp: mApp,
-				crd:        crdRI,
-				getAppErr:  tc.getAppErr,
-				getCrdErr:  tc.getCrdErr,
-				createErr:  tc.createErr,
-				subError:   tc.subError,
+				t:              t,
+				expectedStatus: prov.Success,
+				managedApp:     mApp,
+				crd:            crdRI,
+				getAppErr:      tc.getAppErr,
+				getCrdErr:      tc.getCrdErr,
+				createErr:      tc.createErr,
+				subError:       tc.subError,
 			}
 
 			handler := NewCredentialHandler(p, c)
 			v := handler.(*credentials)
+			v.encryptFunc = func(key, alg, hash string) (util.Encryptor, error) {
+				return &mockEncryptor{}, nil
+			}
 			v.encrypt = func(_ util.Encryptor, _, data map[string]interface{}) map[string]interface{} {
 				return data
 			}
@@ -425,13 +432,15 @@ func Test_encrypt(t *testing.T) {
 }
 
 type credClient struct {
-	managedApp *v1.ResourceInstance
-	crd        *v1.ResourceInstance
-	getAppErr  error
-	getCrdErr  error
-	createErr  error
-	updateErr  error
-	subError   error
+	managedApp     *v1.ResourceInstance
+	crd            *v1.ResourceInstance
+	getAppErr      error
+	getCrdErr      error
+	createErr      error
+	updateErr      error
+	subError       error
+	expectedStatus prov.Status
+	t              *testing.T
 }
 
 func (m credClient) GetResource(url string) (*v1.ResourceInstance, error) {
@@ -453,7 +462,9 @@ func (m credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, er
 	return nil, m.updateErr
 }
 
-func (m credClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m credClient) CreateSubResourceScoped(_ v1.ResourceMeta, subs map[string]interface{}) error {
+	status := subs["status"].(*v1.ResourceStatus)
+	assert.Equal(m.t, m.expectedStatus.String(), status.Level)
 	return m.subError
 }
 
@@ -511,4 +522,11 @@ func newKeyPair() (public string, private string, err error) {
 	}
 
 	return pubKeyBuff.String(), privBuff.String(), nil
+}
+
+type mockEncryptor struct {
+}
+
+func (m mockEncryptor) Encrypt(str string) (string, error) {
+	return "abc", nil
 }
