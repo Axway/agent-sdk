@@ -200,11 +200,8 @@ func TestCredentialHandler(t *testing.T) {
 
 			handler := NewCredentialHandler(p, c)
 			v := handler.(*credentials)
-			v.encryptFunc = func(key, alg, hash string) (util.Encryptor, error) {
-				return &mockEncryptor{}, nil
-			}
-			v.encrypt = func(_ util.Encryptor, _, data map[string]interface{}) map[string]interface{} {
-				return data
+			v.encryptSchema = func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
 			}
 
 			ri, _ := cred.AsInstance()

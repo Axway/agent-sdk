@@ -23,24 +23,21 @@ type credProv interface {
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
 }
 
-type encryptFunc func(enc util.Encryptor, schema, data map[string]interface{}) map[string]interface{}
-
 type credentials struct {
-	prov        credProv
-	client      client
-	encrypt     encryptFunc
-	encryptFunc newEncryptFunc
+	prov          credProv
+	client        client
+	encryptSchema encryptSchemaFunc
 }
 
-type newEncryptFunc func(key, alg, hash string) (util.Encryptor, error)
+// encryptSchemaFunc func signature for encryptSchema
+type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
 func NewCredentialHandler(prov credProv, client client) Handler {
 	return &credentials{
-		prov:        prov,
-		client:      client,
-		encrypt:     encryptMap,
-		encryptFunc: util.NewEncryptor,
+		prov:          prov,
+		client:        client,
+		encryptSchema: encryptSchema,
 	}
 }
 
@@ -91,19 +88,18 @@ func (h *credentials) onPending(cred *mv1.Credential) error {
 	sec := app.Spec.Security
 
 	if status.GetStatus() == prov.Success {
-		enc, err := h.encryptFunc(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
+		data, err := h.encryptSchema(
+			crd.Spec.Provision.Schema,
+			credentialData.GetData(),
+			sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+		)
+
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().
 				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
 				Failed()
-		}
-
-		if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
-			props, ok := schemaProps.(map[string]interface{})
-			if !ok {
-				props = make(map[string]interface{})
-			}
-			cred.Data = h.encrypt(enc, props, credentialData.GetData())
+		} else {
+			cred.Data = data
 		}
 	}
 
@@ -238,4 +234,27 @@ func (c provCreds) GetApplicationDetailsValue(key string) string {
 	}
 
 	return util.ToString(c.appDetails[key])
+}
+
+// encryptSchema schema is the json schema. credData is the data that contains data to encrypt based on the key, alg and hash.
+func encryptSchema(
+	schema, credData map[string]interface{}, key, alg, hash string,
+) (map[string]interface{}, error) {
+	enc, err := util.NewEncryptor(key, alg, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	schemaProps, ok := schema["properties"]
+	if !ok {
+		return nil, fmt.Errorf("properties field not found on schema")
+	}
+
+	props, ok := schemaProps.(map[string]interface{})
+	if !ok {
+		props = make(map[string]interface{})
+	}
+
+	data := encryptMap(enc, props, credData)
+	return data, nil
 }
