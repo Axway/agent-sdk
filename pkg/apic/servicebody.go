@@ -82,10 +82,12 @@ func (s *ServiceBody) GetScopes() map[string]string {
 
 //GetCredentialRequestDefinitions - returns the array of all credential request policies
 func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
+	if len(s.credentialRequestPolicies) > 0 {
+		return s.credentialRequestPolicies
+	}
 	for _, policy := range s.authPolicies {
 		if policy == Apikey {
 			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "api-key")
-			s.ardName = "api-key"
 		}
 		if policy == Oauth {
 			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "oauth")
