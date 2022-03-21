@@ -200,7 +200,7 @@ func TestCredentialHandler(t *testing.T) {
 
 			handler := NewCredentialHandler(p, c)
 			v := handler.(*credentials)
-			v.encryptSchema = func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error) {
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
 			}
 
