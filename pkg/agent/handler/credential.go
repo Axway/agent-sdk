@@ -86,12 +86,13 @@ func (h *credentials) onPending(cred *mv1.Credential) error {
 
 	sec := app.Spec.Security
 	enc, err := util.NewEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
-
 	if err != nil {
 		status = prov.NewRequestStatusBuilder().
 			SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
 			Failed()
-	} else {
+	}
+
+	if status.GetStatus() == prov.Success {
 		if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
 			props, ok := schemaProps.(map[string]interface{})
 			if !ok {
