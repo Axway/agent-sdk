@@ -135,9 +135,13 @@ func TestAccessRequestHandler(t *testing.T) {
 			ri, _ := ar.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
 
-			util.AssertError(t, tc.hasError, err)
-			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 
+			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
 			if tc.inboundStatus == statusPending {
 				assert.True(t, c.createSubCalled)
 			} else {

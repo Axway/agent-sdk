@@ -10,13 +10,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"testing"
+	"reflect"
 	"time"
 	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -251,11 +250,7 @@ func ToString(v interface{}) string {
 	return s
 }
 
-// AssertError asserts on the existence of an error for tests
-func AssertError(t *testing.T, hasErr bool, err error) {
-	if hasErr {
-		assert.Error(t, err)
-	} else {
-		assert.Nil(t, err)
-	}
+// IsNil checks a value, or a pointer for nil
+func IsNil(v interface{}) bool {
+	return v == nil || reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()
 }

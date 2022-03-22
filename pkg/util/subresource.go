@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"reflect"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 )
@@ -63,7 +62,7 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 // Returns an empty string if the value does not exist, or if there is an error.
 func GetSubResourcePropertyValue(h handler, subRes, key string) (string, error) {
 	// check for a nil value, or a pointer to a nil value
-	if h == nil || reflect.ValueOf(h).Kind() == reflect.Ptr && reflect.ValueOf(h).IsNil() {
+	if isNil := IsNil(h); isNil {
 		return "", nil
 	}
 

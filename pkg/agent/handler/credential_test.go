@@ -136,7 +136,12 @@ func TestCredentialHandler(t *testing.T) {
 			ri, _ := cred.AsInstance()
 			err := handler.Handle(tc.action, nil, ri)
 			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
-			util.AssertError(t, tc.hasError, err)
+
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 		})
 	}
 }
