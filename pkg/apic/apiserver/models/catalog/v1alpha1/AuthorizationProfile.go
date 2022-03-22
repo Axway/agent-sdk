@@ -40,6 +40,16 @@ type AuthorizationProfile struct {
 	Spec       AuthorizationProfileSpec       `json:"spec"`
 }
 
+// NewAuthorizationProfile creates an empty *AuthorizationProfile
+func NewAuthorizationProfile(name string) (*AuthorizationProfile, error) {
+	return &AuthorizationProfile{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AuthorizationProfileGVK,
+		},
+	}, nil
+}
+
 // AuthorizationProfileFromInstanceArray converts a []*ResourceInstance to a []*AuthorizationProfile
 func AuthorizationProfileFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AuthorizationProfile, error) {
 	newArray := make([]*AuthorizationProfile, 0)

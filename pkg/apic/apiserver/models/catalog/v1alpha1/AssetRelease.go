@@ -43,6 +43,16 @@ type AssetRelease struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewAssetRelease creates an empty *AssetRelease
+func NewAssetRelease(name string) (*AssetRelease, error) {
+	return &AssetRelease{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetReleaseGVK,
+		},
+	}, nil
+}
+
 // AssetReleaseFromInstanceArray converts a []*ResourceInstance to a []*AssetRelease
 func AssetReleaseFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetRelease, error) {
 	newArray := make([]*AssetRelease, 0)

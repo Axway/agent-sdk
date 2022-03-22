@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -38,6 +39,33 @@ type CredentialRequestDefinition struct {
 	Owner      *apiv1.Owner                          `json:"owner"`
 	References CredentialRequestDefinitionReferences `json:"references"`
 	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
+}
+
+// NewCredentialRequestDefinition creates an empty *CredentialRequestDefinition
+func NewCredentialRequestDefinition(name, scopeKind, scopeName string) (*CredentialRequestDefinition, error) {
+	validScope := false
+	for _, s := range CredentialRequestDefinitionScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for CredentialRequestDefinition kind", scopeKind)
+	}
+
+	return &CredentialRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CredentialRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // CredentialRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*CredentialRequestDefinition

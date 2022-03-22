@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -38,6 +39,33 @@ type AssetMapping struct {
 	Owner  *apiv1.Owner       `json:"owner"`
 	Spec   AssetMappingSpec   `json:"spec"`
 	Status AssetMappingStatus `json:"status"`
+}
+
+// NewAssetMapping creates an empty *AssetMapping
+func NewAssetMapping(name, scopeKind, scopeName string) (*AssetMapping, error) {
+	validScope := false
+	for _, s := range AssetMappingScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AssetMapping kind", scopeKind)
+	}
+
+	return &AssetMapping{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetMappingGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AssetMappingFromInstanceArray converts a []*ResourceInstance to a []*AssetMapping

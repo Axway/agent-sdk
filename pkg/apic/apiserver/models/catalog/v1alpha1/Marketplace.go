@@ -39,6 +39,16 @@ type Marketplace struct {
 	Spec  MarketplaceSpec `json:"spec"`
 }
 
+// NewMarketplace creates an empty *Marketplace
+func NewMarketplace(name string) (*Marketplace, error) {
+	return &Marketplace{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MarketplaceGVK,
+		},
+	}, nil
+}
+
 // MarketplaceFromInstanceArray converts a []*ResourceInstance to a []*Marketplace
 func MarketplaceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Marketplace, error) {
 	newArray := make([]*Marketplace, 0)

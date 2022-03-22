@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -40,6 +41,33 @@ type AssetRequestDefinition struct {
 	References    interface{}                         `json:"references"`
 	Spec          AssetRequestDefinitionSpec          `json:"spec"`
 	Webhooks      interface{}                         `json:"webhooks"`
+}
+
+// NewAssetRequestDefinition creates an empty *AssetRequestDefinition
+func NewAssetRequestDefinition(name, scopeKind, scopeName string) (*AssetRequestDefinition, error) {
+	validScope := false
+	for _, s := range AssetRequestDefinitionScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AssetRequestDefinition kind", scopeKind)
+	}
+
+	return &AssetRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition

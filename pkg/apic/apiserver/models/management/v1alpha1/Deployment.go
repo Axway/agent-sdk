@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -40,6 +41,33 @@ type Deployment struct {
 	Spec       DeploymentSpec       `json:"spec"`
 	// 	Status     DeploymentStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewDeployment creates an empty *Deployment
+func NewDeployment(name, scopeKind, scopeName string) (*Deployment, error) {
+	validScope := false
+	for _, s := range DeploymentScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for Deployment kind", scopeKind)
+	}
+
+	return &Deployment{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _DeploymentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // DeploymentFromInstanceArray converts a []*ResourceInstance to a []*Deployment

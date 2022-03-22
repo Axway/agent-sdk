@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type MeshService struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner    `json:"owner"`
 	Spec  MeshServiceSpec `json:"spec"`
+}
+
+// NewMeshService creates an empty *MeshService
+func NewMeshService(name, scopeKind, scopeName string) (*MeshService, error) {
+	validScope := false
+	for _, s := range MeshServiceScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for MeshService kind", scopeKind)
+	}
+
+	return &MeshService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MeshServiceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // MeshServiceFromInstanceArray converts a []*ResourceInstance to a []*MeshService

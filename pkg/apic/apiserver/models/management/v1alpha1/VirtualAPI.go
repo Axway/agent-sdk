@@ -41,6 +41,16 @@ type VirtualAPI struct {
 	State interface{}    `json:"state"`
 }
 
+// NewVirtualAPI creates an empty *VirtualAPI
+func NewVirtualAPI(name string) (*VirtualAPI, error) {
+	return &VirtualAPI{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _VirtualAPIGVK,
+		},
+	}, nil
+}
+
 // VirtualAPIFromInstanceArray converts a []*ResourceInstance to a []*VirtualAPI
 func VirtualAPIFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualAPI, error) {
 	newArray := make([]*VirtualAPI, 0)

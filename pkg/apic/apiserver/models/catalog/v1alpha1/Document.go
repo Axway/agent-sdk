@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -40,6 +41,33 @@ type Document struct {
 	Spec  DocumentSpec `json:"spec"`
 	// 	Status DocumentStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewDocument creates an empty *Document
+func NewDocument(name, scopeKind, scopeName string) (*Document, error) {
+	validScope := false
+	for _, s := range DocumentScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for Document kind", scopeKind)
+	}
+
+	return &Document{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _DocumentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // DocumentFromInstanceArray converts a []*ResourceInstance to a []*Document

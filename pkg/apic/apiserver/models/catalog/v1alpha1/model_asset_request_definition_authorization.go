@@ -11,5 +11,5 @@ package v1alpha1
 
 // AssetRequestDefinitionAuthorization  (catalog.v1alpha1.AssetRequestDefinition)
 type AssetRequestDefinitionAuthorization struct {
-	Approval string `json:"approval,omitempty"`
+	Approval string `json:"approval"`
 }

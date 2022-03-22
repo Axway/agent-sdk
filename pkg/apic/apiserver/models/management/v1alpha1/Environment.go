@@ -39,6 +39,16 @@ type Environment struct {
 	Spec  EnvironmentSpec `json:"spec"`
 }
 
+// NewEnvironment creates an empty *Environment
+func NewEnvironment(name string) (*Environment, error) {
+	return &Environment{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _EnvironmentGVK,
+		},
+	}, nil
+}
+
 // EnvironmentFromInstanceArray converts a []*ResourceInstance to a []*Environment
 func EnvironmentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Environment, error) {
 	newArray := make([]*Environment, 0)

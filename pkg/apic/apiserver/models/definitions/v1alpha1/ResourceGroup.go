@@ -39,6 +39,16 @@ type ResourceGroup struct {
 	Spec  interface{}  `json:"spec"`
 }
 
+// NewResourceGroup creates an empty *ResourceGroup
+func NewResourceGroup(name string) (*ResourceGroup, error) {
+	return &ResourceGroup{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ResourceGroupGVK,
+		},
+	}, nil
+}
+
 // ResourceGroupFromInstanceArray converts a []*ResourceInstance to a []*ResourceGroup
 func ResourceGroupFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceGroup, error) {
 	newArray := make([]*ResourceGroup, 0)

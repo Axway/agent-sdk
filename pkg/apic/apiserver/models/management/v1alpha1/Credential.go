@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,6 +42,33 @@ type Credential struct {
 	Spec       CredentialSpec       `json:"spec"`
 	// 	Status     CredentialStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewCredential creates an empty *Credential
+func NewCredential(name, scopeKind, scopeName string) (*Credential, error) {
+	validScope := false
+	for _, s := range CredentialScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for Credential kind", scopeKind)
+	}
+
+	return &Credential{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CredentialGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential

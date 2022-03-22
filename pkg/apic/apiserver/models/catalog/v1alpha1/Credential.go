@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -35,11 +36,39 @@ func init() {
 // Credential Resource
 type Credential struct {
 	apiv1.ResourceMeta
-	Data  interface{}    `json:"data"`
-	Owner *apiv1.Owner   `json:"owner"`
-	Spec  CredentialSpec `json:"spec"`
-	// 	Status CredentialStatus `json:"status"`
+	Data       interface{}          `json:"data"`
+	Owner      *apiv1.Owner         `json:"owner"`
+	References CredentialReferences `json:"references"`
+	Spec       CredentialSpec       `json:"spec"`
+	// 	Status     CredentialStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewCredential creates an empty *Credential
+func NewCredential(name, scopeKind, scopeName string) (*Credential, error) {
+	validScope := false
+	for _, s := range CredentialScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for Credential kind", scopeKind)
+	}
+
+	return &Credential{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CredentialGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential
@@ -110,6 +139,7 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 
 	out["data"] = res.Data
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -150,6 +180,20 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "data")
 		err = json.Unmarshal(sr, &res.Data)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
 		if err != nil {
 			return err
 		}

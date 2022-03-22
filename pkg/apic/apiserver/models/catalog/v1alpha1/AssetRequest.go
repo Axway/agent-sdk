@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,6 +42,33 @@ type AssetRequest struct {
 	Spec       AssetRequestSpec       `json:"spec"`
 	// 	Status     AssetRequestStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewAssetRequest creates an empty *AssetRequest
+func NewAssetRequest(name, scopeKind, scopeName string) (*AssetRequest, error) {
+	validScope := false
+	for _, s := range AssetRequestScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AssetRequest kind", scopeKind)
+	}
+
+	return &AssetRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AssetRequestFromInstanceArray converts a []*ResourceInstance to a []*AssetRequest

@@ -39,6 +39,16 @@ type WatchTopic struct {
 	Spec  WatchTopicSpec `json:"spec"`
 }
 
+// NewWatchTopic creates an empty *WatchTopic
+func NewWatchTopic(name string) (*WatchTopic, error) {
+	return &WatchTopic{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _WatchTopicGVK,
+		},
+	}, nil
+}
+
 // WatchTopicFromInstanceArray converts a []*ResourceInstance to a []*WatchTopic
 func WatchTopicFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*WatchTopic, error) {
 	newArray := make([]*WatchTopic, 0)

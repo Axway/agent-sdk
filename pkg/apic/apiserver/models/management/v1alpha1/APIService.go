@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -39,6 +40,33 @@ type APIService struct {
 	Spec  ApiServiceSpec `json:"spec"`
 	// 	Status ApiServiceStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewAPIService creates an empty *APIService
+func NewAPIService(name, scopeKind, scopeName string) (*APIService, error) {
+	validScope := false
+	for _, s := range APIServiceScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for APIService kind", scopeKind)
+	}
+
+	return &APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _APIServiceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // APIServiceFromInstanceArray converts a []*ResourceInstance to a []*APIService

@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -38,6 +39,33 @@ type AccessRequestDefinition struct {
 	Owner    *apiv1.Owner                `json:"owner"`
 	Spec     AccessRequestDefinitionSpec `json:"spec"`
 	Webhooks interface{}                 `json:"webhooks"`
+}
+
+// NewAccessRequestDefinition creates an empty *AccessRequestDefinition
+func NewAccessRequestDefinition(name, scopeKind, scopeName string) (*AccessRequestDefinition, error) {
+	validScope := false
+	for _, s := range AccessRequestDefinitionScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AccessRequestDefinition kind", scopeKind)
+	}
+
+	return &AccessRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AccessRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AccessRequestDefinition

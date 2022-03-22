@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -39,6 +40,33 @@ type ConsumerInstance struct {
 	References ConsumerInstanceReferences `json:"references"`
 	Spec       ConsumerInstanceSpec       `json:"spec"`
 	Status     ConsumerInstanceStatus     `json:"status"`
+}
+
+// NewConsumerInstance creates an empty *ConsumerInstance
+func NewConsumerInstance(name, scopeKind, scopeName string) (*ConsumerInstance, error) {
+	validScope := false
+	for _, s := range ConsumerInstanceScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for ConsumerInstance kind", scopeKind)
+	}
+
+	return &ConsumerInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ConsumerInstanceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // ConsumerInstanceFromInstanceArray converts a []*ResourceInstance to a []*ConsumerInstance

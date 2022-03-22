@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -38,6 +39,33 @@ type AmplifyRuntimeConfig struct {
 	Owner  *apiv1.Owner               `json:"owner"`
 	Spec   AmplifyRuntimeConfigSpec   `json:"spec"`
 	Status AmplifyRuntimeConfigStatus `json:"status"`
+}
+
+// NewAmplifyRuntimeConfig creates an empty *AmplifyRuntimeConfig
+func NewAmplifyRuntimeConfig(name, scopeKind, scopeName string) (*AmplifyRuntimeConfig, error) {
+	validScope := false
+	for _, s := range AmplifyRuntimeConfigScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AmplifyRuntimeConfig kind", scopeKind)
+	}
+
+	return &AmplifyRuntimeConfig{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AmplifyRuntimeConfigGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AmplifyRuntimeConfigFromInstanceArray converts a []*ResourceInstance to a []*AmplifyRuntimeConfig

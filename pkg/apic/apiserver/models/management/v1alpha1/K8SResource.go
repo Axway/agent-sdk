@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type K8SResource struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner    `json:"owner"`
 	Spec  K8SResourceSpec `json:"spec"`
+}
+
+// NewK8SResource creates an empty *K8SResource
+func NewK8SResource(name, scopeKind, scopeName string) (*K8SResource, error) {
+	validScope := false
+	for _, s := range K8SResourceScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for K8SResource kind", scopeKind)
+	}
+
+	return &K8SResource{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _K8SResourceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // K8SResourceFromInstanceArray converts a []*ResourceInstance to a []*K8SResource

@@ -39,6 +39,16 @@ type Mesh struct {
 	Spec  interface{}  `json:"spec"`
 }
 
+// NewMesh creates an empty *Mesh
+func NewMesh(name string) (*Mesh, error) {
+	return &Mesh{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MeshGVK,
+		},
+	}, nil
+}
+
 // MeshFromInstanceArray converts a []*ResourceInstance to a []*Mesh
 func MeshFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Mesh, error) {
 	newArray := make([]*Mesh, 0)

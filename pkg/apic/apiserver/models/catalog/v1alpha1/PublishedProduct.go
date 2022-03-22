@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -38,6 +39,33 @@ type PublishedProduct struct {
 	Owner      *apiv1.Owner               `json:"owner"`
 	References PublishedProductReferences `json:"references"`
 	Spec       PublishedProductSpec       `json:"spec"`
+}
+
+// NewPublishedProduct creates an empty *PublishedProduct
+func NewPublishedProduct(name, scopeKind, scopeName string) (*PublishedProduct, error) {
+	validScope := false
+	for _, s := range PublishedProductScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for PublishedProduct kind", scopeKind)
+	}
+
+	return &PublishedProduct{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _PublishedProductGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // PublishedProductFromInstanceArray converts a []*ResourceInstance to a []*PublishedProduct

@@ -5,7 +5,9 @@
 package {{.res.version}}
 
 import (
+	"fmt"
     "encoding/json"
+
     apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
@@ -42,6 +44,33 @@ type {{.res.kind}} struct {
 		{{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
         {{- $type}} {{if $isNotEmpty}} {{ $varName }}{{ $type }} {{else}} {{if eq $type "Owner"}} *apiv1.Owner {{else}} interface{} {{end}} {{end}} `json:"{{$field | strings.ToLower}}"`
 	{{end}}
+}
+
+// New{{.res.kind}} creates an empty *{{.res.kind}}
+func New{{.res.kind}}(name{{if .res.scopes }}, scopeKind, scopeName{{end}} string) (*{{.res.kind}}, error) {
+    {{if .res.scopes }}validScope := false
+    for _, s := range {{.res.kind}}Scopes {
+        if scopeKind == s {
+            validScope = true
+            break
+        }
+    }
+    if !validScope {
+        return nil, fmt.Errorf("scope '%s' not valid for {{.res.kind}} kind", scopeKind)
+    }
+
+    {{end}}return &{{.res.kind}}{
+        ResourceMeta: apiv1.ResourceMeta{
+            Name: name,
+            GroupVersionKind: _{{.res.kind}}GVK,{{if .res.scopes }}
+                Metadata: apiv1.Metadata{
+                Scope: apiv1.MetadataScope{
+                    Name: scopeName,
+                    Kind: scopeKind,
+                },
+            },{{end}}
+        },
+    }, nil
 }
 
 // {{.res.kind}}FromInstanceArray converts a []*ResourceInstance to a []*{{.res.kind}}

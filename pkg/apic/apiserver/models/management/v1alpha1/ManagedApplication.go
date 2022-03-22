@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -40,6 +41,33 @@ type ManagedApplication struct {
 	Spec       ManagedApplicationSpec       `json:"spec"`
 	// 	Status     ManagedApplicationStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewManagedApplication creates an empty *ManagedApplication
+func NewManagedApplication(name, scopeKind, scopeName string) (*ManagedApplication, error) {
+	validScope := false
+	for _, s := range ManagedApplicationScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for ManagedApplication kind", scopeKind)
+	}
+
+	return &ManagedApplication{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ManagedApplicationGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // ManagedApplicationFromInstanceArray converts a []*ResourceInstance to a []*ManagedApplication
