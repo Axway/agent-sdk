@@ -37,10 +37,6 @@ func NewAccessRequestBuilder(registerFunc RegisterAccessRequestDefinition) Acces
 
 // SetName - set the name of the access request
 func (a *accessRequestDef) SetName(name string) AccessRequestBuilder {
-	if a.title == "" {
-		a.title = name
-	}
-
 	a.name = name
 	return a
 }

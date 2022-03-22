@@ -118,7 +118,6 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
 		accReqDef, err := publishAccessRequestDefinition(&serviceBody)
 		if err != nil {
 			return err
