@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -39,10 +40,26 @@ func (j *centralTeamsCache) Execute() error {
 	for _, team := range platformTeams {
 		savedTeam := agent.cacheManager.GetTeamByID(team.ID)
 		if savedTeam == nil {
-			agent.cacheManager.AddTeam(&team)
+			var params = []interface{}{&team}
+			pointerIdx := firstPointerIdx(params)
+
+			if pointerIdx > -1 {
+				log.Debug("Shane - Contains pointer ", pointerIdx)
+			}
+			agent.cacheManager.AddTeam(team)
 		}
 	}
 	return nil
+}
+
+func firstPointerIdx(s []interface{}) int {
+	for i, v := range s {
+		if reflect.ValueOf(v).Kind() == reflect.Ptr {
+			log.Debug("Shane - Contains pointer value of ", reflect.ValueOf(v))
+			return i
+		}
+	}
+	return -1
 }
 
 // registerTeamMapCacheJob -
