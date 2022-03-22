@@ -39,6 +39,22 @@ type ResourceHook struct {
 	Spec  ResourceHookSpec `json:"spec"`
 }
 
+// NewResourceHook creates an empty *ResourceHook
+func NewResourceHook(name, scopeName string) *ResourceHook {
+	return &ResourceHook{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ResourceHookGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ResourceHookScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ResourceHookFromInstanceArray converts a []*ResourceInstance to a []*ResourceHook
 func ResourceHookFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceHook, error) {
 	newArray := make([]*ResourceHook, 0)

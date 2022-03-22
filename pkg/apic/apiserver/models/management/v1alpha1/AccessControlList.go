@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type AccessControlList struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner          `json:"owner"`
 	Spec  AccessControlListSpec `json:"spec"`
+}
+
+// NewAccessControlList creates an empty *AccessControlList
+func NewAccessControlList(name, scopeKind, scopeName string) (*AccessControlList, error) {
+	validScope := false
+	for _, s := range AccessControlListScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AccessControlList kind", scopeKind)
+	}
+
+	return &AccessControlList{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessControlListGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AccessControlListFromInstanceArray converts a []*ResourceInstance to a []*AccessControlList

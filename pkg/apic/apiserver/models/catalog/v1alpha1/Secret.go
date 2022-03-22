@@ -39,6 +39,22 @@ type Secret struct {
 	Spec  SecretSpec   `json:"spec"`
 }
 
+// NewSecret creates an empty *Secret
+func NewSecret(name, scopeName string) *Secret {
+	return &Secret{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _SecretGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: SecretScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret
 func SecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Secret, error) {
 	newArray := make([]*Secret, 0)

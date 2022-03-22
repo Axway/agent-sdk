@@ -39,6 +39,22 @@ type AmplifyConfig struct {
 	Spec  AmplifyConfigSpec `json:"spec"`
 }
 
+// NewAmplifyConfig creates an empty *AmplifyConfig
+func NewAmplifyConfig(name, scopeName string) *AmplifyConfig {
+	return &AmplifyConfig{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AmplifyConfigGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AmplifyConfigScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AmplifyConfigFromInstanceArray converts a []*ResourceInstance to a []*AmplifyConfig
 func AmplifyConfigFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AmplifyConfig, error) {
 	newArray := make([]*AmplifyConfig, 0)

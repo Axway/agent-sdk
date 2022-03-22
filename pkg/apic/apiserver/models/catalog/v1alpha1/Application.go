@@ -40,6 +40,16 @@ type Application struct {
 	Spec        ApplicationSpec        `json:"spec"`
 }
 
+// NewApplication creates an empty *Application
+func NewApplication(name string) *Application {
+	return &Application{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ApplicationGVK,
+		},
+	}
+}
+
 // ApplicationFromInstanceArray converts a []*ResourceInstance to a []*Application
 func ApplicationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Application, error) {
 	newArray := make([]*Application, 0)

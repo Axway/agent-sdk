@@ -9,7 +9,8 @@
 
 package v1alpha1
 
-// AssetResourceSpecAuthorizationProfile  (catalog.v1alpha1.AssetResource)
-type AssetResourceSpecAuthorizationProfile struct {
-	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
+// CredentialReferences  (catalog.v1alpha1.Credential)
+type CredentialReferences struct {
+	// Reference to the Credential for managed app that got created from this catalog credential.
+	ApiService string `json:"apiService,omitempty"`
 }

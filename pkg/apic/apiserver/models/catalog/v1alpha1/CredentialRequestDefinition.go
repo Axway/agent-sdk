@@ -40,6 +40,22 @@ type CredentialRequestDefinition struct {
 	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
 }
 
+// NewCredentialRequestDefinition creates an empty *CredentialRequestDefinition
+func NewCredentialRequestDefinition(name, scopeName string) *CredentialRequestDefinition {
+	return &CredentialRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CredentialRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: CredentialRequestDefinitionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // CredentialRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*CredentialRequestDefinition
 func CredentialRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*CredentialRequestDefinition, error) {
 	newArray := make([]*CredentialRequestDefinition, 0)

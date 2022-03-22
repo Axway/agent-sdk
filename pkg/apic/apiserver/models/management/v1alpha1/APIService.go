@@ -41,6 +41,22 @@ type APIService struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewAPIService creates an empty *APIService
+func NewAPIService(name, scopeName string) *APIService {
+	return &APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _APIServiceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: APIServiceScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // APIServiceFromInstanceArray converts a []*ResourceInstance to a []*APIService
 func APIServiceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APIService, error) {
 	newArray := make([]*APIService, 0)

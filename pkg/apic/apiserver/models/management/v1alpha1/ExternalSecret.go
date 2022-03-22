@@ -39,6 +39,22 @@ type ExternalSecret struct {
 	Spec  ExternalSecretSpec `json:"spec"`
 }
 
+// NewExternalSecret creates an empty *ExternalSecret
+func NewExternalSecret(name, scopeName string) *ExternalSecret {
+	return &ExternalSecret{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ExternalSecretGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ExternalSecretScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ExternalSecretFromInstanceArray converts a []*ResourceInstance to a []*ExternalSecret
 func ExternalSecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ExternalSecret, error) {
 	newArray := make([]*ExternalSecret, 0)

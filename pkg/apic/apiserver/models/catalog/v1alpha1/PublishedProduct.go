@@ -40,6 +40,22 @@ type PublishedProduct struct {
 	Spec       PublishedProductSpec       `json:"spec"`
 }
 
+// NewPublishedProduct creates an empty *PublishedProduct
+func NewPublishedProduct(name, scopeName string) *PublishedProduct {
+	return &PublishedProduct{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _PublishedProductGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: PublishedProductScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // PublishedProductFromInstanceArray converts a []*ResourceInstance to a []*PublishedProduct
 func PublishedProductFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*PublishedProduct, error) {
 	newArray := make([]*PublishedProduct, 0)

@@ -42,6 +42,22 @@ type AddOn struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewAddOn creates an empty *AddOn
+func NewAddOn(name, scopeName string) *AddOn {
+	return &AddOn{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AddOnGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AddOnScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AddOnFromInstanceArray converts a []*ResourceInstance to a []*AddOn
 func AddOnFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AddOn, error) {
 	newArray := make([]*AddOn, 0)

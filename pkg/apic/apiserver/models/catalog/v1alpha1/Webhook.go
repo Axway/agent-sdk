@@ -39,6 +39,22 @@ type Webhook struct {
 	Spec  WebhookSpec  `json:"spec"`
 }
 
+// NewWebhook creates an empty *Webhook
+func NewWebhook(name, scopeName string) *Webhook {
+	return &Webhook{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _WebhookGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: WebhookScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // WebhookFromInstanceArray converts a []*ResourceInstance to a []*Webhook
 func WebhookFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Webhook, error) {
 	newArray := make([]*Webhook, 0)

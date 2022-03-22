@@ -39,6 +39,22 @@ type SpecDiscovery struct {
 	Spec  SpecDiscoverySpec `json:"spec"`
 }
 
+// NewSpecDiscovery creates an empty *SpecDiscovery
+func NewSpecDiscovery(name, scopeName string) *SpecDiscovery {
+	return &SpecDiscovery{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _SpecDiscoveryGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: SpecDiscoveryScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // SpecDiscoveryFromInstanceArray converts a []*ResourceInstance to a []*SpecDiscovery
 func SpecDiscoveryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*SpecDiscovery, error) {
 	newArray := make([]*SpecDiscovery, 0)

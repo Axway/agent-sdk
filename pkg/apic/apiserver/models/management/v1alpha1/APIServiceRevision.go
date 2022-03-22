@@ -39,6 +39,22 @@ type APIServiceRevision struct {
 	Spec  ApiServiceRevisionSpec `json:"spec"`
 }
 
+// NewAPIServiceRevision creates an empty *APIServiceRevision
+func NewAPIServiceRevision(name, scopeName string) *APIServiceRevision {
+	return &APIServiceRevision{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _APIServiceRevisionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: APIServiceRevisionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // APIServiceRevisionFromInstanceArray converts a []*ResourceInstance to a []*APIServiceRevision
 func APIServiceRevisionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APIServiceRevision, error) {
 	newArray := make([]*APIServiceRevision, 0)

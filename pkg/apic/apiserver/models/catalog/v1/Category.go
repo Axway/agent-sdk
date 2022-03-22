@@ -39,6 +39,16 @@ type Category struct {
 	Spec  CategorySpec `json:"spec"`
 }
 
+// NewCategory creates an empty *Category
+func NewCategory(name string) *Category {
+	return &Category{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CategoryGVK,
+		},
+	}
+}
+
 // CategoryFromInstanceArray converts a []*ResourceInstance to a []*Category
 func CategoryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Category, error) {
 	newArray := make([]*Category, 0)

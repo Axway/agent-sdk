@@ -39,6 +39,22 @@ type K8SResource struct {
 	Spec  K8SResourceSpec `json:"spec"`
 }
 
+// NewK8SResource creates an empty *K8SResource
+func NewK8SResource(name, scopeName string) *K8SResource {
+	return &K8SResource{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _K8SResourceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: K8SResourceScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // K8SResourceFromInstanceArray converts a []*ResourceInstance to a []*K8SResource
 func K8SResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*K8SResource, error) {
 	newArray := make([]*K8SResource, 0)

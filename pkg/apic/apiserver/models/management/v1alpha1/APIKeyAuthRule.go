@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type APIKeyAuthRule struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner       `json:"owner"`
 	Spec  ApiKeyAuthRuleSpec `json:"spec"`
+}
+
+// NewAPIKeyAuthRule creates an empty *APIKeyAuthRule
+func NewAPIKeyAuthRule(name, scopeKind, scopeName string) (*APIKeyAuthRule, error) {
+	validScope := false
+	for _, s := range APIKeyAuthRuleScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for APIKeyAuthRule kind", scopeKind)
+	}
+
+	return &APIKeyAuthRule{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _APIKeyAuthRuleGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // APIKeyAuthRuleFromInstanceArray converts a []*ResourceInstance to a []*APIKeyAuthRule

@@ -39,6 +39,22 @@ type CommandLineInterface struct {
 	Spec  CommandLineInterfaceSpec `json:"spec"`
 }
 
+// NewCommandLineInterface creates an empty *CommandLineInterface
+func NewCommandLineInterface(name, scopeName string) *CommandLineInterface {
+	return &CommandLineInterface{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CommandLineInterfaceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: CommandLineInterfaceScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // CommandLineInterfaceFromInstanceArray converts a []*ResourceInstance to a []*CommandLineInterface
 func CommandLineInterfaceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*CommandLineInterface, error) {
 	newArray := make([]*CommandLineInterface, 0)

@@ -40,6 +40,22 @@ type AmplifyRuntimeConfig struct {
 	Status AmplifyRuntimeConfigStatus `json:"status"`
 }
 
+// NewAmplifyRuntimeConfig creates an empty *AmplifyRuntimeConfig
+func NewAmplifyRuntimeConfig(name, scopeName string) *AmplifyRuntimeConfig {
+	return &AmplifyRuntimeConfig{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AmplifyRuntimeConfigGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AmplifyRuntimeConfigScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AmplifyRuntimeConfigFromInstanceArray converts a []*ResourceInstance to a []*AmplifyRuntimeConfig
 func AmplifyRuntimeConfigFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AmplifyRuntimeConfig, error) {
 	newArray := make([]*AmplifyRuntimeConfig, 0)

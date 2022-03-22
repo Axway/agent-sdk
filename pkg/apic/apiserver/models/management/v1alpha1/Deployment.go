@@ -42,6 +42,22 @@ type Deployment struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewDeployment creates an empty *Deployment
+func NewDeployment(name, scopeName string) *Deployment {
+	return &Deployment{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _DeploymentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: DeploymentScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // DeploymentFromInstanceArray converts a []*ResourceInstance to a []*Deployment
 func DeploymentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Deployment, error) {
 	newArray := make([]*Deployment, 0)

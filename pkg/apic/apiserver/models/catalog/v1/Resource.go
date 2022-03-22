@@ -6,6 +6,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type Resource struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner `json:"owner"`
 	Spec  ResourceSpec `json:"spec"`
+}
+
+// NewResource creates an empty *Resource
+func NewResource(name, scopeKind, scopeName string) (*Resource, error) {
+	validScope := false
+	for _, s := range ResourceScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for Resource kind", scopeKind)
+	}
+
+	return &Resource{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ResourceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // ResourceFromInstanceArray converts a []*ResourceInstance to a []*Resource

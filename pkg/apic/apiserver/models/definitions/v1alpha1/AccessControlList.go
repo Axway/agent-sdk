@@ -39,6 +39,22 @@ type AccessControlList struct {
 	Spec  AccessControlListSpec `json:"spec"`
 }
 
+// NewAccessControlList creates an empty *AccessControlList
+func NewAccessControlList(name, scopeName string) *AccessControlList {
+	return &AccessControlList{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessControlListGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AccessControlListScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AccessControlListFromInstanceArray converts a []*ResourceInstance to a []*AccessControlList
 func AccessControlListFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessControlList, error) {
 	newArray := make([]*AccessControlList, 0)

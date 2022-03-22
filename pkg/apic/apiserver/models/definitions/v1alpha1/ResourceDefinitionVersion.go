@@ -39,6 +39,22 @@ type ResourceDefinitionVersion struct {
 	Spec  ResourceDefinitionVersionSpec `json:"spec"`
 }
 
+// NewResourceDefinitionVersion creates an empty *ResourceDefinitionVersion
+func NewResourceDefinitionVersion(name, scopeName string) *ResourceDefinitionVersion {
+	return &ResourceDefinitionVersion{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ResourceDefinitionVersionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ResourceDefinitionVersionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ResourceDefinitionVersionFromInstanceArray converts a []*ResourceInstance to a []*ResourceDefinitionVersion
 func ResourceDefinitionVersionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ResourceDefinitionVersion, error) {
 	newArray := make([]*ResourceDefinitionVersion, 0)

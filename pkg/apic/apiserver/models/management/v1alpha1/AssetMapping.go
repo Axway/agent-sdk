@@ -40,6 +40,22 @@ type AssetMapping struct {
 	Status AssetMappingStatus `json:"status"`
 }
 
+// NewAssetMapping creates an empty *AssetMapping
+func NewAssetMapping(name, scopeName string) *AssetMapping {
+	return &AssetMapping{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetMappingGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetMappingScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AssetMappingFromInstanceArray converts a []*ResourceInstance to a []*AssetMapping
 func AssetMappingFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetMapping, error) {
 	newArray := make([]*AssetMapping, 0)

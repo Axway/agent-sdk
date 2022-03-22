@@ -42,6 +42,22 @@ type AccessRequest struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewAccessRequest creates an empty *AccessRequest
+func NewAccessRequest(name, scopeName string) *AccessRequest {
+	return &AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessRequestGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AccessRequestScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
 func AccessRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequest, error) {
 	newArray := make([]*AccessRequest, 0)
