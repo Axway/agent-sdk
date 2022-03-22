@@ -130,7 +130,7 @@ func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
 }
 
 func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
-	app := newManagedApp(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
+	app := mv1.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
 	return h.client.GetResource(app.GetSelfLink())
 }
 

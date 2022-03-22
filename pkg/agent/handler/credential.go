@@ -141,7 +141,7 @@ func (h *credentials) onError(Cred *mv1.Credential, err error) {
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {
-	app := newManagedApp(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
+	app := mv1.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplicati
 }
 
 func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
-	crd := newCRD(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
+	crd := mv1.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
 		return nil, err
@@ -259,19 +259,4 @@ func encryptSchema(
 
 	data := encryptMap(enc, props, credData)
 	return data, nil
-}
-
-func newCRD(name, scope string) *mv1.CredentialRequestDefinition {
-	return &mv1.CredentialRequestDefinition{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.CredentialRequestDefinitionGVK(),
-			Name:             name,
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1.EnvironmentGVK().Kind,
-					Name: scope,
-				},
-			},
-		},
-	}
 }

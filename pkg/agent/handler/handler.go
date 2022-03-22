@@ -2,7 +2,6 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -47,19 +46,4 @@ func shouldProcessDeleting(status, state string, finalizerCount int) bool {
 
 func shouldProcessForTrace(status, state string) bool {
 	return status == statusSuccess && state != v1.ResourceDeleting
-}
-
-func newManagedApp(name, scope string) *mv1.ManagedApplication {
-	return &mv1.ManagedApplication{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.ManagedApplicationGVK(),
-			Name:             name,
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1.EnvironmentGVK().Kind,
-					Name: scope,
-				},
-			},
-		},
-	}
 }
