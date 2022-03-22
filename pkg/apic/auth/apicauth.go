@@ -353,22 +353,22 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 	return &tokens, nil
 }
 
-func (ptg *platformTokenGenerator) postAuthForm(client http.Client, Url string, data url.Values) (resp *http.Response, err error) {
+func (ptg *platformTokenGenerator) postAuthForm(client http.Client, URL string, data url.Values) (resp *http.Response, err error) {
 	var altHost string = ""
 	if ptg.singleURL != "" {
 		// Swap the baseURL with the static IP DNS entry
-		purl, _ := url.Parse(Url)
-		Url = strings.Replace(Url, purl.Host, ptg.singleURL, -1)
+		purl, _ := url.Parse(URL)
+		URL = strings.Replace(URL, purl.Host, ptg.singleURL, -1)
 		altHost = purl.Host
 	}
-	req, err := http.NewRequest("POST", Url, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", URL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if altHost != "" {
 		// Force the host to original baseURL
-		log.Debugf("Replaced %s using Host header %s", Url, altHost)
+		log.Debugf("Replaced %s using Host header %s", URL, altHost)
 		req.Host = altHost
 	}
 	return client.Do(req)
