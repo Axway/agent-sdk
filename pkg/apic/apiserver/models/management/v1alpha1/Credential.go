@@ -43,6 +43,22 @@ type Credential struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewCredential creates an empty *Credential
+func NewCredential(name, scopeName string) *Credential {
+	return &Credential{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _CredentialGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: CredentialScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential
 func CredentialFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Credential, error) {
 	newArray := make([]*Credential, 0)

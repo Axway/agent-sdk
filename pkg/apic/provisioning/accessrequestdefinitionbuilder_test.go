@@ -22,7 +22,7 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:     "Fail",
+			name:     "Empty",
 			noSchema: true,
 			wantErr:  false,
 		},
@@ -30,10 +30,14 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
-			// builtDef := struct{}{}
 			registerFunc := func(accessRequestDefinition *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-				// TODO - validate that the accessRequestDefinition is built properly
-				// builtDef = accessRequestDefinition.(struct{})
+				assert.NotNil(t, accessRequestDefinition)
+				if !tt.noSchema {
+					assert.Len(t, accessRequestDefinition.Spec.Schema["properties"], 1)
+					assert.NotNil(t, accessRequestDefinition.Spec.Schema["properties"].(map[string]interface{})["prop"])
+				} else {
+					assert.Len(t, accessRequestDefinition.Spec.Schema["properties"], 0)
+				}
 				registerFuncCalled = true
 				return nil, nil
 			}

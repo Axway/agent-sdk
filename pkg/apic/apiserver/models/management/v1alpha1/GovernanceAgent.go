@@ -41,6 +41,22 @@ type GovernanceAgent struct {
 	Status            GovernanceAgentStatus            `json:"status"`
 }
 
+// NewGovernanceAgent creates an empty *GovernanceAgent
+func NewGovernanceAgent(name, scopeName string) *GovernanceAgent {
+	return &GovernanceAgent{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _GovernanceAgentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: GovernanceAgentScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // GovernanceAgentFromInstanceArray converts a []*ResourceInstance to a []*GovernanceAgent
 func GovernanceAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*GovernanceAgent, error) {
 	newArray := make([]*GovernanceAgent, 0)

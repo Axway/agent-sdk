@@ -42,6 +42,16 @@ type Subscription struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewSubscription creates an empty *Subscription
+func NewSubscription(name string) *Subscription {
+	return &Subscription{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _SubscriptionGVK,
+		},
+	}
+}
+
 // SubscriptionFromInstanceArray converts a []*ResourceInstance to a []*Subscription
 func SubscriptionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Subscription, error) {
 	newArray := make([]*Subscription, 0)

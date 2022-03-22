@@ -11,6 +11,11 @@ package v1alpha1
 
 // AssetRequestReferences  (catalog.v1alpha1.AssetRequest)
 type AssetRequestReferences struct {
+	AssetRequestDefinition string `json:"assetRequestDefinition,omitempty"`
+	// Reference to Release that got created from this asset request.
+	AssetRelease string `json:"assetRelease,omitempty"`
+	// Reference to Release that got created from this asset request.
+	Asset string `json:"asset,omitempty"`
 	// Reference to Access Request resource
 	AccessRequest string `json:"accessRequest,omitempty"`
 }

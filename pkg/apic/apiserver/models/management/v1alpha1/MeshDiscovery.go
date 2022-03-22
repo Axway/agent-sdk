@@ -39,6 +39,22 @@ type MeshDiscovery struct {
 	Spec  MeshDiscoverySpec `json:"spec"`
 }
 
+// NewMeshDiscovery creates an empty *MeshDiscovery
+func NewMeshDiscovery(name, scopeName string) *MeshDiscovery {
+	return &MeshDiscovery{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MeshDiscoveryGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: MeshDiscoveryScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // MeshDiscoveryFromInstanceArray converts a []*ResourceInstance to a []*MeshDiscovery
 func MeshDiscoveryFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshDiscovery, error) {
 	newArray := make([]*MeshDiscovery, 0)

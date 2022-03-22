@@ -43,6 +43,22 @@ type AssetRequest struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewAssetRequest creates an empty *AssetRequest
+func NewAssetRequest(name, scopeName string) *AssetRequest {
+	return &AssetRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetRequestScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AssetRequestFromInstanceArray converts a []*ResourceInstance to a []*AssetRequest
 func AssetRequestFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetRequest, error) {
 	newArray := make([]*AssetRequest, 0)

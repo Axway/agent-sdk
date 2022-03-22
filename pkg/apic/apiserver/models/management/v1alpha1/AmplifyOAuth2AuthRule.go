@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type AmplifyOAuth2AuthRule struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner              `json:"owner"`
 	Spec  AmplifyOAuth2AuthRuleSpec `json:"spec"`
+}
+
+// NewAmplifyOAuth2AuthRule creates an empty *AmplifyOAuth2AuthRule
+func NewAmplifyOAuth2AuthRule(name, scopeKind, scopeName string) (*AmplifyOAuth2AuthRule, error) {
+	validScope := false
+	for _, s := range AmplifyOAuth2AuthRuleScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AmplifyOAuth2AuthRule kind", scopeKind)
+	}
+
+	return &AmplifyOAuth2AuthRule{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AmplifyOAuth2AuthRuleGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AmplifyOAuth2AuthRuleFromInstanceArray converts a []*ResourceInstance to a []*AmplifyOAuth2AuthRule

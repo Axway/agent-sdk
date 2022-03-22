@@ -42,6 +42,22 @@ type AssetRequestDefinition struct {
 	Webhooks      interface{}                         `json:"webhooks"`
 }
 
+// NewAssetRequestDefinition creates an empty *AssetRequestDefinition
+func NewAssetRequestDefinition(name, scopeName string) *AssetRequestDefinition {
+	return &AssetRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetRequestDefinitionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition
 func AssetRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetRequestDefinition, error) {
 	newArray := make([]*AssetRequestDefinition, 0)

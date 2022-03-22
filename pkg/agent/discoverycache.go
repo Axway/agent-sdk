@@ -291,17 +291,7 @@ func (j *discoveryCache) updateARDCache() {
 	log.Trace("updating access request definition cache")
 
 	// create an empty accessrequestdef to gen url
-	emptyARD := mv1.AccessRequestDefinition{
-		ResourceMeta: apiV1.ResourceMeta{
-			GroupVersionKind: mv1.AccessRequestDefinitionGVK(),
-			Metadata: apiV1.Metadata{
-				Scope: apiV1.MetadataScope{
-					Name: agent.cfg.GetEnvironmentName(),
-				},
-			},
-		},
-	}
-	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyARD.GetKindLink())
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
 
 	// Update cache with published resources
 	existingARDs := make(map[string]bool)
@@ -372,17 +362,7 @@ func (j *discoveryCache) updateCRDCache() {
 	log.Trace("updating credential request definition cache")
 
 	// create an empty credentialrequestdef to gen url
-	emptyCRD := mv1.CredentialRequestDefinition{
-		ResourceMeta: apiV1.ResourceMeta{
-			GroupVersionKind: mv1.CredentialRequestDefinitionGVK(),
-			Metadata: apiV1.Metadata{
-				Scope: apiV1.MetadataScope{
-					Name: agent.cfg.GetEnvironmentName(),
-				},
-			},
-		},
-	}
-	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), emptyCRD.GetKindLink())
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
 
 	// Update cache with published resources
 	existingCRDs := make(map[string]bool)

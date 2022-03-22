@@ -16,7 +16,6 @@ type credentialRequestDef struct {
 	name            string
 	provisionSchema map[string]interface{}
 	requestSchema   map[string]interface{}
-	maxAppCreds     int
 	webhooks        []string
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
@@ -27,7 +26,6 @@ type CredentialRequestBuilder interface {
 	SetName(name string) CredentialRequestBuilder
 	SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
-	SetMaxApplicationCredentials(max int) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
 	Register() (*v1alpha1.CredentialRequestDefinition, error)
@@ -74,12 +72,6 @@ func (c *credentialRequestDef) SetProvisionSchema(schema SchemaBuilder) Credenti
 		c.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
 
-	return c
-}
-
-// SetMaxApplicationCredentials - set the maximum number of allowed applications for this credential
-func (c *credentialRequestDef) SetMaxApplicationCredentials(max int) CredentialRequestBuilder {
-	c.maxAppCreds = max
 	return c
 }
 

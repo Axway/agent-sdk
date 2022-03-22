@@ -39,6 +39,22 @@ type AssetMappingTemplate struct {
 	Spec  AssetMappingTemplateSpec `json:"spec"`
 }
 
+// NewAssetMappingTemplate creates an empty *AssetMappingTemplate
+func NewAssetMappingTemplate(name, scopeName string) *AssetMappingTemplate {
+	return &AssetMappingTemplate{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetMappingTemplateGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetMappingTemplateScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AssetMappingTemplateFromInstanceArray converts a []*ResourceInstance to a []*AssetMappingTemplate
 func AssetMappingTemplateFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AssetMappingTemplate, error) {
 	newArray := make([]*AssetMappingTemplate, 0)

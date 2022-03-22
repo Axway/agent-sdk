@@ -41,6 +41,22 @@ type ConsumerInstance struct {
 	Status     ConsumerInstanceStatus     `json:"status"`
 }
 
+// NewConsumerInstance creates an empty *ConsumerInstance
+func NewConsumerInstance(name, scopeName string) *ConsumerInstance {
+	return &ConsumerInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ConsumerInstanceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ConsumerInstanceScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ConsumerInstanceFromInstanceArray converts a []*ResourceInstance to a []*ConsumerInstance
 func ConsumerInstanceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ConsumerInstance, error) {
 	newArray := make([]*ConsumerInstance, 0)

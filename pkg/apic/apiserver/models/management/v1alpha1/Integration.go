@@ -39,6 +39,16 @@ type Integration struct {
 	Spec  IntegrationSpec `json:"spec"`
 }
 
+// NewIntegration creates an empty *Integration
+func NewIntegration(name string) *Integration {
+	return &Integration{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _IntegrationGVK,
+		},
+	}
+}
+
 // IntegrationFromInstanceArray converts a []*ResourceInstance to a []*Integration
 func IntegrationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Integration, error) {
 	newArray := make([]*Integration, 0)

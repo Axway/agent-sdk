@@ -41,6 +41,16 @@ type VirtualAPIRelease struct {
 	State interface{}           `json:"state"`
 }
 
+// NewVirtualAPIRelease creates an empty *VirtualAPIRelease
+func NewVirtualAPIRelease(name string) *VirtualAPIRelease {
+	return &VirtualAPIRelease{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _VirtualAPIReleaseGVK,
+		},
+	}
+}
+
 // VirtualAPIReleaseFromInstanceArray converts a []*ResourceInstance to a []*VirtualAPIRelease
 func VirtualAPIReleaseFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualAPIRelease, error) {
 	newArray := make([]*VirtualAPIRelease, 0)

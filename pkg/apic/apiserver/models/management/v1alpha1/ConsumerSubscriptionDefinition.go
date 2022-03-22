@@ -39,6 +39,22 @@ type ConsumerSubscriptionDefinition struct {
 	Spec  ConsumerSubscriptionDefinitionSpec `json:"spec"`
 }
 
+// NewConsumerSubscriptionDefinition creates an empty *ConsumerSubscriptionDefinition
+func NewConsumerSubscriptionDefinition(name, scopeName string) *ConsumerSubscriptionDefinition {
+	return &ConsumerSubscriptionDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ConsumerSubscriptionDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ConsumerSubscriptionDefinitionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ConsumerSubscriptionDefinitionFromInstanceArray converts a []*ResourceInstance to a []*ConsumerSubscriptionDefinition
 func ConsumerSubscriptionDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ConsumerSubscriptionDefinition, error) {
 	newArray := make([]*ConsumerSubscriptionDefinition, 0)

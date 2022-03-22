@@ -40,6 +40,22 @@ type DiscoveryAgent struct {
 	Status DiscoveryAgentStatus `json:"status"`
 }
 
+// NewDiscoveryAgent creates an empty *DiscoveryAgent
+func NewDiscoveryAgent(name, scopeName string) *DiscoveryAgent {
+	return &DiscoveryAgent{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _DiscoveryAgentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: DiscoveryAgentScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // DiscoveryAgentFromInstanceArray converts a []*ResourceInstance to a []*DiscoveryAgent
 func DiscoveryAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*DiscoveryAgent, error) {
 	newArray := make([]*DiscoveryAgent, 0)

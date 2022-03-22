@@ -40,6 +40,22 @@ type TraceabilityAgent struct {
 	Status TraceabilityAgentStatus `json:"status"`
 }
 
+// NewTraceabilityAgent creates an empty *TraceabilityAgent
+func NewTraceabilityAgent(name, scopeName string) *TraceabilityAgent {
+	return &TraceabilityAgent{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _TraceabilityAgentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: TraceabilityAgentScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // TraceabilityAgentFromInstanceArray converts a []*ResourceInstance to a []*TraceabilityAgent
 func TraceabilityAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*TraceabilityAgent, error) {
 	newArray := make([]*TraceabilityAgent, 0)

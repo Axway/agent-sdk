@@ -42,6 +42,22 @@ type ManagedApplication struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewManagedApplication creates an empty *ManagedApplication
+func NewManagedApplication(name, scopeName string) *ManagedApplication {
+	return &ManagedApplication{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ManagedApplicationGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ManagedApplicationScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ManagedApplicationFromInstanceArray converts a []*ResourceInstance to a []*ManagedApplication
 func ManagedApplicationFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ManagedApplication, error) {
 	newArray := make([]*ManagedApplication, 0)

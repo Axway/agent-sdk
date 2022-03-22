@@ -40,6 +40,22 @@ type AccessRequestDefinition struct {
 	Webhooks interface{}                 `json:"webhooks"`
 }
 
+// NewAccessRequestDefinition creates an empty *AccessRequestDefinition
+func NewAccessRequestDefinition(name, scopeName string) *AccessRequestDefinition {
+	return &AccessRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AccessRequestDefinitionScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // AccessRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AccessRequestDefinition
 func AccessRequestDefinitionFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AccessRequestDefinition, error) {
 	newArray := make([]*AccessRequestDefinition, 0)
