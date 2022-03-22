@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -40,10 +42,7 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	app := &mv1.ManagedApplication{}
-	err := app.FromInstance(resource)
-	if err != nil {
-		return err
-	}
+	app.FromInstance(resource)
 
 	if ok := isStatusFound(app.Status); !ok {
 		return nil
@@ -80,13 +79,12 @@ func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provMana
 	ri, _ := app.AsInstance()
 	h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
 
-	return h.client.CreateSubResourceScoped(
-		app.ResourceMeta,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(app),
-			"status":           app.Status,
-		},
-	)
+	app.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(app),
+		"status":           app.Status,
+	}
+
+	return h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
 }
 
 func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provManagedApp) {
@@ -95,8 +93,20 @@ func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provMan
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
+	} else {
+		h.onError(app, fmt.Errorf(status.GetMessage()))
+		h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
 	}
+}
 
+// onError updates the managed app with an error status
+func (h *managedApplication) onError(ar *mv1.ManagedApplication, err error) {
+	ps := prov.NewRequestStatusBuilder()
+	status := ps.SetMessage(err.Error()).Failed()
+	ar.Status = prov.NewStatusReason(status)
+	ar.SubResources = map[string]interface{}{
+		"status": ar.Status,
+	}
 }
 
 func (h *managedApplication) getTeamName(owner *v1.Owner) string {

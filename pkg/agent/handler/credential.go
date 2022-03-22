@@ -23,20 +23,21 @@ type credProv interface {
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
 }
 
-type encryptFunc func(enc util.Encryptor, schema, data map[string]interface{}) map[string]interface{}
-
 type credentials struct {
-	prov    credProv
-	client  client
-	encrypt encryptFunc
+	prov          credProv
+	client        client
+	encryptSchema encryptSchemaFunc
 }
+
+// encryptSchemaFunc func signature for encryptSchema
+type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
 func NewCredentialHandler(prov credProv, client client) Handler {
 	return &credentials{
-		prov:    prov,
-		client:  client,
-		encrypt: encryptMap,
+		prov:          prov,
+		client:        client,
+		encryptSchema: encryptSchema,
 	}
 }
 
@@ -47,10 +48,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	}
 
 	cr := &mv1.Credential{}
-	err := cr.FromInstance(resource)
-	if err != nil {
-		return err
-	}
+	cr.FromInstance(resource)
 
 	if ok := isStatusFound(cr.Status); !ok {
 		return nil
@@ -58,10 +56,10 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
 		log.Tracef("credential handler - processing resource in pending status")
-		return h.onPending(cr)
+		cr := h.onPending(cr)
+		return h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
 	}
 
-	// check for deleting state on success status
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
 		log.Tracef("credential handler - processing resource in deleting state")
 		h.onDeleting(cr)
@@ -70,34 +68,36 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	return nil
 }
 
-func (h *credentials) onPending(cred *mv1.Credential) error {
+func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	app, err := h.getManagedApp(cred)
 	if err != nil {
-		return err
+		h.onError(cred, err)
+		return cred
 	}
 
 	crd, err := h.getCRD(cred)
 	if err != nil {
-		return err
+		h.onError(cred, err)
+		return cred
 	}
 
 	provCreds := newProvCreds(cred, util.GetAgentDetails(app))
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
-	sec := app.Spec.Security
-	enc, err := util.NewEncryptor(sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash)
+	if status.GetStatus() == prov.Success {
+		sec := app.Spec.Security
+		data, err := h.encryptSchema(
+			crd.Spec.Provision.Schema,
+			credentialData.GetData(),
+			sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+		)
 
-	if err != nil {
-		status = prov.NewRequestStatusBuilder().
-			SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
-			Failed()
-	} else {
-		if schemaProps, ok := crd.Spec.Provision.Schema["properties"]; ok {
-			props, ok := schemaProps.(map[string]interface{})
-			if !ok {
-				props = make(map[string]interface{})
-			}
-			cred.Data = h.encrypt(enc, props, credentialData.GetData())
+		if err != nil {
+			status = prov.NewRequestStatusBuilder().
+				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
+				Failed()
+		} else {
+			cred.Data = data
 		}
 	}
 
@@ -108,15 +108,13 @@ func (h *credentials) onPending(cred *mv1.Credential) error {
 
 	ri, _ := cred.AsInstance()
 	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	cred.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(cred),
+		"status":           cred.Status,
+		"data":             cred.Data,
+	}
 
-	return h.client.CreateSubResourceScoped(
-		cred.ResourceMeta,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(cred),
-			"status":           cred.Status,
-			"data":             cred.Data,
-		},
-	)
+	return cred
 }
 
 func (h *credentials) onDeleting(cred *mv1.Credential) {
@@ -126,36 +124,42 @@ func (h *credentials) onDeleting(cred *mv1.Credential) {
 	if status.GetStatus() == prov.Success {
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+	} else {
+		h.onError(cred, fmt.Errorf(status.GetMessage()))
+		h.client.CreateSubResourceScoped(cred.ResourceMeta, cred.SubResources)
+	}
+}
+
+// onError updates the AccessRequest with an error status
+func (h *credentials) onError(Cred *mv1.Credential, err error) {
+	ps := prov.NewRequestStatusBuilder()
+	status := ps.SetMessage(err.Error()).Failed()
+	Cred.Status = prov.NewStatusReason(status)
+	Cred.SubResources = map[string]interface{}{
+		"status": Cred.Status,
 	}
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/managedapplications/%s",
-		cred.Metadata.Scope.Name,
-		cred.Spec.ManagedApplication,
-	)
-	ri, err := h.client.GetResource(url)
+	app := mv1.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
-	app := &mv1.ManagedApplication{}
+
+	app = &mv1.ManagedApplication{}
 	err = app.FromInstance(ri)
 	return app, err
 }
 
 func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/credentialrequestdefinitions/%s",
-		cred.Metadata.Scope.Name,
-		cred.Spec.CredentialRequestDefinition,
-	)
-	ri, err := h.client.GetResource(url)
+	crd := mv1.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	crd := &mv1.CredentialRequestDefinition{}
+	crd = &mv1.CredentialRequestDefinition{}
 	err = crd.FromInstance(ri)
 	return crd, err
 }
@@ -232,4 +236,27 @@ func (c provCreds) GetApplicationDetailsValue(key string) string {
 	}
 
 	return util.ToString(c.appDetails[key])
+}
+
+// encryptSchema schema is the json schema. credData is the data that contains data to encrypt based on the key, alg and hash.
+func encryptSchema(
+	schema, credData map[string]interface{}, key, alg, hash string,
+) (map[string]interface{}, error) {
+	enc, err := util.NewEncryptor(key, alg, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	schemaProps, ok := schema["properties"]
+	if !ok {
+		return nil, fmt.Errorf("properties field not found on schema")
+	}
+
+	props, ok := schemaProps.(map[string]interface{})
+	if !ok {
+		props = make(map[string]interface{})
+	}
+
+	data := encryptMap(enc, props, credData)
+	return data, nil
 }

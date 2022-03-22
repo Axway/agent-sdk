@@ -49,10 +49,7 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	}
 
 	ar := &mv1.AccessRequest{}
-	err := ar.FromInstance(resource)
-	if err != nil {
-		return err
-	}
+	ar.FromInstance(resource)
 
 	if ok := isStatusFound(ar.Status); !ok {
 		return nil
@@ -60,26 +57,29 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
 		log.Tracef("access request handler - processing resource in pending status")
-		return h.onPending(ar)
+		ar := h.onPending(ar)
+		return h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
 		log.Tracef("access request handler - processing resource in deleting state")
-		return h.onDeleting(ar)
+		h.onDeleting(ar)
 	}
 
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
+func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessRequest {
 	app, err := h.getManagedApp(ar)
 	if err != nil {
-		return err
+		h.onError(ar, err)
+		return ar
 	}
 
 	req, err := h.newReq(ar, util.GetAgentDetails(app))
 	if err != nil {
-		return err
+		h.onError(ar, err)
+		return ar
 	}
 
 	status := h.prov.AccessRequestProvision(req)
@@ -88,41 +88,50 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) error {
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())
 	util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
 
-	// add a finalizer
 	ri, _ := ar.AsInstance()
 	h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
 
-	return h.client.CreateSubResourceScoped(
-		ar.ResourceMeta,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(ar),
-			"status":           ar.Status,
-		},
-	)
+	ar.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(ar),
+		"status":           ar.Status,
+	}
+
+	return ar
 }
 
-func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) error {
+// onError updates the AccessRequest with an error status
+func (h *accessRequestHandler) onError(ar *mv1.AccessRequest, err error) {
+	ps := prov.NewRequestStatusBuilder()
+	status := ps.SetMessage(err.Error()).Failed()
+	ar.Status = prov.NewStatusReason(status)
+	ar.SubResources = map[string]interface{}{
+		"status": ar.Status,
+	}
+}
+
+// onDeleting deprovisions an access request and removes the finalizer
+func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
 	req, err := h.newReq(ar, map[string]interface{}{})
 	if err != nil {
-		return err
+		h.onError(ar, err)
+		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		return
 	}
+
 	status := h.prov.AccessRequestDeprovision(req)
 
 	ri, _ := ar.AsInstance()
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
+	} else {
+		h.onError(ar, fmt.Errorf(status.GetMessage()))
+		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}
-
-	return nil
 }
 
 func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/managedapplications/%s",
-		ar.Metadata.Scope.Name,
-		ar.Spec.ManagedApplication,
-	)
-	return h.client.GetResource(url)
+	app := mv1.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
+	return h.client.GetResource(app.GetSelfLink())
 }
 
 func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {

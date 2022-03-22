@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 	"unicode"
 
@@ -247,4 +248,9 @@ func ToString(v interface{}) string {
 		return ""
 	}
 	return s
+}
+
+// IsNil checks a value, or a pointer for nil
+func IsNil(v interface{}) bool {
+	return v == nil || reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()
 }

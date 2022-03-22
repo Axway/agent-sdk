@@ -61,6 +61,11 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 // Returns errors if unable to perform type conversion.
 // Returns an empty string if the value does not exist, or if there is an error.
 func GetSubResourcePropertyValue(h handler, subRes, key string) (string, error) {
+	// check for a nil value, or a pointer to a nil value
+	if IsNil(h) {
+		return "", nil
+	}
+
 	item := h.GetSubResource(subRes)
 	if item == nil {
 		return "", nil
