@@ -402,16 +402,18 @@ func Test_encrypt(t *testing.T) {
 			}
 
 			encrypted, err := encryptSchema(crd, schemaData, tc.publicKey, tc.alg, tc.hash)
-			util.AssertError(t, tc.hasErr, err)
+			if tc.hasErr {
+				assert.Error(t, err)
+			} else {
+				assert.NotEqual(t, "abc", schemaData["one"])
+				assert.Equal(t, "def", schemaData["two"])
+				assert.NotEqual(t, "ghi", schemaData["three"])
 
-			assert.NotEqual(t, "abc", schemaData["one"])
-			assert.Equal(t, "def", schemaData["two"])
-			assert.NotEqual(t, "ghi", schemaData["three"])
-
-			decrypted := decrypt(parsePrivateKey(tc.privateKey), tc.alg, encrypted)
-			assert.Equal(t, "abc", decrypted["one"])
-			assert.Equal(t, "def", decrypted["two"])
-			assert.Equal(t, "ghi", decrypted["three"])
+				decrypted := decrypt(parsePrivateKey(tc.privateKey), tc.alg, encrypted)
+				assert.Equal(t, "abc", decrypted["one"])
+				assert.Equal(t, "def", decrypted["two"])
+				assert.Equal(t, "ghi", decrypted["three"])
+			}
 		})
 	}
 
