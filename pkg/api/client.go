@@ -61,6 +61,8 @@ type configAgent struct {
 	agentName       string
 	environmentName string
 	isDocker        bool
+	singleURL       string
+	connFilter      []string
 }
 
 var cfgAgent *configAgent
@@ -70,10 +72,12 @@ func init() {
 }
 
 // SetConfigAgent -
-func SetConfigAgent(env string, isDocker bool, agentName string) {
+func SetConfigAgent(env string, isDocker bool, agentName string, singleURL string, connFilter []string) {
 	cfgAgent.environmentName = env
 	cfgAgent.isDocker = isDocker
 	cfgAgent.agentName = agentName
+	cfgAgent.singleURL = singleURL
+	cfgAgent.connFilter = connFilter
 }
 
 // NewClient - creates a new HTTP client
@@ -148,8 +152,22 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 	return params.Encode()
 }
 
+func (c *httpClient) createURL(URL string) (string, string) {
+	purl, _ := url.Parse(URL)
+	for _, v := range cfgAgent.connFilter {
+		log.Tracef("Matching %s contains %s", URL, v)
+		if strings.Contains(URL, v) {
+			URL = strings.Replace(URL, purl.Host, cfgAgent.singleURL, -1)
+			log.Debugf("Replaced %s using Host header %s", URL, purl.Host)
+			break
+		}
+	}
+	return URL, purl.Host
+}
+
 func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
-	requestURL := request.URL
+	requestURL, host := c.createURL(request.URL)
+	urlMutated := request.URL != requestURL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
@@ -184,6 +202,9 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 		ua := fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType)
 		req.Header.Set("User-Agent", ua)
+	}
+	if urlMutated {
+		req.Host = host
 	}
 	return req, err
 }

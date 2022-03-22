@@ -61,7 +61,7 @@ func TestGetPlatformTokensHttpError(t *testing.T) {
 	}))
 	defer s.Close()
 
-	ptg := platformTokenGenerator{s.URL, time.Millisecond, nil, ""}
+	ptg := platformTokenGenerator{s.URL, time.Millisecond, nil, "", ""}
 
 	_, err := ptg.getPlatformTokens("some_token")
 	if err == nil {
@@ -74,7 +74,7 @@ func TestGetPlatformTokensTimeout(t *testing.T) {
 	}))
 
 	defer s.Close()
-	ptg := platformTokenGenerator{s.URL, time.Second, nil, ""}
+	ptg := platformTokenGenerator{s.URL, time.Second, nil, "", ""}
 
 	_, err := ptg.getPlatformTokens("some_token")
 	if err == nil {

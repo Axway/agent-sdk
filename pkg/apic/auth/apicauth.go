@@ -76,21 +76,22 @@ func NewWithStatic(tenantID, token string) *ApicAuth {
 }
 
 // NewWithFlow returns an ApicAuth that uses the axway authentication flow
-func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) *ApicAuth {
+func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, singleURL string, timeout time.Duration) *ApicAuth {
 	return &ApicAuth{
 		tenantID,
-		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, timeout)),
+		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, singleURL, timeout)),
 	}
 }
 
 // NewPlatformTokenGetter returns a token getter for axway ID
-func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) PlatformTokenGetter {
+func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, singleURL string, timeout time.Duration) PlatformTokenGetter {
 	return &platformTokenGetter{
 		aud,
 		clientID,
 		&platformTokenGenerator{
-			url:     url,
-			timeout: timeout,
+			url:       url,
+			timeout:   timeout,
+			singleURL: singleURL,
 		},
 		&keyReader{
 			privKey:   privKey,
@@ -112,6 +113,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			timeout:   centralCfg.GetAuthConfig().GetTimeout(),
 			tlsConfig: centralCfg.GetTLSConfig(),
 			proxyURL:  centralCfg.GetProxyURL(),
+			singleURL: centralCfg.GetSingleURL(),
 		},
 		&keyReader{
 			privKey:   centralCfg.GetAuthConfig().GetPrivateKey(),
@@ -272,6 +274,7 @@ type platformTokenGenerator struct {
 	timeout   time.Duration    // timeout for the http request
 	tlsConfig config.TLSConfig // TLS Config
 	proxyURL  string           // ProxyURL
+	singleURL string           // Alternate Connection for static IP routing
 }
 
 // prepareInitialToken prepares a token for an access request
@@ -317,7 +320,7 @@ func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
 	startTime := time.Now()
 	client := ptg.getHTTPClient()
-	resp, err := client.PostForm(ptg.url, url.Values{
+	resp, err := ptg.postAuthForm(client, ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
 		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
 		"client_assertion":      []string{requestToken},
@@ -348,6 +351,27 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 	}
 
 	return &tokens, nil
+}
+
+func (ptg *platformTokenGenerator) postAuthForm(client http.Client, Url string, data url.Values) (resp *http.Response, err error) {
+	var altHost string = ""
+	if ptg.singleURL != "" {
+		// Swap the baseURL with the static IP DNS entry
+		purl, _ := url.Parse(Url)
+		Url = strings.Replace(Url, purl.Host, ptg.singleURL, -1)
+		altHost = purl.Host
+	}
+	req, err := http.NewRequest("POST", Url, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if altHost != "" {
+		// Force the host to original baseURL
+		log.Debugf("Replaced %s using Host header %s", Url, altHost)
+		req.Host = altHost
+	}
+	return client.Do(req)
 }
 
 type tokenHolder struct {
@@ -558,6 +582,10 @@ func NewTokenAuth(ac Config, tenantID string) TokenGetter {
 	instance := &tokenAuth{tenantID: tenantID}
 	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
 	aud := ac.URL + "/realms/Broker"
+
+	cfg := &config.CentralConfiguration{}
+	singleURL := cfg.GetSingleURL()
+
 	instance.tokenRequester = NewPlatformTokenGetter(
 		ac.PrivateKey,
 		ac.PublicKey,
@@ -565,6 +593,7 @@ func NewTokenAuth(ac Config, tenantID string) TokenGetter {
 		tokenURL,
 		aud,
 		ac.ClientID,
+		singleURL,
 		ac.Timeout,
 	)
 	return instance
