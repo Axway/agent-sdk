@@ -62,7 +62,7 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 // Returns an empty string if the value does not exist, or if there is an error.
 func GetSubResourcePropertyValue(h handler, subRes, key string) (string, error) {
 	// check for a nil value, or a pointer to a nil value
-	if isNil := IsNil(h); isNil {
+	if IsNil(h) {
 		return "", nil
 	}
 
