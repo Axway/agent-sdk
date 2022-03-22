@@ -43,13 +43,13 @@ type Subscription struct {
 }
 
 // NewSubscription creates an empty *Subscription
-func NewSubscription(name string) (*Subscription, error) {
+func NewSubscription(name string) *Subscription {
 	return &Subscription{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _SubscriptionGVK,
 		},
-	}, nil
+	}
 }
 
 // SubscriptionFromInstanceArray converts a []*ResourceInstance to a []*Subscription

@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -42,18 +41,7 @@ type DiscoveryAgent struct {
 }
 
 // NewDiscoveryAgent creates an empty *DiscoveryAgent
-func NewDiscoveryAgent(name, scopeKind, scopeName string) (*DiscoveryAgent, error) {
-	validScope := false
-	for _, s := range DiscoveryAgentScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for DiscoveryAgent kind", scopeKind)
-	}
-
+func NewDiscoveryAgent(name, scopeName string) *DiscoveryAgent {
 	return &DiscoveryAgent{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -61,11 +49,11 @@ func NewDiscoveryAgent(name, scopeKind, scopeName string) (*DiscoveryAgent, erro
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: DiscoveryAgentScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // DiscoveryAgentFromInstanceArray converts a []*ResourceInstance to a []*DiscoveryAgent

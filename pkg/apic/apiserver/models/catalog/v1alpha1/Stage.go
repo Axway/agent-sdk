@@ -41,13 +41,13 @@ type Stage struct {
 }
 
 // NewStage creates an empty *Stage
-func NewStage(name string) (*Stage, error) {
+func NewStage(name string) *Stage {
 	return &Stage{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _StageGVK,
 		},
-	}, nil
+	}
 }
 
 // StageFromInstanceArray converts a []*ResourceInstance to a []*Stage

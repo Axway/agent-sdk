@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type APIServiceRevision struct {
 }
 
 // NewAPIServiceRevision creates an empty *APIServiceRevision
-func NewAPIServiceRevision(name, scopeKind, scopeName string) (*APIServiceRevision, error) {
-	validScope := false
-	for _, s := range APIServiceRevisionScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for APIServiceRevision kind", scopeKind)
-	}
-
+func NewAPIServiceRevision(name, scopeName string) *APIServiceRevision {
 	return &APIServiceRevision{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewAPIServiceRevision(name, scopeKind, scopeName string) (*APIServiceRevisi
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: APIServiceRevisionScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // APIServiceRevisionFromInstanceArray converts a []*ResourceInstance to a []*APIServiceRevision

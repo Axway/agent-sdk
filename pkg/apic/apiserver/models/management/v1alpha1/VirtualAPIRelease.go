@@ -42,13 +42,13 @@ type VirtualAPIRelease struct {
 }
 
 // NewVirtualAPIRelease creates an empty *VirtualAPIRelease
-func NewVirtualAPIRelease(name string) (*VirtualAPIRelease, error) {
+func NewVirtualAPIRelease(name string) *VirtualAPIRelease {
 	return &VirtualAPIRelease{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _VirtualAPIReleaseGVK,
 		},
-	}, nil
+	}
 }
 
 // VirtualAPIReleaseFromInstanceArray converts a []*ResourceInstance to a []*VirtualAPIRelease

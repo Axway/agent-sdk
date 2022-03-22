@@ -40,13 +40,13 @@ type Environment struct {
 }
 
 // NewEnvironment creates an empty *Environment
-func NewEnvironment(name string) (*Environment, error) {
+func NewEnvironment(name string) *Environment {
 	return &Environment{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _EnvironmentGVK,
 		},
-	}, nil
+	}
 }
 
 // EnvironmentFromInstanceArray converts a []*ResourceInstance to a []*Environment

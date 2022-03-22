@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type APISpec struct {
 }
 
 // NewAPISpec creates an empty *APISpec
-func NewAPISpec(name, scopeKind, scopeName string) (*APISpec, error) {
-	validScope := false
-	for _, s := range APISpecScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for APISpec kind", scopeKind)
-	}
-
+func NewAPISpec(name, scopeName string) *APISpec {
 	return &APISpec{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewAPISpec(name, scopeKind, scopeName string) (*APISpec, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: APISpecScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // APISpecFromInstanceArray converts a []*ResourceInstance to a []*APISpec

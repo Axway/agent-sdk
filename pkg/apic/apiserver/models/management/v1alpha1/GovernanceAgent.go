@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -43,18 +42,7 @@ type GovernanceAgent struct {
 }
 
 // NewGovernanceAgent creates an empty *GovernanceAgent
-func NewGovernanceAgent(name, scopeKind, scopeName string) (*GovernanceAgent, error) {
-	validScope := false
-	for _, s := range GovernanceAgentScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for GovernanceAgent kind", scopeKind)
-	}
-
+func NewGovernanceAgent(name, scopeName string) *GovernanceAgent {
 	return &GovernanceAgent{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -62,11 +50,11 @@ func NewGovernanceAgent(name, scopeKind, scopeName string) (*GovernanceAgent, er
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: GovernanceAgentScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // GovernanceAgentFromInstanceArray converts a []*ResourceInstance to a []*GovernanceAgent

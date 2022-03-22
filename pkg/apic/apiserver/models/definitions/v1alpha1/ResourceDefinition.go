@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type ResourceDefinition struct {
 }
 
 // NewResourceDefinition creates an empty *ResourceDefinition
-func NewResourceDefinition(name, scopeKind, scopeName string) (*ResourceDefinition, error) {
-	validScope := false
-	for _, s := range ResourceDefinitionScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ResourceDefinition kind", scopeKind)
-	}
-
+func NewResourceDefinition(name, scopeName string) *ResourceDefinition {
 	return &ResourceDefinition{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewResourceDefinition(name, scopeKind, scopeName string) (*ResourceDefiniti
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ResourceDefinitionScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ResourceDefinitionFromInstanceArray converts a []*ResourceInstance to a []*ResourceDefinition

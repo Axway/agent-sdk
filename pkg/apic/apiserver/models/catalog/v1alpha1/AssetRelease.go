@@ -44,13 +44,13 @@ type AssetRelease struct {
 }
 
 // NewAssetRelease creates an empty *AssetRelease
-func NewAssetRelease(name string) (*AssetRelease, error) {
+func NewAssetRelease(name string) *AssetRelease {
 	return &AssetRelease{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _AssetReleaseGVK,
 		},
-	}, nil
+	}
 }
 
 // AssetReleaseFromInstanceArray converts a []*ResourceInstance to a []*AssetRelease

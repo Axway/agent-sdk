@@ -40,13 +40,13 @@ type Marketplace struct {
 }
 
 // NewMarketplace creates an empty *Marketplace
-func NewMarketplace(name string) (*Marketplace, error) {
+func NewMarketplace(name string) *Marketplace {
 	return &Marketplace{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _MarketplaceGVK,
 		},
-	}, nil
+	}
 }
 
 // MarketplaceFromInstanceArray converts a []*ResourceInstance to a []*Marketplace

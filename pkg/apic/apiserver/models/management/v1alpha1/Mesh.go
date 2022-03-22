@@ -40,13 +40,13 @@ type Mesh struct {
 }
 
 // NewMesh creates an empty *Mesh
-func NewMesh(name string) (*Mesh, error) {
+func NewMesh(name string) *Mesh {
 	return &Mesh{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _MeshGVK,
 		},
-	}, nil
+	}
 }
 
 // MeshFromInstanceArray converts a []*ResourceInstance to a []*Mesh

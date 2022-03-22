@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type VirtualHost struct {
 }
 
 // NewVirtualHost creates an empty *VirtualHost
-func NewVirtualHost(name, scopeKind, scopeName string) (*VirtualHost, error) {
-	validScope := false
-	for _, s := range VirtualHostScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for VirtualHost kind", scopeKind)
-	}
-
+func NewVirtualHost(name, scopeName string) *VirtualHost {
 	return &VirtualHost{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewVirtualHost(name, scopeKind, scopeName string) (*VirtualHost, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: VirtualHostScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // VirtualHostFromInstanceArray converts a []*ResourceInstance to a []*VirtualHost

@@ -40,13 +40,13 @@ type Integration struct {
 }
 
 // NewIntegration creates an empty *Integration
-func NewIntegration(name string) (*Integration, error) {
+func NewIntegration(name string) *Integration {
 	return &Integration{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _IntegrationGVK,
 		},
-	}, nil
+	}
 }
 
 // IntegrationFromInstanceArray converts a []*ResourceInstance to a []*Integration

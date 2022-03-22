@@ -42,13 +42,13 @@ type VirtualAPI struct {
 }
 
 // NewVirtualAPI creates an empty *VirtualAPI
-func NewVirtualAPI(name string) (*VirtualAPI, error) {
+func NewVirtualAPI(name string) *VirtualAPI {
 	return &VirtualAPI{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _VirtualAPIGVK,
 		},
-	}, nil
+	}
 }
 
 // VirtualAPIFromInstanceArray converts a []*ResourceInstance to a []*VirtualAPI

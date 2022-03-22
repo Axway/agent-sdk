@@ -43,13 +43,13 @@ type Product struct {
 }
 
 // NewProduct creates an empty *Product
-func NewProduct(name string) (*Product, error) {
+func NewProduct(name string) *Product {
 	return &Product{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _ProductGVK,
 		},
-	}, nil
+	}
 }
 
 // ProductFromInstanceArray converts a []*ResourceInstance to a []*Product

@@ -43,13 +43,13 @@ type ProductRelease struct {
 }
 
 // NewProductRelease creates an empty *ProductRelease
-func NewProductRelease(name string) (*ProductRelease, error) {
+func NewProductRelease(name string) *ProductRelease {
 	return &ProductRelease{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _ProductReleaseGVK,
 		},
-	}, nil
+	}
 }
 
 // ProductReleaseFromInstanceArray converts a []*ResourceInstance to a []*ProductRelease

@@ -19,7 +19,9 @@ var (
         },
         APIVersion: "{{.res.version}}",
     }
+{{ $scopesLen := 0 }}
 {{if .res.scopes }}
+  {{ $scopesLen = len .res.scopes }}
   {{.res.kind}}Scopes = []string{"{{ join $.res.scopes "\", \""}}",}
 {{else}}
   {{.res.kind}}Scopes = []string{""}
@@ -47,8 +49,8 @@ type {{.res.kind}} struct {
 }
 
 // New{{.res.kind}} creates an empty *{{.res.kind}}
-func New{{.res.kind}}(name{{if .res.scopes }}, scopeKind, scopeName{{end}} string) (*{{.res.kind}}, error) {
-    {{if .res.scopes }}validScope := false
+func New{{.res.kind}}(name{{if .res.scopes }}{{ if gt $scopesLen 1 }}, scopeKind{{end}}, scopeName{{end}} string) (*{{.res.kind}}{{ if gt $scopesLen 1 }}, error{{end}}) {
+    {{ if gt $scopesLen 1 }}validScope := false
     for _, s := range {{.res.kind}}Scopes {
         if scopeKind == s {
             validScope = true
@@ -66,11 +68,11 @@ func New{{.res.kind}}(name{{if .res.scopes }}, scopeKind, scopeName{{end}} strin
                 Metadata: apiv1.Metadata{
                 Scope: apiv1.MetadataScope{
                     Name: scopeName,
-                    Kind: scopeKind,
+                    Kind: {{ if gt $scopesLen 1 }}scopeKind{{else}}{{.res.kind}}Scopes[0]{{end}},
                 },
             },{{end}}
         },
-    }, nil
+    }{{ if gt $scopesLen 1 }} , nil{{end}}
 }
 
 // {{.res.kind}}FromInstanceArray converts a []*ResourceInstance to a []*{{.res.kind}}

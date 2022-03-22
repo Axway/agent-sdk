@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type MeshWorkload struct {
 }
 
 // NewMeshWorkload creates an empty *MeshWorkload
-func NewMeshWorkload(name, scopeKind, scopeName string) (*MeshWorkload, error) {
-	validScope := false
-	for _, s := range MeshWorkloadScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for MeshWorkload kind", scopeKind)
-	}
-
+func NewMeshWorkload(name, scopeName string) *MeshWorkload {
 	return &MeshWorkload{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewMeshWorkload(name, scopeKind, scopeName string) (*MeshWorkload, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: MeshWorkloadScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // MeshWorkloadFromInstanceArray converts a []*ResourceInstance to a []*MeshWorkload

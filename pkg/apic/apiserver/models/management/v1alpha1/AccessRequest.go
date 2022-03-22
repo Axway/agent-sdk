@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -44,18 +43,7 @@ type AccessRequest struct {
 }
 
 // NewAccessRequest creates an empty *AccessRequest
-func NewAccessRequest(name, scopeKind, scopeName string) (*AccessRequest, error) {
-	validScope := false
-	for _, s := range AccessRequestScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for AccessRequest kind", scopeKind)
-	}
-
+func NewAccessRequest(name, scopeName string) *AccessRequest {
 	return &AccessRequest{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -63,11 +51,11 @@ func NewAccessRequest(name, scopeKind, scopeName string) (*AccessRequest, error)
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: AccessRequestScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest

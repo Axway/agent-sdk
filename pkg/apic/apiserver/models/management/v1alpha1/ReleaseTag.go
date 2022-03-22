@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -44,18 +43,7 @@ type ReleaseTag struct {
 }
 
 // NewReleaseTag creates an empty *ReleaseTag
-func NewReleaseTag(name, scopeKind, scopeName string) (*ReleaseTag, error) {
-	validScope := false
-	for _, s := range ReleaseTagScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ReleaseTag kind", scopeKind)
-	}
-
+func NewReleaseTag(name, scopeName string) *ReleaseTag {
 	return &ReleaseTag{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -63,11 +51,11 @@ func NewReleaseTag(name, scopeKind, scopeName string) (*ReleaseTag, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ReleaseTagScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ReleaseTagFromInstanceArray converts a []*ResourceInstance to a []*ReleaseTag

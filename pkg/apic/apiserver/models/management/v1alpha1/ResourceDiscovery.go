@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type ResourceDiscovery struct {
 }
 
 // NewResourceDiscovery creates an empty *ResourceDiscovery
-func NewResourceDiscovery(name, scopeKind, scopeName string) (*ResourceDiscovery, error) {
-	validScope := false
-	for _, s := range ResourceDiscoveryScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ResourceDiscovery kind", scopeKind)
-	}
-
+func NewResourceDiscovery(name, scopeName string) *ResourceDiscovery {
 	return &ResourceDiscovery{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewResourceDiscovery(name, scopeKind, scopeName string) (*ResourceDiscovery
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ResourceDiscoveryScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ResourceDiscoveryFromInstanceArray converts a []*ResourceInstance to a []*ResourceDiscovery

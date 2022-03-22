@@ -41,13 +41,13 @@ type AuthorizationProfile struct {
 }
 
 // NewAuthorizationProfile creates an empty *AuthorizationProfile
-func NewAuthorizationProfile(name string) (*AuthorizationProfile, error) {
+func NewAuthorizationProfile(name string) *AuthorizationProfile {
 	return &AuthorizationProfile{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _AuthorizationProfileGVK,
 		},
-	}, nil
+	}
 }
 
 // AuthorizationProfileFromInstanceArray converts a []*ResourceInstance to a []*AuthorizationProfile

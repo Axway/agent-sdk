@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -42,18 +41,7 @@ type TraceabilityAgent struct {
 }
 
 // NewTraceabilityAgent creates an empty *TraceabilityAgent
-func NewTraceabilityAgent(name, scopeKind, scopeName string) (*TraceabilityAgent, error) {
-	validScope := false
-	for _, s := range TraceabilityAgentScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for TraceabilityAgent kind", scopeKind)
-	}
-
+func NewTraceabilityAgent(name, scopeName string) *TraceabilityAgent {
 	return &TraceabilityAgent{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -61,11 +49,11 @@ func NewTraceabilityAgent(name, scopeKind, scopeName string) (*TraceabilityAgent
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: TraceabilityAgentScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // TraceabilityAgentFromInstanceArray converts a []*ResourceInstance to a []*TraceabilityAgent

@@ -43,13 +43,13 @@ type Asset struct {
 }
 
 // NewAsset creates an empty *Asset
-func NewAsset(name string) (*Asset, error) {
+func NewAsset(name string) *Asset {
 	return &Asset{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _AssetGVK,
 		},
-	}, nil
+	}
 }
 
 // AssetFromInstanceArray converts a []*ResourceInstance to a []*Asset

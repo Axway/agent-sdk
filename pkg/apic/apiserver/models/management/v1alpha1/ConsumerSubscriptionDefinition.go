@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type ConsumerSubscriptionDefinition struct {
 }
 
 // NewConsumerSubscriptionDefinition creates an empty *ConsumerSubscriptionDefinition
-func NewConsumerSubscriptionDefinition(name, scopeKind, scopeName string) (*ConsumerSubscriptionDefinition, error) {
-	validScope := false
-	for _, s := range ConsumerSubscriptionDefinitionScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ConsumerSubscriptionDefinition kind", scopeKind)
-	}
-
+func NewConsumerSubscriptionDefinition(name, scopeName string) *ConsumerSubscriptionDefinition {
 	return &ConsumerSubscriptionDefinition{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewConsumerSubscriptionDefinition(name, scopeKind, scopeName string) (*Cons
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ConsumerSubscriptionDefinitionScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ConsumerSubscriptionDefinitionFromInstanceArray converts a []*ResourceInstance to a []*ConsumerSubscriptionDefinition

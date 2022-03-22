@@ -41,13 +41,13 @@ type Application struct {
 }
 
 // NewApplication creates an empty *Application
-func NewApplication(name string) (*Application, error) {
+func NewApplication(name string) *Application {
 	return &Application{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _ApplicationGVK,
 		},
-	}, nil
+	}
 }
 
 // ApplicationFromInstanceArray converts a []*ResourceInstance to a []*Application

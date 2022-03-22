@@ -40,13 +40,13 @@ type Category struct {
 }
 
 // NewCategory creates an empty *Category
-func NewCategory(name string) (*Category, error) {
+func NewCategory(name string) *Category {
 	return &Category{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _CategoryGVK,
 		},
-	}, nil
+	}
 }
 
 // CategoryFromInstanceArray converts a []*ResourceInstance to a []*Category

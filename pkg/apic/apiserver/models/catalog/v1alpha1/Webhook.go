@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type Webhook struct {
 }
 
 // NewWebhook creates an empty *Webhook
-func NewWebhook(name, scopeKind, scopeName string) (*Webhook, error) {
-	validScope := false
-	for _, s := range WebhookScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for Webhook kind", scopeKind)
-	}
-
+func NewWebhook(name, scopeName string) *Webhook {
 	return &Webhook{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewWebhook(name, scopeKind, scopeName string) (*Webhook, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: WebhookScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // WebhookFromInstanceArray converts a []*ResourceInstance to a []*Webhook

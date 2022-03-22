@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -45,18 +44,7 @@ type Credential struct {
 }
 
 // NewCredential creates an empty *Credential
-func NewCredential(name, scopeKind, scopeName string) (*Credential, error) {
-	validScope := false
-	for _, s := range CredentialScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for Credential kind", scopeKind)
-	}
-
+func NewCredential(name, scopeName string) *Credential {
 	return &Credential{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -64,11 +52,11 @@ func NewCredential(name, scopeKind, scopeName string) (*Credential, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: CredentialScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // CredentialFromInstanceArray converts a []*ResourceInstance to a []*Credential

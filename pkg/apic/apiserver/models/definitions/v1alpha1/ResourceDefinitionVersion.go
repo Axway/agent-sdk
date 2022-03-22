@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type ResourceDefinitionVersion struct {
 }
 
 // NewResourceDefinitionVersion creates an empty *ResourceDefinitionVersion
-func NewResourceDefinitionVersion(name, scopeKind, scopeName string) (*ResourceDefinitionVersion, error) {
-	validScope := false
-	for _, s := range ResourceDefinitionVersionScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ResourceDefinitionVersion kind", scopeKind)
-	}
-
+func NewResourceDefinitionVersion(name, scopeName string) *ResourceDefinitionVersion {
 	return &ResourceDefinitionVersion{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewResourceDefinitionVersion(name, scopeKind, scopeName string) (*ResourceD
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ResourceDefinitionVersionScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ResourceDefinitionVersionFromInstanceArray converts a []*ResourceInstance to a []*ResourceDefinitionVersion

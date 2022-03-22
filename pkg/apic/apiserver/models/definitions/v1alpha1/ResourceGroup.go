@@ -40,13 +40,13 @@ type ResourceGroup struct {
 }
 
 // NewResourceGroup creates an empty *ResourceGroup
-func NewResourceGroup(name string) (*ResourceGroup, error) {
+func NewResourceGroup(name string) *ResourceGroup {
 	return &ResourceGroup{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _ResourceGroupGVK,
 		},
-	}, nil
+	}
 }
 
 // ResourceGroupFromInstanceArray converts a []*ResourceInstance to a []*ResourceGroup

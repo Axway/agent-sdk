@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type Secret struct {
 }
 
 // NewSecret creates an empty *Secret
-func NewSecret(name, scopeKind, scopeName string) (*Secret, error) {
-	validScope := false
-	for _, s := range SecretScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for Secret kind", scopeKind)
-	}
-
+func NewSecret(name, scopeName string) *Secret {
 	return &Secret{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewSecret(name, scopeKind, scopeName string) (*Secret, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: SecretScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // SecretFromInstanceArray converts a []*ResourceInstance to a []*Secret

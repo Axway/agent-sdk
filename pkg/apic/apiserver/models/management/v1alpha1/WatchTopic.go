@@ -40,13 +40,13 @@ type WatchTopic struct {
 }
 
 // NewWatchTopic creates an empty *WatchTopic
-func NewWatchTopic(name string) (*WatchTopic, error) {
+func NewWatchTopic(name string) *WatchTopic {
 	return &WatchTopic{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _WatchTopicGVK,
 		},
-	}, nil
+	}
 }
 
 // WatchTopicFromInstanceArray converts a []*ResourceInstance to a []*WatchTopic

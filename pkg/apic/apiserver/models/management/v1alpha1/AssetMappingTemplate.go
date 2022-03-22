@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type AssetMappingTemplate struct {
 }
 
 // NewAssetMappingTemplate creates an empty *AssetMappingTemplate
-func NewAssetMappingTemplate(name, scopeKind, scopeName string) (*AssetMappingTemplate, error) {
-	validScope := false
-	for _, s := range AssetMappingTemplateScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for AssetMappingTemplate kind", scopeKind)
-	}
-
+func NewAssetMappingTemplate(name, scopeName string) *AssetMappingTemplate {
 	return &AssetMappingTemplate{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewAssetMappingTemplate(name, scopeKind, scopeName string) (*AssetMappingTe
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: AssetMappingTemplateScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // AssetMappingTemplateFromInstanceArray converts a []*ResourceInstance to a []*AssetMappingTemplate

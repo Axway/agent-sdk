@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -41,18 +40,7 @@ type ResourceHook struct {
 }
 
 // NewResourceHook creates an empty *ResourceHook
-func NewResourceHook(name, scopeKind, scopeName string) (*ResourceHook, error) {
-	validScope := false
-	for _, s := range ResourceHookScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for ResourceHook kind", scopeKind)
-	}
-
+func NewResourceHook(name, scopeName string) *ResourceHook {
 	return &ResourceHook{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -60,11 +48,11 @@ func NewResourceHook(name, scopeKind, scopeName string) (*ResourceHook, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: ResourceHookScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ResourceHookFromInstanceArray converts a []*ResourceInstance to a []*ResourceHook

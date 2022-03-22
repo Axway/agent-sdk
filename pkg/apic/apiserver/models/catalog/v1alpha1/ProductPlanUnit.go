@@ -40,13 +40,13 @@ type ProductPlanUnit struct {
 }
 
 // NewProductPlanUnit creates an empty *ProductPlanUnit
-func NewProductPlanUnit(name string) (*ProductPlanUnit, error) {
+func NewProductPlanUnit(name string) *ProductPlanUnit {
 	return &ProductPlanUnit{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _ProductPlanUnitGVK,
 		},
-	}, nil
+	}
 }
 
 // ProductPlanUnitFromInstanceArray converts a []*ResourceInstance to a []*ProductPlanUnit

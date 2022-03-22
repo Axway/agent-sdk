@@ -40,13 +40,13 @@ type K8SCluster struct {
 }
 
 // NewK8SCluster creates an empty *K8SCluster
-func NewK8SCluster(name string) (*K8SCluster, error) {
+func NewK8SCluster(name string) *K8SCluster {
 	return &K8SCluster{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _K8SClusterGVK,
 		},
-	}, nil
+	}
 }
 
 // K8SClusterFromInstanceArray converts a []*ResourceInstance to a []*K8SCluster

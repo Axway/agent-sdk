@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -44,18 +43,7 @@ type AddOn struct {
 }
 
 // NewAddOn creates an empty *AddOn
-func NewAddOn(name, scopeKind, scopeName string) (*AddOn, error) {
-	validScope := false
-	for _, s := range AddOnScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for AddOn kind", scopeKind)
-	}
-
+func NewAddOn(name, scopeName string) *AddOn {
 	return &AddOn{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -63,11 +51,11 @@ func NewAddOn(name, scopeKind, scopeName string) (*AddOn, error) {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: scopeKind,
+					Kind: AddOnScopes[0],
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 // AddOnFromInstanceArray converts a []*ResourceInstance to a []*AddOn
