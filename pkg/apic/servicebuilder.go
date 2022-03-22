@@ -41,6 +41,7 @@ type ServiceBuilder interface {
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 	SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder
 	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
+	SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -310,9 +311,17 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		// get oauth scopes
 		b.serviceBody.scopes = val.getOAuthScopes()
 
-		err := b.serviceBody.createAccessRequestDefintion()
-		if err != nil {
-			return b.serviceBody, err
+		// only set ard name based on spec if not already set
+		if b.serviceBody.ardName == "" {
+			if len(b.serviceBody.apiKeyInfo) > 0 {
+				b.serviceBody.ardName = "api-key"
+			}
+
+			// if the spec has api key and oauth use the oauth ard
+			err := b.serviceBody.createAccessRequestDefintion()
+			if err != nil {
+				return b.serviceBody, err
+			}
 		}
 	}
 
@@ -328,5 +337,11 @@ func (b *serviceBodyBuilder) SetCredentialRequestDefinitions(credentialRequestDe
 // AddCredentialRequestDefinition -
 func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder {
 	b.serviceBody.credentialRequestPolicies = append(b.serviceBody.credentialRequestPolicies, credentialRequestDefName)
+	return b
+}
+
+// SetAccessRequestDefintionName -
+func (b *serviceBodyBuilder) SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder {
+	b.serviceBody.ardName = accessRequestDefName
 	return b
 }

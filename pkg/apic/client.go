@@ -89,6 +89,7 @@ type Client interface {
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*apiv1.ResourceInstance, error)
@@ -864,4 +865,33 @@ func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequest
 
 	err = data.FromInstance(ri)
 	return data, err
+}
+
+// UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
+func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	ri.Metadata.ResourceVersion = ""
+	bts, err := json.Marshal(ri)
+	if err != nil {
+		return nil, err
+	}
+	bts, err = c.ExecuteAPI(coreapi.PUT, url, nil, bts)
+	if err != nil {
+		return nil, err
+	}
+	r := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(bts, r)
+	return r, err
+}
+
+// DeleteResourceInstance - deletes a ResourceInstance with instance
+func (c *ServiceClient) DeleteResourceInstance(ri *apiv1.ResourceInstance) error {
+	if ri.GetSelfLink() == "" {
+		return fmt.Errorf("could not remove resource instance, could not get self link")
+	}
+	bts, err := json.Marshal(ri)
+	if err != nil {
+		return err
+	}
+	_, err = c.ExecuteAPI(coreapi.DELETE, ri.GetSelfLink(), nil, bts)
+	return err
 }

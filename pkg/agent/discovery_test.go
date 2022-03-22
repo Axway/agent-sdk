@@ -2,8 +2,11 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -57,6 +60,17 @@ func TestDiscoveryCache(t *testing.T) {
 			Metadata: v1.Metadata{ID: "123"},
 			Name:     "test",
 			Title:    "test",
+		},
+	}
+	accReqDef := &v1alpha1.AccessRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{Scope: v1.MetadataScope{
+				Kind: v1alpha1.EnvironmentResourceName,
+				Name: "test",
+			},
+			},
+			Name:  "ard",
+			Title: "ard",
 		},
 	}
 	teams := []definitions.PlatformTeam{
@@ -120,13 +134,35 @@ func TestDiscoveryCache(t *testing.T) {
 	apicClient := agent.apicClient
 	var apiSvc v1alpha1.APIService
 	apiSvc.FromInstance(&apiSvc2)
-	agent.apicClient = &mock.Client{
+
+	wantErr := false
+	deleteCalled := false
+	mockClient := &mock.Client{
 		PublishServiceMock: func(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
+			if wantErr {
+				return nil, fmt.Errorf("error")
+			}
 			return &apiSvc, nil
+		},
+		RegisterAccessRequestDefinitionMock: func(_ *v1alpha1.AccessRequestDefinition, _ bool) (*v1alpha1.AccessRequestDefinition, error) {
+			return accReqDef, nil
+		},
+		DeleteResourceInstanceMock: func(_ *v1.ResourceInstance) error {
+			deleteCalled = true
+			return nil
 		},
 	}
 	StartAgentStatusUpdate()
-	PublishAPI(apic.ServiceBody{})
+
+	//open the spec
+	specFileDescriptor, _ := os.Open("./testdata/petstore-openapi3-template-urls.json")
+	specData, _ := ioutil.ReadAll(specFileDescriptor)
+	sb, _ := apic.NewServiceBodyBuilder().
+		SetAPIName("api").
+		SetAPISpec(specData).Build()
+
+	agent.apicClient = mockClient
+	PublishAPI(sb)
 	agent.apicClient = apicClient
 	assert.Equal(t, 2, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
@@ -138,4 +174,15 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
 	assert.False(t, IsAPIPublishedByID("2222"))
+
+	sb, _ = apic.NewServiceBodyBuilder().
+		SetAPIName("api2").
+		SetAPISpec(specData).Build()
+	wantErr = true
+	assert.False(t, deleteCalled)
+	agent.apicClient = mockClient
+	err = PublishAPI(sb)
+	agent.apicClient = apicClient
+	assert.NotNil(t, err)
+	assert.True(t, deleteCalled)
 }
