@@ -24,7 +24,6 @@ func TestAccessRequestHandler(t *testing.T) {
 		getErr           error
 		hasError         bool
 		inboundStatus    string
-		isDeleting       bool
 		name             string
 		outboundStatus   string
 		references       []v1.Reference
@@ -87,11 +86,10 @@ func TestAccessRequestHandler(t *testing.T) {
 			subError:         fmt.Errorf("error updating subresources"),
 		},
 		{
-			action:           proto.Event_CREATED,
-			inboundStatus:    statusPending,
-			name:             "should handle an error when the instance is not found in the cache, and set a failed status",
-			outboundStatus:   statusErr,
-			expectedProvType: "",
+			action:         proto.Event_CREATED,
+			inboundStatus:  statusPending,
+			name:           "should handle an error when the instance is not found in the cache, and set a failed status",
+			outboundStatus: statusErr,
 		},
 	}
 
@@ -102,91 +100,117 @@ func TestAccessRequestHandler(t *testing.T) {
 			ar := accessReq
 			ar.Status.Level = tc.inboundStatus
 			ar.Metadata.References = tc.references
-			if tc.isDeleting {
-				ar.Metadata.State = v1.ResourceDeleting
-				ar.Finalizers = []v1.Finalizer{{Name: arFinalizer}}
-			}
 
 			instanceRI, _ := instance.AsInstance()
 			cm.AddAPIServiceInstance(instanceRI)
 
-			c := &mockClient{
-				t:              t,
-				getRI:          mApp,
-				getErr:         tc.getErr,
-				createErr:      tc.createErr,
-				subError:       tc.subError,
-				expectedStatus: tc.outboundStatus,
-				isDeleting:     tc.isDeleting,
+			status := mock.MockRequestStatus{
+				Status: prov.Success,
+				Msg:    "msg",
+				Properties: map[string]string{
+					"status_key": "status_val",
+				},
 			}
+
+			arp := &mockARProvision{
+				expectedAccessDetails: util.GetAgentDetails(&ar),
+				expectedAPIID:         instRefID,
+				expectedAppDetails:    util.GetAgentDetails(mApp),
+				expectedAppName:       managedAppRefName,
+				expectedStatus:        status,
+				t:                     t,
+			}
+
+			c := &mockClient{
+				createErr:      tc.createErr,
+				expectedStatus: tc.outboundStatus,
+				getErr:         tc.getErr,
+				getRI:          mApp,
+				subError:       tc.subError,
+				t:              t,
+			}
+
+			handler := NewAccessRequestHandler(arp, cm, c)
+
+			ri, _ := ar.AsInstance()
+			err := handler.Handle(tc.action, nil, ri)
+
+			util.AssertError(t, tc.hasError, err)
+			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
+
+			if tc.inboundStatus == statusPending {
+				assert.True(t, c.createSubCalled)
+			} else {
+				assert.False(t, c.createSubCalled)
+			}
+
+		})
+	}
+}
+
+func TestAccessRequestHandler_deleting(t *testing.T) {
+	tests := []struct {
+		name           string
+		outboundStatus prov.Status
+	}{
+		{
+			name:           "should deprovision with no error",
+			outboundStatus: prov.Success,
+		},
+		{
+			name:           "should fail to deprovision and set the status to error",
+			outboundStatus: prov.Error,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			ar := accessReq
+			ar.Status.Level = statusSuccess
+			ar.Metadata.State = v1.ResourceDeleting
+			ar.Finalizers = []v1.Finalizer{{Name: arFinalizer}}
+
+			instanceRI, _ := instance.AsInstance()
+			cm.AddAPIServiceInstance(instanceRI)
 
 			arp := &mockARProvision{
 				t:                     t,
 				expectedAPIID:         instRefID,
 				expectedAppName:       managedAppRefName,
 				expectedAccessDetails: util.GetAgentDetails(&ar),
-				expectedAppDetails:    util.GetAgentDetails(mApp),
-				status: mock.MockRequestStatus{
-					Status: prov.Success,
+				expectedAppDetails:    map[string]interface{}{},
+				expectedStatus: mock.MockRequestStatus{
+					Status: tc.outboundStatus,
 					Msg:    "msg",
 					Properties: map[string]string{
 						"status_key": "status_val",
 					},
 				},
 			}
+
+			c := &mockClient{
+				expectedStatus: tc.outboundStatus.String(),
+				getRI:          mApp,
+				isDeleting:     true,
+				t:              t,
+			}
+
 			handler := NewAccessRequestHandler(arp, cm, c)
 
 			ri, _ := ar.AsInstance()
 
-			err := handler.Handle(tc.action, nil, ri)
-			assert.Equal(t, tc.expectedProvType, arp.prov)
-			if tc.hasError {
-				assert.NotNil(t, err)
+			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+			assert.Nil(t, err)
+			assert.Equal(t, deprovision, arp.expectedProvType)
+
+			if tc.outboundStatus.String() == statusSuccess {
+				assert.False(t, c.createSubCalled)
 			} else {
-				assert.Nil(t, err)
+				assert.True(t, c.createSubCalled)
 			}
 		})
 	}
-}
-
-func TestAccessRequestHandler_deleting(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	ar := accessReq
-	ar.Status.Level = statusSuccess
-	ar.Metadata.State = v1.ResourceDeleting
-	ar.Finalizers = []v1.Finalizer{{Name: arFinalizer}}
-
-	instanceRI, _ := instance.AsInstance()
-	cm.AddAPIServiceInstance(instanceRI)
-
-	c := &mockClient{
-		t:              t,
-		getRI:          mApp,
-		expectedStatus: statusSuccess,
-		isDeleting:     true,
-	}
-
-	arp := &mockARProvision{
-		t:                     t,
-		expectedAPIID:         instRefID,
-		expectedAppName:       managedAppRefName,
-		expectedAccessDetails: util.GetAgentDetails(&ar),
-		expectedAppDetails:    map[string]interface{}{},
-		status: mock.MockRequestStatus{
-			Status: prov.Success,
-			Msg:    "msg",
-			Properties: map[string]string{
-				"status_key": "status_val",
-			},
-		},
-	}
-	handler := NewAccessRequestHandler(arp, cm, c)
-
-	ri, _ := ar.AsInstance()
-
-	err := handler.Handle(proto.Event_UPDATED, nil, ri)
-	assert.Equal(t, deprovision, arp.prov)
-	assert.Nil(t, err)
 }
 
 func TestAccessRequestHandler_wrong_kind(t *testing.T) {
@@ -231,14 +255,15 @@ func Test_arReq(t *testing.T) {
 }
 
 type mockClient struct {
-	createErr      error
-	expectedStatus string
-	getErr         error
-	getRI          *v1.ResourceInstance
-	isDeleting     bool
-	subError       error
-	t              *testing.T
-	updateErr      error
+	createErr       error
+	createSubCalled bool
+	expectedStatus  string
+	getErr          error
+	getRI           *v1.ResourceInstance
+	isDeleting      bool
+	subError        error
+	t               *testing.T
+	updateErr       error
 }
 
 func (m *mockClient) GetResource(_ string) (*v1.ResourceInstance, error) {
@@ -255,7 +280,8 @@ func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, e
 
 func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, subs map[string]interface{}) error {
 	status := subs["status"].(*v1.ResourceStatus)
-	assert.Equal(m.t, m.expectedStatus, status.Level)
+	assert.Equal(m.t, m.expectedStatus, status.Level, status.Reasons)
+	m.createSubCalled = true
 	return m.subError
 }
 
@@ -270,33 +296,33 @@ func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string
 }
 
 type mockARProvision struct {
-	t                     *testing.T
-	expectedAPIID         string
-	expectedAppName       string
-	expectedAppDetails    map[string]interface{}
 	expectedAccessDetails map[string]interface{}
-	status                mock.MockRequestStatus
-	prov                  string
+	expectedAPIID         string
+	expectedAppDetails    map[string]interface{}
+	expectedAppName       string
+	expectedProvType      string
+	expectedStatus        mock.MockRequestStatus
+	t                     *testing.T
 }
 
 func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus) {
-	m.prov = provision
+	m.expectedProvType = provision
 	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
-	return m.status
+	return m.expectedStatus
 }
 
 func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (status prov.RequestStatus) {
-	m.prov = deprovision
+	m.expectedProvType = deprovision
 	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.apiID)
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
-	return m.status
+	return m.expectedStatus
 }
 
 const instRefID = "inst-id-1"

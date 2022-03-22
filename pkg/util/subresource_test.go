@@ -100,6 +100,13 @@ func TestGetAgentDetailsValue(t *testing.T) {
 		hasError     bool
 	}{
 		{
+			name:         "should return an empty string and nil if the resource is nil",
+			ri:           nil,
+			inputKey:     "id",
+			expectedItem: "",
+			hasError:     false,
+		},
+		{
 			name:         "should return an empty string and nil if x-agent-details is not found",
 			ri:           &mockRI{subResources: map[string]interface{}{}},
 			inputKey:     "id",

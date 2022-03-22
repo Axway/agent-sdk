@@ -48,10 +48,7 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	}
 
 	cr := &mv1.Credential{}
-	err := cr.FromInstance(resource)
-	if err != nil {
-		return err
-	}
+	cr.FromInstance(resource)
 
 	if ok := isStatusFound(cr.Status); !ok {
 		return nil
@@ -59,10 +56,10 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
 		log.Tracef("credential handler - processing resource in pending status")
-		return h.onPending(cr)
+		cr := h.onPending(cr)
+		return h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
 	}
 
-	// check for deleting state on success status
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
 		log.Tracef("credential handler - processing resource in deleting state")
 		h.onDeleting(cr)
@@ -71,23 +68,24 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	return nil
 }
 
-func (h *credentials) onPending(cred *mv1.Credential) error {
+func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	app, err := h.getManagedApp(cred)
 	if err != nil {
-		return err
+		h.onError(cred, err)
+		return cred
 	}
 
 	crd, err := h.getCRD(cred)
 	if err != nil {
-		return err
+		h.onError(cred, err)
+		return cred
 	}
 
 	provCreds := newProvCreds(cred, util.GetAgentDetails(app))
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
-	sec := app.Spec.Security
-
 	if status.GetStatus() == prov.Success {
+		sec := app.Spec.Security
 		data, err := h.encryptSchema(
 			crd.Spec.Provision.Schema,
 			credentialData.GetData(),
@@ -110,15 +108,13 @@ func (h *credentials) onPending(cred *mv1.Credential) error {
 
 	ri, _ := cred.AsInstance()
 	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	cred.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(cred),
+		"status":           cred.Status,
+		"data":             cred.Data,
+	}
 
-	return h.client.CreateSubResourceScoped(
-		cred.ResourceMeta,
-		map[string]interface{}{
-			defs.XAgentDetails: util.GetAgentDetails(cred),
-			"status":           cred.Status,
-			"data":             cred.Data,
-		},
-	)
+	return cred
 }
 
 func (h *credentials) onDeleting(cred *mv1.Credential) {
@@ -128,36 +124,42 @@ func (h *credentials) onDeleting(cred *mv1.Credential) {
 	if status.GetStatus() == prov.Success {
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+	} else {
+		h.onError(cred, fmt.Errorf(status.GetMessage()))
+		h.client.CreateSubResourceScoped(cred.ResourceMeta, cred.SubResources)
+	}
+}
+
+// onError updates the AccessRequest with an error status
+func (h *credentials) onError(Cred *mv1.Credential, err error) {
+	ps := prov.NewRequestStatusBuilder()
+	status := ps.SetMessage(err.Error()).Failed()
+	Cred.Status = prov.NewStatusReason(status)
+	Cred.SubResources = map[string]interface{}{
+		"status": Cred.Status,
 	}
 }
 
 func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/managedapplications/%s",
-		cred.Metadata.Scope.Name,
-		cred.Spec.ManagedApplication,
-	)
-	ri, err := h.client.GetResource(url)
+	app := newManagedApp(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
-	app := &mv1.ManagedApplication{}
+
+	app = &mv1.ManagedApplication{}
 	err = app.FromInstance(ri)
 	return app, err
 }
 
 func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
-	url := fmt.Sprintf(
-		"/management/v1alpha1/environments/%s/credentialrequestdefinitions/%s",
-		cred.Metadata.Scope.Name,
-		cred.Spec.CredentialRequestDefinition,
-	)
-	ri, err := h.client.GetResource(url)
+	crd := newCRD(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	crd := &mv1.CredentialRequestDefinition{}
+	crd = &mv1.CredentialRequestDefinition{}
 	err = crd.FromInstance(ri)
 	return crd, err
 }
@@ -257,4 +259,19 @@ func encryptSchema(
 
 	data := encryptMap(enc, props, credData)
 	return data, nil
+}
+
+func newCRD(name, scope string) *mv1.CredentialRequestDefinition {
+	return &mv1.CredentialRequestDefinition{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: mv1.CredentialRequestDefinitionGVK(),
+			Name:             name,
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Kind: mv1.EnvironmentGVK().Kind,
+					Name: scope,
+				},
+			},
+		},
+	}
 }

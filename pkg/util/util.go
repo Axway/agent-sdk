@@ -10,11 +10,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -247,4 +249,13 @@ func ToString(v interface{}) string {
 		return ""
 	}
 	return s
+}
+
+// AssertError asserts on the existence of an error for tests
+func AssertError(t *testing.T, hasErr bool, err error) {
+	if hasErr {
+		assert.Error(t, err)
+	} else {
+		assert.Nil(t, err)
+	}
 }
