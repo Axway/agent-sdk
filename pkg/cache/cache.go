@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	util "github.com/Axway/agent-sdk/pkg/util"
@@ -210,12 +211,16 @@ func (c *itemCache) hasItemChanged(thisAction cacheAction) (thisReply cacheReply
 // returns the entire item, if found
 func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
 	key := thisAction.key
+	data := thisAction.data
 
 	thisReply = cacheReply{
 		item: nil,
 		err:  fmt.Errorf("Could not find item with key: %s", key),
 	}
 	if item, ok := c.Items[key]; ok {
+		if item.ContainsPointer {
+			item.Object = &data
+		}
 		thisReply = cacheReply{
 			item: item,
 			err:  nil,
@@ -307,11 +312,20 @@ func (c *itemCache) set(thisAction cacheAction) (thisReply cacheReply) {
 	if _, ok := c.Items[key]; ok {
 		secKeys = c.Items[key].SecondaryKeys
 	}
+
+	var containsPointer = false
+	if reflect.ValueOf(data).Kind() == reflect.Ptr {
+		containsPointer = true
+		// set the underlying value
+		data = reflect.ValueOf(data)
+	}
+
 	c.Items[key] = &Item{
-		Object:        data,
-		UpdateTime:    time.Now().Unix(),
-		Hash:          hash,
-		SecondaryKeys: secKeys,
+		Object:          data,
+		UpdateTime:      time.Now().Unix(),
+		Hash:            hash,
+		SecondaryKeys:   secKeys,
+		ContainsPointer: containsPointer,
 	}
 	return
 }

@@ -18,13 +18,13 @@ func TestTeamCache(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		teams                []*definitions.PlatformTeam
-		cached               []definitions.PlatformTeam
+		cached               []*definitions.PlatformTeam
 		expectedTeamsInCache int
 	}{
 		{
 			name:                 "Should save one team to the cache",
 			expectedTeamsInCache: 1,
-			cached:               []definitions.PlatformTeam{},
+			cached:               []*definitions.PlatformTeam{},
 			teams: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
@@ -36,7 +36,7 @@ func TestTeamCache(t *testing.T) {
 		{
 			name:                 "Should save two teams to the cache, and remove a team that was added",
 			expectedTeamsInCache: 2,
-			cached: []definitions.PlatformTeam{
+			cached: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
 					ID:      "1",
@@ -59,7 +59,7 @@ func TestTeamCache(t *testing.T) {
 		{
 			name:                 "Should save 4 teams in the cache",
 			expectedTeamsInCache: 4,
-			cached: []definitions.PlatformTeam{
+			cached: []*definitions.PlatformTeam{
 				{
 					Name:    "TeamA",
 					ID:      "1",

@@ -54,7 +54,7 @@ type Manager interface {
 
 	// Team and ACL related cache methods
 	GetTeamCache() cache.Cache
-	AddTeam(team defs.PlatformTeam)
+	AddTeam(team *defs.PlatformTeam)
 	GetTeamByName(name string) *defs.PlatformTeam
 	GetTeamByID(id string) *defs.PlatformTeam
 	GetDefaultTeam() *defs.PlatformTeam
@@ -441,9 +441,9 @@ func (c *cacheManager) GetTeamCache() cache.Cache {
 }
 
 // AddTeam saves a team to the cache
-func (c *cacheManager) AddTeam(team defs.PlatformTeam) {
+func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
 	defer c.setCacheUpdated(true)
-	c.teams.SetWithSecondaryKey(team.Name, team.ID, team)
+	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
 }
 
 // GetTeamByName gets a team by name
@@ -456,7 +456,6 @@ func (c *cacheManager) GetTeamByName(name string) *defs.PlatformTeam {
 	if !ok {
 		return nil
 	}
-	log.Debug("Shane - team ", &team)
 	return &team
 }
 

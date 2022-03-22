@@ -59,6 +59,6 @@ replace (
 )
 
 retract ( // errored versions
-	[v1.1.4, v1.1.9]
 	v1.1.16
+	[v1.1.4, v1.1.9]
 )
