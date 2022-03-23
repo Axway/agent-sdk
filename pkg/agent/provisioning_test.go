@@ -1,14 +1,23 @@
 package agent
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewCredentialRequestBuilder(t *testing.T) {
+
+	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer s.Close()
+	cfg := createCentralCfg(s.URL, "test")
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{MarketplaceProvisioning: true})
+
 	agent.apicClient = &mock.Client{
 		RegisterCredentialRequestDefinitionMock: func(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
 			return data, nil

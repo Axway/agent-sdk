@@ -145,6 +145,8 @@ type CentralConfig interface {
 	GetGRPCPort() int
 	GetCacheStoragePath() string
 	GetCacheStorageInterval() time.Duration
+	SetIsMarketplaceSubsEnabled(enabled bool)
+	IsMarketplaceSubsEnabled() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -180,6 +182,7 @@ type CentralConfiguration struct {
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
+	isMarketplaceSubs         bool
 }
 
 // GRPCConfig - Represents the grpc config
@@ -268,6 +271,16 @@ func (c *CentralConfiguration) GetEnvironmentID() string {
 // SetEnvironmentID - Sets the environment ID
 func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 	c.environmentID = environmentID
+}
+
+// SetIsMarketplaceSubsEnabled - Sets the isMarketplaceSubs boolean
+func (c *CentralConfiguration) SetIsMarketplaceSubsEnabled(enabled bool) {
+	c.isMarketplaceSubs = enabled
+}
+
+// IsMarketplaceSubsEnabled - Returns the isMarketplaceSubs boolean
+func (c *CentralConfiguration) IsMarketplaceSubsEnabled() bool {
+	return c.isMarketplaceSubs
 }
 
 // IsAxwayManaged - Returns the environment ID

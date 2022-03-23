@@ -22,6 +22,16 @@ func buildAPIServiceInstanceSpec(
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) mv1a.ApiServiceInstanceSpec {
 	return mv1a.ApiServiceInstanceSpec{
+		ApiServiceRevision: serviceBody.serviceContext.revisionName,
+		Endpoint:           endpoints,
+	}
+}
+
+func buildAPIServiceInstanceMarketplaceSpec(
+	serviceBody *ServiceBody,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+) mv1a.ApiServiceInstanceSpec {
+	return mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endpoints,
 		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
@@ -41,6 +51,10 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Description: serviceBody.ardName,
 		})
 	}
+	spec := buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	if c.cfg.IsMarketplaceSubsEnabled() {
+		spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints)
+	}
 
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &mv1a.APIServiceInstance{
@@ -58,7 +72,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 				},
 			},
 		},
-		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
+		Spec:  spec,
 		Owner: owner,
 	}
 
@@ -81,6 +95,9 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	if c.cfg.IsMarketplaceSubsEnabled() {
+		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints)
+	}
 	instance.Owner = owner
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)

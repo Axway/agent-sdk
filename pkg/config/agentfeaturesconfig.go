@@ -10,25 +10,28 @@ type AgentFeaturesConfig interface {
 	ProcessSystemSignalsEnabled() bool
 	VersionCheckerEnabled() bool
 	PersistCacheEnabled() bool
+	MarketplaceProvisioningEnabled() bool
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
 type AgentFeaturesConfiguration struct {
 	AgentFeaturesConfig
 	IConfigValidator
-	ConnectToCentral     bool `config:"connectToCentral"`
-	ProcessSystemSignals bool `config:"processSystemSignals"`
-	VersionChecker       bool `config:"versionChecker"`
-	PersistCache         bool `config:"persistCache"`
+	ConnectToCentral        bool `config:"connectToCentral"`
+	ProcessSystemSignals    bool `config:"processSystemSignals"`
+	VersionChecker          bool `config:"versionChecker"`
+	PersistCache            bool `config:"persistCache"`
+	MarketplaceProvisioning bool `config:"marketplaceProvisioning"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
 func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 	return &AgentFeaturesConfiguration{
-		ConnectToCentral:     true,
-		ProcessSystemSignals: true,
-		VersionChecker:       true,
-		PersistCache:         false,
+		ConnectToCentral:        true,
+		ProcessSystemSignals:    true,
+		VersionChecker:          true,
+		PersistCache:            false,
+		MarketplaceProvisioning: false,
 	}
 }
 
@@ -52,11 +55,17 @@ func (c *AgentFeaturesConfiguration) PersistCacheEnabled() bool {
 	return c.PersistCache
 }
 
+// MarketplaceProvisioningEnabled - True if the agent SDK should handle marketplace subscriptions.
+func (c *AgentFeaturesConfiguration) MarketplaceProvisioningEnabled() bool {
+	return c.MarketplaceProvisioning
+}
+
 const (
-	pathConnectToCentral     = "agentFeatures.connectToCentral"
-	pathProcessSystemSignals = "agentFeatures.processSystemSignals"
-	pathVersionChecker       = "agentFeatures.versionChecker"
-	pathPersistCache         = "agentFeatures.persistCache"
+	pathConnectToCentral        = "agentFeatures.connectToCentral"
+	pathProcessSystemSignals    = "agentFeatures.processSystemSignals"
+	pathVersionChecker          = "agentFeatures.versionChecker"
+	pathPersistCache            = "agentFeatures.persistCache"
+	pathMarketplaceProvisioning = "agentFeatures.marketplaceProvisioning"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -71,15 +80,17 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathProcessSystemSignals, true, "Controls whether the agent SDK processes system signals or not")
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 	props.AddBoolProperty(pathPersistCache, false, "Controls whether the agent SDK will persist agent cache or not")
+	props.AddBoolProperty(pathMarketplaceProvisioning, false, "Controls whether the agent should handle Marketplace Subscriptions or not")
 }
 
 // ParseAgentFeaturesConfig - Parses the AgentFeatures Config values from the command line
 func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig, error) {
 	cfg := &AgentFeaturesConfiguration{
-		ConnectToCentral:     props.BoolPropertyValueOrTrue(pathConnectToCentral),
-		ProcessSystemSignals: props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
-		VersionChecker:       props.BoolPropertyValueOrTrue(pathVersionChecker),
-		PersistCache:         props.BoolPropertyValueOrTrue(pathPersistCache),
+		ConnectToCentral:        props.BoolPropertyValueOrTrue(pathConnectToCentral),
+		ProcessSystemSignals:    props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
+		VersionChecker:          props.BoolPropertyValueOrTrue(pathVersionChecker),
+		PersistCache:            props.BoolPropertyValueOrTrue(pathPersistCache),
+		MarketplaceProvisioning: props.BoolPropertyValueOrTrue(pathMarketplaceProvisioning),
 	}
 
 	return cfg, nil
