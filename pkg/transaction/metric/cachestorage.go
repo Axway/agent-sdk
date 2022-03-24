@@ -159,7 +159,8 @@ func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
 
 			var apiStatusMetric *APIMetric
 			for _, duration := range apiMetric.Values {
-				apiStatusMetric = c.collector.updateMetric(APIDetails{apiMetric.API.ID, apiMetric.API.Name, apiMetric.API.Revision, apiMetric.API.TeamID, apiMetric.API.Stage}, apiMetric.StatusCode, duration)
+				api := APIDetails{apiMetric.API.ID, apiMetric.API.Name, apiMetric.API.Revision, apiMetric.API.TeamID, apiMetric.API.APIServiceInstance, apiMetric.API.Stage}
+				apiStatusMetric = c.collector.updateMetric(api, apiMetric.StatusCode, duration)
 			}
 			if apiStatusMetric != nil {
 				apiStatusMetric.StartTime = apiMetric.StartTime

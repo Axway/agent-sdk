@@ -271,14 +271,18 @@ func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
 		// setup the start time to be used for reporting metric event
 		consumerAPIStatusMap[statusCode] = &SubscriptionMetric{
 			Subscription: SubscriptionDetails{
-				ID:                 subscriptionID,
-				Name:               subscriptionName,
-				AppID:              appID,
-				AppName:            appName,
-				APIID:              apiID,
-				APIName:            metricAppDetail.APIDetails.Name,
+				ID:   subscriptionID,
+				Name: subscriptionName,
+			},
+			App: AppDetails{
+				ID:              appID,
+				Name:            appName,
+				ConsumerOrgGUID: consumerOrgGUID,
+			},
+			API: APIDetails{
+				ID:                 apiID,
+				Name:               metricAppDetail.APIDetails.Name,
 				APIServiceInstance: apiServiceInstanceName,
-				ConsumerOrgGUID:    consumerOrgGUID,
 			},
 			StatusCode: statusCode,
 			Status:     c.getStatusText(statusCode),
@@ -479,13 +483,9 @@ func (c *collector) generateAppMetricEvent(histogram metrics.Histogram, subscrip
 
 	subscriptionStatusMetric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
 	subscriptionStatusMetric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
-	// Generate app subscription metric for provider
+	// Generate app subscription metric
 	c.generateAppV4Event(histogram, subscriptionStatusMetric, c.orgGUID)
 
-	// Generate app subscription metric for consumer
-	if subscriptionStatusMetric.Subscription.ConsumerOrgGUID != "" && subscriptionStatusMetric.Subscription.ConsumerOrgGUID != c.orgGUID {
-		c.generateAppV4Event(histogram, subscriptionStatusMetric, subscriptionStatusMetric.Subscription.ConsumerOrgGUID)
-	}
 }
 
 func (c *collector) generateAppV4Event(histogram metrics.Histogram, v4data V4Data, orgGUID string) {

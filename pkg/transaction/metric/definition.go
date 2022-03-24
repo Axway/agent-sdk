@@ -45,11 +45,12 @@ type ObservationDetails struct {
 
 // APIDetails - Holds the api details
 type APIDetails struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Revision int    `json:"revision"`
-	TeamID   string `json:"teamId"`
-	Stage    string `json:"-"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Revision           int    `json:"revision,omitempty"`
+	TeamID             string `json:"teamId,omitempty"`
+	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	Stage              string `json:"-"`
 }
 
 // APIMetric - struct to hold metric specific for status code based API transactions
@@ -76,6 +77,8 @@ func (a *APIMetric) GetType() string {
 // SubscriptionMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type SubscriptionMetric struct {
 	Subscription SubscriptionDetails `json:"subscription"`
+	App          AppDetails          `json:"application"`
+	API          APIDetails          `json:"api"`
 	StatusCode   string              `json:"statusCode"`
 	Status       string              `json:"status"`
 	Count        int64               `json:"count"`
@@ -146,20 +149,15 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ConsumerOrgGUID string `json:"consumerOrgId,omitempty"`
 }
 
 // SubscriptionDetails - struct for subscription metric detail
 type SubscriptionDetails struct {
-	ID                 string `json:"id"`
-	Name               string `json:"name"`
-	AppID              string `json:"appId"`
-	AppName            string `json:"appName"`
-	ConsumerOrgGUID    string `json:"-"`
-	APIID              string `json:"apiId"`
-	APIName            string `json:"apiName"`
-	APIServiceInstance string `json:"apiServiceInstance"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // Data - struct for data to report as API Metrics
