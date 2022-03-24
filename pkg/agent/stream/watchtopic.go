@@ -106,95 +106,65 @@ func getOrCreateWatchTopic(name, scope string, client apiClient, features watchT
 }
 
 func shouldPushUpdate(cur, new *mv1.WatchTopic) bool {
-	for _, newFilter := range new.Spec.Filters {
-		found := false
-		for _, existingFilter := range cur.Spec.Filters {
-			if filtersEqual(newFilter, existingFilter) {
-				found = true
-				break
+	filtersDiff := func(a, b []mv1.WatchTopicSpecFilters) bool {
+		for _, aFilter := range a {
+			found := false
+			for _, bFilter := range b {
+				if filtersEqual(aFilter, bFilter) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				// update required
+				return true
 			}
 		}
-		if !found {
-			// update required
-			return true
-		}
+		return false
 	}
 
-	// now check the reverse
-	for _, existingFilter := range cur.Spec.Filters {
-		found := false
-		for _, newFilter := range new.Spec.Filters {
-			if filtersEqual(existingFilter, newFilter) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			// update required
-			return true
-		}
+	if filtersDiff(cur.Spec.Filters, new.Spec.Filters) {
+		return true
 	}
-
-	return false
+	return filtersDiff(new.Spec.Filters, cur.Spec.Filters)
 }
 
 func filtersEqual(a, b mv1.WatchTopicSpecFilters) (equal bool) {
-	if a.Group != b.Group {
-		return
-	}
-
-	if a.Kind != b.Kind {
-		return
-	}
-
-	if a.Name != b.Name {
-		return
-	}
-
-	if a.Scope == nil && b.Scope != nil {
-		return
-	}
-
-	if a.Scope != nil && b.Scope == nil {
+	if a.Group != b.Group ||
+		a.Kind != b.Kind ||
+		a.Name != b.Name ||
+		a.Scope == nil && b.Scope != nil ||
+		a.Scope != nil && b.Scope == nil {
 		return
 	}
 
 	if a.Scope != nil && b.Scope != nil {
-		if a.Scope.Kind != b.Scope.Kind {
-			return
-		}
-
-		if a.Scope.Name != b.Scope.Name {
+		if a.Scope.Kind != b.Scope.Kind ||
+			a.Scope.Name != b.Scope.Name {
 			return
 		}
 	}
 
-	for _, aType := range a.Type {
-		found := false
-		for _, bType := range b.Type {
-			if aType == bType {
-				found = true
-				break
+	typesDiff := func(aTypes, bTypes []string) bool {
+		for _, aType := range aTypes {
+			found := false
+			for _, bType := range bTypes {
+				if aType == bType {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return true
 			}
 		}
-		if !found {
-			return
-		}
+		return false
 	}
 
-	for _, bType := range b.Type {
-		found := false
-		for _, aType := range a.Type {
-			if aType == bType {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return
-		}
+	if typesDiff(a.Type, b.Type) {
+		return false
 	}
-	return true
+	return !typesDiff(b.Type, a.Type)
 }
 
 // executeTemplate parses a WatchTopic from a template
