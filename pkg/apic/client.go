@@ -632,12 +632,14 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
 
-	switch response.Code {
-	case http.StatusOK:
+	switch {
+	case response.Code == http.StatusNoContent && method == http.MethodDelete:
+		return nil, nil
+	case response.Code == http.StatusOK:
 		fallthrough
-	case http.StatusCreated:
+	case response.Code == http.StatusCreated:
 		return response.Body, nil
-	case http.StatusUnauthorized:
+	case response.Code == http.StatusUnauthorized:
 		return nil, ErrAuthentication
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
@@ -892,6 +894,6 @@ func (c *ServiceClient) DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	if err != nil {
 		return err
 	}
-	_, err = c.ExecuteAPI(coreapi.DELETE, ri.GetSelfLink(), nil, bts)
+	_, err = c.ExecuteAPI(coreapi.DELETE, fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), ri.GetSelfLink()), nil, bts)
 	return err
 }

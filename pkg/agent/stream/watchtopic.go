@@ -2,6 +2,7 @@ package stream
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
@@ -33,7 +34,7 @@ const (
 				"group": "{{.Group}}",
 				"kind": "{{.Kind}}",
 				"name": "*",
-				{{if .ScopeName}}"scope": {
+				{{if ne .ScopeName ""}}"scope": {
 					"kind": "{{if .ScopeKind}}{{.ScopeKind}}{{else}}Environment{{end}}",
 					"name": "{{.ScopeName}}"
 				},{{end}}
@@ -62,7 +63,9 @@ func getOrCreateWatchTopic(name, scope string, client apiClient, features watchT
 
 	if err == nil {
 		err = wt.FromInstance(ri)
-		return wt, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var agentResourceGroupKind v1.GroupKind
@@ -82,16 +85,120 @@ func getOrCreateWatchTopic(name, scope string, client apiClient, features watchT
 		return nil, resource.ErrUnsupportedAgentType
 	}
 
-	bts, err := parseWatchTopicTemplate(tmplValuesFunc(name, scope, agentResourceGroupKind, features))
+	newWT, err := parseWatchTopicTemplate(tmplValuesFunc(name, scope, agentResourceGroupKind, features))
 	if err != nil {
 		return nil, err
 	}
 
-	return createWatchTopic(bts, client)
+	// if the existing wt has no name then it does not exist yet
+	if wt.Name == "" {
+		return createOrUpdateWatchTopic(newWT, client)
+	}
+
+	//compare the generated WT and the existing WT for changes
+	if shouldPushUpdate(wt, newWT) {
+		// update the spec in the existing watch topic
+		wt.Spec = newWT.Spec
+		return createOrUpdateWatchTopic(wt, client)
+	}
+
+	return wt, nil
+}
+
+func shouldPushUpdate(cur, new *mv1.WatchTopic) bool {
+	for _, newFilter := range new.Spec.Filters {
+		found := false
+		for _, existingFilter := range cur.Spec.Filters {
+			if filtersEqual(newFilter, existingFilter) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// update required
+			return true
+		}
+	}
+
+	// now check the reverse
+	for _, existingFilter := range cur.Spec.Filters {
+		found := false
+		for _, newFilter := range new.Spec.Filters {
+			if filtersEqual(existingFilter, newFilter) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// update required
+			return true
+		}
+	}
+
+	return false
+}
+
+func filtersEqual(a, b mv1.WatchTopicSpecFilters) (equal bool) {
+	if a.Group != b.Group {
+		return
+	}
+
+	if a.Kind != b.Kind {
+		return
+	}
+
+	if a.Name != b.Name {
+		return
+	}
+
+	if a.Scope == nil && b.Scope != nil {
+		return
+	}
+
+	if a.Scope != nil && b.Scope == nil {
+		return
+	}
+
+	if a.Scope != nil && b.Scope != nil {
+		if a.Scope.Kind != b.Scope.Kind {
+			return
+		}
+
+		if a.Scope.Name != b.Scope.Name {
+			return
+		}
+	}
+
+	for _, aType := range a.Type {
+		found := false
+		for _, bType := range b.Type {
+			if aType == bType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return
+		}
+	}
+
+	for _, bType := range b.Type {
+		found := false
+		for _, aType := range a.Type {
+			if aType == bType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return
+		}
+	}
+	return true
 }
 
 // executeTemplate parses a WatchTopic from a template
-func parseWatchTopicTemplate(values WatchTopicValues) ([]byte, error) {
+func parseWatchTopicTemplate(values WatchTopicValues) (*mv1.WatchTopic, error) {
 	tmpl, err := template.New("watch-topic-tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(agentTemplate)
 	if err != nil {
 		return nil, err
@@ -99,14 +206,29 @@ func parseWatchTopicTemplate(values WatchTopicValues) ([]byte, error) {
 
 	buf := bytes.NewBuffer([]byte{})
 	err = tmpl.Execute(buf, values)
+	if err != nil {
+		return nil, err
+	}
 
-	return buf.Bytes(), err
+	wt := mv1.NewWatchTopic("")
+	err = json.Unmarshal(buf.Bytes(), wt)
+	return wt, err
 }
 
-// createWatchTopic creates a WatchTopic
-func createWatchTopic(bts []byte, rc apiClient) (*mv1.WatchTopic, error) {
-	wt := mv1.NewWatchTopic("")
-	ri, err := rc.CreateResource(wt.GetKindLink(), bts)
+// createOrUpdateWatchTopic creates a WatchTopic
+func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc apiClient) (*mv1.WatchTopic, error) {
+	bts, err := json.Marshal(wt)
+	if err != nil {
+		return nil, err
+	}
+
+	var ri *v1.ResourceInstance
+	if wt.Metadata.ID != "" {
+		ri, err = rc.UpdateResource(wt.GetSelfLink(), bts)
+	} else {
+		ri, err = rc.CreateResource(wt.GetKindLink(), bts)
+	}
+
 	if err != nil {
 		return nil, err
 	}

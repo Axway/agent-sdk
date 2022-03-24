@@ -172,6 +172,7 @@ type mockAPIClient struct {
 	getErr    error
 	createErr error
 	updateErr error
+	deleteErr error
 }
 
 func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
@@ -184,4 +185,8 @@ func (m mockAPIClient) CreateResource(url string, bts []byte) (*apiv1.ResourceIn
 
 func (m mockAPIClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.updateErr
+}
+
+func (m mockAPIClient) DeleteResourceInstance(*apiv1.ResourceInstance) error {
+	return m.deleteErr
 }

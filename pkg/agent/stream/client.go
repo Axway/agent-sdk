@@ -46,6 +46,7 @@ type apiClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 }
 
 // Streamer interface for starting a service
