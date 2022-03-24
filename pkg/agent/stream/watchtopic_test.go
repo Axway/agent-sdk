@@ -115,21 +115,53 @@ func TestGetCachedWatchTopic(t *testing.T) {
 	}
 }
 
+type mockWatchTopicFeatures struct {
+	isMPSEnabled bool
+	agentType    config.AgentType
+}
+
+func (m *mockWatchTopicFeatures) IsMarketplaceSubsEnabled() bool {
+	return m.isMPSEnabled
+}
+
+func (m *mockWatchTopicFeatures) GetAgentType() config.AgentType {
+	return m.agentType
+}
+
 func Test_parseWatchTopic(t *testing.T) {
-	bts, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", mv1.DiscoveryAgentGVK().GroupKind))
-	assert.Nil(t, err)
+	tests := []struct {
+		name         string
+		isMPSEnabled bool
+	}{
+		{
+			name: "Should create a watch topic without marketplace subs enabled",
+		},
+		{
+			name:         "Should create a watch topic with marketplace subs enabled",
+			isMPSEnabled: true,
+		},
+	}
 
-	assert.True(t, len(bts) > 0)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			features := &mockWatchTopicFeatures{isMPSEnabled: tc.isMPSEnabled}
 
-	bts, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", mv1.TraceabilityAgentGVK().GroupKind))
-	assert.Nil(t, err)
+			bts, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", mv1.DiscoveryAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
 
-	assert.True(t, len(bts) > 0)
+			assert.True(t, len(bts) > 0)
 
-	bts, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", mv1.GovernanceAgentGVK().GroupKind))
-	assert.Nil(t, err)
+			bts, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", mv1.TraceabilityAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
 
-	assert.True(t, len(bts) > 0)
+			assert.True(t, len(bts) > 0)
+
+			bts, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", mv1.GovernanceAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
+
+			assert.True(t, len(bts) > 0)
+		})
+	}
 }
 
 func TestGetOrCreateWatchTopic(t *testing.T) {
@@ -195,8 +227,9 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
+			features := &mockWatchTopicFeatures{isMPSEnabled: true, agentType: tc.agentType}
 
-			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, tc.agentType)
+			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, features)
 			if tc.hasErr == true {
 				assert.NotNil(t, err)
 			} else {

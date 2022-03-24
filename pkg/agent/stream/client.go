@@ -279,7 +279,7 @@ func getWatchTopic(cfg config.CentralConfig, client apiClient) (*v1alpha1.WatchT
 	wtName := getWatchTopicName(env, cfg.GetAgentType())
 	wt, err := getCachedWatchTopic(cache.New(), wtName)
 	if err != nil || wt == nil {
-		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg.GetAgentType())
+		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg)
 		if err != nil {
 			return nil, err
 		}
