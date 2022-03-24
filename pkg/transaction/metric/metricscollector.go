@@ -206,13 +206,13 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
+func (c *collector) updateConsumerMetric(metricAppDetail Detail) *SubscriptionMetric {
 	if !c.usageConfig.CanPublishSubscriptionMetric() {
-		return // no need to update metrics with publish off
+		return nil // no need to update metrics with publish off
 	}
 
 	if metricAppDetail.AppDetails.Name == "" {
-		return
+		return nil
 	}
 
 	cacheManager := agent.GetCacheManager()
@@ -289,8 +289,11 @@ func (c *collector) updateConsumerMetric(metricAppDetail Detail) {
 			StartTime:  now(),
 		}
 	}
-
 	consumerApp.Update(metricAppDetail.Duration)
+	c.storage.updateConsumerMetric(consumerApp, consumerAPIStatusMap[statusCode])
+
+	return consumerAPIStatusMap[statusCode]
+
 }
 
 func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64) *APIMetric {
@@ -601,26 +604,39 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4D
 		apiID := apiMetric.API.ID
 		if apiStatusMap, ok := c.metricMap[apiID]; ok {
 			c.storage.removeMetric(apiStatusMap[apiMetric.StatusCode])
-			if len(apiStatusMap) != 0 {
-				c.metricMap[apiID] = apiStatusMap
-			} else {
-				delete(c.metricMap, apiID)
-			}
+			delete(c.metricMap[apiID], apiMetric.StatusCode)
+			histogram.Clear()
+		}
+		if len(c.metricMap[apiID]) == 0 {
+			delete(c.metricMap, apiID)
 		}
 		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", apiMetric.API.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 	case "SubscriptionMetric":
 		subscriptionMetric := v4Data.(*SubscriptionMetric)
 		subID := subscriptionMetric.Subscription.ID
+		appID := subscriptionMetric.App.ID
+		apiID := subscriptionMetric.API.ID
+		statusCode := subscriptionMetric.StatusCode
 		if consumerAppMap, ok := c.consumerMetricMap[subID]; ok {
-			if len(consumerAppMap) != 0 {
-				c.consumerMetricMap[subID] = consumerAppMap
-			} else {
-				delete(c.consumerMetricMap, subID)
+			if apiMap, ok := consumerAppMap[appID]; ok {
+				if apiStatusMap, ok := apiMap[apiID]; ok {
+					c.storage.removeConsumerMetric(apiStatusMap[statusCode])
+					delete(c.consumerMetricMap[subID][appID][apiID], statusCode)
+					histogram.Clear()
+				}
+				if len(c.consumerMetricMap[subID][appID][apiID]) == 0 {
+					delete(c.consumerMetricMap[subID][appID], apiID)
+				}
 			}
+			if len(c.consumerMetricMap[subID][appID]) == 0 {
+				delete(c.consumerMetricMap[subID], appID)
+			}
+		}
+		if len(c.consumerMetricMap[subID]) == 0 {
+			delete(c.consumerMetricMap, subID)
 		}
 		log.Infof("Published metrics report for subscription %s [start timestamp: %d, end timestamp: %d]", subscriptionMetric.Subscription.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 	}
-	histogram.Clear()
 }
 
 func (c *collector) getStatusText(statusCode string) string {

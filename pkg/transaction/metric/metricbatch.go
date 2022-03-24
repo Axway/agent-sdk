@@ -92,6 +92,8 @@ func (b *EventBatch) ACK() {
 					v4Data = &SubscriptionMetric{}
 				}
 				if v4Data != nil {
+					buf, _ := json.Marshal(v4Event["data"])
+					json.Unmarshal(buf, v4Data)
 					eventID := event.Content.Meta[metricKey].(string)
 					b.collector.cleanupMetricCounter(b.histograms[eventID], v4Data)
 				}

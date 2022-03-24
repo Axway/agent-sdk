@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	appUsagePrefix     = "app_usage."
-	cacheFileName      = "agent-usagemetric.json"
-	metricKeyPrefix    = "metric."
-	metricStartTimeKey = "metric_start_time"
-	usageStartTimeKey  = "usage_start_time"
-	usageCountKey      = "usage_count"
-	volumeKey          = "usage_volume"
+	appUsagePrefix              = "app_usage."
+	cacheFileName               = "agent-usagemetric.json"
+	metricKeyPrefix             = "metric."
+	subscriptionMetricKeyPrefix = "subscriptionmetric."
+	metricStartTimeKey          = "metric_start_time"
+	usageStartTimeKey           = "usage_start_time"
+	usageCountKey               = "usage_count"
+	volumeKey                   = "usage_volume"
 )
 
 type storageCache interface {
@@ -32,7 +33,9 @@ type storageCache interface {
 	updateVolume(bytes int64)
 	updateAppUsage(usageCount int, appID string)
 	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
+	updateConsumerMetric(apiStatusMetric metrics.Histogram, apiMetric *SubscriptionMetric)
 	removeMetric(apiMetric *APIMetric)
+	removeConsumerMetric(subscriptionMetric *SubscriptionMetric)
 	save()
 }
 
@@ -73,6 +76,7 @@ func (c *cacheStorage) initialize() {
 	storageCache := cache.Load(c.cacheFilePath)
 	c.loadUsage(storageCache)
 	c.loadAPIMetric(storageCache)
+	c.loadConsumerMetric(storageCache)
 
 	// Not a job as the loop requires signal processing
 	if !c.isInitialized && util.IsNotTest() {
@@ -159,8 +163,7 @@ func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
 
 			var apiStatusMetric *APIMetric
 			for _, duration := range apiMetric.Values {
-				api := APIDetails{apiMetric.API.ID, apiMetric.API.Name, apiMetric.API.Revision, apiMetric.API.TeamID, apiMetric.API.APIServiceInstance, apiMetric.API.Stage}
-				apiStatusMetric = c.collector.updateMetric(api, apiMetric.StatusCode, duration)
+				apiStatusMetric = c.collector.updateMetric(apiMetric.API, apiMetric.StatusCode, duration)
 			}
 			if apiStatusMetric != nil {
 				apiStatusMetric.StartTime = apiMetric.StartTime
@@ -169,6 +172,34 @@ func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
 	}
 }
 
+func (c *cacheStorage) loadConsumerMetric(storageCache cache.Cache) {
+	cacheKeys := storageCache.GetKeys()
+	for _, cacheKey := range cacheKeys {
+		if strings.Contains(cacheKey, subscriptionMetricKeyPrefix) {
+			cacheItem, _ := storageCache.Get(cacheKey)
+
+			buffer, _ := json.Marshal(cacheItem)
+			var subMetric cachedMetric
+			json.Unmarshal(buffer, &subMetric)
+
+			storageCache.Set(cacheKey, subMetric)
+
+			var subscriptionMetric *SubscriptionMetric
+			for _, duration := range subMetric.Values {
+				metricDetail := Detail{
+					APIDetails: subMetric.API,
+					AppDetails: subMetric.App,
+					StatusCode: subMetric.StatusCode,
+					Duration:   duration,
+				}
+				subscriptionMetric = c.collector.updateConsumerMetric(metricDetail)
+			}
+			if subscriptionMetric != nil {
+				subscriptionMetric.StartTime = subMetric.StartTime
+			}
+		}
+	}
+}
 func (c *cacheStorage) updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric) {
 	if !c.isInitialized {
 		return
@@ -195,6 +226,44 @@ func (c *cacheStorage) removeMetric(apiMetric *APIMetric) {
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 	c.storage.Delete(metricKeyPrefix + apiMetric.API.ID + "." + apiMetric.StatusCode)
+}
+
+func (c *cacheStorage) updateConsumerMetric(subscriptionCounter metrics.Histogram, subscriptionMetric *SubscriptionMetric) {
+	if !c.isInitialized {
+		return
+	}
+
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
+
+	cachedAPIMetric := cachedMetric{
+		Subscription: subscriptionMetric.Subscription,
+		App:          subscriptionMetric.App,
+		API:          subscriptionMetric.API,
+		StatusCode:   subscriptionMetric.StatusCode,
+		Count:        subscriptionCounter.Count(),
+		Values:       subscriptionCounter.Sample().Values(),
+		StartTime:    subscriptionMetric.StartTime,
+	}
+
+	key := subscriptionMetric.Subscription.ID + "." +
+		subscriptionMetric.App.ID + "." +
+		subscriptionMetric.API.ID + "." +
+		subscriptionMetric.StatusCode
+	c.storage.Set(subscriptionMetricKeyPrefix+key, cachedAPIMetric)
+}
+
+func (c *cacheStorage) removeConsumerMetric(subscriptionMetric *SubscriptionMetric) {
+	if !c.isInitialized {
+		return
+	}
+	c.storageLock.Lock()
+	defer c.storageLock.Unlock()
+	key := subscriptionMetric.Subscription.ID + "." +
+		subscriptionMetric.App.ID + "." +
+		subscriptionMetric.API.ID + "." +
+		subscriptionMetric.StatusCode
+	c.storage.Delete(subscriptionMetricKeyPrefix + key)
 }
 
 func (c *cacheStorage) save() {

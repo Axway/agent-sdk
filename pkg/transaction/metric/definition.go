@@ -99,11 +99,13 @@ func (a *SubscriptionMetric) GetType() string {
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	API        APIDetails `json:"api"`
-	StatusCode string     `json:"statusCode"`
-	Count      int64      `json:"count"`
-	Values     []int64    `json:"values"`
-	StartTime  time.Time  `json:"startTime"`
+	App          AppDetails          `json:"app,omitempty"`
+	Subscription SubscriptionDetails `json:"subscription,omitempty"`
+	API          APIDetails          `json:"api"`
+	StatusCode   string              `json:"statusCode"`
+	Count        int64               `json:"count"`
+	Values       []int64             `json:"values"`
+	StartTime    time.Time           `json:"startTime"`
 }
 
 // V4EventDistribution - represents V7 distribution
