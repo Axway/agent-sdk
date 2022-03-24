@@ -88,8 +88,6 @@ func (b *EventBatch) ACK() {
 				switch eventType.(string) {
 				case metricEvent:
 					v4Data = &APIMetric{}
-				case subscriptionMetricEvent:
-					v4Data = &SubscriptionMetric{}
 				}
 				if v4Data != nil {
 					buf, _ := json.Marshal(v4Event["data"])

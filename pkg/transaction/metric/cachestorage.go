@@ -17,14 +17,13 @@ import (
 )
 
 const (
-	appUsagePrefix              = "app_usage."
-	cacheFileName               = "agent-usagemetric.json"
-	metricKeyPrefix             = "metric."
-	subscriptionMetricKeyPrefix = "subscriptionmetric."
-	metricStartTimeKey          = "metric_start_time"
-	usageStartTimeKey           = "usage_start_time"
-	usageCountKey               = "usage_count"
-	volumeKey                   = "usage_volume"
+	appUsagePrefix     = "app_usage."
+	cacheFileName      = "agent-usagemetric.json"
+	metricKeyPrefix    = "metric."
+	metricStartTimeKey = "metric_start_time"
+	usageStartTimeKey  = "usage_start_time"
+	usageCountKey      = "usage_count"
+	volumeKey          = "usage_volume"
 )
 
 type storageCache interface {
@@ -32,10 +31,8 @@ type storageCache interface {
 	updateUsage(usageCount int)
 	updateVolume(bytes int64)
 	updateAppUsage(usageCount int, appID string)
-	updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric)
-	updateConsumerMetric(apiStatusMetric metrics.Histogram, apiMetric *SubscriptionMetric)
-	removeMetric(apiMetric *APIMetric)
-	removeConsumerMetric(subscriptionMetric *SubscriptionMetric)
+	updateMetric(apiStatusMetric metrics.Histogram, metric *APIMetric)
+	removeMetric(metric *APIMetric)
 	save()
 }
 
@@ -75,8 +72,7 @@ func (c *cacheStorage) initialize() {
 	c.moveCacheFile() // to remove for next major release
 	storageCache := cache.Load(c.cacheFilePath)
 	c.loadUsage(storageCache)
-	c.loadAPIMetric(storageCache)
-	c.loadConsumerMetric(storageCache)
+	c.loadMetrics(storageCache)
 
 	// Not a job as the loop requires signal processing
 	if !c.isInitialized && util.IsNotTest() {
@@ -149,58 +145,36 @@ func (c *cacheStorage) updateAppUsage(usageCount int, appID string) {
 	c.storage.Set(appUsagePrefix+appID, usageCount)
 }
 
-func (c *cacheStorage) loadAPIMetric(storageCache cache.Cache) {
+func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 	cacheKeys := storageCache.GetKeys()
 	for _, cacheKey := range cacheKeys {
 		if strings.Contains(cacheKey, metricKeyPrefix) {
 			cacheItem, _ := storageCache.Get(cacheKey)
 
 			buffer, _ := json.Marshal(cacheItem)
-			var apiMetric cachedMetric
-			json.Unmarshal(buffer, &apiMetric)
+			var cm cachedMetric
+			json.Unmarshal(buffer, &cm)
 
-			storageCache.Set(cacheKey, apiMetric)
+			storageCache.Set(cacheKey, cm)
 
-			var apiStatusMetric *APIMetric
-			for _, duration := range apiMetric.Values {
-				apiStatusMetric = c.collector.updateMetric(apiMetric.API, apiMetric.StatusCode, duration)
-			}
-			if apiStatusMetric != nil {
-				apiStatusMetric.StartTime = apiMetric.StartTime
-			}
-		}
-	}
-}
-
-func (c *cacheStorage) loadConsumerMetric(storageCache cache.Cache) {
-	cacheKeys := storageCache.GetKeys()
-	for _, cacheKey := range cacheKeys {
-		if strings.Contains(cacheKey, subscriptionMetricKeyPrefix) {
-			cacheItem, _ := storageCache.Get(cacheKey)
-
-			buffer, _ := json.Marshal(cacheItem)
-			var subMetric cachedMetric
-			json.Unmarshal(buffer, &subMetric)
-
-			storageCache.Set(cacheKey, subMetric)
-
-			var subscriptionMetric *SubscriptionMetric
-			for _, duration := range subMetric.Values {
+			var metric *APIMetric
+			for _, duration := range cm.Values {
 				metricDetail := Detail{
-					APIDetails: subMetric.API,
-					AppDetails: subMetric.App,
-					StatusCode: subMetric.StatusCode,
+					APIDetails: cm.API,
+					AppDetails: cm.App,
+					StatusCode: cm.StatusCode,
 					Duration:   duration,
 				}
-				subscriptionMetric = c.collector.updateConsumerMetric(metricDetail)
+				metric = c.collector.updateMetric(metricDetail)
 			}
-			if subscriptionMetric != nil {
-				subscriptionMetric.StartTime = subMetric.StartTime
+			if metric != nil {
+				metric.StartTime = cm.StartTime
 			}
 		}
 	}
 }
-func (c *cacheStorage) updateMetric(apiStatusMetric metrics.Histogram, apiMetric *APIMetric) {
+
+func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetric) {
 	if !c.isInitialized {
 		return
 	}
@@ -208,62 +182,34 @@ func (c *cacheStorage) updateMetric(apiStatusMetric metrics.Histogram, apiMetric
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	cachedAPIMetric := cachedMetric{
-		API:        apiMetric.API,
-		StatusCode: apiMetric.StatusCode,
-		Count:      apiStatusMetric.Count(),
-		Values:     apiStatusMetric.Sample().Values(),
-		StartTime:  apiMetric.StartTime,
+	cachedMetric := cachedMetric{
+		Subscription: metric.Subscription,
+		App:          metric.App,
+		API:          metric.API,
+		StatusCode:   metric.StatusCode,
+		Count:        histogram.Count(),
+		Values:       histogram.Sample().Values(),
+		StartTime:    metric.StartTime,
 	}
-	c.storage.Set(metricKeyPrefix+apiMetric.API.ID+"."+apiMetric.StatusCode, cachedAPIMetric)
+
+	c.storage.Set(metricKeyPrefix+c.getKey(metric), cachedMetric)
 }
 
-func (c *cacheStorage) removeMetric(apiMetric *APIMetric) {
+func (c *cacheStorage) removeMetric(metric *APIMetric) {
 	if !c.isInitialized {
 		return
 	}
-
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
-	c.storage.Delete(metricKeyPrefix + apiMetric.API.ID + "." + apiMetric.StatusCode)
+
+	c.storage.Delete(metricKeyPrefix + c.getKey(metric))
 }
 
-func (c *cacheStorage) updateConsumerMetric(subscriptionCounter metrics.Histogram, subscriptionMetric *SubscriptionMetric) {
-	if !c.isInitialized {
-		return
-	}
-
-	c.storageLock.Lock()
-	defer c.storageLock.Unlock()
-
-	cachedAPIMetric := cachedMetric{
-		Subscription: subscriptionMetric.Subscription,
-		App:          subscriptionMetric.App,
-		API:          subscriptionMetric.API,
-		StatusCode:   subscriptionMetric.StatusCode,
-		Count:        subscriptionCounter.Count(),
-		Values:       subscriptionCounter.Sample().Values(),
-		StartTime:    subscriptionMetric.StartTime,
-	}
-
-	key := subscriptionMetric.Subscription.ID + "." +
-		subscriptionMetric.App.ID + "." +
-		subscriptionMetric.API.ID + "." +
-		subscriptionMetric.StatusCode
-	c.storage.Set(subscriptionMetricKeyPrefix+key, cachedAPIMetric)
-}
-
-func (c *cacheStorage) removeConsumerMetric(subscriptionMetric *SubscriptionMetric) {
-	if !c.isInitialized {
-		return
-	}
-	c.storageLock.Lock()
-	defer c.storageLock.Unlock()
-	key := subscriptionMetric.Subscription.ID + "." +
-		subscriptionMetric.App.ID + "." +
-		subscriptionMetric.API.ID + "." +
-		subscriptionMetric.StatusCode
-	c.storage.Delete(subscriptionMetricKeyPrefix + key)
+func (c *cacheStorage) getKey(metric *APIMetric) string {
+	return metric.Subscription.ID + "." +
+		metric.App.ID + "." +
+		metric.API.ID + "." +
+		metric.StatusCode
 }
 
 func (c *cacheStorage) save() {

@@ -34,23 +34,22 @@ type Collector interface {
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	usageStartTime    time.Time
-	usageEndTime      time.Time
-	metricStartTime   time.Time
-	metricEndTime     time.Time
-	orgGUID           string
-	lock              *sync.Mutex
-	batchLock         *sync.Mutex
-	registry          metrics.Registry
-	metricBatch       *EventBatch
-	metricMap         map[string]map[string]*APIMetric
-	consumerMetricMap map[string]map[string]map[string]map[string]*SubscriptionMetric
-	publishItemQueue  []publishQueueItem
-	jobID             string
-	publisher         publisher
-	storage           storageCache
-	reports           offlineReportCache
-	usageConfig       config.UsageReportingConfig
+	usageStartTime   time.Time
+	usageEndTime     time.Time
+	metricStartTime  time.Time
+	metricEndTime    time.Time
+	orgGUID          string
+	lock             *sync.Mutex
+	batchLock        *sync.Mutex
+	registry         metrics.Registry
+	metricBatch      *EventBatch
+	metricMap        map[string]map[string]map[string]map[string]*APIMetric
+	publishItemQueue []publishQueueItem
+	jobID            string
+	publisher        publisher
+	storage          storageCache
+	reports          offlineReportCache
+	usageConfig      config.UsageReportingConfig
 }
 
 type publishQueueItem interface {
@@ -109,15 +108,14 @@ func createMetricCollector() Collector {
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
-		usageStartTime:    now().Add(-1 * time.Minute),
-		metricStartTime:   now().Add(-1 * time.Minute),
-		lock:              &sync.Mutex{},
-		batchLock:         &sync.Mutex{},
-		registry:          metrics.NewRegistry(),
-		metricMap:         make(map[string]map[string]*APIMetric),
-		consumerMetricMap: make(map[string]map[string]map[string]map[string]*SubscriptionMetric),
-		publishItemQueue:  make([]publishQueueItem, 0),
-		usageConfig:       agent.GetCentralConfig().GetUsageReportingConfig(),
+		usageStartTime:   now().Add(-1 * time.Minute),
+		metricStartTime:  now().Add(-1 * time.Minute),
+		lock:             &sync.Mutex{},
+		batchLock:        &sync.Mutex{},
+		registry:         metrics.NewRegistry(),
+		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
+		publishItemQueue: make([]publishQueueItem, 0),
+		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -182,13 +180,12 @@ func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration
 	defer c.batchLock.Unlock()
 	c.updateUsage(1)
 	c.updateVolume(bytes)
-	c.updateMetric(apiDetails, statusCode, duration)
 }
 
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
-	c.updateConsumerMetric(metricDetail)
+	c.updateMetric(metricDetail)
 }
 
 func (c *collector) updateVolume(bytes int64) {
@@ -206,122 +203,117 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateConsumerMetric(metricAppDetail Detail) *SubscriptionMetric {
-	if !c.usageConfig.CanPublishSubscriptionMetric() {
+func (c *collector) updateMetric(detail Detail) *APIMetric {
+	if !c.usageConfig.CanPublishMetric() {
 		return nil // no need to update metrics with publish off
-	}
-
-	if metricAppDetail.AppDetails.Name == "" {
-		return nil
 	}
 
 	cacheManager := agent.GetCacheManager()
 
 	// Lookup Managed App
-	apiID := metricAppDetail.APIDetails.ID
-	stage := metricAppDetail.APIDetails.Stage
+	apiID := detail.APIDetails.ID
+	stage := detail.APIDetails.Stage
 
-	managedApp := cacheManager.GetManagedApplicationByName(metricAppDetail.AppDetails.Name)
-	consumerOrgGUID := c.getConsumerOrgGUID(managedApp)
+	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
 	accessRequest := c.getAccessRequest(cacheManager, managedApp, apiID, stage)
 	subscription := c.getSubscription(cacheManager, accessRequest)
 
-	appID := "unkown"
-	appName := "unknown"
-	if managedApp != nil {
-		appID = managedApp.Metadata.ID
-		appName = managedApp.Name
-	}
+	subscriptionID := c.getSubscriptionID(subscription)
+	appID := c.getApplicationID(managedApp)
+	statusCode := detail.StatusCode
 
-	subscriptionID := "unknown"
-	subscriptionName := "unknown"
-	if subscription != nil {
-		subscriptionID = subscription.Metadata.ID
-		subscriptionName = subscription.Name
-	}
+	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + apiID + "." + statusCode)
 
-	apiServiceInstanceName := "unknown"
-	if accessRequest != nil {
-		apiServiceInstanceName = accessRequest.Spec.ApiServiceInstance
-	}
-
-	statusCode := metricAppDetail.StatusCode
-	consumerApp := c.getOrRegisterHistogram("subscription." + subscriptionID + "." + appID + "." + apiID + "." + statusCode)
-
-	consumerAppMap, ok := c.consumerMetricMap[subscriptionID]
+	appMap, ok := c.metricMap[subscriptionID]
 	if !ok {
-		consumerAppMap = make(map[string]map[string]map[string]*SubscriptionMetric)
-		c.consumerMetricMap[subscriptionID] = consumerAppMap
+		appMap = make(map[string]map[string]map[string]*APIMetric)
+		c.metricMap[subscriptionID] = appMap
 	}
 
-	consumerAPIMap, ok := consumerAppMap[appID]
+	apiMap, ok := appMap[appID]
 	if !ok {
-		consumerAPIMap = make(map[string]map[string]*SubscriptionMetric)
-		consumerAppMap[appID] = consumerAPIMap
+		apiMap = make(map[string]map[string]*APIMetric)
+		appMap[appID] = apiMap
 	}
 
-	consumerAPIStatusMap, ok := consumerAPIMap[apiID]
+	statusMap, ok := apiMap[apiID]
 	if !ok {
-		consumerAPIStatusMap = make(map[string]*SubscriptionMetric)
-		consumerAPIMap[apiID] = consumerAPIStatusMap
+		statusMap = make(map[string]*APIMetric)
+		apiMap[apiID] = statusMap
 	}
 
-	if _, ok := consumerAPIStatusMap[statusCode]; !ok {
-		// First api metric for api+statuscode,
+	if _, ok := statusMap[statusCode]; !ok {
+		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
-		consumerAPIStatusMap[statusCode] = &SubscriptionMetric{
-			Subscription: SubscriptionDetails{
-				ID:   subscriptionID,
-				Name: subscriptionName,
-			},
-			App: AppDetails{
-				ID:              appID,
-				Name:            appName,
-				ConsumerOrgGUID: consumerOrgGUID,
-			},
-			API: APIDetails{
-				ID:                 apiID,
-				Name:               metricAppDetail.APIDetails.Name,
-				APIServiceInstance: apiServiceInstanceName,
-			},
-			StatusCode: statusCode,
-			Status:     c.getStatusText(statusCode),
-			StartTime:  now(),
+		statusMap[statusCode] = &APIMetric{
+			Subscription: c.createSubscriptionDetail(subscription),
+			App:          c.createAppDetail(managedApp),
+			API:          c.createAPIDetail(detail.APIDetails, accessRequest),
+			StatusCode:   statusCode,
+			Status:       c.getStatusText(statusCode),
+			StartTime:    now(),
 		}
 	}
-	consumerApp.Update(metricAppDetail.Duration)
-	c.storage.updateConsumerMetric(consumerApp, consumerAPIStatusMap[statusCode])
+	histogram.Update(detail.Duration)
+	c.storage.updateMetric(histogram, statusMap[statusCode])
 
-	return consumerAPIStatusMap[statusCode]
-
+	return statusMap[statusCode]
 }
 
-func (c *collector) updateMetric(apiDetails APIDetails, statusCode string, duration int64) *APIMetric {
-	if !c.usageConfig.CanPublishMetric() {
-		return nil // no need to update metrics with publish off
+func (c *collector) getSubscriptionID(subscription *v1.ResourceInstance) string {
+	if subscription == nil {
+		return unknown
 	}
-	apiStatusDuration := c.getOrRegisterHistogram("transaction.status." + apiDetails.ID + "." + statusCode)
+	return subscription.Metadata.ID
+}
 
-	apiStatusMap, ok := c.metricMap[apiDetails.ID]
-	if !ok {
-		apiStatusMap = make(map[string]*APIMetric)
-		c.metricMap[apiDetails.ID] = apiStatusMap
-	}
-
-	if _, ok := apiStatusMap[statusCode]; !ok {
-		// First api metric for api+statuscode,
-		// setup the start time to be used for reporting metric event
-		apiStatusMap[statusCode] = &APIMetric{
-			API:        apiDetails,
-			StatusCode: statusCode,
-			Status:     c.getStatusText(statusCode),
-			StartTime:  now(),
-		}
+func (c *collector) createSubscriptionDetail(subscription *v1.ResourceInstance) SubscriptionDetails {
+	detail := SubscriptionDetails{
+		ID:   unknown,
+		Name: unknown,
 	}
 
-	apiStatusDuration.Update(duration)
-	c.storage.updateMetric(apiStatusDuration, apiStatusMap[statusCode])
-	return apiStatusMap[statusCode]
+	if subscription != nil {
+		detail.ID = subscription.Metadata.ID
+		detail.Name = subscription.Name
+	}
+	return detail
+}
+
+func (c *collector) getApplicationID(app *v1.ResourceInstance) string {
+	if app == nil {
+		return unknown
+	}
+	return app.Metadata.ID
+}
+
+func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
+	detail := AppDetails{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	if app != nil {
+		detail.ID = app.Metadata.ID
+		detail.Name = app.Name
+		detail.ConsumerOrgGUID = c.getConsumerOrgGUID(app)
+	}
+	return detail
+}
+
+func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRequest) APIDetails {
+	detail := APIDetails{
+		ID:                 api.ID,
+		Name:               api.Name,
+		Revision:           api.Revision,
+		TeamID:             api.TeamID,
+		APIServiceInstance: unknown,
+	}
+
+	if accessReq != nil {
+		detail.APIServiceInstance = accessReq.Spec.ApiServiceInstance
+	}
+	return detail
 }
 
 func (c *collector) cleanup() {
@@ -377,11 +369,8 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	// case transactionVolumeMetric:
 	case name == transactionVolumeMetric:
 		return // skip volume metric as it is handled with Count metric
-	// case transactionVolumeMetric:
-	case strings.HasPrefix(name, "subscription."):
-		c.processConsumerMetric(name, metric)
 	default:
-		c.processTransactionMetric(name, metric)
+		c.processMetric(name, metric)
 	}
 }
 
@@ -436,35 +425,20 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 }
 
-func (c *collector) processTransactionMetric(metricName string, metric interface{}) {
-	elements := strings.Split(metricName, ".")
-	if len(elements) > 2 {
-		apiID := elements[2]
-		statusCode := elements[3]
-		if apiStatusMap, ok := c.metricMap[apiID]; ok {
-			if statusCodeDetail, ok := apiStatusMap[statusCode]; ok && strings.HasPrefix(metricName, "transaction.status") {
-				statusMetric := (metric.(metrics.Histogram))
-				c.setEventMetricsFromHistogram(statusCodeDetail, statusMetric)
-				c.generateAPIStatusMetricEvent(statusMetric, statusCodeDetail, apiID)
-			}
-		}
-	}
-}
-
-func (c *collector) processConsumerMetric(metricName string, metric interface{}) {
+func (c *collector) processMetric(metricName string, metric interface{}) {
 	elements := strings.Split(metricName, ".")
 	if len(elements) == 5 {
 		subscriptionID := elements[1]
 		appID := elements[2]
 		apiID := elements[3]
 		statusCode := elements[4]
-		if consumerSubscriptionMap, ok := c.consumerMetricMap[subscriptionID]; ok {
-			if consumerAppMap, ok := consumerSubscriptionMap[appID]; ok {
-				if consumerAPIMap, ok := consumerAppMap[apiID]; ok {
-					if consumerAPIStatusDetail, ok := consumerAPIMap[statusCode]; ok {
+		if appMap, ok := c.metricMap[subscriptionID]; ok {
+			if apiMap, ok := appMap[appID]; ok {
+				if statusMap, ok := apiMap[apiID]; ok {
+					if statusDetail, ok := statusMap[statusCode]; ok {
 						statusMetric := (metric.(metrics.Histogram))
-						c.setConsumerEventMetricsFromHistogram(consumerAPIStatusDetail, statusMetric)
-						c.generateAppMetricEvent(statusMetric, consumerAPIStatusDetail, appID)
+						c.settMetricsFromHistogram(statusDetail, statusMetric)
+						c.generateMetricEvent(statusMetric, statusDetail, appID)
 					}
 				}
 			}
@@ -472,31 +446,31 @@ func (c *collector) processConsumerMetric(metricName string, metric interface{})
 	}
 }
 
-func (c *collector) setConsumerEventMetricsFromHistogram(apiStatusDetails *SubscriptionMetric, histogram metrics.Histogram) {
-	apiStatusDetails.Count = histogram.Count()
-	apiStatusDetails.Response.Max = histogram.Max()
-	apiStatusDetails.Response.Min = histogram.Min()
-	apiStatusDetails.Response.Avg = histogram.Mean()
+func (c *collector) settMetricsFromHistogram(metrics *APIMetric, histogram metrics.Histogram) {
+	metrics.Count = histogram.Count()
+	metrics.Response.Max = histogram.Max()
+	metrics.Response.Min = histogram.Min()
+	metrics.Response.Avg = histogram.Mean()
 }
 
-func (c *collector) generateAppMetricEvent(histogram metrics.Histogram, subscriptionStatusMetric *SubscriptionMetric, apiID string) {
-	if subscriptionStatusMetric.Count == 0 {
+func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *APIMetric, apiID string) {
+	if metric.Count == 0 {
 		return
 	}
 
-	subscriptionStatusMetric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
-	subscriptionStatusMetric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
+	metric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
+	metric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
 	// Generate app subscription metric
-	c.generateAppV4Event(histogram, subscriptionStatusMetric, c.orgGUID)
+	c.generateV4Event(histogram, metric, c.orgGUID)
 
 }
 
-func (c *collector) generateAppV4Event(histogram metrics.Histogram, v4data V4Data, orgGUID string) {
-	subscriptionStatusMetricEventID, _ := uuid.NewRandom()
-	subscriptionStatusMetricEvent := V4Event{
-		ID:        subscriptionStatusMetricEventID.String(),
+func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data, orgGUID string) {
+	eventID, _ := uuid.NewRandom()
+	event := V4Event{
+		ID:        eventID.String(),
 		Timestamp: c.metricStartTime.UnixNano() / 1e6,
-		Event:     subscriptionMetricEvent,
+		Event:     metricEvent,
 		App:       orgGUID,
 		Version:   "4",
 		Distribution: &V4EventDistribution{
@@ -505,39 +479,7 @@ func (c *collector) generateAppV4Event(histogram metrics.Histogram, v4data V4Dat
 		},
 		Data: v4data,
 	}
-	AddCondorMetricEventToBatch(subscriptionStatusMetricEvent, c.metricBatch, histogram)
-}
-
-func (c *collector) setEventMetricsFromHistogram(apiStatusDetails *APIMetric, histogram metrics.Histogram) {
-	apiStatusDetails.Count = histogram.Count()
-	apiStatusDetails.Response.Max = histogram.Max()
-	apiStatusDetails.Response.Min = histogram.Min()
-	apiStatusDetails.Response.Avg = histogram.Mean()
-}
-
-func (c *collector) generateAPIStatusMetricEvent(histogram metrics.Histogram, apiStatusMetric *APIMetric, apiID string) {
-	if apiStatusMetric.Count == 0 {
-		return
-	}
-
-	apiStatusMetric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
-	apiStatusMetric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
-	apiStatusMetricEventID, _ := uuid.NewRandom()
-	apiStatusMetricEvent := V4Event{
-		ID:        apiStatusMetricEventID.String(),
-		Timestamp: c.metricStartTime.UnixNano() / 1e6,
-		Event:     metricEvent,
-		App:       c.orgGUID,
-		Version:   "4",
-		Distribution: &V4EventDistribution{
-			Environment: agent.GetCentralConfig().GetEnvironmentID(),
-			Version:     "1",
-		},
-		Data: apiStatusMetric,
-	}
-
-	// Add all metrics to the batch
-	AddCondorMetricEventToBatch(apiStatusMetricEvent, c.metricBatch, histogram)
+	AddCondorMetricEventToBatch(event, c.metricBatch, histogram)
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
@@ -598,44 +540,31 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 }
 
 func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4Data) {
-	switch v4Data.GetType() {
-	case "APIMetric":
-		apiMetric := v4Data.(*APIMetric)
-		apiID := apiMetric.API.ID
-		if apiStatusMap, ok := c.metricMap[apiID]; ok {
-			c.storage.removeMetric(apiStatusMap[apiMetric.StatusCode])
-			delete(c.metricMap[apiID], apiMetric.StatusCode)
-			histogram.Clear()
-		}
-		if len(c.metricMap[apiID]) == 0 {
-			delete(c.metricMap, apiID)
-		}
-		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", apiMetric.API.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
-	case "SubscriptionMetric":
-		subscriptionMetric := v4Data.(*SubscriptionMetric)
-		subID := subscriptionMetric.Subscription.ID
-		appID := subscriptionMetric.App.ID
-		apiID := subscriptionMetric.API.ID
-		statusCode := subscriptionMetric.StatusCode
-		if consumerAppMap, ok := c.consumerMetricMap[subID]; ok {
+	metric, ok := v4Data.(*APIMetric)
+	if ok {
+		subID := metric.Subscription.ID
+		appID := metric.App.ID
+		apiID := metric.API.ID
+		statusCode := metric.StatusCode
+		if consumerAppMap, ok := c.metricMap[subID]; ok {
 			if apiMap, ok := consumerAppMap[appID]; ok {
 				if apiStatusMap, ok := apiMap[apiID]; ok {
-					c.storage.removeConsumerMetric(apiStatusMap[statusCode])
-					delete(c.consumerMetricMap[subID][appID][apiID], statusCode)
+					c.storage.removeMetric(apiStatusMap[statusCode])
+					delete(c.metricMap[subID][appID][apiID], statusCode)
 					histogram.Clear()
 				}
-				if len(c.consumerMetricMap[subID][appID][apiID]) == 0 {
-					delete(c.consumerMetricMap[subID][appID], apiID)
+				if len(c.metricMap[subID][appID][apiID]) == 0 {
+					delete(c.metricMap[subID][appID], apiID)
 				}
 			}
-			if len(c.consumerMetricMap[subID][appID]) == 0 {
-				delete(c.consumerMetricMap[subID], appID)
+			if len(c.metricMap[subID][appID]) == 0 {
+				delete(c.metricMap[subID], appID)
 			}
 		}
-		if len(c.consumerMetricMap[subID]) == 0 {
-			delete(c.consumerMetricMap, subID)
+		if len(c.metricMap[subID]) == 0 {
+			delete(c.metricMap, subID)
 		}
-		log.Infof("Published metrics report for subscription %s [start timestamp: %d, end timestamp: %d]", subscriptionMetric.Subscription.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", metric.API.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
 	}
 }
 

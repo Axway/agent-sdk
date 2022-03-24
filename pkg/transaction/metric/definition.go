@@ -8,7 +8,6 @@ var now = time.Now
 const (
 	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
-	subscriptionMetricEvent = "subscription.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
 	metricFlow              = "api-central-metric"
@@ -18,6 +17,7 @@ const (
 	lighthouseVolume        = "Volume"
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
+	unknown                 = "unknown"
 )
 
 // Detail - holds the details for computing metrics
@@ -53,29 +53,8 @@ type APIDetails struct {
 	Stage              string `json:"-"`
 }
 
-// APIMetric - struct to hold metric specific for status code based API transactions
+// APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	API         APIDetails         `json:"api"`
-	StatusCode  string             `json:"statusCode"`
-	Status      string             `json:"status"`
-	Count       int64              `json:"count"`
-	Response    ResponseMetrics    `json:"response"`
-	Observation ObservationDetails `json:"observation"`
-	StartTime   time.Time          `json:"-"`
-}
-
-// GetStartTime - Returns the start time for API metric
-func (a *APIMetric) GetStartTime() time.Time {
-	return a.StartTime
-}
-
-// GetType - Returns APIMetric
-func (a *APIMetric) GetType() string {
-	return "APIMetric"
-}
-
-// SubscriptionMetric - struct to hold metric aggregated for subscription,application,api,statuscode
-type SubscriptionMetric struct {
 	Subscription SubscriptionDetails `json:"subscription"`
 	App          AppDetails          `json:"application"`
 	API          APIDetails          `json:"api"`
@@ -88,13 +67,13 @@ type SubscriptionMetric struct {
 }
 
 // GetStartTime - Returns the start time for subscription metric
-func (a *SubscriptionMetric) GetStartTime() time.Time {
+func (a *APIMetric) GetStartTime() time.Time {
 	return a.StartTime
 }
 
-// GetType - Returns SubscriptionMetric
-func (a *SubscriptionMetric) GetType() string {
-	return "SubscriptionMetric"
+// GetType - Returns APIMetric
+func (a *APIMetric) GetType() string {
+	return "APIMetric"
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery

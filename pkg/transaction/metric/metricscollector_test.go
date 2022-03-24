@@ -244,7 +244,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 2, // API metric + Provider subscription metric
+			expectedMetricEventsAcked: 1, // API metric + Provider subscription metric
 			appName:                   "managed-app-1",
 		},
 		// Success case with consumer metric event
@@ -258,7 +258,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 2, // API metric + Provider + Consumer subscription metric
+			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
 		},
 		// Success case with no usage report
@@ -285,7 +285,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
-			expectedMetricEventsAcked: 2,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Success case, retry metrics
@@ -299,7 +299,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 2,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Retry limit hit
