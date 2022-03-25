@@ -211,18 +211,28 @@ func (c *itemCache) hasItemChanged(thisAction cacheAction) (thisReply cacheReply
 // returns the entire item, if found
 func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
 	key := thisAction.key
-	data := thisAction.data
 
 	thisReply = cacheReply{
 		item: nil,
 		err:  fmt.Errorf("Could not find item with key: %s", key),
 	}
 	if item, ok := c.Items[key]; ok {
-		if item.ContainsPointer {
-			item.Object = &data
+		replyItem := &Item{
+			UpdateTime:    item.UpdateTime,
+			Hash:          item.Hash,
+			SecondaryKeys: item.SecondaryKeys,
+			ForeignKey:    item.ForeignKey,
+			Object:        item.Object,
 		}
+		if item.ContainsPointer {
+			rf := reflect.ValueOf(item.Object)
+			p := reflect.New(rf.Type())
+			p.Elem().Set(rf)
+			replyItem.Object = p.Interface()
+		}
+
 		thisReply = cacheReply{
-			item: item,
+			item: replyItem,
 			err:  nil,
 		}
 	}
@@ -313,19 +323,16 @@ func (c *itemCache) set(thisAction cacheAction) (thisReply cacheReply) {
 		secKeys = c.Items[key].SecondaryKeys
 	}
 
-	var containsPointer = false
-	if reflect.ValueOf(data).Kind() == reflect.Ptr {
-		containsPointer = true
-		// set the underlying value
-		data = reflect.ValueOf(data)
+	c.Items[key] = &Item{
+		Object:        data,
+		UpdateTime:    time.Now().Unix(),
+		Hash:          hash,
+		SecondaryKeys: secKeys,
 	}
 
-	c.Items[key] = &Item{
-		Object:          data,
-		UpdateTime:      time.Now().Unix(),
-		Hash:            hash,
-		SecondaryKeys:   secKeys,
-		ContainsPointer: containsPointer,
+	if reflect.ValueOf(data).Type().Kind() == reflect.Ptr {
+		c.Items[key].Object = reflect.ValueOf(data).Elem().Interface()
+		c.Items[key].ContainsPointer = true
 	}
 	return
 }
