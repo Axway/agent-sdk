@@ -46,6 +46,7 @@ type apiClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 }
 
 // Streamer interface for starting a service
@@ -279,7 +280,7 @@ func getWatchTopic(cfg config.CentralConfig, client apiClient) (*v1alpha1.WatchT
 	wtName := getWatchTopicName(env, cfg.GetAgentType())
 	wt, err := getCachedWatchTopic(cache.New(), wtName)
 	if err != nil || wt == nil {
-		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg.GetAgentType())
+		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg)
 		if err != nil {
 			return nil, err
 		}

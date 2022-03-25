@@ -13,6 +13,7 @@ func TestDefaultAgentFeaturesConfig(t *testing.T) {
 	assert.True(t, agentFeaturesConfig.ProcessSystemSignalsEnabled())
 	assert.True(t, agentFeaturesConfig.VersionCheckerEnabled())
 	assert.False(t, agentFeaturesConfig.PersistCacheEnabled())
+	assert.False(t, agentFeaturesConfig.MarketplaceProvisioningEnabled())
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.NotNil(t, cfgValidator)

@@ -12,8 +12,8 @@ package v1alpha1
 // WatchTopicSpecFilters  (management.v1alpha1.WatchTopic)
 type WatchTopicSpecFilters struct {
 	// Value for the group of the resource. Use \"*\" for any.
-	Group string              `json:"group"`
-	Scope WatchTopicSpecScope `json:"scope,omitempty"`
+	Group string               `json:"group"`
+	Scope *WatchTopicSpecScope `json:"scope,omitempty"`
 	// Value for the Kind of the resource. Use \"*\" for any.
 	Kind string `json:"kind"`
 	// Name of the resource. Use \"*\" for any.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -109,7 +110,9 @@ func TestDiscoveryCache(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "test")
 	resetResources()
-	err := Initialize(cfg)
+	afc := config.NewAgentFeaturesConfiguration()
+	afc.(*config.AgentFeaturesConfiguration).MarketplaceProvisioning = true
+	err := InitializeWithAgentFeatures(cfg, afc)
 	assert.Nil(t, err)
 
 	assert.True(t, dcj.Ready())

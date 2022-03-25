@@ -48,6 +48,20 @@ $SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_in
 # reformat the code
 go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
 
+######################
+# For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
+# "Scope *WatchTopicSpecScope `json:"scope,omitempty"`"
+######################
+SEARCH="\s*Scope\s*WatchTopicSpecScope.*"
+REPLACE="Scope *WatchTopicSpecScope \`json:\"scope,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# add in the new line we want
+$SED -i "/WatchTopicSpecScope/a ${REPLACE}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
 
 ######################
 # For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into

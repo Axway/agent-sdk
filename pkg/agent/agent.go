@@ -95,6 +95,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return err
 	}
 	agent.agentFeaturesCfg = agentFeaturesCfg
+	centralCfg.SetIsMarketplaceSubsEnabled(agentFeaturesCfg.MarketplaceProvisioningEnabled())
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
