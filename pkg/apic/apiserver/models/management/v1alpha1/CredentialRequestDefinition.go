@@ -38,6 +38,7 @@ type CredentialRequestDefinition struct {
 	Owner      *apiv1.Owner                          `json:"owner"`
 	References CredentialRequestDefinitionReferences `json:"references"`
 	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
+	Webhooks   interface{}                           `json:"webhooks"`
 }
 
 // NewCredentialRequestDefinition creates an empty *CredentialRequestDefinition
@@ -125,6 +126,7 @@ func (res *CredentialRequestDefinition) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["webhooks"] = res.Webhooks
 
 	return json.Marshal(out)
 }
@@ -163,6 +165,20 @@ func (res *CredentialRequestDefinition) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
 		if err != nil {
 			return err
 		}

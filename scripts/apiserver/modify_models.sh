@@ -64,6 +64,22 @@ $SED -i "/WatchTopicSpecScope/a ${REPLACE}" ${MODEL_PATH}/model_watch_topic_spec
 go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
 
 ######################
+# For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into
+# "References []AccessRequestReferences `json:"references"`"
+######################
+SEARCH="\s*References\s*AccessRequestReferences.*"
+REPLACE="References []AccessRequestReferences \`json:\"references\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/AccessRequest.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/AccessRequest.go
+# add in the new line we want
+$SED -i "/AccessRequestReferences/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
+# reformat the code
+go fmt ${MODEL_PATH}/AccessRequest.go
+
+
+######################
 # Update any time imports in the models, we want to turn "time" into
 # time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 ######################
@@ -83,6 +99,7 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
 
 ######################
 # Update any OneOf types to be interface{}

@@ -12,5 +12,5 @@ package v1alpha1
 // CredentialReferences  (catalog.v1alpha1.Credential)
 type CredentialReferences struct {
 	// Reference to the Credential for managed app that got created from this catalog credential.
-	ApiService string `json:"apiService,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }
