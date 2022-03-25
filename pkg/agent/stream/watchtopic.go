@@ -21,6 +21,7 @@ type watchTopicFeatures interface {
 	GetAgentType() config.AgentType
 }
 
+// TODO replace this with the resource def
 const (
 	agentTemplate = `{
 	"group": "management",
@@ -194,10 +195,17 @@ func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc apiClient) (*mv1.WatchTopic
 
 	var ri *v1.ResourceInstance
 	if wt.Metadata.ID != "" {
-		ri, err = rc.UpdateResource(wt.GetSelfLink(), bts)
-	} else {
-		ri, err = rc.CreateResource(wt.GetKindLink(), bts)
+		// delete/create required for harvester
+		ri, err := wt.AsInstance()
+		if err != nil {
+			return nil, err
+		}
+		err = rc.DeleteResourceInstance(ri)
+		if err != nil {
+			return nil, err
+		}
 	}
+	ri, err = rc.CreateResource(wt.GetKindLink(), bts)
 
 	if err != nil {
 		return nil, err
@@ -292,10 +300,10 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 		{GroupKind: mv1.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
 			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
 		}...)
 	}
