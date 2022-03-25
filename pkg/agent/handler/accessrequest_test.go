@@ -380,7 +380,7 @@ var accessReq = mv1.AccessRequest{
 			},
 		},
 	},
-	References: mv1.AccessRequestReferences{},
+	References: []mv1.AccessRequestReferences{},
 	Spec: mv1.AccessRequestSpec{
 		ApiServiceInstance: instRefName,
 		ManagedApplication: managedAppRefName,

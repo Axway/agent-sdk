@@ -564,8 +564,7 @@ var crd = &mv1.CredentialRequestDefinition{
 				"properties": map[string]interface{}{},
 			},
 		},
-		Capabilities: nil,
-		Webhooks:     nil,
+		Webhooks: nil,
 	},
 }
 
