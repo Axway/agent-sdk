@@ -35,10 +35,10 @@ func init() {
 // Credential Resource
 type Credential struct {
 	apiv1.ResourceMeta
-	Data       interface{}            `json:"data"`
-	Owner      *apiv1.Owner           `json:"owner"`
-	References []CredentialReferences `json:"references"`
-	Spec       CredentialSpec         `json:"spec"`
+	Data       interface{}          `json:"data"`
+	Owner      *apiv1.Owner         `json:"owner"`
+	References CredentialReferences `json:"references"`
+	Spec       CredentialSpec       `json:"spec"`
 	// 	Status     CredentialStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
