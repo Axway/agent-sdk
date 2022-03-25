@@ -35,9 +35,9 @@ func init() {
 // AccessRequest Resource
 type AccessRequest struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec       `json:"spec"`
+	Owner      *apiv1.Owner              `json:"owner"`
+	References []AccessRequestReferences `json:"references"`
+	Spec       AccessRequestSpec         `json:"spec"`
 	// 	Status     AccessRequestStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
@@ -108,6 +108,7 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+
 	return err
 }
 

@@ -4,7 +4,7 @@ package v1
 type ResourceStatus struct {
 	Level string `json:"level"`
 	// Details of the warning.
-	Reasons []ResourceStatusReason `json:"reasons"`
+	Reasons []ResourceStatusReason `json:"reasons,omitempty"`
 }
 
 // ResourceStatusReason struct for reason oneOfs
