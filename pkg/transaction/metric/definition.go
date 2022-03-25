@@ -8,7 +8,6 @@ var now = time.Now
 const (
 	schemaPath              = "/api/v1/report.schema.json"
 	metricEvent             = "api.transaction.status.metric"
-	subscriptionMetricEvent = "subscription.status.metric"
 	messageKey              = "message"
 	metricKey               = "metric"
 	metricFlow              = "api-central-metric"
@@ -18,6 +17,7 @@ const (
 	lighthouseVolume        = "Volume"
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
+	unknown                 = "unknown"
 )
 
 // Detail - holds the details for computing metrics
@@ -45,37 +45,19 @@ type ObservationDetails struct {
 
 // APIDetails - Holds the api details
 type APIDetails struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Revision int    `json:"revision"`
-	TeamID   string `json:"teamId"`
-	Stage    string `json:"-"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Revision           int    `json:"revision,omitempty"`
+	TeamID             string `json:"teamId,omitempty"`
+	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	Stage              string `json:"-"`
 }
 
-// APIMetric - struct to hold metric specific for status code based API transactions
+// APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	API         APIDetails         `json:"api"`
-	StatusCode  string             `json:"statusCode"`
-	Status      string             `json:"status"`
-	Count       int64              `json:"count"`
-	Response    ResponseMetrics    `json:"response"`
-	Observation ObservationDetails `json:"observation"`
-	StartTime   time.Time          `json:"-"`
-}
-
-// GetStartTime - Returns the start time for API metric
-func (a *APIMetric) GetStartTime() time.Time {
-	return a.StartTime
-}
-
-// GetType - Returns APIMetric
-func (a *APIMetric) GetType() string {
-	return "APIMetric"
-}
-
-// SubscriptionMetric - struct to hold metric aggregated for subscription,application,api,statuscode
-type SubscriptionMetric struct {
 	Subscription SubscriptionDetails `json:"subscription"`
+	App          AppDetails          `json:"application"`
+	API          APIDetails          `json:"api"`
 	StatusCode   string              `json:"statusCode"`
 	Status       string              `json:"status"`
 	Count        int64               `json:"count"`
@@ -85,22 +67,24 @@ type SubscriptionMetric struct {
 }
 
 // GetStartTime - Returns the start time for subscription metric
-func (a *SubscriptionMetric) GetStartTime() time.Time {
+func (a *APIMetric) GetStartTime() time.Time {
 	return a.StartTime
 }
 
-// GetType - Returns SubscriptionMetric
-func (a *SubscriptionMetric) GetType() string {
-	return "SubscriptionMetric"
+// GetType - Returns APIMetric
+func (a *APIMetric) GetType() string {
+	return "APIMetric"
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	API        APIDetails `json:"api"`
-	StatusCode string     `json:"statusCode"`
-	Count      int64      `json:"count"`
-	Values     []int64    `json:"values"`
-	StartTime  time.Time  `json:"startTime"`
+	App          AppDetails          `json:"app,omitempty"`
+	Subscription SubscriptionDetails `json:"subscription,omitempty"`
+	API          APIDetails          `json:"api"`
+	StatusCode   string              `json:"statusCode"`
+	Count        int64               `json:"count"`
+	Values       []int64             `json:"values"`
+	StartTime    time.Time           `json:"startTime"`
 }
 
 // V4EventDistribution - represents V7 distribution
@@ -146,20 +130,15 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ConsumerOrgGUID string `json:"consumerOrgId,omitempty"`
 }
 
 // SubscriptionDetails - struct for subscription metric detail
 type SubscriptionDetails struct {
-	ID                 string `json:"id"`
-	Name               string `json:"name"`
-	AppID              string `json:"appId"`
-	AppName            string `json:"appName"`
-	ConsumerOrgGUID    string `json:"-"`
-	APIID              string `json:"apiId"`
-	APIName            string `json:"apiName"`
-	APIServiceInstance string `json:"apiServiceInstance"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // Data - struct for data to report as API Metrics

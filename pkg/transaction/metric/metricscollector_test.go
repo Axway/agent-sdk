@@ -244,7 +244,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 2, // API metric + Provider subscription metric
+			expectedMetricEventsAcked: 1, // API metric + Provider subscription metric
 			appName:                   "managed-app-1",
 		},
 		// Success case with consumer metric event
@@ -258,7 +258,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 3, // API metric + Provider + Consumer subscription metric
+			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
 		},
 		// Success case with no usage report
@@ -285,7 +285,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
-			expectedMetricEventsAcked: 2,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Success case, retry metrics
@@ -299,7 +299,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 2,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Retry limit hit
@@ -324,7 +324,7 @@ func TestMetricCollector(t *testing.T) {
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
-						APIDetails: APIDetails{"111", "111", 1, teamID, ""},
+						APIDetails: APIDetails{"111", "111", 1, teamID, "", ""},
 						StatusCode: "200",
 						Duration:   10,
 						Bytes:      10,
@@ -380,12 +380,12 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 10, 10, "")
 			metricCollector.Execute()
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 10, 10, "")
 
 			// No event generation/publish, store the cache
 			metricCollector.storage.save()
@@ -401,11 +401,11 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "200", 10, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, ""}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 5, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "401", 15, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 20, 10, "")
+			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 10, 10, "")
 
 			metricCollector.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
@@ -515,7 +515,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			reportGenerator := metricCollector.reports.(*cacheOfflineReport)
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123", ""}, "200", 10, 10, "")
+					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123", "", ""}, "200", 10, 10, "")
 				}
 				metricCollector.Execute()
 				testLoops++
