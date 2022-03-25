@@ -27,7 +27,7 @@ variables:
 ############################################################
 include:
   - project: "apigov/beano_cicd"
-    ref: APIGOV-00000
+    ref: master
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
