@@ -87,7 +87,7 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 		c.name = provisioning.OAuthSecretCRD
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
-				SetName("secret").
+				SetName(provisioning.OauthClientSecret).
 				SetLabel("Client Secret").
 				SetRequired().
 				IsString().
@@ -101,7 +101,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 		c.name = provisioning.OAuthPublicKeyCRD
 		c.reqProps = append(c.reqProps,
 			provisioning.NewSchemaPropertyBuilder().
-				SetName("public-key").
+				SetName(provisioning.OauthPublicKey).
 				SetLabel("Public Key").
 				SetRequired().
 				IsString())
@@ -114,7 +114,7 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 		withCRDName(provisioning.APIKeyCRD),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
-				SetName("key").
+				SetName(provisioning.APIKey).
 				SetLabel("API Key").
 				SetRequired().
 				IsString().
@@ -131,7 +131,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 	oauthOptions := []func(*crdBuilderOptions){
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
-				SetName("client-id").
+				SetName(provisioning.OauthClientID).
 				SetLabel("Client ID").
 				SetRequired().
 				IsString()),

@@ -7,11 +7,11 @@ const (
 	OAuthSecretCRD    = "oauth-secret"
 	OAuthPublicKeyCRD = "oauth-public-key"
 
-	OauthClientID     = "client-id"
-	OauthClientSecret = "client-secret"
-	OauthPublicKey    = "public-key"
+	OauthClientID     = "clientId"
+	OauthClientSecret = "clientSecret"
+	OauthPublicKey    = "publicKey"
 
-	APIKey = "api-key"
+	APIKey = "apiKey"
 )
 
 // RequestType - the type of credential request being sent
