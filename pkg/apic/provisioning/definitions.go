@@ -6,6 +6,12 @@ const (
 	APIKeyCRD         = "api-key"
 	OAuthSecretCRD    = "oauth-secret"
 	OAuthPublicKeyCRD = "oauth-public-key"
+
+	OauthClientID     = "client-id"
+	OauthClientSecret = "client-secret"
+	OauthPublicKey    = "public-key"
+
+	APIKey = "api-key"
 )
 
 // RequestType - the type of credential request being sent
