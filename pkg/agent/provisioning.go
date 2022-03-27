@@ -110,10 +110,6 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
 func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
-	if _, err := agent.cacheManager.GetAccessRequestDefinitionByName(provisioning.APIKeyARD); err != nil {
-		NewAccessRequestBuilder().SetName(provisioning.APIKeyARD).Register()
-	}
-
 	apiKeyOptions := []func(*crdBuilderOptions){
 		withCRDName(provisioning.APIKeyCRD),
 		WithCRDProvisionSchemaProperty(
@@ -170,6 +166,11 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+}
+
+// NewAPIKeyAccessRequestBuilder - called by the agents
+func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
+	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
 }
 
 // provisioner
