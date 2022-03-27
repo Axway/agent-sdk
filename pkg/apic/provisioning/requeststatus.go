@@ -1,6 +1,10 @@
 package provisioning
 
-import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+import (
+	"time"
+
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
 
 // RequestStatus - holds info about the Status of the request
 type RequestStatus interface {
@@ -103,7 +107,7 @@ func NewStatusReason(r RequestStatus) *apiv1.ResourceStatus {
 			{
 				Type:      r.GetStatus().String(),
 				Detail:    r.GetMessage(),
-				Timestamp: apiv1.Time{},
+				Timestamp: apiv1.Time(time.Now()),
 			},
 		},
 	}
