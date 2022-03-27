@@ -1,5 +1,13 @@
 package provisioning
 
+// default names of ARD and CRDs
+const (
+	APIKeyARD         = "api-key"
+	APIKeyCRD         = "api-key"
+	OAuthSecretCRD    = "oauth-secret"
+	OAuthPublicKeyCRD = "oauth-public-key"
+)
+
 // RequestType - the type of credential request being sent
 type RequestType int
 

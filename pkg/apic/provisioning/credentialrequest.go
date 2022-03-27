@@ -10,4 +10,6 @@ type CredentialRequest interface {
 	GetCredentialDetailsValue(key string) string
 	// GetCredentialType returns the type of credential related to this request
 	GetCredentialType() string
+	// GetCredentialData returns the map[string]interface{} of data from the request
+	GetCredentialData() map[string]interface{}
 }

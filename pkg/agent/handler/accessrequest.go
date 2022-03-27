@@ -155,6 +155,7 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 		apiID:         apiID,
 		appDetails:    appDetails,
 		stage:         stage,
+		accessData:    ar.Spec.Data,
 		accessDetails: util.GetAgentDetails(ar),
 		managedApp:    ar.Spec.ManagedApplication,
 	}, nil
@@ -164,6 +165,7 @@ type provAccReq struct {
 	apiID         string
 	appDetails    map[string]interface{}
 	accessDetails map[string]interface{}
+	accessData    map[string]interface{}
 	managedApp    string
 	stage         string
 }
@@ -176,6 +178,11 @@ func (r provAccReq) GetApplicationName() string {
 // GetAPIID gets the api service instance id that the access request is linked too.
 func (r provAccReq) GetAPIID() string {
 	return r.apiID
+}
+
+// GetAccessRequestData gets the data of the access request
+func (r provAccReq) GetAccessRequestData() map[string]interface{} {
+	return r.accessData
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
