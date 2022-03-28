@@ -191,5 +191,5 @@ func TestMapStringInterfaceToStringString(t *testing.T) {
 	assert.Equal(t, "false", result["baz"])
 	assert.Equal(t, "1", result["aaa"])
 	assert.Equal(t, `{"a":"a","b":["1","2","3"]}`, result["test"])
-	assert.Equal(t, "nil", "")
+	assert.Equal(t, "", result["nil"])
 }
