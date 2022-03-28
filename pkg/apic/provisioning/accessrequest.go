@@ -12,4 +12,6 @@ type AccessRequest interface {
 	GetApplicationName() string
 	// GetStage returns the api stage
 	GetStage() string
+	// GetAccessRequestData returns the map[string]interface{} of data from the request
+	GetAccessRequestData() map[string]interface{}
 }

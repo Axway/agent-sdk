@@ -14,6 +14,7 @@ type RegisterCredentialRequestDefinition func(credentialRequestDefinition *v1alp
 
 type credentialRequestDef struct {
 	name            string
+	title           string
 	provisionSchema map[string]interface{}
 	requestSchema   map[string]interface{}
 	webhooks        []string
@@ -24,6 +25,7 @@ type credentialRequestDef struct {
 // CredentialRequestBuilder - aids in creating a new credential request
 type CredentialRequestBuilder interface {
 	SetName(name string) CredentialRequestBuilder
+	SetTitle(title string) CredentialRequestBuilder
 	SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
@@ -42,6 +44,12 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 // SetName - set the name of the credential request
 func (c *credentialRequestDef) SetName(name string) CredentialRequestBuilder {
 	c.name = name
+	return c
+}
+
+// SetTitle - set the title of the credential request
+func (c *credentialRequestDef) SetTitle(title string) CredentialRequestBuilder {
+	c.title = title
 	return c
 }
 
@@ -108,10 +116,14 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 
 	hashInt, _ := util.ComputeHash(spec)
 
+	if c.title == "" {
+		c.title = c.name
+	}
+
 	crd := &v1alpha1.CredentialRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
-			Title:            c.name,
+			Title:            c.title,
 			Name:             c.name,
 			SubResources: map[string]interface{}{
 				definitions.XAgentDetails: map[string]interface{}{

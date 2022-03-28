@@ -20,7 +20,11 @@ func TestCredentialBuilder(t *testing.T) {
 			key:  "api-key-data",
 		},
 		{
-			name:   "Build OAuth Credential",
+			name: "Build OAuth Credential",
+			id:   "client-id",
+		},
+		{
+			name:   "Build OAuth Credential with Secret",
 			id:     "client-id",
 			secret: "secret",
 		},
@@ -40,8 +44,10 @@ func TestCredentialBuilder(t *testing.T) {
 			switch {
 			case tt.key != "":
 				cred = builder.SetAPIKey(tt.key)
+			case tt.id != "" && tt.secret != "":
+				cred = builder.SetOAuthIDAndSecret(tt.key, tt.secret)
 			case tt.id != "":
-				cred = builder.SetOAuth(tt.key, tt.secret)
+				cred = builder.SetOAuthID(tt.key)
 			case tt.other != nil:
 				cred = builder.SetCredential(tt.other)
 			}

@@ -195,6 +195,7 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 type provCreds struct {
 	managedApp  string
 	credType    string
+	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
 }
@@ -206,6 +207,7 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		appDetails:  appDetails,
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
+		credData:    cr.Spec.Data,
 		managedApp:  cr.Spec.ManagedApplication,
 	}
 }
@@ -218,6 +220,11 @@ func (c provCreds) GetApplicationName() string {
 // GetCredentialType gets the type of the credential
 func (c provCreds) GetCredentialType() string {
 	return c.credType
+}
+
+// GetCredentialData gets the data of the credential
+func (c provCreds) GetCredentialData() map[string]interface{} {
+	return c.credData
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.

@@ -87,10 +87,10 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 	}
 	for _, policy := range s.authPolicies {
 		if policy == Apikey {
-			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "api-key")
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, provisioning.APIKeyCRD)
 		}
 		if policy == Oauth {
-			s.credentialRequestPolicies = append(s.credentialRequestPolicies, "oauth")
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
 		}
 	}
 	return s.credentialRequestPolicies

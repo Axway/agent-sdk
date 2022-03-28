@@ -22,10 +22,11 @@ func (m MockApplicationRequest) GetTeamName() string {
 
 type MockCredentialRequest struct {
 	provisioning.CredentialRequest
-	AppDetails map[string]string
-	AppName    string
-	CredType   string
-	Details    map[string]string
+	AppDetails  map[string]string
+	AppName     string
+	CredDefName string
+	Details     map[string]string
+	CredData    map[string]interface{}
 }
 
 func (m MockCredentialRequest) GetApplicationName() string {
@@ -41,7 +42,11 @@ func (m MockCredentialRequest) GetApplicationDetailsValue(key string) string {
 }
 
 func (m MockCredentialRequest) GetCredentialType() string {
-	return m.CredType
+	return m.CredDefName
+}
+
+func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
+	return m.CredData
 }
 
 type MockAccessRequest struct {

@@ -23,7 +23,8 @@ func (c credential) GetData() map[string]interface{} {
 
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
-	SetOAuth(id, secret string) Credential
+	SetOAuthID(id string) Credential
+	SetOAuthIDAndSecret(id, secret string) Credential
 	SetAPIKey(key string) Credential
 	SetCredential(data map[string]interface{}) Credential
 }
@@ -39,12 +40,21 @@ func NewCredentialBuilder() CredentialBuilder {
 	}
 }
 
-// SetOAuth - set the credential as an Oauth type
-func (c *credentialBuilder) SetOAuth(id, secret string) Credential {
+// SetOAuthID - set the credential as an Oauth type
+func (c *credentialBuilder) SetOAuthID(id string) Credential {
 	c.credential.credentialType = oauth
 	c.credential.data = map[string]interface{}{
-		"id":     id,
-		"secret": secret,
+		OauthClientID: id,
+	}
+	return c.credential
+}
+
+// SetOAuthIDAndSecret - set the credential as an Oauth type
+func (c *credentialBuilder) SetOAuthIDAndSecret(id, secret string) Credential {
+	c.credential.credentialType = oauth
+	c.credential.data = map[string]interface{}{
+		OauthClientID:     id,
+		OauthClientSecret: secret,
 	}
 	return c.credential
 }
@@ -53,7 +63,7 @@ func (c *credentialBuilder) SetOAuth(id, secret string) Credential {
 func (c *credentialBuilder) SetAPIKey(key string) Credential {
 	c.credential.credentialType = apiKey
 	c.credential.data = map[string]interface{}{
-		"key": key,
+		APIKey: key,
 	}
 	return c.credential
 }
