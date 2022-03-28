@@ -30,13 +30,38 @@ func buildAPIServiceInstanceSpec(
 func buildAPIServiceInstanceMarketplaceSpec(
 	serviceBody *ServiceBody,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	knownCRDs []string,
 ) mv1a.ApiServiceInstanceSpec {
 	return mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endpoints,
-		CredentialRequestDefinitions: serviceBody.GetCredentialRequestDefinitions(),
+		CredentialRequestDefinitions: knownCRDs,
 		AccessRequestDefinition:      serviceBody.ardName,
 	}
+}
+
+func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBody) []string {
+	crds := serviceBody.GetCredentialRequestDefinitions()
+
+	// remove any crd not in the cache
+	knownCRDs := make([]string, 0)
+	for _, crd := range crds {
+		if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
+			knownCRDs = append(knownCRDs, crd)
+		}
+	}
+
+	return knownCRDs
+}
+
+func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
+	ard := serviceBody.ardName
+
+	if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
+		return
+	}
+
+	serviceBody.ardName = ""
 }
 
 func (c *ServiceClient) buildAPIServiceInstance(
@@ -51,9 +76,11 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Description: serviceBody.ardName,
 		})
 	}
+
 	spec := buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	if c.cfg.IsMarketplaceSubsEnabled() {
-		spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints)
+		c.checkAccessRequestDefinition(serviceBody)
+		spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
 	}
 
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
@@ -96,7 +123,8 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	if c.cfg.IsMarketplaceSubsEnabled() {
-		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints)
+		c.checkAccessRequestDefinition(serviceBody)
+		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
 	}
 	instance.Owner = owner
 
