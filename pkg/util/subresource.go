@@ -101,14 +101,3 @@ func convert(item interface{}) (map[string]interface{}, error) {
 		)
 	}
 }
-
-func MapStringInterfaceToStringString(data map[string]interface{}) map[string]string {
-	newData := make(map[string]string)
-
-	for k, v := range data {
-		if vStr, ok := v.(string); ok {
-			newData[k] = vStr
-		}
-	}
-	return newData
-}

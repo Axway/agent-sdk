@@ -226,3 +226,18 @@ func CheckEmptyMapStringString(m map[string]string) map[string]string {
 
 	return m
 }
+
+// MapStringInterfaceToStringString - convert map[string]interface{} to map[string]string given the item can be a string
+func MapStringInterfaceToStringString(data map[string]interface{}) map[string]string {
+	newData := make(map[string]string)
+
+	for k, v := range data {
+		newData[k] = ""
+		if v == nil {
+			continue
+		} else {
+			newData[k] = fmt.Sprintf("%+v", v)
+		}
+	}
+	return newData
+}
