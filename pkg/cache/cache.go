@@ -224,8 +224,9 @@ func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
 			ForeignKey:    item.ForeignKey,
 			Object:        item.Object,
 		}
-		if item.ContainsPointer {
-			rf := reflect.ValueOf(item.Object)
+		if item.Object != nil && item.ContainsPointer && reflect.ValueOf(item.Object).Type().Kind() == reflect.Ptr {
+			pOriginal := reflect.ValueOf(item.Object).Elem().Interface()
+			rf := reflect.ValueOf(pOriginal)
 			p := reflect.New(rf.Type())
 			p.Elem().Set(rf)
 			replyItem.Object = p.Interface()
@@ -330,8 +331,7 @@ func (c *itemCache) set(thisAction cacheAction) (thisReply cacheReply) {
 		SecondaryKeys: secKeys,
 	}
 
-	if reflect.ValueOf(data).Type().Kind() == reflect.Ptr {
-		c.Items[key].Object = reflect.ValueOf(data).Elem().Interface()
+	if data != nil && reflect.ValueOf(data).Type().Kind() == reflect.Ptr {
 		c.Items[key].ContainsPointer = true
 	}
 	return
