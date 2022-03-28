@@ -11,6 +11,7 @@ import (
 	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	"github.com/Axway/agent-sdk/pkg/util"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // SubscriptionState - Type definition for subscription state
@@ -184,6 +185,12 @@ func (s *CentralSubscription) updateCatalogSubscriptionState(newState Subscripti
 	headers, err := s.getServiceClient().createHeader()
 	if err != nil {
 		return nil, err
+	}
+
+	// Catalog has a requirement for the description to be < 350 characters.
+	if len(description) > 350 {
+		log.Warnf("Truncating description. Description to update catalog subscription state is greater than the 350 allowable characters [%s]", description)
+		description = description[:350]
 	}
 
 	subState := uc.CatalogItemSubscriptionState{

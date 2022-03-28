@@ -399,3 +399,33 @@ func TestSaveAndLoad(t *testing.T) {
 	assert.Equal(t, cache.(*itemCache).Items[key5].ForeignKey, cache3.(*itemCache).Items[key5].ForeignKey, "The foreign keys for 'key5' were not loaded properly")
 
 }
+
+type st struct {
+	val string
+}
+
+func TestItem(t *testing.T) {
+	// Create new cache
+	cache := New()
+	s := &st{
+		val: "test",
+	}
+	cache.Set("key", s)
+	ss, _ := cache.Get("key")
+	sts := ss.(*st)
+
+	assert.Equal(t, s.val, "test")
+	assert.Equal(t, sts.val, "test")
+
+	sts.val = "test1"
+	assert.Equal(t, s.val, "test")
+	assert.Equal(t, sts.val, "test1")
+
+	cache.Set("key", sts)
+	ss, _ = cache.Get("key")
+	sts = ss.(*st)
+
+	assert.Equal(t, s.val, "test")
+	assert.Equal(t, sts.val, "test1")
+
+}
