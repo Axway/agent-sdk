@@ -2,11 +2,12 @@ package cache
 
 // Item - a cached item
 type Item struct {
-	Object        interface{}     `json:"data"`
-	UpdateTime    int64           `json:"updateTime"`
-	Hash          uint64          `json:"hash"`
-	SecondaryKeys map[string]bool `json:"secondaryKeys"` // keep track of secondary keys for clean up
-	ForeignKey    string          `json:"foreignKey"`
+	Object          interface{}     `json:"data"`
+	UpdateTime      int64           `json:"updateTime"`
+	Hash            uint64          `json:"hash"`
+	SecondaryKeys   map[string]bool `json:"secondaryKeys"` // keep track of secondary keys for clean up
+	ForeignKey      string          `json:"foreignKey"`
+	ContainsPointer bool            `json:"containsPointer"` // does item contain a pointer
 }
 
 // GetObject - returns the object saved in this cache item
