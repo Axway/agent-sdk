@@ -39,7 +39,7 @@ replace (
 	github.com/dop251/goja => github.com/andrewkroh/goja v0.0.0-20190128172624-dd2ac4456e20
 	github.com/elastic/beats/v7 => github.com/elastic/beats/v7 v7.7.1
 	github.com/fsnotify/fsevents => github.com/elastic/fsevents v0.0.0-20181029231046-e1d381a4d270
-	github.com/getkin/kin-openapi v0.76.0 => github.com/getkin/kin-openapi v0.67.0
+	github.com/getkin/kin-openapi => github.com/getkin/kin-openapi v0.67.0
 )
 
 retract ( // errored versions
