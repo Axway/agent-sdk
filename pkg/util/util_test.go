@@ -94,7 +94,6 @@ func TestLoadEnvFromFile(t *testing.T) {
 	assert.True(t, b)
 	i, _ = strconv.ParseInt(os.Getenv("CENTRAL_INTVAL2"), 10, 0)
 	assert.Equal(t, int64(20), i)
-	b, _ = strconv.ParseBool(os.Getenv("CENTRAL_USAGEREPORTING_OFFLINE"))
 	assert.Equal(t, "https://test.net", os.Getenv("CENTRAL_AUTH_URL"))
 }
 
@@ -176,4 +175,21 @@ func TestMergeMapStringString(t *testing.T) {
 
 	result4 := MergeMapStringString(m1, nil)
 	assert.NotNil(t, result4)
+}
+
+func TestMapStringInterfaceToStringString(t *testing.T) {
+	m1 := map[string]interface{}{
+		"foo":  "foo1",
+		"baz":  false,
+		"aaa":  1,
+		"test": `{"a":"a","b":["1","2","3"]}`,
+		"nil":  nil,
+	}
+	result := MapStringInterfaceToStringString(m1)
+
+	assert.Equal(t, "foo1", result["foo"])
+	assert.Equal(t, "false", result["baz"])
+	assert.Equal(t, "1", result["aaa"])
+	assert.Equal(t, `{"a":"a","b":["1","2","3"]}`, result["test"])
+	assert.Equal(t, "", result["nil"])
 }

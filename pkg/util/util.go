@@ -254,3 +254,18 @@ func ToString(v interface{}) string {
 func IsNil(v interface{}) bool {
 	return v == nil || reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()
 }
+
+// MapStringInterfaceToStringString - convert map[string]interface{} to map[string]string given the item can be a string
+func MapStringInterfaceToStringString(data map[string]interface{}) map[string]string {
+	newData := make(map[string]string)
+
+	for k, v := range data {
+		newData[k] = ""
+		if v == nil {
+			continue
+		} else {
+			newData[k] = fmt.Sprintf("%+v", v)
+		}
+	}
+	return newData
+}

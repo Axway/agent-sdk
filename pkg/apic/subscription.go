@@ -362,7 +362,9 @@ func (s *CentralSubscription) setAPIResourceInfo(apiServerResource *v1.ResourceI
 	stage, _ := util.GetAgentDetailsValue(apiServerResource, defs.AttrExternalAPIStage)
 	s.RemoteAPIID = apiID
 	s.RemoteAPIStage = stage
-	s.RemoteAPIAttributes = apiServerResource.Attributes
+
+	// get the x agent details for this, convert to map[string]string
+	s.RemoteAPIAttributes = util.MapStringInterfaceToStringString(util.GetAgentDetails(apiServerResource))
 }
 
 // getSubscriptions -
