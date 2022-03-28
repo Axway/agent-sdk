@@ -63,7 +63,7 @@ func (c *credentialBuilder) SetOAuthIDAndSecret(id, secret string) Credential {
 func (c *credentialBuilder) SetAPIKey(key string) Credential {
 	c.credential.credentialType = apiKey
 	c.credential.data = map[string]interface{}{
-		"key": key,
+		APIKey: key,
 	}
 	return c.credential
 }
