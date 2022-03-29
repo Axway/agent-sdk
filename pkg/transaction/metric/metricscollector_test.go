@@ -37,7 +37,6 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
 	usgCfg.Publish = true
 	usgCfg.PublishMetric = true
-	usgCfg.PublishSubscriptionMetric = true
 	return cfg
 }
 

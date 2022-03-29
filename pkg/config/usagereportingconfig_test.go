@@ -54,7 +54,6 @@ func validateconfig(t *testing.T, expVals expected, cfg UsageReportingConfig) {
 	assert.Equal(t, expVals.url, cfg.GetURL())
 	assert.Equal(t, expVals.publish, cfg.CanPublishUsage())
 	assert.Equal(t, expVals.metric, cfg.CanPublishMetric())
-	assert.Equal(t, expVals.subscriptionMetric, cfg.CanPublishSubscriptionMetric())
 	assert.Equal(t, expVals.interval, cfg.GetInterval())
 	assert.Equal(t, expVals.offline, cfg.IsOfflineMode())
 	assert.Equal(t, expVals.schedule, cfg.GetSchedule())
