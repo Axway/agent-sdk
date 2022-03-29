@@ -33,8 +33,9 @@ type AnyOfSubscriptionSchemaPropertyDefinitions struct {
 // SubscriptionSchemaPropertyDefinition -
 type SubscriptionSchemaPropertyDefinition struct {
 	Type               string                                          `json:"type"`
-	Title              string                                          `json:"title"`
-	Description        string                                          `json:"description"`
+	Title              string                                          `json:"title,omitempty"`
+	Description        string                                          `json:"description,omitempty"`
+	DefaultValue       interface{}                                     `json:"default,omitempty"`
 	Enum               []string                                        `json:"enum,omitempty"`
 	ReadOnly           bool                                            `json:"readOnly,omitempty"`
 	Format             string                                          `json:"format,omitempty"`
@@ -48,6 +49,7 @@ type SubscriptionSchemaPropertyDefinition struct {
 	APICRef            string                                          `json:"x-axway-ref-apic,omitempty"`
 	Name               string                                          `json:"-"`
 	Required           bool                                            `json:"-"`
+	//Pattern            string                                          `json:"pattern,omitempty"`
 }
 
 type subscriptionSchema struct {
