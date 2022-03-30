@@ -104,6 +104,8 @@ type StringPropertyBuilder interface {
     SetFirstEnumValue(value string) StringPropertyBuilder
     // AddEnumValue - Add another value to the list of allowed values for the property
     AddEnumValue(value string) StringPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value string) StringPropertyBuilder
 }
 ```
 Example of a required string property declaration.
@@ -136,6 +138,8 @@ type NumberPropertyBuilder interface {
     SetMinValue(min float64) NumberPropertyBuilder
     // SetMaxValue - Set the maximum allowed property value
     SetMaxValue(min float64) NumberPropertyBuilder
+    // SetDefaultValue - Define the initial value for the property
+    SetDefaultValue(value float64) NumberPropertyBuilder
 }
 
 ```
@@ -157,6 +161,8 @@ type IntegerPropertyBuilder interface {
     SetMinValue(min int64) IntegerPropertyBuilder
     // SetMaxValue - Set the maximum allowed property value
     SetMaxValue(min int64) IntegerPropertyBuilder
+    // SetDefaultValue - Define the initial value for the property
+    SetDefaultValue(value int64) IntegerPropertyBuilder
 }
 ```
 Same display as for number property except accepting only integer values

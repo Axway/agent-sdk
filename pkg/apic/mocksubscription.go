@@ -14,7 +14,7 @@ type MockSubscription struct {
 	CatalogID                    string
 	UserID                       string
 	State                        SubscriptionState
-	PropertyVals                 map[string]string
+	PropertyVals                 map[string]interface{}
 	ReceivedValues               map[string]interface{}
 	RemoteAPIAttributes          map[string]string
 	ReceivedAppName              string
@@ -55,7 +55,30 @@ func (s *MockSubscription) GetState() SubscriptionState { return s.State }
 
 //GetPropertyValue - mocked for testing
 func (s *MockSubscription) GetPropertyValue(propertyKey string) string {
-	return s.PropertyVals[propertyKey]
+	if s.PropertyVals[propertyKey] != nil {
+		return fmt.Sprintf("%v", s.PropertyVals[propertyKey])
+	}
+	return ""
+}
+
+//GetPropertyValues - mocked for testing
+func (s *MockSubscription) GetPropertyValues(propertyKey string) []interface{} {
+	if valueI, ok := s.PropertyVals[propertyKey]; ok {
+		if valueC, isArray := valueI.([]float64); isArray {
+			values := []interface{}{}
+			for _, v := range valueC {
+				values = append(values, v)
+			}
+			return values
+		} else if valueC, isArrayOfMap := valueI.([]map[string]interface{}); isArrayOfMap {
+			values := []interface{}{}
+			for _, v := range valueC {
+				values = append(values, v)
+			}
+			return values
+		}
+	}
+	return nil
 }
 
 //UpdateState - mocked for testing

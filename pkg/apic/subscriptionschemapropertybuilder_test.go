@@ -164,17 +164,19 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				IsString().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
-				SetFirstEnumValue("firstValue"),
+				SetFirstEnumValue("firstValue").
+				SetDefaultValue("a"),
 			SubscriptionSchemaPropertyDefinition{
-				Name:        "TheName",
-				Title:       "TheName",
-				Description: "TheDescription",
-				Required:    true,
-				Format:      "hidden",
-				ReadOnly:    true,
-				APICRef:     "APICRefField",
-				Type:        DataTypeString,
-				Enum:        []string{"firstValue", "c", "a", "b", "addedValue"},
+				Name:         "TheName",
+				Title:        "TheName",
+				Description:  "TheDescription",
+				Required:     true,
+				Format:       "hidden",
+				ReadOnly:     true,
+				APICRef:      "APICRefField",
+				Type:         DataTypeString,
+				Enum:         []string{"firstValue", "c", "a", "b", "addedValue"},
+				DefaultValue: "a",
 			}},
 		{"Full String property with sorted enum and first value",
 			NewSubscriptionSchemaPropertyBuilder().
@@ -188,17 +190,19 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
 				SetFirstEnumValue("firstValue").
-				SetSortEnumValues(),
+				SetSortEnumValues().
+				SetDefaultValue("a"),
 			SubscriptionSchemaPropertyDefinition{
-				Name:        "TheName",
-				Title:       "TheName",
-				Description: "TheDescription",
-				Required:    true,
-				Format:      "hidden",
-				ReadOnly:    true,
-				APICRef:     "APICRefField",
-				Type:        DataTypeString,
-				Enum:        []string{"firstValue", "a", "addedValue", "b", "c"},
+				Name:         "TheName",
+				Title:        "TheName",
+				Description:  "TheDescription",
+				Required:     true,
+				Format:       "hidden",
+				ReadOnly:     true,
+				APICRef:      "APICRefField",
+				Type:         DataTypeString,
+				Enum:         []string{"firstValue", "a", "addedValue", "b", "c"},
+				DefaultValue: "a",
 			}},
 		{"Minimal Number property",
 			NewSubscriptionSchemaPropertyBuilder().
@@ -219,18 +223,20 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetAPICRefField("APICRefField").
 				IsNumber().
 				SetMinValue(0.0).
-				SetMaxValue(100.5),
+				SetMaxValue(100.5).
+				SetDefaultValue(50.5),
 			SubscriptionSchemaPropertyDefinition{
-				Name:        "TheName",
-				Title:       "TheName",
-				Description: "TheDescription",
-				Required:    true,
-				Format:      "hidden",
-				ReadOnly:    true,
-				APICRef:     "APICRefField",
-				Type:        DataTypeNumber,
-				Minimum:     getFloat64Pointer(0.0),
-				Maximum:     getFloat64Pointer(100.5),
+				Name:         "TheName",
+				Title:        "TheName",
+				Description:  "TheDescription",
+				Required:     true,
+				Format:       "hidden",
+				ReadOnly:     true,
+				APICRef:      "APICRefField",
+				Type:         DataTypeNumber,
+				Minimum:      getFloat64Pointer(0.0),
+				Maximum:      getFloat64Pointer(100.5),
+				DefaultValue: getFloat64Pointer(50.5),
 			}},
 		{"Minimal Integer property",
 			NewSubscriptionSchemaPropertyBuilder().
@@ -251,18 +257,20 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetAPICRefField("APICRefField").
 				IsInteger().
 				SetMinValue(0).
-				SetMaxValue(100),
+				SetMaxValue(100).
+				SetDefaultValue(50),
 			SubscriptionSchemaPropertyDefinition{
-				Name:        "TheName",
-				Title:       "TheName",
-				Description: "TheDescription",
-				Required:    true,
-				Format:      "hidden",
-				ReadOnly:    true,
-				APICRef:     "APICRefField",
-				Type:        DataTypeInteger,
-				Minimum:     getFloat64Pointer(0),
-				Maximum:     getFloat64Pointer(100),
+				Name:         "TheName",
+				Title:        "TheName",
+				Description:  "TheDescription",
+				Required:     true,
+				Format:       "hidden",
+				ReadOnly:     true,
+				APICRef:      "APICRefField",
+				Type:         DataTypeInteger,
+				Minimum:      getFloat64Pointer(0),
+				Maximum:      getFloat64Pointer(100),
+				DefaultValue: getFloat64Pointer(50),
 			}},
 		{"Minimal Array property",
 			NewSubscriptionSchemaPropertyBuilder().
@@ -369,6 +377,11 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 	}{
 		{"String property without name", NewSubscriptionSchemaPropertyBuilder().
 			IsString(), "without a name"},
+		{"String property with default value not present in enum list", NewSubscriptionSchemaPropertyBuilder().
+			SetName("aString").
+			IsString().
+			SetEnumValues([]string{"a", "b"}).
+			SetDefaultValue("z"), "must be present in the enum list"},
 		{"Number property without name", NewSubscriptionSchemaPropertyBuilder().
 			IsNumber(), "without a name"},
 		{"Number property with min greater than max", NewSubscriptionSchemaPropertyBuilder().
@@ -376,6 +389,16 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 			IsNumber().
 			SetMinValue(2).
 			SetMaxValue(1), "greater than"},
+		{"Number property with default value greater than max", NewSubscriptionSchemaPropertyBuilder().
+			SetName("aNumber").
+			IsNumber().
+			SetMaxValue(1).
+			SetDefaultValue(2), "must be equal or lower than max value"},
+		{"Number property with default value lower than min", NewSubscriptionSchemaPropertyBuilder().
+			SetName("aNumber").
+			IsNumber().
+			SetMinValue(2).
+			SetDefaultValue(1), "must be equal or greater than min value"},
 		{"Integer property without name", NewSubscriptionSchemaPropertyBuilder().
 			IsInteger(),
 			"without a name"},
@@ -384,6 +407,16 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 			IsInteger().
 			SetMinValue(2).
 			SetMaxValue(1), "greater than"},
+		{"Integer property with default value greater than max", NewSubscriptionSchemaPropertyBuilder().
+			SetName("aNumber").
+			IsInteger().
+			SetMaxValue(1).
+			SetDefaultValue(2), "must be equal or lower than max value"},
+		{"Integer property with default value lower than min", NewSubscriptionSchemaPropertyBuilder().
+			SetName("aNumber").
+			IsInteger().
+			SetMinValue(2).
+			SetDefaultValue(1), "must be equal or greater than min value"},
 		{"Array property without name", NewSubscriptionSchemaPropertyBuilder().
 			IsArray(), "without a name"},
 		{"Array property with min items greater than max items", NewSubscriptionSchemaPropertyBuilder().
