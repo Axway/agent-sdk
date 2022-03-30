@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestARDHandler(t *testing.T) {
+func TestACLHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
@@ -32,7 +32,7 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.AccessControlListGVK().Kind,
 						},
 					},
 				},
@@ -51,7 +51,7 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.AccessControlListGVK().Kind,
 						},
 					},
 				},
@@ -70,7 +70,7 @@ func TestARDHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessRequestDefinitionGVK().Kind,
+							Kind: mv1.AccessControlListGVK().Kind,
 						},
 					},
 				},
@@ -100,7 +100,7 @@ func TestARDHandler(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewARDHandler(cacheManager)
+			handler := NewACLHandler(cacheManager)
 
 			err := handler.Handle(tc.action, nil, tc.resource)
 			if tc.hasError {

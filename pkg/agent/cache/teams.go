@@ -75,6 +75,11 @@ func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
 	c.teams.Set(accessControlList, acl)
 }
 
+// DeleteAccessControlList removes the Access Control List to the cache
+func (c *cacheManager) DeleteAccessControlList() error {
+	return c.teams.Delete(accessControlList)
+}
+
 // GetAccessControlList gets the Access Control List from the cache
 func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
 	c.ApplyResourceReadLock()

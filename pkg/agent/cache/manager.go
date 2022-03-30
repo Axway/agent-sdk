@@ -57,6 +57,7 @@ type Manager interface {
 	GetDefaultTeam() *defs.PlatformTeam
 	SetAccessControlList(acl *v1.ResourceInstance)
 	GetAccessControlList() *v1.ResourceInstance
+	DeleteAccessControlList() error
 
 	// AccessRequestDefintion cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)

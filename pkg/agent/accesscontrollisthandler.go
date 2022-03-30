@@ -75,19 +75,17 @@ func (j *aclUpdateJob) initializeACLJob() {
 }
 
 func (j *aclUpdateJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
-	acl := &v1alpha1.AccessControlList{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.AccessControlListGVK(),
-			Name:             j.getACLName(),
-			Title:            j.getACLName(),
-		},
-		Spec: v1alpha1.AccessControlListSpec{
-			Rules: []v1alpha1.AccessRules{
-				{
-					Access: []v1alpha1.AccessLevelScope{
-						{
-							Level: "scope",
-						},
+	acl, _ := v1alpha1.NewAccessControlList(
+		j.getACLName(),
+		v1alpha1.EnvironmentGVK().Kind,
+		agent.cfg.GetEnvironmentName(),
+	)
+	acl.Spec = v1alpha1.AccessControlListSpec{
+		Rules: []v1alpha1.AccessRules{
+			{
+				Access: []v1alpha1.AccessLevelScope{
+					{
+						Level: "scope",
 					},
 				},
 			},
@@ -122,7 +120,8 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 		acl, err = agent.apicClient.CreateAccessControlList(acl)
 	}
 
-	if err == nil {
+	// let the stream handlers cache this if in GRPC
+	if err == nil && !agent.cfg.IsUsingGRPC() {
 		aclInstance, err := acl.AsInstance()
 		if err == nil {
 			agent.cacheManager.SetAccessControlList(aclInstance)
