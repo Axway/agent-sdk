@@ -147,11 +147,12 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	client.processRequest()
 
 	var lastSequenceID int64
-	sequenceID := m.options.sequenceGetter.GetSequence()
+	var sequenceID int64
 	if m.hClient != nil && m.options.sequenceGetter != nil {
+		sequenceID = m.options.sequenceGetter.GetSequence()
 		if sequenceID > 0 {
 			var err error
-			err, lastSequenceID = m.hClient.receiveSyncEvents(link, sequenceID, events)
+			lastSequenceID, err = m.hClient.receiveSyncEvents(link, sequenceID, events)
 			if err != nil {
 				client.handleError(err)
 				return subID, err
