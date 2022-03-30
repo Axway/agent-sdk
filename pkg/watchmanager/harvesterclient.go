@@ -49,10 +49,11 @@ func newHarvesterClient(cfg *harvesterConfig) *harvesterClient {
 	}
 }
 
-func (h *harvesterClient) receiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) error {
+func (h *harvesterClient) receiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (error, int64) {
+	var lastID int64
 	token, err := h.cfg.tokenGetter()
 	if err != nil {
-		return err
+		return err, lastID
 	}
 
 	morePages := true
@@ -78,17 +79,17 @@ func (h *harvesterClient) receiveSyncEvents(topicSelfLink string, sequenceID int
 		req.Headers["Content-Type"] = "application/json"
 		res, err := h.client.Send(req)
 		if err != nil {
-			return err
+			return err, lastID
 		}
 
 		if res.Code != 200 {
-			return fmt.Errorf("expected a 200 response but received %d", res.Code)
+			return fmt.Errorf("expected a 200 response but received %d", res.Code), lastID
 		}
 
 		pagedEvents := make([]*resourceEntryExternalEvent, 0)
 		err = json.Unmarshal(res.Body, &pagedEvents)
 		if err != nil {
-			return err
+			return err, lastID
 		}
 
 		if len(pagedEvents) < h.cfg.pageSize {
@@ -96,9 +97,11 @@ func (h *harvesterClient) receiveSyncEvents(topicSelfLink string, sequenceID int
 		}
 
 		for _, event := range pagedEvents {
+			lastID = event.Metadata.GetSequenceID()
 			eventCh <- event.toProtoEvent()
 		}
 		page++
 	}
-	return err
+
+	return err, lastID
 }

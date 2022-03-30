@@ -591,7 +591,7 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		return nil, err
 	}
 
-	if response.Code == http.StatusNoContent && method == http.MethodDelete {
+	if method == http.MethodDelete && (response.Code == http.StatusNotFound || response.Code == http.StatusNoContent) {
 		return nil, nil
 	}
 

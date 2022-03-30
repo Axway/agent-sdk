@@ -146,14 +146,23 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 	client.processRequest()
 
+	var lastSequenceID int64
+	sequenceID := m.options.sequenceGetter.GetSequence()
 	if m.hClient != nil && m.options.sequenceGetter != nil {
-		sequenceID := m.options.sequenceGetter.GetSequence()
 		if sequenceID > 0 {
-			err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+			var err error
+			err, lastSequenceID = m.hClient.receiveSyncEvents(link, sequenceID, events)
 			if err != nil {
 				client.handleError(err)
 				return subID, err
 			}
+		}
+	}
+
+	if lastSequenceID > 0 {
+		// wait for all current sequences to be processed before processing new ones
+		for sequenceID < lastSequenceID {
+			sequenceID = m.options.sequenceGetter.GetSequence()
 		}
 	}
 

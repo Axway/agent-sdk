@@ -254,6 +254,7 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 		{GroupKind: cv1.CategoryGVK().GroupKind, EventTypes: all},
 		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: mv1.AccessControlListGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
