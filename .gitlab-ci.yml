@@ -57,6 +57,7 @@ stages:
 .only-main: &only-main
   only:
     - main
+    - APIGOV-00002
   except:
     - web
     - triggers
