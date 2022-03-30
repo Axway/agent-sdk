@@ -204,7 +204,7 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (c *streamer) Start() error {
-	events, eventErrorCh := make(chan *proto.Event, 100), make(chan error, 100)
+	events, eventErrorCh := make(chan *proto.Event), make(chan error)
 
 	c.listener = c.newListener(
 		events,
@@ -223,9 +223,7 @@ func (c *streamer) Start() error {
 	listenCh := c.listener.Listen()
 
 	// lock the cache until all harvester events have been saved
-	c.cacheManager.ApplyResourceReadLock()
 	_, err = c.manager.RegisterWatch(c.topicSelfLink, events, eventErrorCh)
-	c.cacheManager.ReleaseResourceReadLock()
 	if err != nil {
 		return err
 	}
