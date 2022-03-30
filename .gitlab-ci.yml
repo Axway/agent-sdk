@@ -57,10 +57,10 @@ stages:
 .only-main: &only-main
   only:
     - main
-    - APIGOV-00002
   except:
     - web
     - triggers
+    - schedules
 
 ############################################################
 # Section for CSR jobs
