@@ -60,6 +60,7 @@ stages:
   except:
     - web
     - triggers
+    - schedules
 
 ############################################################
 # Section for CSR jobs
