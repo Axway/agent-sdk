@@ -88,6 +88,7 @@ func SetConfigAgent(env string, isDocker bool, agentName string, singleURL strin
 	}
 }
 
+// AddSingleEntryFilterURL - adds a url for single entry point filter
 func AddSingleEntryFilterURL(filterURL string) {
 	if cfgAgent.singleEntryFilter != nil {
 		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, filterURL)
