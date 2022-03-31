@@ -25,27 +25,29 @@ func validateUsageReporting(cfg UsageReportingConfig) (err error) {
 }
 
 type expected struct {
-	url            string
-	publish        bool
-	metric         bool
-	interval       time.Duration
-	offline        bool
-	schedule       string
-	reportSchedule string
-	granularity    int
-	qaVars         bool
+	url                string
+	publish            bool
+	metric             bool
+	subscriptionMetric bool
+	interval           time.Duration
+	offline            bool
+	schedule           string
+	reportSchedule     string
+	granularity        int
+	qaVars             bool
 }
 
 var defaultExpected = expected{
-	url:            "https://lighthouse.admin.axway.com",
-	publish:        true,
-	metric:         true,
-	interval:       15 * time.Minute,
-	offline:        false,
-	schedule:       "@hourly",
-	reportSchedule: "@monthly",
-	granularity:    900000,
-	qaVars:         false,
+	url:                "https://lighthouse.admin.axway.com",
+	publish:            true,
+	metric:             true,
+	subscriptionMetric: false,
+	interval:           15 * time.Minute,
+	offline:            false,
+	schedule:           "@hourly",
+	reportSchedule:     "@monthly",
+	granularity:        900000,
+	qaVars:             false,
 }
 
 func validateconfig(t *testing.T, expVals expected, cfg UsageReportingConfig) {

@@ -27,11 +27,62 @@ func buildAPIServiceInstanceSpec(
 	}
 }
 
+func buildAPIServiceInstanceMarketplaceSpec(
+	serviceBody *ServiceBody,
+	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	knownCRDs []string,
+) mv1a.ApiServiceInstanceSpec {
+	return mv1a.ApiServiceInstanceSpec{
+		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
+		Endpoint:                     endpoints,
+		CredentialRequestDefinitions: knownCRDs,
+		AccessRequestDefinition:      serviceBody.ardName,
+	}
+}
+
+func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBody) []string {
+	crds := serviceBody.GetCredentialRequestDefinitions()
+
+	// remove any crd not in the cache
+	knownCRDs := make([]string, 0)
+	for _, crd := range crds {
+		if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
+			knownCRDs = append(knownCRDs, crd)
+		}
+	}
+
+	return knownCRDs
+}
+
+func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
+	ard := serviceBody.ardName
+
+	if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
+		return
+	}
+
+	serviceBody.ardName = ""
+}
+
 func (c *ServiceClient) buildAPIServiceInstance(
 	serviceBody *ServiceBody,
 	name string,
 	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
 ) *mv1a.APIServiceInstance {
+	finalizer := make([]v1.Finalizer, 0)
+	if serviceBody.uniqueARD {
+		finalizer = append(finalizer, v1.Finalizer{
+			Name:        AccessRequestDefinitionFinalizer,
+			Description: serviceBody.ardName,
+		})
+	}
+
+	spec := buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	if c.cfg.IsMarketplaceSubsEnabled() {
+		c.checkAccessRequestDefinition(serviceBody)
+		spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
+	}
+
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &mv1a.APIServiceInstance{
 		ResourceMeta: v1.ResourceMeta{
@@ -40,8 +91,15 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Finalizers:       finalizer,
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
+					Kind: mv1a.EnvironmentGVK().Kind,
+					Name: c.cfg.GetEnvironmentName(),
+				},
+			},
 		},
-		Spec:  buildAPIServiceInstanceSpec(serviceBody, endpoints),
+		Spec:  spec,
 		Owner: owner,
 	}
 
@@ -64,6 +122,10 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
+	if c.cfg.IsMarketplaceSubsEnabled() {
+		c.checkAccessRequestDefinition(serviceBody)
+		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
+	}
 	instance.Owner = owner
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
@@ -125,15 +187,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
 			}
-			err = c.CreateSubResourceScoped(
-				mv1a.EnvironmentResourceName,
-				c.cfg.GetEnvironmentName(),
-				instance.PluralName(),
-				instance.Name,
-				instance.Group,
-				instance.APIVersion,
-				subResources,
-			)
+			err = c.CreateSubResourceScoped(instance.ResourceMeta, subResources)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 				if rollbackErr != nil {

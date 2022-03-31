@@ -42,6 +42,22 @@ type ReleaseTag struct {
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
+// NewReleaseTag creates an empty *ReleaseTag
+func NewReleaseTag(name, scopeName string) *ReleaseTag {
+	return &ReleaseTag{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ReleaseTagGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: ReleaseTagScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // ReleaseTagFromInstanceArray converts a []*ResourceInstance to a []*ReleaseTag
 func ReleaseTagFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ReleaseTag, error) {
 	newArray := make([]*ReleaseTag, 0)

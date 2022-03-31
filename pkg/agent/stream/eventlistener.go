@@ -21,21 +21,21 @@ type Listener interface {
 type EventListener struct {
 	cancel          context.CancelFunc
 	ctx             context.Context
-	getResource     ResourceClient
+	client          apiClient
 	handlers        []handler.Handler
 	source          chan *proto.Event
 	sequenceManager *agentSequenceManager
 }
 
-type newListenerFunc func(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
+type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri ResourceClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &EventListener{
 		cancel:          cancel,
 		ctx:             ctx,
-		getResource:     ri,
+		client:          ri,
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
@@ -44,7 +44,9 @@ func NewEventListener(source chan *proto.Event, ri ResourceClient, sequenceManag
 
 // Stop stops the listener
 func (em *EventListener) Stop() {
-	em.cancel()
+	if em != nil {
+		em.cancel()
+	}
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
@@ -115,7 +117,7 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 	if event.Type == proto.Event_DELETED {
 		return em.convertEventPayload(event), nil
 	}
-	return em.getResource.Get(event.Payload.Metadata.SelfLink)
+	return em.client.GetResource(event.Payload.Metadata.SelfLink)
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.

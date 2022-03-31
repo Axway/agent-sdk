@@ -39,6 +39,9 @@ type ServiceBuilder interface {
 	SetRevisionAttribute(revisionAttribute map[string]string) ServiceBuilder
 	SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
+	SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder
+	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
+	SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -61,22 +64,24 @@ type serviceBodyBuilder struct {
 func NewServiceBodyBuilder() ServiceBuilder {
 	return &serviceBodyBuilder{
 		serviceBody: ServiceBody{
-			AuthPolicy:           Passthrough,
-			authPolicies:         make([]string, 0),
-			CreatedBy:            config.AgentTypeName,
-			State:                PublishedStatus,
-			Status:               PublishedStatus,
-			ServiceAttributes:    make(map[string]string),
-			RevisionAttributes:   make(map[string]string),
-			InstanceAttributes:   make(map[string]string),
-			StageDescriptor:      "Stage",
-			Endpoints:            make([]EndpointDefinition, 0),
-			UnstructuredProps:    &UnstructuredProperties{},
-			categoryTitles:       make([]string, 0),
-			categoryNames:        make([]string, 0),
-			ServiceAgentDetails:  make(map[string]interface{}),
-			InstanceAgentDetails: make(map[string]interface{}),
-			RevisionAgentDetails: make(map[string]interface{}),
+			AuthPolicy:                Passthrough,
+			authPolicies:              make([]string, 0),
+			CreatedBy:                 config.AgentTypeName,
+			State:                     PublishedStatus,
+			Status:                    PublishedStatus,
+			scopes:                    make(map[string]string),
+			ServiceAttributes:         make(map[string]string),
+			RevisionAttributes:        make(map[string]string),
+			InstanceAttributes:        make(map[string]string),
+			StageDescriptor:           "Stage",
+			Endpoints:                 make([]EndpointDefinition, 0),
+			UnstructuredProps:         &UnstructuredProperties{},
+			categoryTitles:            make([]string, 0),
+			categoryNames:             make([]string, 0),
+			credentialRequestPolicies: make([]string, 0),
+			ServiceAgentDetails:       make(map[string]interface{}),
+			InstanceAgentDetails:      make(map[string]interface{}),
+			RevisionAgentDetails:      make(map[string]interface{}),
 		},
 	}
 }
@@ -290,14 +295,53 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 
 	var i interface{} = specProcessor
 	if val, ok := i.(oasSpecProcessor); ok {
+		val.parseAuthInfo()
+
 		// get the auth policy from the spec
-		b.serviceBody.authPolicies, b.serviceBody.apiKeyInfo = val.getAuthInfo()
+		b.serviceBody.authPolicies = val.getAuthPolicies()
 
 		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
 		if len(b.serviceBody.authPolicies) > 0 {
 			b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
 		}
+
+		// get the apikey info
+		b.serviceBody.apiKeyInfo = val.getAPIKeyInfo()
+
+		// get oauth scopes
+		b.serviceBody.scopes = val.getOAuthScopes()
+
+		// only set ard name based on spec if not already set
+		if b.serviceBody.ardName == "" {
+			if len(b.serviceBody.apiKeyInfo) > 0 {
+				b.serviceBody.ardName = "api-key"
+			}
+
+			// if the spec has api key and oauth use the oauth ard
+			err := b.serviceBody.createAccessRequestDefintion()
+			if err != nil {
+				return b.serviceBody, err
+			}
+		}
 	}
 
 	return b.serviceBody, nil
+}
+
+// SetCredentialRequestDefinitions -
+func (b *serviceBodyBuilder) SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder {
+	b.serviceBody.credentialRequestPolicies = credentialRequestDefNames
+	return b
+}
+
+// AddCredentialRequestDefinition -
+func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder {
+	b.serviceBody.credentialRequestPolicies = append(b.serviceBody.credentialRequestPolicies, credentialRequestDefName)
+	return b
+}
+
+// SetAccessRequestDefintionName -
+func (b *serviceBodyBuilder) SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder {
+	b.serviceBody.ardName = accessRequestDefName
+	return b
 }

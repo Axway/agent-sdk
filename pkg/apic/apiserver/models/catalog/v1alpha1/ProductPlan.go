@@ -41,6 +41,16 @@ type ProductPlan struct {
 	State      ProductPlanState      `json:"state"`
 }
 
+// NewProductPlan creates an empty *ProductPlan
+func NewProductPlan(name string) *ProductPlan {
+	return &ProductPlan{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ProductPlanGVK,
+		},
+	}
+}
+
 // ProductPlanFromInstanceArray converts a []*ResourceInstance to a []*ProductPlan
 func ProductPlanFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ProductPlan, error) {
 	newArray := make([]*ProductPlan, 0)

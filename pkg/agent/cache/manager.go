@@ -2,12 +2,12 @@ package cache
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -15,10 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const (
-	defaultCacheStoragePath = "./data/cache"
-	accessControlList       = "AccessControlListKey"
-)
+const defaultCacheStoragePath = "./data/cache"
 
 // Manager - interface to manage agent resource
 type Manager interface {
@@ -60,10 +57,45 @@ type Manager interface {
 	GetDefaultTeam() *defs.PlatformTeam
 	SetAccessControlList(acl *v1.ResourceInstance)
 	GetAccessControlList() *v1.ResourceInstance
+	DeleteAccessControlList() error
+
+	// AccessRequestDefintion cache related methods
+	AddAccessRequestDefinition(resource *v1.ResourceInstance)
+	GetAccessRequestDefinitionKeys() []string
+	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
+	GetAccessRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteAccessRequestDefinition(id string) error
+
+	// CredentialRequestDefintion cache related methods
+	AddCredentialRequestDefinition(resource *v1.ResourceInstance)
+	GetCredentialRequestDefinitionKeys() []string
+	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
+	GetCredentialRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteCredentialRequestDefinition(id string) error
 
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
 	GetSequence(watchTopicName string) int64
+
+	// ManagedApplication cache related methods
+	GetManagedApplicationCacheKeys() []string
+	AddManagedApplication(resource *v1.ResourceInstance)
+	GetManagedApplication(id string) *v1.ResourceInstance
+	GetManagedApplicationByName(name string) *v1.ResourceInstance
+	DeleteManagedApplication(id string) error
+
+	// AccessRequest cache related methods
+	GetAccessRequestCacheKeys() []string
+	AddAccessRequest(resource *mv1.AccessRequest)
+	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest
+	GetAccessRequest(id string) *mv1.AccessRequest
+	DeleteAccessRequest(id string) error
+
+	// Subscription cache related methods
+	AddSubscription(resource *v1.ResourceInstance)
+	GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance
+	GetSubscription(id string) *v1.ResourceInstance
+	DeleteSubscription(id string) error
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
@@ -74,11 +106,16 @@ type cacheManager struct {
 	apiMap                  cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
+	managedApplicationMap   cache.Cache
+	accessRequestMap        cache.Cache
+	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
 	persistedCache          cache.Cache
 	teams                   cache.Cache
+	ardMap                  cache.Cache
+	crdMap                  cache.Cache
 	cacheFilename           string
 	hasLoadedPersistedCache bool
 	isCacheUpdated          bool
@@ -87,12 +124,17 @@ type cacheManager struct {
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	m := &cacheManager{
-		apiMap:         cache.New(),
-		instanceMap:    cache.New(),
-		categoryMap:    cache.New(),
-		sequenceCache:  cache.New(),
-		teams:          cache.New(),
-		isCacheUpdated: false,
+		apiMap:                cache.New(),
+		instanceMap:           cache.New(),
+		categoryMap:           cache.New(),
+		managedApplicationMap: cache.New(),
+		accessRequestMap:      cache.New(),
+		subscriptionMap:       cache.New(),
+		sequenceCache:         cache.New(),
+		teams:                 cache.New(),
+		ardMap:                cache.New(),
+		crdMap:                cache.New(),
+		isCacheUpdated:        false,
 	}
 
 	if cfg.IsUsingGRPC() && persistCache {
@@ -106,22 +148,31 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	c.cacheFilename = c.getCacheFileName(cfg)
 
 	cacheMap := cache.New()
-	err := cacheMap.Load(c.cacheFilename)
-	if err == nil {
-		c.apiMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServices")
-		c.instanceMap = c.loadPersistedResourceInstanceCache(cacheMap, "apiServiceInstances")
-		c.categoryMap = c.loadPersistedResourceInstanceCache(cacheMap, "categories")
-		c.sequenceCache = c.loadPersistedCache(cacheMap, "watchSequence")
-		c.teams = c.loadPersistedCache(cacheMap, "teamCache")
-		c.hasLoadedPersistedCache = true
-		c.isCacheUpdated = false
+	cacheMap.Load(c.cacheFilename)
+
+	cacheKeys := map[string]func(cache.Cache){
+		"apiServices":         func(loaded cache.Cache) { c.apiMap = loaded },
+		"apiServiceInstances": func(loaded cache.Cache) { c.instanceMap = loaded },
+		"categories":          func(loaded cache.Cache) { c.categoryMap = loaded },
+		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
+		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
+		"teams":               func(loaded cache.Cache) { c.teams = loaded },
+		"managedApp":          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
+		"subscriptions":       func(loaded cache.Cache) { c.subscriptionMap = loaded },
+		"accReq":              func(loaded cache.Cache) { c.accessRequestMap = loaded },
+		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
 	}
 
-	cacheMap.Set("apiServices", c.apiMap)
-	cacheMap.Set("apiServiceInstances", c.instanceMap)
-	cacheMap.Set("categories", c.categoryMap)
-	cacheMap.Set("watchSequence", c.sequenceCache)
-	cacheMap.Set("teams", c.teams)
+	c.hasLoadedPersistedCache = true
+	c.isCacheUpdated = false
+	for key := range cacheKeys {
+		loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, key)
+		if isNew {
+			c.hasLoadedPersistedCache = false
+		}
+		cacheKeys[key](loadedMap)
+	}
+
 	c.persistedCache = cacheMap
 	if util.IsNotTest() {
 		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
@@ -140,26 +191,28 @@ func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
 	return cachePath + "/" + cfg.GetEnvironmentName() + ".cache"
 }
 
-func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) cache.Cache {
+func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) (cache.Cache, bool) {
 	itemCache, _ := cacheMap.Get(key)
 	if itemCache != nil {
 		raw, _ := json.Marshal(itemCache)
-		return cache.LoadFromBuffer(raw)
+		return cache.LoadFromBuffer(raw), false
 	}
-	return cache.New()
+	return cache.New(), true
 }
 
-func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, cacheKey string) cache.Cache {
-	riCache := c.loadPersistedCache(cacheMap, cacheKey)
+func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, cacheKey string) (cache.Cache, bool) {
+	riCache, isNew := c.loadPersistedCache(cacheMap, cacheKey)
 	keys := riCache.GetKeys()
 	for _, key := range keys {
 		item, _ := riCache.Get(key)
 		rawResource, _ := json.Marshal(item)
 		ri := &v1.ResourceInstance{}
-		json.Unmarshal(rawResource, ri)
-		riCache.Set(key, ri)
+		if json.Unmarshal(rawResource, ri) == nil {
+			riCache.Set(key, ri)
+		}
 	}
-	return riCache
+	cacheMap.Set(cacheKey, riCache)
+	return riCache, isNew
 }
 
 func (c *cacheManager) setCacheUpdated(updated bool) {
@@ -201,313 +254,6 @@ func (c *cacheManager) SaveCache() {
 		c.persistedCache.Save(c.cacheFilename)
 		c.setCacheUpdated(false)
 	}
-}
-
-// API service cache management
-
-// AddAPIService - add/update APIService resource in cache
-func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
-	apiID, err := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
-	if err != nil {
-		return fmt.Errorf("failed to get external API ID from APIService resource: %s", err)
-	}
-	if apiID != "" {
-		defer c.setCacheUpdated(true)
-		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
-		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
-		if primaryKey != "" {
-			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
-			if _, err := c.apiMap.Get(apiID); err != nil {
-				c.apiMap.Delete(apiID)
-			}
-
-			c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
-			c.apiMap.SetSecondaryKey(primaryKey, apiName)
-		} else {
-			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
-		}
-		log.Tracef("added api name: %s, id %s to API cache", apiName, apiID)
-	}
-
-	return nil
-}
-
-// GetAPIServiceCache - returns the APIService cache
-func (c *cacheManager) GetAPIServiceCache() cache.Cache {
-	return c.apiMap
-}
-
-// GetAPIServiceKeys - returns keys for APIService cache
-func (c *cacheManager) GetAPIServiceKeys() []string {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	return c.apiMap.GetKeys()
-}
-
-// GetAPIServiceWithAPIID - returns resource from APIService cache based on externalAPIID attribute
-func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	api, _ := c.apiMap.Get(apiID)
-	if api == nil {
-		api, _ = c.apiMap.GetBySecondaryKey(apiID)
-	}
-
-	if api != nil {
-		apiSvc, ok := api.(*v1.ResourceInstance)
-		if ok {
-			return apiSvc
-		}
-	}
-	return nil
-}
-
-// GetAPIServiceWithPrimaryKey - returns resource from APIService cache based on externalAPIPrimaryKey attribute
-func (c *cacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	api, _ := c.apiMap.Get(primaryKey)
-	if api != nil {
-		apiSvc, ok := api.(*v1.ResourceInstance)
-		if ok {
-			return apiSvc
-		}
-	}
-	return nil
-}
-
-// GetAPIServiceWithName - returns resource from APIService cache based on externalAPIName attribute
-func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstance {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	api, _ := c.apiMap.GetBySecondaryKey(apiName)
-	if api != nil {
-		apiSvc, ok := api.(*v1.ResourceInstance)
-		if ok {
-			return apiSvc
-		}
-	}
-	return nil
-}
-
-// GetTeamsIDsInAPIServices - returns the array of team IDs that have services
-func (c *cacheManager) GetTeamsIDsInAPIServices() []string {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	teamNameMap := make(map[string]struct{})
-	teamIDs := make([]string, 0)
-	for _, key := range c.apiMap.GetKeys() {
-		api, _ := c.apiMap.Get(key)
-		if apiSvc, ok := api.(*v1.ResourceInstance); ok {
-			if apiSvc.Owner != nil && apiSvc.Owner.Type == v1.TeamOwner {
-				if _, found := teamNameMap[apiSvc.Owner.ID]; found {
-					continue
-				}
-				teamNameMap[apiSvc.Owner.ID] = struct{}{}
-				teamIDs = append(teamIDs, apiSvc.Owner.ID)
-			}
-		}
-	}
-
-	return teamIDs
-}
-
-// DeleteAPIService - remove APIService resource from cache based on externalAPIID or externalAPIPrimaryKey
-func (c *cacheManager) DeleteAPIService(key string) error {
-	defer c.setCacheUpdated(true)
-
-	err := c.apiMap.Delete(key)
-	if err != nil {
-		err = c.apiMap.DeleteBySecondaryKey(key)
-	}
-	return err
-}
-
-// API service instance management
-
-// AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
-func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
-
-	c.instanceMap.Set(resource.Metadata.ID, resource)
-}
-
-// GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
-func (c *cacheManager) GetAPIServiceInstanceKeys() []string {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	return c.instanceMap.GetKeys()
-}
-
-// GetAPIServiceInstanceByID - returns resource from APIServiceInstance cache based on instance ID
-func (c *cacheManager) GetAPIServiceInstanceByID(id string) (*v1.ResourceInstance, error) {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	item, err := c.instanceMap.Get(id)
-	if item != nil {
-		instance, ok := item.(*v1.ResourceInstance)
-		if ok {
-			return instance, nil
-		}
-	}
-	return nil, err
-}
-
-// DeleteAPIServiceInstance - remove APIServiceInstance resource from cache based on instance ID
-func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
-	defer c.setCacheUpdated(true)
-
-	return c.instanceMap.Delete(id)
-}
-
-// DeleteAllAPIServiceInstance - remove all APIServiceInstance resource from cache
-func (c *cacheManager) DeleteAllAPIServiceInstance() {
-	defer c.setCacheUpdated(true)
-
-	c.instanceMap.Flush()
-}
-
-// Category cache management
-
-// AddCategory - add/update Category resource in cache
-func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-	defer c.setCacheUpdated(true)
-
-	c.categoryMap.SetWithSecondaryKey(resource.Name, fmt.Sprintf("title-%s", resource.Title), resource)
-}
-
-// GetCategoryCache - returns the Category cache
-func (c *cacheManager) GetCategoryCache() cache.Cache {
-	return c.categoryMap
-}
-
-// GetCategoryKeys - returns keys for Category cache
-func (c *cacheManager) GetCategoryKeys() []string {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	return c.categoryMap.GetKeys()
-}
-
-// GetCategory - returns resource from Category cache based on name
-func (c *cacheManager) GetCategory(name string) *v1.ResourceInstance {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	category, _ := c.categoryMap.Get(name)
-	if category != nil {
-		ri, ok := category.(*v1.ResourceInstance)
-		if ok {
-			return ri
-		}
-	}
-	return nil
-}
-
-// GetCategoryWithTitle - returns resource from Category cache based on title
-func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
-
-	category, _ := c.categoryMap.GetBySecondaryKey(fmt.Sprintf("title-%s", title))
-	if category != nil {
-		ri, ok := category.(*v1.ResourceInstance)
-		if ok {
-			return ri
-		}
-	}
-	return nil
-}
-
-// DeleteCategory - remove Category resource from cache based on name
-func (c *cacheManager) DeleteCategory(name string) error {
-	defer c.setCacheUpdated(true)
-
-	return c.categoryMap.Delete(name)
-}
-
-// GetTeamCache - returns the team cache
-func (c *cacheManager) GetTeamCache() cache.Cache {
-	return c.teams
-}
-
-// AddTeam saves a team to the cache
-func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
-	defer c.setCacheUpdated(true)
-	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
-}
-
-// GetTeamByName gets a team by name
-func (c *cacheManager) GetTeamByName(name string) *defs.PlatformTeam {
-	item, err := c.teams.Get(name)
-	if err != nil {
-		return nil
-	}
-	team, ok := item.(defs.PlatformTeam)
-	if !ok {
-		return nil
-	}
-	return &team
-}
-
-// GetDefaultTeam gets the default team
-func (c *cacheManager) GetDefaultTeam() *defs.PlatformTeam {
-	names := c.teams.GetKeys()
-
-	var defaultTeam defs.PlatformTeam
-	for _, name := range names {
-		item, _ := c.teams.Get(name)
-		team, ok := item.(defs.PlatformTeam)
-		if !ok {
-			continue
-		}
-
-		if team.Default {
-			defaultTeam = team
-			break
-		}
-
-		continue
-	}
-
-	return &defaultTeam
-}
-
-// GetTeamByID gets a team by id
-func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
-	item, err := c.teams.GetBySecondaryKey(id)
-	if err != nil {
-		return nil
-	}
-	team, ok := item.(defs.PlatformTeam)
-	if !ok {
-		return nil
-	}
-	return &team
-}
-
-// SetAccessControlList saves the Access Control List to the cache
-func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
-	c.teams.Set(accessControlList, acl)
-}
-
-// GetAccessControlList gets the Access Control List from the cache
-func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
-	item, err := c.teams.Get(accessControlList)
-	if err != nil {
-		return nil
-	}
-	return item.(*v1.ResourceInstance)
 }
 
 // Watch Sequence cache

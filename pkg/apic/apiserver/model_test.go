@@ -7,7 +7,6 @@ import (
 
 	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,16 +14,16 @@ import (
 // should handle marshaling and unmarshalling for an apiserver resource with a custom sub resource
 func TestAPIServiceMarshal(t *testing.T) {
 	svc1 := &m.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind:  v1.GroupKind{Group: "management", Kind: "APIService"},
 				APIVersion: "v1",
 			},
 			Name:  "name",
 			Title: "title",
-			Metadata: apiv1.Metadata{
+			Metadata: v1.Metadata{
 				ID:              "123",
-				Audit:           apiv1.AuditMetadata{},
+				Audit:           v1.AuditMetadata{},
 				ResourceVersion: "1",
 				SelfLink:        "/self/link",
 				State:           "state",
@@ -34,7 +33,7 @@ func TestAPIServiceMarshal(t *testing.T) {
 				"attr2": "val2",
 			},
 			Tags: []string{"tag1", "tag2"},
-			Finalizers: []apiv1.Finalizer{
+			Finalizers: []v1.Finalizer{
 				{Name: "finalizer1"},
 				{Name: "finalizer2"},
 			},
@@ -44,8 +43,8 @@ func TestAPIServiceMarshal(t *testing.T) {
 				},
 			},
 		},
-		Owner: &apiv1.Owner{
-			Type: apiv1.TeamOwner,
+		Owner: &v1.Owner{
+			Type: v1.TeamOwner,
 			ID:   "233",
 		},
 		Spec: m.ApiServiceSpec{
@@ -78,25 +77,25 @@ func TestAPIServiceMarshal(t *testing.T) {
 	assert.Nil(t, err)
 
 	// override the audit metadata to easily assert the two structs are equal
-	svc1.Metadata.Audit = apiv1.AuditMetadata{}
-	svc2.Metadata.Audit = apiv1.AuditMetadata{}
+	svc1.Metadata.Audit = v1.AuditMetadata{}
+	svc2.Metadata.Audit = v1.AuditMetadata{}
 	assert.Equal(t, svc1, svc2)
 }
 
 // should unmarshal when owner is not set
 func TestAPIServiceMarshalNoOwner(t *testing.T) {
 	svc1 := &m.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind:  v1.GroupKind{Group: "management", Kind: "APIService"},
 				APIVersion: "v1",
 			},
 			Name:  "name",
 			Title: "title",
-			Metadata: apiv1.Metadata{
+			Metadata: v1.Metadata{
 				ID: "123",
 			},
-			Finalizers: []apiv1.Finalizer{
+			Finalizers: []v1.Finalizer{
 				{Name: "finalizer1"},
 				{Name: "finalizer2"},
 			},
@@ -132,8 +131,8 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 	assert.Nil(t, err)
 
 	// override the audit metadata to easily assert the two structs are equal
-	svc1.Metadata.Audit = apiv1.AuditMetadata{}
-	svc2.Metadata.Audit = apiv1.AuditMetadata{}
+	svc1.Metadata.Audit = v1.AuditMetadata{}
+	svc2.Metadata.Audit = v1.AuditMetadata{}
 	assert.Equal(t, svc1, svc2)
 }
 
@@ -141,16 +140,16 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 func TestAPIServiceAsInstance(t *testing.T) {
 	newTime := getTimestamp()
 	svc := &m.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind:  v1.GroupKind{Group: "management", Kind: "APIService"},
 				APIVersion: "v1",
 			},
 			Name:  "name",
 			Title: "title",
-			Metadata: apiv1.Metadata{
+			Metadata: v1.Metadata{
 				ID:              "123",
-				Audit:           apiv1.AuditMetadata{},
+				Audit:           v1.AuditMetadata{},
 				ResourceVersion: "1",
 				SelfLink:        "/self/link",
 				State:           "state",
@@ -177,8 +176,8 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				},
 			},
 		},
-		Owner: &apiv1.Owner{
-			Type: apiv1.TeamOwner,
+		Owner: &v1.Owner{
+			Type: v1.TeamOwner,
 			ID:   "233",
 		},
 		Spec: m.ApiServiceSpec{
@@ -205,8 +204,8 @@ func TestAPIServiceAsInstance(t *testing.T) {
 	assert.Nil(t, err)
 
 	// override the audit metadata to easily assert the two structs are equal
-	svc.Metadata.Audit = apiv1.AuditMetadata{}
-	ri.Metadata.Audit = apiv1.AuditMetadata{}
+	svc.Metadata.Audit = v1.AuditMetadata{}
+	ri.Metadata.Audit = v1.AuditMetadata{}
 
 	// marshal the instance spec to bytes, then convert it to an ApiServiceSpec
 	// to see if it matches the svc.Spec field
@@ -231,16 +230,16 @@ func TestAPIServiceAsInstance(t *testing.T) {
 func TestAPIServiceFromInstance(t *testing.T) {
 	// convert a service to an instance
 	svc1 := &m.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind:  apiv1.GroupKind{Group: "management", Kind: "APIService"},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind:  v1.GroupKind{Group: "management", Kind: "APIService"},
 				APIVersion: "v1",
 			},
 			Name:  "name",
 			Title: "title",
-			Metadata: apiv1.Metadata{
+			Metadata: v1.Metadata{
 				ID:              "123",
-				Audit:           apiv1.AuditMetadata{},
+				Audit:           v1.AuditMetadata{},
 				ResourceVersion: "1",
 				SelfLink:        "/self/link",
 				State:           "state",
@@ -257,8 +256,8 @@ func TestAPIServiceFromInstance(t *testing.T) {
 				},
 			},
 		},
-		Owner: &apiv1.Owner{
-			Type: apiv1.TeamOwner,
+		Owner: &v1.Owner{
+			Type: v1.TeamOwner,
 			ID:   "233",
 		},
 		Spec: m.ApiServiceSpec{
@@ -293,8 +292,8 @@ func TestAPIServiceFromInstance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, ri1, ri2)
 
-	svc1.Metadata.Audit = apiv1.AuditMetadata{}
-	svc2.Metadata.Audit = apiv1.AuditMetadata{}
+	svc1.Metadata.Audit = v1.AuditMetadata{}
+	svc2.Metadata.Audit = v1.AuditMetadata{}
 	assert.Equal(t, svc1, svc2)
 }
 
@@ -302,9 +301,9 @@ func TestAPIServiceFromInstance(t *testing.T) {
 // Unmarshalling should handle the pre-defined sub resources and any dynamic sub resources.
 func TestGovernanceAgentResource(t *testing.T) {
 	gov1 := &m.GovernanceAgent{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind: apiv1.GroupKind{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind: v1.GroupKind{
 					Group: "management",
 					Kind:  "GovernanceAgent",
 				},
@@ -312,7 +311,7 @@ func TestGovernanceAgentResource(t *testing.T) {
 			},
 			Name:  "name",
 			Title: "title",
-			Metadata: apiv1.Metadata{
+			Metadata: v1.Metadata{
 				ID: "123",
 			},
 		},

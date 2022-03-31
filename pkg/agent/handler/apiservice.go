@@ -1,0 +1,55 @@
+package handler
+
+import (
+	"fmt"
+
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+)
+
+type apiSvcHandler struct {
+	agentCacheManager agentcache.Manager
+}
+
+// NewAPISvcHandler creates a Handler for API Services.
+func NewAPISvcHandler(agentCacheManager agentcache.Manager) Handler {
+	return &apiSvcHandler{
+		agentCacheManager: agentCacheManager,
+	}
+}
+
+func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+	if resource.Kind != mv1.APIServiceGVK().Kind {
+		return nil
+	}
+
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+		return h.agentCacheManager.AddAPIService(resource)
+	}
+
+	if action == proto.Event_DELETED {
+		// external api id is not available on the resource for a delete event.
+		// retrieve all keys and match the metadata id to see which resource needs to be deleted from the cache.
+		keys := h.agentCacheManager.GetAPIServiceKeys()
+		for _, k := range keys {
+			svc := h.agentCacheManager.GetAPIServiceWithAPIID(k)
+
+			if svc.Metadata.ID == resource.Metadata.ID {
+				id, err := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
+				if err != nil {
+					return fmt.Errorf(
+						"%s not found on api service %s. %s", definitions.AttrExternalAPIID, resource.Name, err,
+					)
+				}
+				h.agentCacheManager.DeleteAPIService(id)
+				break
+			}
+		}
+	}
+
+	return nil
+}

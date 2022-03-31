@@ -19,7 +19,7 @@ func TestEventListener_start(t *testing.T) {
 		name      string
 		hasError  bool
 		events    chan *proto.Event
-		ri        ResourceClient
+		client    apiClient
 		handler   handler.Handler
 		writeStop bool
 	}{
@@ -27,14 +27,14 @@ func TestEventListener_start(t *testing.T) {
 			name:     "should start without an error",
 			hasError: false,
 			events:   make(chan *proto.Event),
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{},
 		},
 		{
 			name:     "should return an error when the event channel is closed",
 			hasError: true,
 			events:   make(chan *proto.Event),
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{},
 		},
 
@@ -42,14 +42,14 @@ func TestEventListener_start(t *testing.T) {
 			name:     "should not return an error, even if the request for a ResourceClient fails",
 			hasError: false,
 			events:   make(chan *proto.Event),
-			ri:       &mockRI{err: fmt.Errorf("failed")},
+			client:   &mockAPIClient{getErr: fmt.Errorf("failed")},
 			handler:  &mockHandler{},
 		},
 		{
 			name:     "should not return an error, even if a handler fails to process an event",
 			hasError: false,
 			events:   make(chan *proto.Event),
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{err: fmt.Errorf("failed")},
 		},
 	}
@@ -58,7 +58,7 @@ func TestEventListener_start(t *testing.T) {
 	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.ri, sequenceManager, tc.handler)
+			listener := NewEventListener(tc.events, tc.client, sequenceManager, tc.handler)
 
 			errCh := make(chan error)
 			go func() {
@@ -98,13 +98,13 @@ func TestEventListener_Listen(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockRI{}, sequenceManager, &mockHandler{})
+	listener := NewEventListener(events, &mockAPIClient{}, sequenceManager, &mockHandler{})
 	errCh := listener.Listen()
 	go listener.Stop()
 	err := <-errCh
 	assert.Nil(t, err)
 
-	listener = NewEventListener(events, &mockRI{}, sequenceManager, &mockHandler{})
+	listener = NewEventListener(events, &mockAPIClient{}, sequenceManager, &mockHandler{})
 	errCh = listener.Listen()
 	close(events)
 	err = <-errCh
@@ -116,35 +116,35 @@ func TestEventListener_handleEvent(t *testing.T) {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		ri       ResourceClient
+		client   apiClient
 		handler  handler.Handler
 	}{
 		{
 			name:     "should process a delete event with no error",
 			event:    proto.Event_DELETED,
 			hasError: false,
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{},
 		},
 		{
 			name:     "should return an error when the request to get a ResourceClient fails",
 			event:    proto.Event_CREATED,
 			hasError: true,
-			ri:       &mockRI{err: fmt.Errorf("err")},
+			client:   &mockAPIClient{getErr: fmt.Errorf("err")},
 			handler:  &mockHandler{},
 		},
 		{
 			name:     "should get a ResourceClient, and process a create event",
 			event:    proto.Event_CREATED,
 			hasError: false,
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{},
 		},
 		{
 			name:     "should get a ResourceClient, and process an update event",
 			event:    proto.Event_UPDATED,
 			hasError: false,
-			ri:       &mockRI{},
+			client:   &mockAPIClient{},
 			handler:  &mockHandler{},
 		},
 	}
@@ -164,7 +164,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), tc.ri, sequenceManager, tc.handler)
+			listener := NewEventListener(make(chan *proto.Event), tc.client, sequenceManager, tc.handler)
 
 			err := listener.handleEvent(event)
 
@@ -184,30 +184,6 @@ type mockTokenGetter struct {
 
 func (m *mockTokenGetter) GetToken() (string, error) {
 	return m.token, m.err
-}
-
-type mockRI struct {
-	err error
-}
-
-func (m mockRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
-	return nil, nil
-}
-
-func (m mockRI) Get(_ string) (*apiv1.ResourceInstance, error) {
-	return &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind: apiv1.GroupKind{
-					Kind: "kind",
-				},
-			},
-			Name:  "name",
-			Title: "title",
-		},
-		Owner: nil,
-		Spec:  nil,
-	}, m.err
 }
 
 type mockHandler struct {

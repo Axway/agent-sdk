@@ -1,12 +1,18 @@
 package v1
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
+
+const ResourceDeleting = "DELETING"
 
 // Meta interface for API Server resource metadata
 type Meta interface {
 	GetName() string
 	GetGroupVersionKind() GroupVersionKind
 	GetMetadata() Metadata
+	SetScopeName(string)
 	GetAttributes() map[string]string
 	SetAttributes(map[string]string)
 	GetTags() []string
@@ -46,6 +52,11 @@ func (rm *ResourceMeta) SetName(name string) {
 	rm.Name = name
 }
 
+// SetName sets the name of a resource
+func (rm *ResourceMeta) SetScopeName(name string) {
+	rm.Metadata.Scope.Name = name
+}
+
 // GetMetadata gets the resource metadata
 func (rm *ResourceMeta) GetMetadata() Metadata {
 	if rm == nil {
@@ -53,6 +64,50 @@ func (rm *ResourceMeta) GetMetadata() Metadata {
 	}
 
 	return rm.Metadata
+}
+
+// GetSelfLink gets the resource metadata selflink
+func (rm *ResourceMeta) GetSelfLink() string {
+	if rm == nil {
+		return ""
+	}
+
+	// return the self lnk if we have it
+	if rm.GetMetadata().SelfLink != "" {
+		return rm.Metadata.SelfLink
+	}
+
+	if kindLink := rm.GetKindLink(); kindLink != "" {
+		return strings.Join([]string{kindLink, rm.Name}, "/")
+	}
+	return ""
+}
+
+// GetKindLink gets the link to resource kind
+func (rm *ResourceMeta) GetKindLink() string {
+	if rm == nil {
+		return ""
+	}
+
+	// can't continue if group kind or version are blank
+	if rm.Group == "" || rm.Kind == "" || rm.APIVersion == "" {
+		return ""
+	}
+
+	// empty string to prepend with /
+	pathItems := []string{"", rm.Group, rm.APIVersion}
+
+	plural, _ := GetPluralFromKind(rm.Kind)
+
+	scope, ok := GetScope(rm.GetGroupVersionKind().GroupKind)
+	if ok && scope != "" {
+		scopePlural, _ := GetPluralFromKind(scope)
+		pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
+	}
+
+	pathItems = append(pathItems, plural)
+
+	return strings.Join(pathItems, "/")
 }
 
 // GetGroupVersionKind gets thee group, version, and kind of the resource
@@ -192,7 +247,7 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 
 	// all contains all keys but the sub resources. rawSubs contains all keys, but should only contain the subresource keys.
 	// delete the keys from subs that are not sub resource keys
-	for k, _ := range all {
+	for k := range all {
 		delete(rawSubs, k)
 	}
 	delete(rawSubs, "owner")

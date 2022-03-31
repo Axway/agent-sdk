@@ -75,15 +75,27 @@ func (b *EventBatch) Events() []beatPub.Event {
 // ACK - all events have been acked, cleanup the counters
 func (b *EventBatch) ACK() {
 	for _, event := range b.events {
-		var v4Event V4Event
 		if data, found := event.Content.Fields[messageKey]; found {
 			v4Bytes := data.(string)
+			v4Event := make(map[string]interface{})
 			err := json.Unmarshal([]byte(v4Bytes), &v4Event)
 			if err != nil {
 				continue
 			}
-			eventID := event.Content.Meta[metricKey].(string)
-			b.collector.cleanupMetricCounter(b.histograms[eventID], v4Event)
+			eventType, ok := v4Event["event"]
+			if ok {
+				var v4Data V4Data
+				switch eventType.(string) {
+				case metricEvent:
+					v4Data = &APIMetric{}
+				}
+				if v4Data != nil {
+					buf, _ := json.Marshal(v4Event["data"])
+					json.Unmarshal(buf, v4Data)
+					eventID := event.Content.Meta[metricKey].(string)
+					b.collector.cleanupMetricCounter(b.histograms[eventID], v4Data)
+				}
+			}
 		}
 	}
 	b.collector.metricStartTime = b.collector.metricEndTime

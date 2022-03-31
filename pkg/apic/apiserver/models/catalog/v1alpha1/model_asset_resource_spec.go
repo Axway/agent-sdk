@@ -12,9 +12,10 @@ package v1alpha1
 // AssetResourceSpec  (catalog.v1alpha1.AssetResource)
 type AssetResourceSpec struct {
 	// The Stage this Asset Resource is deployed on.
-	Stage                  string `json:"stage,omitempty"`
-	AssetRequestDefinition string `json:"assetRequestDefinition,omitempty"`
-	Type                   string `json:"type"`
+	Stage                        string   `json:"stage,omitempty"`
+	AssetRequestDefinition       string   `json:"assetRequestDefinition,omitempty"`
+	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
+	Type                         string   `json:"type"`
 	// content-type of the spec.
 	ContentType string `json:"contentType,omitempty"`
 	// Base64 encoded value of the api specification.

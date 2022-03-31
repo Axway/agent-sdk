@@ -42,6 +42,16 @@ type Asset struct {
 	State      AssetState      `json:"state"`
 }
 
+// NewAsset creates an empty *Asset
+func NewAsset(name string) *Asset {
+	return &Asset{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetGVK,
+		},
+	}
+}
+
 // AssetFromInstanceArray converts a []*ResourceInstance to a []*Asset
 func AssetFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Asset, error) {
 	newArray := make([]*Asset, 0)

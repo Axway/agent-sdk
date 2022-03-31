@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -23,7 +24,7 @@ import (
 const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
-	apiServerFields     = "metadata,group,kind,name,title,owner,attributes,x-agent-details"
+	apiServerFields     = "metadata,group,kind,name,title,owner,attributes,x-agent-details,finalizers"
 	queryFormatString   = "%s>\"%s\""
 )
 
@@ -38,6 +39,8 @@ type discoveryCache struct {
 	lastServiceTime      time.Time
 	lastInstanceTime     time.Time
 	lastCategoryTime     time.Time
+	lastARDTime          time.Time
+	lastCRDTime          time.Time
 	refreshAll           bool
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
@@ -52,6 +55,8 @@ func newDiscoveryCache(
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
 		lastCategoryTime:     time.Time{},
+		lastARDTime:          time.Time{},
+		lastCRDTime:          time.Time{},
 		refreshAll:           getAll,
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
@@ -86,10 +91,18 @@ func (j *discoveryCache) Execute() error {
 	}
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		if agent.cfg.GetAgentType() == config.DiscoveryAgent {
-			j.updateAPIServiceInstancesCache()
+		j.updateAPIServiceInstancesCache()
+
+		switch agent.cfg.GetAgentType() {
+		case config.DiscoveryAgent:
 			j.updateCategoryCache()
+			j.updateCRDCache()
+			j.updateARDCache()
+		case config.TraceabilityAgent:
+			j.updateManagedApplicationCache()
+			j.updateAccessRequestCache()
 		}
+
 		if j.agentResourceManager != nil {
 			j.agentResourceManager.FetchAgentResource()
 		}
@@ -194,10 +207,6 @@ func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
 }
 
 func (j *discoveryCache) updateAPIServiceInstancesCache() {
-	if agent.apiValidator == nil {
-		return
-	}
-
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
@@ -276,4 +285,179 @@ func (j *discoveryCache) updateCategoryCache() {
 			}
 		}
 	}
+}
+
+func (j *discoveryCache) updateARDCache() {
+	log.Trace("updating access request definition cache")
+
+	// create an empty accessrequestdef to gen url
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
+
+	// Update cache with published resources
+	existingARDs := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastARDTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastARDTime.Format(apiV1.APIServerTimeFormat),
+		)
+	}
+	ards, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+
+	for _, ard := range ards {
+		// Update the lastARDTime based on the newest category found
+		thisTime := time.Time(ard.Metadata.Audit.CreateTimestamp)
+		if j.lastARDTime.Before(thisTime) {
+			j.lastARDTime = thisTime
+		}
+
+		agent.cacheManager.AddAccessRequestDefinition(ard)
+		existingARDs[ard.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.cacheManager.GetAccessRequestDefinitionKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingARDs[key]; !ok {
+				agent.cacheManager.DeleteAccessRequestDefinition(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateManagedApplicationCache() {
+	log.Trace("updating managed application cache")
+
+	// Update cache with published resources
+	// TODO - Remove custom subresource and include subject subresource when added to model
+	existingManagedApplications := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + "," + defs.XMarketplaceSubject,
+	}
+
+	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/managedapplications", apiServerPageSize,
+	)
+
+	for _, managedApp := range managedApps {
+		agent.cacheManager.AddManagedApplication(managedApp)
+		existingManagedApplications[managedApp.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove managed applications that no longer exist
+		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingManagedApplications[key]; !ok {
+				agent.cacheManager.DeleteManagedApplication(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateCRDCache() {
+	log.Trace("updating credential request definition cache")
+
+	// create an empty credentialrequestdef to gen url
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
+
+	// Update cache with published resources
+	existingCRDs := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	if !j.lastCRDTime.IsZero() && !j.refreshAll {
+		query[apic.QueryKey] = fmt.Sprintf(
+			queryFormatString, apic.CreateTimestampQueryKey, j.lastCRDTime.Format(apiV1.APIServerTimeFormat),
+		)
+	}
+	crds, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+
+	for _, crd := range crds {
+		// Update the lastARDTime based on the newest category found
+		thisTime := time.Time(crd.Metadata.Audit.CreateTimestamp)
+		if j.lastCRDTime.Before(thisTime) {
+			j.lastCRDTime = thisTime
+		}
+
+		agent.cacheManager.AddCredentialRequestDefinition(crd)
+		existingCRDs[crd.Metadata.ID] = true
+	}
+
+	if j.refreshAll {
+		// Remove categories that no longer exist
+		cacheKeys := agent.cacheManager.GetCredentialRequestDefinitionKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingCRDs[key]; !ok {
+				agent.cacheManager.DeleteCredentialRequestDefinition(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) updateAccessRequestCache() {
+	log.Trace("updating access request cache")
+
+	// Update cache with published resources
+	// TODO - Remove custom subresource and include references
+	existingAccessRequests := make(map[string]bool)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields + ",spec," + defs.XMarketplaceSubscription,
+	}
+
+	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, agent.cfg.GetEnvironmentURL()+"/accessrequests", apiServerPageSize,
+	)
+
+	for _, accessRequest := range accessRequests {
+		ar := &mv1.AccessRequest{}
+		ar.FromInstance(accessRequest)
+		agent.cacheManager.AddAccessRequest(ar)
+		existingAccessRequests[accessRequest.Metadata.ID] = true
+		j.addSubscription(ar)
+	}
+
+	if j.refreshAll {
+		// Remove access requests that no longer exist
+		cacheKeys := agent.cacheManager.GetAccessRequestCacheKeys()
+		for _, key := range cacheKeys {
+			if _, ok := existingAccessRequests[key]; !ok {
+				agent.cacheManager.DeleteAccessRequest(key)
+			}
+		}
+	}
+}
+
+func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
+	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
+	// once controller starts to populate it.
+	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
+		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	if subscriptionName == "" {
+		return
+	}
+
+	subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
+	if subscription == nil {
+		subscription, err := j.fetchSubscription(subscriptionName)
+		if err == nil {
+			agent.cacheManager.AddSubscription(subscription)
+		}
+	}
+}
+
+func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.ResourceInstance, error) {
+	if subscriptionName == "" {
+		return nil, nil
+	}
+
+	url := fmt.Sprintf(
+		"/catalog/v1alpha1/subscriptions/%s",
+		subscriptionName,
+	)
+	return GetCentralClient().GetResource(url)
 }

@@ -17,7 +17,18 @@ const (
 	lighthouseVolume        = "Volume"
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
+	unknown                 = "unknown"
 )
+
+// Detail - holds the details for computing metrics
+// for API and consumer subscriptions
+type Detail struct {
+	APIDetails APIDetails
+	StatusCode string
+	Duration   int64
+	Bytes      int64
+	AppDetails AppDetails
+}
 
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
@@ -34,36 +45,58 @@ type ObservationDetails struct {
 
 // APIDetails - Holds the api details
 type APIDetails struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Revision int    `json:"revision"`
-	TeamID   string `json:"teamId"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Revision           int    `json:"revision,omitempty"`
+	TeamID             string `json:"teamId,omitempty"`
+	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	Stage              string `json:"-"`
 }
 
-// APIMetric - struct to hold metric specific for status code based API transactions
+// APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	API         APIDetails         `json:"api"`
-	StatusCode  string             `json:"statusCode"`
-	Status      string             `json:"status"`
-	Count       int64              `json:"count"`
-	Response    ResponseMetrics    `json:"response"`
-	Observation ObservationDetails `json:"observation"`
-	StartTime   time.Time          `json:"-"`
+	Subscription SubscriptionDetails `json:"subscription"`
+	App          AppDetails          `json:"application"`
+	API          APIDetails          `json:"api"`
+	StatusCode   string              `json:"statusCode"`
+	Status       string              `json:"status"`
+	Count        int64               `json:"count"`
+	Response     ResponseMetrics     `json:"response"`
+	Observation  ObservationDetails  `json:"observation"`
+	StartTime    time.Time           `json:"-"`
+}
+
+// GetStartTime - Returns the start time for subscription metric
+func (a *APIMetric) GetStartTime() time.Time {
+	return a.StartTime
+}
+
+// GetType - Returns APIMetric
+func (a *APIMetric) GetType() string {
+	return "APIMetric"
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	API        APIDetails `json:"api"`
-	StatusCode string     `json:"statusCode"`
-	Count      int64      `json:"count"`
-	Values     []int64    `json:"values"`
-	StartTime  time.Time  `json:"startTime"`
+	App          AppDetails          `json:"app,omitempty"`
+	Subscription SubscriptionDetails `json:"subscription,omitempty"`
+	API          APIDetails          `json:"api"`
+	StatusCode   string              `json:"statusCode"`
+	Count        int64               `json:"count"`
+	Values       []int64             `json:"values"`
+	StartTime    time.Time           `json:"startTime"`
 }
 
 // V4EventDistribution - represents V7 distribution
 type V4EventDistribution struct {
 	Environment string `json:"environment"`
 	Version     string `json:"version"`
+}
+
+// V4Data - Interface for representing the metric data
+type V4Data interface {
+	GetStartTime() time.Time
+	GetType() string
 }
 
 // V4Event - represents V7 event
@@ -74,7 +107,7 @@ type V4Event struct {
 	App          string               `json:"app"` // ORG GUID
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
-	Data         *APIMetric           `json:"data"`
+	Data         V4Data               `json:"data"`
 }
 
 // LighthouseUsageReport -Lighthouse Usage report
@@ -97,6 +130,13 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ConsumerOrgGUID string `json:"consumerOrgId,omitempty"`
+}
+
+// SubscriptionDetails - struct for subscription metric detail
+type SubscriptionDetails struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }

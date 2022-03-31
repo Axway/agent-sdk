@@ -35,8 +35,25 @@ func init() {
 // AccessRequestDefinition Resource
 type AccessRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner                `json:"owner"`
-	Spec  AccessRequestDefinitionSpec `json:"spec"`
+	Owner    *apiv1.Owner                `json:"owner"`
+	Spec     AccessRequestDefinitionSpec `json:"spec"`
+	Webhooks interface{}                 `json:"webhooks"`
+}
+
+// NewAccessRequestDefinition creates an empty *AccessRequestDefinition
+func NewAccessRequestDefinition(name, scopeName string) *AccessRequestDefinition {
+	return &AccessRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AccessRequestDefinitionScopes[0],
+				},
+			},
+		},
+	}
 }
 
 // AccessRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AccessRequestDefinition
@@ -107,6 +124,7 @@ func (res *AccessRequestDefinition) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
+	out["webhooks"] = res.Webhooks
 
 	return json.Marshal(out)
 }
@@ -134,6 +152,20 @@ func (res *AccessRequestDefinition) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

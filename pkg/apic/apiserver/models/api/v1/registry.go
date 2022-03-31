@@ -8,10 +8,12 @@ var (
 	resourceMap = map[GroupKind]string{}
 
 	gvkSet = map[GroupVersionKind]bool{}
+
+	plurals = map[string]string{}
 )
 
 // RegisterGVK registers a GroupVersionKind with optional scope and mandatory resource
-func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
+func RegisterGVK(gvk GroupVersionKind, scopeKind, resource string) {
 	if gvk.Group == "" || gvk.Kind == "" || gvk.APIVersion == "" || resource == "" {
 		panic(fmt.Sprintf("encountered empty fields while registering gvk to resource: %+v, %s", gvk, resource))
 	}
@@ -32,6 +34,8 @@ func RegisterGVK(gvk GroupVersionKind, scopeKind string, resource string) {
 	}
 
 	resourceMap[gvk.GroupKind] = resource
+
+	plurals[gvk.Kind] = resource
 }
 
 // GetScope return the scope of a Kind
@@ -57,4 +61,10 @@ func GVKSet() []GroupVersionKind {
 	}
 
 	return res
+}
+
+// GetPluralFromKind
+func GetPluralFromKind(kind string) (p string, ok bool) {
+	p, ok = plurals[kind]
+	return
 }

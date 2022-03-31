@@ -39,6 +39,16 @@ type ProductPlanUnit struct {
 	Spec  ProductPlanUnitSpec `json:"spec"`
 }
 
+// NewProductPlanUnit creates an empty *ProductPlanUnit
+func NewProductPlanUnit(name string) *ProductPlanUnit {
+	return &ProductPlanUnit{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _ProductPlanUnitGVK,
+		},
+	}
+}
+
 // ProductPlanUnitFromInstanceArray converts a []*ResourceInstance to a []*ProductPlanUnit
 func ProductPlanUnitFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ProductPlanUnit, error) {
 	newArray := make([]*ProductPlanUnit, 0)

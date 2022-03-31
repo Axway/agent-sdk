@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type OAS3Document struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner `json:"owner"`
 	Spec  interface{}  `json:"spec"`
+}
+
+// NewOAS3Document creates an empty *OAS3Document
+func NewOAS3Document(name, scopeKind, scopeName string) (*OAS3Document, error) {
+	validScope := false
+	for _, s := range OAS3DocumentScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for OAS3Document kind", scopeKind)
+	}
+
+	return &OAS3Document{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _OAS3DocumentGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // OAS3DocumentFromInstanceArray converts a []*ResourceInstance to a []*OAS3Document

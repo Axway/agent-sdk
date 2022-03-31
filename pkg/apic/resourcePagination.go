@@ -99,18 +99,4 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 	return resourceInstance, nil
 }
 
-// UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
-func (c *ServiceClient) UpdateAPIV1ResourceInstance(
-	url string,
-	ri *apiv1.ResourceInstance,
-) (*apiv1.ResourceInstance, error) {
-	ri.Metadata.ResourceVersion = ""
-	bts, err := json.Marshal(ri)
-	if err != nil {
-		return nil, err
-	}
-	bts, err = c.ExecuteAPI(coreapi.PUT, url, nil, bts)
-	r := &apiv1.ResourceInstance{}
-	err = json.Unmarshal(bts, r)
-	return r, err
-}
+

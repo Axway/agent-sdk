@@ -140,12 +140,13 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
-	IsUsingAccessRequests() bool
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
 	GetCacheStoragePath() string
 	GetCacheStorageInterval() time.Duration
+	SetIsMarketplaceSubsEnabled(enabled bool)
+	IsMarketplaceSubsEnabled() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -173,7 +174,6 @@ type CentralConfiguration struct {
 	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
-	UseAccessRequests         bool                 `config:"useAccessRequests"`
 	UsageReporting            UsageReportingConfig `config:"usageReporting"`
 	GRPCCfg                   GRPCConfig           `config:"grpc"`
 	CacheStoragePath          string               `config:"cacheStoragePath"`
@@ -182,6 +182,7 @@ type CentralConfiguration struct {
 	environmentID             string
 	teamID                    string
 	isAxwayManaged            bool
+	isMarketplaceSubs         bool
 }
 
 // GRPCConfig - Represents the grpc config
@@ -270,6 +271,16 @@ func (c *CentralConfiguration) GetEnvironmentID() string {
 // SetEnvironmentID - Sets the environment ID
 func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 	c.environmentID = environmentID
+}
+
+// SetIsMarketplaceSubsEnabled - Sets the isMarketplaceSubs boolean
+func (c *CentralConfiguration) SetIsMarketplaceSubsEnabled(enabled bool) {
+	c.isMarketplaceSubs = enabled
+}
+
+// IsMarketplaceSubsEnabled - Returns the isMarketplaceSubs boolean
+func (c *CentralConfiguration) IsMarketplaceSubsEnabled() bool {
+	return c.isMarketplaceSubs
 }
 
 // IsAxwayManaged - Returns the environment ID
@@ -502,11 +513,6 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
-// IsUsingAccessRequests -
-func (c *CentralConfiguration) IsUsingAccessRequests() bool {
-	return c.UseAccessRequests
-}
-
 // IsUsingGRPC -
 func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.GRPCCfg.Enabled
@@ -563,7 +569,6 @@ const (
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
 	pathJobTimeout                = "central.jobTimeout"
-	pathUseAccessRequests         = "central.useAccessRequests"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
 	pathGRPCPort                  = "central.grpc.port"
@@ -702,7 +707,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
-	props.AddBoolProperty(pathUseAccessRequests, false, "Controls whether the agent should look for access requests for provisioning access on the dataplane")
 	// Watch stream config
 	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
@@ -750,7 +754,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
-		UseAccessRequests:         props.BoolPropertyValue(pathUseAccessRequests),
 		UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),

@@ -35,6 +35,8 @@ const (
 	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
 
 	DefaultTeamKey = "DefaultTeam"
+
+	AccessRequestDefinitionFinalizer = "agent.cleanup.accessrequestdefinition"
 )
 
 type apiError struct {

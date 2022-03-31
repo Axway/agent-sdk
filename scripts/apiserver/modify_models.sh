@@ -7,15 +7,15 @@ COMMENT="// GENERATE: The following code has been modified after code generation
 SEARCH="\s*AutoSubscribe\s*bool.*"
 REPLACE="AutoSubscribe bool \`json:\"autoSubscribe\"\`"
 
-# Ubuntu ships with GNU sed, where the suffix for the -i option is optional. 
+# Ubuntu ships with GNU sed, where the suffix for the -i option is optional.
 # OS X ships with BSD sed, where the suffix is mandatory, and a backup will be created.
-# Using GNU sed prevents the script from breaking, and will not create a backup file. 
+# Using GNU sed prevents the script from breaking, and will not create a backup file.
 SED=sed
 OS=`uname`
 if [[ "$OS" == "Darwin" ]] ; then
     SED=gsed
     type $SED >/dev/null 2>&1 || {
-        echo -e >&2 "$SED it not installed. Try: brew install gnu-sed" ;        
+        echo -e >&2 "$SED it not installed. Try: brew install gnu-sed" ;
         exit 1;
     }
 fi
@@ -48,10 +48,40 @@ $SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_in
 # reformat the code
 go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
 
+######################
+# For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
+# "Scope *WatchTopicSpecScope `json:"scope,omitempty"`"
+######################
+SEARCH="\s*Scope\s*WatchTopicSpecScope.*"
+REPLACE="Scope *WatchTopicSpecScope \`json:\"scope,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# add in the new line we want
+$SED -i "/WatchTopicSpecScope/a ${REPLACE}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
+
+######################
+# For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into
+# "References []AccessRequestReferences `json:"references"`"
+######################
+SEARCH="\s*References\s*AccessRequestReferences.*"
+REPLACE="References []AccessRequestReferences \`json:\"references\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/AccessRequest.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/AccessRequest.go
+# add in the new line we want
+$SED -i "/AccessRequestReferences/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
+# reformat the code
+go fmt ${MODEL_PATH}/AccessRequest.go
+
 
 ######################
 # Update any time imports in the models, we want to turn "time" into
-# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1" 
+# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 ######################
 MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
 
@@ -69,6 +99,7 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
 
 ######################
 # Update any OneOf types to be interface{}
@@ -139,3 +170,23 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
+######################
+# Update the following REQUEST states to include the type infront of the constant
+######################
+# MODELS=`find ${OUTDIR}/models -type f -name "model_*_request.go"`
+# REQUESTS="PROVISION RENEW"
+
+# for file in ${MODELS}; do
+#     requestType=`grep "List of" ${file} | awk '{print $4}'`
+#     for request in ${REQUESTS}; do
+#         if grep -e ${request} ${file} >> /dev/null; then
+#             # add a comment to the code
+#             $SED -i -e "/${request}/i ${COMMENT}" ${file}
+#             # replace the Oneof type
+#             $SED -i -e "s/${request}/${requestType}${request}/g" ${file}
+#             # reformat the code
+#             go fmt ${file}
+#         fi
+#     done
+# done

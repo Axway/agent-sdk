@@ -9,17 +9,10 @@
 
 package v1alpha1
 
-import (
-	// GENERATE: The following code has been modified after code generation
-	// 	"time"
-	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-)
-
-// AssetRequestStatus struct for AssetRequestStatus
+// AssetRequestStatus  (catalog.v1alpha1.AssetRequest)
 type AssetRequestStatus struct {
-	Type string `json:"type"`
-	// Details of the error.
-	Detail string `json:"detail"`
-	// Time when the update occurred.
-	Timestamp time.Time `json:"timestamp"`
+	// The current status level, indicating progress towards consistency.
+	Level string `json:"level"`
+	// Reasons for the generated status.
+	Reasons []AssetRequestStatusReasons `json:"reasons,omitempty"`
 }

@@ -39,6 +39,22 @@ type MeshWorkload struct {
 	Spec  MeshWorkloadSpec `json:"spec"`
 }
 
+// NewMeshWorkload creates an empty *MeshWorkload
+func NewMeshWorkload(name, scopeName string) *MeshWorkload {
+	return &MeshWorkload{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MeshWorkloadGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: MeshWorkloadScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // MeshWorkloadFromInstanceArray converts a []*ResourceInstance to a []*MeshWorkload
 func MeshWorkloadFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshWorkload, error) {
 	newArray := make([]*MeshWorkload, 0)

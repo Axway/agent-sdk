@@ -67,7 +67,7 @@ func TestReceiveSyncEvents(t *testing.T) {
 	}()
 	s.responseStatus = 200
 	s.harvesterResponse = []resourceEntryExternalEvent{}
-	err := client.receiveSyncEvents("/test", 1, eventCh)
+	_, err := client.receiveSyncEvents("/test", 1, eventCh)
 	assert.Nil(t, err)
 	stopCh <- true
 	assert.Equal(t, 0, len(events))

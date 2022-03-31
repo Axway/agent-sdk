@@ -39,6 +39,16 @@ type K8SCluster struct {
 	Spec  K8SClusterSpec `json:"spec"`
 }
 
+// NewK8SCluster creates an empty *K8SCluster
+func NewK8SCluster(name string) *K8SCluster {
+	return &K8SCluster{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _K8SClusterGVK,
+		},
+	}
+}
+
 // K8SClusterFromInstanceArray converts a []*ResourceInstance to a []*K8SCluster
 func K8SClusterFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*K8SCluster, error) {
 	newArray := make([]*K8SCluster, 0)

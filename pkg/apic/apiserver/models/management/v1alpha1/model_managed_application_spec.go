@@ -9,9 +9,7 @@
 
 package v1alpha1
 
-// AssetRequestState  (catalog.v1alpha1.AssetRequest)
-type AssetRequestState struct {
-	Name string `json:"name"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
+// ManagedApplicationSpec  (management.v1alpha1.ManagedApplication)
+type ManagedApplicationSpec struct {
+	Security ManagedApplicationSpecSecurity `json:"security,omitempty"`
 }

@@ -39,6 +39,22 @@ type VirtualHost struct {
 	Spec  VirtualHostSpec `json:"spec"`
 }
 
+// NewVirtualHost creates an empty *VirtualHost
+func NewVirtualHost(name, scopeName string) *VirtualHost {
+	return &VirtualHost{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _VirtualHostGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: VirtualHostScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // VirtualHostFromInstanceArray converts a []*ResourceInstance to a []*VirtualHost
 func VirtualHostFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*VirtualHost, error) {
 	newArray := make([]*VirtualHost, 0)

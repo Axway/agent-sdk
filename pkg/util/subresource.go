@@ -16,12 +16,16 @@ type handler interface {
 
 // GetAgentDetails get all the values for the x-agent-details sub resource
 func GetAgentDetails(h handler) map[string]interface{} {
+	if h == nil {
+		return nil
+	}
+
 	item := h.GetSubResource(defs.XAgentDetails)
 	if item == nil {
 		return nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(defs.XAgentDetails, item)
 	if err != nil {
 		return nil
 	}
@@ -29,24 +33,52 @@ func GetAgentDetails(h handler) map[string]interface{} {
 	return sub
 }
 
+// GetAgentDetailStrings get all the values for the x-agent-details sub resource as string
+func GetAgentDetailStrings(h handler) map[string]string {
+	details := GetAgentDetails(h)
+	if details == nil {
+		return nil
+	}
+
+	strMap := make(map[string]string)
+
+	for k, v := range details {
+		strMap[k] = fmt.Sprint(v)
+	}
+	return strMap
+}
+
 // GetAgentDetailsValue gets a single string value fom the x-agent-details sub resource.
 // Returns nil for error if x-agent-details does not exist.
 // Returns errors if unable to perform type conversion.
 // Returns an empty string if the value does not exist, or if there is an error.
 func GetAgentDetailsValue(h handler, key string) (string, error) {
-	item := h.GetSubResource(defs.XAgentDetails)
+	return GetSubResourcePropertyValue(h, defs.XAgentDetails, key)
+}
+
+// GetSubResourcePropertyValue gets a single string value fom the specified sub resource.
+// Returns nil for error if specified does not exist.
+// Returns errors if unable to perform type conversion.
+// Returns an empty string if the value does not exist, or if there is an error.
+func GetSubResourcePropertyValue(h handler, subRes, key string) (string, error) {
+	// check for a nil value, or a pointer to a nil value
+	if IsNil(h) {
+		return "", nil
+	}
+
+	item := h.GetSubResource(subRes)
 	if item == nil {
 		return "", nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(subRes, item)
 	if err != nil {
 		return "", err
 	}
 
 	item, ok := sub[key]
 	if !ok {
-		return "", fmt.Errorf("key %s not found in %s", key, defs.XAgentDetails)
+		return "", fmt.Errorf("key %s not found in %s", key, subRes)
 	}
 
 	switch v := item.(type) {
@@ -57,7 +89,7 @@ func GetAgentDetailsValue(h handler, key string) (string, error) {
 	default:
 		return "", fmt.Errorf(
 			"%s keys should be a string or int. Received type %T for key %s",
-			defs.XAgentDetails,
+			subRes,
 			v,
 			key,
 		)
@@ -73,7 +105,7 @@ func SetAgentDetailsKey(h handler, key, value string) error {
 		return nil
 	}
 
-	sub, err := convert(item)
+	sub, err := convert(defs.XAgentDetails, item)
 	if err != nil {
 		return err
 	}
@@ -89,14 +121,14 @@ func SetAgentDetails(h handler, details map[string]interface{}) {
 	h.SetSubResource(defs.XAgentDetails, details)
 }
 
-func convert(item interface{}) (map[string]interface{}, error) {
+func convert(subResName string, item interface{}) (map[string]interface{}, error) {
 	switch v := item.(type) {
 	case map[string]interface{}:
 		return v, nil
 	default:
 		return nil, fmt.Errorf(
 			"unable to convert %s to type 'AgentDetails'. Received type %T",
-			defs.XAgentDetails,
+			subResName,
 			item,
 		)
 	}

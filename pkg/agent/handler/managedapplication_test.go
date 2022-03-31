@@ -1,0 +1,271 @@
+package handler
+
+import (
+	"testing"
+
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestManagedApplicationHandler(t *testing.T) {
+	tests := []struct {
+		action           proto.Event_Type
+		createErr        error
+		getErr           error
+		hasError         bool
+		name             string
+		expectedProvType string
+		inboundStatus    string
+		subError         error
+		teamName         string
+		outboundStatus   string
+	}{
+		{
+			name:             "should handle a create event for a ManagedApplication when status is pending",
+			action:           proto.Event_CREATED,
+			teamName:         teamName,
+			expectedProvType: provision,
+			inboundStatus:    statusPending,
+			outboundStatus:   statusSuccess,
+		},
+		{
+			name:             "should handle an update event for a ManagedApplication when status is pending",
+			action:           proto.Event_UPDATED,
+			expectedProvType: provision,
+			inboundStatus:    statusPending,
+			outboundStatus:   statusSuccess,
+		},
+		{
+			name:   "should return nil when the event is for subresources",
+			action: proto.Event_SUBRESOURCEUPDATED,
+		},
+		{
+			name:   "should return nil when status field is empty",
+			action: proto.Event_CREATED,
+		},
+		{
+			name:          "should return nil when status field is Success",
+			action:        proto.Event_CREATED,
+			inboundStatus: statusSuccess,
+		},
+		{
+			name:          "should return nil when status field is Error",
+			action:        proto.Event_CREATED,
+			inboundStatus: statusErr,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app := managedAppForTest
+			app.Status.Level = tc.inboundStatus
+
+			status := mock.MockRequestStatus{
+				Status: prov.Success,
+				Msg:    "msg",
+				Properties: map[string]string{
+					"status_key": "status_val",
+				},
+			}
+
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       tc.teamName,
+				status:                 status,
+				t:                      t,
+			}
+
+			c := &mockClient{
+				subError:       tc.subError,
+				expectedStatus: tc.outboundStatus,
+				t:              t,
+			}
+
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			if tc.teamName != "" {
+				cm.AddTeam(team)
+			}
+			handler := NewManagedApplicationHandler(p, cm, c)
+
+			ri, _ := app.AsInstance()
+			err := handler.Handle(tc.action, nil, ri)
+
+			assert.Equal(t, tc.expectedProvType, p.prov)
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			if tc.inboundStatus == statusPending {
+				assert.True(t, c.createSubCalled)
+			} else {
+				assert.False(t, c.createSubCalled)
+			}
+		})
+	}
+}
+
+func TestManagedApplicationHandler_deleting(t *testing.T) {
+	tests := []struct {
+		name           string
+		outboundStatus prov.Status
+	}{
+		{
+			name:           "should deprovision with no error",
+			outboundStatus: prov.Success,
+		},
+		{
+			name:           "should fail to deprovision and set the status to error",
+			outboundStatus: prov.Error,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app := managedAppForTest
+			app.Status.Level = statusSuccess
+			app.Metadata.State = v1.ResourceDeleting
+			app.Finalizers = []v1.Finalizer{{Name: maFinalizer}}
+
+			status := mock.MockRequestStatus{
+				Status: tc.outboundStatus,
+				Msg:    "msg",
+				Properties: map[string]string{
+					"status_key": "status_val",
+				},
+			}
+
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       "",
+				status:                 status,
+				t:                      t,
+			}
+
+			c := &mockClient{
+				expectedStatus: tc.outboundStatus.String(),
+				isDeleting:     true,
+				t:              t,
+			}
+
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+			handler := NewManagedApplicationHandler(p, cm, c)
+
+			ri, _ := app.AsInstance()
+			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+
+			assert.Equal(t, deprovision, p.prov)
+			assert.Nil(t, err)
+
+			if tc.outboundStatus.String() == statusSuccess {
+				assert.False(t, c.createSubCalled)
+			} else {
+				assert.True(t, c.createSubCalled)
+			}
+		})
+	}
+}
+
+func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
+	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	c := &mockClient{
+		t: t,
+	}
+	p := &mockManagedAppProv{}
+	handler := NewManagedApplicationHandler(p, cm, c)
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: mv1.EnvironmentGVK(),
+		},
+	}
+	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	assert.Nil(t, err)
+}
+
+func Test_managedApp(t *testing.T) {
+	m := provManagedApp{
+		managedAppName: "managed-app-name",
+		teamName:       "123",
+		data:           map[string]interface{}{"abc": "123"},
+	}
+
+	assert.Equal(t, m.managedAppName, m.GetManagedApplicationName())
+	assert.Equal(t, m.teamName, m.GetTeamName())
+	assert.Equal(t, m.data["abc"].(string), m.GetApplicationDetailsValue("abc"))
+
+	m.data = nil
+	assert.Empty(t, m.GetApplicationDetailsValue("abc"))
+}
+
+type mockManagedAppProv struct {
+	t                      *testing.T
+	status                 mock.MockRequestStatus
+	expectedManagedApp     string
+	expectedManagedAppData map[string]interface{}
+	expectedTeamName       string
+	prov                   string
+}
+
+func (m *mockManagedAppProv) ApplicationRequestProvision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
+	m.prov = provision
+	v := ma.(provManagedApp)
+	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
+	assert.Equal(m.t, m.expectedManagedAppData, v.data)
+	assert.Equal(m.t, m.expectedTeamName, v.teamName)
+	return m.status
+}
+
+func (m *mockManagedAppProv) ApplicationRequestDeprovision(ma prov.ApplicationRequest) (status prov.RequestStatus) {
+	m.prov = deprovision
+	v := ma.(provManagedApp)
+	assert.Equal(m.t, m.expectedManagedApp, v.managedAppName)
+	assert.Equal(m.t, m.expectedManagedAppData, v.data)
+	assert.Equal(m.t, m.expectedTeamName, v.teamName)
+	return m.status
+}
+
+const teamName = "team-a"
+
+var team = &defs.PlatformTeam{
+	ID:      "1122",
+	Name:    teamName,
+	Default: true,
+}
+
+var managedAppForTest = mv1.ManagedApplication{
+	ResourceMeta: v1.ResourceMeta{
+		Name: "app-test",
+		Metadata: v1.Metadata{
+			ID: "11",
+			Scope: v1.MetadataScope{
+				Kind: mv1.EnvironmentGVK().Kind,
+				Name: "env-1",
+			},
+		},
+		SubResources: map[string]interface{}{
+			defs.XAgentDetails: map[string]interface{}{
+				"sub_manage_app_key": "sub_manage_app_val",
+			},
+		},
+	},
+	Owner: &v1.Owner{
+		Type: 0,
+		ID:   team.ID,
+	},
+	Spec: mv1.ManagedApplicationSpec{},
+	Status: &v1.ResourceStatus{
+		Level: statusPending,
+	},
+}

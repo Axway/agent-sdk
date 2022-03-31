@@ -5,7 +5,9 @@
 package {{.res.version}}
 
 import (
+	"fmt"
     "encoding/json"
+
     apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
@@ -17,7 +19,9 @@ var (
         },
         APIVersion: "{{.res.version}}",
     }
+{{ $scopesLen := 0 }}
 {{if .res.scopes }}
+  {{ $scopesLen = len .res.scopes }}
   {{.res.kind}}Scopes = []string{"{{ join $.res.scopes "\", \""}}",}
 {{else}}
   {{.res.kind}}Scopes = []string{""}
@@ -42,6 +46,33 @@ type {{.res.kind}} struct {
 		{{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
         {{- $type}} {{if $isNotEmpty}} {{ $varName }}{{ $type }} {{else}} {{if eq $type "Owner"}} *apiv1.Owner {{else}} interface{} {{end}} {{end}} `json:"{{$field | strings.ToLower}}"`
 	{{end}}
+}
+
+// New{{.res.kind}} creates an empty *{{.res.kind}}
+func New{{.res.kind}}(name{{if .res.scopes }}{{ if gt $scopesLen 1 }}, scopeKind{{end}}, scopeName{{end}} string) (*{{.res.kind}}{{ if gt $scopesLen 1 }}, error{{end}}) {
+    {{ if gt $scopesLen 1 }}validScope := false
+    for _, s := range {{.res.kind}}Scopes {
+        if scopeKind == s {
+            validScope = true
+            break
+        }
+    }
+    if !validScope {
+        return nil, fmt.Errorf("scope '%s' not valid for {{.res.kind}} kind", scopeKind)
+    }
+
+    {{end}}return &{{.res.kind}}{
+        ResourceMeta: apiv1.ResourceMeta{
+            Name: name,
+            GroupVersionKind: _{{.res.kind}}GVK,{{if .res.scopes }}
+                Metadata: apiv1.Metadata{
+                Scope: apiv1.MetadataScope{
+                    Name: scopeName,
+                    Kind: {{ if gt $scopesLen 1 }}scopeKind{{else}}{{.res.kind}}Scopes[0]{{end}},
+                },
+            },{{end}}
+        },
+    }{{ if gt $scopesLen 1 }} , nil{{end}}
 }
 
 // {{.res.kind}}FromInstanceArray converts a []*ResourceInstance to a []*{{.res.kind}}

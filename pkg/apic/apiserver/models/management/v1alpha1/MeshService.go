@@ -39,6 +39,22 @@ type MeshService struct {
 	Spec  MeshServiceSpec `json:"spec"`
 }
 
+// NewMeshService creates an empty *MeshService
+func NewMeshService(name, scopeName string) *MeshService {
+	return &MeshService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _MeshServiceGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: MeshServiceScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // MeshServiceFromInstanceArray converts a []*ResourceInstance to a []*MeshService
 func MeshServiceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MeshService, error) {
 	newArray := make([]*MeshService, 0)

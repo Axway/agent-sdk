@@ -40,6 +40,16 @@ type Stage struct {
 	Spec  StageSpec    `json:"spec"`
 }
 
+// NewStage creates an empty *Stage
+func NewStage(name string) *Stage {
+	return &Stage{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _StageGVK,
+		},
+	}
+}
+
 // StageFromInstanceArray converts a []*ResourceInstance to a []*Stage
 func StageFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Stage, error) {
 	newArray := make([]*Stage, 0)

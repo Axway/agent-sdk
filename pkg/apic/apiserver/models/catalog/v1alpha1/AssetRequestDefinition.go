@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AssetRequestDefinitionScopes = []string{"Asset", "AssetRelease"}
+	AssetRequestDefinitionScopes = []string{"AuthorizationProfile"}
 )
 
 const AssetRequestDefinitionResourceName = "assetrequestdefinitions"
@@ -35,9 +35,27 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner               `json:"owner"`
-	References interface{}                `json:"references"`
-	Spec       AssetRequestDefinitionSpec `json:"spec"`
+	Authorization AssetRequestDefinitionAuthorization `json:"authorization"`
+	Owner         *apiv1.Owner                        `json:"owner"`
+	References    interface{}                         `json:"references"`
+	Spec          AssetRequestDefinitionSpec          `json:"spec"`
+	Webhooks      interface{}                         `json:"webhooks"`
+}
+
+// NewAssetRequestDefinition creates an empty *AssetRequestDefinition
+func NewAssetRequestDefinition(name, scopeName string) *AssetRequestDefinition {
+	return &AssetRequestDefinition{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestDefinitionGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetRequestDefinitionScopes[0],
+				},
+			},
+		},
+	}
 }
 
 // AssetRequestDefinitionFromInstanceArray converts a []*ResourceInstance to a []*AssetRequestDefinition
@@ -106,9 +124,11 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["authorization"] = res.Authorization
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["webhooks"] = res.Webhooks
 
 	return json.Marshal(out)
 }
@@ -138,6 +158,20 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource Authorization
+	if v, ok := aux.SubResources["authorization"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "authorization")
+		err = json.Unmarshal(sr, &res.Authorization)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource References
 	if v, ok := aux.SubResources["references"]; ok {
 		sr, err = json.Marshal(v)
@@ -147,6 +181,20 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Webhooks
+	if v, ok := aux.SubResources["webhooks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "webhooks")
+		err = json.Unmarshal(sr, &res.Webhooks)
 		if err != nil {
 			return err
 		}

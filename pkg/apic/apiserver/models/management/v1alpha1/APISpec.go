@@ -39,6 +39,22 @@ type APISpec struct {
 	Spec  ApiSpecSpec  `json:"spec"`
 }
 
+// NewAPISpec creates an empty *APISpec
+func NewAPISpec(name, scopeName string) *APISpec {
+	return &APISpec{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _APISpecGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: APISpecScopes[0],
+				},
+			},
+		},
+	}
+}
+
 // APISpecFromInstanceArray converts a []*ResourceInstance to a []*APISpec
 func APISpecFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APISpec, error) {
 	newArray := make([]*APISpec, 0)

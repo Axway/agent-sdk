@@ -35,10 +35,29 @@ func init() {
 // AccessRequest Resource
 type AccessRequest struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec       `json:"spec"`
-	State      AccessRequestState      `json:"state"`
+	Owner *apiv1.Owner `json:"owner"`
+	// GENERATE: The following code has been modified after code generation
+	// 	References AccessRequestReferences `json:"references"`
+	References []AccessRequestReferences `json:"references"`
+	Spec       AccessRequestSpec         `json:"spec"`
+	// 	Status     AccessRequestStatus       `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewAccessRequest creates an empty *AccessRequest
+func NewAccessRequest(name, scopeName string) *AccessRequest {
+	return &AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AccessRequestGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AccessRequestScopes[0],
+				},
+			},
+		},
+	}
 }
 
 // AccessRequestFromInstanceArray converts a []*ResourceInstance to a []*AccessRequest
@@ -110,7 +129,7 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["state"] = res.State
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -154,15 +173,17 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
+		delete(aux.SubResources, "status")
+		// 		err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

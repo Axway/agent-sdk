@@ -19,7 +19,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AssetRequestScopes = []string{"Asset"}
+	AssetRequestScopes = []string{"Application"}
 )
 
 const AssetRequestResourceName = "assetrequests"
@@ -35,12 +35,28 @@ func init() {
 // AssetRequest Resource
 type AssetRequest struct {
 	apiv1.ResourceMeta
+	Approval   AssetRequestApproval   `json:"approval"`
 	Owner      *apiv1.Owner           `json:"owner"`
 	References AssetRequestReferences `json:"references"`
 	Spec       AssetRequestSpec       `json:"spec"`
-	State      AssetRequestState      `json:"state"`
 	// 	Status     AssetRequestStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
+}
+
+// NewAssetRequest creates an empty *AssetRequest
+func NewAssetRequest(name, scopeName string) *AssetRequest {
+	return &AssetRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AssetRequestGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: AssetRequestScopes[0],
+				},
+			},
+		},
+	}
 }
 
 // AssetRequestFromInstanceArray converts a []*ResourceInstance to a []*AssetRequest
@@ -109,10 +125,10 @@ func (res *AssetRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["approval"] = res.Approval
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
@@ -143,6 +159,20 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource Approval
+	if v, ok := aux.SubResources["approval"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "approval")
+		err = json.Unmarshal(sr, &res.Approval)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource References
 	if v, ok := aux.SubResources["references"]; ok {
 		sr, err = json.Marshal(v)
@@ -152,20 +182,6 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource State
-	if v, ok := aux.SubResources["state"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "state")
-		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}

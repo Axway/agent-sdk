@@ -119,6 +119,44 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 	return nil
 }
 
+// DeleteAPIServiceInstanceWithFinalizers deletes an api service instance in central, handling finalizers
+func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error {
+	url := c.cfg.GetInstancesURL() + "/" + ri.Name
+	finalizers := ri.Finalizers
+	ri.Finalizers = make([]v1.Finalizer, 0)
+
+	// handle finalizers
+	for _, f := range finalizers {
+		if f.Name == AccessRequestDefinitionFinalizer {
+			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
+			if err == nil {
+				continue
+			}
+		}
+		ri.Finalizers = append(ri.Finalizers, f)
+	}
+
+	// get the full instance
+	currentRI, err := c.executeAPIServiceAPI(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	// update the finalizers in the instance from central
+	currentRI.Finalizers = ri.Finalizers
+
+	// update instance
+	updatedInstance, err := json.Marshal(currentRI)
+	if err != nil {
+		return err
+	}
+	_, err = c.apiServiceDeployAPI(http.MethodPut, url, updatedInstance)
+	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
+		return err
+	}
+
+	return c.DeleteAPIServiceInstance(ri.Name)
+}
+
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID(consumerInstanceID)
@@ -258,6 +296,36 @@ func (c *ServiceClient) executeAPIServiceAPI(method, url string, buffer []byte) 
 	ri := &v1.ResourceInstance{}
 	json.Unmarshal(response.Body, ri)
 	return ri, nil
+}
+
+// getFinalizers - get the finalizers from the resource
+func (c *ServiceClient) getFinalizers(url string) ([]v1.Finalizer, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	request := coreapi.Request{
+		Method: http.MethodGet,
+		URL:    url,
+		QueryParams: map[string]string{
+			FieldsKey: "finalizers",
+		},
+		Headers: headers,
+	}
+	response, err := c.apiClient.Send(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Code >= http.StatusBadRequest {
+		responseErr := readResponseErrors(response.Code, response.Body)
+		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
+	}
+
+	ri := &v1.ResourceInstance{}
+	json.Unmarshal(response.Body, ri)
+	return ri.Finalizers, nil
 }
 
 // create the on-and-only secret for the environment

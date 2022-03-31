@@ -52,7 +52,7 @@ type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	CreateSubResourceScoped(scopeKindPlural, scopeName, resKindPlural, name, group, version string, subs map[string]interface{}) error
+	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type item struct {
@@ -276,41 +276,10 @@ func (m *AttributeMigration) getRI(url string) (*v1.ResourceInstance, error) {
 }
 
 func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
-	plural, err := getPlural(ri.Kind)
-	if err != nil {
-		return err
-	}
-
 	subResources := map[string]interface{}{
 		defs.XAgentDetails: ri.SubResources[defs.XAgentDetails],
 	}
-
-	err = m.client.CreateSubResourceScoped(
-		mv1a.EnvironmentResourceName,
-		m.cfg.GetEnvironmentName(),
-		plural,
-		ri.Name,
-		ri.Group,
-		ri.APIVersion,
-		subResources,
-	)
-
-	return err
-}
-
-func getPlural(kind string) (string, error) {
-	switch kind {
-	case mv1a.APIServiceGVK().Kind:
-		return mv1a.APIServiceResourceName, nil
-	case mv1a.APIServiceRevisionGVK().Kind:
-		return mv1a.APIServiceRevisionResourceName, nil
-	case mv1a.APIServiceInstanceGVK().Kind:
-		return mv1a.APIServiceInstanceResourceName, nil
-	case mv1a.ConsumerInstanceGVK().Kind:
-		return mv1a.ConsumerInstanceResourceName, nil
-	default:
-		return "", fmt.Errorf("cannot get plural for %s", kind)
-	}
+	return m.client.CreateSubResourceScoped(ri.ResourceMeta, subResources)
 }
 
 func updateAttrs(ri *v1.ResourceInstance) item {

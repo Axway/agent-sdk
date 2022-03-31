@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/config"
-
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-
-	"github.com/stretchr/testify/assert"
-
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateWatchTopic(t *testing.T) {
@@ -43,15 +40,16 @@ func TestCreateWatchTopic(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			rc := &fakeRI{
+			rc := &mockAPIClient{
 				ri:        tc.ri,
 				createErr: tc.err,
 			}
 
-			bts, err := tc.ri.MarshalJSON()
+			wt := mv1.NewWatchTopic("")
+			err := wt.FromInstance(tc.ri)
 			assert.Nil(t, err)
 
-			wt, err := createWatchTopic(bts, rc)
+			wt, err = createOrUpdateWatchTopic(wt, rc)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 			} else {
@@ -115,22 +113,56 @@ func TestGetCachedWatchTopic(t *testing.T) {
 	}
 }
 
+type mockWatchTopicFeatures struct {
+	isMPSEnabled bool
+	agentType    config.AgentType
+}
+
+func (m *mockWatchTopicFeatures) IsMarketplaceSubsEnabled() bool {
+	return m.isMPSEnabled
+}
+
+func (m *mockWatchTopicFeatures) GetAgentType() config.AgentType {
+	return m.agentType
+}
+
 func Test_parseWatchTopic(t *testing.T) {
-	bts, err := parseWatchTopicTemplate("name", "scope", "DiscoveryAgent", NewDiscoveryWatchTopic)
-	assert.Nil(t, err)
+	tests := []struct {
+		name         string
+		isMPSEnabled bool
+	}{
+		{
+			name: "Should create a watch topic without marketplace subs enabled",
+		},
+		{
+			name:         "Should create a watch topic with marketplace subs enabled",
+			isMPSEnabled: true,
+		},
+	}
 
-	assert.True(t, len(bts) > 0)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			features := &mockWatchTopicFeatures{isMPSEnabled: tc.isMPSEnabled}
 
-	bts, err = parseWatchTopicTemplate("name", "scope", "TraceabilityAgent", NewTraceWatchTopic)
-	assert.Nil(t, err)
+			wt, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", mv1.DiscoveryAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
+			assert.NotNil(t, wt)
 
-	assert.True(t, len(bts) > 0)
+			wt, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", mv1.TraceabilityAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
+			assert.NotNil(t, wt)
+
+			wt, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", mv1.GovernanceAgentGVK().GroupKind, features))
+			assert.Nil(t, err)
+			assert.NotNil(t, wt)
+		})
+	}
 }
 
 func TestGetOrCreateWatchTopic(t *testing.T) {
 	tests := []struct {
 		name      string
-		rc        *fakeRI
+		client    *mockAPIClient
 		hasErr    bool
 		agentType config.AgentType
 	}{
@@ -138,7 +170,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should retrieve a watch topic if it exists",
 			hasErr:    false,
 			agentType: config.DiscoveryAgent,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
 						Name: "wt-name",
@@ -150,7 +182,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a trace agent if it does not exist",
 			agentType: config.TraceabilityAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -163,7 +195,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a discovery agent if it does not exist",
 			agentType: config.DiscoveryAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -176,7 +208,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			name:      "should create a watch topic for a governance agent if it does not exist",
 			agentType: config.GovernanceAgent,
 			hasErr:    false,
-			rc: &fakeRI{
+			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),
 				ri: &apiv1.ResourceInstance{
 					ResourceMeta: apiv1.ResourceMeta{
@@ -190,30 +222,17 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
+			features := &mockWatchTopicFeatures{isMPSEnabled: true, agentType: tc.agentType}
 
-			wt, err := getOrCreateWatchTopic(name, "scope", tc.rc, tc.agentType)
+			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, features)
 			if tc.hasErr == true {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tc.rc.ri.Name, wt.Name)
+				assert.Equal(t, tc.client.ri.Name, wt.Name)
 			}
 		})
 	}
-}
-
-type fakeRI struct {
-	createErr error
-	getErr    error
-	ri        *apiv1.ResourceInstance
-}
-
-func (m fakeRI) Create(_ string, _ []byte) (*apiv1.ResourceInstance, error) {
-	return m.ri, m.createErr
-}
-
-func (m fakeRI) Get(_ string) (*apiv1.ResourceInstance, error) {
-	return m.ri, m.getErr
 }
 
 type mockCacheGet struct {
@@ -223,4 +242,372 @@ type mockCacheGet struct {
 
 func (m mockCacheGet) Get(_ string) (interface{}, error) {
 	return m.item, m.err
+}
+
+func Test_shouldPushUpdate(t *testing.T) {
+	type args struct {
+		cur []mv1.WatchTopicSpecFilters
+		new []mv1.WatchTopicSpecFilters
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "should not push update",
+			args: args{
+				cur: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+				new: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "should push update, second more",
+			args: args{
+				cur: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+				new: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind1",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "should push update, first more",
+			args: args{
+				cur: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind1",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+				new: []mv1.WatchTopicSpecFilters{
+					{
+						Group: "group",
+						Scope: nil,
+						Kind:  "kind",
+						Name:  "name",
+						Type:  []string{"type1", "type2", "type3"},
+					},
+				},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			createWatchTopic := func(filters []mv1.WatchTopicSpecFilters) *mv1.WatchTopic {
+				wt := mv1.NewWatchTopic("")
+				wt.Spec.Filters = filters
+				return wt
+			}
+
+			if got := shouldPushUpdate(createWatchTopic(tt.args.cur), createWatchTopic(tt.args.new)); got != tt.want {
+				t.Errorf("shouldPushUpdate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_filtersEqual(t *testing.T) {
+	type args struct {
+		a mv1.WatchTopicSpecFilters
+		b mv1.WatchTopicSpecFilters
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantEqual bool
+	}{
+		{
+			name: "group diff",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group1",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "kind diff",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind1",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "name diff",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name1",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff 1",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff 2",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: nil,
+					Kind:  "kind",
+					Name:  "name",
+					Type:  []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff name",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name1",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff name",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind1",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff types 1",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "scope diff types 2",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "equal",
+			args: args{
+				a: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+				b: mv1.WatchTopicSpecFilters{
+					Group: "group",
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: "kind",
+						Name: "name",
+					},
+					Kind: "kind",
+					Name: "name",
+					Type: []string{"type1", "type2", "type3"},
+				},
+			},
+			wantEqual: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotEqual := filtersEqual(tt.args.a, tt.args.b); gotEqual != tt.wantEqual {
+				t.Errorf("filtersEqual() = %v, want %v", gotEqual, tt.wantEqual)
+			}
+		})
+	}
 }

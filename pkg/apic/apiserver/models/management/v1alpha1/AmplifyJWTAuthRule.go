@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -37,6 +38,33 @@ type AmplifyJWTAuthRule struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner `json:"owner"`
 	Spec  interface{}  `json:"spec"`
+}
+
+// NewAmplifyJWTAuthRule creates an empty *AmplifyJWTAuthRule
+func NewAmplifyJWTAuthRule(name, scopeKind, scopeName string) (*AmplifyJWTAuthRule, error) {
+	validScope := false
+	for _, s := range AmplifyJWTAuthRuleScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for AmplifyJWTAuthRule kind", scopeKind)
+	}
+
+	return &AmplifyJWTAuthRule{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:             name,
+			GroupVersionKind: _AmplifyJWTAuthRuleGVK,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: scopeName,
+					Kind: scopeKind,
+				},
+			},
+		},
+	}, nil
 }
 
 // AmplifyJWTAuthRuleFromInstanceArray converts a []*ResourceInstance to a []*AmplifyJWTAuthRule

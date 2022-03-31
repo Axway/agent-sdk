@@ -9,9 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestState  (management.v1alpha1.AccessRequest)
-type AccessRequestState struct {
-	Name string `json:"name"`
-	// Description of the phase.
-	Message string `json:"message,omitempty"`
+// CredentialReferences  (management.v1alpha1.Credential)
+type CredentialReferences struct {
+	// Name of the catalog Application for which the initial Credential was generated
+	Application string `json:"application,omitempty"`
 }

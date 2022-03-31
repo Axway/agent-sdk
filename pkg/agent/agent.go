@@ -18,6 +18,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -63,6 +64,7 @@ type agentData struct {
 
 	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
+	provisioner            provisioning.Provisioning
 }
 
 var agent agentData
@@ -93,6 +95,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return err
 	}
 	agent.agentFeaturesCfg = agentFeaturesCfg
+	centralCfg.SetIsMarketplaceSubsEnabled(agentFeaturesCfg.MarketplaceProvisioningEnabled())
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
@@ -340,6 +343,14 @@ func GetAPICache() cache.Cache {
 	return agent.cacheManager.GetAPIServiceCache()
 }
 
+// GetCacheManager - Returns the cache
+func GetCacheManager() agentcache.Manager {
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, agent.agentFeaturesCfg.PersistCacheEnabled())
+	}
+	return agent.cacheManager
+}
+
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
 	if agent.agentResourceManager == nil {
@@ -399,11 +410,21 @@ func startStreamMode(agent agentData) error {
 		handler.NewInstanceHandler(agent.cacheManager),
 		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		handler.NewCRDHandler(agent.cacheManager),
+		handler.NewARDHandler(agent.cacheManager),
+		handler.NewACLHandler(agent.cacheManager),
 		agent.proxyResourceHandler,
 	}
 
+	// Register managed application and access handler for traceability agent
+	// For discovery agent, the handlers gets registered while setting up provisioner
+	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
+		handlers = append(handlers, handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
+		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
+	}
+
 	cs, err := stream.NewStreamer(
-		api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL()),
+		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
