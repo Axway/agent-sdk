@@ -148,7 +148,6 @@ type CentralConfig interface {
 	SetIsMarketplaceSubsEnabled(enabled bool)
 	IsMarketplaceSubsEnabled() bool
 	GetSingleURL() string
-	GetConnFilter() []string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -165,7 +164,6 @@ type CentralConfiguration struct {
 	AgentName                 string               `config:"agentName"`
 	URL                       string               `config:"url"`
 	singleURL                 string               `config:"platformSingleURL"`
-	connFilter                []string             `config:"connFilter"`
 	PlatformURL               string               `config:"platformURL"`
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
@@ -547,11 +545,6 @@ func (c *CentralConfiguration) GetSingleURL() string {
 	return c.singleURL
 }
 
-// GetConnFilter - Returns the central base URL
-func (c *CentralConfiguration) GetConnFilter() []string {
-	return c.connFilter
-}
-
 const (
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
@@ -560,7 +553,6 @@ const (
 	pathAuthPublicKey             = "central.auth.publicKey"
 	pathAuthKeyPassword           = "central.auth.keyPassword"
 	pathAuthURL                   = "central.auth.url"
-	pathConnFilter                = "central.connFilter"
 	pathSingleURL                 = "central.singleURL" //TODO: kf move up from central to platform?
 	pathAuthRealm                 = "central.auth.realm"
 	pathAuthClientID              = "central.auth.clientId"
@@ -702,7 +694,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
 	props.AddStringProperty(pathSingleURL, "", "Alternate Connection for Agent if using static IP")
-	props.AddStringSliceProperty(pathConnFilter, nil, "Filter List of connections if using Static IP")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
@@ -801,7 +792,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.singleURL = props.StringPropertyValue(pathSingleURL)
-	cfg.connFilter = props.StringSlicePropertyValue(pathConnFilter)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)

@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,16 +55,18 @@ type Client interface {
 
 type httpClient struct {
 	Client
-	httpClient *http.Client
-	timeout    time.Duration
+	httpClient         *http.Client
+	timeout            time.Duration
+	dialer             *net.Dialer
+	singleEntryHostMap map[string]string
 }
 
 type configAgent struct {
-	agentName       string
-	environmentName string
-	isDocker        bool
-	singleURL       string
-	connFilter      []string
+	agentName         string
+	environmentName   string
+	isDocker          bool
+	singleURL         string
+	singleEntryFilter []string
 }
 
 var cfgAgent *configAgent
@@ -72,12 +76,22 @@ func init() {
 }
 
 // SetConfigAgent -
-func SetConfigAgent(env string, isDocker bool, agentName string, singleURL string, connFilter []string) {
+func SetConfigAgent(env string, isDocker bool, agentName string, singleURL string, singleEntryFilter []string) {
 	cfgAgent.environmentName = env
 	cfgAgent.isDocker = isDocker
 	cfgAgent.agentName = agentName
 	cfgAgent.singleURL = singleURL
-	cfgAgent.connFilter = connFilter
+	if cfgAgent.singleEntryFilter != nil {
+		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, singleEntryFilter...)
+	} else {
+		cfgAgent.singleEntryFilter = singleEntryFilter
+	}
+}
+
+func AddSingleEntryFilterURL(filterURL string) {
+	if cfgAgent.singleEntryFilter != nil {
+		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, filterURL)
+	}
 }
 
 // NewClient - creates a new HTTP client
@@ -88,12 +102,44 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
 func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	httpCli := createClient(tlsCfg, parseProxyURL(proxyURL))
-	httpCli.Timeout = timeout
-	return &httpClient{
-		timeout:    timeout,
-		httpClient: httpCli,
+	client := &httpClient{
+		timeout: timeout,
+		dialer: &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 50 * time.Second,
+			DualStack: true,
+		},
+		singleEntryHostMap: getSingleEntryMapping(),
 	}
+	client.createClient(tlsCfg, parseProxyURL(proxyURL))
+
+	return client
+}
+
+func getSingleEntryMapping() map[string]string {
+	hostMapping := make(map[string]string)
+	entryURL, err := url.Parse(cfgAgent.singleURL)
+	if err == nil {
+		entryPort := parsePort(entryURL)
+		for _, filteredURL := range cfgAgent.singleEntryFilter {
+			svcURL, err := url.Parse(filteredURL)
+			if err == nil {
+				svcPort := parsePort(svcURL)
+				hostMapping[fmt.Sprintf("%s:%d", svcURL.Host, svcPort)] = fmt.Sprintf("%s:%d", entryURL.Host, entryPort)
+			}
+		}
+	}
+	return hostMapping
+}
+
+func parsePort(url *url.URL) int {
+	port := 0
+	if url.Port() == "" {
+		port, _ = net.LookupPort("tcp", url.Scheme)
+	} else {
+		port, _ = strconv.Atoi(url.Port())
+	}
+	return port
 }
 
 func parseProxyURL(proxyURL string) *url.URL {
@@ -107,28 +153,38 @@ func parseProxyURL(proxyURL string) *url.URL {
 	return nil
 }
 
-func createClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
+func (c *httpClient) createClient(tlsCfg config.TLSConfig, proxyURL *url.URL) {
 	if tlsCfg != nil {
-		return createHTTPSClient(tlsCfg, proxyURL)
+		c.createHTTPSClient(tlsCfg, proxyURL)
 	}
-	return createHTTPClient(proxyURL)
+	c.createHTTPClient(proxyURL)
 }
 
-func createHTTPClient(proxyURL *url.URL) *http.Client {
-	return &http.Client{
+func (c *httpClient) createHTTPClient(proxyURL *url.URL) {
+	c.httpClient = &http.Client{
 		Transport: &http.Transport{
-			Proxy: util.GetProxyURL(proxyURL),
+			Proxy:       util.GetProxyURL(proxyURL),
+			DialContext: c.Dialer,
 		},
+		Timeout: c.timeout,
 	}
 }
 
-func createHTTPSClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
-	return &http.Client{
+func (c *httpClient) createHTTPSClient(tlsCfg config.TLSConfig, proxyURL *url.URL) {
+	c.httpClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg.BuildTLSConfig(),
 			Proxy:           util.GetProxyURL(proxyURL),
 		},
+		Timeout: c.timeout,
 	}
+}
+
+func (c *httpClient) Dialer(ctx context.Context, network, addr string) (net.Conn, error) {
+	if shost, ok := c.singleEntryHostMap[addr]; ok {
+		addr = shost
+	}
+	return c.dialer.DialContext(ctx, network, addr)
 }
 
 func getTimeoutFromEnvironment() time.Duration {
@@ -151,23 +207,8 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 	}
 	return params.Encode()
 }
-
-func (c *httpClient) createURL(URL string) (string, string) {
-	purl, _ := url.Parse(URL)
-	for _, v := range cfgAgent.connFilter {
-		log.Tracef("Matching %s contains %s", URL, v)
-		if strings.Contains(URL, v) {
-			URL = strings.Replace(URL, purl.Host, cfgAgent.singleURL, -1)
-			log.Debugf("Replaced %s using Host header %s", URL, purl.Host)
-			break
-		}
-	}
-	return URL, purl.Host
-}
-
 func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
-	requestURL, host := c.createURL(request.URL)
-	urlMutated := request.URL != requestURL
+	requestURL := request.URL
 	if len(request.QueryParams) != 0 {
 		requestURL += "?" + c.getURLEncodedQueryParams(request.QueryParams)
 	}
@@ -202,9 +243,6 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 		ua := fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType)
 		req.Header.Set("User-Agent", ua)
-	}
-	if urlMutated {
-		req.Host = host
 	}
 	return req, err
 }

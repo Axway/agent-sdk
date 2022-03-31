@@ -24,8 +24,8 @@ import (
 
 	"math/big"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	jwt "github.com/golang-jwt/jwt"
@@ -275,6 +275,7 @@ type platformTokenGenerator struct {
 	tlsConfig config.TLSConfig // TLS Config
 	proxyURL  string           // ProxyURL
 	singleURL string           // Alternate Connection for static IP routing
+	apiClient api.Client
 }
 
 // prepareInitialToken prepares a token for an access request
@@ -298,23 +299,11 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 
 	return requestToken, nil
 }
-func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
-	client := http.Client{Timeout: ptg.timeout}
-	httpTransport := &http.Transport{}
-
-	if ptg.tlsConfig != nil {
-		httpTransport.TLSClientConfig = ptg.tlsConfig.BuildTLSConfig()
+func (ptg *platformTokenGenerator) getHTTPClient() api.Client {
+	if ptg.apiClient == nil {
+		ptg.apiClient = api.NewClientWithTimeout(ptg.tlsConfig, ptg.proxyURL, ptg.timeout)
 	}
-
-	if ptg.proxyURL != "" {
-		url, err := url.Parse(ptg.proxyURL)
-		if err != nil {
-			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
-		}
-		httpTransport.Proxy = util.GetProxyURL(url)
-	}
-	client.Transport = httpTransport
-	return client
+	return ptg.apiClient
 }
 
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
@@ -326,52 +315,35 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 		"client_assertion":      []string{requestToken},
 	})
 
-	duration := time.Now().Sub(startTime)
-	if err != nil {
-		log.Tracef("%s [%dms] - ERR - %s - %s", "POST", duration.Milliseconds(), ptg.url, err.Error())
-	} else {
-		log.Tracef("%s [%dms] - %d - %s", "POST", duration.Milliseconds(), resp.StatusCode, ptg.url)
-	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	defer closeHelper(resp.Body)
-	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		log.Debugf("bad response from AxwayID: %s: %s, request time : %s", resp.Status, body, startTime.String())
+	if resp.Code != 200 {
+		body := resp.Body
+		log.Debugf("bad response from AxwayID: %d %s: %s, request time : %s", resp.Code, http.StatusText(resp.Code), body, startTime.String())
 		log.Debug("please check the value for CENTRAL_AUTH_URL: The Amplify login URL.  Otherwise, possibly a clock syncing issue. Please check NTP daemon, if being used, that is up and running correctly.")
-		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
+		return nil, fmt.Errorf("bad response from AxwayId: %d %s", resp.Code, http.StatusText(resp.Code))
 	}
 
 	tokens := axwayTokenResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+	if err := json.Unmarshal(resp.Body, &tokens); err != nil {
 		return nil, err
 	}
 
 	return &tokens, nil
 }
 
-func (ptg *platformTokenGenerator) postAuthForm(client http.Client, URL string, data url.Values) (resp *http.Response, err error) {
-	var altHost string = ""
-	if ptg.singleURL != "" {
-		// Swap the baseURL with the static IP DNS entry
-		purl, _ := url.Parse(URL)
-		URL = strings.Replace(URL, purl.Host, ptg.singleURL, -1)
-		altHost = purl.Host
+func (ptg *platformTokenGenerator) postAuthForm(client api.Client, URL string, data url.Values) (resp *api.Response, err error) {
+	req := api.Request{
+		Method: api.POST,
+		URL:    URL,
+		Body:   []byte(data.Encode()),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
 	}
-	req, err := http.NewRequest("POST", URL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if altHost != "" {
-		// Force the host to original baseURL
-		log.Debugf("Replaced %s using Host header %s", URL, altHost)
-		req.Host = altHost
-	}
-	return client.Do(req)
+	return client.Send(req)
 }
 
 type tokenHolder struct {
