@@ -288,6 +288,9 @@ func (j *discoveryCache) updateCategoryCache() {
 }
 
 func (j *discoveryCache) updateARDCache() {
+	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		return
+	}
 	log.Trace("updating access request definition cache")
 
 	// create an empty accessrequestdef to gen url
@@ -359,6 +362,9 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 }
 
 func (j *discoveryCache) updateCRDCache() {
+	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		return
+	}
 	log.Trace("updating credential request definition cache")
 
 	// create an empty credentialrequestdef to gen url
