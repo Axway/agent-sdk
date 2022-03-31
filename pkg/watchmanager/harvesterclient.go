@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -43,9 +44,10 @@ func newHarvesterClient(cfg *harvesterConfig) *harvesterClient {
 	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
 	tlsCfg.LoadFrom(cfg.tlsCfg)
 	return &harvesterClient{
-		url:    cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
-		cfg:    cfg,
-		client: api.NewClient(tlsCfg, cfg.proxyURL),
+		url: cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
+		cfg: cfg,
+		// TODO - setup timeout from central config
+		client: api.NewSingleEntryClient(tlsCfg, cfg.proxyURL, 30*time.Second),
 	}
 }
 

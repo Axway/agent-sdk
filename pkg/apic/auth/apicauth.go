@@ -301,7 +301,7 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 }
 func (ptg *platformTokenGenerator) getHTTPClient() api.Client {
 	if ptg.apiClient == nil {
-		ptg.apiClient = api.NewClientWithTimeout(ptg.tlsConfig, ptg.proxyURL, ptg.timeout)
+		ptg.apiClient = api.NewSingleEntryClient(ptg.tlsConfig, ptg.proxyURL, ptg.timeout)
 	}
 	return ptg.apiClient
 }
