@@ -20,19 +20,19 @@
     - [Access Request Provision and Deprovision](#access-request-provision-and-deprovision)
     - [Credential Request Provision and Deprovision](#credential-request-provision-and-deprovision)
 
-Marketplace Provisioning allows the consumer to create applications, associate products to the application, and create credentials in the application. Amplify Agents SDK publishes API server resources which result may be added to products within the Marketplace. The agents can configure data that is required from consumers, at the time of access request, to provision access to the resource in the connected gateway.
+Marketplace Provisioning allows the consumer to create applications, associate products, and create credentials. Amplify Agents SDK watches for API server resources to trigger provisioning events for the agent to handle. The agents can configure data that is required from consumers to provision access or create credentials for the resource in the connected gateway.
 
 ## Provisioning Resources and Schemas
 
 ### Creating Access Request Schemas
 
-An Access Request Definition tells Marketplace the information that a consumer needs to provide in order for the agent to provision that consumer the ability to use a discovered API.
+An Access Request Definition tells Marketplace the information that a consumer may provide for granting access to a discovered API.
 
 The Amplify Agent SDK provides a mechanism to set up access request definition schemas based on configuration parameters required by the connected gateway. The agent can set up schemas which register resources of type AccessRequestDefinition in Amplify Central. When the agent discovers an API and publishes it to Amplify Central, the created resource references one of the AccessRequestDefinition resources and associates it with the published API. This could be a schema per API on the target gateway or based on the authentication type of API.
 
-The agent implementation can use the helper method `agent.NewAPIKeyAccessRequestBuilder().Register()` for an access request definition named *api-key* for API Key APIs that require no additional data for provisioning. It is also possible for the agent to create it's own access request definitions by using `agent.NewAccessRequestBuilder()` adding schema properties, see below, before calling Register.
+The agent implementation can use the helper method `agent.NewAPIKeyAccessRequestBuilder().Register()` for an access request definition named *api-key* for API Key APIs that require no additional data for provisioning. It is also possible for the agent to create its own access request definitions by using `agent.NewAccessRequestBuilder()`, adding schema properties, see below, before calling Register.
 
-Below is an example of using the builder to create a single Access Request Definition, named after an API. The example only adds a single property, Access Tier, sets it as a required string with an enumeration of accepted. This could be called as part of the discovery process of an API, or at startup if its a single schema for many APIs.
+Below is an example of using the builder to create a single Access Request Definition, named after an API. A single required property, Access Tier, with a list of accepted values. This could be called as part of the discovery process of an API, or at startup if its a single schema for many APIs.
 
 ```go
 import (
@@ -57,11 +57,11 @@ func createAccessRequestDefinition(apiName string, tiers []string) {
 
 ### Creating Credential Request Schemas
 
-A Credential Request Definition tells Marketplace the information that a consumer needs to provide in order for the agent to provision that consumer the credentials required by a discovered API.
+A Credential Request Definition tells Marketplace the information that a consumer may provide for creating credentials required by a discovered API.
 
-The Amplify Agent SDK provides a mechanism to set up credential request definition schemas based on configuration parameters required by the connected gateway. The agent can set up schemas which register resources of type CredentialRequestDefinition in Amplify Central. When the agent discovers an API and publishes it to Amplify Central, the created resource references one or more of the CredentialRequestDefinition resources and associates it/them with the published API. This would be a list of all credential types that a particular API will support.
+The Amplify Agent SDK provides a mechanism to set up credential request definition schemas based on configuration parameters required by the connected gateway. The agent can set up schemas which register resources of type CredentialRequestDefinition in Amplify Central. When the agent discovers an API and publishes it to Amplify Central, the created resource will then reference one or more of the CredentialRequestDefinition resources and associate them with the published API. Resulting in a list of all credential types that a particular API supports.
 
-Along with the data needed to handle a provisioning request the Credential Request Definition also creates a provisioning schema that informs Amplify Central about the structure of the data the provisioned credential will have. For example an oauth credential will define a provisioning schema with a *client id* field and a *client secret* field that shall be encrypted.
+Along with the data needed to handle a provisioning request, the Credential Request Definition also contains a provisioning schema that defines the structure of the provisioned credential. For example an oauth credential will define a provisioning schema with a *client id* field and a *client secret* field that shall be encrypted.
 
 The agent implementation provides a few helper methods for creating these Credential Requests Definitions, as described below.
 
@@ -79,7 +79,7 @@ func createCredentialRequestDefinitions() {
     SetRequired().
     SetDescription("Credential Type").
     IsString().
-    SetEnumValues([]{"Public","Confidential"}) // add an enumeration
+      SetEnumValues([]{"Public","Confidential"}) // add an enumeration
 
   agent.NewOAuthCredentialRequestBuilder(             // Oauth CRD builder helper, adds client id field
     agent.WithCRDOAuthSecret(),                       // its a secret based credential, add client secret field
@@ -165,7 +165,7 @@ type StringPropertyBuilder interface {
 Example of a required string property declaration.
 
 ```go
-apic.NewSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
  SetName("stringProperty").
  SetDescription("Description of the String property.").
  SetRequired().
@@ -175,7 +175,7 @@ apic.NewSchemaPropertyBuilder().
 Example of a required choice property declaration
 
 ```go
-apic.NewSubscriptionSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
   SetName("stringList").
   SetDescription("Description of the String property.").
   SetRequired().
@@ -188,7 +188,7 @@ apic.NewSubscriptionSchemaPropertyBuilder().
 Example of a secret property for a credential request provisioning schema
 
 ```go
-apic.NewSubscriptionSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
   SetName("secretProperty").
   SetDescription("Description of the secret property.").
   SetRequired().
@@ -205,13 +205,12 @@ type NumberPropertyBuilder interface {
   // SetMaxValue - Set the maximum allowed property value
   SetMaxValue(min float64) NumberPropertyBuilder
 }
-
 ```
 
 Example of a Number property with Min and Max values.
 
 ```go
-apic.NewSubscriptionSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
   SetName("Number property").
   SetDescription("Description of the Number property.").
   IsNumber().
@@ -233,12 +232,12 @@ type IntegerPropertyBuilder interface {
 Same display as for number property except accepting only integer values
 
 ```go
-apic.NewSubscriptionSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
   SetName("Integer property").
   SetDescription("Description of the Integer property.").
   IsInteger().
-      SetMinValue(10).
-      SetMaxValue(42)
+    SetMinValue(10).
+    SetMaxValue(42)
 ```
 
 #### Array Property Builder
@@ -247,83 +246,32 @@ Create an array of property.
 
 ```go
 type ArrayPropertyBuilder interface {
-    // AddItem - Add a item property in the array property
-    AddItem(item PropertyBuilder) ArrayPropertyBuilder
-    // SetMinItems - Set the minimum number of items in the array property
-    SetMinItems(min uint) ArrayPropertyBuilder
-    // SetMaxItems - Set the maximum number of items in the array property
-    SetMaxItems(max uint) ArrayPropertyBuilder
+  // AddItem - Add a item property in the array property
+  AddItem(item PropertyBuilder) ArrayPropertyBuilder
+  // SetMinItems - Set the minimum number of items in the array property
+  SetMinItems(min uint) ArrayPropertyBuilder
+  // SetMaxItems - Set the maximum number of items in the array property
+  SetMaxItems(max uint) ArrayPropertyBuilder
 }
 ```
 
 Example of an array property allowing integer inputs with Min and Max constraints.
 
 ```go
-apic.NewSubscriptionSchemaPropertyBuilder().
+provisioning.NewSchemaPropertyBuilder().
   SetName("Array property").
   SetDescription("Description of the Array property.").
   IsArray().
-    AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
+    AddItem(provisioning.NewSchemaPropertyBuilder().
       SetName("HTTP Code").
       IsInteger().
         SetMinValue(100).
         SetMaxValue(599))
 ```
 
-Example of an array property allowing the user to choose between 2 kind of authorization:
-
-```go
-apic.NewSubscriptionSchemaPropertyBuilder().
-  SetName("Authorization").
-  SetDescription("Determines the type of authorization used.").
-  IsArray().
-  SetMaxItems(1).
-    AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
-      SetName("OAuth2").
-      IsObject().
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("OAuth2 client id").
-          SetDescription("OAuth2 client id.").
-          SetRequired().
-          IsString()).
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("OAuth2 client secret").
-          SetDescription("OAuth2 client secret.").
-          SetRequired().
-          IsString()).
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("OAuth2 provider").
-          SetDescription("URL provider of access tokens. Example: http://mysite.com/oauth/token").
-          SetRequired().
-          IsString()).
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("OAuth2 mode").
-          SetDescription("Whether to send client credentials in body or via header of the request.").
-          SetRequired().
-          IsString().
-          SetEnumValues([]string{"header", "body"})).
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("OAuth2 scope").
-          SetDescription("Scope supported for the client credentials OAuth2 authorization. Example: READ").
-          IsString())).
-    AddItem(apic.NewSubscriptionSchemaPropertyBuilder().
-      SetName("Credentials").
-      IsObject().
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("Username").
-          SetDescription("Your username credential.").
-          SetRequired().
-          IsString()).
-        AddProperty(apic.NewSubscriptionSchemaPropertyBuilder().
-          SetName("Password ").
-          SetDescription("Your password credential.").
-          SetRequired().
-          IsString()))
-```
-
 ## Handle Provisioning Requests
 
-The Agents SDK provides a registration method for the agent to implement an interface that is called when certain provisioning events happen in Amplify Central. Once registered the Agents SDK will watch for these events and trigger the appropriate method for the agent o handle that provisioning request.
+The Agents SDK provides a registration method for the agent to implement an interface that is called when certain provisioning events happen in Amplify Central. Once registered, the Agents SDK will watch for these events and trigger the appropriate method for the agent to handle that provisioning request.
 
 ### Creating and Registering Provisioner
 
@@ -341,7 +289,7 @@ type Provisioning interface {
 }
 ```
 
-Once implemented the agent may register the structure that implements it with the following call.
+Once implemented, the agent may register the structure that implements it with the following call.
 
 ```go
 import "github.com/Axway/agent-sdk/pkg/agent"
@@ -351,7 +299,7 @@ agent.RegisterProvisioner(provisioningImplementation)
 
 #### RequestStatus return structure
 
-All Provisioning request methods will expect a RequestStatus object to be returned after handing the request.  To create this object the Agent SDK provides a builder with the following methods.
+All Provisioning request methods will expect a RequestStatus object to be returned after handing the request.  To create this object, the Agent SDK provides a builder with the following methods.
 
 ```go
 // RequestStatusBuilder - builder to create new request Status
@@ -385,7 +333,7 @@ return provisioning.NewRequestStatusBuilder().SetMessage("failed for reason x").
 
 ### Application Request Provision and Deprovision
 
-The Application request flow begins with the creation of a ManagedApplication resource in the environment that the agent is managing. The agent SDK will receive an event that the resource was created then check that the resource is in a Pending state before handing it off to the agent. Below is an event diagram to show the process taken.
+The Application request flow begins with the creation of a ManagedApplication resource in the environment that the agent is managing. The agent SDK will receive an event that the resource was created, check that the resource is in a Pending state, before handing it off to the agent. Below is an event diagram to show the process taken.
 
 ![Application Events](./managedapp.png)
 
@@ -401,7 +349,7 @@ type ApplicationRequest interface {
 }
 ```
 
-When receiving a provisioning request the agent is expected to create, on its connected data plane, an Application (or similar object), that will be associated with APIs or Credentials. During this provisioning the agent should gather any details necessary to handle deprovisioning and set it in the [RequestStatus](#requeststatus-return-structure).
+When receiving a provisioning request the agent creates, an Application (or similar object) on the data plane, that will be associated with APIs and/or Credentials. During this provisioning, the agent should gather any details necessary to handle deprovisioning and set it in the [RequestStatus](#requeststatus-return-structure).
 
 ### Access Request Provision and Deprovision
 
