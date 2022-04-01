@@ -117,7 +117,6 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 	client := &httpClient{
 		timeout: timeout,
 	}
-	client.httpClient = client.createClient(tlsCfg, parseProxyURL(proxyURL))
 	if cfgAgent.singleURL != "" {
 		client.dialer = &net.Dialer{
 			Timeout:   timeout,
@@ -126,6 +125,8 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 		}
 		client.singleEntryHostMap = initializeSingleEntryMapping(cfgAgent.singleURL, cfgAgent.singleEntryFilter)
 	}
+
+	client.httpClient = client.createClient(tlsCfg, parseProxyURL(proxyURL))
 	return client
 }
 
