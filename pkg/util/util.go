@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"time"
 	"unicode"
 
@@ -82,6 +84,17 @@ func GetURLHostName(urlString string) string {
 		return ""
 	}
 	return host.Hostname()
+}
+
+// ParsePort - parse port from URL
+func ParsePort(url *url.URL) int {
+	port := 0
+	if url.Port() == "" {
+		port, _ = net.LookupPort("tcp", url.Scheme)
+	} else {
+		port, _ = strconv.Atoi(url.Port())
+	}
+	return port
 }
 
 // StringSliceContains - does the given string slice contain the specified string?

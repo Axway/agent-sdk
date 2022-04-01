@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc/connectivity"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/sirupsen/logrus"
@@ -88,7 +89,8 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 }
 
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
-	proxyDialer, err := m.getProxyDialer()
+	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
+	dialer, err := m.getDialer(address)
 	if err != nil {
 		return nil, err
 	}
@@ -97,27 +99,34 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 		withKeepaliveParams(m.options.keepAlive.time, m.options.keepAlive.timeout),
 		withRPCCredentials(m.cfg.TenantID, m.cfg.TokenGetter),
 		withTLSConfig(m.options.tlsCfg),
-		withProxyDialer(proxyDialer),
+		withDialer(dialer),
 		chainStreamClientInterceptor(
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
 	}
 
-	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
 	log.Infof("connecting to watch service. host: %s. port: %d", m.cfg.Host, m.cfg.Port)
 
 	return grpc.Dial(address, grpcDialOptions...)
 }
 
-func (m *watchManager) getProxyDialer() (proxyDialer, error) {
+func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
+	if m.options.singleEntryAddr == "" && m.options.proxyURL == "" {
+		return nil, nil
+	}
+	var proxyURL *url.URL
+	var err error
 	if m.options.proxyURL != "" {
-		proxyURL, err := url.Parse(m.options.proxyURL)
+		proxyURL, err = url.Parse(m.options.proxyURL)
 		if err != nil {
 			return nil, err
 		}
-		return newGRPCProxyDialer(proxyURL), nil
 	}
-	return nil, nil
+	singleEntryHostMap := make(map[string]string)
+	if m.options.singleEntryAddr != "" {
+		singleEntryHostMap[targetAddr] = m.options.singleEntryAddr
+	}
+	return util.NewDialer(proxyURL, singleEntryHostMap), nil
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic

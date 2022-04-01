@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -57,7 +56,7 @@ type httpClient struct {
 	Client
 	httpClient         *http.Client
 	timeout            time.Duration
-	dialer             *net.Dialer
+	dialer             util.Dialer
 	singleEntryHostMap map[string]string
 }
 
@@ -107,26 +106,21 @@ func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time
 	client := &httpClient{
 		timeout: timeout,
 	}
-	client.httpClient = client.createClient(tlsCfg, parseProxyURL(proxyURL))
+	client.initialize(tlsCfg, proxyURL, "")
 
 	return client
 }
 
-// NewSingleEntryClient - creates a new HTTP client, with a timeout
+// NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
 func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
 	client := &httpClient{
 		timeout: timeout,
 	}
 	if cfgAgent.singleURL != "" {
-		client.dialer = &net.Dialer{
-			Timeout:   timeout,
-			KeepAlive: 50 * time.Second,
-			DualStack: true,
-		}
 		client.singleEntryHostMap = initializeSingleEntryMapping(cfgAgent.singleURL, cfgAgent.singleEntryFilter)
 	}
 
-	client.httpClient = client.createClient(tlsCfg, parseProxyURL(proxyURL))
+	client.initialize(tlsCfg, proxyURL, cfgAgent.singleURL)
 	return client
 }
 
@@ -134,26 +128,16 @@ func initializeSingleEntryMapping(singleEntryURL string, singleEntryFilter []str
 	hostMapping := make(map[string]string)
 	entryURL, err := url.Parse(singleEntryURL)
 	if err == nil {
-		entryPort := parsePort(entryURL)
+		entryPort := util.ParsePort(entryURL)
 		for _, filteredURL := range singleEntryFilter {
 			svcURL, err := url.Parse(filteredURL)
 			if err == nil {
-				svcPort := parsePort(svcURL)
+				svcPort := util.ParsePort(svcURL)
 				hostMapping[fmt.Sprintf("%s:%d", svcURL.Host, svcPort)] = fmt.Sprintf("%s:%d", entryURL.Host, entryPort)
 			}
 		}
 	}
 	return hostMapping
-}
-
-func parsePort(url *url.URL) int {
-	port := 0
-	if url.Port() == "" {
-		port, _ = net.LookupPort("tcp", url.Scheme)
-	} else {
-		port, _ = strconv.Atoi(url.Port())
-	}
-	return port
 }
 
 func parseProxyURL(proxyURL string) *url.URL {
@@ -167,44 +151,42 @@ func parseProxyURL(proxyURL string) *url.URL {
 	return nil
 }
 
-func (c *httpClient) createClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
-	if tlsCfg != nil {
-		return c.createHTTPSClient(tlsCfg, proxyURL)
+func (c *httpClient) initialize(tlsCfg config.TLSConfig, proxyURL, singleEntryURL string) {
+	c.httpClient = c.createClient(tlsCfg)
+	if singleEntryURL == "" && proxyURL == "" {
+		return
 	}
-	return c.createHTTPClient(proxyURL)
+
+	c.dialer = util.NewDialer(parseProxyURL(proxyURL), c.singleEntryHostMap)
+	c.httpClient.Transport.(*http.Transport).DialContext = c.httpDialer
 }
 
-func (c *httpClient) createHTTPClient(proxyURL *url.URL) *http.Client {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: util.GetProxyURL(proxyURL),
-		},
-		Timeout: c.timeout,
+func (c *httpClient) createClient(tlsCfg config.TLSConfig) *http.Client {
+	if tlsCfg != nil {
+		return c.createHTTPSClient(tlsCfg)
 	}
-	if c.dialer != nil {
-		httpClient.Transport.(*http.Transport).DialContext = c.singleEntryDialer
+	return c.createHTTPClient()
+}
+
+func (c *httpClient) createHTTPClient() *http.Client {
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+		Timeout:   c.timeout,
 	}
 	return httpClient
 }
 
-func (c *httpClient) createHTTPSClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
+func (c *httpClient) createHTTPSClient(tlsCfg config.TLSConfig) *http.Client {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg.BuildTLSConfig(),
-			Proxy:           util.GetProxyURL(proxyURL),
 		},
 		Timeout: c.timeout,
-	}
-	if c.dialer != nil {
-		httpClient.Transport.(*http.Transport).DialContext = c.singleEntryDialer
 	}
 	return httpClient
 }
 
-func (c *httpClient) singleEntryDialer(ctx context.Context, network, addr string) (net.Conn, error) {
-	if shost, ok := c.singleEntryHostMap[addr]; ok {
-		addr = shost
-	}
+func (c *httpClient) httpDialer(ctx context.Context, network, addr string) (net.Conn, error) {
 	return c.dialer.DialContext(ctx, network, addr)
 }
 
@@ -315,7 +297,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		duration := time.Since(startTime)
 		targetURL := req.URL.String()
 		if c.dialer != nil {
-			svcHost := fmt.Sprintf("%s:%d", req.URL.Host, parsePort(req.URL))
+			svcHost := fmt.Sprintf("%s:%d", req.URL.Host, util.ParsePort(req.URL))
 			if entryHost, ok := c.singleEntryHostMap[svcHost]; ok {
 				targetURL = req.URL.Scheme + "://" + entryHost + req.URL.Path
 			}
