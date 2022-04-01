@@ -107,11 +107,11 @@ type IntegerPropertyBuilder interface {
 }
 
 // ObjectPropertyBuilder - specific methods related to the Object property builders
-type ObjectPropertyBuilder interface {
-	// AddProperty - Add a property in the object property
-	AddProperty(property PropertyBuilder) ObjectPropertyBuilder
-	PropertyBuilder
-}
+// type ObjectPropertyBuilder interface {
+// 	// AddProperty - Add a property in the object property
+// 	AddProperty(property PropertyBuilder) ObjectPropertyBuilder
+// 	PropertyBuilder
+// }
 
 // ArrayPropertyBuilder - specific methods related to the Array property builders
 type ArrayPropertyBuilder interface {
