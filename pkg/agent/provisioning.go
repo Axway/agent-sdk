@@ -11,7 +11,7 @@ import (
 
 // createOrUpdateCredentialRequestDefinition -
 func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
 	crdRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(data.Name)

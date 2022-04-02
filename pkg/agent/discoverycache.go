@@ -288,7 +288,7 @@ func (j *discoveryCache) updateCategoryCache() {
 }
 
 func (j *discoveryCache) updateARDCache() {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
 	log.Trace("updating access request definition cache")
@@ -362,7 +362,7 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 }
 
 func (j *discoveryCache) updateCRDCache() {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
 	log.Trace("updating credential request definition cache")
