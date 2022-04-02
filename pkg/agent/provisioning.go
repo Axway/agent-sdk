@@ -177,7 +177,7 @@ func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 
 // RegisterProvisioner - allow the agent to register a provisioner
 func RegisterProvisioner(provisioner provisioning.Provisioning) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
 	agent.provisioner = provisioner
