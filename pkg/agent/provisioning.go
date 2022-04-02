@@ -146,7 +146,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
 	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(data.Name)
