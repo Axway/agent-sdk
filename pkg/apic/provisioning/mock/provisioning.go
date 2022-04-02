@@ -51,11 +51,12 @@ func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 
 type MockAccessRequest struct {
 	provisioning.AccessRequest
-	APIID      string
-	AppDetails map[string]string
-	AppName    string
-	Details    map[string]string
-	Stage      string
+	APIID           string
+	AppDetails      map[string]string
+	AppName         string
+	Details         map[string]string
+	InstanceDetails map[string]interface{}
+	Stage           string
 }
 
 func (m MockAccessRequest) GetApplicationName() string {
@@ -76,6 +77,10 @@ func (m MockAccessRequest) GetAPIID() string {
 
 func (m MockAccessRequest) GetStage() string {
 	return m.Stage
+}
+
+func (m MockAccessRequest) GetInstanceDetails() map[string]interface{} {
+	return m.InstanceDetails
 }
 
 type MockRequestStatus struct {

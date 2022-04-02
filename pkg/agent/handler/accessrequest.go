@@ -152,22 +152,24 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 	stage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 
 	return &provAccReq{
-		apiID:         apiID,
-		appDetails:    appDetails,
-		stage:         stage,
-		accessData:    ar.Spec.Data,
-		accessDetails: util.GetAgentDetails(ar),
-		managedApp:    ar.Spec.ManagedApplication,
+		apiID:           apiID,
+		appDetails:      appDetails,
+		stage:           stage,
+		accessData:      ar.Spec.Data,
+		accessDetails:   util.GetAgentDetails(ar),
+		instanceDetails: util.GetAgentDetails(instance),
+		managedApp:      ar.Spec.ManagedApplication,
 	}, nil
 }
 
 type provAccReq struct {
-	apiID         string
-	appDetails    map[string]interface{}
-	accessDetails map[string]interface{}
-	accessData    map[string]interface{}
-	managedApp    string
-	stage         string
+	apiID           string
+	appDetails      map[string]interface{}
+	accessDetails   map[string]interface{}
+	accessData      map[string]interface{}
+	instanceDetails map[string]interface{}
+	managedApp      string
+	stage           string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -205,4 +207,13 @@ func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
 
 func (r provAccReq) GetStage() string {
 	return r.stage
+}
+
+// GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
+func (r provAccReq) GetInstanceDetails() map[string]interface{} {
+	if r.instanceDetails == nil {
+		return map[string]interface{}{}
+	}
+
+	return r.instanceDetails
 }

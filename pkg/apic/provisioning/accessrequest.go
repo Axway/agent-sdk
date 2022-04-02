@@ -14,4 +14,6 @@ type AccessRequest interface {
 	GetStage() string
 	// GetAccessRequestData returns the map[string]interface{} of data from the request
 	GetAccessRequestData() map[string]interface{}
+	// GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
+	GetInstanceDetails() map[string]interface{}
 }
