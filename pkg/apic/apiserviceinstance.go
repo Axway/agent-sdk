@@ -183,6 +183,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	}
 
 	if err == nil && len(instance.SubResources) > 0 {
+		ri.SubResources = instance.SubResources // add the subresources to the instance that will be cached
 		if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
