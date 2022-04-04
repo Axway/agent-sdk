@@ -207,6 +207,9 @@ func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
 }
 
 func (j *discoveryCache) updateAPIServiceInstancesCache() {
+	j.instanceCacheLock.Lock()
+	defer j.instanceCacheLock.Unlock()
+
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
@@ -226,8 +229,6 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		return
 	}
 
-	j.instanceCacheLock.Lock()
-	defer j.instanceCacheLock.Unlock()
 	if j.refreshAll {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
