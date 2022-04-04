@@ -13,13 +13,16 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/common/transport"
 	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/elastic/beats/v7/libbeat/publisher"
+	"golang.org/x/net/proxy"
 
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
@@ -39,6 +42,7 @@ const (
 )
 
 var traceabilityClients []*Client
+var traceCfg *Config
 
 // GetClient - returns a random client from the clients array
 var GetClient = getClient
@@ -114,7 +118,8 @@ func makeTraceabilityAgent(
 	observer outputs.Observer,
 	libbeatCfg *common.Config,
 ) (outputs.Group, error) {
-	traceCfg, err := readConfig(libbeatCfg, beat)
+	var err error
+	traceCfg, err = readConfig(libbeatCfg, beat)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		return outputs.Fail(err)
@@ -128,9 +133,40 @@ func makeTraceabilityAgent(
 
 	var transportGroup outputs.Group
 	log.Tracef("initialzing traceability client using config: %+v, host: %+v", traceCfg, hosts)
-	if traceCfg.Protocol == "https" || traceCfg.Protocol == "http" {
+	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
+	if !isSingleEntry && IsHTTPTransport() {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
 	} else {
+		// For Single entry point register dialer factory for sni scheme and set the
+		// proxy url with sni scheme. When libbeat will register its dialer and sees
+		// proxy url with sni scheme, it will invoke the factory to construct the dialer
+		// The dialer will be invoked as proxy dialer in the libbeat dialer chain
+		// (proxy dialer, stat dialer, tls dialer).
+		if isSingleEntry {
+			if IsHTTPTransport() {
+				log.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
+			}
+			// Register dialer factory with sni scheme for single entry point
+			proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
+			// If real proxy configured(not the sni proxy set here), validate the scheme
+			// since libbeats proxy dialer will not be invoked.
+			if traceCfg.Proxy.URL != "" {
+				proxCfg := &transport.ProxyConfig{
+					URL:          traceCfg.Proxy.URL,
+					LocalResolve: traceCfg.Proxy.LocalResolve,
+				}
+				err := proxCfg.Validate()
+				if err != nil {
+					outputs.Fail(err)
+				}
+			}
+			// Replace the proxy URL to sni by setting the environment variable
+			// Libbeat parses the yaml file and replaces the value from yaml
+			// with overridden environment variable.
+			// Set the sni host to the ingestion service host to allow the
+			// single entry dialer to receive the target address
+			os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
+		}
 		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg, traceCfg)
 	}
 
@@ -174,6 +210,29 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	}
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
+}
+
+// Factory method for creating dialer for sni scheme
+// Setup the single entry point dialer with single entry host mapping based
+// on central config and traceability proxy url from original config that gets
+// read by traceability output factory(makeTraceabilityAgent)
+func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (proxy.Dialer, error) {
+	var traceProxyURL *url.URL
+	if traceCfg.Proxy.URL != "" {
+		traceProxyURL, _ = url.Parse(traceCfg.Proxy.URL)
+	}
+	var singleEntryHostMap map[string]string
+	cfgSingleURL := agent.GetCentralConfig().GetSingleURL()
+	// cfgSingleURL should not be empty as the factory method is registered based on that check
+	singleEntryURL, err := url.Parse(cfgSingleURL)
+	if err == nil {
+		singleEntryHostMap = map[string]string{
+			traceCfg.Hosts[0]: fmt.Sprintf("%s:%d", singleEntryURL.Host, util.ParsePort(singleEntryURL)),
+		}
+	}
+
+	dialer := util.NewDialer(traceProxyURL, singleEntryHostMap)
+	return dialer, nil
 }
 
 func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string) (outputs.Group, error) {

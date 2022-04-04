@@ -9,10 +9,15 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // Dialer - interface for http dialer for proxy and single entry point
 type Dialer interface {
+	// Dial - interface used by libbeat for tcp network dial
+	Dial(network string, addr string) (net.Conn, error)
+	// DialContext - interface used by http transport
 	DialContext(ctx context.Context, network string, addr string) (net.Conn, error)
 }
 
@@ -39,6 +44,15 @@ func NewDialer(proxyURL *url.URL, singleEntryHostMap map[string]string) Dialer {
 		dialer.singleEntryHostMap = map[string]string{}
 	}
 	return dialer
+}
+
+// Dial- manages the connections to proxy and single entry point for tcp transports
+func (d *dialer) Dial(network string, addr string) (net.Conn, error) {
+	conn, err := d.DialContext(context.Background(), network, addr)
+	if err == nil && addr != conn.RemoteAddr().String() {
+		log.Tracef("routing the traffic for %s via %s", addr, conn.RemoteAddr().String())
+	}
+	return conn, err
 }
 
 // DialContext - manages the connections to proxy and single entry point
