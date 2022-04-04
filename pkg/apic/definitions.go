@@ -48,6 +48,7 @@ type apiError struct {
 const (
 	UnpublishedState = "UNPUBLISHED"
 	PublishedState   = "PUBLISHED"
+	ApprovalPending  = "APPROVAL_PENDING"
 )
 
 // consts for status
