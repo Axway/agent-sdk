@@ -144,6 +144,7 @@ func makeTraceabilityAgent(
 		// (proxy dialer, stat dialer, tls dialer).
 		if isSingleEntry {
 			if IsHTTPTransport() {
+				traceCfg.Protocol = "tcp"
 				log.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
 			}
 			// Register dialer factory with sni scheme for single entry point
