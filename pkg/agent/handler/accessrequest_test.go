@@ -235,22 +235,26 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 
 func Test_arReq(t *testing.T) {
 	r := provAccReq{
-		apiID: "123",
 		appDetails: map[string]interface{}{
 			"app_details_key": "app_details_value",
 		},
 		accessDetails: map[string]interface{}{
 			"access_details_key": "access_details_value",
 		},
+		accessData: map[string]interface{}{
+			"key": "val",
+		},
 		managedApp: "managed-app-name",
-		stage:      "api-stage",
+		instanceDetails: map[string]interface{}{
+			defs.AttrExternalAPIStage: "api-stage",
+			defs.AttrExternalAPIID:    "123",
+		},
 	}
 
-	assert.Equal(t, r.apiID, r.GetAPIID())
 	assert.Equal(t, r.managedApp, r.GetApplicationName())
 	assert.Equal(t, r.appDetails["app_details_key"], r.GetApplicationDetailsValue("app_details_key"))
 	assert.Equal(t, r.accessDetails["access_details_key"], r.GetAccessRequestDetailsValue("access_details_key"))
-	assert.Equal(t, r.stage, r.GetStage())
+	assert.Equal(t, r.accessData, r.GetAccessRequestData())
 
 	r.accessDetails = nil
 	r.appDetails = nil
@@ -312,7 +316,7 @@ type mockARProvision struct {
 func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.expectedProvType = provision
 	v := ar.(*provAccReq)
-	assert.Equal(m.t, m.expectedAPIID, v.apiID)
+	assert.Equal(m.t, m.expectedAPIID, v.instanceDetails[defs.AttrExternalAPIID])
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
@@ -322,7 +326,7 @@ func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status 
 func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (status prov.RequestStatus) {
 	m.expectedProvType = deprovision
 	v := ar.(*provAccReq)
-	assert.Equal(m.t, m.expectedAPIID, v.apiID)
+	assert.Equal(m.t, m.expectedAPIID, v.instanceDetails[defs.AttrExternalAPIID])
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
