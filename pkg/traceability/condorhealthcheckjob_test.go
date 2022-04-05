@@ -84,7 +84,11 @@ func TestJobStatus(t *testing.T) {
 				proxyURL: test.proxy,
 				timeout:  time.Second * 1,
 			}
-
+			traceCfg = &Config{
+				Proxy: ProxyConfig{
+					URL: test.proxy,
+				},
+			}
 			job := condorHealthCheckJob{
 				agentHealthChecker: ta,
 			}

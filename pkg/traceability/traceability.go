@@ -219,16 +219,24 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 // read by traceability output factory(makeTraceabilityAgent)
 func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (proxy.Dialer, error) {
 	var traceProxyURL *url.URL
-	if traceCfg.Proxy.URL != "" {
-		traceProxyURL, _ = url.Parse(traceCfg.Proxy.URL)
+	var err error
+	if traceCfg != nil && traceCfg.Proxy.URL != "" {
+		traceProxyURL, err = url.Parse(traceCfg.Proxy.URL)
+		if err != nil {
+			return nil, fmt.Errorf("proxy could not be parsed. %s", err.Error())
+		}
 	}
 	var singleEntryHostMap map[string]string
-	cfgSingleURL := agent.GetCentralConfig().GetSingleURL()
-	// cfgSingleURL should not be empty as the factory method is registered based on that check
-	singleEntryURL, err := url.Parse(cfgSingleURL)
-	if err == nil {
-		singleEntryHostMap = map[string]string{
-			traceCfg.Hosts[0]: fmt.Sprintf("%s:%d", singleEntryURL.Host, util.ParsePort(singleEntryURL)),
+	if agent.GetCentralConfig() != nil {
+		cfgSingleURL := agent.GetCentralConfig().GetSingleURL()
+		if cfgSingleURL != "" {
+			// cfgSingleURL should not be empty as the factory method is registered based on that check
+			singleEntryURL, err := url.Parse(cfgSingleURL)
+			if err == nil {
+				singleEntryHostMap = map[string]string{
+					traceCfg.Hosts[0]: fmt.Sprintf("%s:%d", singleEntryURL.Host, util.ParsePort(singleEntryURL)),
+				}
+			}
 		}
 	}
 

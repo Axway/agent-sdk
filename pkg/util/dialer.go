@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"golang.org/x/net/proxy"
 )
 
 // Dialer - interface for http dialer for proxy and single entry point
@@ -19,10 +20,13 @@ type Dialer interface {
 	Dial(network string, addr string) (net.Conn, error)
 	// DialContext - interface used by http transport
 	DialContext(ctx context.Context, network string, addr string) (net.Conn, error)
+	// GetProxyScheme() string
+	GetProxyScheme() string
 }
 
 type dialer struct {
 	singleEntryHostMap map[string]string
+	proxyScheme        string
 	proxyAddress       string
 	userName           string
 	password           string
@@ -34,6 +38,7 @@ func NewDialer(proxyURL *url.URL, singleEntryHostMap map[string]string) Dialer {
 		singleEntryHostMap: singleEntryHostMap,
 	}
 	if proxyURL != nil {
+		dialer.proxyScheme = proxyURL.Scheme
 		dialer.proxyAddress = proxyURL.Host
 		if user := proxyURL.User; user != nil {
 			dialer.userName = user.Username()
@@ -49,7 +54,7 @@ func NewDialer(proxyURL *url.URL, singleEntryHostMap map[string]string) Dialer {
 // Dial- manages the connections to proxy and single entry point for tcp transports
 func (d *dialer) Dial(network string, addr string) (net.Conn, error) {
 	conn, err := d.DialContext(context.Background(), network, addr)
-	if err == nil && addr != conn.RemoteAddr().String() {
+	if err == nil && len(d.singleEntryHostMap) > 0 && addr != conn.RemoteAddr().String() {
 		log.Tracef("routing the traffic for %s via %s", addr, conn.RemoteAddr().String())
 	}
 	return conn, err
@@ -64,6 +69,11 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 	}
 	if d.proxyAddress != "" {
 		addr = d.proxyAddress
+		switch d.proxyScheme {
+		case "socks5", "socks5h", "http", "https":
+		default:
+			return nil, fmt.Errorf("could not setup proxy, unsupported proxy scheme %s", d.proxyScheme)
+		}
 	}
 	conn, err := (&net.Dialer{
 		Timeout:   10 * time.Second,
@@ -73,13 +83,37 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 		return nil, err
 	}
 	if d.proxyAddress != "" {
-		err = d.proxyConnect(ctx, conn, originalAddr, sniHost)
-		if err != nil {
-			conn.Close()
-			return nil, err
+		switch d.proxyScheme {
+		case "socks5", "socks5h":
+			var auth *proxy.Auth
+			if d.userName != "" {
+				auth = new(proxy.Auth)
+				auth.User = d.userName
+				if d.password != "" {
+					auth.Password = d.password
+				}
+			}
+			socksDialer, err := proxy.SOCKS5(network, d.proxyAddress, auth, nil)
+			if err != nil {
+				return nil, err
+			}
+			return socksDialer.Dial(network, originalAddr)
+		case "http", "https":
+			err = d.proxyConnect(ctx, conn, originalAddr, sniHost)
+			if err != nil {
+				conn.Close()
+				return nil, err
+			}
 		}
 	}
 	return conn, nil
+}
+
+func (d *dialer) GetProxyScheme() string {
+	if d.proxyAddress != "" {
+		return d.proxyScheme
+	}
+	return ""
 }
 
 func (d *dialer) proxyConnect(ctx context.Context, conn net.Conn, targetAddr, sniHost string) error {

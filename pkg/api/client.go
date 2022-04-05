@@ -296,7 +296,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	defer func() {
 		duration := time.Since(startTime)
 		targetURL := req.URL.String()
-		if c.dialer != nil {
+		if c.dialer != nil && (c.dialer.GetProxyScheme() != "socks5" && c.dialer.GetProxyScheme() != "socks5h") {
 			svcHost := fmt.Sprintf("%s:%d", req.URL.Host, util.ParsePort(req.URL))
 			if entryHost, ok := c.singleEntryHostMap[svcHost]; ok {
 				targetURL = req.URL.Scheme + "://" + entryHost + req.URL.Path

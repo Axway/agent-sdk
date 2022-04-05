@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -48,9 +47,11 @@ func (j *condorHealthCheckJob) checkConnections(name string) error {
 }
 
 func (j *condorHealthCheckJob) checkTCPConnection(host string) error {
-	uri, _ := url.Parse(j.agentHealthChecker.proxyURL)
-	dialer, _ := ingestionSingleEntryDialer(uri, &net.Dialer{Timeout: j.agentHealthChecker.timeout})
-
+	// Proxy url parameter is nil since the dialer will use proxy url from traceCfg
+	dialer, err := ingestionSingleEntryDialer(nil, &net.Dialer{Timeout: j.agentHealthChecker.timeout})
+	if err != nil {
+		return err
+	}
 	conn, err := dialer.Dial(j.agentHealthChecker.protocol, j.agentHealthChecker.host)
 	if err != nil {
 		return fmt.Errorf("%s connection failed. %s", host, err.Error())
