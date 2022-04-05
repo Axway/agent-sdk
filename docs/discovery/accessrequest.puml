@@ -14,6 +14,9 @@ sdk -> env: Get refereneced API Service Instance
 sdk -> agent: AccessRequestProvision
 activate agent
 
+agent --> sdk: Get details on Application  - GetApplicationDetailsValue(key)
+agent --> sdk: Get access request data - GetAccessRequestData()
+agent --> sdk: Get details on API Service Instance - GetInstanceDetails()
 agent --> agent: Handle provisioning of Access
 note over agent: Add properties necessary to deprovision
 
@@ -43,6 +46,7 @@ sdk <-> env: Get all properties
 sdk -> agent: AccessRequestDeprovision
 activate agent
 
+agent --> sdk: Get details on AccessRequest  - GetAccessRequestDetailsValue(key)
 agent --> agent: Handle deprovisioning of Access
 
 agent -> sdk: success

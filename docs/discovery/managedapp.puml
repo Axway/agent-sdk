@@ -12,6 +12,7 @@ sdk --> sdk: isPending
 sdk -> agent: ApplicationProvision
 activate agent
 
+agent --> sdk: Get Application Name  - GetManagedApplicationName()
 agent --> agent: Handle provisioning of Application
 
 note over agent: Add properties necessary to deprovision
@@ -41,6 +42,7 @@ sdk <-> env: Get all properties
 sdk -> agent: ApplicationDeprovision
 activate agent
 
+agent --> sdk: Get details on Application  - GetApplicationDetailsValue(key)
 agent --> agent: Handle deprovisioning of Application
 
 agent -> sdk: success
