@@ -63,17 +63,19 @@ func (d *dialer) Dial(network string, addr string) (net.Conn, error) {
 // DialContext - manages the connections to proxy and single entry point
 func (d *dialer) DialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
 	originalAddr := addr
-	sniHost, ok := d.singleEntryHostMap[addr]
+	singleEntryHost, ok := d.singleEntryHostMap[addr]
 	if ok {
-		addr = sniHost
+		addr = singleEntryHost
 	}
 	if d.proxyAddress != "" {
-		addr = d.proxyAddress
 		switch d.proxyScheme {
-		case "socks5", "socks5h", "http", "https":
+		case "socks5", "socks5h":
+			return d.socksConnect(network, originalAddr, singleEntryHost)
+		case "http", "https":
 		default:
 			return nil, fmt.Errorf("could not setup proxy, unsupported proxy scheme %s", d.proxyScheme)
 		}
+		addr = d.proxyAddress
 	}
 	conn, err := (&net.Dialer{
 		Timeout:   10 * time.Second,
@@ -84,22 +86,8 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 	}
 	if d.proxyAddress != "" {
 		switch d.proxyScheme {
-		case "socks5", "socks5h":
-			var auth *proxy.Auth
-			if d.userName != "" {
-				auth = new(proxy.Auth)
-				auth.User = d.userName
-				if d.password != "" {
-					auth.Password = d.password
-				}
-			}
-			socksDialer, err := proxy.SOCKS5(network, d.proxyAddress, auth, nil)
-			if err != nil {
-				return nil, err
-			}
-			return socksDialer.Dial(network, originalAddr)
 		case "http", "https":
-			err = d.proxyConnect(ctx, conn, originalAddr, sniHost)
+			err = d.httpConnect(ctx, conn, originalAddr, singleEntryHost)
 			if err != nil {
 				conn.Close()
 				return nil, err
@@ -116,7 +104,27 @@ func (d *dialer) GetProxyScheme() string {
 	return ""
 }
 
-func (d *dialer) proxyConnect(ctx context.Context, conn net.Conn, targetAddr, sniHost string) error {
+func (d *dialer) socksConnect(network, addr, singleEntryHost string) (net.Conn, error) {
+	var auth *proxy.Auth
+	if d.userName != "" {
+		auth = new(proxy.Auth)
+		auth.User = d.userName
+		if d.password != "" {
+			auth.Password = d.password
+		}
+	}
+	socksDialer, err := proxy.SOCKS5(network, d.proxyAddress, auth, nil)
+	if err != nil {
+		return nil, err
+	}
+	targetAddr := addr
+	if singleEntryHost != "" {
+		targetAddr = singleEntryHost
+	}
+	return socksDialer.Dial(network, targetAddr)
+}
+
+func (d *dialer) httpConnect(ctx context.Context, conn net.Conn, targetAddr, sniHost string) error {
 	req := d.createConnectRequest(ctx, targetAddr, sniHost)
 	if err := req.Write(conn); err != nil {
 		return err
