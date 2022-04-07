@@ -57,7 +57,11 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
 		log.Tracef("credential handler - processing resource in pending status")
 		cr := h.onPending(cr)
-		return h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
+		err := h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
+		if err != nil {
+			return err
+		}
+		return h.client.CreateSubResourceScoped(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
 	}
 
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
@@ -110,7 +114,6 @@ func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
-		"status":           cred.Status,
 		"data":             cred.Data,
 	}
 

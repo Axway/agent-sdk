@@ -58,7 +58,11 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
 		log.Tracef("access request handler - processing resource in pending status")
 		ar := h.onPending(ar)
-		return h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		err := h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		if err != nil {
+			return err
+		}
+		return h.client.CreateSubResourceScoped(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
@@ -93,7 +97,6 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessReque
 
 	ar.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(ar),
-		"status":           ar.Status,
 	}
 
 	return ar
