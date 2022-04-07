@@ -287,8 +287,10 @@ func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, e
 }
 
 func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, subs map[string]interface{}) error {
-	status := subs["status"].(*v1.ResourceStatus)
-	assert.Equal(m.t, m.expectedStatus, status.Level, status.Reasons)
+	if statusI, ok := subs["status"]; ok {
+		status := statusI.(*v1.ResourceStatus)
+		assert.Equal(m.t, m.expectedStatus, status.Level, status.Reasons)
+	}
 	m.createSubCalled = true
 	return m.subError
 }
