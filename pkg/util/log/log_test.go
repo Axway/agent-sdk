@@ -85,9 +85,3 @@ func TestLoggerConfig(t *testing.T) {
 	assert.Nil(t, err, "Did not expect an error")
 	lc.err = nil
 }
-
-func Test(t *testing.T) {
-	log.SetLevel(logrus.DebugLevel)
-	logger := NewFieldLogger()
-	logger.WithField("abc", struct{ asdf string }{asdf: "asdf"}).Debug("debugging")
-}
