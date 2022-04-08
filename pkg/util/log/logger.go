@@ -17,28 +17,31 @@ type FieldLogger interface {
 
 // StdLogger interface for logging methods found in the go standard library logger.
 type StdLogger interface {
-	Debug(v ...interface{})
-	Debugf(format string, v ...interface{})
-	Error(v ...interface{})
-	Errorf(format string, v ...interface{})
-	Fatal(v ...interface{})
-	Fatalf(format string, v ...interface{})
-	Info(v ...interface{})
-	Infof(format string, v ...interface{})
-	Panic(v ...interface{})
-	Panicf(format string, v ...interface{})
-	Trace(v ...interface{})
-	Tracef(format string, v ...interface{})
-	Warn(v ...interface{})
-	Warnf(format string, v ...interface{})
+	logrus.StdLogger
+
+	Debug(args ...interface{})
+	Debugf(format string, args ...interface{})
+	Debugln(args ...interface{})
+
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Errorln(args ...interface{})
+
+	Info(args ...interface{})
+	Infof(format string, args ...interface{})
+	Infoln(args ...interface{})
+
+	Warn(args ...interface{})
+	Warnf(format string, args ...interface{})
+	Warnln(args ...interface{})
 }
 
 // LogRedactor interface for redacting log messages
 type LogRedactor interface {
-	TraceRedacted(fields []string, v ...interface{})
-	ErrorRedacted(fields []string, v ...interface{})
-	InfoRedacted(fields []string, v ...interface{})
-	DebugRedacted(fields []string, v ...interface{})
+	TraceRedacted(fields []string, args ...interface{})
+	ErrorRedacted(fields []string, args ...interface{})
+	InfoRedacted(fields []string, args ...interface{})
+	DebugRedacted(fields []string, args ...interface{})
 }
 
 // NewFieldLogger returns a FieldLogger for standard logging, and logp logging.
@@ -51,132 +54,6 @@ func NewFieldLogger() FieldLogger {
 
 type logger struct {
 	entry *logrus.Entry
-}
-
-// Debug prints a debug message
-func (l *logger) Debug(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Debug(debugSelector, v)
-		return
-	}
-	l.entry.Debug(v...)
-}
-
-// Debugf prints a formatted debug message
-func (l *logger) Debugf(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Debug(debugSelector, format, v)
-		return
-	}
-	l.entry.Debugf(format, v...)
-}
-
-// Error prints an error message
-func (l *logger) Error(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Error(v)
-		return
-	}
-	l.entry.Error(v...)
-}
-
-// Errorf prints a formatted error message
-func (l *logger) Errorf(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Errorf(format, v)
-		return
-	}
-	l.entry.Errorf(format, v...)
-}
-
-// Fatal prints a fatal error message
-func (l *logger) Fatal(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Fatal(v...)
-		return
-	}
-	l.entry.Fatal(v...)
-}
-
-// Fatalf prints a formatted fatal message
-func (l *logger) Fatalf(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Fatalf(format, v...)
-		return
-	}
-	l.entry.Fatalf(format, v...)
-}
-
-// Info prints an info message
-func (l *logger) Info(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Info(v...)
-		return
-	}
-	l.entry.Info(v...)
-}
-
-// Infof prints a formatted info message
-func (l *logger) Infof(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Infof(format, v...)
-		return
-	}
-	l.entry.Infof(format, v...)
-}
-
-// Panic prints a panic message
-func (l *logger) Panic(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Panic(v...)
-		return
-	}
-	l.entry.Panic(v...)
-}
-
-// Panicf prints a formatted panic message
-func (l *logger) Panicf(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Panicf(format, v...)
-		return
-	}
-	l.entry.Panicf(format, v...)
-}
-
-// Trace prints a trace message
-func (l *logger) Trace(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Debug(traceSelector, fmt.Sprint(v...))
-		return
-	}
-	l.entry.Trace(v...)
-}
-
-// Tracef prints a formatted trace message
-func (l *logger) Tracef(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Debug(traceSelector, fmt.Sprint(v...))
-		return
-	}
-	l.entry.Tracef(format, v...)
-}
-
-// Warn prints a warning message
-func (l *logger) Warn(v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Warn(v...)
-		return
-	}
-	l.entry.Warn(v...)
-}
-
-// Warnf prints a formatted warning message
-func (l *logger) Warnf(format string, v ...interface{}) {
-	if l.isLogP() {
-		logp.L().Warnf(format, v...)
-		return
-	}
-	l.entry.Warnf(format, v...)
 }
 
 // WithField adds a field to the log message
@@ -194,22 +71,274 @@ func (l *logger) WithError(err error) FieldLogger {
 	return &logger{entry: l.entry.WithError(err)}
 }
 
-func (l *logger) TraceRedacted(fields []string, v ...interface{}) {
-	l.Trace(ObscureArguments(fields, v...))
+// Debugf prints a formatted debug message
+func (l *logger) Debugf(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debugf(format, args)
+		return
+	}
+	l.entry.Debugf(format, args...)
 }
 
-func (l *logger) ErrorRedacted(fields []string, v ...interface{}) {
-	l.Error(ObscureArguments(fields, v...))
+// Infof prints a formatted info message
+func (l *logger) Infof(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Infof(format, args...)
+		return
+	}
+	l.entry.Infof(format, args...)
 }
 
-func (l *logger) InfoRedacted(fields []string, v ...interface{}) {
-	l.Info(ObscureArguments(fields, v...))
+// Printf formats a message
+func (l *logger) Printf(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debugf(format, args)
+		return
+	}
+	l.entry.Printf(format, args...)
 }
 
-func (l *logger) DebugRedacted(fields []string, v ...interface{}) {
-	l.Debug(ObscureArguments(fields, v...))
+// Warnf prints a formatted warning message
+func (l *logger) Warnf(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Warnf(format, args...)
+		return
+	}
+	l.entry.Warnf(format, args...)
+}
+
+// Tracef prints a formatted trace message
+func (l *logger) Tracef(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debugf(format, args...)
+		return
+	}
+	l.entry.Tracef(format, args...)
+}
+
+// Errorf prints a formatted error message
+func (l *logger) Errorf(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Errorf(format, args)
+		return
+	}
+	l.entry.Errorf(format, args...)
+}
+
+// Fatalf prints a formatted fatal message
+func (l *logger) Fatalf(format string, args ...interface{}) {
+	if l.isLogP() {
+		logp.L().Fatalf(format, args...)
+		return
+	}
+	l.entry.Fatalf(format, args...)
+}
+
+// Panicf prints a formatted panic message
+func (l *logger) Panicf(format string, args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Panicf(format, args...)
+		return
+	}
+	l.entry.Panicf(format, args...)
+}
+
+// Debug prints a debug message
+func (l *logger) Debug(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debug(args...)
+		return
+	}
+	l.entry.Debug(args...)
+}
+
+// Info prints an info message
+func (l *logger) Info(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Info(args...)
+		return
+	}
+	l.entry.Info(args...)
+}
+
+// Print prints a message
+func (l *logger) Print(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Info(args...)
+		return
+	}
+	l.entry.Print(args...)
+}
+
+// Trace prints a trace message
+func (l *logger) Trace(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debug(args...)
+		return
+	}
+	l.entry.Trace(args...)
+}
+
+// Warn prints a warning message
+func (l *logger) Warn(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Warn(args...)
+		return
+	}
+	l.entry.Warn(args...)
+}
+
+// Error prints an error message
+func (l *logger) Error(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Error(args...)
+		return
+	}
+	l.entry.Error(args...)
+}
+
+// Fatal prints a fatal error message
+func (l *logger) Fatal(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Fatal(args...)
+		return
+	}
+	l.entry.Fatal(args...)
+}
+
+// Panic prints a panic message
+func (l *logger) Panic(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Panic(args...)
+		return
+	}
+	l.entry.Panic(args...)
+}
+
+// Debugln prints a debug line
+func (l *logger) Debugln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debug(args...)
+		return
+	}
+	l.entry.Debugln(args...)
+}
+
+// Infoln prints an info line
+func (l *logger) Infoln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Info(args...)
+		return
+	}
+	l.entry.Infoln(args...)
+}
+
+// Println prints a line
+func (l *logger) Println(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Info(args...)
+		return
+	}
+	l.entry.Println(args...)
+}
+
+// Traceln prints a trace line
+func (l *logger) Traceln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Debug(args...)
+		return
+	}
+	l.entry.Trace(args...)
+}
+
+// Warnln prints a warn line
+func (l *logger) Warnln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Warn(args...)
+		return
+	}
+	l.entry.Warnln(args...)
+}
+
+// Errorln prints an error line
+func (l *logger) Errorln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Error(args...)
+		return
+	}
+	l.entry.Errorln(args...)
+}
+
+// Fatalln prints a fatal line
+func (l *logger) Fatalln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Fatal(args...)
+		return
+	}
+	l.entry.Fatalln(args...)
+}
+
+// Panicln prints a panic line
+func (l *logger) Panicln(args ...interface{}) {
+	if l.isLogP() {
+		args = append(args, l.formatEntries()...)
+		logp.L().Panic(args...)
+		return
+	}
+	l.entry.Panic(args...)
+}
+
+// TraceRedacted redacts a trace message
+func (l *logger) TraceRedacted(fields []string, args ...interface{}) {
+	l.Trace(ObscureArguments(fields, args...))
+}
+
+// ErrorRedacted redacts an error message
+func (l *logger) ErrorRedacted(fields []string, args ...interface{}) {
+	l.Error(ObscureArguments(fields, args...))
+}
+
+// InfoRedacted redacts an info message
+func (l *logger) InfoRedacted(fields []string, args ...interface{}) {
+	l.Info(ObscureArguments(fields, args...))
+}
+
+// DebugRedacted redacts a debug message
+func (l *logger) DebugRedacted(fields []string, args ...interface{}) {
+	l.Debug(ObscureArguments(fields, args...))
 }
 
 func (l *logger) isLogP() bool {
 	return isLogP
+}
+
+func (l *logger) formatEntries() []interface{} {
+	var args []interface{}
+	for k, val := range l.entry.Data {
+		s := fmt.Sprintf("%s=%s", k, val)
+		args = append(args, s)
+	}
+	return args
 }

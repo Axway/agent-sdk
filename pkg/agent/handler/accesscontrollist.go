@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -13,6 +15,7 @@ type aclHandler struct {
 
 // NewACLHandler creates a Handler for Access Requests
 func NewACLHandler(agentCacheManager agentcache.Manager) Handler {
+	log.Print()
 	return &aclHandler{
 		agentCacheManager: agentCacheManager,
 	}

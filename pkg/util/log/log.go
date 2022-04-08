@@ -3,11 +3,12 @@ package log
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/elastic/beats/v7/libbeat/logp"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptrace"
 	"os"
+
+	"github.com/elastic/beats/v7/libbeat/logp"
+	"github.com/sirupsen/logrus"
 )
 
 const (
