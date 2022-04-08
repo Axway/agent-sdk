@@ -81,10 +81,13 @@ func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provMana
 
 	app.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(app),
-		"status":           app.Status,
 	}
 
-	return h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
+	err := h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
+	if err != nil {
+		return err
+	}
+	return h.client.CreateSubResourceScoped(app.ResourceMeta, map[string]interface{}{"status": app.Status})
 }
 
 func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provManagedApp) {
