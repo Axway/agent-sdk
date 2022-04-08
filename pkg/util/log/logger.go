@@ -331,7 +331,7 @@ func (l *logger) DebugRedacted(fields []string, args ...interface{}) {
 }
 
 func (l *logger) isLogP() bool {
-	return true
+	return isLogP
 }
 
 func (l *logger) formatEntries() []interface{} {
