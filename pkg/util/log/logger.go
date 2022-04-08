@@ -36,8 +36,8 @@ type StdLogger interface {
 	Warnln(args ...interface{})
 }
 
-// LogRedactor interface for redacting log messages
-type LogRedactor interface {
+// Redactor interface for redacting log messages
+type Redactor interface {
 	TraceRedacted(fields []string, args ...interface{})
 	ErrorRedacted(fields []string, args ...interface{})
 	InfoRedacted(fields []string, args ...interface{})
