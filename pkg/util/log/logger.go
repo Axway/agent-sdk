@@ -331,13 +331,13 @@ func (l *logger) DebugRedacted(fields []string, args ...interface{}) {
 }
 
 func (l *logger) isLogP() bool {
-	return isLogP
+	return true
 }
 
 func (l *logger) formatEntries() []interface{} {
 	var args []interface{}
 	for k, val := range l.entry.Data {
-		s := fmt.Sprintf("%s=%s", k, val)
+		s := fmt.Sprintf("%v=%v", k, val)
 		args = append(args, s)
 	}
 	return args
