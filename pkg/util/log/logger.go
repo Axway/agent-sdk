@@ -15,7 +15,7 @@ type FieldLogger interface {
 	WithError(err error) FieldLogger
 }
 
-// StdLogger interface for logging methods found in the go standard library logger.
+// StdLogger interface for logging methods found in the go standard library logger, and logrus methods.
 type StdLogger interface {
 	logrus.StdLogger
 
