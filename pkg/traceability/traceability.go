@@ -203,7 +203,7 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	}
 
 	// only run the health check if in online mode
-	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
 		err := registerHealthCheckers(traceCfg)
 		if err != nil {
 			return outputs.Group{}, err
@@ -232,9 +232,9 @@ func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (p
 		if cfgSingleURL != "" {
 			// cfgSingleURL should not be empty as the factory method is registered based on that check
 			singleEntryURL, err := url.Parse(cfgSingleURL)
-			if err == nil {
+			if err == nil && traceCfg != nil {
 				singleEntryHostMap = map[string]string{
-					traceCfg.Hosts[0]: fmt.Sprintf("%s:%d", singleEntryURL.Host, util.ParsePort(singleEntryURL)),
+					traceCfg.Hosts[0]: util.ParseAddr(singleEntryURL),
 				}
 			}
 		}

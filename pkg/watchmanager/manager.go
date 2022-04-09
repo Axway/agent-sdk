@@ -75,12 +75,13 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 
 	if manager.options.sequenceGetter != nil {
 		harvesterConfig := &harvesterConfig{
-			host:        manager.cfg.Host,
-			port:        manager.cfg.Port,
-			tenantID:    manager.cfg.TenantID,
-			tokenGetter: manager.cfg.TokenGetter,
-			proxyURL:    manager.options.proxyURL,
-			tlsCfg:      manager.options.tlsCfg,
+			host:          manager.cfg.Host,
+			port:          manager.cfg.Port,
+			tenantID:      manager.cfg.TenantID,
+			tokenGetter:   manager.cfg.TokenGetter,
+			proxyURL:      manager.options.proxyURL,
+			tlsCfg:        manager.options.tlsCfg,
+			clientTimeout: manager.options.keepAlive.timeout,
 		}
 		manager.hClient = newHarvesterClient(harvesterConfig)
 	}

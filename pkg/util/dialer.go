@@ -14,6 +14,13 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+const (
+	// DefaultKeepAliveInterval - default duration to send keep alive pings
+	DefaultKeepAliveInterval = 50 * time.Second
+	// DefaultKeepAliveTimeout - default keepalive timeout
+	DefaultKeepAliveTimeout = 10 * time.Second
+)
+
 // Dialer - interface for http dialer for proxy and single entry point
 type Dialer interface {
 	// Dial - interface used by libbeat for tcp network dial
@@ -78,8 +85,8 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 		addr = d.proxyAddress
 	}
 	conn, err := (&net.Dialer{
-		Timeout:   10 * time.Second,
-		KeepAlive: 50 * time.Second,
+		Timeout:   DefaultKeepAliveTimeout,
+		KeepAlive: DefaultKeepAliveInterval,
 		DualStack: true}).DialContext(ctx, network, addr)
 	if err != nil {
 		return nil, err

@@ -87,14 +87,6 @@ func SetConfigAgent(env string, isDocker bool, agentName, singleURL string, sing
 	}
 }
 
-// AddSingleEntryFilterURL - adds a url for single entry point filter
-// TODO - move this method to client and update the single entry host mapping
-func AddSingleEntryFilterURL(filterURL string) {
-	if cfgAgent.singleEntryFilter != nil {
-		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, filterURL)
-	}
-}
-
 // NewClient - creates a new HTTP client
 func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 	timeout := getTimeoutFromEnvironment()
@@ -116,11 +108,15 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 	client := &httpClient{
 		timeout: timeout,
 	}
-	if cfgAgent.singleURL != "" {
-		client.singleEntryHostMap = initializeSingleEntryMapping(cfgAgent.singleURL, cfgAgent.singleEntryFilter)
+	singleURL := ""
+	if cfgAgent != nil {
+		singleURL = cfgAgent.singleURL
+		if singleURL != "" {
+			client.singleEntryHostMap = initializeSingleEntryMapping(singleURL, cfgAgent.singleEntryFilter)
+		}
 	}
 
-	client.initialize(tlsCfg, proxyURL, cfgAgent.singleURL)
+	client.initialize(tlsCfg, proxyURL, singleURL)
 	return client
 }
 
@@ -128,12 +124,10 @@ func initializeSingleEntryMapping(singleEntryURL string, singleEntryFilter []str
 	hostMapping := make(map[string]string)
 	entryURL, err := url.Parse(singleEntryURL)
 	if err == nil {
-		entryPort := util.ParsePort(entryURL)
 		for _, filteredURL := range singleEntryFilter {
 			svcURL, err := url.Parse(filteredURL)
 			if err == nil {
-				svcPort := util.ParsePort(svcURL)
-				hostMapping[fmt.Sprintf("%s:%d", svcURL.Host, svcPort)] = fmt.Sprintf("%s:%d", entryURL.Host, entryPort)
+				hostMapping[util.ParseAddr(svcURL)] = util.ParseAddr(entryURL)
 			}
 		}
 	}
@@ -210,6 +204,7 @@ func (c *httpClient) getURLEncodedQueryParams(queryParams map[string]string) str
 	}
 	return params.Encode()
 }
+
 func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*http.Request, error) {
 	requestURL := request.URL
 	if len(request.QueryParams) != 0 {
@@ -297,7 +292,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		duration := time.Since(startTime)
 		targetURL := req.URL.String()
 		if c.dialer != nil {
-			svcHost := fmt.Sprintf("%s:%d", req.URL.Host, util.ParsePort(req.URL))
+			svcHost := util.ParseAddr(req.URL)
 			if entryHost, ok := c.singleEntryHostMap[svcHost]; ok {
 				targetURL = req.URL.Scheme + "://" + entryHost + req.URL.Path
 			}

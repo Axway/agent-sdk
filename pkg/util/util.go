@@ -89,12 +89,29 @@ func GetURLHostName(urlString string) string {
 // ParsePort - parse port from URL
 func ParsePort(url *url.URL) int {
 	port := 0
+	if url == nil {
+		return port
+	}
+
 	if url.Port() == "" {
 		port, _ = net.LookupPort("tcp", url.Scheme)
 	} else {
 		port, _ = strconv.Atoi(url.Port())
 	}
 	return port
+}
+
+// ParseAddr - parse host:port from URL
+func ParseAddr(url *url.URL) string {
+	if url == nil {
+		return ""
+	}
+
+	host, port, err := net.SplitHostPort(url.Host)
+	if err != nil {
+		return fmt.Sprintf("%s:%d", url.Host, ParsePort(url))
+	}
+	return fmt.Sprintf("%s:%s", host, port)
 }
 
 // StringSliceContains - does the given string slice contain the specified string?

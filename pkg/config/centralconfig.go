@@ -163,7 +163,7 @@ type CentralConfiguration struct {
 	EnvironmentID             string               `config:"environmentID"`
 	AgentName                 string               `config:"agentName"`
 	URL                       string               `config:"url"`
-	singleURL                 string               `config:"platformSingleURL"`
+	SingleURL                 string               `config:"platformSingleURL"`
 	PlatformURL               string               `config:"platformURL"`
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
@@ -542,7 +542,7 @@ func (c *CentralConfiguration) GetCacheStorageInterval() time.Duration {
 
 // GetSingleURL - Returns the Alternate base URL
 func (c *CentralConfiguration) GetSingleURL() string {
-	return c.singleURL
+	return c.SingleURL
 }
 
 const (
@@ -791,7 +791,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	cfg.URL = props.StringPropertyValue(pathURL)
-	cfg.singleURL = props.StringPropertyValue(pathSingleURL)
+	cfg.SingleURL = props.StringPropertyValue(pathSingleURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)

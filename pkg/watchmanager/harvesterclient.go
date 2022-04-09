@@ -10,6 +10,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -18,14 +19,15 @@ const (
 )
 
 type harvesterConfig struct {
-	protocol    string
-	host        string
-	port        uint32
-	tenantID    string
-	tokenGetter TokenGetter
-	tlsCfg      *tls.Config
-	proxyURL    string
-	pageSize    int
+	protocol      string
+	host          string
+	port          uint32
+	tenantID      string
+	clientTimeout time.Duration
+	tokenGetter   TokenGetter
+	tlsCfg        *tls.Config
+	proxyURL      string
+	pageSize      int
 }
 
 type harvesterClient struct {
@@ -43,11 +45,14 @@ func newHarvesterClient(cfg *harvesterConfig) *harvesterClient {
 	}
 	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
 	tlsCfg.LoadFrom(cfg.tlsCfg)
+	clientTimeout := cfg.clientTimeout
+	if clientTimeout == 0 {
+		clientTimeout = util.DefaultKeepAliveTimeout
+	}
 	return &harvesterClient{
-		url: cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
-		cfg: cfg,
-		// TODO - setup timeout from central config
-		client: api.NewSingleEntryClient(tlsCfg, cfg.proxyURL, 30*time.Second),
+		url:    cfg.protocol + "://" + cfg.host + ":" + strconv.Itoa(int(cfg.port)) + "/events",
+		cfg:    cfg,
+		client: api.NewSingleEntryClient(tlsCfg, cfg.proxyURL, clientTimeout),
 	}
 }
 

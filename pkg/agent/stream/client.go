@@ -166,7 +166,7 @@ func NewStreamer(
 	singleEntryAddr := ""
 	singleEntryURL, err := url.Parse(cfg.GetSingleURL())
 	if err == nil {
-		singleEntryAddr = fmt.Sprintf("%s:%d", singleEntryURL.Host, util.ParsePort(singleEntryURL))
+		singleEntryAddr = util.ParseAddr(singleEntryURL)
 	}
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),

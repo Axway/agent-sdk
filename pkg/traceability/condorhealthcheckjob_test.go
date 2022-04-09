@@ -53,19 +53,19 @@ func TestJobStatus(t *testing.T) {
 		{
 			name:     "TCP bad Proxy URL",
 			protocol: "tcp",
-			proxy:    "socks5://host:\\//test.com:1080",
+			proxy:    "socks5://host:\\//localhost:1080",
 			errStr:   "proxy could not be parsed",
 		},
 		{
 			name:     "TCP bad Proxy Protocol",
 			protocol: "tcp",
-			proxy:    "sock://test.com:1080",
+			proxy:    "sock://localhost:1080",
 			errStr:   "could not setup proxy",
 		},
 		{
 			name:     "TCP good Proxy",
 			protocol: "tcp",
-			proxy:    "socks5://test.com:1080",
+			proxy:    "socks5://localhost:1080",
 			errStr:   "connection failed",
 		},
 		{
