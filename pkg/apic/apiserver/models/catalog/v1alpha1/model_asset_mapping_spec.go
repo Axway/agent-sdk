@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetMappingSpec  (management.v1alpha1.AssetMapping)
+// AssetMappingSpec  (catalog.v1alpha1.AssetMapping)
 type AssetMappingSpec struct {
 	// Reference to the executed AssetMappingTemplate.
 	AssetMappingTemplate string                 `json:"assetMappingTemplate,omitempty"`

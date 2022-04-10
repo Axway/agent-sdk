@@ -9,9 +9,9 @@
 
 package v1alpha1
 
-// ApplicationMarketplace Details about the marketplace Application. (catalog.v1alpha1.Application)
-type ApplicationMarketplace struct {
+// ManagedApplicationMarketplace Details about the marketplace Application. (management.v1alpha1.ManagedApplication)
+type ManagedApplicationMarketplace struct {
 	// The name of the Marketplace.
-	Name     string                         `json:"name"`
-	Resource ApplicationMarketplaceResource `json:"resource"`
+	Name     string                                `json:"name"`
+	Resource ManagedApplicationMarketplaceResource `json:"resource"`
 }
