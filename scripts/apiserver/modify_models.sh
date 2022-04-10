@@ -120,6 +120,44 @@ for file in ${MODELS}; do
 done
 
 ######################
+# Remove the ManagementV1alpha1 prefix from the resources generated
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="ManagementV1alpha1"
+REPLACE=""
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
+# Remove the CatalogV1alpha1 prefix from the resources generated
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="CatalogV1alpha1"
+REPLACE=""
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
 # Update the following STATES to include the type infront of the constant
 ######################
 MODELS=`find ${OUTDIR}/models -type f -name "model_*_state.go"`
