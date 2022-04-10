@@ -16,6 +16,7 @@ import (
 const (
 	xAxwayEncrypted = "x-axway-encrypted"
 	crFinalizer     = "agent.credential.provisioned"
+	crLogPrefix     = "credential handler - %s"
 )
 
 type credProv interface {
@@ -48,24 +49,30 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 	}
 
 	cr := &mv1.Credential{}
-	cr.FromInstance(resource)
+	err := cr.FromInstance(resource)
+	if err != nil {
+		log.Errorf(fmt.Sprintf(crLogPrefix, "could not handle credential request: %s"), err.Error())
+		return nil
+	}
 
 	if ok := isStatusFound(cr.Status); !ok {
+		log.Debugf(fmt.Sprintf(crLogPrefix, "could not handle credential request as it did not have a status subresource"))
 		return nil
 	}
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
-		log.Tracef("credential handler - processing resource in pending status")
+		log.Tracef(fmt.Sprintf(crLogPrefix, "processing resource in pending status"))
 		cr := h.onPending(cr)
 		err := h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
+			log.Errorf(fmt.Sprintf(crLogPrefix, "error creating subresources: %s"), err.Error())
 			return err
 		}
 		return h.client.CreateSubResourceScoped(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
 	}
 
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
-		log.Tracef("credential handler - processing resource in deleting state")
+		log.Trace(fmt.Sprintf(crLogPrefix, "processing resource in deleting state"))
 		h.onDeleting(cr)
 	}
 
@@ -75,12 +82,14 @@ func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, res
 func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	app, err := h.getManagedApp(cred)
 	if err != nil {
+		log.Errorf(fmt.Sprintf(crLogPrefix, "error getting managed app: %s"), err.Error())
 		h.onError(cred, err)
 		return cred
 	}
 
 	crd, err := h.getCRD(cred)
 	if err != nil {
+		log.Errorf(fmt.Sprintf(crLogPrefix, "error getting resource details: %s"), err.Error())
 		h.onError(cred, err)
 		return cred
 	}
@@ -111,7 +120,10 @@ func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
 	ri, _ := cred.AsInstance()
-	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	if cred.Status.Level == prov.Success.String() {
+		// only add finalizer on success
+		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	}
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
 		"data":             cred.Data,

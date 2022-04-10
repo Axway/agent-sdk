@@ -31,17 +31,17 @@ func TestAccessRequestHandler(t *testing.T) {
 	}{
 		{
 			action:           proto.Event_CREATED,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle a create event for an AccessRequest when status is pending",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 			expectedProvType: provision,
 			references:       accessReq.Metadata.References,
 		},
 		{
 			action:           proto.Event_UPDATED,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle an update event for an AccessRequest when status is pending",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 			expectedProvType: provision,
 			references:       accessReq.Metadata.References,
 		},
@@ -51,13 +51,13 @@ func TestAccessRequestHandler(t *testing.T) {
 		},
 		{
 			action:        proto.Event_UPDATED,
-			inboundStatus: statusErr,
+			inboundStatus: prov.Error.String(),
 			name:          "should return nil and not process anything when status is set to Error",
 			references:    accessReq.Metadata.References,
 		},
 		{
 			action:        proto.Event_UPDATED,
-			inboundStatus: statusSuccess,
+			inboundStatus: prov.Success.String(),
 			name:          "should return nil and not process anything when the status is set to Success",
 			references:    accessReq.Metadata.References,
 		},
@@ -70,26 +70,26 @@ func TestAccessRequestHandler(t *testing.T) {
 		{
 			action:         proto.Event_CREATED,
 			getErr:         fmt.Errorf("error getting managed app"),
-			inboundStatus:  statusPending,
+			inboundStatus:  prov.Pending.String(),
 			name:           "should handle an error when retrieving the managed app, and set a failed status",
-			outboundStatus: statusErr,
+			outboundStatus: prov.Error.String(),
 			references:     accessReq.Metadata.References,
 		},
 		{
 			action:           proto.Event_CREATED,
 			hasError:         true,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle an error when updating the AccessRequest subresources",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 			expectedProvType: provision,
 			references:       accessReq.Metadata.References,
 			subError:         fmt.Errorf("error updating subresources"),
 		},
 		{
 			action:         proto.Event_CREATED,
-			inboundStatus:  statusPending,
+			inboundStatus:  prov.Pending.String(),
 			name:           "should handle an error when the instance is not found in the cache, and set a failed status",
-			outboundStatus: statusErr,
+			outboundStatus: prov.Error.String(),
 		},
 	}
 
@@ -142,7 +142,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
-			if tc.inboundStatus == statusPending {
+			if tc.inboundStatus == prov.Pending.String() {
 				assert.True(t, c.createSubCalled)
 			} else {
 				assert.False(t, c.createSubCalled)
@@ -171,7 +171,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 			ar := accessReq
-			ar.Status.Level = statusSuccess
+			ar.Status.Level = prov.Success.String()
 			ar.Metadata.State = v1.ResourceDeleting
 			ar.Finalizers = []v1.Finalizer{{Name: arFinalizer}}
 
@@ -208,7 +208,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, deprovision, arp.expectedProvType)
 
-			if tc.outboundStatus.String() == statusSuccess {
+			if tc.outboundStatus.String() == prov.Success.String() {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
@@ -392,6 +392,6 @@ var accessReq = mv1.AccessRequest{
 		ManagedApplication: managedAppRefName,
 	},
 	Status: &v1.ResourceStatus{
-		Level: statusPending,
+		Level: prov.Pending.String(),
 	},
 }

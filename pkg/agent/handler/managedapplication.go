@@ -13,7 +13,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const maFinalizer = "agent.managedapplication.provisioned"
+const (
+	maFinalizer = "agent.managedapplication.provisioned"
+	maLogPrefix = "managed application handler - %s"
+)
 
 type managedAppProvision interface {
 	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
@@ -42,9 +45,14 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	app := &mv1.ManagedApplication{}
-	app.FromInstance(resource)
+	err := app.FromInstance(resource)
+	if err != nil {
+		log.Errorf(fmt.Sprintf(maLogPrefix, "could not handle application request: %s"), err.Error())
+		return nil
+	}
 
 	if ok := isStatusFound(app.Status); !ok {
+		log.Debugf(fmt.Sprintf(maLogPrefix, "could not handle application request as it did not have a status subresource"))
 		return nil
 	}
 
@@ -55,12 +63,12 @@ func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMe
 	}
 
 	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
-		log.Tracef("managed application handler - processing resource in pending status")
+		log.Trace(fmt.Sprintf(maLogPrefix, "processing resource in pending status"))
 		return h.onPending(app, ma)
 	}
 
 	if ok := shouldProcessDeleting(app.Status.Level, app.Metadata.State, len(app.Finalizers)); ok {
-		log.Tracef("managed application handler - processing resource in deleting state")
+		log.Trace(fmt.Sprintf(maLogPrefix, "processing resource in deleting state"))
 		h.onDeleting(app, ma)
 	}
 
@@ -77,7 +85,10 @@ func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provMana
 
 	// add finalizer
 	ri, _ := app.AsInstance()
-	h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+	if app.Status.Level == prov.Success.String() {
+		// only add finalizer on success
+		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+	}
 
 	app.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(app),
@@ -97,6 +108,7 @@ func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provMan
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
 	} else {
+		log.Debugf(fmt.Sprintf(maLogPrefix, "request status was not Success, skipping"))
 		h.onError(app, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
 	}

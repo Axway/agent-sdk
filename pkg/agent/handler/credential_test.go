@@ -42,16 +42,16 @@ func TestCredentialHandler(t *testing.T) {
 		{
 			action:           proto.Event_CREATED,
 			expectedProvType: provision,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle a create event for a Credential when status is pending",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 		},
 		{
 			action:           proto.Event_UPDATED,
 			expectedProvType: provision,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle an update event for a Credential when status is pending",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 		},
 		{
 			action: proto.Event_SUBRESOURCEUPDATED,
@@ -59,35 +59,35 @@ func TestCredentialHandler(t *testing.T) {
 		},
 		{
 			action:        proto.Event_UPDATED,
-			inboundStatus: statusErr,
+			inboundStatus: prov.Error.String(),
 			name:          "should return nil and not process anything when the Credential status is set to Error",
 		},
 		{
 			action:        proto.Event_UPDATED,
-			inboundStatus: statusSuccess,
+			inboundStatus: prov.Success.String(),
 			name:          "should return nil and not process anything when the Credential status is set to Success",
 		},
 		{
 			action:         proto.Event_CREATED,
 			getAppErr:      fmt.Errorf("error getting managed app"),
-			inboundStatus:  statusPending,
+			inboundStatus:  prov.Pending.String(),
 			name:           "should handle an error when retrieving the managed app, and set a failed status",
-			outboundStatus: statusErr,
+			outboundStatus: prov.Error.String(),
 		},
 		{
 			action:         proto.Event_CREATED,
 			getCrdErr:      fmt.Errorf("error getting credential request definition"),
-			inboundStatus:  statusPending,
+			inboundStatus:  prov.Pending.String(),
 			name:           "should handle an error when retrieving the credential request definition, and set a failed status",
-			outboundStatus: statusErr,
+			outboundStatus: prov.Error.String(),
 		},
 		{
 			action:           proto.Event_CREATED,
 			expectedProvType: provision,
 			hasError:         true,
-			inboundStatus:    statusPending,
+			inboundStatus:    prov.Pending.String(),
 			name:             "should handle an error when updating the Credential subresources",
-			outboundStatus:   statusSuccess,
+			outboundStatus:   prov.Success.String(),
 			subError:         fmt.Errorf("error updating subresources"),
 		},
 		{
@@ -166,7 +166,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cred := credential
-			cred.Status.Level = statusSuccess
+			cred.Status.Level = prov.Success.String()
 			cred.Metadata.State = v1.ResourceDeleting
 			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
 
@@ -204,7 +204,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, deprovision, p.expectedProvType)
 
-			if tc.outboundStatus.String() == statusSuccess {
+			if tc.outboundStatus.String() == prov.Success.String() {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)

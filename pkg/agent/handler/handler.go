@@ -2,6 +2,7 @@ package handler
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -36,14 +37,14 @@ func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta
 
 // shouldProcessPending returns true when the resource is pending, and is not in a deleting state
 func shouldProcessPending(status, state string) bool {
-	return status == statusPending && state != v1.ResourceDeleting
+	return status == prov.Pending.String() && state != v1.ResourceDeleting
 }
 
 // shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers
 func shouldProcessDeleting(status, state string, finalizerCount int) bool {
-	return status == statusSuccess && state == v1.ResourceDeleting && finalizerCount > 0
+	return status == prov.Success.String() && state == v1.ResourceDeleting && finalizerCount > 0
 }
 
 func shouldProcessForTrace(status, state string) bool {
-	return status == statusSuccess && state != v1.ResourceDeleting
+	return status == prov.Success.String() && state != v1.ResourceDeleting
 }

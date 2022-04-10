@@ -14,12 +14,10 @@ import (
 )
 
 const (
-	provision     = "provision"
-	deprovision   = "deprovision"
-	statusErr     = "Error"
-	statusSuccess = "Success"
-	statusPending = "Pending"
-	arFinalizer   = "agent.accessrequest.provisioned"
+	provision   = "provision"
+	deprovision = "deprovision"
+	arFinalizer = "agent.accessrequest.provisioned"
+	arLogPrefix = "access request handler - %s"
 )
 
 type arProvisioner interface {
@@ -49,24 +47,30 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 	}
 
 	ar := &mv1.AccessRequest{}
-	ar.FromInstance(resource)
+	err := ar.FromInstance(resource)
+	if err != nil {
+		log.Errorf(fmt.Sprintf(arLogPrefix, "could not handle access request: %s"), err.Error())
+		return nil
+	}
 
 	if ok := isStatusFound(ar.Status); !ok {
+		log.Debugf(fmt.Sprintf(arLogPrefix, "could not handle access request as it did not have a status subresource"))
 		return nil
 	}
 
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
-		log.Tracef("access request handler - processing resource in pending status")
+		log.Tracef(fmt.Sprintf(arLogPrefix, "processing resource in pending status"))
 		ar := h.onPending(ar)
 		err := h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
+			log.Errorf(fmt.Sprintf(arLogPrefix, "error creating subresources: %s"), err.Error())
 			return err
 		}
 		return h.client.CreateSubResourceScoped(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
-		log.Tracef("access request handler - processing resource in deleting state")
+		log.Trace(fmt.Sprintf(arLogPrefix, "processing resource in deleting state"))
 		h.onDeleting(ar)
 	}
 
@@ -76,12 +80,14 @@ func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.Event
 func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessRequest {
 	app, err := h.getManagedApp(ar)
 	if err != nil {
+		log.Errorf(fmt.Sprintf(arLogPrefix, "error getting managed app: %s"), err.Error())
 		h.onError(ar, err)
 		return ar
 	}
 
 	req, err := h.newReq(ar, util.GetAgentDetails(app))
 	if err != nil {
+		log.Errorf(fmt.Sprintf(arLogPrefix, "error getting resource details: %s"), err.Error())
 		h.onError(ar, err)
 		return ar
 	}
@@ -93,7 +99,10 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessReque
 	util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
 
 	ri, _ := ar.AsInstance()
-	h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+	if ar.Status.Level == prov.Success.String() {
+		// only add finalizer on success
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+	}
 
 	ar.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(ar),
@@ -116,6 +125,7 @@ func (h *accessRequestHandler) onError(ar *mv1.AccessRequest, err error) {
 func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
 	req, err := h.newReq(ar, map[string]interface{}{})
 	if err != nil {
+		log.Errorf(fmt.Sprintf(arLogPrefix, "error getting deprovision request details: %s"), err.Error())
 		h.onError(ar, err)
 		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 		return
@@ -127,6 +137,7 @@ func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 	} else {
+		log.Debugf(fmt.Sprintf(arLogPrefix, "request status was not Success, skipping"))
 		h.onError(ar, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}
