@@ -120,6 +120,33 @@ func (m *watchManager) getProxyDialer() (proxyDialer, error) {
 	return nil, nil
 }
 
+// eventCatchUp - called until lastSequenceID is 0, caught up on events
+func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event) error {
+	if m.hClient == nil || m.options.sequenceGetter == nil {
+		return nil
+	}
+
+	sequenceID := m.options.sequenceGetter.GetSequence()
+	if sequenceID > 0 {
+		var err error
+		lastSequenceID, err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+		if err != nil {
+			m.clientMap[subID].handleError(err)
+			return err
+		}
+
+		if lastSequenceID > 0 {
+			// wait for all current sequences to be processed before processing new ones
+			for sequenceID < lastSequenceID {
+				sequenceID = m.options.sequenceGetter.GetSequence()
+			}
+		} else {
+			return nil
+		}
+	}
+	return m.eventCatchUp(link, subID, events)
+}
+
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
 	m.mutex.Lock()
@@ -146,25 +173,8 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 	client.processRequest()
 
-	var lastSequenceID int64
-	var sequenceID int64
-	if m.hClient != nil && m.options.sequenceGetter != nil {
-		sequenceID = m.options.sequenceGetter.GetSequence()
-		if sequenceID > 0 {
-			var err error
-			lastSequenceID, err = m.hClient.receiveSyncEvents(link, sequenceID, events)
-			if err != nil {
-				client.handleError(err)
-				return subID, err
-			}
-		}
-	}
-
-	if lastSequenceID > 0 {
-		// wait for all current sequences to be processed before processing new ones
-		for sequenceID < lastSequenceID {
-			sequenceID = m.options.sequenceGetter.GetSequence()
-		}
+	if err := m.eventCatchUp(link, subID, events); err != nil {
+		return subID, err
 	}
 
 	go client.processEvents()
