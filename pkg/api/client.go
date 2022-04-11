@@ -237,7 +237,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		duration := time.Since(startTime)
 		if err != nil {
 			c.logger.
-				WithField("ID", reqID).
+				WithField("id", reqID).
 				WithField("method", req.Method).
 				WithField("status", statusCode).
 				WithField("duration (ms)", duration.Milliseconds()).
@@ -246,7 +246,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 				Trace("request failed")
 		} else {
 			c.logger.
-				WithField("ID", reqID).
+				WithField("id", reqID).
 				WithField("method", req.Method).
 				WithField("status", statusCode).
 				WithField("duration (ms)", duration.Milliseconds()).
