@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -19,7 +21,8 @@ func NewARDHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *ardHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *ardHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestDefinitionGVK().Kind {
 		return nil
 	}

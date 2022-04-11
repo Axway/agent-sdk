@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -36,10 +38,10 @@ func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 }
 
 // Handle receives the type of the event (add, update, delete), event metadata and updated API Server resource
-func (h *StreamWatchProxyHandler) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *StreamWatchProxyHandler) Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if h.targetResourceHandlerMap != nil {
 		for _, handler := range h.targetResourceHandlerMap {
-			err := handler.Handle(action, eventMetadata, resource)
+			err := handler.Handle(ctx, eventMetadata, resource)
 			if err != nil {
 				return err
 			}

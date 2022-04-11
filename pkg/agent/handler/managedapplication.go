@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -9,11 +10,13 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const maFinalizer = "agent.managedapplication.provisioned"
+const (
+	maFinalizer = "agent.managedapplication.provisioned"
+	maLogPrefix = "managed application handler - %s"
+)
 
 type managedAppProvision interface {
 	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
@@ -36,38 +39,47 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 }
 
 // Handle processes grpc events triggered for ManagedApplications
-func (h *managedApplication) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
+	log := GetLoggerFromContext(ctx).WithField(handlerField, "Managed Application")
+	ctx = setLoggerInContext(ctx, log)
+
 	app := &mv1.ManagedApplication{}
-	app.FromInstance(resource)
+	err := app.FromInstance(resource)
+	if err != nil {
+		log.WithError(err).Error("could not handle application request")
+		return nil
+	}
 
 	if ok := isStatusFound(app.Status); !ok {
+		log.Debug("could not handle application request as it did not have a status subresource")
 		return nil
 	}
 
 	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       h.getTeamName(app.Owner),
+		teamName:       h.getTeamName(ctx, app.Owner),
 		data:           util.GetAgentDetails(app),
 	}
 
 	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
-		log.Tracef("managed application handler - processing resource in pending status")
-		return h.onPending(app, ma)
+		log.Trace("processing resource in pending status")
+		return h.onPending(ctx, app, ma)
 	}
 
 	if ok := shouldProcessDeleting(app.Status.Level, app.Metadata.State, len(app.Finalizers)); ok {
-		log.Tracef("managed application handler - processing resource in deleting state")
-		h.onDeleting(app, ma)
+		log.Trace("processing resource in deleting state")
+		h.onDeleting(ctx, app, ma)
 	}
 
 	return nil
 }
 
-func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provManagedApp) error {
+func (h *managedApplication) onPending(_ context.Context, app *mv1.ManagedApplication, pma provManagedApp) error {
 	status := h.prov.ApplicationRequestProvision(pma)
 
 	app.Status = prov.NewStatusReason(status)
@@ -77,7 +89,10 @@ func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provMana
 
 	// add finalizer
 	ri, _ := app.AsInstance()
-	h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+	if app.Status.Level == prov.Success.String() {
+		// only add finalizer on success
+		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+	}
 
 	app.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(app),
@@ -90,13 +105,15 @@ func (h *managedApplication) onPending(app *mv1.ManagedApplication, pma provMana
 	return h.client.CreateSubResourceScoped(app.ResourceMeta, map[string]interface{}{"status": app.Status})
 }
 
-func (h *managedApplication) onDeleting(app *mv1.ManagedApplication, pma provManagedApp) {
+func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) {
+	log := GetLoggerFromContext(ctx)
 	status := h.prov.ApplicationRequestDeprovision(pma)
 
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
 	} else {
+		log.Debugf("request status was not Success, skipping")
 		h.onError(app, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
 	}
@@ -112,7 +129,7 @@ func (h *managedApplication) onError(ar *mv1.ManagedApplication, err error) {
 	}
 }
 
-func (h *managedApplication) getTeamName(owner *v1.Owner) string {
+func (h *managedApplication) getTeamName(_ context.Context, owner *v1.Owner) string {
 	teamName := ""
 	if owner != nil && owner.ID != "" {
 		team := h.cache.GetTeamByID(owner.ID)

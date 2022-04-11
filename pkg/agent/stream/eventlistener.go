@@ -97,19 +97,16 @@ func (em *EventListener) start() (done bool, err error) {
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
-	em.logger.
-		WithField("sequenceID", event.Metadata.SequenceID).
-		WithField("action", proto.Event_Type_name[int32(event.Type)]).
-		WithField("kind", event.Payload.Kind).
-		WithField("name", event.Payload.Name).
-		Debug("processing received watch event")
+	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
+	logger := handler.GetLoggerFromContext(ctx)
+	logger.Trace("processing received watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
 		return err
 	}
 
-	em.handleResource(event.Type, event.Metadata, ri)
+	em.handleResource(ctx, event.Metadata, ri)
 	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
@@ -122,9 +119,10 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
+func (em *EventListener) handleResource(ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
+
 	for _, h := range em.handlers {
-		err := h.Handle(action, eventMetadata, resource)
+		err := h.Handle(ctx, eventMetadata, resource)
 		if err != nil {
 			em.logger.Error(err)
 		}
