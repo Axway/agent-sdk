@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AddOnSpec struct for AddOnSpec
+// AddOnSpec  (catalog.v1alpha1.AddOn)
 type AddOnSpec struct {
 	// description of the Plan.
 	Description string `json:"description,omitempty"`

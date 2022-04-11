@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AddOnStatus struct for AddOnStatus
+// AddOnStatus  (catalog.v1alpha1.AddOn)
 type AddOnStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

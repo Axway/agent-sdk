@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ApplicationMarketplaceResourceOwnerOrganization Organization details.
+// ApplicationMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.Application)
 type ApplicationMarketplaceResourceOwnerOrganization struct {
 	// Id of the organization.
 	Id string `json:"id"`

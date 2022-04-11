@@ -15,12 +15,13 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AssetReleaseStatusReasons struct for AssetReleaseStatusReasons
+// AssetReleaseStatusReasons  (catalog.v1alpha1.AssetRelease)
 type AssetReleaseStatusReasons struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time                         `json:"timestamp"`
-	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	//  (catalog.v1alpha1.AssetRelease)
+	Meta map[string]map[string]interface{} `json:"meta,omitempty"`
 }

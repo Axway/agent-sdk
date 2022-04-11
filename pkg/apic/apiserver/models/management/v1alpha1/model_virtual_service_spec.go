@@ -9,11 +9,11 @@
 
 package v1alpha1
 
-// VirtualServiceSpec struct for VirtualServiceSpec
+// VirtualServiceSpec  (management.v1alpha1.VirtualService)
 type VirtualServiceSpec struct {
 	// The path prefix to match. Example /api/v1
 	Prefix string `json:"prefix"`
-	// The list of headers and values to match. These are ANDed together.
+	// The list of headers and values to match. These are ANDed together. (management.v1alpha1.VirtualService)
 	HeaderMatch map[string]string `json:"headerMatch,omitempty"`
 	// The hosts that the VirtualService will match.
 	VirtualHosts []string `json:"virtualHosts,omitempty"`

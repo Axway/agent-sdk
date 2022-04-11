@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ManagedApplicationMarketplaceResource The Marketplace Application resource details.
+// ManagedApplicationMarketplaceResource The Marketplace Application resource details. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplaceResource struct {
 	Metadata ManagedApplicationMarketplaceResourceMetadata `json:"metadata"`
 	Owner    ManagedApplicationMarketplaceResourceOwner    `json:"owner,omitempty"`

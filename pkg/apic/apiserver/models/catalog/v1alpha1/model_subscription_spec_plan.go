@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// SubscriptionSpecPlan struct for SubscriptionSpecPlan
+// SubscriptionSpecPlan  (catalog.v1alpha1.Subscription)
 type SubscriptionSpecPlan struct {
 	// Reference to Product resource
 	Name string `json:"name"`

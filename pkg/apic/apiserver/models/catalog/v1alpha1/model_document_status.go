@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// DocumentStatus struct for DocumentStatus
+// DocumentStatus  (catalog.v1alpha1.Document)
 type DocumentStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

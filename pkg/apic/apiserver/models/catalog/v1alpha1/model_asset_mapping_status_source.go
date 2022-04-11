@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetMappingStatusSource struct for AssetMappingStatusSource
+// AssetMappingStatusSource  (catalog.v1alpha1.AssetMapping)
 type AssetMappingStatusSource struct {
 	Resource AssetMappingStatusSourceResource `json:"resource,omitempty"`
 }

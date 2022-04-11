@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetRequestDefinitionAuthorization struct for AssetRequestDefinitionAuthorization
+// AssetRequestDefinitionAuthorization  (catalog.v1alpha1.AssetRequestDefinition)
 type AssetRequestDefinitionAuthorization struct {
 	Approval string `json:"approval"`
 }

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ManagedApplicationMarketplaceResourceOwner Owner of the Application.
+// ManagedApplicationMarketplaceResourceOwner Owner of the Application. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`

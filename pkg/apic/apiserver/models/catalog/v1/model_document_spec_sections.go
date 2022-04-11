@@ -9,7 +9,7 @@
 
 package v1
 
-// DocumentSpecSections struct for DocumentSpecSections
+// DocumentSpecSections  (catalog.v1.Document)
 type DocumentSpecSections struct {
 	// Title for the section.
 	Title string `json:"title"`
