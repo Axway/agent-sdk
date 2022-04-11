@@ -28,15 +28,15 @@ var logHTTPTrace bool
 
 func init() {
 	networkTrace := os.Getenv("LOG_HTTP_TRACE")
-	logHTTPTrace = (networkTrace == "true")
+	logHTTPTrace = networkTrace == "true"
 }
 
-//SetIsLogP -
+// SetIsLogP -
 func SetIsLogP() {
 	isLogP = true
 }
 
-//UnsetIsLogP -
+// UnsetIsLogP -
 func UnsetIsLogP() {
 	isLogP = false
 }
