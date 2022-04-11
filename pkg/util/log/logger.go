@@ -17,6 +17,7 @@ type FieldLogger interface {
 
 // StdLogger interface for logging methods found in the go standard library logger, and logrus methods.
 type StdLogger interface {
+	Redactor
 	logrus.StdLogger
 
 	Debug(args ...interface{})
@@ -38,10 +39,10 @@ type StdLogger interface {
 
 // Redactor interface for redacting log messages
 type Redactor interface {
-	TraceRedacted(fields []string, args ...interface{})
+	DebugRedacted(fields []string, args ...interface{})
 	ErrorRedacted(fields []string, args ...interface{})
 	InfoRedacted(fields []string, args ...interface{})
-	DebugRedacted(fields []string, args ...interface{})
+	TraceRedacted(fields []string, args ...interface{})
 }
 
 // NewFieldLogger returns a FieldLogger for standard logging, and logp logging.
@@ -75,7 +76,7 @@ func (l *logger) WithError(err error) FieldLogger {
 func (l *logger) Debugf(format string, args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debugf(format, args)
+		logp.L().Named(debugSelector).Debugf(format, args)
 		return
 	}
 	l.entry.Debugf(format, args...)
@@ -95,7 +96,7 @@ func (l *logger) Infof(format string, args ...interface{}) {
 func (l *logger) Printf(format string, args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debugf(format, args)
+		logp.L().Infof(format, args)
 		return
 	}
 	l.entry.Printf(format, args...)
@@ -115,7 +116,7 @@ func (l *logger) Warnf(format string, args ...interface{}) {
 func (l *logger) Tracef(format string, args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debugf(format, args...)
+		logp.L().Named(traceSelector).Debugf(format, args...)
 		return
 	}
 	l.entry.Tracef(format, args...)
@@ -154,7 +155,7 @@ func (l *logger) Panicf(format string, args ...interface{}) {
 func (l *logger) Debug(args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debug(args...)
+		logp.L().Named(debugSelector).Debug(args...)
 		return
 	}
 	l.entry.Debug(args...)
@@ -184,7 +185,7 @@ func (l *logger) Print(args ...interface{}) {
 func (l *logger) Trace(args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debug(args...)
+		logp.L().Named(traceSelector).Debug(args...)
 		return
 	}
 	l.entry.Trace(args...)
@@ -234,7 +235,7 @@ func (l *logger) Panic(args ...interface{}) {
 func (l *logger) Debugln(args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debug(args...)
+		logp.L().Named(debugSelector).Debug(args...)
 		return
 	}
 	l.entry.Debugln(args...)
@@ -264,7 +265,7 @@ func (l *logger) Println(args ...interface{}) {
 func (l *logger) Traceln(args ...interface{}) {
 	if l.isLogP() {
 		args = append(args, l.formatEntries()...)
-		logp.L().Debug(args...)
+		logp.L().Named(traceSelector).Debug(args...)
 		return
 	}
 	l.entry.Trace(args...)
