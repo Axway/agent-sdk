@@ -144,6 +144,8 @@ func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event
 		} else {
 			return nil
 		}
+	} else {
+		return nil
 	}
 	return m.eventCatchUp(link, subID, events)
 }
