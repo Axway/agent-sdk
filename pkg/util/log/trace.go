@@ -2,6 +2,7 @@ package log
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/http/httptrace"
 
@@ -9,12 +10,14 @@ import (
 )
 
 type httpTrace struct {
-	reqID string
+	reqID  string
+	logger FieldLogger
 }
 
 // NewRequestWithTraceContext - New request trace context
 func NewRequestWithTraceContext(id string, req *http.Request) *http.Request {
-	trace := &httpTrace{reqID: id}
+	logger := NewFieldLogger()
+	trace := &httpTrace{reqID: id, logger: logger}
 
 	clientTrace := &httptrace.ClientTrace{
 		GetConn:              trace.logConnection,
@@ -34,16 +37,25 @@ func NewRequestWithTraceContext(id string, req *http.Request) *http.Request {
 }
 
 func (t *httpTrace) logConnection(hostPort string) {
-	Tracef("[ID:%s] getting connection %s", t.reqID, hostPort)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("port", hostPort).
+		Trace("getting connection")
 }
 
 func (t *httpTrace) logDNSStart(info httptrace.DNSStartInfo) {
-	Tracef("[ID:%s] dns lookup start, host: %s", t.reqID, info.Host)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("host", info.Host).
+		Trace("dns lookup start")
 }
 
 func (t *httpTrace) logDNSDone(info httptrace.DNSDoneInfo) {
 	if info.Err != nil {
-		Tracef("[ID:%s] dns lookup failure, error: %s", t.reqID, info.Err.Error())
+		t.logger.
+			WithField("ID", t.reqID).
+			WithError(info.Err).
+			Trace("dns lookup failure")
 		return
 	}
 	resolvedIPs := ""
@@ -56,59 +68,100 @@ func (t *httpTrace) logDNSDone(info httptrace.DNSDoneInfo) {
 	if resolvedIPs == "" {
 		resolvedIPs = "none"
 	}
-	Tracef("[ID:%s] dns lookup completed, resolved IPs: %s error: %s", t.reqID, resolvedIPs, info.Err)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("ips", resolvedIPs).
+		Trace("dns lookup completed, resolved IPs")
 }
 
 func (t *httpTrace) logConnectStart(network, addr string) {
 	Tracef("[ID:%s] creating connection %s:%s", t.reqID, network, addr)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("network", network).
+		WithField("addr", addr).
+		Trace("creating connection")
 }
 
 func (t *httpTrace) logConnectDone(network, addr string, err error) {
 	if err != nil {
-		Tracef("[ID:%s] connection creation failure %s:%s error %s", t.reqID, network, addr, err.Error())
+		t.logger.
+			WithField("ID", t.reqID).
+			WithField("network", network).
+			WithField("addr", addr).
+			WithError(err).
+			Trace("connection creation failure")
 		return
 	}
-	Tracef("[ID:%s] connection created %s:%s", t.reqID, network, addr)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("network", network).
+		WithField("addr", addr).
+		Trace("connection created")
 }
 
 func (t *httpTrace) logWroteHeaderField(key string, value []string) {
 	if _, ok := networkTraceIgnoreHeaders[key]; !ok {
-		Tracef("[ID:%s] writing header %s: %v", t.reqID, key, value)
+		t.logger.
+			WithField("ID", t.reqID).
+			WithField("key", key).
+			WithField("value", value).
+			Trace("writing header")
 	} else {
-		Tracef("[ID:%s] writing header %s: ***", t.reqID, key)
+		t.logger.
+			WithField("ID", t.reqID).
+			WithField("key", key).
+			WithField("value", "***").
+			Trace("writing header")
 	}
 }
 
 func (t *httpTrace) logGotConn(info httptrace.GotConnInfo) {
-	Tracef("[ID:%s] connection established, local addr: %s:%s, remote addr: %s:%s", t.reqID,
-		info.Conn.LocalAddr().Network(), info.Conn.RemoteAddr().String(),
-		info.Conn.RemoteAddr().Network(), info.Conn.RemoteAddr().String(),
-	)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("local addr", fmt.Sprintf("%s:%s", info.Conn.LocalAddr().Network(), info.Conn.RemoteAddr().String())).
+		WithField("remote addr", fmt.Sprintf("%s:%s", info.Conn.RemoteAddr().Network(), info.Conn.RemoteAddr().String())).
+		Trace("connection established")
 }
 
 func (t *httpTrace) logTLSHandshakeStart() {
-	Tracef("[ID:%s] TLS handshake start", t.reqID)
+	t.logger.
+		WithField("ID", t.reqID).
+		Trace("TLS handshake start")
 }
 
 func (t *httpTrace) logTLSHandshakeDone(state tls.ConnectionState, err error) {
 	if err != nil {
 		Tracef("[ID:%s] TLS handshake failure, error: %s", t.reqID, err.Error())
+		t.logger.
+			WithError(err).
+			Trace("TLS handshake failure")
 		return
 	}
-	Tracef("[ID:%s] TLS handshake completed, server name: %s protocol: %s", t.reqID,
-		state.ServerName, state.NegotiatedProtocol,
-	)
+	t.logger.
+		WithField("ID", t.reqID).
+		WithField("protocol", state.NegotiatedProtocol).
+		WithField("server name", state.ServerName).
+		Trace("TLS handshake completed")
 }
 
 func (t *httpTrace) logGotFirstResponseByte() {
-	Tracef("[ID:%s] reading response", t.reqID)
+	t.logger.
+		WithField("ID", t.reqID).
+		Trace("reading response")
 }
 
 func (t *httpTrace) logWroteRequest(info httptrace.WroteRequestInfo) {
 	if info.Err != nil {
-		Tracef("[ID:%s] failed to write request, error: %s", t.reqID, info.Err.Error())
+		t.logger.
+			WithField("ID", t.reqID).
+			WithError(info.Err).
+			Trace("failed to write request")
 	}
 	Tracef("[ID:%s] writing request completed", t.reqID)
+	t.logger.
+		WithField("ID", t.reqID).
+		Trace("writing request completed")
 }
 
 // IsHTTPLogTraceEnabled -

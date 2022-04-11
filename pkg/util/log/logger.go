@@ -35,6 +35,10 @@ type StdLogger interface {
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
 	Warnln(args ...interface{})
+
+	Trace(args ...interface{})
+	Tracef(format string, args ...interface{})
+	Traceln(args ...interface{})
 }
 
 // Redactor interface for redacting log messages
