@@ -7,7 +7,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// FieldLogger Wraps the StdLogger, and provides logrus methods for logging with fields
+// FieldLogger Wraps the StdLogger, and provides logrus methods for logging with fields.
+// Intended to mimic the logrus.FieldLogger interface, but with our own interface and implementation.
 type FieldLogger interface {
 	StdLogger
 	WithField(key string, value interface{}) FieldLogger

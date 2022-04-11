@@ -17,7 +17,7 @@ type httpTrace struct {
 // NewRequestWithTraceContext - New request trace context
 func NewRequestWithTraceContext(id string, req *http.Request) *http.Request {
 	logger := NewFieldLogger()
-	trace := &httpTrace{reqID: id, logger: logger}
+	trace := &httpTrace{reqID: id, logger: logger.WithField("component", "httpTrace")}
 
 	clientTrace := &httptrace.ClientTrace{
 		GetConn:              trace.logConnection,
@@ -75,7 +75,6 @@ func (t *httpTrace) logDNSDone(info httptrace.DNSDoneInfo) {
 }
 
 func (t *httpTrace) logConnectStart(network, addr string) {
-	Tracef("[ID:%s] creating connection %s:%s", t.reqID, network, addr)
 	t.logger.
 		WithField("ID", t.reqID).
 		WithField("network", network).
@@ -132,7 +131,6 @@ func (t *httpTrace) logTLSHandshakeStart() {
 
 func (t *httpTrace) logTLSHandshakeDone(state tls.ConnectionState, err error) {
 	if err != nil {
-		Tracef("[ID:%s] TLS handshake failure, error: %s", t.reqID, err.Error())
 		t.logger.
 			WithError(err).
 			Trace("TLS handshake failure")
@@ -158,7 +156,6 @@ func (t *httpTrace) logWroteRequest(info httptrace.WroteRequestInfo) {
 			WithError(info.Err).
 			Trace("failed to write request")
 	}
-	Tracef("[ID:%s] writing request completed", t.reqID)
 	t.logger.
 		WithField("ID", t.reqID).
 		Trace("writing request completed")

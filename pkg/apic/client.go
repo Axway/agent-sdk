@@ -105,6 +105,7 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 	serviceClient := &ServiceClient{
 		caches: caches,
 	}
+	serviceClient.logger = log.NewFieldLogger().WithField("component", "serviceClient")
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.initClient(cfg)
@@ -136,14 +137,14 @@ func (c *ServiceClient) GetOrCreateCategory(title string) string {
 	category := c.caches.GetCategoryWithTitle(title)
 	if category == nil {
 		if !corecfg.IsCategoryAutocreationEnabled() {
-			log.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", title)
+			c.logger.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", title)
 			return ""
 		}
 
 		// create the category and add it to the cache
 		newCategory, err := c.CreateCategory(title)
 		if err != nil {
-			log.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(title).Error())
+			c.logger.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(title).Error())
 			return ""
 		}
 		category, err = newCategory.AsInstance()
@@ -163,7 +164,7 @@ func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 
 	err := c.setTeamCache()
 	if err != nil {
-		log.Error(err)
+		c.logger.Error(err)
 	}
 
 	// set the default webhook if one has been configured
@@ -408,7 +409,7 @@ func (c *ServiceClient) getPlatformUserInfo(id string) (*defs.PlatformUserInfo, 
 	}
 
 	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
-	log.Tracef("Platform URL being used to get user information %s", platformURL)
+	c.logger.Tracef("Platform URL being used to get user information %s", platformURL)
 
 	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
 	if reqErr != nil {
@@ -436,7 +437,7 @@ func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
 	}
 
 	email := platformUserInfo.Result.Email
-	log.Tracef("Platform user email %s", email)
+	c.logger.Tracef("Platform user email %s", email)
 
 	return email, nil
 }
@@ -450,7 +451,7 @@ func (c *ServiceClient) GetUserName(id string) (string, error) {
 
 	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
 
-	log.Tracef("Platform user %s", userName)
+	c.logger.Tracef("Platform user %s", userName)
 
 	return userName, nil
 }
@@ -547,7 +548,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlLi
 	return acl, err
 }
 
-//UpdateAccessControlList - removes existing then creates new AccessControlList
+// UpdateAccessControlList - removes existing then creates new AccessControlList
 func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
 	// first delete the existing access control list
 	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
@@ -689,7 +690,7 @@ func (c *ServiceClient) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[s
 				if execErr == nil {
 					execErr = err
 				}
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
+				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
 			}
 		}(wg, subName)
 	}
@@ -722,7 +723,7 @@ func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[str
 			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
-				log.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
+				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
 			}
 		}(subName)
 	}

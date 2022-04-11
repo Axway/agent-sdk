@@ -25,6 +25,7 @@ type EventListener struct {
 	handlers        []handler.Handler
 	source          chan *proto.Event
 	sequenceManager *agentSequenceManager
+	logger          log.FieldLogger
 }
 
 type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
@@ -39,6 +40,7 @@ func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *a
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
+		logger:          log.NewFieldLogger().WithField("component", "stream event listener"),
 	}
 }
 
@@ -81,10 +83,10 @@ func (em *EventListener) start() (done bool, err error) {
 
 		err := em.handleEvent(event)
 		if err != nil {
-			log.Errorf("stream event listener error: %s", err)
+			em.logger.WithError(err).Error("stream event listener error")
 		}
 	case <-em.ctx.Done():
-		log.Tracef("stream event listener has been gracefully stopped")
+		em.logger.Trace("stream event listener has been gracefully stopped")
 		done = true
 		err = nil
 		break
@@ -122,7 +124,7 @@ func (em *EventListener) handleResource(ctx context.Context, eventMetadata *prot
 	for _, h := range em.handlers {
 		err := h.Handle(ctx, eventMetadata, resource)
 		if err != nil {
-			log.Error(err)
+			em.logger.Error(err)
 		}
 	}
 }
