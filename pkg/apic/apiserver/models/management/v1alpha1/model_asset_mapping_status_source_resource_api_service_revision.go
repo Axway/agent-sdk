@@ -9,10 +9,9 @@
 
 package v1alpha1
 
-// VirtualServiceSpecRules struct for VirtualServiceSpecRules
-type VirtualServiceSpecRules struct {
-	Cors string `json:"cors,omitempty"`
+// AssetMappingStatusSourceResourceApiServiceRevision  (management.v1alpha1.AssetMapping)
+type AssetMappingStatusSourceResourceApiServiceRevision struct {
+	Ref string `json:"ref,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	Auth    interface{} `json:"auth,omitempty"`
-	Lambdas []string    `json:"lambdas,omitempty"`
+	OperationType AssetMappingStatusOperationType `json:"operationType,omitempty"`
 }

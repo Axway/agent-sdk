@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
@@ -19,7 +20,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	ExternalSecretScopes = []string{"Environment"}
+	ExternalSecretScopes = []string{"Environment", "VirtualAPI", "VirtualAPIRelease"}
 )
 
 const ExternalSecretResourceName = "externalsecrets"
@@ -40,7 +41,18 @@ type ExternalSecret struct {
 }
 
 // NewExternalSecret creates an empty *ExternalSecret
-func NewExternalSecret(name, scopeName string) *ExternalSecret {
+func NewExternalSecret(name, scopeKind, scopeName string) (*ExternalSecret, error) {
+	validScope := false
+	for _, s := range ExternalSecretScopes {
+		if scopeKind == s {
+			validScope = true
+			break
+		}
+	}
+	if !validScope {
+		return nil, fmt.Errorf("scope '%s' not valid for ExternalSecret kind", scopeKind)
+	}
+
 	return &ExternalSecret{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
@@ -48,11 +60,11 @@ func NewExternalSecret(name, scopeName string) *ExternalSecret {
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: ExternalSecretScopes[0],
+					Kind: scopeKind,
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 // ExternalSecretFromInstanceArray converts a []*ResourceInstance to a []*ExternalSecret

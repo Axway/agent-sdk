@@ -12,6 +12,6 @@ package v1alpha1
 // AssetMappingSpec  (management.v1alpha1.AssetMapping)
 type AssetMappingSpec struct {
 	// Reference to the executed AssetMappingTemplate.
-	AssetMappingTemplate string                 `json:"assetMappingTemplate"`
+	AssetMappingTemplate string                 `json:"assetMappingTemplate,omitempty"`
 	Inputs               AssetMappingSpecInputs `json:"inputs"`
 }

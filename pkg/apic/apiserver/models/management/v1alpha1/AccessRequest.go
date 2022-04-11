@@ -37,10 +37,10 @@ type AccessRequest struct {
 	apiv1.ResourceMeta
 	Owner *apiv1.Owner `json:"owner"`
 	// GENERATE: The following code has been modified after code generation
-	// 	References AccessRequestReferences `json:"references"`
-	References []AccessRequestReferences `json:"references"`
-	Spec       AccessRequestSpec         `json:"spec"`
-	// 	Status     AccessRequestStatus       `json:"status"`
+	// 	References interface{}         `json:"references"`
+	References []interface{}     `json:"references"`
+	Spec       AccessRequestSpec `json:"spec"`
+	// 	Status     AccessRequestStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
