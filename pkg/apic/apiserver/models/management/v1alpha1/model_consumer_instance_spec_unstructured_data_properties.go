@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ConsumerInstanceSpecUnstructuredDataProperties The Catalog Item properties for unstructuded definition subtypes. (management.v1alpha1.ConsumerInstance)
+// ConsumerInstanceSpecUnstructuredDataProperties The Catalog Item properties for unstructuded definition subtypes.
 type ConsumerInstanceSpecUnstructuredDataProperties struct {
 	// Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'.
 	Type string `json:"type"`

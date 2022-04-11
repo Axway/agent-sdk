@@ -9,10 +9,10 @@
 
 package v1alpha1
 
-// AssetRequestStatus  (catalog.v1alpha1.AssetRequest)
+// AssetRequestStatus struct for AssetRequestStatus
 type AssetRequestStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []AssetRequestStatusReasons `json:"reasons,omitempty"`
+	Reasons []AssetReleaseStatusReasons `json:"reasons,omitempty"`
 }

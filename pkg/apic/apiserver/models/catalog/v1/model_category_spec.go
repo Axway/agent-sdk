@@ -9,7 +9,7 @@
 
 package v1
 
-// CategorySpec  (catalog.v1.Category)
+// CategorySpec struct for CategorySpec
 type CategorySpec struct {
 	// Markdown representing the category description.
 	Description string `json:"description,omitempty"`

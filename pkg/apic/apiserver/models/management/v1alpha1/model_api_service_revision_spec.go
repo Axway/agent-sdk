@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ApiServiceRevisionSpec  (management.v1alpha1.APIServiceRevision)
+// ApiServiceRevisionSpec struct for ApiServiceRevisionSpec
 type ApiServiceRevisionSpec struct {
 	ApiService string                           `json:"apiService"`
 	Definition ApiServiceRevisionSpecDefinition `json:"definition,omitempty"`

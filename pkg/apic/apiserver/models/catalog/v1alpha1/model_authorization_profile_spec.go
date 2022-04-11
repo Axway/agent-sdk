@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AuthorizationProfileSpec  (catalog.v1alpha1.AuthorizationProfile)
+// AuthorizationProfileSpec struct for AuthorizationProfileSpec
 type AuthorizationProfileSpec struct {
 	// Description of AuthorizationProfile that can be used to access Asset.
 	Description string `json:"description,omitempty"`

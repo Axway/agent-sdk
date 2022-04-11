@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductReleaseSpecRelease  (catalog.v1alpha1.ProductRelease)
+// ProductReleaseSpecRelease struct for ProductReleaseSpecRelease
 type ProductReleaseSpecRelease struct {
 	Name string `json:"name,omitempty"`
 	// The AssetRelease version.

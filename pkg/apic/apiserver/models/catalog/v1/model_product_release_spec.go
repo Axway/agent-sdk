@@ -9,7 +9,7 @@
 
 package v1
 
-// ProductReleaseSpec  (catalog.v1.ProductRelease)
+// ProductReleaseSpec struct for ProductReleaseSpec
 type ProductReleaseSpec struct {
 	// Description of the release.
 	Description string `json:"description,omitempty"`

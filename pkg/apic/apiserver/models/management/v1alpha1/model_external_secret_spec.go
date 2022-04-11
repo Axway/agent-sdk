@@ -9,9 +9,10 @@
 
 package v1alpha1
 
-// ExternalSecretSpec Data for Bearer Token Auth.
+// ExternalSecretSpec struct for ExternalSecretSpec
 type ExternalSecretSpec struct {
-	Kind string `json:"kind"`
-	// Alias for the Bearer Token in the secret.
-	Alias string `json:"alias"`
+	// GENERATE: The following code has been modified after code generation
+	Config interface{} `json:"config"`
+	// GENERATE: The following code has been modified after code generation
+	Data interface{} `json:"data"`
 }

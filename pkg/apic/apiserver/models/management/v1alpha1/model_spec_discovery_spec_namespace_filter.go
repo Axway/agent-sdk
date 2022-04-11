@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// SpecDiscoverySpecNamespaceFilter a list of namespace names to follow. If not set, follows all namespaces. (management.v1alpha1.SpecDiscovery)
+// SpecDiscoverySpecNamespaceFilter a list of namespace names to follow. If not set, follows all namespaces.
 type SpecDiscoverySpecNamespaceFilter struct {
 	Names []string `json:"names,omitempty"`
 }

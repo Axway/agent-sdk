@@ -9,9 +9,8 @@
 
 package v1alpha1
 
-// Oas3DocumentSpec  (management.v1alpha1.OAS3Document)
+// Oas3DocumentSpec struct for Oas3DocumentSpec
 type Oas3DocumentSpec struct {
-	VirtualService string `json:"virtualService"`
-	//  (management.v1alpha1.OAS3Document)
-	Oas map[string]interface{} `json:"oas"`
+	VirtualService string                 `json:"virtualService"`
+	Oas            map[string]interface{} `json:"oas"`
 }

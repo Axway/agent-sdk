@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetResourceReferences  (catalog.v1alpha1.AssetResource)
+// AssetResourceReferences struct for AssetResourceReferences
 type AssetResourceReferences struct {
 	// Reference to API Service Revision resource
 	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`

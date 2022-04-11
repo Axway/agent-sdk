@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// DeploymentSpec  (management.v1alpha1.Deployment)
+// DeploymentSpec struct for DeploymentSpec
 type DeploymentSpec struct {
 	// The name of an APIServiceInstance resource that specifies where the API is deployed.
 	VirtualAPIRelease string `json:"virtualAPIRelease"`

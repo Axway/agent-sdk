@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// WatchTopicSpec  (management.v1alpha1.WatchTopic)
+// WatchTopicSpec struct for WatchTopicSpec
 type WatchTopicSpec struct {
 	// Description of the WatchTopic
 	Description string                  `json:"description,omitempty"`

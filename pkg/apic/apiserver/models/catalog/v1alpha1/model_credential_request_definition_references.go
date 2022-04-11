@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// CredentialRequestDefinitionReferences  (catalog.v1alpha1.CredentialRequestDefinition)
+// CredentialRequestDefinitionReferences struct for CredentialRequestDefinitionReferences
 type CredentialRequestDefinitionReferences struct {
 	// The name of the CredentialRequestDefinition from an Environment.
 	CredentialReqDef string `json:"credentialReqDef,omitempty"`

@@ -15,13 +15,12 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AssetRequestStatusReasons  (catalog.v1alpha1.AssetRequest)
-type AssetRequestStatusReasons struct {
+// DocumentStatusSuccess struct for DocumentStatusSuccess
+type DocumentStatusSuccess struct {
 	Type string `json:"type"`
-	// Details of the error.
-	Detail string `json:"detail"`
-	// Time when the update occurred.
+	// Time when the change occured.
 	Timestamp time.Time `json:"timestamp"`
-	//  (catalog.v1alpha1.AssetRequest)
-	Meta map[string]map[string]interface{} `json:"meta,omitempty"`
+	// message of the result
+	Detail string                 `json:"detail"`
+	Meta   map[string]interface{} `json:"meta,omitempty"`
 }

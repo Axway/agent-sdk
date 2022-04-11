@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AccessRequestDefinitionSpec  (management.v1alpha1.AccessRequestDefinition)
+// AccessRequestDefinitionSpec struct for AccessRequestDefinitionSpec
 type AccessRequestDefinitionSpec struct {
-	// JSON Schema draft \\#7 for defining the AccessRequest properties needed to get access to an APIServiceInstance. (management.v1alpha1.AccessRequestDefinition)
+	// JSON Schema draft \\#7 for defining the AccessRequest properties needed to get access to an APIServiceInstance.
 	Schema map[string]interface{} `json:"schema"`
 }

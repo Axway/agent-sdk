@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductPlanSpecFeatures  (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecFeatures struct for ProductPlanSpecFeatures
 type ProductPlanSpecFeatures struct {
 	Name string `json:"name"`
 }

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AccessRequestStatus  (management.v1alpha1.AccessRequest)
+// AccessRequestStatus struct for AccessRequestStatus
 type AccessRequestStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

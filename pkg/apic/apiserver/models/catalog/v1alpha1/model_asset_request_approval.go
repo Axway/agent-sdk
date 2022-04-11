@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetRequestApproval  (catalog.v1alpha1.AssetRequest)
+// AssetRequestApproval struct for AssetRequestApproval
 type AssetRequestApproval struct {
 	State AssetRequestApprovalState `json:"state"`
 }

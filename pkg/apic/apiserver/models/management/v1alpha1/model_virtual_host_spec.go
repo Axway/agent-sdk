@@ -11,6 +11,8 @@ package v1alpha1
 
 // VirtualHostSpec struct for VirtualHostSpec
 type VirtualHostSpec struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
+	// The fully qualifield domain name as described in RFC 1035
+	Domain string `json:"domain"`
+	// GENERATE: The following code has been modified after code generation
+	Secret interface{} `json:"secret"`
 }

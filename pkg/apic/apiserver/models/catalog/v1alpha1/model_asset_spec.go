@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AssetSpec  (catalog.v1alpha1.Asset)
+// AssetSpec struct for AssetSpec
 type AssetSpec struct {
 	// description of the asset.
 	Description string `json:"description,omitempty"`

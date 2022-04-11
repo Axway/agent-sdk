@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ManagedApplicationStatus  (management.v1alpha1.ManagedApplication)
+// ManagedApplicationStatus struct for ManagedApplicationStatus
 type ManagedApplicationStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

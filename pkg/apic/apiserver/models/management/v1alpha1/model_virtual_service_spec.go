@@ -9,10 +9,18 @@
 
 package v1alpha1
 
-// VirtualServiceSpec Configuration for operations on a route.
+// VirtualServiceSpec struct for VirtualServiceSpec
 type VirtualServiceSpec struct {
-	Id     string                  `json:"id"`
-	Method string                  `json:"method"`
-	Path   string                  `json:"path"`
-	Rules  VirtualServiceSpecRules `json:"rules,omitempty"`
+	// The path prefix to match. Example /api/v1
+	Prefix string `json:"prefix"`
+	// The list of headers and values to match. These are ANDed together.
+	HeaderMatch map[string]string `json:"headerMatch,omitempty"`
+	// The hosts that the VirtualService will match.
+	VirtualHosts []string `json:"virtualHosts,omitempty"`
+	Cors         string   `json:"cors,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Auth    interface{} `json:"auth"`
+	Lambdas []string    `json:"lambdas,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Route []VirtualServiceSpecServiceRouting `json:"route"`
 }

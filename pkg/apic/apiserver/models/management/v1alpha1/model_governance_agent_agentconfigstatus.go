@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// GovernanceAgentAgentconfigstatus  (management.v1alpha1.GovernanceAgent)
+// GovernanceAgentAgentconfigstatus struct for GovernanceAgentAgentconfigstatus
 type GovernanceAgentAgentconfigstatus struct {
 	// Version of the config.
 	ResourceVersion string `json:"resourceVersion,omitempty"`

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ApiServiceSpec  (management.v1alpha1.APIService)
+// ApiServiceSpec struct for ApiServiceSpec
 type ApiServiceSpec struct {
 	// The description of the api service.
 	Description string             `json:"description,omitempty"`

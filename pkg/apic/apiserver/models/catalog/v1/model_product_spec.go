@@ -9,7 +9,7 @@
 
 package v1
 
-// ProductSpec  (catalog.v1.Product)
+// ProductSpec struct for ProductSpec
 type ProductSpec struct {
 	// description of the Product.
 	Description string   `json:"description,omitempty"`

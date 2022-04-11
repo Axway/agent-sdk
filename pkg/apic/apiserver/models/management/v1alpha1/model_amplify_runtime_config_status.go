@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AmplifyRuntimeConfigStatus  (management.v1alpha1.AmplifyRuntimeConfig)
+// AmplifyRuntimeConfigStatus struct for AmplifyRuntimeConfigStatus
 type AmplifyRuntimeConfigStatus struct {
 	Name string `json:"name"`
 	// Description of the phase.

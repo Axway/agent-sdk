@@ -11,7 +11,10 @@ package v1alpha1
 
 // ResourceSpec struct for ResourceSpec
 type ResourceSpec struct {
-	Type string `json:"type"`
-	// Resource content.
-	Content string `json:"content"`
+	// The type of the resource, example: pdf
+	FileType string `json:"fileType"`
+	// The content type
+	ContentType string `json:"contentType"`
+	// GENERATE: The following code has been modified after code generation
+	Data interface{} `json:"data"`
 }

@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// CredentialRequestDefinitionSpecProvision  (catalog.v1alpha1.CredentialRequestDefinition)
+// CredentialRequestDefinitionSpecProvision struct for CredentialRequestDefinitionSpecProvision
 type CredentialRequestDefinitionSpecProvision struct {
-	// JSON Schema draft \\#7 for describing the generated credentials format. (catalog.v1alpha1.CredentialRequestDefinition)
+	// JSON Schema draft \\#7 for describing the generated credentials format.
 	Schema map[string]interface{} `json:"schema"`
 }

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AmplifyConfigSpecAddress The listener address configuration. (management.v1alpha1.AmplifyConfig)
+// AmplifyConfigSpecAddress The listener address configuration.
 type AmplifyConfigSpecAddress struct {
 	// The listener interface
 	Interface string `json:"interface"`

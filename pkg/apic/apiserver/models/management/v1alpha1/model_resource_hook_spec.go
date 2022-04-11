@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ResourceHookSpec  (management.v1alpha1.ResourceHook)
+// ResourceHookSpec struct for ResourceHookSpec
 type ResourceHookSpec struct {
 	Triggers []ResourceHookSpecTriggers `json:"triggers"`
 	// List of Webhook kind resource names that dictates what webhooks will be invoked on matching triggers.

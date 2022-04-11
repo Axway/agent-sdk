@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AmplifyJwtAuthRuleSpecFrom  (management.v1alpha1.AmplifyJWTAuthRule)
+// AmplifyJwtAuthRuleSpecFrom struct for AmplifyJwtAuthRuleSpecFrom
 type AmplifyJwtAuthRuleSpecFrom struct {
 	// Where to look for the token.
 	In   string `json:"in,omitempty"`

@@ -9,10 +9,10 @@
 
 package v1alpha1
 
-// SubscriptionStatus  (catalog.v1alpha1.Subscription)
+// SubscriptionStatus struct for SubscriptionStatus
 type SubscriptionStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []SubscriptionStatusReasons `json:"reasons,omitempty"`
+	Reasons []AssetReleaseStatusReasons `json:"reasons,omitempty"`
 }

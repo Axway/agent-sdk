@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ApplicationSpec  (catalog.v1alpha1.Application)
+// ApplicationSpec struct for ApplicationSpec
 type ApplicationSpec struct {
 	Security ApplicationSpecSecurity `json:"security"`
 }

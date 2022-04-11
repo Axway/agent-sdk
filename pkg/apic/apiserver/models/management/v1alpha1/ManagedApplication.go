@@ -35,10 +35,11 @@ func init() {
 // ManagedApplication Resource
 type ManagedApplication struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner                 `json:"owner"`
-	References ManagedApplicationReferences `json:"references"`
-	Spec       ManagedApplicationSpec       `json:"spec"`
-	// 	Status     ManagedApplicationStatus     `json:"status"`
+	Marketplace ManagedApplicationMarketplace `json:"marketplace"`
+	Owner       *apiv1.Owner                  `json:"owner"`
+	References  ManagedApplicationReferences  `json:"references"`
+	Spec        ManagedApplicationSpec        `json:"spec"`
+	// 	Status      ManagedApplicationStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -124,6 +125,7 @@ func (res *ManagedApplication) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -155,6 +157,20 @@ func (res *ManagedApplication) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Marketplace
+	if v, ok := aux.SubResources["marketplace"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "marketplace")
+		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References

@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// AddOnReferences  (catalog.v1alpha1.AddOn)
+// AddOnReferences struct for AddOnReferences
 type AddOnReferences struct {
-	Product AddOnReferencesProduct `json:"product,omitempty"`
+	Product ProductPlanReferencesProduct `json:"product,omitempty"`
 }

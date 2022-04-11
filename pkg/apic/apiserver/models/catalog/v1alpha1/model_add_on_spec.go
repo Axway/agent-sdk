@@ -11,6 +11,11 @@ package v1alpha1
 
 // AddOnSpec struct for AddOnSpec
 type AddOnSpec struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+	// description of the Plan.
+	Description string `json:"description,omitempty"`
+	// The unit used to measure the access to the resource.
+	Unit string `json:"unit"`
+	// The resources that the access is being granted to.
+	// GENERATE: The following code has been modified after code generation
+	Resources []interface{} `json:"resources,omitempty"`
 }

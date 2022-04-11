@@ -9,7 +9,7 @@
 
 package v1alpha1
 
-// ProductReferences  (catalog.v1alpha1.Product)
+// ProductReferences struct for ProductReferences
 type ProductReferences struct {
 	// Computed latest AssetReleases for each Asset reference in the Product.
 	Assets []ProductReferencesAssets `json:"assets,omitempty"`
