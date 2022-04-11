@@ -97,7 +97,7 @@ func (em *EventListener) start() (done bool, err error) {
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
-	ctx := handler.NewEventContext(proto.Event_Type(event.Type), event.Metadata, event.Payload.Name, event.Payload.Kind)
+	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
 	logger := handler.GetLoggerFromContext(ctx)
 	logger.Trace("processing received watch event")
 
