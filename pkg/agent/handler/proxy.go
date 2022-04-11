@@ -52,6 +52,7 @@ func (h *StreamWatchProxyHandler) Handle(ctx context.Context, eventMetadata *pro
 	return nil
 }
 
+// NewEventContext - create a context for the new event
 func NewEventContext(action proto.Event_Type, eventMetadata *proto.EventMeta, kind, name string) context.Context {
 	logger := fieldLogger.WithFields(
 		logrus.Fields{
@@ -75,6 +76,7 @@ func setActionInContext(ctx context.Context, action proto.Event_Type) context.Co
 	return context.WithValue(ctx, ctxAction, action)
 }
 
+// GetLoggerFromContext- returns the field logger that is part of the context
 func GetLoggerFromContext(ctx context.Context) corelog.FieldLogger {
 	return ctx.Value(ctxLogger).(corelog.FieldLogger)
 }
