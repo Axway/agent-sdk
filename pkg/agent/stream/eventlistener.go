@@ -25,6 +25,7 @@ type EventListener struct {
 	handlers        []handler.Handler
 	source          chan *proto.Event
 	sequenceManager *agentSequenceManager
+	logger          log.FieldLogger
 }
 
 type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
@@ -39,6 +40,7 @@ func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *a
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
+		logger:          log.NewFieldLogger().WithField("component", "stream event listener"),
 	}
 }
 
@@ -81,10 +83,10 @@ func (em *EventListener) start() (done bool, err error) {
 
 		err := em.handleEvent(event)
 		if err != nil {
-			log.Errorf("stream event listener error: %s", err)
+			em.logger.WithError(err).Error("stream event listener error")
 		}
 	case <-em.ctx.Done():
-		log.Tracef("stream event listener has been gracefully stopped")
+		em.logger.Trace("stream event listener has been gracefully stopped")
 		done = true
 		err = nil
 		break
@@ -95,13 +97,12 @@ func (em *EventListener) start() (done bool, err error) {
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
-	log.Debugf(
-		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
-		event.Metadata.SequenceID,
-		proto.Event_Type_name[int32(event.Type)],
-		event.Payload.Kind,
-		event.Payload.Name,
-	)
+	em.logger.
+		WithField("sequenceID", event.Metadata.SequenceID).
+		WithField("action", proto.Event_Type_name[int32(event.Type)]).
+		WithField("kind", event.Payload.Kind).
+		WithField("name", event.Payload.Name).
+		Debug("processing received watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
@@ -125,7 +126,7 @@ func (em *EventListener) handleResource(action proto.Event_Type, eventMetadata *
 	for _, h := range em.handlers {
 		err := h.Handle(action, eventMetadata, resource)
 		if err != nil {
-			log.Error(err)
+			em.logger.Error(err)
 		}
 	}
 }

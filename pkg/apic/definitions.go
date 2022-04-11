@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -114,6 +115,7 @@ type ServiceClient struct {
 	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
+	logger                             log.FieldLogger
 }
 
 // APIServerInfoProperty -

@@ -14,7 +14,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 
@@ -53,6 +53,7 @@ type Client interface {
 
 type httpClient struct {
 	Client
+	logger     log.FieldLogger
 	httpClient *http.Client
 	timeout    time.Duration
 }
@@ -89,6 +90,7 @@ func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time
 	return &httpClient{
 		timeout:    timeout,
 		httpClient: httpCli,
+		logger:     log.NewFieldLogger().WithField("component", "httpClient"),
 	}
 }
 
@@ -234,9 +236,22 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	defer func() {
 		duration := time.Since(startTime)
 		if err != nil {
-			log.Tracef("[ID:%s] %s [%dms] - ERR - %s - %s", reqID, req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
+			c.logger.
+				WithField("ID", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration (ms)", duration.Milliseconds()).
+				WithField("url", req.URL.String()).
+				WithError(err).
+				Trace("request failed")
 		} else {
-			log.Tracef("[ID:%s] %s [%dms] - %d - %s", reqID, req.Method, duration.Milliseconds(), statusCode, req.URL.String())
+			c.logger.
+				WithField("ID", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration (ms)", duration.Milliseconds()).
+				WithField("url", req.URL.String()).
+				Trace("request succeeded")
 		}
 	}()
 

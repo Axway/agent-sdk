@@ -8,7 +8,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // API service cache management
@@ -34,7 +33,10 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 		} else {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
 		}
-		log.Tracef("added api name: %s, id %s to API cache", apiName, apiID)
+		c.logger.
+			WithField("api name", apiName).
+			WithField("api id", apiID).
+			Trace("added api to cache")
 	}
 
 	return nil

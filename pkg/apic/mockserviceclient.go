@@ -5,6 +5,7 @@ import (
 	"time"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -59,6 +60,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		apiClient:                          apiClient,
 		DefaultSubscriptionApprovalWebhook: webhook,
 		DefaultSubscriptionSchema:          NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
+		logger:                             log.NewFieldLogger(),
 	}
 	svcClient.subscriptionMgr = newSubscriptionManager(svcClient)
 	return svcClient, apiClient
