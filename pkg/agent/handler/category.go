@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
@@ -18,7 +20,8 @@ func NewCategoryHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (c *categoryHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (c *categoryHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != catalog.CategoryGVK().Kind {
 		return nil
 	}

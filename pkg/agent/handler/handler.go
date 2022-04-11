@@ -1,16 +1,43 @@
 package handler
 
 import (
+	"context"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	corelog "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+func init() {
+	fieldLogger = corelog.NewFieldLogger().WithField("package", "sdk.agent.handler")
+}
+
 // Handler interface used by the EventListener to process events.
 type Handler interface {
-	// Handle receives the type of the event (add, update, delete), event metadata and the API Server resource, if it exists.
-	Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
+	// Handle receives the type of the event context, event metadata and the API Server resource, if it exists.
+	Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
 }
+
+// This type is used for values added to context
+type ctxKey int
+
+// The key used for the logger in the context
+const (
+	ctxLogger ctxKey = iota
+	ctxAction
+)
+
+var fieldLogger corelog.FieldLogger
+
+// logger constants
+const (
+	handlerField    = "handler"
+	sequenceIDField = "sequence"
+	actionField     = "action"
+	typeField       = "resource"
+	nameField       = "name"
+)
 
 // client is an interface that is implemented by the ServiceClient in apic/client.go.
 type client interface {

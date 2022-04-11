@@ -120,7 +120,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewAPISvcHandler(cacheManager)
 
-			err := handler.Handle(tc.action, nil, tc.resource)
+			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {

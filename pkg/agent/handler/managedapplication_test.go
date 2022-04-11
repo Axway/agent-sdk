@@ -97,7 +97,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			handler := NewManagedApplicationHandler(p, cm, c)
 
 			ri, _ := app.AsInstance()
-			err := handler.Handle(tc.action, nil, ri)
+			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
 
 			assert.Equal(t, tc.expectedProvType, p.prov)
 			if tc.hasError {
@@ -164,7 +164,7 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 			handler := NewManagedApplicationHandler(p, cm, c)
 
 			ri, _ := app.AsInstance()
-			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 
 			assert.Equal(t, deprovision, p.prov)
 			assert.Nil(t, err)
@@ -190,7 +190,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 

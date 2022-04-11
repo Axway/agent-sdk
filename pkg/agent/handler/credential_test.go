@@ -134,7 +134,7 @@ func TestCredentialHandler(t *testing.T) {
 			}
 
 			ri, _ := cred.AsInstance()
-			err := handler.Handle(tc.action, nil, ri)
+			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 
 			if tc.hasError {
@@ -200,7 +200,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			}
 
 			ri, _ := cred.AsInstance()
-			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
 			assert.Equal(t, deprovision, p.expectedProvType)
 
@@ -222,7 +222,7 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 

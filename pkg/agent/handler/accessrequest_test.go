@@ -133,7 +133,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			handler := NewAccessRequestHandler(arp, cm, c)
 
 			ri, _ := ar.AsInstance()
-			err := handler.Handle(tc.action, nil, ri)
+			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
 
 			if tc.hasError {
 				assert.Error(t, err)
@@ -204,7 +204,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 
 			ri, _ := ar.AsInstance()
 
-			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
 			assert.Equal(t, deprovision, arp.expectedProvType)
 
@@ -229,7 +229,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 

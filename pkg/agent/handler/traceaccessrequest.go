@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -25,7 +26,8 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 }
 
 // Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind {
 		return nil
 	}

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -18,7 +20,8 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *instanceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.APIServiceInstanceGVK().Kind {
 		return nil
 	}

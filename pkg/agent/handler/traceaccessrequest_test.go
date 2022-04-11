@@ -21,7 +21,7 @@ func TestTraceAccessRequestHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 
@@ -57,7 +57,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	ri, _ := ar.AsInstance()
 
 	// no status
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
 
@@ -100,7 +100,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 		},
 	}
 
-	err = handler.Handle(proto.Event_CREATED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	cachedAR := cm.GetAccessRequest("ar")
 	assert.NotNil(t, cachedAR)
@@ -111,7 +111,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	cachedRI := cm.GetSubscription("subscription")
 	assert.NotNil(t, cachedRI)
 
-	err = handler.Handle(proto.Event_DELETED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 
 	cachedAR = cm.GetAccessRequest("ar")

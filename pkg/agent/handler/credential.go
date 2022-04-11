@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -16,7 +17,6 @@ import (
 const (
 	xAxwayEncrypted = "x-axway-encrypted"
 	crFinalizer     = "agent.credential.provisioned"
-	crLogPrefix     = "credential handler - %s"
 )
 
 type credProv interface {
@@ -43,54 +43,59 @@ func NewCredentialHandler(prov credProv, client client) Handler {
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *credentials) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
+	log := GetLoggerFromContext(ctx).WithField(handlerField, "Credential")
+	ctx = setLoggerInContext(ctx, log)
+
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
-		log.Errorf(fmt.Sprintf(crLogPrefix, "could not handle credential request: %s"), err.Error())
+		log.WithError(err).Errorf("could not handle credential request")
 		return nil
 	}
 
 	if ok := isStatusFound(cr.Status); !ok {
-		log.Debugf(fmt.Sprintf(crLogPrefix, "could not handle credential request as it did not have a status subresource"))
+		log.Debugf("could not handle credential request as it did not have a status subresource")
 		return nil
 	}
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
-		log.Tracef(fmt.Sprintf(crLogPrefix, "processing resource in pending status"))
-		cr := h.onPending(cr)
+		log.Tracef("processing resource in pending status")
+		cr := h.onPending(ctx, cr)
 		err := h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
-			log.Errorf(fmt.Sprintf(crLogPrefix, "error creating subresources: %s"), err.Error())
+			log.WithError(err).Errorf("error creating subresources")
 			return err
 		}
 		return h.client.CreateSubResourceScoped(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
 	}
 
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
-		log.Trace(fmt.Sprintf(crLogPrefix, "processing resource in deleting state"))
-		h.onDeleting(cr)
+		log.Trace("processing resource in deleting state")
+		h.onDeleting(ctx, cr)
 	}
 
 	return nil
 }
 
-func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
-	app, err := h.getManagedApp(cred)
+func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.Credential {
+	log := GetLoggerFromContext(ctx)
+	app, err := h.getManagedApp(ctx, cred)
 	if err != nil {
-		log.Errorf(fmt.Sprintf(crLogPrefix, "error getting managed app: %s"), err.Error())
-		h.onError(cred, err)
+		log.WithError(err).Errorf("error getting managed app")
+		h.onError(ctx, cred, err)
 		return cred
 	}
 
-	crd, err := h.getCRD(cred)
+	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		log.Errorf(fmt.Sprintf(crLogPrefix, "error getting resource details: %s"), err.Error())
-		h.onError(cred, err)
+		log.WithError(err).Errorf("error getting resource details: %s")
+		h.onError(ctx, cred, err)
 		return cred
 	}
 
@@ -132,7 +137,7 @@ func (h *credentials) onPending(cred *mv1.Credential) *mv1.Credential {
 	return cred
 }
 
-func (h *credentials) onDeleting(cred *mv1.Credential) {
+func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 	provCreds := newProvCreds(cred, map[string]interface{}{})
 	status := h.prov.CredentialDeprovision(provCreds)
 
@@ -140,22 +145,22 @@ func (h *credentials) onDeleting(cred *mv1.Credential) {
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 	} else {
-		h.onError(cred, fmt.Errorf(status.GetMessage()))
+		h.onError(ctx, cred, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(cred.ResourceMeta, cred.SubResources)
 	}
 }
 
 // onError updates the AccessRequest with an error status
-func (h *credentials) onError(Cred *mv1.Credential, err error) {
+func (h *credentials) onError(_ context.Context, cred *mv1.Credential, err error) {
 	ps := prov.NewRequestStatusBuilder()
 	status := ps.SetMessage(err.Error()).Failed()
-	Cred.Status = prov.NewStatusReason(status)
-	Cred.SubResources = map[string]interface{}{
-		"status": Cred.Status,
+	cred.Status = prov.NewStatusReason(status)
+	cred.SubResources = map[string]interface{}{
+		"status": cred.Status,
 	}
 }
 
-func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplication, error) {
+func (h *credentials) getManagedApp(ctx context.Context, cred *mv1.Credential) (*mv1.ManagedApplication, error) {
 	app := mv1.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
@@ -167,7 +172,7 @@ func (h *credentials) getManagedApp(cred *mv1.Credential) (*mv1.ManagedApplicati
 	return app, err
 }
 
-func (h *credentials) getCRD(cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
+func (h *credentials) getCRD(ctx context.Context, cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
 	crd := mv1.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
@@ -196,6 +201,7 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 
 			str, err := enc.Encrypt(v)
 			if err != nil {
+
 				log.Error(err)
 				continue
 			}
