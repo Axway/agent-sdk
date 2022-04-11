@@ -4,9 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	corelog "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/sirupsen/logrus"
 )
 
 // ProxyHandler interface to represent the proxy resource handler.
@@ -50,37 +48,4 @@ func (h *StreamWatchProxyHandler) Handle(ctx context.Context, eventMetadata *pro
 		}
 	}
 	return nil
-}
-
-// NewEventContext - create a context for the new event
-func NewEventContext(action proto.Event_Type, eventMetadata *proto.EventMeta, kind, name string) context.Context {
-	logger := fieldLogger.WithFields(
-		logrus.Fields{
-			actionField: action.String(),
-			typeField:   kind,
-			nameField:   name,
-		},
-	)
-	if eventMetadata != nil {
-		logger = logger.
-			WithField(sequenceIDField, eventMetadata.SequenceID)
-	}
-	return setActionInContext(setLoggerInContext(context.Background(), logger), action)
-}
-
-func setLoggerInContext(ctx context.Context, logger corelog.FieldLogger) context.Context {
-	return context.WithValue(ctx, ctxLogger, logger)
-}
-
-func setActionInContext(ctx context.Context, action proto.Event_Type) context.Context {
-	return context.WithValue(ctx, ctxAction, action)
-}
-
-// GetLoggerFromContext - returns the field logger that is part of the context
-func GetLoggerFromContext(ctx context.Context) corelog.FieldLogger {
-	return ctx.Value(ctxLogger).(corelog.FieldLogger)
-}
-
-func getActionFromContext(ctx context.Context) proto.Event_Type {
-	return ctx.Value(ctxAction).(proto.Event_Type)
 }
