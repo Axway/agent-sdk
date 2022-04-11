@@ -76,7 +76,7 @@ func setActionInContext(ctx context.Context, action proto.Event_Type) context.Co
 	return context.WithValue(ctx, ctxAction, action)
 }
 
-// GetLoggerFromContext- returns the field logger that is part of the context
+// GetLoggerFromContext - returns the field logger that is part of the context
 func GetLoggerFromContext(ctx context.Context) corelog.FieldLogger {
 	return ctx.Value(ctxLogger).(corelog.FieldLogger)
 }
