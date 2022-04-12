@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -50,7 +49,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 			ApiServiceInstance: "instance",
 		},
 		References: []interface{}{
-			v1alpha1.AccessRequestReferencesSubscription{
+			mv1.AccessRequestReferencesSubscription{
 				Kind: "Subscription",
 				Name: "subscription-name",
 			},
