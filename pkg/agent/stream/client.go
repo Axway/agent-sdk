@@ -163,17 +163,20 @@ func NewStreamer(
 		TokenGetter: getToken.GetToken,
 	}
 	sequenceManager := newAgentSequenceManager(cacheManager, wt.Name)
-	singleEntryAddr := ""
-	singleEntryURL, err := url.Parse(cfg.GetSingleURL())
-	if err == nil {
-		singleEntryAddr = util.ParseAddr(singleEntryURL)
-	}
+
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
 		wm.WithSyncEvents(sequenceManager),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
-		wm.WithSingleEntryAddr(singleEntryAddr),
+	}
+
+	if cfg.GetSingleURL() != "" {
+		singleEntryURL, err := url.Parse(cfg.GetSingleURL())
+		if err == nil {
+			singleEntryAddr := util.ParseAddr(singleEntryURL)
+			wm.WithSingleEntryAddr(singleEntryAddr)
+		}
 	}
 
 	return &streamer{
