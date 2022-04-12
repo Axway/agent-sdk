@@ -105,7 +105,10 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 	serviceClient := &ServiceClient{
 		caches: caches,
 	}
-	serviceClient.logger = log.NewFieldLogger().WithField("component", "serviceClient")
+	serviceClient.logger = log.NewFieldLogger().
+		WithField("component", "serviceClient").
+		WithField("package", "sdk.apic")
+
 	serviceClient.SetTokenGetter(tokenRequester)
 	serviceClient.subscriptionSchemaCache = cache.New()
 	serviceClient.initClient(cfg)

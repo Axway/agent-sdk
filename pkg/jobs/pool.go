@@ -28,6 +28,10 @@ type Pool struct {
 }
 
 func newPool() *Pool {
+	logger := log.NewFieldLogger().
+		WithField("component", "Pool").
+		WithField("package", "sdk.jobs")
+
 	newPool := Pool{
 		jobs:             make(map[string]JobExecution),
 		cronJobs:         make(map[string]JobExecution),
@@ -36,7 +40,7 @@ func newPool() *Pool {
 		failJobChan:      make(chan string),
 		stopJobsChan:     make(chan bool),
 		backoff:          newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2),
-		logger:           log.NewFieldLogger().WithField("component", "job pool"),
+		logger:           logger,
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 

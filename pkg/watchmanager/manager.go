@@ -51,9 +51,12 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 		return nil, err
 	}
 
+	logger := log.NewFieldLogger().
+		WithField("component", "watchManager").
+		WithField("package", "sdk.watchmanager")
 	manager := &watchManager{
 		cfg:                cfg,
-		logger:             log.NewFieldLogger().WithField("component", "watchmanager"),
+		logger:             logger,
 		clientMap:          make(map[string]*watchClient),
 		options:            newWatchOptions(),
 		newWatchClientFunc: proto.NewWatchClient,

@@ -52,6 +52,9 @@ type discoveryCache struct {
 func newDiscoveryCache(
 	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
 ) *discoveryCache {
+	logger := log.NewFieldLogger().
+		WithField("package", "sdk.agent").
+		WithField("component", "discoveryCache")
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
@@ -63,7 +66,7 @@ func newDiscoveryCache(
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
 		migrator:             migrator,
-		logger:               log.NewFieldLogger().WithField("component", "discoveryCache"),
+		logger:               logger,
 	}
 }
 

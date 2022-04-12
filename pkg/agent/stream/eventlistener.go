@@ -33,6 +33,10 @@ type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManage
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
 func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
+	logger := log.NewFieldLogger().
+		WithField("component", "EventListener").
+		WithField("package", "sdk.agent.stream")
+
 	return &EventListener{
 		cancel:          cancel,
 		ctx:             ctx,
@@ -40,7 +44,7 @@ func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *a
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
-		logger:          log.NewFieldLogger().WithField("component", "stream event listener"),
+		logger:          logger,
 	}
 }
 

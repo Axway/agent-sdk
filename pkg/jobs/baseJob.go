@@ -42,7 +42,8 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 	logger := log.NewFieldLogger().
 		WithField("jobName", name).
 		WithField("jobID", id).
-		WithField("component", "base job")
+		WithField("package", "sdk.jobs").
+		WithField("component", "baseJob")
 	return baseJob{
 		id:            id,
 		name:          name,
