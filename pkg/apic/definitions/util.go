@@ -4,6 +4,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
+// GetSubscriptionNameFromAccessRequest - Returns the subscription name from access request references
 func GetSubscriptionNameFromAccessRequest(ar *mv1.AccessRequest) string {
 	if ar == nil {
 		return ""

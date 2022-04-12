@@ -8,7 +8,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
@@ -345,7 +344,7 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",marketplace",
+		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
 	}
 
 	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -419,7 +418,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec,references",
+		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -446,7 +445,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 }
 
 func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
-	subscriptionName := definitions.GetSubscriptionNameFromAccessRequest(ar)
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
 	if subscriptionName == "" {
 		return
 	}

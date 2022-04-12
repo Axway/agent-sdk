@@ -16,7 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -652,7 +652,7 @@ func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.
 }
 
 func (c *collector) getSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
-	subscriptionName := definitions.GetSubscriptionNameFromAccessRequest(accessRequest)
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
 	if subscriptionName == "" {
 		return nil
 	}

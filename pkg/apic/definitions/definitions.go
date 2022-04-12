@@ -32,4 +32,7 @@ const (
 	AttrExternalAPIStage             = "externalAPIStage"
 	AttrCreatedBy                    = "createdBy"
 	AttrSpecHash                     = "specHash"
+	Spec                             = "spec"
+	MarketplaceSubResource           = "marketplace"
+	ReferencesSubResource            = "references"
 )
