@@ -9,6 +9,7 @@ import (
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/sirupsen/logrus"
 
@@ -162,11 +163,20 @@ func NewStreamer(
 		TokenGetter: getToken.GetToken,
 	}
 	sequenceManager := newAgentSequenceManager(cacheManager, wt.Name)
+
 	watchOpts := []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
 		wm.WithSyncEvents(sequenceManager),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
+	}
+
+	if cfg.GetSingleURL() != "" {
+		singleEntryURL, err := url.Parse(cfg.GetSingleURL())
+		if err == nil {
+			singleEntryAddr := util.ParseAddr(singleEntryURL)
+			wm.WithSingleEntryAddr(singleEntryAddr)
+		}
 	}
 
 	return &streamer{

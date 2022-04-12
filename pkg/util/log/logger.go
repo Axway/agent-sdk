@@ -80,8 +80,12 @@ func (l *logger) WithError(err error) FieldLogger {
 // Debugf prints a formatted debug message
 func (l *logger) Debugf(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Named(debugSelector).Debugf(format, args)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Named(debugSelector).Debug(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Debugf(format, args...)
@@ -90,8 +94,12 @@ func (l *logger) Debugf(format string, args ...interface{}) {
 // Infof prints a formatted info message
 func (l *logger) Infof(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Infof(format, args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Info(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Infof(format, args...)
@@ -100,8 +108,12 @@ func (l *logger) Infof(format string, args ...interface{}) {
 // Printf formats a message
 func (l *logger) Printf(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Infof(format, args)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Infow(fmt.Sprint(format, args))
 		return
 	}
 	l.entry.Printf(format, args...)
@@ -110,8 +122,12 @@ func (l *logger) Printf(format string, args ...interface{}) {
 // Warnf prints a formatted warning message
 func (l *logger) Warnf(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Warnf(format, args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Warnw(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Warnf(format, args...)
@@ -120,8 +136,12 @@ func (l *logger) Warnf(format string, args ...interface{}) {
 // Tracef prints a formatted trace message
 func (l *logger) Tracef(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Named(traceSelector).Debugf(format, args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Named(traceSelector).Debugw(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Tracef(format, args...)
@@ -130,8 +150,12 @@ func (l *logger) Tracef(format string, args ...interface{}) {
 // Errorf prints a formatted error message
 func (l *logger) Errorf(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Errorf(format, args)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Errorw(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Errorf(format, args...)
@@ -140,7 +164,12 @@ func (l *logger) Errorf(format string, args ...interface{}) {
 // Fatalf prints a formatted fatal message
 func (l *logger) Fatalf(format string, args ...interface{}) {
 	if l.isLogP() {
-		logp.L().Fatalf(format, args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Fatalw(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Fatalf(format, args...)
@@ -149,8 +178,12 @@ func (l *logger) Fatalf(format string, args ...interface{}) {
 // Panicf prints a formatted panic message
 func (l *logger) Panicf(format string, args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Panicf(format, args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Panicw(fmt.Sprintf(format, args))
 		return
 	}
 	l.entry.Panicf(format, args...)
@@ -159,8 +192,12 @@ func (l *logger) Panicf(format string, args ...interface{}) {
 // Debug prints a debug message
 func (l *logger) Debug(args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Named(debugSelector).Debug(args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Named(debugSelector).Debug(args...)
 		return
 	}
 	l.entry.Debug(args...)
@@ -169,8 +206,12 @@ func (l *logger) Debug(args ...interface{}) {
 // Info prints an info message
 func (l *logger) Info(args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Info(args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Info(args...)
 		return
 	}
 	l.entry.Info(args...)
@@ -189,8 +230,12 @@ func (l *logger) Print(args ...interface{}) {
 // Trace prints a trace message
 func (l *logger) Trace(args ...interface{}) {
 	if l.isLogP() {
-		args = append(args, l.formatEntries()...)
-		logp.L().Named(traceSelector).Debug(args...)
+		entries := l.formatEntries()
+		l := logp.L()
+		for _, entry := range entries {
+			l = l.With(entry)
+		}
+		l.Named(traceSelector).Debug(args...)
 		return
 	}
 	l.entry.Trace(args...)
@@ -343,8 +388,7 @@ func (l *logger) isLogP() bool {
 func (l *logger) formatEntries() []interface{} {
 	var args []interface{}
 	for k, val := range l.entry.Data {
-		s := fmt.Sprintf("%v=%v", k, val)
-		args = append(args, s)
+		args = append(args, logp.String(k, fmt.Sprintf("%v", val)))
 	}
 	return args
 }

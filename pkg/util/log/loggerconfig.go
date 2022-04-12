@@ -97,7 +97,12 @@ func (b *LoggerConfig) Format(format string) *LoggerConfig {
 	if b.err == nil {
 		switch strings.ToLower(format) {
 		case loggingFormatStringMap[Line]:
-			b.cfg.Formatter = &logrus.TextFormatter{TimestampFormat: time.RFC3339}
+			b.cfg.Formatter = &logrus.TextFormatter{
+				TimestampFormat:  time.RFC3339,
+				FullTimestamp:    true,
+				PadLevelText:     true,
+				QuoteEmptyFields: true,
+			}
 		case loggingFormatStringMap[JSON]:
 			b.cfg.Formatter = &logrus.JSONFormatter{TimestampFormat: time.RFC3339}
 		default:

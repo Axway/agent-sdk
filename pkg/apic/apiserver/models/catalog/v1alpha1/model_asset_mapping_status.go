@@ -9,12 +9,10 @@
 
 package v1alpha1
 
-// AssetMappingStatus The type of the operation executed on the resource that triggered the Asset Mapping.
-type AssetMappingStatus string
-
-// List of AssetMappingStatus
-const (
-	CREATED AssetMappingStatus = "created"
-	UPDATED AssetMappingStatus = "updated"
-	DELETED AssetMappingStatus = "deleted"
-)
+// AssetMappingStatus  (catalog.v1alpha1.AssetMapping)
+type AssetMappingStatus struct {
+	Level  string                   `json:"level,omitempty"`
+	Source AssetMappingStatusSource `json:"source,omitempty"`
+	// Generated catalog resources.
+	Outputs []AssetMappingStatusOutputs `json:"outputs,omitempty"`
+}
