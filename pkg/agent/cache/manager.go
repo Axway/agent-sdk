@@ -126,7 +126,7 @@ type cacheManager struct {
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 	logger := log.NewFieldLogger().
 		WithComponent("cacheManager").
-		WithComponent("sdk.agent.cache")
+		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
 		apiMap:                cache.New(),
 		instanceMap:           cache.New(),
