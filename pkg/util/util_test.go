@@ -193,3 +193,33 @@ func TestMapStringInterfaceToStringString(t *testing.T) {
 	assert.Equal(t, `{"a":"a","b":["1","2","3"]}`, result["test"])
 	assert.Equal(t, "", result["nil"])
 }
+
+func TestParsePort(t *testing.T) {
+	p := ParsePort(nil)
+	assert.Equal(t, 0, p)
+
+	u, _ := url.Parse("http://test:222")
+	p = ParsePort(u)
+	assert.Equal(t, 222, p)
+
+	u, _ = url.Parse("http://test")
+	p = ParsePort(u)
+	assert.Equal(t, 80, p)
+
+	u, _ = url.Parse("noscheme://test")
+	p = ParsePort(u)
+	assert.Equal(t, 0, p)
+}
+
+func TestParseAddr(t *testing.T) {
+	addr := ParseAddr(nil)
+	assert.Equal(t, "", addr)
+
+	u, _ := url.Parse("http://test:222")
+	addr = ParseAddr(u)
+	assert.Equal(t, "test:222", addr)
+
+	u, _ = url.Parse("http://test")
+	addr = ParseAddr(u)
+	assert.Equal(t, "test:80", addr)
+}

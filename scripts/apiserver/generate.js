@@ -155,7 +155,9 @@ const createMainAndSubResources = (spec) => {
 
 const addResourceToGroupVersion = (acc, spec, schemaKey) => {
 	const { schemas } = spec.components;
-	const [group, version, kind] = schemaKey.split(".");
+	let [group, version, ...kind] = schemaKey.split(".");
+	kind = kind.join(".")
+
 	// if the group does not exist, create the grouped resource
 	if (!acc[group]) {
 		acc[group] = {

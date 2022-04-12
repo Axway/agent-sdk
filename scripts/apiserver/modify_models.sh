@@ -67,14 +67,14 @@ go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
 # For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into
 # "References []AccessRequestReferences `json:"references"`"
 ######################
-SEARCH="\s*References\s*AccessRequestReferences.*"
-REPLACE="References []AccessRequestReferences \`json:\"references\"\`"
+SEARCH="\s*References\s*interface{}.*"
+REPLACE="References []interface{} \`json:\"references\"\`"
 # add a comment to the code
 $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/AccessRequest.go
 # comment out the line we're changing
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/AccessRequest.go
 # add in the new line we want
-$SED -i "/AccessRequestReferences/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
+$SED -i "/References\s/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
 # reformat the code
 go fmt ${MODEL_PATH}/AccessRequest.go
 
@@ -114,6 +114,44 @@ for file in ${MODELS}; do
         $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
         # replace the Oneof type
         $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
+# Remove the ManagementV1alpha1 prefix from the resources generated
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="ManagementV1alpha1"
+REPLACE=""
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
+# Remove the CatalogV1alpha1 prefix from the resources generated
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="CatalogV1alpha1"
+REPLACE=""
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+
         # reformat the code
         go fmt ${file}
     fi

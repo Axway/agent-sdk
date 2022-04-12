@@ -159,7 +159,7 @@ func (c *ServiceClient) GetOrCreateCategory(title string) string {
 // initClient - config change handler
 func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
-	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
+	c.apiClient = coreapi.NewSingleEntryClient(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
 	err := c.setTeamCache()
@@ -190,7 +190,7 @@ func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) 
 // SetConfig - sets the config and apiClient
 func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
-	c.apiClient = coreapi.NewClientWithTimeout(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
+	c.apiClient = coreapi.NewSingleEntryClient(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
 }
 
 // mapToTagsArray -

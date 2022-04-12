@@ -43,7 +43,6 @@ type Set struct {
 	AmplifyConfigManagementV1alpha1                  *management_v1alpha1.UnscopedAmplifyConfigClient
 	AmplifyRuntimeConfigManagementV1alpha1           *management_v1alpha1.UnscopedAmplifyRuntimeConfigClient
 	VirtualHostManagementV1alpha1                    *management_v1alpha1.UnscopedVirtualHostClient
-	ExternalSecretManagementV1alpha1                 *management_v1alpha1.UnscopedExternalSecretClient
 	ManagedApplicationManagementV1alpha1             *management_v1alpha1.UnscopedManagedApplicationClient
 	CredentialManagementV1alpha1                     *management_v1alpha1.UnscopedCredentialClient
 	VirtualAPIManagementV1alpha1                     *management_v1alpha1.VirtualAPIClient
@@ -217,10 +216,6 @@ func New(b cAPIV1.Base) *Set {
 	s.VirtualHostManagementV1alpha1, err = management_v1alpha1.NewVirtualHostClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualHost: %s", err))
-	}
-	s.ExternalSecretManagementV1alpha1, err = management_v1alpha1.NewExternalSecretClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ExternalSecret: %s", err))
 	}
 	s.ManagedApplicationManagementV1alpha1, err = management_v1alpha1.NewManagedApplicationClient(b)
 	if err != nil {
