@@ -7,8 +7,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -58,10 +57,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.Even
 }
 
 func (h *traceAccessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
-	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
-	// once controller starts to populate it.
-	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
-		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	subscriptionName := definitions.GetSubscriptionNameFromAccessRequest(ar)
 	if subscriptionName == "" {
 		return
 	}

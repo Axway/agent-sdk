@@ -5,6 +5,7 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -42,16 +43,17 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 					},
 				},
 			},
-			SubResources: map[string]interface{}{
-				defs.XMarketplaceSubscription: map[string]interface{}{
-					defs.AttrSubscriptionName: "subscription",
-				},
-			},
 			Name: "ar",
 		},
 		Spec: mv1.AccessRequestSpec{
 			ManagedApplication: "app",
 			ApiServiceInstance: "instance",
+		},
+		References: []interface{}{
+			v1alpha1.AccessRequestReferencesSubscription{
+				Kind: "Subscription",
+				Name: "subscription-name",
+			},
 		},
 	}
 	ri, _ := ar.AsInstance()
@@ -94,9 +96,9 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	c.getRI = &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
-				ID: "subscription",
+				ID: "subscription-id",
 			},
-			Name: "subscription",
+			Name: "subscription-name",
 		},
 	}
 
@@ -108,7 +110,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	cachedAR = cm.GetAccessRequestByAppAndAPI("app", "api", "")
 	assert.NotNil(t, cachedAR)
 
-	cachedRI := cm.GetSubscription("subscription")
+	cachedRI := cm.GetSubscription("subscription-id")
 	assert.NotNil(t, cachedRI)
 
 	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)

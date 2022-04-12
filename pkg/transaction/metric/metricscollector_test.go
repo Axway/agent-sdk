@@ -138,12 +138,19 @@ func createAPIServiceInstance(id, name string, apiID string) *v1.ResourceInstanc
 	return createRI(id, name, sub)
 }
 
-func createManagedApplication(id, name, consumerOrgGUID string) *v1.ResourceInstance {
+func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstance {
 	var subjectSubRes map[string]interface{}
-	if consumerOrgGUID != "" {
+	if consumerOrgID != "" {
 		subjectSubRes = map[string]interface{}{
-			defs.XMarketplaceSubject: map[string]interface{}{
-				defs.AttrSubjectOrgGUID: consumerOrgGUID,
+			"marketplace": mv1.ManagedApplicationMarketplace{
+				Name: name,
+				Resource: mv1.ManagedApplicationMarketplaceResource{
+					Owner: mv1.ManagedApplicationMarketplaceResourceOwner{
+						Organization: mv1.ManagedApplicationMarketplaceResourceOwnerOrganization{
+							Id: consumerOrgID,
+						},
+					},
+				},
 			},
 		}
 	}
@@ -151,11 +158,6 @@ func createManagedApplication(id, name, consumerOrgGUID string) *v1.ResourceInst
 }
 
 func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *mv1.AccessRequest {
-	subscriptionSubRes := map[string]interface{}{
-		defs.XMarketplaceSubscription: map[string]interface{}{
-			defs.AttrSubscriptionName: subscriptionName,
-		},
-	}
 	return &mv1.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
@@ -167,12 +169,17 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 					},
 				},
 			},
-			SubResources: subscriptionSubRes,
-			Name:         name,
+			Name: name,
 		},
 		Spec: mv1.AccessRequestSpec{
 			ManagedApplication: appName,
 			ApiServiceInstance: instanceName,
+		},
+		References: []interface{}{
+			mv1.AccessRequestReferencesSubscription{
+				Kind: "Subscription",
+				Name: subscriptionName,
+			},
 		},
 	}
 }
