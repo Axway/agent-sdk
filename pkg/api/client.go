@@ -123,10 +123,9 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 func newClient(timeout time.Duration) *httpClient {
 	return &httpClient{
 		timeout: timeout,
-		logger:  log.NewFieldLogger().
+		logger: log.NewFieldLogger().
 			WithField("component", "httpClient").
-			WithField("package", "sdk.api")
-		,
+			WithField("package", "sdk.api"),
 	}
 }
 
