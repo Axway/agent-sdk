@@ -20,6 +20,8 @@ func TestWatchOptions(t *testing.T) {
 		WithKeepAlive(1*time.Second, 1*time.Second),
 		WithLogger(entry),
 		WithSyncEvents(&testSequenceProvider{}),
+		WithProxy("http://proxy"),
+		WithSingleEntryAddr("single-entry"),
 	}
 	options := newWatchOptions()
 
@@ -32,4 +34,6 @@ func TestWatchOptions(t *testing.T) {
 	assert.Equal(t, 1*time.Second, options.keepAlive.timeout)
 	assert.Equal(t, 1*time.Second, options.keepAlive.time)
 	assert.NotNil(t, options.sequenceGetter)
+	assert.Equal(t, "http://proxy", options.proxyURL)
+	assert.Equal(t, "single-entry", options.singleEntryAddr)
 }

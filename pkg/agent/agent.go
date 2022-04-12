@@ -117,7 +117,14 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	agent.cfg = centralCfg
-	api.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName())
+	singleEntryFilter := []string{
+		// Traceability host URL will be added by the traceability factory
+		centralCfg.GetURL(),
+		centralCfg.GetPlatformURL(),
+		centralCfg.GetAuthConfig().GetTokenURL(),
+		centralCfg.GetUsageReportingConfig().GetURL(),
+	}
+	api.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetSingleURL(), singleEntryFilter)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)

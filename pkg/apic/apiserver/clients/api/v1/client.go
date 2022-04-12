@@ -12,6 +12,7 @@ import (
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/tomnomnom/linkheader"
 )
 
@@ -67,8 +68,10 @@ func BasicAuth(user, password, tenantID, instanceID string) Options {
 
 // JWTAuth auth with token
 func JWTAuth(tenantID, privKey, pubKey, password, url, aud, clientID string, timeout time.Duration) Options {
+	cfg := &config.CentralConfiguration{}
+	altConn := cfg.GetSingleURL()
 	return func(c *ClientBase) {
-		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, timeout)
+		tokenGetter := auth.NewPlatformTokenGetter(privKey, pubKey, password, url, aud, clientID, altConn, timeout)
 		c.auth = &jwtAuth{
 			tenantID:    tenantID,
 			tokenGetter: tokenGetter,
