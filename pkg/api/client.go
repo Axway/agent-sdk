@@ -96,10 +96,7 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
 func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := &httpClient{
-		timeout: timeout,
-		logger:  log.NewFieldLogger().WithField("component", "httpClient"),
-	}
+	client := newClient(timeout)
 	client.initialize(tlsCfg, proxyURL, "")
 
 	return client
@@ -107,9 +104,7 @@ func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time
 
 // NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
 func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := &httpClient{
-		timeout: timeout,
-	}
+	client := newClient(timeout)
 	singleURL := ""
 	if cfgAgent != nil {
 		singleURL = cfgAgent.singleURL
@@ -120,6 +115,13 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 
 	client.initialize(tlsCfg, proxyURL, singleURL)
 	return client
+}
+
+func newClient(timeout time.Duration) *httpClient {
+	return &httpClient{
+		timeout: timeout,
+		logger:  log.NewFieldLogger().WithField("component", "httpClient"),
+	}
 }
 
 func initializeSingleEntryMapping(singleEntryURL string, singleEntryFilter []string) map[string]string {
