@@ -49,7 +49,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	log := GetLoggerFromContext(ctx).WithField(handlerField, "Credential")
+	log := getLoggerFromContext(ctx).WithComponent("credentialHandler")
 	ctx = setLoggerInContext(ctx, log)
 
 	cr := &mv1.Credential{}
@@ -84,7 +84,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.Credential {
-	log := GetLoggerFromContext(ctx)
+	log := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, cred)
 	if err != nil {
 		log.WithError(err).Errorf("error getting managed app")

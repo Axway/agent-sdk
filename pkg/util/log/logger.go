@@ -14,6 +14,8 @@ type FieldLogger interface {
 	WithField(key string, value interface{}) FieldLogger
 	WithFields(fields logrus.Fields) FieldLogger
 	WithError(err error) FieldLogger
+	WithComponent(componentName string) FieldLogger
+	WithPackage(packageName string) FieldLogger
 }
 
 // StdLogger interface for logging methods found in the go standard library logger, and logrus methods.
@@ -60,6 +62,16 @@ func NewFieldLogger() FieldLogger {
 
 type logger struct {
 	entry *logrus.Entry
+}
+
+// WithField adds a field to the log message
+func (l *logger) WithComponent(value string) FieldLogger {
+	return &logger{entry: l.entry.WithField("component", value)}
+}
+
+// WithField adds a field to the log message
+func (l *logger) WithPackage(value string) FieldLogger {
+	return &logger{entry: l.entry.WithField("package", value)}
 }
 
 // WithField adds a field to the log message

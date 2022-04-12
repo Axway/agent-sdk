@@ -34,8 +34,8 @@ type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManage
 func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := log.NewFieldLogger().
-		WithField("component", "EventListener").
-		WithField("package", "sdk.agent.stream")
+		WithComponent("EventListener").
+		WithPackage("sdk.agent.stream")
 
 	return &EventListener{
 		cancel:          cancel,
@@ -102,8 +102,7 @@ func (em *EventListener) start() (done bool, err error) {
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
 	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
-	logger := handler.GetLoggerFromContext(ctx)
-	logger.Trace("processing received watch event")
+	em.logger.WithField("sequence", event.Metadata.SequenceID).Trace("processing received watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {

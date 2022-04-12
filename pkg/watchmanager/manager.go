@@ -53,8 +53,8 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 	}
 
 	logger := log.NewFieldLogger().
-		WithField("component", "watchManager").
-		WithField("package", "sdk.watchmanager")
+		WithComponent("watchManager").
+		WithPackage("sdk.watchmanager")
 	manager := &watchManager{
 		cfg:                cfg,
 		logger:             logger,

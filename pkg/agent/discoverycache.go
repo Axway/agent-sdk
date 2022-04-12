@@ -53,8 +53,8 @@ func newDiscoveryCache(
 	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
-		WithField("package", "sdk.agent").
-		WithField("component", "discoveryCache")
+		WithPackage("sdk.agent").
+		WithComponent("discoveryCache")
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},

@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	fieldLogger = corelog.NewFieldLogger().WithField("package", "sdk.agent.handler")
+	fieldLogger = corelog.NewFieldLogger().WithPackage("sdk.agent.handler")
 }
 
 // Handler interface used by the EventListener to process events.
@@ -101,8 +101,8 @@ func setActionInContext(ctx context.Context, action proto.Event_Type) context.Co
 	return context.WithValue(ctx, ctxAction, action)
 }
 
-// GetLoggerFromContext - returns the field logger that is part of the context
-func GetLoggerFromContext(ctx context.Context) corelog.FieldLogger {
+// getLoggerFromContext - returns the field logger that is part of the context
+func getLoggerFromContext(ctx context.Context) corelog.FieldLogger {
 	return ctx.Value(ctxLogger).(corelog.FieldLogger)
 }
 

@@ -29,8 +29,8 @@ type Pool struct {
 
 func newPool() *Pool {
 	logger := log.NewFieldLogger().
-		WithField("component", "Pool").
-		WithField("package", "sdk.jobs")
+		WithComponent("Pool").
+		WithPackage("sdk.jobs")
 
 	newPool := Pool{
 		jobs:             make(map[string]JobExecution),

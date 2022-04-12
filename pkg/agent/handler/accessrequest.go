@@ -46,7 +46,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 
-	log := GetLoggerFromContext(ctx).WithField(handlerField, "Access Request")
+	log := getLoggerFromContext(ctx).WithComponent("accessRequestHandler")
 	ctx = setLoggerInContext(ctx, log)
 
 	ar := &mv1.AccessRequest{}
@@ -86,7 +86,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 }
 
 func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequest) *mv1.AccessRequest {
-	log := GetLoggerFromContext(ctx)
+	log := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
@@ -132,7 +132,7 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *mv1.AccessRequest,
 
 // onDeleting deprovisions an access request and removes the finalizer
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessRequest) {
-	log := GetLoggerFromContext(ctx)
+	log := getLoggerFromContext(ctx)
 	req, err := h.newReq(ctx, ar, map[string]interface{}{})
 	if err != nil {
 		log.WithError(err).Error("error getting deprovision request details: %s")

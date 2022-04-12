@@ -40,10 +40,10 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
 	id := newUUID()
 	logger := log.NewFieldLogger().
+		WithPackage("sdk.jobs").
+		WithComponent("baseJob").
 		WithField("jobName", name).
-		WithField("jobID", id).
-		WithField("package", "sdk.jobs").
-		WithField("component", "baseJob")
+		WithField("jobID", id)
 	return baseJob{
 		id:            id,
 		name:          name,

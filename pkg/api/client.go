@@ -99,8 +99,8 @@ func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time
 	client := newClient(timeout)
 	client.initialize(tlsCfg, proxyURL, "")
 	client.logger = log.NewFieldLogger().
-		WithField("component", "httpClient").
-		WithField("package", "sdk.api")
+		WithComponent("httpClient").
+		WithPackage("sdk.api")
 
 	return client
 }
@@ -124,8 +124,8 @@ func newClient(timeout time.Duration) *httpClient {
 	return &httpClient{
 		timeout: timeout,
 		logger: log.NewFieldLogger().
-			WithField("component", "httpClient").
-			WithField("package", "sdk.api"),
+			WithComponent("httpClient").
+			WithPackage("sdk.api"),
 	}
 }
 

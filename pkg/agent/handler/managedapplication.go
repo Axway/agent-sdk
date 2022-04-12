@@ -45,7 +45,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		return nil
 	}
 
-	log := GetLoggerFromContext(ctx).WithField(handlerField, "Managed Application")
+	log := getLoggerFromContext(ctx).WithComponent("managedApplicationHandler")
 	ctx = setLoggerInContext(ctx, log)
 
 	app := &mv1.ManagedApplication{}
@@ -106,7 +106,7 @@ func (h *managedApplication) onPending(_ context.Context, app *mv1.ManagedApplic
 }
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) {
-	log := GetLoggerFromContext(ctx)
+	log := getLoggerFromContext(ctx)
 	status := h.prov.ApplicationRequestDeprovision(pma)
 
 	if status.GetStatus() == prov.Success {
