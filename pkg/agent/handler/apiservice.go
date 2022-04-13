@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -22,7 +23,8 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *apiSvcHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.APIServiceGVK().Kind {
 		return nil
 	}

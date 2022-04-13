@@ -46,11 +46,15 @@ type discoveryCache struct {
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
 	migrator             migrate.AttrMigrator
+	logger               log.FieldLogger
 }
 
 func newDiscoveryCache(
 	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
 ) *discoveryCache {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("discoveryCache")
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
@@ -62,6 +66,7 @@ func newDiscoveryCache(
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
 		migrator:             migrator,
+		logger:               logger,
 	}
 }
 
@@ -84,7 +89,7 @@ func (j *discoveryCache) Status() error {
 func (j *discoveryCache) Execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
-	log.Trace("executing API cache update job")
+	j.logger.Trace("executing API cache update job")
 	err := j.updateAPICache()
 	if err != nil {
 		return err
@@ -112,7 +117,7 @@ func (j *discoveryCache) Execute() error {
 }
 
 func (j *discoveryCache) updateAPICache() error {
-	log.Trace("updating API cache")
+	j.logger.Trace("updating API cache")
 
 	existingAPIs := make(map[string]bool)
 	apiServices, err := j.getAPIServices()
@@ -225,7 +230,7 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		query, agent.cfg.GetInstancesURL(), apiServerPageSize,
 	)
 	if err != nil {
-		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
+		j.logger.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
 		return
 	}
 
@@ -249,7 +254,7 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 }
 
 func (j *discoveryCache) updateCategoryCache() {
-	log.Trace("updating category cache")
+	j.logger.Trace("updating category cache")
 
 	// Update cache with published resources
 	existingCategories := make(map[string]bool)
@@ -292,7 +297,7 @@ func (j *discoveryCache) updateARDCache() {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
-	log.Trace("updating access request definition cache")
+	j.logger.Trace("updating access request definition cache")
 
 	// create an empty accessrequestdef to gen url
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
@@ -333,7 +338,7 @@ func (j *discoveryCache) updateARDCache() {
 }
 
 func (j *discoveryCache) updateManagedApplicationCache() {
-	log.Trace("updating managed application cache")
+	j.logger.Trace("updating managed application cache")
 
 	// Update cache with published resources
 	// TODO - Remove custom subresource and include subject subresource when added to model
@@ -366,7 +371,7 @@ func (j *discoveryCache) updateCRDCache() {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
-	log.Trace("updating credential request definition cache")
+	j.logger.Trace("updating credential request definition cache")
 
 	// create an empty credentialrequestdef to gen url
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
@@ -407,7 +412,7 @@ func (j *discoveryCache) updateCRDCache() {
 }
 
 func (j *discoveryCache) updateAccessRequestCache() {
-	log.Trace("updating access request cache")
+	j.logger.Trace("updating access request cache")
 
 	// Update cache with published resources
 	// TODO - Remove custom subresource and include references

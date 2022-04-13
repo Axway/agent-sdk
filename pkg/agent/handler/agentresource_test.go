@@ -102,7 +102,7 @@ func TestAgentResourceHandler(t *testing.T) {
 
 			handler := NewAgentResourceHandler(resourceManager)
 
-			err := handler.Handle(tc.action, nil, tc.resource)
+			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
 				assert.Nil(t, err)
 				assert.Nil(t, resourceManager.resource)

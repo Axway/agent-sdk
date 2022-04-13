@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -13,7 +14,7 @@ type customHandler struct {
 	err error
 }
 
-func (c *customHandler) Handle(_ proto.Event_Type, _ *proto.EventMeta, _ *v1.ResourceInstance) error {
+func (c *customHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *v1.ResourceInstance) error {
 	return c.err
 }
 
@@ -90,7 +91,7 @@ func TestProxyHandler(t *testing.T) {
 				proxy.RegisterTargetHandler(fmt.Sprintf("%d", i), h)
 			}
 
-			err := proxy.Handle(tc.event, nil, ri)
+			err := proxy.Handle(NewEventContext(tc.event, nil, ri.Kind, ri.Name), nil, ri)
 			if tc.hasError {
 				assert.Error(t, err)
 			} else {

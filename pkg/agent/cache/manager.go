@@ -103,6 +103,7 @@ type Manager interface {
 
 type cacheManager struct {
 	jobs.Job
+	logger                  log.FieldLogger
 	apiMap                  cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
@@ -123,6 +124,9 @@ type cacheManager struct {
 
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
+	logger := log.NewFieldLogger().
+		WithComponent("cacheManager").
+		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
 		apiMap:                cache.New(),
 		instanceMap:           cache.New(),
@@ -135,6 +139,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 		ardMap:                cache.New(),
 		crdMap:                cache.New(),
 		isCacheUpdated:        false,
+		logger:                logger,
 	}
 
 	if cfg.IsUsingGRPC() && persistCache {
@@ -234,7 +239,7 @@ func (c *cacheManager) Status() error {
 // Execute - persists the cache to file
 func (c *cacheManager) Execute() error {
 	if util.IsNotTest() && c.isCacheUpdated {
-		log.Trace("executing cache persistence job")
+		c.logger.Trace("executing cache persistence job")
 		c.SaveCache()
 	}
 	return nil

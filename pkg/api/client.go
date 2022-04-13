@@ -15,7 +15,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 
@@ -54,6 +54,7 @@ type Client interface {
 
 type httpClient struct {
 	Client
+	logger             log.FieldLogger
 	httpClient         *http.Client
 	timeout            time.Duration
 	dialer             util.Dialer
@@ -95,19 +96,18 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
 func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := &httpClient{
-		timeout: timeout,
-	}
+	client := newClient(timeout)
 	client.initialize(tlsCfg, proxyURL, "")
+	client.logger = log.NewFieldLogger().
+		WithComponent("httpClient").
+		WithPackage("sdk.api")
 
 	return client
 }
 
 // NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
 func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := &httpClient{
-		timeout: timeout,
-	}
+	client := newClient(timeout)
 	singleURL := ""
 	if cfgAgent != nil {
 		singleURL = cfgAgent.singleURL
@@ -118,6 +118,15 @@ func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time
 
 	client.initialize(tlsCfg, proxyURL, singleURL)
 	return client
+}
+
+func newClient(timeout time.Duration) *httpClient {
+	return &httpClient{
+		timeout: timeout,
+		logger: log.NewFieldLogger().
+			WithComponent("httpClient").
+			WithPackage("sdk.api"),
+	}
 }
 
 func initializeSingleEntryMapping(singleEntryURL string, singleEntryFilter []string) map[string]string {
@@ -298,9 +307,22 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 			}
 		}
 		if err != nil {
-			log.Tracef("[ID:%s] %s [%dms] - ERR - %s - %s", reqID, req.Method, duration.Milliseconds(), targetURL, err.Error())
+			c.logger.
+				WithField("id", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration(ms)", duration.Milliseconds()).
+				WithField("url", targetURL).
+				WithError(err).
+				Trace("request failed")
 		} else {
-			log.Tracef("[ID:%s] %s [%dms] - %d - %s", reqID, req.Method, duration.Milliseconds(), statusCode, targetURL)
+			c.logger.
+				WithField("id", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration(ms)", duration.Milliseconds()).
+				WithField("url", targetURL).
+				Trace("request succeeded")
 		}
 	}()
 

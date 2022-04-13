@@ -25,6 +25,7 @@ type EventListener struct {
 	handlers        []handler.Handler
 	source          chan *proto.Event
 	sequenceManager *agentSequenceManager
+	logger          log.FieldLogger
 }
 
 type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
@@ -32,6 +33,10 @@ type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManage
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
 func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
+	logger := log.NewFieldLogger().
+		WithComponent("EventListener").
+		WithPackage("sdk.agent.stream")
+
 	return &EventListener{
 		cancel:          cancel,
 		ctx:             ctx,
@@ -39,6 +44,7 @@ func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *a
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
+		logger:          logger,
 	}
 }
 
@@ -81,10 +87,10 @@ func (em *EventListener) start() (done bool, err error) {
 
 		err := em.handleEvent(event)
 		if err != nil {
-			log.Errorf("stream event listener error: %s", err)
+			em.logger.WithError(err).Error("stream event listener error")
 		}
 	case <-em.ctx.Done():
-		log.Tracef("stream event listener has been gracefully stopped")
+		em.logger.Trace("stream event listener has been gracefully stopped")
 		done = true
 		err = nil
 		break
@@ -95,20 +101,15 @@ func (em *EventListener) start() (done bool, err error) {
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
-	log.Debugf(
-		"processing received watch event[sequenceID: %d, action: %s, type: %s, name: %s]",
-		event.Metadata.SequenceID,
-		proto.Event_Type_name[int32(event.Type)],
-		event.Payload.Kind,
-		event.Payload.Name,
-	)
+	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
+	em.logger.WithField("sequence", event.Metadata.SequenceID).Trace("processing received watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
 		return err
 	}
 
-	em.handleResource(event.Type, event.Metadata, ri)
+	em.handleResource(ctx, event.Metadata, ri)
 	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
@@ -121,11 +122,12 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
+func (em *EventListener) handleResource(ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
+
 	for _, h := range em.handlers {
-		err := h.Handle(action, eventMetadata, resource)
+		err := h.Handle(ctx, eventMetadata, resource)
 		if err != nil {
-			log.Error(err)
+			em.logger.Error(err)
 		}
 	}
 }
