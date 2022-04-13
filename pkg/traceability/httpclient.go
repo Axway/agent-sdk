@@ -39,6 +39,7 @@ type HTTPClient struct {
 	observer         outputs.Observer
 	headers          map[string]string
 	beatInfo         beat.Info
+	logger           log.FieldLogger
 }
 
 // HTTPClientSettings struct
@@ -84,6 +85,10 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		}
 	}
 
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.traceability").
+		WithComponent("HTTPClient")
+
 	client := &HTTPClient{
 		Connection: Connection{
 			URL: s.URL,
@@ -100,6 +105,7 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		proxyURL:         s.Proxy,
 		headers:          s.Headers,
 		beatInfo:         s.BeatInfo,
+		logger:           logger,
 	}
 
 	return client, nil
@@ -183,18 +189,17 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 	}
 	status, _, err := client.request(events, client.headers, timeStamp)
 	if err != nil && err == ErrJSONEncodeFailed {
-		log.Debugf("Failed to publish event: %s", err.Error())
+		client.logger.WithError(err).Debug("failed to publish event")
 		return nil, nil
 	}
 	switch {
-	case status == 500 || status == 400: //server error or bad input, don't retry
-		log.Debugf("Failed to publish event: received status code %d", status)
+	case status == 500 || status == 400: // server error or bad input, don't retry
+		client.logger.WithField("status", status).Debug("failed to publish event")
 		return nil, nil
-	case status >= 300:
-		// retry
+	case status >= 300: // retry
 		return data, err
 	case status == 0:
-		log.Debugf("Transport error :%s", err.Error())
+		client.logger.WithError(err).Debug("transport error")
 	}
 
 	return nil, nil

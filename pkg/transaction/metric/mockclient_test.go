@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 )
@@ -40,6 +41,7 @@ var myMockClient outputs.Client
 func mockGetClient() (*traceability.Client, error) {
 	tpClient := &traceability.Client{}
 	tpClient.SetTransportClient(myMockClient)
+	tpClient.SetLogger(log.NewFieldLogger())
 	return tpClient, nil
 }
 

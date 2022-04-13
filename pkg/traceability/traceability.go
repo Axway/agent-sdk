@@ -62,6 +62,7 @@ func getClient() (*Client, error) {
 // Client - struct
 type Client struct {
 	transportClient outputs.Client
+	logger          log.FieldLogger
 }
 
 type traceabilityAgentHealthChecker struct {
@@ -118,6 +119,10 @@ func makeTraceabilityAgent(
 	observer outputs.Observer,
 	libbeatCfg *common.Config,
 ) (outputs.Group, error) {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.traceability").
+		WithComponent("makeTraceabilityAgent")
+
 	var err error
 	traceCfg, err = readConfig(libbeatCfg, beat)
 	if err != nil {
@@ -132,7 +137,7 @@ func makeTraceabilityAgent(
 	}
 
 	var transportGroup outputs.Group
-	log.Tracef("initialzing traceability client using config: %+v, host: %+v", traceCfg, hosts)
+	logger.Tracef("initializing traceability client using config: %+v, host: %+v", traceCfg, hosts)
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 	if !isSingleEntry && IsHTTPTransport() {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
@@ -145,7 +150,7 @@ func makeTraceabilityAgent(
 		if isSingleEntry {
 			if IsHTTPTransport() {
 				traceCfg.Protocol = "tcp"
-				log.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
+				logger.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
 			}
 			// Register dialer factory with sni scheme for single entry point
 			proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
@@ -180,9 +185,12 @@ func makeTraceabilityAgent(
 		Retry:     transportGroup.Retry,
 	}
 	clients := make([]outputs.Client, 0)
+
+	logger = logger.WithField("component", "Client")
 	for _, client := range transportGroup.Clients {
 		outputClient := &Client{
 			transportClient: client,
+			logger:          logger,
 		}
 		clients = append(clients, outputClient)
 		traceabilityClients = append(traceabilityClients, outputClient)
@@ -288,6 +296,11 @@ func (client *Client) SetTransportClient(outputClient outputs.Client) {
 	client.transportClient = outputClient
 }
 
+// SetLogger - set the logger
+func (client *Client) SetLogger(logger log.FieldLogger) {
+	client.logger = logger
+}
+
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
 	// do not attempt to establish a connection in offline mode
@@ -342,7 +355,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 
 		sampledEvents, err := sampling.FilterEvents(events)
 		if err != nil {
-			log.Error(err.Error())
+			client.logger.Error(err.Error())
 		} else {
 			updateEvent(batch, sampledEvents)
 		}
@@ -351,17 +364,26 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	publishCount := len(batch.Events())
 
 	if publishCount > 0 {
-		log.Infof("Creating %d %s events", publishCount, eventType)
+		client.logger.
+			WithField("count", publishCount).
+			WithField("eventType", eventType).
+			Info("creating events")
 	}
 
 	err := client.transportClient.Publish(batch)
 	if err != nil {
-		log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
+		client.logger.
+			WithField("eventType", eventType).
+			WithError(err).
+			Error("failed to publish event")
 		return err
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
-		log.Infof("%d %s events have been published", publishCount-len(batch.Events()), eventType)
+		client.logger.
+			WithField("count", publishCount-len(batch.Events())).
+			WithField("eventType", eventType).
+			Info("published events")
 	}
 
 	return nil
