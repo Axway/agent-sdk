@@ -167,15 +167,15 @@ func (c *collector) Execute() error {
 	c.metricEndTime = now()
 	c.orgGUID = c.getOrgGUID()
 	c.logger.
-		WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-		WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
-		WithField("event type", "usage").
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField("eventType", "usage").
 		Debug("generating usage event")
 
 	c.logger.
-		WithField("start timestamp", util.ConvertTimeToMillis(c.metricStartTime)).
-		WithField("end timestamp", util.ConvertTimeToMillis(c.metricEndTime)).
-		WithField("event type", "metric").
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.metricStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.metricEndTime)).
+		WithField("eventType", "metric").
 		Debugf("generating metric event")
 	defer func() {
 		c.cleanup()
@@ -357,15 +357,15 @@ func (c *collector) generateEvents() {
 
 	if len(c.publishItemQueue) == 0 {
 		c.logger.
-			WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
-			WithField("event type", "usage").
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			WithField("eventType", "usage").
 			Info("no usage event generated as no transactions recorded")
 
 		c.logger.
-			WithField("start timestamp", util.ConvertTimeToMillis(c.metricStartTime)).
-			WithField("end timestamp", util.ConvertTimeToMillis(c.metricEndTime)).
-			WithField("event type", "metric").
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.metricStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.metricEndTime)).
+			WithField("eventType", "metric").
 			Info("no metric event generated as no transactions recorded")
 	}
 
@@ -409,19 +409,19 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
 	c.logger.
-		WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-		WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
-		WithField("transaction count", c.getOrRegisterCounter(transactionCountMetric).Count()).
-		WithField("event type", "usage").
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField("count", c.getOrRegisterCounter(transactionCountMetric).Count()).
+		WithField("eventType", "usage").
 		Info("creating usage event")
 
 	if agent.GetCentralConfig().IsAxwayManaged() {
 		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
 		c.logger.
-			WithField("event type", "volume").
-			WithField("total bytes", c.getOrRegisterCounter(transactionVolumeMetric).Count()).
-			WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			WithField("eventType", "volume").
+			WithField("totalBytes", c.getOrRegisterCounter(transactionVolumeMetric).Count()).
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
 			Infof("creating volume event")
 	}
 
@@ -544,14 +544,14 @@ func (c *collector) publishEvents() {
 			if err != nil {
 				c.logger.
 					WithError(err).
-					WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-					WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
-					WithField("event type", "usage").
+					WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+					WithField("eventType", "usage").
 					Error("failed to publish usage event. current usage report is kept and will be added to the next trigger interval")
 			} else {
 				c.logger.
-					WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-					WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+					WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
 					Info("published usage report")
 				c.cleanupCounters(eventQueueItem)
 			}
@@ -607,9 +607,9 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4D
 			delete(c.metricMap, subID)
 		}
 		c.logger.
-			WithField("start timestamp", util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField("end timestamp", util.ConvertTimeToMillis(c.usageEndTime)).
-			WithField("api name", metric.API.Name).
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			WithField("apiName", metric.API.Name).
 			Info("Published metrics report for API")
 	}
 }

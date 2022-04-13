@@ -34,8 +34,8 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
 		}
 		c.logger.
-			WithField("api name", apiName).
-			WithField("api id", apiID).
+			WithField("apiName", apiName).
+			WithField("apiID", apiID).
 			Trace("added api to cache")
 	}
 

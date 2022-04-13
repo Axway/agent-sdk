@@ -311,7 +311,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 				WithField("id", reqID).
 				WithField("method", req.Method).
 				WithField("status", statusCode).
-				WithField("duration (ms)", duration.Milliseconds()).
+				WithField("duration(ms)", duration.Milliseconds()).
 				WithField("url", targetURL).
 				WithError(err).
 				Trace("request failed")
@@ -320,7 +320,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 				WithField("id", reqID).
 				WithField("method", req.Method).
 				WithField("status", statusCode).
-				WithField("duration (ms)", duration.Milliseconds()).
+				WithField("duration(ms)", duration.Milliseconds()).
 				WithField("url", targetURL).
 				Trace("request succeeded")
 		}
