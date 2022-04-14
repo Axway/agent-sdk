@@ -341,10 +341,9 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	j.logger.Trace("updating managed application cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + "," + defs.XMarketplaceSubject,
+		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
 	}
 
 	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -415,10 +414,9 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	j.logger.Trace("updating access request cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec," + defs.XMarketplaceSubscription,
+		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -445,10 +443,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 }
 
 func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
-	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
-	// once controller starts to populate it.
-	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
-		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
 	if subscriptionName == "" {
 		return
 	}
