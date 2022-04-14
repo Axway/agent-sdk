@@ -35,4 +35,5 @@ const (
 	Spec                             = "spec"
 	MarketplaceSubResource           = "marketplace"
 	ReferencesSubResource            = "references"
+	Subscription                     = "Subscription"
 )

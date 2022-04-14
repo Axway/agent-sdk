@@ -15,7 +15,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar := &mv1.AccessRequest{
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
-				Kind: "Subscription",
+				Kind: Subscription,
 				Name: "management/test",
 			},
 		},
@@ -27,7 +27,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar = &mv1.AccessRequest{
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
-				Kind: "Subscription",
+				Kind: Subscription,
 				Name: "catalog/test",
 			},
 		},
@@ -38,7 +38,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar = &mv1.AccessRequest{
 		References: []interface{}{
 			&mv1.AccessRequestReferencesSubscription{
-				Kind: "Subscription",
+				Kind: Subscription,
 				Name: "catalog/test",
 			},
 		},

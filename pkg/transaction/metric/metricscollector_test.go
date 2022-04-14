@@ -197,7 +197,7 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 		},
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
-				Kind: "Subscription",
+				Kind: defs.Subscription,
 				Name: "catalog/" + subscriptionName,
 			},
 		},

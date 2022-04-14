@@ -341,7 +341,6 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	j.logger.Trace("updating managed application cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
@@ -415,7 +414,6 @@ func (j *discoveryCache) updateAccessRequestCache() {
 	j.logger.Trace("updating access request cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,

@@ -28,7 +28,7 @@ func getSubscriptionRefName(ar *mv1.AccessRequest) string {
 		switch arRef := ref.(type) {
 		case map[string]interface{}:
 			kind := arRef["kind"]
-			if kind == "Subscription" {
+			if kind == Subscription {
 				return arRef["name"].(string)
 			}
 		case mv1.AccessRequestReferencesSubscription:
@@ -41,7 +41,7 @@ func getSubscriptionRefName(ar *mv1.AccessRequest) string {
 }
 
 func getSubscriptionName(arRef *mv1.AccessRequestReferencesSubscription) string {
-	if arRef.Kind == "Subscription" {
+	if arRef.Kind == Subscription {
 		return arRef.Name
 	}
 	return ""
