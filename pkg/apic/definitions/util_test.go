@@ -11,11 +11,24 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	subscriptionName := GetSubscriptionNameFromAccessRequest(nil)
 	assert.Equal(t, "", subscriptionName)
 
+	// Reference from group other than catalog
 	ar := &mv1.AccessRequest{
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
 				Kind: "Subscription",
-				Name: "test",
+				Name: "management/test",
+			},
+		},
+	}
+	subscriptionName = GetSubscriptionNameFromAccessRequest(ar)
+	assert.Equal(t, "", subscriptionName)
+
+	// Reference from catalog group
+	ar = &mv1.AccessRequest{
+		References: []interface{}{
+			mv1.AccessRequestReferencesSubscription{
+				Kind: "Subscription",
+				Name: "catalog/test",
 			},
 		},
 	}
@@ -26,7 +39,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 		References: []interface{}{
 			&mv1.AccessRequestReferencesSubscription{
 				Kind: "Subscription",
-				Name: "test",
+				Name: "catalog/test",
 			},
 		},
 	}

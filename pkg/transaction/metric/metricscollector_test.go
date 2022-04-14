@@ -13,6 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -139,9 +140,9 @@ func createAPIServiceInstance(id, name string, apiID string) *v1.ResourceInstanc
 }
 
 func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstance {
-	var subjectSubRes map[string]interface{}
+	var marketplaceSubRes map[string]interface{}
 	if consumerOrgID != "" {
-		subjectSubRes = map[string]interface{}{
+		marketplaceSubRes = map[string]interface{}{
 			"marketplace": mv1.ManagedApplicationMarketplace{
 				Name: name,
 				Resource: mv1.ManagedApplicationMarketplaceResource{
@@ -154,7 +155,26 @@ func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstan
 			},
 		}
 	}
-	return createRI(id, name, subjectSubRes)
+	return createRI(id, name, marketplaceSubRes)
+}
+
+func createSubscription(id, name, consumerOrgID string) *v1.ResourceInstance {
+	var marketplaceSubRes map[string]interface{}
+	if consumerOrgID != "" {
+		marketplaceSubRes = map[string]interface{}{
+			"marketplace": cv1.SubscriptionMarketplace{
+				Name: name,
+				Resource: cv1.SubscriptionMarketplaceResource{
+					Owner: cv1.SubscriptionMarketplaceResourceOwner{
+						Organization: cv1.SubscriptionMarketplaceResourceOwnerOrganization{
+							Id: consumerOrgID,
+						},
+					},
+				},
+			},
+		}
+	}
+	return createRI(id, name, marketplaceSubRes)
 }
 
 func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *mv1.AccessRequest {
@@ -178,7 +198,7 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
 				Kind: "Subscription",
-				Name: subscriptionName,
+				Name: "catalog/" + subscriptionName,
 			},
 		},
 	}
@@ -207,8 +227,8 @@ func TestMetricCollector(t *testing.T) {
 	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
 	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
 
-	cm.AddSubscription(createRI("sub-1", "subscription-1", nil))
-	cm.AddSubscription(createRI("sub-2", "subscription-2", nil))
+	cm.AddSubscription(createSubscription("sub-1", "subscription-1", "test-consumer-org"))
+	cm.AddSubscription(createSubscription("sub-2", "subscription-2", ""))
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)

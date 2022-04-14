@@ -51,7 +51,7 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 		References: []interface{}{
 			mv1.AccessRequestReferencesSubscription{
 				Kind: "Subscription",
-				Name: "subscription-name",
+				Name: "catalog/subscription-name",
 			},
 		},
 	}
