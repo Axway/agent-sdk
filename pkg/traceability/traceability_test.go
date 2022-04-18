@@ -2,6 +2,7 @@ package traceability
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -333,7 +334,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	batch := createBatch("{\"f1\":\"test\"}")
 	traceabilityClient.Connect()
 	agent.StartAgentStatusUpdate()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 
 	assert.Nil(t, err)
@@ -370,7 +371,7 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 
 	traceabilityClient.Connect()
 	agent.StartAgentStatusUpdate()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.Nil(t, err)
 
@@ -407,7 +408,7 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	batch := createBatch("{\"f1\":\"test\"}")
 
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	assert.Nil(t, err)
 	traceabilityClient.Close()
 
@@ -444,7 +445,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 
 	s.responseStatus = 404
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.NotNil(t, err)
 	assert.False(t, batch.acked)
@@ -455,7 +456,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	group, err = createTransport(testConfig)
 	traceabilityClient = group.Clients[0].(*Client)
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.Nil(t, err)
 	assert.True(t, batch.acked)

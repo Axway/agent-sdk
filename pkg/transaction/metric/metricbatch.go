@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
@@ -43,7 +44,7 @@ func (b *EventBatch) publish() error {
 		b.batchUnlock()
 		return err
 	}
-	err = client.Publish(b)
+	err = client.Publish(context.Background(), b)
 	if err != nil {
 		b.batchUnlock()
 		return err

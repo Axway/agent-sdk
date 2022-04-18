@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
@@ -19,7 +20,7 @@ type MockClient struct {
 
 func (m *MockClient) Close() error   { return nil }
 func (m *MockClient) Connect() error { return nil }
-func (m *MockClient) Publish(batch beatPub.Batch) error {
+func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
 	m.pubCount++
 	switch {
 	case m.retry >= m.pubCount:
