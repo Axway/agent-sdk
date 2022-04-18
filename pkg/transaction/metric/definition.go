@@ -130,9 +130,9 @@ type LighthouseUsageEvent struct {
 
 // AppDetails - struct for app details to report
 type AppDetails struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	ConsumerOrgGUID string `json:"consumerOrgId,omitempty"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
 }
 
 // SubscriptionDetails - struct for subscription metric detail
