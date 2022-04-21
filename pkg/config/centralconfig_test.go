@@ -48,16 +48,15 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://satisfy.singleurl.com"
-	centralConfig.Mode = PublishToEnvironmentAndCatalog
-	err = cfgValidator.ValidateCfg()
-
-	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
 
 	centralConfig.Environment = "eee"
+
+	centralConfig.SingleURL = ""
 	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
+	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
 
 	centralConfig.APIServerVersion = ""
 	err = cfgValidator.ValidateCfg()
@@ -119,12 +118,6 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://satisfy.singleurl.com"
-	centralConfig.Mode = PublishToEnvironmentAndCatalog
-	err = cfgValidator.ValidateCfg()
-
-	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.deployment, please set and/or check its value", err.Error())
 
 	centralConfig.APICDeployment = "aaa"
@@ -139,7 +132,14 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
 
 	authCfg.URL = "http://localhost.com:8080"
+
+	centralConfig.SingleURL = ""
 	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
+	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	err = cfgValidator.ValidateCfg()
+
 	assert.Nil(t, err)
 
 	centralConfig.ReportActivityFrequency = 0

@@ -206,6 +206,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PollInterval:              60 * time.Second,
 		ClientTimeout:             60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
+		SingleURL:                 "https://ingestion.platform.axway.com",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
@@ -553,7 +554,7 @@ const (
 	pathAuthPublicKey             = "central.auth.publicKey"
 	pathAuthKeyPassword           = "central.auth.keyPassword"
 	pathAuthURL                   = "central.auth.url"
-	pathSingleURL                 = "central.singleURL" //TODO: kf move up from central to platform?
+	pathSingleURL                 = "central.singleURL"
 	pathAuthRealm                 = "central.auth.realm"
 	pathAuthClientID              = "central.auth.clientId"
 	pathAuthTimeout               = "central.auth.timeout"
@@ -695,7 +696,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of Amplify Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
-	props.AddStringProperty(pathSingleURL, "", "Alternate Connection for Agent if using static IP")
+	props.AddStringProperty(pathSingleURL, "https://ingestion.platform.axway.com", "Alternate Connection for Agent if using static IP")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")

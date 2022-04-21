@@ -41,6 +41,7 @@ func init() {
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
 	cfg.URL = url
+	cfg.SingleURL = ""
 	cfg.TenantID = "123456"
 	cfg.Environment = env
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
@@ -273,6 +274,7 @@ func TestCreateHTTPClientt(t *testing.T) {
 	testConfig.Hosts = []string{
 		"somehost:invalidport",
 	}
+
 	group, err := createTransport(testConfig)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "invalid port")

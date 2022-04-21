@@ -29,7 +29,7 @@ func resetResources() {
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
 	cfg.URL = url
-	cfg.SingleURL = "https://satisfy.singleurl.com"
+	cfg.SingleURL = url
 	cfg.TenantID = "123456"
 	cfg.Environment = env
 	cfg.APICDeployment = "apic"
