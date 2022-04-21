@@ -618,6 +618,8 @@ func (c *CentralConfiguration) validateConfig() {
 
 	c.validateURL(c.GetPlatformURL(), pathPlatformURL, true)
 
+	c.validateURL(c.GetSingleURL(), pathSingleURL, true)
+
 	// proxyURL
 	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
 
