@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -124,7 +125,7 @@ func (client *HTTPClient) Close() error {
 }
 
 // Publish sends events to the clients sink.
-func (client *HTTPClient) Publish(batch publisher.Batch) error {
+func (client *HTTPClient) Publish(_ context.Context, batch publisher.Batch) error {
 	events := batch.Events()
 	rest, err := client.publishEvents(events)
 	if len(rest) == 0 {
