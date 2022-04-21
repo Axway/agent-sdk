@@ -280,6 +280,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
