@@ -19,7 +19,7 @@ func TestTraceManagedApplicationHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 
@@ -37,7 +37,7 @@ func TestTraceManagedApplicationHandler(t *testing.T) {
 
 	ri, _ := managedApp.AsInstance()
 	// no status
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
 
@@ -47,7 +47,7 @@ func TestTraceManagedApplicationHandler(t *testing.T) {
 
 	ri, _ = managedApp.AsInstance()
 
-	err = handler.Handle(proto.Event_CREATED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	cachedApp := cm.GetManagedApplication("appId")
 	assert.NotNil(t, cachedApp)
@@ -55,7 +55,7 @@ func TestTraceManagedApplicationHandler(t *testing.T) {
 	cachedApp = cm.GetManagedApplicationByName("appName")
 	assert.NotNil(t, cachedApp)
 
-	err = handler.Handle(proto.Event_DELETED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 
 	cachedApp = cm.GetManagedApplication("appId")

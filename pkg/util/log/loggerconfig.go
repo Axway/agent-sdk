@@ -20,8 +20,13 @@ func init() {
 		output: STDOUT,
 		path:   ".",
 		cfg: rotatefilehook.RotateFileConfig{
-			Level:     logrus.InfoLevel,
-			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339},
+			Level: logrus.InfoLevel,
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			},
 		},
 		initialized: false,
 	}
@@ -97,9 +102,22 @@ func (b *LoggerConfig) Format(format string) *LoggerConfig {
 	if b.err == nil {
 		switch strings.ToLower(format) {
 		case loggingFormatStringMap[Line]:
-			b.cfg.Formatter = &logrus.TextFormatter{TimestampFormat: time.RFC3339}
+			b.cfg.Formatter = &logrus.TextFormatter{
+				TimestampFormat:  time.RFC3339,
+				FullTimestamp:    true,
+				PadLevelText:     true,
+				QuoteEmptyFields: true,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			}
 		case loggingFormatStringMap[JSON]:
-			b.cfg.Formatter = &logrus.JSONFormatter{TimestampFormat: time.RFC3339}
+			b.cfg.Formatter = &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			}
 		default:
 			b.err = ErrInvalidLogConfig.FormatError("log.format", "json, line")
 		}

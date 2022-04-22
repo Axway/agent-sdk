@@ -11,7 +11,7 @@ import (
 
 // createOrUpdateCredentialRequestDefinition -
 func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
 	crdRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(data.Name)
@@ -146,7 +146,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
 	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(data.Name)
@@ -177,7 +177,7 @@ func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 
 // RegisterProvisioner - allow the agent to register a provisioner
 func RegisterProvisioner(provisioner provisioning.Provisioning) {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
 	agent.provisioner = provisioner

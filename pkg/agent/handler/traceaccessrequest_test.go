@@ -21,7 +21,7 @@ func TestTraceAccessRequestHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 
@@ -42,22 +42,23 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 					},
 				},
 			},
-			SubResources: map[string]interface{}{
-				defs.XMarketplaceSubscription: map[string]interface{}{
-					defs.AttrSubscriptionName: "subscription",
-				},
-			},
 			Name: "ar",
 		},
 		Spec: mv1.AccessRequestSpec{
 			ManagedApplication: "app",
 			ApiServiceInstance: "instance",
 		},
+		References: []interface{}{
+			mv1.AccessRequestReferencesSubscription{
+				Kind: defs.Subscription,
+				Name: "catalog/subscription-name",
+			},
+		},
 	}
 	ri, _ := ar.AsInstance()
 
 	// no status
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
 
@@ -94,13 +95,13 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	c.getRI = &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
-				ID: "subscription",
+				ID: "subscription-id",
 			},
-			Name: "subscription",
+			Name: "subscription-name",
 		},
 	}
 
-	err = handler.Handle(proto.Event_CREATED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 	cachedAR := cm.GetAccessRequest("ar")
 	assert.NotNil(t, cachedAR)
@@ -108,10 +109,10 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	cachedAR = cm.GetAccessRequestByAppAndAPI("app", "api", "")
 	assert.NotNil(t, cachedAR)
 
-	cachedRI := cm.GetSubscription("subscription")
+	cachedRI := cm.GetSubscription("subscription-id")
 	assert.NotNil(t, cachedRI)
 
-	err = handler.Handle(proto.Event_DELETED, nil, ri)
+	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 
 	cachedAR = cm.GetAccessRequest("ar")

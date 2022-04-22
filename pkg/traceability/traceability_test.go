@@ -2,12 +2,14 @@ package traceability
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -221,8 +223,49 @@ func TestCreateLogstashClient(t *testing.T) {
 	assert.Equal(t, 3, GetMaxRetries())
 }
 
+func TestCreateLogstashClientWithSingleEntry(t *testing.T) {
+	cfg := createCentralCfg("http://localhost:8888", "v7")
+	cfg.SingleURL = "http://localhost:9999"
+	agent.Initialize(cfg)
+	logstashClientCreateCalled = false
+
+	testConfig := DefaultConfig()
+	testConfig.Protocol = "http"
+	testConfig.Hosts = []string{
+		"somehost",
+	}
+	group, err := createTransport(testConfig)
+	assert.Nil(t, err)
+	assert.NotNil(t, group)
+	assert.NotNil(t, group.Clients)
+	assert.True(t, logstashClientCreateCalled)
+	assert.Equal(t, "tcp", traceCfg.Protocol)
+	transportProxy := os.Getenv("TRACEABILITY_PROXYURL")
+	assert.Equal(t, "sni://"+traceCfg.Hosts[0], transportProxy)
+
+	testConfig.Proxy = ProxyConfig{
+		URL:          "http://localhost:9999",
+		LocalResolve: false,
+	}
+
+	testConfig.Hosts = []string{
+		"somehost",
+	}
+	group, err = createTransport(testConfig)
+	assert.Nil(t, err)
+	assert.NotNil(t, group)
+	assert.NotNil(t, group.Clients)
+	assert.True(t, logstashClientCreateCalled)
+	assert.Equal(t, "tcp", traceCfg.Protocol)
+	assert.Equal(t, "http://localhost:9999", traceCfg.Proxy.URL)
+	transportProxy = os.Getenv("TRACEABILITY_PROXYURL")
+	assert.Equal(t, "sni://"+traceCfg.Hosts[0], transportProxy)
+}
+
 func TestCreateHTTPClientt(t *testing.T) {
 	logstashClientCreateCalled = false
+	cfg := createCentralCfg("http://localhost:8888", "v7")
+	agent.Initialize(cfg)
 
 	testConfig := DefaultConfig()
 	testConfig.Protocol = "http"
@@ -291,7 +334,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	batch := createBatch("{\"f1\":\"test\"}")
 	traceabilityClient.Connect()
 	agent.StartAgentStatusUpdate()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 
 	assert.Nil(t, err)
@@ -328,7 +371,7 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 
 	traceabilityClient.Connect()
 	agent.StartAgentStatusUpdate()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.Nil(t, err)
 
@@ -365,7 +408,7 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	batch := createBatch("{\"f1\":\"test\"}")
 
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	assert.Nil(t, err)
 	traceabilityClient.Close()
 
@@ -402,7 +445,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 
 	s.responseStatus = 404
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.NotNil(t, err)
 	assert.False(t, batch.acked)
@@ -413,7 +456,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	group, err = createTransport(testConfig)
 	traceabilityClient = group.Clients[0].(*Client)
 	traceabilityClient.Connect()
-	err = traceabilityClient.Publish(batch)
+	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
 	assert.Nil(t, err)
 	assert.True(t, batch.acked)

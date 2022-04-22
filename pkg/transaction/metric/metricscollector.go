@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -50,6 +51,7 @@ type collector struct {
 	storage          storageCache
 	reports          offlineReportCache
 	usageConfig      config.UsageReportingConfig
+	logger           log.FieldLogger
 }
 
 type publishQueueItem interface {
@@ -105,6 +107,9 @@ func GetMetricCollector() Collector {
 }
 
 func createMetricCollector() Collector {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.transaction.metric").
+		WithComponent("collector")
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
@@ -116,6 +121,7 @@ func createMetricCollector() Collector {
 		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
+		logger:           logger,
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -161,8 +167,17 @@ func (c *collector) Execute() error {
 	c.usageEndTime = now()
 	c.metricEndTime = now()
 	c.orgGUID = c.getOrgGUID()
-	log.Debugf("Generating usage event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
-	log.Debugf("Generating metric event [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.metricStartTime), util.ConvertTimeToMillis(c.metricEndTime))
+	c.logger.
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField("eventType", "usage").
+		Debug("generating usage event")
+
+	c.logger.
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.metricStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.metricEndTime)).
+		WithField("eventType", "metric").
+		Debugf("generating metric event")
 	defer func() {
 		c.cleanup()
 	}()
@@ -247,7 +262,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
 			Subscription: c.createSubscriptionDetail(subscription),
-			App:          c.createAppDetail(managedApp),
+			App:          c.createAppDetail(managedApp, subscription),
 			API:          c.createAPIDetail(detail.APIDetails, accessRequest),
 			StatusCode:   statusCode,
 			Status:       c.getStatusText(statusCode),
@@ -287,7 +302,7 @@ func (c *collector) getApplicationID(app *v1.ResourceInstance) string {
 	return app.Metadata.ID
 }
 
-func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
+func (c *collector) createAppDetail(app *v1.ResourceInstance, subscription *v1.ResourceInstance) AppDetails {
 	detail := AppDetails{
 		ID:   unknown,
 		Name: unknown,
@@ -296,7 +311,10 @@ func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
 	if app != nil {
 		detail.ID = app.Metadata.ID
 		detail.Name = app.Name
-		detail.ConsumerOrgGUID = c.getConsumerOrgGUID(app)
+		detail.ConsumerOrgID = c.getConsumerOrgID(app)
+		if detail.ConsumerOrgID == "" {
+			detail.ConsumerOrgID = c.getConsumerOrgIDFromSubscription(subscription)
+		}
 	}
 	return detail
 }
@@ -336,15 +354,23 @@ func (c *collector) getOrgGUID() string {
 }
 
 func (c *collector) generateEvents() {
-	if agent.GetCentralConfig().GetEnvironmentID() == "" ||
-		cmd.GetBuildDataPlaneType() == "" {
-		log.Warn("Unable to process usage and metric event generation. Please verify the agent config")
+	if agent.GetCentralConfig().GetEnvironmentID() == "" || cmd.GetBuildDataPlaneType() == "" {
+		c.logger.Warn("Unable to process usage and metric event generation. Please verify the agent config")
 		return
 	}
 
 	if len(c.publishItemQueue) == 0 {
-		log.Infof("No usage event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
-		log.Infof("No metric event generated as no transactions recorded [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.metricStartTime), util.ConvertTimeToMillis(c.metricEndTime))
+		c.logger.
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			WithField("eventType", "usage").
+			Info("no usage event generated as no transactions recorded")
+
+		c.logger.
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.metricStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.metricEndTime)).
+			WithField("eventType", "metric").
+			Info("no metric event generated as no transactions recorded")
 	}
 
 	c.metricBatch = NewEventBatch(c)
@@ -352,7 +378,9 @@ func (c *collector) generateEvents() {
 	if c.usageConfig.CanPublishMetric() {
 		err := c.metricBatch.Publish()
 		if err != nil {
-			log.Errorf("Could not send metric event: %s, current metric data is kept and will be added to the next trigger interval.", err.Error())
+			c.logger.
+				WithError(err).
+				Errorf("could not send metric event. Current metric data is kept and will be added to the next trigger interval")
 		}
 	}
 }
@@ -363,7 +391,7 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 		if c.usageConfig.CanPublishUsage() {
 			c.generateUsageEvent(c.orgGUID)
 		} else {
-			log.Info("Publishing the usage event is turned off")
+			c.logger.Info("Publishing the usage event is turned off")
 		}
 
 	// case transactionVolumeMetric:
@@ -384,11 +412,21 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	usage := map[string]int64{
 		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
-	log.Infof("Creating usage event with %d transactions [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionCountMetric).Count(), util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+	c.logger.
+		WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField("count", c.getOrRegisterCounter(transactionCountMetric).Count()).
+		WithField("eventType", "usage").
+		Info("creating usage event")
 
 	if agent.GetCentralConfig().IsAxwayManaged() {
 		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
-		log.Infof("Creating volume event with %d bytes [start timestamp: %d, end timestamp: %d]", c.getOrRegisterCounter(transactionVolumeMetric).Count(), util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+		c.logger.
+			WithField("eventType", "volume").
+			WithField("totalBytes", c.getOrRegisterCounter(transactionVolumeMetric).Count()).
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			Infof("creating volume event")
 	}
 
 	granularity := int(c.usageEndTime.Sub(c.usageStartTime).Milliseconds())
@@ -508,9 +546,17 @@ func (c *collector) publishEvents() {
 		for _, eventQueueItem := range c.publishItemQueue {
 			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
-				log.Errorf("Failed to publish usage event  [start timestamp: %d, end timestamp: %d]: %s - current usage report is kept and will be added to the next trigger interval.", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime), err.Error())
+				c.logger.
+					WithError(err).
+					WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+					WithField("eventType", "usage").
+					Error("failed to publish usage event. current usage report is kept and will be added to the next trigger interval")
 			} else {
-				log.Infof("Published usage report [start timestamp: %d, end timestamp: %d]", util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+				c.logger.
+					WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+					Info("published usage report")
 				c.cleanupCounters(eventQueueItem)
 			}
 		}
@@ -564,7 +610,11 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4D
 		if len(c.metricMap[subID]) == 0 {
 			delete(c.metricMap, subID)
 		}
-		log.Infof("Published metrics report for API %s [start timestamp: %d, end timestamp: %d]", metric.API.Name, util.ConvertTimeToMillis(c.usageStartTime), util.ConvertTimeToMillis(c.usageEndTime))
+		c.logger.
+			WithField("startTimestamp", util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField("endTimestamp", util.ConvertTimeToMillis(c.usageEndTime)).
+			WithField("apiName", metric.API.Name).
+			Info("Published metrics report for API")
 	}
 }
 
@@ -582,16 +632,28 @@ func (c *collector) getStatusText(statusCode string) string {
 	return statusText
 }
 
-func (c *collector) getConsumerOrgGUID(managedApp *v1.ResourceInstance) string {
-	if managedApp == nil {
+func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
+	if ri == nil {
 		return ""
 	}
 
 	// Lookup Subscription
-	// TODO - Use subject subresource on managed application once model includes it.
-	consumerOrgGUID, _ := util.GetSubResourcePropertyValue(managedApp,
-		defs.XMarketplaceSubject, defs.AttrSubjectOrgGUID)
-	return consumerOrgGUID
+	app := &v1alpha1.ManagedApplication{}
+	app.FromInstance(ri)
+
+	return app.Marketplace.Resource.Owner.Organization.Id
+}
+
+func (c *collector) getConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
+	if ri == nil {
+		return ""
+	}
+
+	// Lookup Subscription
+	subscription := &cv1.Subscription{}
+	subscription.FromInstance(ri)
+
+	return subscription.Marketplace.Resource.Owner.Organization.Id
 }
 
 func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
@@ -605,25 +667,12 @@ func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.
 	return accessReq
 }
 
-func (c *collector) getSubscriptionFromAccessReq(accessRequest *v1alpha1.AccessRequest) string {
-	// Lookup Access Request
-	if accessRequest == nil {
-		return ""
-	}
-	// Lookup Subscription
-	// Temporary using custom subresource, use subscription reference in AccessRequest
-	// TODO - Use subscription reference subresource on AccessRequest once controller starts to populate it.
-	subscriptionName, _ := util.GetSubResourcePropertyValue(accessRequest,
-		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
-	return subscriptionName
-}
-
 func (c *collector) getSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
-	if accessRequest == nil {
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
+	if subscriptionName == "" {
 		return nil
 	}
 
-	subscriptionName := c.getSubscriptionFromAccessReq(accessRequest)
 	subscription := cacheManager.GetSubscriptionByName(subscriptionName)
 	if subscription == nil {
 		return nil

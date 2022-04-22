@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -19,7 +21,8 @@ func NewCRDHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *crdHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *crdHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.CredentialRequestDefinitionGVK().Kind {
 		return nil
 	}

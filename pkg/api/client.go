@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
-	log "github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
 
@@ -53,14 +54,19 @@ type Client interface {
 
 type httpClient struct {
 	Client
-	httpClient *http.Client
-	timeout    time.Duration
+	logger             log.FieldLogger
+	httpClient         *http.Client
+	timeout            time.Duration
+	dialer             util.Dialer
+	singleEntryHostMap map[string]string
 }
 
 type configAgent struct {
-	agentName       string
-	environmentName string
-	isDocker        bool
+	agentName         string
+	environmentName   string
+	isDocker          bool
+	singleURL         string
+	singleEntryFilter []string
 }
 
 var cfgAgent *configAgent
@@ -70,10 +76,16 @@ func init() {
 }
 
 // SetConfigAgent -
-func SetConfigAgent(env string, isDocker bool, agentName string) {
+func SetConfigAgent(env string, isDocker bool, agentName, singleURL string, singleEntryFilter []string) {
 	cfgAgent.environmentName = env
 	cfgAgent.isDocker = isDocker
 	cfgAgent.agentName = agentName
+	cfgAgent.singleURL = singleURL
+	if cfgAgent.singleEntryFilter != nil {
+		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, singleEntryFilter...)
+	} else {
+		cfgAgent.singleEntryFilter = singleEntryFilter
+	}
 }
 
 // NewClient - creates a new HTTP client
@@ -84,12 +96,51 @@ func NewClient(cfg config.TLSConfig, proxyURL string) Client {
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
 func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	httpCli := createClient(tlsCfg, parseProxyURL(proxyURL))
-	httpCli.Timeout = timeout
-	return &httpClient{
-		timeout:    timeout,
-		httpClient: httpCli,
+	client := newClient(timeout)
+	client.initialize(tlsCfg, proxyURL, "")
+	client.logger = log.NewFieldLogger().
+		WithComponent("httpClient").
+		WithPackage("sdk.api")
+
+	return client
+}
+
+// NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
+func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
+	client := newClient(timeout)
+	singleURL := ""
+	if cfgAgent != nil {
+		singleURL = cfgAgent.singleURL
+		if singleURL != "" {
+			client.singleEntryHostMap = initializeSingleEntryMapping(singleURL, cfgAgent.singleEntryFilter)
+		}
 	}
+
+	client.initialize(tlsCfg, proxyURL, singleURL)
+	return client
+}
+
+func newClient(timeout time.Duration) *httpClient {
+	return &httpClient{
+		timeout: timeout,
+		logger: log.NewFieldLogger().
+			WithComponent("httpClient").
+			WithPackage("sdk.api"),
+	}
+}
+
+func initializeSingleEntryMapping(singleEntryURL string, singleEntryFilter []string) map[string]string {
+	hostMapping := make(map[string]string)
+	entryURL, err := url.Parse(singleEntryURL)
+	if err == nil {
+		for _, filteredURL := range singleEntryFilter {
+			svcURL, err := url.Parse(filteredURL)
+			if err == nil {
+				hostMapping[util.ParseAddr(svcURL)] = util.ParseAddr(entryURL)
+			}
+		}
+	}
+	return hostMapping
 }
 
 func parseProxyURL(proxyURL string) *url.URL {
@@ -103,28 +154,43 @@ func parseProxyURL(proxyURL string) *url.URL {
 	return nil
 }
 
-func createClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
+func (c *httpClient) initialize(tlsCfg config.TLSConfig, proxyURL, singleEntryURL string) {
+	c.httpClient = c.createClient(tlsCfg)
+	if singleEntryURL == "" && proxyURL == "" {
+		return
+	}
+
+	c.dialer = util.NewDialer(parseProxyURL(proxyURL), c.singleEntryHostMap)
+	c.httpClient.Transport.(*http.Transport).DialContext = c.httpDialer
+}
+
+func (c *httpClient) createClient(tlsCfg config.TLSConfig) *http.Client {
 	if tlsCfg != nil {
-		return createHTTPSClient(tlsCfg, proxyURL)
+		return c.createHTTPSClient(tlsCfg)
 	}
-	return createHTTPClient(proxyURL)
+	return c.createHTTPClient()
 }
 
-func createHTTPClient(proxyURL *url.URL) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy: util.GetProxyURL(proxyURL),
-		},
+func (c *httpClient) createHTTPClient() *http.Client {
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+		Timeout:   c.timeout,
 	}
+	return httpClient
 }
 
-func createHTTPSClient(tlsCfg config.TLSConfig, proxyURL *url.URL) *http.Client {
-	return &http.Client{
+func (c *httpClient) createHTTPSClient(tlsCfg config.TLSConfig) *http.Client {
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg.BuildTLSConfig(),
-			Proxy:           util.GetProxyURL(proxyURL),
 		},
+		Timeout: c.timeout,
 	}
+	return httpClient
+}
+
+func (c *httpClient) httpDialer(ctx context.Context, network, addr string) (net.Conn, error) {
+	return c.dialer.DialContext(ctx, network, addr)
 }
 
 func getTimeoutFromEnvironment() time.Duration {
@@ -233,10 +299,30 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	statusCode := 0
 	defer func() {
 		duration := time.Since(startTime)
+		targetURL := req.URL.String()
+		if c.dialer != nil {
+			svcHost := util.ParseAddr(req.URL)
+			if entryHost, ok := c.singleEntryHostMap[svcHost]; ok {
+				targetURL = req.URL.Scheme + "://" + entryHost + req.URL.Path
+			}
+		}
 		if err != nil {
-			log.Tracef("[ID:%s] %s [%dms] - ERR - %s - %s", reqID, req.Method, duration.Milliseconds(), req.URL.String(), err.Error())
+			c.logger.
+				WithField("id", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration(ms)", duration.Milliseconds()).
+				WithField("url", targetURL).
+				WithError(err).
+				Trace("request failed")
 		} else {
-			log.Tracef("[ID:%s] %s [%dms] - %d - %s", reqID, req.Method, duration.Milliseconds(), statusCode, req.URL.String())
+			c.logger.
+				WithField("id", reqID).
+				WithField("method", req.Method).
+				WithField("status", statusCode).
+				WithField("duration(ms)", duration.Milliseconds()).
+				WithField("url", targetURL).
+				Trace("request succeeded")
 		}
 	}()
 

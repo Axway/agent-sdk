@@ -8,10 +8,9 @@ import (
 
 	"google.golang.org/grpc/connectivity"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/sirupsen/logrus"
-
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 )
@@ -40,7 +39,7 @@ type watchManager struct {
 	clientMap          map[string]*watchClient
 	connection         *grpc.ClientConn
 	hClient            *harvesterClient
-	logger             logrus.FieldLogger
+	logger             log.FieldLogger
 	mutex              sync.Mutex
 	newWatchClientFunc newWatchClientFunc
 	options            *watchOptions
@@ -53,11 +52,12 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 		return nil, err
 	}
 
-	entry := logrus.NewEntry(log.Get())
-
+	logger := log.NewFieldLogger().
+		WithComponent("watchManager").
+		WithPackage("sdk.watchmanager")
 	manager := &watchManager{
 		cfg:                cfg,
-		logger:             entry.WithField("package", "watchmanager"),
+		logger:             logger,
 		clientMap:          make(map[string]*watchClient),
 		options:            newWatchOptions(),
 		newWatchClientFunc: proto.NewWatchClient,
@@ -69,17 +69,20 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 
 	manager.connection, err = manager.createConnection()
 	if err != nil {
-		log.Errorf("failed to establish connection with watch service: %s", err.Error())
+		manager.logger.
+			WithError(err).
+			Errorf("failed to establish connection with watch service")
 	}
 
 	if manager.options.sequenceGetter != nil {
 		harvesterConfig := &harvesterConfig{
-			host:        manager.cfg.Host,
-			port:        manager.cfg.Port,
-			tenantID:    manager.cfg.TenantID,
-			tokenGetter: manager.cfg.TokenGetter,
-			proxyURL:    manager.options.proxyURL,
-			tlsCfg:      manager.options.tlsCfg,
+			host:          manager.cfg.Host,
+			port:          manager.cfg.Port,
+			tenantID:      manager.cfg.TenantID,
+			tokenGetter:   manager.cfg.TokenGetter,
+			proxyURL:      manager.options.proxyURL,
+			tlsCfg:        manager.options.tlsCfg,
+			clientTimeout: manager.options.keepAlive.timeout,
 		}
 		manager.hClient = newHarvesterClient(harvesterConfig)
 	}
@@ -88,7 +91,8 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 }
 
 func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
-	proxyDialer, err := m.getProxyDialer()
+	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
+	dialer, err := m.getDialer(address)
 	if err != nil {
 		return nil, err
 	}
@@ -97,27 +101,66 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 		withKeepaliveParams(m.options.keepAlive.time, m.options.keepAlive.timeout),
 		withRPCCredentials(m.cfg.TenantID, m.cfg.TokenGetter),
 		withTLSConfig(m.options.tlsCfg),
-		withProxyDialer(proxyDialer),
+		withDialer(dialer),
 		chainStreamClientInterceptor(
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
 	}
 
-	address := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
-	log.Infof("connecting to watch service. host: %s. port: %d", m.cfg.Host, m.cfg.Port)
+	m.logger.
+		WithField("host", m.cfg.Host).
+		WithField("port", m.cfg.Port).
+		Infof("connecting to watch service")
 
 	return grpc.Dial(address, grpcDialOptions...)
 }
 
-func (m *watchManager) getProxyDialer() (proxyDialer, error) {
+func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
+	if m.options.singleEntryAddr == "" && m.options.proxyURL == "" {
+		return nil, nil
+	}
+	var proxyURL *url.URL
+	var err error
 	if m.options.proxyURL != "" {
-		proxyURL, err := url.Parse(m.options.proxyURL)
+		proxyURL, err = url.Parse(m.options.proxyURL)
 		if err != nil {
 			return nil, err
 		}
-		return newGRPCProxyDialer(proxyURL), nil
 	}
-	return nil, nil
+	singleEntryHostMap := make(map[string]string)
+	if m.options.singleEntryAddr != "" {
+		singleEntryHostMap[targetAddr] = m.options.singleEntryAddr
+	}
+	return util.NewDialer(proxyURL, singleEntryHostMap), nil
+}
+
+// eventCatchUp - called until lastSequenceID is 0, caught up on events
+func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event) error {
+	if m.hClient == nil || m.options.sequenceGetter == nil {
+		return nil
+	}
+
+	sequenceID := m.options.sequenceGetter.GetSequence()
+	if sequenceID > 0 {
+		var err error
+		lastSequenceID, err := m.hClient.receiveSyncEvents(link, sequenceID, events)
+		if err != nil {
+			m.clientMap[subID].handleError(err)
+			return err
+		}
+
+		if lastSequenceID > 0 {
+			// wait for all current sequences to be processed before processing new ones
+			for sequenceID < lastSequenceID {
+				sequenceID = m.options.sequenceGetter.GetSequence()
+			}
+		} else {
+			return nil
+		}
+	} else {
+		return nil
+	}
+	return m.eventCatchUp(link, subID, events)
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic
@@ -146,30 +189,16 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 	client.processRequest()
 
-	var lastSequenceID int64
-	var sequenceID int64
-	if m.hClient != nil && m.options.sequenceGetter != nil {
-		sequenceID = m.options.sequenceGetter.GetSequence()
-		if sequenceID > 0 {
-			var err error
-			lastSequenceID, err = m.hClient.receiveSyncEvents(link, sequenceID, events)
-			if err != nil {
-				client.handleError(err)
-				return subID, err
-			}
-		}
-	}
-
-	if lastSequenceID > 0 {
-		// wait for all current sequences to be processed before processing new ones
-		for sequenceID < lastSequenceID {
-			sequenceID = m.options.sequenceGetter.GetSequence()
-		}
+	if err := m.eventCatchUp(link, subID, events); err != nil {
+		return subID, err
 	}
 
 	go client.processEvents()
 
-	log.Infof("registered watch client. id: %s. watchtopic: %s", subID, link)
+	m.logger.
+		WithField("id", subID).
+		WithField("watchtopic", link).
+		Infof("registered watch client")
 
 	return subID, nil
 }
@@ -183,7 +212,7 @@ func (m *watchManager) CloseWatch(id string) error {
 	if !ok {
 		return errors.New("invalid watch subscription ID")
 	}
-	log.Infof("closing watch for subscription: %s", id)
+	m.logger.WithField("id", id).Info("closing connection for subscription")
 	client.cancelStreamCtx()
 	delete(m.clientMap, id)
 	return nil
@@ -191,7 +220,7 @@ func (m *watchManager) CloseWatch(id string) error {
 
 // CloseConn closes watch service connection, and all open streams
 func (m *watchManager) CloseConn() {
-	log.Info("closing watch service connection")
+	m.logger.Info("closing watch service connection")
 
 	m.connection.Close()
 	for id := range m.clientMap {
@@ -212,7 +241,7 @@ func (m *watchManager) Status() bool {
 
 	for k, c := range m.clientMap {
 		if !c.isRunning {
-			log.Debugf("watchmanager: watch client is not running.")
+			m.logger.Debug("watch client is not running")
 			ok = false
 			delete(m.clientMap, k)
 		}

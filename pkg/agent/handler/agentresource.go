@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -23,7 +25,8 @@ func NewAgentResourceHandler(agentResourceManager resource.Manager) Handler {
 	}
 }
 
-func (h *agentResourceHandler) Handle(action proto.Event_Type, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *agentResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if h.agentResourceManager != nil && action == proto.Event_UPDATED {
 		kind := resource.Kind
 		switch kind {

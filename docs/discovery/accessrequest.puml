@@ -1,0 +1,66 @@
+@startuml
+participant Environment as env
+participant SDK as sdk 
+participant Agent as agent
+
+'Provision Access Request
+
+env -> sdk: Access Request Create Event
+activate sdk
+sdk --> sdk: isPending
+sdk -> env: Get refereneced Managed Application
+sdk -> env: Get refereneced API Service Instance
+
+sdk -> agent: AccessRequestProvision
+activate agent
+
+agent --> sdk: Get details on Application  - GetApplicationDetailsValue(key)
+agent --> sdk: Get access request data - GetAccessRequestData()
+agent --> sdk: Get details on API Service Instance - GetInstanceDetails()
+agent --> agent: Handle provisioning of Access
+note over agent: Add properties necessary to deprovision
+
+agent -> sdk: success
+activate sdk #green
+
+sdk -> env: Update Access Request Success
+deactivate sdk
+note left sdk: Add properties from agent to resource
+
+agent -> sdk: fail
+deactivate agent
+activate sdk #red
+
+sdk -> env: Update Access Request Fail
+deactivate sdk
+
+deactivate sdk
+
+'Deprovision Access Request
+
+env -> sdk: Access Request Update Event
+activate sdk
+sdk --> sdk: isDeleting
+sdk <-> env: Get all properties
+
+sdk -> agent: AccessRequestDeprovision
+activate agent
+
+agent --> sdk: Get details on AccessRequest  - GetAccessRequestDetailsValue(key)
+agent --> agent: Handle deprovisioning of Access
+
+agent -> sdk: success
+activate sdk #green
+
+sdk -> env: Update Access Request, allowing resource removal
+deactivate sdk
+
+agent -> sdk: fail
+deactivate agent
+activate sdk #red
+
+sdk -> env: Update Access Request Fail
+deactivate sdk
+
+deactivate sdk
+@enduml

@@ -44,11 +44,21 @@ update_version_file() {
 }
 
 commit_promotion() {
-    echo "Committing the new promoted version to main"
-    cd ${BASE_DIR}
-    git add version
-    git commit -m "INT - ${MSG}"
-    git push --force origin main
+    # put this back when we can figure out how to push directly to github sdk, which is protected
+    # maybe define a user that can push and go git config --locak(global) user
+    # maybe this? https://github.com/marketplace/actions/add-commit or this https://github.com/peter-evans/create-pull-request
+    # echo "Committing the new promoted version to main"
+    # cd ${BASE_DIR}
+    # git add version
+    # git commit -m "INT - ${MSG}"
+    # git push --force origin main
+
+    echo "Until the script can be fixed, you must manually do the next steps"
+    echo "  1) create a new SDK branch"
+    echo "  2) update the version file by adding 1 to the last digit"
+    echo "  3) commit the branch with the following message: 'INT - ${MSG}'"
+    echo "  4) create a pull request on github and await approval"
+    echo "  5) merge the branch into main"
 }
 
 main() {

@@ -505,7 +505,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 		out := scanner.Text()
 		err := json.Unmarshal([]byte(out), &logData)
 		assert.Nil(t, err, "failed to unmarshal log data")
-		if logData["level"] == level && logData["msg"] == msg {
+		if logData["level"] == level && logData["message"] == msg {
 			break
 		}
 	}
@@ -513,7 +513,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	os.Stdout = rescueStdout
 
 	assert.Equal(t, level, logData["level"])
-	assert.Equal(t, msg, logData["msg"])
+	assert.Equal(t, msg, logData["message"])
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
@@ -560,13 +560,13 @@ func TestRootCommandLoggerFile(t *testing.T) {
 		out := scanner.Text()
 		err := json.Unmarshal([]byte(out), &logData)
 		assert.Nil(t, err, "failed to unmarshal log data")
-		if logData["level"] == level && logData["msg"] == msg {
+		if logData["level"] == level && logData["message"] == msg {
 			break
 		}
 	}
 
 	assert.Equal(t, level, logData["level"])
-	assert.Equal(t, msg, logData["msg"])
+	assert.Equal(t, msg, logData["message"])
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {

@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
-
-	"golang.org/x/net/proxy"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -25,10 +22,7 @@ type condorHealthCheckJob struct {
 // Ready -
 func (j *condorHealthCheckJob) Ready() bool {
 	err := j.checkConnections(healthcheckCondor)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // Status -
@@ -53,26 +47,16 @@ func (j *condorHealthCheckJob) checkConnections(name string) error {
 }
 
 func (j *condorHealthCheckJob) checkTCPConnection(host string) error {
-	var err error
-	defaultDialer := &net.Dialer{Timeout: j.agentHealthChecker.timeout}
-	d := proxy.FromEnvironmentUsing(defaultDialer)
-
-	// Setup the proxy if needed
-	if j.agentHealthChecker.proxyURL != "" {
-		uri, err := url.Parse(j.agentHealthChecker.proxyURL)
-		if err != nil {
-			return fmt.Errorf("%s proxy could not be parsed. %s", host, err.Error())
-		}
-		d, err = proxy.FromURL(uri, defaultDialer)
-		if err != nil {
-			return fmt.Errorf("%s could not setup proxy. %s", host, err.Error())
-		}
+	// Proxy url parameter is nil since the dialer will use proxy url from traceCfg
+	dialer, err := ingestionSingleEntryDialer(nil, &net.Dialer{Timeout: j.agentHealthChecker.timeout})
+	if err != nil {
+		return err
 	}
-
-	_, err = d.Dial(j.agentHealthChecker.protocol, j.agentHealthChecker.host)
+	conn, err := dialer.Dial(j.agentHealthChecker.protocol, j.agentHealthChecker.host)
 	if err != nil {
 		return fmt.Errorf("%s connection failed. %s", host, err.Error())
 	}
+	conn.Close()
 
 	return nil
 }

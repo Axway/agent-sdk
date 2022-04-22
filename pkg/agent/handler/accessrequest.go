@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -9,17 +10,13 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
 const (
-	provision     = "provision"
-	deprovision   = "deprovision"
-	statusErr     = "Error"
-	statusSuccess = "Success"
-	statusPending = "Pending"
-	arFinalizer   = "agent.accessrequest.provisioned"
+	provision   = "provision"
+	deprovision = "deprovision"
+	arFinalizer = "agent.accessrequest.provisioned"
 )
 
 type arProvisioner interface {
@@ -43,42 +40,64 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *accessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
 
+	log := getLoggerFromContext(ctx).WithComponent("accessRequestHandler")
+	ctx = setLoggerInContext(ctx, log)
+
 	ar := &mv1.AccessRequest{}
-	ar.FromInstance(resource)
+	err := ar.FromInstance(resource)
+	if err != nil {
+		log.WithError(err).Error("could not handle access request")
+		return nil
+	}
 
 	if ok := isStatusFound(ar.Status); !ok {
+		log.Debug("could not handle access request as it did not have a status subresource")
 		return nil
 	}
 
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
-		log.Tracef("access request handler - processing resource in pending status")
-		ar := h.onPending(ar)
-		return h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		log.Trace("processing resource in pending status")
+		ar := h.onPending(ctx, ar)
+		err := h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		if err != nil {
+			log.WithError(err).Errorf("error creating subresources")
+			return err
+		}
+		err = h.client.CreateSubResourceScoped(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
+		if err != nil {
+			log.WithError(err).Errorf("error creating status subresources")
+			return err
+		}
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
-		log.Tracef("access request handler - processing resource in deleting state")
-		h.onDeleting(ar)
+		log.Trace("processing resource in deleting state")
+		h.onDeleting(ctx, ar)
 	}
 
+	log.Trace("finished processing request")
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessRequest {
-	app, err := h.getManagedApp(ar)
+func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequest) *mv1.AccessRequest {
+	log := getLoggerFromContext(ctx)
+	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
-		h.onError(ar, err)
+		log.WithError(err).Error("error getting managed app")
+		h.onError(ctx, ar, err)
 		return ar
 	}
 
-	req, err := h.newReq(ar, util.GetAgentDetails(app))
+	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
 	if err != nil {
-		h.onError(ar, err)
+		log.WithError(err).Error("error getting resource details")
+		h.onError(ctx, ar, err)
 		return ar
 	}
 
@@ -89,18 +108,20 @@ func (h *accessRequestHandler) onPending(ar *mv1.AccessRequest) *mv1.AccessReque
 	util.SetAgentDetails(ar, util.MapStringStringToMapStringInterface(details))
 
 	ri, _ := ar.AsInstance()
-	h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+	if ar.Status.Level == prov.Success.String() {
+		// only add finalizer on success
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+	}
 
 	ar.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(ar),
-		"status":           ar.Status,
 	}
 
 	return ar
 }
 
 // onError updates the AccessRequest with an error status
-func (h *accessRequestHandler) onError(ar *mv1.AccessRequest, err error) {
+func (h *accessRequestHandler) onError(_ context.Context, ar *mv1.AccessRequest, err error) {
 	ps := prov.NewRequestStatusBuilder()
 	status := ps.SetMessage(err.Error()).Failed()
 	ar.Status = prov.NewStatusReason(status)
@@ -110,10 +131,12 @@ func (h *accessRequestHandler) onError(ar *mv1.AccessRequest, err error) {
 }
 
 // onDeleting deprovisions an access request and removes the finalizer
-func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
-	req, err := h.newReq(ar, map[string]interface{}{})
+func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessRequest) {
+	log := getLoggerFromContext(ctx)
+	req, err := h.newReq(ctx, ar, map[string]interface{}{})
 	if err != nil {
-		h.onError(ar, err)
+		log.WithError(err).Error("error getting deprovision request details: %s")
+		h.onError(ctx, ar, err)
 		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 		return
 	}
@@ -124,17 +147,18 @@ func (h *accessRequestHandler) onDeleting(ar *mv1.AccessRequest) {
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 	} else {
-		h.onError(ar, fmt.Errorf(status.GetMessage()))
+		log.Debugf("request status was not Success, skipping")
+		h.onError(ctx, ar, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}
 }
 
-func (h *accessRequestHandler) getManagedApp(ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
+func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
 	app := mv1.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
 	return h.client.GetResource(app.GetSelfLink())
 }
 
-func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
+func (h *accessRequestHandler) newReq(_ context.Context, ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
 	instID := ""
 	for _, ref := range ar.Metadata.References {
 		if ref.Name == ar.Spec.ApiServiceInstance {
@@ -148,36 +172,26 @@ func (h *accessRequestHandler) newReq(ar *mv1.AccessRequest, appDetails map[stri
 		return nil, err
 	}
 
-	apiID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-	stage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
-
 	return &provAccReq{
-		apiID:         apiID,
-		appDetails:    appDetails,
-		stage:         stage,
-		accessData:    ar.Spec.Data,
-		accessDetails: util.GetAgentDetails(ar),
-		managedApp:    ar.Spec.ManagedApplication,
+		appDetails:      appDetails,
+		accessData:      ar.Spec.Data,
+		accessDetails:   util.GetAgentDetails(ar),
+		instanceDetails: util.GetAgentDetails(instance),
+		managedApp:      ar.Spec.ManagedApplication,
 	}, nil
 }
 
 type provAccReq struct {
-	apiID         string
-	appDetails    map[string]interface{}
-	accessDetails map[string]interface{}
-	accessData    map[string]interface{}
-	managedApp    string
-	stage         string
+	appDetails      map[string]interface{}
+	accessDetails   map[string]interface{}
+	accessData      map[string]interface{}
+	instanceDetails map[string]interface{}
+	managedApp      string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
 func (r provAccReq) GetApplicationName() string {
 	return r.managedApp
-}
-
-// GetAPIID gets the api service instance id that the access request is linked too.
-func (r provAccReq) GetAPIID() string {
-	return r.apiID
 }
 
 // GetAccessRequestData gets the data of the access request
@@ -203,6 +217,11 @@ func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
 	return util.ToString(r.accessDetails[key])
 }
 
-func (r provAccReq) GetStage() string {
-	return r.stage
+// GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
+func (r provAccReq) GetInstanceDetails() map[string]interface{} {
+	if r.instanceDetails == nil {
+		return map[string]interface{}{}
+	}
+
+	return r.instanceDetails
 }

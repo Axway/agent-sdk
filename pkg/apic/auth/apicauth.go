@@ -24,8 +24,8 @@ import (
 
 	"math/big"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	jwt "github.com/golang-jwt/jwt"
@@ -76,21 +76,22 @@ func NewWithStatic(tenantID, token string) *ApicAuth {
 }
 
 // NewWithFlow returns an ApicAuth that uses the axway authentication flow
-func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) *ApicAuth {
+func NewWithFlow(tenantID, privKey, publicKey, password, url, aud, clientID string, singleURL string, timeout time.Duration) *ApicAuth {
 	return &ApicAuth{
 		tenantID,
-		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, timeout)),
+		tokenGetterWithChannel(NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID, singleURL, timeout)),
 	}
 }
 
 // NewPlatformTokenGetter returns a token getter for axway ID
-func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, timeout time.Duration) PlatformTokenGetter {
+func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID string, singleURL string, timeout time.Duration) PlatformTokenGetter {
 	return &platformTokenGetter{
 		aud,
 		clientID,
 		&platformTokenGenerator{
-			url:     url,
-			timeout: timeout,
+			url:       url,
+			timeout:   timeout,
+			singleURL: singleURL,
 		},
 		&keyReader{
 			privKey:   privKey,
@@ -112,6 +113,7 @@ func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) Pl
 			timeout:   centralCfg.GetAuthConfig().GetTimeout(),
 			tlsConfig: centralCfg.GetTLSConfig(),
 			proxyURL:  centralCfg.GetProxyURL(),
+			singleURL: centralCfg.GetSingleURL(),
 		},
 		&keyReader{
 			privKey:   centralCfg.GetAuthConfig().GetPrivateKey(),
@@ -272,6 +274,8 @@ type platformTokenGenerator struct {
 	timeout   time.Duration    // timeout for the http request
 	tlsConfig config.TLSConfig // TLS Config
 	proxyURL  string           // ProxyURL
+	singleURL string           // Alternate Connection for static IP routing
+	apiClient api.Client
 }
 
 // prepareInitialToken prepares a token for an access request
@@ -295,59 +299,51 @@ func prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (str
 
 	return requestToken, nil
 }
-func (ptg *platformTokenGenerator) getHTTPClient() http.Client {
-	client := http.Client{Timeout: ptg.timeout}
-	httpTransport := &http.Transport{}
-
-	if ptg.tlsConfig != nil {
-		httpTransport.TLSClientConfig = ptg.tlsConfig.BuildTLSConfig()
+func (ptg *platformTokenGenerator) getHTTPClient() api.Client {
+	if ptg.apiClient == nil {
+		ptg.apiClient = api.NewSingleEntryClient(ptg.tlsConfig, ptg.proxyURL, ptg.timeout)
 	}
-
-	if ptg.proxyURL != "" {
-		url, err := url.Parse(ptg.proxyURL)
-		if err != nil {
-			log.Errorf("Error parsing proxyURL from config; creating a non-proxy client: %s", err.Error())
-		}
-		httpTransport.Proxy = util.GetProxyURL(url)
-	}
-	client.Transport = httpTransport
-	return client
+	return ptg.apiClient
 }
 
 func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwayTokenResponse, error) {
 	startTime := time.Now()
 	client := ptg.getHTTPClient()
-	resp, err := client.PostForm(ptg.url, url.Values{
+	resp, err := ptg.postAuthForm(client, ptg.url, url.Values{
 		"grant_type":            []string{"client_credentials"},
 		"client_assertion_type": []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
 		"client_assertion":      []string{requestToken},
 	})
 
-	duration := time.Now().Sub(startTime)
-	if err != nil {
-		log.Tracef("%s [%dms] - ERR - %s - %s", "POST", duration.Milliseconds(), ptg.url, err.Error())
-	} else {
-		log.Tracef("%s [%dms] - %d - %s", "POST", duration.Milliseconds(), resp.StatusCode, ptg.url)
-	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	defer closeHelper(resp.Body)
-	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		log.Debugf("bad response from AxwayID: %s: %s, request time : %s", resp.Status, body, startTime.String())
+	if resp.Code != 200 {
+		body := resp.Body
+		log.Debugf("bad response from AxwayID: %d %s: %s, request time : %s", resp.Code, http.StatusText(resp.Code), body, startTime.String())
 		log.Debug("please check the value for CENTRAL_AUTH_URL: The Amplify login URL.  Otherwise, possibly a clock syncing issue. Please check NTP daemon, if being used, that is up and running correctly.")
-		return nil, fmt.Errorf("bad response from AxwayId: %s", resp.Status)
+		return nil, fmt.Errorf("bad response from AxwayId: %d %s", resp.Code, http.StatusText(resp.Code))
 	}
 
 	tokens := axwayTokenResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+	if err := json.Unmarshal(resp.Body, &tokens); err != nil {
 		return nil, err
 	}
 
 	return &tokens, nil
+}
+
+func (ptg *platformTokenGenerator) postAuthForm(client api.Client, URL string, data url.Values) (resp *api.Response, err error) {
+	req := api.Request{
+		Method: api.POST,
+		URL:    URL,
+		Body:   []byte(data.Encode()),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+	}
+	return client.Send(req)
 }
 
 type tokenHolder struct {
@@ -558,6 +554,10 @@ func NewTokenAuth(ac Config, tenantID string) TokenGetter {
 	instance := &tokenAuth{tenantID: tenantID}
 	tokenURL := ac.URL + "/realms/Broker/protocol/openid-connect/token"
 	aud := ac.URL + "/realms/Broker"
+
+	cfg := &config.CentralConfiguration{}
+	singleURL := cfg.GetSingleURL()
+
 	instance.tokenRequester = NewPlatformTokenGetter(
 		ac.PrivateKey,
 		ac.PublicKey,
@@ -565,6 +565,7 @@ func NewTokenAuth(ac Config, tenantID string) TokenGetter {
 		tokenURL,
 		aud,
 		ac.ClientID,
+		singleURL,
 		ac.Timeout,
 	)
 	return instance

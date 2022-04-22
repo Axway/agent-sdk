@@ -46,11 +46,15 @@ type discoveryCache struct {
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
 	migrator             migrate.AttrMigrator
+	logger               log.FieldLogger
 }
 
 func newDiscoveryCache(
 	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
 ) *discoveryCache {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("discoveryCache")
 	return &discoveryCache{
 		lastServiceTime:      time.Time{},
 		lastInstanceTime:     time.Time{},
@@ -62,6 +66,7 @@ func newDiscoveryCache(
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
 		migrator:             migrator,
+		logger:               logger,
 	}
 }
 
@@ -84,7 +89,7 @@ func (j *discoveryCache) Status() error {
 func (j *discoveryCache) Execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
-	log.Trace("executing API cache update job")
+	j.logger.Trace("executing API cache update job")
 	err := j.updateAPICache()
 	if err != nil {
 		return err
@@ -112,7 +117,7 @@ func (j *discoveryCache) Execute() error {
 }
 
 func (j *discoveryCache) updateAPICache() error {
-	log.Trace("updating API cache")
+	j.logger.Trace("updating API cache")
 
 	existingAPIs := make(map[string]bool)
 	apiServices, err := j.getAPIServices()
@@ -207,6 +212,9 @@ func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
 }
 
 func (j *discoveryCache) updateAPIServiceInstancesCache() {
+	j.instanceCacheLock.Lock()
+	defer j.instanceCacheLock.Unlock()
+
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
@@ -222,12 +230,10 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		query, agent.cfg.GetInstancesURL(), apiServerPageSize,
 	)
 	if err != nil {
-		log.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
+		j.logger.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
 		return
 	}
 
-	j.instanceCacheLock.Lock()
-	defer j.instanceCacheLock.Unlock()
 	if j.refreshAll {
 		agent.cacheManager.DeleteAllAPIServiceInstance()
 	}
@@ -248,7 +254,7 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 }
 
 func (j *discoveryCache) updateCategoryCache() {
-	log.Trace("updating category cache")
+	j.logger.Trace("updating category cache")
 
 	// Update cache with published resources
 	existingCategories := make(map[string]bool)
@@ -288,10 +294,10 @@ func (j *discoveryCache) updateCategoryCache() {
 }
 
 func (j *discoveryCache) updateARDCache() {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
-	log.Trace("updating access request definition cache")
+	j.logger.Trace("updating access request definition cache")
 
 	// create an empty accessrequestdef to gen url
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
@@ -332,13 +338,12 @@ func (j *discoveryCache) updateARDCache() {
 }
 
 func (j *discoveryCache) updateManagedApplicationCache() {
-	log.Trace("updating managed application cache")
+	j.logger.Trace("updating managed application cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include subject subresource when added to model
 	existingManagedApplications := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + "," + defs.XMarketplaceSubject,
+		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
 	}
 
 	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -362,10 +367,10 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 }
 
 func (j *discoveryCache) updateCRDCache() {
-	if !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return
 	}
-	log.Trace("updating credential request definition cache")
+	j.logger.Trace("updating credential request definition cache")
 
 	// create an empty credentialrequestdef to gen url
 	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
@@ -406,13 +411,12 @@ func (j *discoveryCache) updateCRDCache() {
 }
 
 func (j *discoveryCache) updateAccessRequestCache() {
-	log.Trace("updating access request cache")
+	j.logger.Trace("updating access request cache")
 
 	// Update cache with published resources
-	// TODO - Remove custom subresource and include references
 	existingAccessRequests := make(map[string]bool)
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields + ",spec," + defs.XMarketplaceSubscription,
+		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
 	}
 
 	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -439,10 +443,7 @@ func (j *discoveryCache) updateAccessRequestCache() {
 }
 
 func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
-	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
-	// once controller starts to populate it.
-	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
-		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
 	if subscriptionName == "" {
 		return
 	}

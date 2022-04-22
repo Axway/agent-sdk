@@ -20,9 +20,17 @@ func getFormatter(format string) (logrus.Formatter, error) {
 			FullTimestamp:    true,
 			PadLevelText:     true,
 			QuoteEmptyFields: true,
+			FieldMap: logrus.FieldMap{
+				logrus.FieldKeyMsg: "message",
+			},
 		}, nil
 	case jsonFormat:
-		return &logrus.JSONFormatter{TimestampFormat: time.RFC3339}, nil
+		return &logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339,
+			FieldMap: logrus.FieldMap{
+				logrus.FieldKeyMsg: "message",
+			},
+		}, nil
 	default:
 		return nil, errors.New("[watchclient] invalid log format")
 	}

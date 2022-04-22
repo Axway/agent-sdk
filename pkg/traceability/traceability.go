@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -13,13 +14,16 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/elastic/beats/v7/libbeat/common/transport"
 	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/elastic/beats/v7/libbeat/publisher"
+	"golang.org/x/net/proxy"
 
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
@@ -39,6 +43,7 @@ const (
 )
 
 var traceabilityClients []*Client
+var traceCfg *Config
 
 // GetClient - returns a random client from the clients array
 var GetClient = getClient
@@ -58,6 +63,7 @@ func getClient() (*Client, error) {
 // Client - struct
 type Client struct {
 	transportClient outputs.Client
+	logger          log.FieldLogger
 }
 
 type traceabilityAgentHealthChecker struct {
@@ -114,7 +120,12 @@ func makeTraceabilityAgent(
 	observer outputs.Observer,
 	libbeatCfg *common.Config,
 ) (outputs.Group, error) {
-	traceCfg, err := readConfig(libbeatCfg, beat)
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.traceability").
+		WithComponent("makeTraceabilityAgent")
+
+	var err error
+	traceCfg, err = readConfig(libbeatCfg, beat)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		return outputs.Fail(err)
@@ -127,10 +138,42 @@ func makeTraceabilityAgent(
 	}
 
 	var transportGroup outputs.Group
-	log.Tracef("initialzing traceability client using config: %+v, host: %+v", traceCfg, hosts)
-	if traceCfg.Protocol == "https" || traceCfg.Protocol == "http" {
+	logger.Tracef("initializing traceability client using config: %+v, host: %+v", traceCfg, hosts)
+	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
+	if !isSingleEntry && IsHTTPTransport() {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
 	} else {
+		// For Single entry point register dialer factory for sni scheme and set the
+		// proxy url with sni scheme. When libbeat will register its dialer and sees
+		// proxy url with sni scheme, it will invoke the factory to construct the dialer
+		// The dialer will be invoked as proxy dialer in the libbeat dialer chain
+		// (proxy dialer, stat dialer, tls dialer).
+		if isSingleEntry {
+			if IsHTTPTransport() {
+				traceCfg.Protocol = "tcp"
+				logger.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
+			}
+			// Register dialer factory with sni scheme for single entry point
+			proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
+			// If real proxy configured(not the sni proxy set here), validate the scheme
+			// since libbeats proxy dialer will not be invoked.
+			if traceCfg.Proxy.URL != "" {
+				proxCfg := &transport.ProxyConfig{
+					URL:          traceCfg.Proxy.URL,
+					LocalResolve: traceCfg.Proxy.LocalResolve,
+				}
+				err := proxCfg.Validate()
+				if err != nil {
+					outputs.Fail(err)
+				}
+			}
+			// Replace the proxy URL to sni by setting the environment variable
+			// Libbeat parses the yaml file and replaces the value from yaml
+			// with overridden environment variable.
+			// Set the sni host to the ingestion service host to allow the
+			// single entry dialer to receive the target address
+			os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
+		}
 		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg, traceCfg)
 	}
 
@@ -143,9 +186,12 @@ func makeTraceabilityAgent(
 		Retry:     transportGroup.Retry,
 	}
 	clients := make([]outputs.Client, 0)
+
+	logger = logger.WithField("component", "Client")
 	for _, client := range transportGroup.Clients {
 		outputClient := &Client{
 			transportClient: client,
+			logger:          logger,
 		}
 		clients = append(clients, outputClient)
 		traceabilityClients = append(traceabilityClients, outputClient)
@@ -166,7 +212,7 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	}
 
 	// only run the health check if in online mode
-	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
 		err := registerHealthCheckers(traceCfg)
 		if err != nil {
 			return outputs.Group{}, err
@@ -174,6 +220,37 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	}
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
+}
+
+// Factory method for creating dialer for sni scheme
+// Setup the single entry point dialer with single entry host mapping based
+// on central config and traceability proxy url from original config that gets
+// read by traceability output factory(makeTraceabilityAgent)
+func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (proxy.Dialer, error) {
+	var traceProxyURL *url.URL
+	var err error
+	if traceCfg != nil && traceCfg.Proxy.URL != "" {
+		traceProxyURL, err = url.Parse(traceCfg.Proxy.URL)
+		if err != nil {
+			return nil, fmt.Errorf("proxy could not be parsed. %s", err.Error())
+		}
+	}
+	var singleEntryHostMap map[string]string
+	if agent.GetCentralConfig() != nil {
+		cfgSingleURL := agent.GetCentralConfig().GetSingleURL()
+		if cfgSingleURL != "" {
+			// cfgSingleURL should not be empty as the factory method is registered based on that check
+			singleEntryURL, err := url.Parse(cfgSingleURL)
+			if err == nil && traceCfg != nil {
+				singleEntryHostMap = map[string]string{
+					traceCfg.Hosts[0]: util.ParseAddr(singleEntryURL),
+				}
+			}
+		}
+	}
+
+	dialer := util.NewDialer(traceProxyURL, singleEntryHostMap)
+	return dialer, nil
 }
 
 func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string) (outputs.Group, error) {
@@ -220,6 +297,11 @@ func (client *Client) SetTransportClient(outputClient outputs.Client) {
 	client.transportClient = outputClient
 }
 
+// SetLogger - set the logger
+func (client *Client) SetLogger(logger log.FieldLogger) {
+	client.logger = logger
+}
+
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
 	// do not attempt to establish a connection in offline mode
@@ -250,7 +332,7 @@ func (client *Client) Close() error {
 }
 
 // Publish sends events to the clients sink.
-func (client *Client) Publish(batch publisher.Batch) error {
+func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error {
 	events := batch.Events()
 
 	eventType := "metric"
@@ -274,7 +356,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 
 		sampledEvents, err := sampling.FilterEvents(events)
 		if err != nil {
-			log.Error(err.Error())
+			client.logger.Error(err.Error())
 		} else {
 			updateEvent(batch, sampledEvents)
 		}
@@ -283,17 +365,26 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	publishCount := len(batch.Events())
 
 	if publishCount > 0 {
-		log.Infof("Creating %d %s events", publishCount, eventType)
+		client.logger.
+			WithField("count", publishCount).
+			WithField("eventType", eventType).
+			Info("creating events")
 	}
 
-	err := client.transportClient.Publish(batch)
+	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
-		log.Errorf("Failed to publish %s event : %s", eventType, err.Error())
+		client.logger.
+			WithField("eventType", eventType).
+			WithError(err).
+			Error("failed to publish event")
 		return err
 	}
 
 	if publishCount-len(batch.Events()) > 0 {
-		log.Infof("%d %s events have been published", publishCount-len(batch.Events()), eventType)
+		client.logger.
+			WithField("count", publishCount-len(batch.Events())).
+			WithField("eventType", eventType).
+			Info("published events")
 	}
 
 	return nil

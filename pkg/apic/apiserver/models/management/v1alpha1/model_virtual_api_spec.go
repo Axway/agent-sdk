@@ -9,7 +9,11 @@
 
 package v1alpha1
 
-// VirtualApiSpec The OAS specification.
+// VirtualApiSpec  (management.v1alpha1.VirtualAPI)
 type VirtualApiSpec struct {
-	Oas map[string]interface{} `json:"oas"`
+	// description of the asset.
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Api VirtualApiSpecOas `json:"api,omitempty"`
 }

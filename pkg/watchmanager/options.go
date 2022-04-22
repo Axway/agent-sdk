@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -39,11 +40,12 @@ type keepAliveOption struct {
 
 // watchOptions options to use when creating a stream
 type watchOptions struct {
-	tlsCfg         *tls.Config
-	proxyURL       string
-	keepAlive      keepAliveOption
-	loggerEntry    *logrus.Entry
-	sequenceGetter SequenceProvider
+	tlsCfg          *tls.Config
+	proxyURL        string
+	singleEntryAddr string
+	keepAlive       keepAliveOption
+	loggerEntry     *logrus.Entry
+	sequenceGetter  SequenceProvider
 }
 
 // newWatchOptions returns the default watchOptions
@@ -52,8 +54,8 @@ func newWatchOptions() *watchOptions {
 		loggerEntry: logrus.NewEntry(log.Get()),
 		tlsCfg:      defaultTLSConfig(),
 		keepAlive: keepAliveOption{
-			time:    50 * time.Second,
-			timeout: 10 * time.Second,
+			time:    util.DefaultKeepAliveInterval,
+			timeout: util.DefaultKeepAliveTimeout,
 		},
 	}
 }
@@ -69,6 +71,13 @@ func WithTLSConfig(tlsCfg *tls.Config) Option {
 func WithProxy(proxy string) Option {
 	return funcOption(func(o *watchOptions) {
 		o.proxyURL = proxy
+	})
+}
+
+// WithSingleEntryAddr - sets up the single entry host to be used
+func WithSingleEntryAddr(singleEntryAddr string) Option {
+	return funcOption(func(o *watchOptions) {
+		o.singleEntryAddr = singleEntryAddr
 	})
 }
 
@@ -119,14 +128,14 @@ func withKeepaliveParams(time, timeout time.Duration) grpc.DialOption {
 		})
 }
 
-// withProxyDialer sets up the proxy dialer
-func withProxyDialer(dialer proxyDialer) grpc.DialOption {
+// withDialer sets up the proxy dialer
+func withDialer(dialer util.Dialer) grpc.DialOption {
 	if dialer == nil {
 		return &grpc.EmptyDialOption{}
 	}
 
 	return grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-		return dialer.dial(ctx, addr)
+		return dialer.DialContext(ctx, "tcp", addr)
 	})
 }
 

@@ -1,0 +1,62 @@
+@startuml
+participant Environment as env
+participant SDK as sdk 
+participant Agent as agent
+
+'Provision Managed App
+
+env -> sdk: Managed Application Create Event
+activate sdk
+sdk --> sdk: isPending
+
+sdk -> agent: ApplicationProvision
+activate agent
+
+agent --> sdk: Get Application Name  - GetManagedApplicationName()
+agent --> agent: Handle provisioning of Application
+
+note over agent: Add properties necessary to deprovision
+agent -> sdk: success
+activate sdk #green
+
+sdk -> env: Update Managed Application Success
+deactivate sdk
+note left sdk: Add properties from agent to resource
+
+agent -> sdk: fail
+deactivate agent
+activate sdk #red
+
+sdk -> env: Update Managed Application Fail
+deactivate sdk
+
+deactivate sdk
+
+'Deprovision Managed App
+
+env -> sdk: Managed Application Update Event
+activate sdk
+sdk --> sdk: isDeleting
+sdk <-> env: Get all properties
+
+sdk -> agent: ApplicationDeprovision
+activate agent
+
+agent --> sdk: Get details on Application  - GetApplicationDetailsValue(key)
+agent --> agent: Handle deprovisioning of Application
+
+agent -> sdk: success
+activate sdk #green
+
+sdk -> env: Update Managed Application, allowing resource removal
+deactivate sdk
+
+agent -> sdk: fail
+deactivate agent
+activate sdk #red
+
+sdk -> env: Update Managed Application Fail
+deactivate sdk
+
+deactivate sdk
+@enduml

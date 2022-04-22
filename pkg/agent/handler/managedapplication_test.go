@@ -33,15 +33,15 @@ func TestManagedApplicationHandler(t *testing.T) {
 			action:           proto.Event_CREATED,
 			teamName:         teamName,
 			expectedProvType: provision,
-			inboundStatus:    statusPending,
-			outboundStatus:   statusSuccess,
+			inboundStatus:    prov.Pending.String(),
+			outboundStatus:   prov.Success.String(),
 		},
 		{
 			name:             "should handle an update event for a ManagedApplication when status is pending",
 			action:           proto.Event_UPDATED,
 			expectedProvType: provision,
-			inboundStatus:    statusPending,
-			outboundStatus:   statusSuccess,
+			inboundStatus:    prov.Pending.String(),
+			outboundStatus:   prov.Success.String(),
 		},
 		{
 			name:   "should return nil when the event is for subresources",
@@ -54,12 +54,12 @@ func TestManagedApplicationHandler(t *testing.T) {
 		{
 			name:          "should return nil when status field is Success",
 			action:        proto.Event_CREATED,
-			inboundStatus: statusSuccess,
+			inboundStatus: prov.Success.String(),
 		},
 		{
 			name:          "should return nil when status field is Error",
 			action:        proto.Event_CREATED,
-			inboundStatus: statusErr,
+			inboundStatus: prov.Error.String(),
 		},
 	}
 
@@ -97,7 +97,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			handler := NewManagedApplicationHandler(p, cm, c)
 
 			ri, _ := app.AsInstance()
-			err := handler.Handle(tc.action, nil, ri)
+			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
 
 			assert.Equal(t, tc.expectedProvType, p.prov)
 			if tc.hasError {
@@ -106,7 +106,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			if tc.inboundStatus == statusPending {
+			if tc.inboundStatus == prov.Pending.String() {
 				assert.True(t, c.createSubCalled)
 			} else {
 				assert.False(t, c.createSubCalled)
@@ -133,7 +133,7 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			app := managedAppForTest
-			app.Status.Level = statusSuccess
+			app.Status.Level = prov.Success.String()
 			app.Metadata.State = v1.ResourceDeleting
 			app.Finalizers = []v1.Finalizer{{Name: maFinalizer}}
 
@@ -164,12 +164,12 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 			handler := NewManagedApplicationHandler(p, cm, c)
 
 			ri, _ := app.AsInstance()
-			err := handler.Handle(proto.Event_UPDATED, nil, ri)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 
 			assert.Equal(t, deprovision, p.prov)
 			assert.Nil(t, err)
 
-			if tc.outboundStatus.String() == statusSuccess {
+			if tc.outboundStatus.String() == prov.Success.String() {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
@@ -190,7 +190,7 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 			GroupVersionKind: mv1.EnvironmentGVK(),
 		},
 	}
-	err := handler.Handle(proto.Event_CREATED, nil, ri)
+	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 }
 
@@ -266,6 +266,6 @@ var managedAppForTest = mv1.ManagedApplication{
 	},
 	Spec: mv1.ManagedApplicationSpec{},
 	Status: &v1.ResourceStatus{
-		Level: statusPending,
+		Level: prov.Pending.String(),
 	},
 }

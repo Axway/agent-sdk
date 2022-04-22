@@ -16,8 +16,6 @@ type AssetMappingSpecInputs struct {
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
 	// name of the stage
 	Stage string `json:"stage"`
-	// name of the asset
-	Asset string `json:"asset"`
 	// list of categories for the asset.
 	Categories []string `json:"categories,omitempty"`
 }

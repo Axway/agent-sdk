@@ -25,6 +25,7 @@ type baseJob struct {
 	backoff          *backoff
 	isReady          bool
 	stopReadyChan    chan interface{}
+	logger           log.FieldLogger
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
@@ -37,8 +38,14 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 
 //createBaseJob - creates a single run job and returns it
 func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
+	id := newUUID()
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.jobs").
+		WithComponent("baseJob").
+		WithField("jobName", name).
+		WithField("jobID", id)
 	return baseJob{
-		id:            newUUID(),
+		id:            id,
 		name:          name,
 		job:           newJob,
 		jobType:       jobType,
@@ -49,6 +56,7 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
 		isReady:       false,
 		stopReadyChan: make(chan interface{}),
+		logger:        logger,
 	}
 }
 
@@ -146,7 +154,8 @@ func (b *baseJob) updateStatus() JobStatus {
 	jobStatus := b.callWithTimeout(b.job.Status)
 	if jobStatus != nil { // on error set the status to failed
 		b.failChan <- b.id
-		log.Errorf("job %s (%s) failed: %s", b.name, b.id, jobStatus.Error())
+		b.logger.WithError(jobStatus).Error("job failed")
+
 		newStatus = JobStatusFailed
 	}
 	b.statusLock.Lock()
@@ -187,7 +196,7 @@ func (b *baseJob) Ready() bool {
 
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
-	log.Debugf("Waiting for %s (%s) to be ready", b.name, b.id)
+	b.logger.Debugf("waiting for job to be ready")
 	for {
 		select {
 		case <-b.stopReadyChan:
@@ -197,11 +206,11 @@ func (b *baseJob) waitForReady() {
 		default:
 			if b.job.Ready() {
 				b.backoff.reset()
-				log.Debugf("%s (%s) is ready", b.name, b.id)
+				b.logger.Debug("job is ready")
 				b.SetIsReady()
 				return
 			}
-			log.Tracef("Job %s (%s) not ready, checking again in %v seconds", b.name, b.id, b.backoff.getCurrentTimeout())
+			b.logger.Tracef("job is not ready, checking again in %v seconds", b.backoff.getCurrentTimeout())
 			b.backoff.sleep()
 			b.backoff.increaseTimeout()
 		}
@@ -223,19 +232,12 @@ func (b *baseJob) stop() {
 }
 
 func (b *baseJob) startLog() {
-	if b.name != "" {
-		log.Debugf("Starting %v (%v) job %v", b.jobType, b.name, b.id)
-	} else {
-		log.Debugf("Starting %v job %v", b.jobType, b.id)
-	}
+	b.logger.Debugf("Starting %v", b.jobType)
 }
 
 func (b *baseJob) stopLog() {
-	if b.name != "" {
-		log.Debugf("Stopping %v (%v) job %v", b.jobType, b.name, b.id)
-	} else {
-		log.Debugf("Stopping %v job %v", b.jobType, b.id)
-	}
+
+	b.logger.Debugf("Stopping %v ", b.jobType)
 }
 
 func (b *baseJob) setExecutionError() {

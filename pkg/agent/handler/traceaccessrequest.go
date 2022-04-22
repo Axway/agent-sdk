@@ -1,13 +1,13 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -25,7 +25,8 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 }
 
 // Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(action proto.Event_Type, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind {
 		return nil
 	}
@@ -56,10 +57,7 @@ func (h *traceAccessRequestHandler) Handle(action proto.Event_Type, meta *proto.
 }
 
 func (h *traceAccessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
-	// TODO - Use subscription reference subresource on AccessRequest instead of custom subresource
-	// once controller starts to populate it.
-	subscriptionName, _ := util.GetSubResourcePropertyValue(ar,
-		defs.XMarketplaceSubscription, defs.AttrSubscriptionName)
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
 	if subscriptionName == "" {
 		return
 	}

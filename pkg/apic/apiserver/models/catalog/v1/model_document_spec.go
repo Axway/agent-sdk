@@ -9,10 +9,9 @@
 
 package v1
 
-// DocumentSpec struct for DocumentSpec
+// DocumentSpec  (catalog.v1.Document)
 type DocumentSpec struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-	// Title for the article.
-	Title string `json:"title"`
+	// Document description.
+	Description string                 `json:"description,omitempty"`
+	Sections    []DocumentSpecSections `json:"sections,omitempty"`
 }

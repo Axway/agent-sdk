@@ -4,17 +4,34 @@ The Amplify Central Discovery Agents can be used for discovering APIs managed by
 
 ## Table of Contents
 
-- [Central Configuration](#Central-Configuration)
-- [Agent Configuration](#Agent-Configuration)
-- [Setting up command line parser and binding agent config](#Setting-up-command-line-parser-and-binding-agent-config)
-- [Filtering](#Filtering)
-- [Processing Discovery](#Processing-Discovery)
-- [Publishing changes to Central](#Publishing-changes-to-Central)
-- [Subscriptions](./subscriptions.md)
-- [Validating ConsumerInstance](#Validating-ConsumerInstance)
-- [Registering handler for API Server events](#Registering-handler-for-API-Server-events)
-- [Building the Agent](#Building-the-Agent)
-- [Executing Discovery Agent](#Executing-Discovery-Agent)
+- [Building Discovery Agent](#building-discovery-agent)
+  - [Table of Contents](#table-of-contents)
+  - [Central Configuration](#central-configuration)
+    - [Configuration interfaces](#configuration-interfaces)
+  - [Agent Configuration](#agent-configuration)
+    - [Sample Agent configuration definition](#sample-agent-configuration-definition)
+    - [Sample Agent YAML configuration](#sample-agent-yaml-configuration)
+  - [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
+    - [Sample of agent command initialization and agent config setup](#sample-of-agent-command-initialization-and-agent-config-setup)
+  - [Filtering](#filtering)
+    - [Exists](#exists)
+    - [Any](#any)
+    - [Contains](#contains)
+    - [MatchRegEx](#matchregex)
+  - [Processing Discovery](#processing-discovery)
+    - [Unstructured data additional properties](#unstructured-data-additional-properties)
+    - [Sample of creating service body using the builder](#sample-of-creating-service-body-using-the-builder)
+  - [Publishing changes to Central](#publishing-changes-to-central)
+    - [Sample of publishing API to Amplify Central](#sample-of-publishing-api-to-amplify-central)
+    - [Sample of published API server resources](#sample-of-published-api-server-resources)
+  - [Subscriptions](#subscriptions)
+  - [Marketplace Provisioning](#marketplace-provisioning)
+  - [Validating ConsumerInstance](#validating-consumerinstance)
+  - [Registering handler for API Server events](#registering-handler-for-api-server-events)
+    - [Example](#example)
+  - [Building the Agent](#building-the-agent)
+    - [Pre-requisites for executing the agent](#pre-requisites-for-executing-the-agent)
+  - [Executing Discovery Agent](#executing-discovery-agent)
 
 ## Central Configuration
 
@@ -598,6 +615,10 @@ spec:
 ## Subscriptions
 
 See [Subscriptions](./subscriptions.md)
+
+## Marketplace Provisioning
+
+See [Provisioning](./provisioning.md)
 
 ## Validating ConsumerInstance
 

@@ -136,7 +136,7 @@ func TestHealthCheck(t *testing.T) {
 	requester := svcClient.tokenRequester
 
 	// swap out mock for a real tokenRequester
-	svcClient.tokenRequester = auth.NewPlatformTokenGetter("", "", "", "", "", "", 1*time.Second)
+	svcClient.tokenRequester = auth.NewPlatformTokenGetter("", "", "", "", "", "", "", 1*time.Second)
 
 	// failure
 	status := svcClient.Healthcheck("Client Test")
