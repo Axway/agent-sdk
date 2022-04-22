@@ -51,8 +51,12 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
 
 	centralConfig.Environment = "eee"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
+	authCfg.URL = "http://localhost.com:8080"
 
-	centralConfig.SingleURL = ""
+	centralConfig.SingleURL = "malformed.singleURL.com"
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
@@ -133,14 +137,11 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 
 	authCfg.URL = "http://localhost.com:8080"
 
-	centralConfig.SingleURL = ""
+	centralConfig.SingleURL = "malformed.singleURL.com"
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
 	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
-	err = cfgValidator.ValidateCfg()
-
-	assert.Nil(t, err)
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
