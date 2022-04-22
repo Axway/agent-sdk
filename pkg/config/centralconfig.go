@@ -698,7 +698,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of Amplify Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
 	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
-	props.AddStringProperty(pathSingleURL, "https://ingestion.platform.axway.com", "Alternate Connection for Agent if using static IP")
+	props.AddStringProperty(pathSingleURL, "", "Alternate Connection for Agent if using static IP")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Password for the private key, if needed")
