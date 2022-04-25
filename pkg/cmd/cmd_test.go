@@ -100,6 +100,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
 	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
 	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.team", "centralTeam", "", "Team name for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in Amplify Central")
@@ -121,6 +122,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "Amplify Central")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
 	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
 	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
@@ -280,6 +282,8 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
@@ -332,6 +336,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -377,6 +382,7 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	err := rootCmd.Execute()
@@ -432,6 +438,7 @@ func TestRootCmdHandlers(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -476,6 +483,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -528,6 +536,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -581,6 +590,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -694,6 +704,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
 	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 	os.Setenv("CENTRAL_ENVIRONMENT", "test")
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)

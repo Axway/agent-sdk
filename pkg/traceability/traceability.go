@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -331,7 +332,7 @@ func (client *Client) Close() error {
 }
 
 // Publish sends events to the clients sink.
-func (client *Client) Publish(batch publisher.Batch) error {
+func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error {
 	events := batch.Events()
 
 	eventType := "metric"
@@ -370,7 +371,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 			Info("creating events")
 	}
 
-	err := client.transportClient.Publish(batch)
+	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
 		client.logger.
 			WithField("eventType", eventType).

@@ -3,7 +3,7 @@ module github.com/Axway/agent-sdk
 go 1.16
 
 require (
-	github.com/elastic/beats/v7 v7.7.1
+	github.com/elastic/beats/v7 v7.17.2
 	github.com/emersion/go-sasl v0.0.0-20211008083017-0b9dcfb154ac
 	github.com/emersion/go-smtp v0.15.0
 	github.com/emicklei/proto v1.9.2
@@ -29,16 +29,12 @@ require (
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/h2non/gock.v1 v1.1.2
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.22.7
 )
 
 replace (
-	github.com/Shopify/sarama => github.com/elastic/sarama v1.19.0
-	github.com/dop251/goja => github.com/andrewkroh/goja v0.0.0-20190128172624-dd2ac4456e20
-	github.com/elastic/beats/v7 => github.com/elastic/beats/v7 v7.7.1
-	github.com/fsnotify/fsevents => github.com/elastic/fsevents v0.0.0-20181029231046-e1d381a4d270
+	github.com/Shopify/sarama => github.com/elastic/sarama v1.19.1-0.20210823122811-11c3ef800752
 	github.com/getkin/kin-openapi => github.com/getkin/kin-openapi v0.67.0
 )
 

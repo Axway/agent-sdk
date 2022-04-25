@@ -206,6 +206,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PollInterval:              60 * time.Second,
 		ClientTimeout:             60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
+		SingleURL:                 "",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
@@ -553,7 +554,7 @@ const (
 	pathAuthPublicKey             = "central.auth.publicKey"
 	pathAuthKeyPassword           = "central.auth.keyPassword"
 	pathAuthURL                   = "central.auth.url"
-	pathSingleURL                 = "central.singleURL" //TODO: kf move up from central to platform?
+	pathSingleURL                 = "central.singleURL"
 	pathAuthRealm                 = "central.auth.realm"
 	pathAuthClientID              = "central.auth.clientId"
 	pathAuthTimeout               = "central.auth.timeout"
@@ -617,6 +618,10 @@ func (c *CentralConfiguration) validateConfig() {
 	c.validateURL(c.GetURL(), pathURL, true)
 
 	c.validateURL(c.GetPlatformURL(), pathPlatformURL, true)
+
+	if c.GetSingleURL() != "" {
+		c.validateURL(c.GetSingleURL(), pathSingleURL, true)
+	}
 
 	// proxyURL
 	c.validateURL(c.GetProxyURL(), pathProxyURL, false)
