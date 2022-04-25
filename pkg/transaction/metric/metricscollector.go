@@ -110,6 +110,14 @@ func createMetricCollector() Collector {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.transaction.metric").
 		WithComponent("collector")
+
+	// Check for nil.  There is a case where init is being called before the cmd initialization. When this happens
+	// the singleton object will not be created. ie., .exe subcommands. Just return nil. The next call to GetMetricCollector
+	// should create the singleton object
+	if agent.GetCentralConfig() == nil {
+		return nil
+	}
+
 	metricCollector := &collector{
 		// Set the initial start time to be minimum 1m behind, so that the job can generate valid event
 		// if any usage event are to be generated on startup
