@@ -131,7 +131,7 @@ func (l *logger) Warnf(format string, args ...interface{}) {
 
 // Tracef prints a formatted trace message
 func (l *logger) Tracef(format string, args ...interface{}) {
-	if l.isLogP() {
+	if l.isLogP() && GetLevel() == logrus.TraceLevel {
 		lgp := l.logpWithEntries()
 		lgp.Named(traceSelector).Debugf(format, args...)
 		return
@@ -201,7 +201,7 @@ func (l *logger) Print(args ...interface{}) {
 
 // Trace prints a trace message
 func (l *logger) Trace(args ...interface{}) {
-	if l.isLogP() {
+	if l.isLogP() && GetLevel() == logrus.TraceLevel {
 		lgp := l.logpWithEntries()
 		lgp.Named(traceSelector).Debug(args...)
 		return
@@ -281,7 +281,7 @@ func (l *logger) Println(args ...interface{}) {
 
 // Traceln prints a trace line
 func (l *logger) Traceln(args ...interface{}) {
-	if l.isLogP() {
+	if l.isLogP() && GetLevel() == logrus.TraceLevel {
 		lgp := l.logpWithEntries()
 		lgp.Named(traceSelector).Debug(args...)
 		return
