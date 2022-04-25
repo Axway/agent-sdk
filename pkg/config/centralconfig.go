@@ -206,7 +206,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PollInterval:              60 * time.Second,
 		ClientTimeout:             60 * time.Second,
 		PlatformURL:               "https://platform.axway.com",
-		SingleURL:                 "https://ingestion.platform.axway.com",
+		SingleURL:                 "",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
