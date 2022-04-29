@@ -328,7 +328,7 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 
 	tokens := axwayTokenResponse{}
 	if err := json.Unmarshal(resp.Body, &tokens); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to unmarshal token: %v", err)
 	}
 
 	return &tokens, nil
@@ -382,7 +382,7 @@ func (ptp *platformTokenGetter) Close() error {
 
 // fetchNewToken fetches a new token from the platform and updates the token cache.
 func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
-	log.Trace("Get cached token is empty.  Try and fetch a new token")
+	log.Debug("[INIT] Get cached token is empty. Try and fetch a new token")
 	privateKey, err := ptp.getPrivateKey()
 	if err != nil {
 		return "", err
@@ -398,6 +398,7 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 		*privateKey.Precomputed.Qinv = big.Int{}
 	}()
 
+	log.Debug("[INIT] Get public key")
 	publicKey, err := ptp.getPublicKey()
 	if err != nil {
 		return "", err

@@ -26,7 +26,7 @@ func NewAgentResourceHandler(agentResourceManager resource.Manager) Handler {
 }
 
 func (h *agentResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if h.agentResourceManager != nil && action == proto.Event_UPDATED {
 		kind := resource.Kind
 		switch kind {

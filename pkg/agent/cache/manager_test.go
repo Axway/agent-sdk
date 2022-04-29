@@ -347,3 +347,28 @@ func TestCredentialRequestDefinitionCache(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedCRD)
 }
+
+func TestFetchOnStartupCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	res := m.GetAllFetchOnStartupResources()
+	assert.Empty(t, res)
+
+	ri1 := createRI("123", "foo")
+	ri2 := createRI("456", "bar")
+	ri3 := createRI("789", "baz")
+
+	m.AddFetchOnStartupResources([]*v1.ResourceInstance{ri1})
+	m.AddFetchOnStartupResources([]*v1.ResourceInstance{ri2, ri3})
+
+	res = m.GetAllFetchOnStartupResources()
+	assert.Len(t, res, 3)
+
+	err := m.DeleteAllFetchOnStartupResources()
+	assert.NoError(t, err)
+
+	res = m.GetAllFetchOnStartupResources()
+	assert.Empty(t, res)
+
+}

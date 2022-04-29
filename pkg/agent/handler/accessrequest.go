@@ -41,7 +41,7 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
