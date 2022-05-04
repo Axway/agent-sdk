@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -135,18 +134,12 @@ func (sm *subscriptionManager) processSubscriptions() {
 			if !sm.isItemOnLocklist(id) {
 				sm.addLocklistItem(id)
 				log.Tracef("checking if we should handle subscription %s", subscription.GetName())
-				var err error
 				centralSub := subscription.(*CentralSubscription)
-				err = sm.preprocessSubscription(centralSub)
-				if err != nil {
-					log.Error(err)
-				}
-				if err == nil && subscription.GetApicID() != "" && subscription.GetRemoteAPIID() != "" {
+				process := sm.preprocessSubscription(centralSub)
+				if process {
 					log.Infof("Subscription %s received", subscription.GetName())
 					sm.invokeProcessor(subscription)
 					log.Infof("Subscription %s processed", subscription.GetName())
-				} else {
-					log.Tracef("Skipping subscription %s api service not on this dataplane", subscription.GetName())
 				}
 				sm.removeLocklistItem(id)
 			}
@@ -154,25 +147,29 @@ func (sm *subscriptionManager) processSubscriptions() {
 	}
 }
 
-func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) error {
+func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubscription) bool {
 	subscription.ApicID = subscription.GetCatalogItemID()
 	subscription.apicClient = sm.apicClient
 	apiserverInfo, err := sm.apicClient.getCatalogItemAPIServerInfoProperty(subscription.ApicID, subscription.GetID())
 	if err != nil {
 		log.Error(utilerrors.Wrap(ErrGetCatalogItemServerInfoProperties, err.Error()))
-		return err
+		return false
 	}
 	if apiserverInfo.Environment.Name != sm.apicClient.cfg.GetEnvironmentName() {
 		log.Debugf("Subscription '%s' skipped because associated catalog item belongs to '%s' environment and the agent is configured for managing '%s' environment", subscription.GetName(), apiserverInfo.Environment.Name, sm.apicClient.cfg.GetEnvironmentName())
-		return errors.New("environment of subscription is not associated with agent's environment - skipping")
+		return false
 	}
 	if apiserverInfo.ConsumerInstance.Name == "" {
 		log.Debugf("Subscription '%s' skipped because associated catalog item is not created by agent", subscription.GetName())
-		return errors.New("associated catalog item is not created by agent - skipping")
+		return false
 	}
 	sm.preprocessSubscriptionForConsumerInstance(subscription, apiserverInfo.ConsumerInstance.Name)
 
-	return nil
+	if subscription.GetApicID() != "" && subscription.GetRemoteAPIID() != "" {
+		return true
+	}
+	log.Debugf("Subscription '%s' skipped because it did not have an API Central ID and/or a Remote API ID", subscription.GetName())
+	return false
 }
 
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
