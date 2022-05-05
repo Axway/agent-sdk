@@ -279,7 +279,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -333,7 +333,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -379,7 +379,7 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -435,7 +435,7 @@ func TestRootCmdHandlers(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -480,7 +480,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -533,7 +533,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -587,7 +587,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
@@ -700,7 +700,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	}
 
 	os.Setenv("CENTRAL_AUTH_URL", s.URL+"/auth")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "DOSA_1111")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
 	os.Setenv("CENTRAL_URL", s.URL)

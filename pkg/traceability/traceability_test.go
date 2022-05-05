@@ -47,7 +47,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
-	authCfg.ClientID = "DOSA_1111"
+	authCfg.ClientID = "serviceaccount_1234"
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
 	cfg.GetUsageReportingConfig().(*config.UsageReportingConfiguration).Interval = 30 * time.Second

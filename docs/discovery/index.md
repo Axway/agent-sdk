@@ -75,7 +75,7 @@ central:
     environment: remote-gw
     additionalTags: DiscoveredByCustomAgent
     auth:
-        clientId: DOSA_3ecfferff6ab694badb1ba8e1cfb28f7u8
+        clientId: serviceaccount_1234
         privateKey: ./private_key.pem
         publicKey: ./public_key.pem
 ```
@@ -252,7 +252,7 @@ central:
     environment: remote-gw
     additionalTags: DiscoveredByCustomAgent
     auth:
-        clientId: DOSA_3ecfferff6ab694badb1ba8e1cfb28f7u8
+        clientId: serviceaccount_1234
         privateKey: ./private_key.pem
         publicKey: ./public_key.pem
 

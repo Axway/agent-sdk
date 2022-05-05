@@ -36,7 +36,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg := cfg.Auth.(*config.AuthConfiguration)
 	authCfg.URL = url + "/auth"
 	authCfg.Realm = "Broker"
-	authCfg.ClientID = "DOSA_1111"
+	authCfg.ClientID = "serviceaccount_1111"
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
 	return cfg

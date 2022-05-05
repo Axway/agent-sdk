@@ -31,9 +31,9 @@ const mockJSONEnv = `{
     "id": "e4f1cf5371cd390b0171cd43d7460056",
     "audit": {
       "createTimestamp": "2020-04-30T22:45:07.533+0000",
-      "createUserId": "DOSA_531453183cc145adb68ed2d8af625eb2",
+      "createUserId": "serviceaccount_1234",
       "modifyTimestamp": "2020-04-30T22:45:07.533+0000",
-      "modifyUserId": "DOSA_531453183cc145adb68ed2d8af625eb2"
+      "modifyUserId": "serviceaccount_1234"
     },
     "resourceVersion": "297",
     "references": []
@@ -354,7 +354,7 @@ func TestJWTAuth(t *testing.T) {
 			"",
 			"http://localhost:8080/auth/realms/Broker/protocol/openid-connect/token",
 			"http://localhost:8080/auth/realms/Broker",
-			"DOSA_1234",
+			"serviceaccount_1234",
 			10*time.Second,
 		),
 		UserAgent(uaHeader),
