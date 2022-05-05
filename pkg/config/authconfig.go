@@ -4,9 +4,11 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const tokenEndpoint = "/protocol/openid-connect/token"
@@ -69,6 +71,10 @@ func (a *AuthConfiguration) validate() {
 	}
 
 	if a.GetClientID() == "" {
+		// raise deprecation warning for IDs prefixed DOSA_
+		if strings.HasPrefix(a.GetClientID(), "DOSA_") {
+			log.Warn("DOSA_* service accounts are deprecated, please migrate to an Amplify Platform Service account")
+		}
 		exception.Throw(ErrBadConfig.FormatError(pathAuthClientID))
 	}
 

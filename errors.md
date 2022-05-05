@@ -60,6 +60,7 @@
 | 1403 | invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes                            | pkg/config/ErrStatusHealthCheckPeriod               |
 | 1404 | invalid value for statusHealthCheckInterval. Value must be between 30 seconds and 5 minutes                 | pkg/config/ErrStatusHealthCheckInterval             |
 | 1405 | a key file could not be read                                                                                | pkg/config/ErrReadingKeyFile                        |
+| 1406 | DOSA and Marketplace provisioning is not supported                                                          | pkg/config/ErrServiceAccount                        |
 | 1410 | invalid configuration settings for the logging setup                                                        | pkg/config/ErrInvalidLogConfig                      |
 | 1411 | invalid secret reference                                                                                    | pkg/cmd/properties/ErrInvalidSecretReference        |
 |      | 1500-1599 - errors related to traceability output transport                                                 |                                                     |
