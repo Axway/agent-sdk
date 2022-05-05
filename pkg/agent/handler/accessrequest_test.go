@@ -28,6 +28,7 @@ func TestAccessRequestHandler(t *testing.T) {
 		outboundStatus   string
 		references       []v1.Reference
 		subError         error
+		appStatus        string
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -44,6 +45,14 @@ func TestAccessRequestHandler(t *testing.T) {
 			outboundStatus:   prov.Success.String(),
 			expectedProvType: provision,
 			references:       accessReq.Metadata.References,
+		},
+		{
+			action:         proto.Event_CREATED,
+			inboundStatus:  prov.Pending.String(),
+			name:           "should return nil with the appStatus is not success",
+			outboundStatus: prov.Error.String(),
+			references:     accessReq.Metadata.References,
+			appStatus:      prov.Error.String(),
 		},
 		{
 			action: proto.Event_SUBRESOURCEUPDATED,
@@ -95,6 +104,11 @@ func TestAccessRequestHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			mApp.SubResources["status"].(map[string]interface{})["level"] = prov.Success.String()
+			if tc.appStatus != "" {
+				mApp.SubResources["status"].(map[string]interface{})["level"] = tc.appStatus
+			}
+
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 
 			ar := accessReq
@@ -360,6 +374,9 @@ var mApp = &v1.ResourceInstance{
 		SubResources: map[string]interface{}{
 			defs.XAgentDetails: map[string]interface{}{
 				"sub_managed_app_key": "sub_managed_app_val",
+			},
+			"status": map[string]interface{}{
+				"level": prov.Success.String(),
 			},
 		},
 	},
