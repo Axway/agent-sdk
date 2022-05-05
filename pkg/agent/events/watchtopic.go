@@ -283,9 +283,11 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
+			{GroupKind: mv1.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
 			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: mv1.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: mv1.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: mv1.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{

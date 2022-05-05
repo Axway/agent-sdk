@@ -95,9 +95,10 @@ func (j *discoveryCache) updateAPICache() error {
 
 		externalAPIID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 		// skip service without external api id
-		if externalAPIID == "" {
-			continue
-		}
+		// TODO something in here for Gov Agent
+		//if externalAPIID == "" {
+		//	continue
+		//}
 
 		agent.cacheManager.AddAPIService(svc)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
@@ -138,10 +139,11 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 	}
 
 	for _, instance := range serviceInstances {
-		id, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-		if id == "" {
-			continue // skip instance without external api id
-		}
+		// TODO something for Gov Agent
+		//id, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+		//if id == "" {
+		//	continue // skip instance without external api id
+		//}
 		agent.cacheManager.AddAPIServiceInstance(instance)
 	}
 }
