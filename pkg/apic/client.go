@@ -71,7 +71,7 @@ type Client interface {
 	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, schema SubscriptionSchema) error
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
-	Healthcheck(name string) *hc.Status
+	HealthCheck(name string) *hc.Status
 	GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
 	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
 	GetAPIServiceInstances(query map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
@@ -299,8 +299,8 @@ func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
 	c.subscriptionMgr = mgr
 }
 
-// Healthcheck - verify connection to the platform
-func (c *ServiceClient) Healthcheck(_ string) *hc.Status {
+// HealthCheck - verify connection to the platform
+func (c *ServiceClient) HealthCheck(_ string) *hc.Status {
 	// Set a default response
 	s := hc.Status{
 		Result: hc.OK,

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	"google.golang.org/grpc/connectivity"
 
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -26,11 +27,6 @@ type Manager interface {
 	Status() bool
 }
 
-// SequenceProvider - Interface to provide event sequence ID to harvester client to fetch events
-type SequenceProvider interface {
-	GetSequence() int64
-}
-
 // TokenGetter - function to acquire token
 type TokenGetter func() (string, error)
 
@@ -38,7 +34,7 @@ type watchManager struct {
 	cfg                *Config
 	clientMap          map[string]*watchClient
 	connection         *grpc.ClientConn
-	hClient            *harvesterClient
+	hClient            harvester.Harvest
 	logger             log.FieldLogger
 	mutex              sync.Mutex
 	newWatchClientFunc newWatchClientFunc
@@ -74,17 +70,20 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			Errorf("failed to establish connection with watch service")
 	}
 
-	if manager.options.sequenceGetter != nil {
-		harvesterConfig := &harvesterConfig{
-			host:          manager.cfg.Host,
-			port:          manager.cfg.Port,
-			tenantID:      manager.cfg.TenantID,
-			tokenGetter:   manager.cfg.TokenGetter,
-			proxyURL:      manager.options.proxyURL,
-			tlsCfg:        manager.options.tlsCfg,
-			clientTimeout: manager.options.keepAlive.timeout,
+	sg := manager.options.sequenceProvider
+
+	if sg != nil {
+		harvesterConfig := &harvester.Config{
+			Host:             manager.cfg.Host,
+			Port:             manager.cfg.Port,
+			TenantID:         manager.cfg.TenantID,
+			TokenGetter:      manager.cfg.TokenGetter,
+			ProxyURL:         manager.options.proxyURL,
+			TlsCfg:           manager.options.tlsCfg,
+			ClientTimeout:    manager.options.keepAlive.timeout,
+			SequenceProvider: sg,
 		}
-		manager.hClient = newHarvesterClient(harvesterConfig)
+		manager.hClient = harvester.NewClient(harvesterConfig)
 	}
 
 	return manager, err
@@ -136,31 +135,13 @@ func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
 
 // eventCatchUp - called until lastSequenceID is 0, caught up on events
 func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event) error {
-	if m.hClient == nil || m.options.sequenceGetter == nil {
-		return nil
+	err := m.hClient.EventCatchUp(link, events)
+	if err != nil {
+		m.clientMap[subID].handleError(err)
+		return err
 	}
 
-	sequenceID := m.options.sequenceGetter.GetSequence()
-	if sequenceID > 0 {
-		var err error
-		lastSequenceID, err := m.hClient.receiveSyncEvents(link, sequenceID, events)
-		if err != nil {
-			m.clientMap[subID].handleError(err)
-			return err
-		}
-
-		if lastSequenceID > 0 {
-			// wait for all current sequences to be processed before processing new ones
-			for sequenceID < lastSequenceID {
-				sequenceID = m.options.sequenceGetter.GetSequence()
-			}
-		} else {
-			return nil
-		}
-	} else {
-		return nil
-	}
-	return m.eventCatchUp(link, subID, events)
+	return nil
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic

@@ -258,7 +258,7 @@ func startAPIServiceCache() error {
 
 	if !agent.cfg.IsUsingGRPC() {
 		// health check for central in gRPC mode is registered by streamer
-		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.HealthCheck)
 
 		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
 		if err != nil {
@@ -436,7 +436,7 @@ func startStreamMode(agent agentData) error {
 		agent.tokenRequester,
 		agent.cacheManager,
 		func(s stream.Streamer) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.HealthCheck)
 		},
 		handlers...,
 	)

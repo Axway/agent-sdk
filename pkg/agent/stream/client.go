@@ -55,7 +55,7 @@ type Streamer interface {
 	Start() error
 	Status() error
 	Stop()
-	Healthcheck(_ string) *hc.Status
+	HealthCheck(_ string) *hc.Status
 }
 
 // NewClientStreamJob creates a job for the streamer
@@ -135,7 +135,6 @@ type streamer struct {
 	newListener        newListenerFunc
 	sequenceManager    *agentSequenceManager
 	onStreamConnection OnStreamConnection
-	cacheManager       agentcache.Manager
 }
 
 // NewStreamer creates a Streamer
@@ -189,7 +188,6 @@ func NewStreamer(
 		newListener:        NewEventListener,
 		sequenceManager:    sequenceManager,
 		onStreamConnection: onStreamConnection,
-		cacheManager:       cacheManager,
 	}, nil
 }
 
@@ -268,8 +266,8 @@ func (c *streamer) Stop() {
 	c.listener.Stop()
 }
 
-// Healthcheck - healthchecker for stream client
-func (c *streamer) Healthcheck(_ string) *hc.Status {
+// HealthCheck - health check for stream client
+func (c *streamer) HealthCheck(_ string) *hc.Status {
 	err := c.Status()
 	if err != nil {
 		return &hc.Status{
