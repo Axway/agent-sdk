@@ -9,4 +9,5 @@ var (
 	ErrStatusHealthCheckPeriod   = configerrors.New(1403, "invalid value for statusHealthCheckPeriod. Value must be between 1 and 5 minutes")
 	ErrStatusHealthCheckInterval = configerrors.New(1404, "invalid value for statusHealthCheckInterval. Value must be between 30 seconds and 5 minutes")
 	ErrReadingKeyFile            = configerrors.Newf(1405, "could not read the %v key file %v")
+	ErrServiceAccount            = configerrors.New(1406, "using a DOSA_* service account with Marketplace Provisioning is unsupported")
 )

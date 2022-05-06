@@ -94,6 +94,13 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 		return ar
 	}
 
+	// check the application status
+	if app.Status.Level != prov.Success.String() {
+		err = fmt.Errorf("error can't handle access request when application is not yet successful")
+		h.onError(ctx, ar, err)
+		return ar
+	}
+
 	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
 	if err != nil {
 		log.WithError(err).Error("error getting resource details")
@@ -153,9 +160,16 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	}
 }
 
-func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
+func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *mv1.AccessRequest) (*mv1.ManagedApplication, error) {
 	app := mv1.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
-	return h.client.GetResource(app.GetSelfLink())
+	ri, err := h.client.GetResource(app.GetSelfLink())
+	if err != nil {
+		return nil, err
+	}
+
+	app = &mv1.ManagedApplication{}
+	err = app.FromInstance(ri)
+	return app, err
 }
 
 func (h *accessRequestHandler) newReq(_ context.Context, ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
