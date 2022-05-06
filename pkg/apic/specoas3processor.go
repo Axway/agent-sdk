@@ -172,8 +172,8 @@ func (p *oas3SpecProcessor) parseAuthInfo() {
 			}
 		}
 	}
-	authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
-	sort.Strings(authPolicies)
+	p.authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
+	sort.Strings(p.authPolicies)
 	p.apiKeyInfo = keyInfo
 	p.scopes = scopes
 }

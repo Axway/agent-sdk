@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -81,6 +82,19 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.pollInterval, please set and/or check its value", err.Error())
+	centralConfig.PollInterval = 30
+
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
+	centralConfig.ReportActivityFrequency = time.Minute
+
+	// validate mp and DOSA
+	authCfg.ClientID = "DOSA_aaaa"
+	centralConfig.isMarketplaceSubs = true
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1406] - using a DOSA_* service account with Marketplace Provisioning is unsupported", err.Error())
 
 	cleanupFiles(tmpFile.Name())
 }

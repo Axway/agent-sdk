@@ -38,6 +38,7 @@ func TestCredentialHandler(t *testing.T) {
 		name             string
 		outboundStatus   string
 		subError         error
+		appStatus        string
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -52,6 +53,13 @@ func TestCredentialHandler(t *testing.T) {
 			inboundStatus:    prov.Pending.String(),
 			name:             "should handle an update event for a Credential when status is pending",
 			outboundStatus:   prov.Success.String(),
+		},
+		{
+			action:         proto.Event_CREATED,
+			inboundStatus:  prov.Pending.String(),
+			name:           "should return nil with the appStatus is not success",
+			outboundStatus: prov.Error.String(),
+			appStatus:      prov.Error.String(),
 		},
 		{
 			action: proto.Event_SUBRESOURCEUPDATED,
@@ -98,6 +106,11 @@ func TestCredentialHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			credApp.SubResources["status"].(map[string]interface{})["level"] = prov.Success.String()
+			if tc.appStatus != "" {
+				credApp.SubResources["status"].(map[string]interface{})["level"] = tc.appStatus
+			}
+
 			cred := credential
 			cred.Status.Level = tc.inboundStatus
 
@@ -543,6 +556,9 @@ var credApp = &v1.ResourceInstance{
 		SubResources: map[string]interface{}{
 			defs.XAgentDetails: map[string]interface{}{
 				"sub_managed_app_key": "sub_managed_app_val",
+			},
+			"status": map[string]interface{}{
+				"level": prov.Success.String(),
 			},
 		},
 	},

@@ -598,6 +598,11 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			c.validateConfig()
 			c.Auth.validate()
 
+			// Check that platform service account is used with market place provisioning
+			if c.IsMarketplaceSubsEnabled() && strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
+				exception.Throw(ErrServiceAccount)
+			}
+
 			if supportsTraceability(c.AgentType) {
 				c.UsageReporting.validate()
 			}

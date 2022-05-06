@@ -17,17 +17,34 @@ The Amplify Agents SDK provides a component for generating beat event from the m
 
 ## Table of Contents
 
-- [Central Configuration](#Central-Configuration)
-- [Agent Specific Configuration](#Agent-Specific-Configuration)
-- [Amplify Ingestion output configuration](#Amplify-Ingestion-output-configuration)
-- [Setting up command line parser and binding agent config](#Setting-up-command-line-parser-and-binding-agent-config)
-- [Initializing Agent/Custom elastic beat](#Initializing-Agent-Custom-elastic=beat)
-- [Transaction Event processing and Event Generation](#Transaction-Event-processing-and-Event-Generation)
-- [Traceability redaction](#Traceability-redaction)
-- [Traceability sampling](./Traceability-sampling)
-- [Traceability usage reporting](#Traceability-usage-reporting)
-- [Building the Agent](#Building-the-Agent)
-- [Executing Traceability Agent](#Executing-Traceability-Agent)
+- [Building Traceability Agent](#building-traceability-agent)
+  - [Table of Contents](#table-of-contents)
+    - [Central Configuration](#central-configuration)
+      - [Configuration interfaces](#configuration-interfaces)
+    - [Agent Specific Configuration](#agent-specific-configuration)
+      - [Sample Agent specific configuration definition](#sample-agent-specific-configuration-definition)
+    - [Amplify Ingestion output configuration](#amplify-ingestion-output-configuration)
+      - [Sample Agent YAML configuration](#sample-agent-yaml-configuration)
+    - [Setting up command line parser and binding agent config](#setting-up-command-line-parser-and-binding-agent-config)
+      - [Sample of agent command initialization and agent config setup](#sample-of-agent-command-initialization-and-agent-config-setup)
+    - [Initializing Agent/Custom elastic beat](#initializing-agentcustom-elastic-beat)
+    - [Transaction Event processing and Event Generation](#transaction-event-processing-and-event-generation)
+      - [Sample Transaction Summary](#sample-transaction-summary)
+      - [Sample Transaction Event](#sample-transaction-event)
+      - [Common Log Entry attributes](#common-log-entry-attributes)
+      - [Transaction Summary attributes](#transaction-summary-attributes)
+      - [Transaction Event attributes](#transaction-event-attributes)
+        - [HTTP Protocol specific attributes](#http-protocol-specific-attributes)
+    - [Traceability redaction](#traceability-redaction)
+      - [Setting up redaction and sanitization](#setting-up-redaction-and-sanitization)
+      - [Setting up redaction in YAML](#setting-up-redaction-in-yaml)
+      - [Using environment variables for redaction](#using-environment-variables-for-redaction)
+    - [Traceability sampling](#traceability-sampling)
+    - [Traceability usage reporting](#traceability-usage-reporting)
+      - [Offline usage reporting](#offline-usage-reporting)
+    - [Building the Agent](#building-the-agent)
+      - [Pre-requisites for executing the agent](#pre-requisites-for-executing-the-agent)
+    - [Executing Traceability Agent](#executing-traceability-agent)
 
 ### Central Configuration
 
@@ -81,7 +98,7 @@ central:
  deployment: prod
     additionalTags: DiscoveredByCustomAgent
     auth:
-        clientId: DOSA_3ecfferff6ab694badb1ba8e1cfb28f7u8
+        clientId: serviceaccount_1234
         privateKey: ./private_key.pem
         publicKey: ./public_key.pem
 ```
@@ -277,7 +294,7 @@ apic_traceability_agent:
     environment: remote-gw
     additionalTags: DiscoveredByCustomAgent
     auth:
-      clientId: DOSA_3ecfferff6ab694badb1ba8e1cfb28f7u8
+      clientId: serviceaccount_1234
       privateKey: ./private_key.pem
       publicKey: ./public_key.pem
 

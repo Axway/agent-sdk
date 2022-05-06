@@ -92,6 +92,13 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 		return cred
 	}
 
+	// check the application status
+	if app.Status.Level != prov.Success.String() {
+		err = fmt.Errorf("error can't handle credential when application is not yet successful")
+		h.onError(ctx, cred, err)
+		return cred
+	}
+
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
 		log.WithError(err).Errorf("error getting resource details: %s")
