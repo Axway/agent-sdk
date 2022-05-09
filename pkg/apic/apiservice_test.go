@@ -271,7 +271,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -279,7 +279,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -287,7 +287,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -295,7 +295,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance subresource
 			RespCode: http.StatusOK,
 		},
 	})
@@ -318,7 +318,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -326,7 +326,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -334,7 +334,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -342,7 +342,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance subresource
 			RespCode: http.StatusOK,
 		},
 	})
