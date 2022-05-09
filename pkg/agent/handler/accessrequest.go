@@ -66,12 +66,12 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		ar := h.onPending(ctx, ar)
 		err := h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
-			log.WithError(err).Errorf("error creating subresources")
+			log.WithError(err).Error("error creating subresources")
 			return err
 		}
 		err = h.client.CreateSubResourceScoped(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
 		if err != nil {
-			log.WithError(err).Errorf("error creating status subresources")
+			log.WithError(err).Error("error creating status subresources")
 			return err
 		}
 	}

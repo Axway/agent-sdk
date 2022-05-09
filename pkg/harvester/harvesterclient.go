@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -49,6 +51,21 @@ type Client struct {
 	Cfg    *Config
 	Client api.Client
 	Url    string
+}
+
+func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, sq SequenceProvider) *Config {
+	return &Config{
+		ClientTimeout:    cfg.GetClientTimeout(),
+		Host:             cfg.GetURL(),
+		PageSize:         100,
+		Port:             443,
+		Protocol:         "https",
+		ProxyURL:         cfg.GetProxyURL(),
+		SequenceProvider: sq,
+		TenantID:         cfg.GetTenantID(),
+		TlsCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
+		TokenGetter:      getToken.GetToken,
+	}
 }
 
 // NewClient creates a new harvester client
