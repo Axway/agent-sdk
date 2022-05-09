@@ -86,7 +86,7 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 	hashInt, _ := util.ComputeHash(spec)
 
 	ard := v1alpha1.NewAccessRequestDefinition(a.name, "")
-	ard.Title = c.title
+	ard.Title = a.title
 	ard.Spec = spec
 
 	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
