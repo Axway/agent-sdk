@@ -11,7 +11,6 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -121,7 +120,7 @@ func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
 }
 
 // processService -
-func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIService, error) {
 	// Default action to create service
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
@@ -163,7 +162,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*v1alpha1.APIS
 	return svc, err
 }
 
-func (c *ServiceClient) updateAPIServiceSubresources(svc *v1alpha1.APIService) error {
+func (c *ServiceClient) updateAPIServiceSubresources(svc *mv1a.APIService) error {
 	subResources := make(map[string]interface{})
 	if svc.Status != nil {
 		subResources["status"] = svc.Status

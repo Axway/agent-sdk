@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
@@ -672,40 +672,19 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
 func (c *ServiceClient) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	var execErr error
-	wg := &sync.WaitGroup{}
-	for subName, sub := range subs {
-		wg.Add(1)
-		url := fmt.Sprintf("%s/apis%s/%s", c.cfg.GetURL(), rm.GetSelfLink(), subName)
-
-		r := map[string]interface{}{
-			subName: sub,
-		}
-		bts, err := json.Marshal(r)
-		if err != nil {
-			return err
-		}
-
-		go func(wg *sync.WaitGroup, sn string) {
-			defer wg.Done()
-			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
-			if err != nil {
-				if execErr == nil {
-					execErr = err
-				}
-				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
-			}
-		}(wg, subName)
-	}
-
-	wg.Wait()
-
-	return execErr
+	_, err := c.createSubResource(rm, subs)
+	return err
 }
 
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
 func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
+	_, err := c.createSubResource(rm, subs)
+	return err
+}
+
+func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]interface{}) (*v1.ResourceInstance, error) {
 	var execErr error
+	var instanceBytes []byte
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
@@ -718,12 +697,13 @@ func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[str
 		}
 		bts, err := json.Marshal(r)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		go func(sn string) {
 			defer wg.Done()
-			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			var err error
+			instanceBytes, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
 				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
@@ -732,8 +712,17 @@ func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[str
 	}
 
 	wg.Wait()
+	if execErr != nil {
+		return nil, execErr
+	}
 
-	return execErr
+	ri := &v1.ResourceInstance{}
+	err := json.Unmarshal(instanceBytes, ri)
+	if err != nil {
+		return nil, err
+	}
+
+	return ri, nil
 }
 
 // GetResource gets a single resource
@@ -800,27 +789,32 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	method := coreapi.POST
 
 	if update {
-		// get the existing RI and update it
-		url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
-		method = coreapi.PUT
+		response, err := c.ExecuteAPI(coreapi.GET, fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink()), nil, nil)
+		if err == nil {
+			// get the existing RI and update it
+			url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
+			method = coreapi.PUT
 
-		response, err := c.ExecuteAPI(coreapi.GET, url, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		existingRI := &apiv1.ResourceInstance{}
-		err = json.Unmarshal(response, existingRI)
-		if err != nil {
-			return nil, err
-		}
+			existingRI := &apiv1.ResourceInstance{}
+			err = json.Unmarshal(response, existingRI)
+			if err != nil {
+				return nil, err
+			}
 
-		if reflect.DeepEqual(existingRI.Spec, data.Spec) {
-			return existingRI, nil
-		}
+			// do not perform any actions if hash is the same
+			oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
+			newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
+			if oldHash == newHash {
+				return existingRI, nil
+			}
 
-		// Update the spec from the data sent in
-		existingRI.Spec = data.Spec
-		data = existingRI
+			// Update the spec and subresources, if they exist in incoming data
+			existingRI.Spec = data.Spec
+			existingRI.SubResources = util.MergeMapStringInterface(existingRI.SubResources, data.SubResources)
+
+			// set the data and subresources to be pushed
+			data = existingRI
+		}
 	}
 
 	reqBytes, err := json.Marshal(data)
@@ -835,6 +829,16 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 
 	newRI := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, newRI)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data.SubResources) > 0 {
+		newRI, err = c.createSubResource(newRI.ResourceMeta, data.SubResources)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return newRI, err
 }

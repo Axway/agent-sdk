@@ -123,16 +123,12 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 	crd := &v1alpha1.CredentialRequestDefinition{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
-			Title:            c.title,
 			Name:             c.name,
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrSpecHash: fmt.Sprint(hashInt),
-				},
-			},
+			Title:            c.title,
 		},
 		Spec: spec,
 	}
+	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return c.registerFunc(crd)
 }

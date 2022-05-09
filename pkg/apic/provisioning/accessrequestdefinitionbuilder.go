@@ -87,14 +87,10 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
 			Name:             a.name,
 			Title:            a.title,
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrSpecHash: fmt.Sprint(hashInt),
-				},
-			},
 		},
 		Spec: spec,
 	}
+	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return a.registerFunc(ard)
 }

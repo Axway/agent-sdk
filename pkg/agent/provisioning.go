@@ -5,6 +5,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // credential request definitions
@@ -18,7 +19,9 @@ func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestD
 	if crdRI == nil {
 		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
 	}
-	if data.SubResources[definitions.AttrSpecHash] != crdRI.SubResources[definitions.AttrSpecHash] {
+	newHash, _ := util.GetAgentDetailsValue(data, definitions.AttrSpecHash)
+	oldHash, _ := util.GetAgentDetailsValue(crdRI, definitions.AttrSpecHash)
+	if newHash != oldHash {
 		return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
 	}
 	err := data.FromInstance(crdRI)
@@ -153,7 +156,9 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 	if ardRI == nil {
 		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
 	}
-	if data.SubResources[definitions.AttrSpecHash] != ardRI.SubResources[definitions.AttrSpecHash] {
+	newHash, _ := util.GetAgentDetailsValue(data, definitions.AttrSpecHash)
+	oldHash, _ := util.GetAgentDetailsValue(ardRI, definitions.AttrSpecHash)
+	if newHash != oldHash {
 		return agent.apicClient.RegisterAccessRequestDefinition(data, true)
 	}
 	err := data.FromInstance(ardRI)
