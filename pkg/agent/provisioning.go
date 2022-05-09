@@ -3,9 +3,7 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // credential request definitions
@@ -15,20 +13,7 @@ func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestD
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	crdRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(data.Name)
-	if crdRI == nil {
-		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
-	}
-	newHash, _ := util.GetAgentDetailsValue(data, definitions.AttrSpecHash)
-	oldHash, _ := util.GetAgentDetailsValue(crdRI, definitions.AttrSpecHash)
-	if newHash != oldHash {
-		return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
-	}
-	err := data.FromInstance(crdRI)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return agent.apicClient.RegisterCredentialRequestDefinition(data)
 }
 
 type crdBuilderOptions struct {
@@ -152,20 +137,7 @@ func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinitio
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(data.Name)
-	if ardRI == nil {
-		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
-	}
-	newHash, _ := util.GetAgentDetailsValue(data, definitions.AttrSpecHash)
-	oldHash, _ := util.GetAgentDetailsValue(ardRI, definitions.AttrSpecHash)
-	if newHash != oldHash {
-		return agent.apicClient.RegisterAccessRequestDefinition(data, true)
-	}
-	err := data.FromInstance(ardRI)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return agent.apicClient.RegisterAccessRequestDefinition(data)
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition

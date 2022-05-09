@@ -147,7 +147,7 @@ func TestDiscoveryCache(t *testing.T) {
 			}
 			return &apiSvc, nil
 		},
-		RegisterAccessRequestDefinitionMock: func(_ *v1alpha1.AccessRequestDefinition, _ bool) (*v1alpha1.AccessRequestDefinition, error) {
+		RegisterAccessRequestDefinitionMock: func(_ *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
 			return accReqDef, nil
 		},
 		DeleteResourceInstanceMock: func(_ *v1.ResourceInstance) error {

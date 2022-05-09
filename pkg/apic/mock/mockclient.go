@@ -51,8 +51,8 @@ type Client struct {
 	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error)
-	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error)
+	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error)
+	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
 	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
 	CreateSubResourceScopedMock                              func(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -332,16 +332,16 @@ func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1al
 	return nil, nil
 }
 
-func (m *Client) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
+func (m *Client) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
 	if m.RegisterCredentialRequestDefinitionMock != nil {
-		return m.RegisterCredentialRequestDefinitionMock(data, update)
+		return m.RegisterCredentialRequestDefinitionMock(data)
 	}
 	return nil, nil
 }
 
-func (m *Client) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition, update bool) (*v1alpha1.AccessRequestDefinition, error) {
+func (m *Client) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
 	if m.RegisterAccessRequestDefinitionMock != nil {
-		return m.RegisterAccessRequestDefinitionMock(data, update)
+		return m.RegisterAccessRequestDefinitionMock(data)
 	}
 	return nil, nil
 }

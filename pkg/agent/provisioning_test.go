@@ -19,7 +19,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{MarketplaceProvisioning: true})
 
 	agent.apicClient = &mock.Client{
-		RegisterCredentialRequestDefinitionMock: func(data *v1alpha1.CredentialRequestDefinition, update bool) (*v1alpha1.CredentialRequestDefinition, error) {
+		RegisterCredentialRequestDefinitionMock: func(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
 			return data, nil
 		},
 	}

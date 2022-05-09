@@ -96,8 +96,8 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error)
-	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error)
+	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition) (*mv1a.CredentialRequestDefinition, error)
+	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error)
 }
 
 // New creates a new Client
@@ -783,38 +783,39 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 }
 
 // updateORCreateResourceInstance
-func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance, update bool) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// default to post
 	url := fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetKindLink())
 	method := coreapi.POST
 
-	if update {
-		response, err := c.ExecuteAPI(coreapi.GET, fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink()), nil, nil)
-		if err == nil {
-			// get the existing RI and update it
-			url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
-			method = coreapi.PUT
+	// check if the KIND and ID combo have an item in the cache
+	var existingRI *apiv1.ResourceInstance
+	var err error
+	switch data.Kind {
+	case mv1a.AccessRequestDefinitionGVK().Kind:
+		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
+	// case v1.CredentailRequestDefinition:
+	default:
+		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
+	}
 
-			existingRI := &apiv1.ResourceInstance{}
-			err = json.Unmarshal(response, existingRI)
-			if err != nil {
-				return nil, err
-			}
+	if err == nil {
+		url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
+		method = coreapi.PUT
 
-			// do not perform any actions if hash is the same
-			oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
-			newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
-			if oldHash == newHash {
-				return existingRI, nil
-			}
-
-			// Update the spec and subresources, if they exist in incoming data
-			existingRI.Spec = data.Spec
-			existingRI.SubResources = util.MergeMapStringInterface(existingRI.SubResources, data.SubResources)
-
-			// set the data and subresources to be pushed
-			data = existingRI
+		// do not perform any actions if hash is the same
+		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
+		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
+		if oldHash == newHash {
+			return existingRI, nil
 		}
+
+		// Update the spec and agent details subresource, if they exist in incoming data
+		existingRI.Spec = data.Spec
+		existingRI.SubResources = data.SubResources
+
+		// set the data and subresources to be pushed
+		data = existingRI
 	}
 
 	reqBytes, err := json.Marshal(data)
@@ -833,8 +834,9 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		return nil, err
 	}
 
-	if len(data.SubResources) > 0 {
-		newRI, err = c.createSubResource(newRI.ResourceMeta, data.SubResources)
+	if data := util.GetAgentDetails(data); data != nil {
+		// only send in the agent details here, that is all the agent needs to update for anything here
+		newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
 		if err != nil {
 			return nil, err
 		}
@@ -844,14 +846,14 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 }
 
 // RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error) {
+func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition) (*mv1a.CredentialRequestDefinition, error) {
 	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
 	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
-	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
+	ri, err = c.updateSpecORCreateResourceInstance(ri)
 	if err != nil {
 		return nil, err
 	}
@@ -861,14 +863,14 @@ func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.Credentia
 }
 
 // RegisterAccessRequestDefinition - Adds or updates a access request definition
-func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error) {
+func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
 	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
-	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
+	ri, err = c.updateSpecORCreateResourceInstance(ri)
 	if err != nil {
 		return nil, err
 	}

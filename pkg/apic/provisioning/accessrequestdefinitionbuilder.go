@@ -3,7 +3,6 @@ package provisioning
 import (
 	"fmt"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -76,20 +75,20 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.title = a.name
 	}
 
+	if a.name == "" {
+		return nil, fmt.Errorf("must set a name for the access request defintion")
+	}
+
 	spec := v1alpha1.AccessRequestDefinitionSpec{
 		Schema: a.schema,
 	}
 
 	hashInt, _ := util.ComputeHash(spec)
 
-	ard := &v1alpha1.AccessRequestDefinition{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.AccessRequestDefinitionGVK(),
-			Name:             a.name,
-			Title:            a.title,
-		},
-		Spec: spec,
-	}
+	ard := v1alpha1.NewAccessRequestDefinition(a.name, "")
+	ard.Title = c.title
+	ard.Spec = spec
+
 	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return a.registerFunc(ard)
