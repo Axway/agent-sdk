@@ -154,7 +154,8 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 	} else {
-		log.Debugf("request status was not Success, skipping")
+		err := fmt.Errorf(status.GetMessage())
+		log.WithError(err).Error("request status was not Success, skipping")
 		h.onError(ctx, ar, fmt.Errorf(status.GetMessage()))
 		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
 	}

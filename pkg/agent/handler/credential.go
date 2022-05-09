@@ -49,34 +49,34 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	log := getLoggerFromContext(ctx).WithComponent("credentialHandler")
-	ctx = setLoggerInContext(ctx, log)
+	logger := getLoggerFromContext(ctx).WithComponent("credentialHandler")
+	ctx = setLoggerInContext(ctx, logger)
 
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
-		log.WithError(err).Errorf("could not handle credential request")
+		logger.WithError(err).Errorf("could not handle credential request")
 		return nil
 	}
 
 	if ok := isStatusFound(cr.Status); !ok {
-		log.Debugf("could not handle credential request as it did not have a status subresource")
+		logger.Debugf("could not handle credential request as it did not have a status subresource")
 		return nil
 	}
 
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
-		log.Tracef("processing resource in pending status")
+		logger.Tracef("processing resource in pending status")
 		cr := h.onPending(ctx, cr)
 		err := h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
-			log.WithError(err).Errorf("error creating subresources")
+			logger.WithError(err).Errorf("error creating subresources")
 			return err
 		}
 		return h.client.CreateSubResourceScoped(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
 	}
 
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
-		log.Trace("processing resource in deleting state")
+		logger.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, cr)
 	}
 
@@ -84,10 +84,10 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.Credential {
-	log := getLoggerFromContext(ctx)
+	logger := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, cred)
 	if err != nil {
-		log.WithError(err).Errorf("error getting managed app")
+		logger.WithError(err).Errorf("error getting managed app")
 		h.onError(ctx, cred, err)
 		return cred
 	}
@@ -101,7 +101,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		log.WithError(err).Errorf("error getting resource details: %s")
+		logger.WithError(err).Error("error getting resource details")
 		h.onError(ctx, cred, err)
 		return cred
 	}
@@ -147,12 +147,15 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 	provCreds := newProvCreds(cred, map[string]interface{}{})
 	status := h.prov.CredentialDeprovision(provCreds)
+	logger := getLoggerFromContext(ctx)
 
 	if status.GetStatus() == prov.Success {
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 	} else {
-		h.onError(ctx, cred, fmt.Errorf(status.GetMessage()))
+		err := fmt.Errorf(status.GetMessage())
+		logger.WithError(err).Error("request status was not Success, skipping")
+		h.onError(ctx, cred, err)
 		h.client.CreateSubResourceScoped(cred.ResourceMeta, cred.SubResources)
 	}
 }

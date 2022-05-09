@@ -113,8 +113,9 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApp
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
 	} else {
-		log.Debugf("request status was not Success, skipping")
-		h.onError(app, fmt.Errorf(status.GetMessage()))
+		err := fmt.Errorf(status.GetMessage())
+		log.WithError(err).Error("request status was not Success, skipping")
+		h.onError(app, err)
 		h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
 	}
 }
