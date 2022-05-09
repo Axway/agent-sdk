@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"context"
@@ -17,30 +17,41 @@ type Listener interface {
 	Stop()
 }
 
+type APIClient interface {
+	GetResource(url string) (*apiv1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
+}
+
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
 	cancel          context.CancelFunc
 	ctx             context.Context
-	client          apiClient
+	client          APIClient
 	handlers        []handler.Handler
 	source          chan *proto.Event
-	sequenceManager *agentSequenceManager
+	sequenceManager SequenceProvider
 	logger          log.FieldLogger
 }
 
-type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
+type NewListenerFunc func(
+	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
+) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
+func NewEventListener(
+	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
+) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
-		WithPackage("sdk.agent.stream")
+		WithPackage("sdk.agent.events")
 
 	return &EventListener{
 		cancel:          cancel,
 		ctx:             ctx,
-		client:          ri,
+		client:          client,
 		handlers:        cbs,
 		source:          source,
 		sequenceManager: sequenceManager,
@@ -122,7 +133,9 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
+func (em *EventListener) handleResource(
+	ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance,
+) {
 
 	for _, h := range em.handlers {
 		err := h.Handle(ctx, eventMetadata, resource)

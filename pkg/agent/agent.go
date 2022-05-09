@@ -12,6 +12,7 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -256,29 +257,31 @@ func startAPIServiceCache() error {
 		return err
 	}
 
-	if !agent.cfg.IsUsingGRPC() {
-		// health check for central in gRPC mode is registered by streamer
-		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.HealthCheck)
+	return startCentralEventProcessor(agent)
 
-		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
-		if err != nil {
-			return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		}
-		// Start the full update after the first interval
-		go startDiscoveryCache(agent.instanceCacheLock)
-		log.Tracef("registered API cache update job: %s", id)
-	} else {
-		// Load cache from API initially. Following updates to cache will be done using watch events
-		if !agent.cacheManager.HasLoadedPersistedCache() {
-			// trigger early saving for the initialized cache, following save will be done by interval job
-			agent.cacheManager.SaveCache()
-		}
-
-		err := startStreamMode(agent)
-		if err != nil {
-			return err
-		}
-	}
+	// if !agent.cfg.IsUsingGRPC() {
+	// 	// health check for central in gRPC mode is registered by streamer
+	// 	hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.HealthCheck)
+	//
+	// 	id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
+	// 	if err != nil {
+	// 		return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
+	// 	}
+	// 	// Start the full update after the first interval
+	// 	go startDiscoveryCache(agent.instanceCacheLock)
+	// 	log.Tracef("registered API cache update job: %s", id)
+	// } else {
+	// 	// Load cache from API initially. Following updates to cache will be done using watch events
+	// 	if !agent.cacheManager.HasLoadedPersistedCache() {
+	// 		// trigger early saving for the initialized cache, following save will be done by interval job
+	// 		agent.cacheManager.SaveCache()
+	// 	}
+	//
+	// 	err := startStreamMode(agent)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
@@ -411,7 +414,15 @@ func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	log.Tracef("registered API cache update all job: %s", id)
 }
 
-func startStreamMode(agent agentData) error {
+func startCentralEventProcessor(agent agentData) error {
+	if agent.cfg.IsUsingGRPC() {
+		return startStreamMode(agent)
+	}
+
+	return startPollMode(agent)
+}
+
+func newHandlers(agent agentData) []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
@@ -430,12 +441,38 @@ func startStreamMode(agent agentData) error {
 		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
 	}
 
-	cs, err := stream.NewStreamer(
+	return handlers
+}
+
+func startPollMode(agent agentData) error {
+	handlers := newHandlers(agent)
+
+	pc, err := poller.NewPollClient(
 		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
-		func(s stream.Streamer) {
+		handlers...,
+	)
+
+	if err != nil {
+		return fmt.Errorf("could not start the harvester poll client: %s", err)
+	}
+
+	newEventProcessorJob(pc)
+
+	return err
+}
+
+func startStreamMode(agent agentData) error {
+	handlers := newHandlers(agent)
+
+	sc, err := stream.NewStreamerClient(
+		agent.apicClient,
+		agent.cfg,
+		agent.tokenRequester,
+		agent.cacheManager,
+		func(s *stream.StreamerClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.HealthCheck)
 		},
 		handlers...,
@@ -445,7 +482,7 @@ func startStreamMode(agent agentData) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	stream.NewClientStreamJob(cs)
+	newEventProcessorJob(sc)
 
 	return err
 }

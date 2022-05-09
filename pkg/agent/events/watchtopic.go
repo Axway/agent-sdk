@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"bytes"
@@ -15,6 +15,13 @@ import (
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
+
+// agentTypesMap - Agent Types map
+var agentTypesMap = map[config.AgentType]string{
+	config.DiscoveryAgent:    "discoveryagents",
+	config.TraceabilityAgent: "traceabilityagents",
+	config.GovernanceAgent:   "governanceagents",
+}
 
 type watchTopicFeatures interface {
 	IsMarketplaceSubsEnabled() bool
@@ -58,7 +65,7 @@ var (
 )
 
 // getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
-func getOrCreateWatchTopic(name, scope string, client apiClient, features watchTopicFeatures) (*mv1.WatchTopic, error) {
+func getOrCreateWatchTopic(name, scope string, client APIClient, features watchTopicFeatures) (*mv1.WatchTopic, error) {
 	wt := mv1.NewWatchTopic("")
 	ri, err := client.GetResource(fmt.Sprintf("%s/%s", wt.GetKindLink(), name))
 
@@ -187,7 +194,7 @@ func parseWatchTopicTemplate(values WatchTopicValues) (*mv1.WatchTopic, error) {
 }
 
 // createOrUpdateWatchTopic creates a WatchTopic
-func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc apiClient) (*mv1.WatchTopic, error) {
+func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc APIClient) (*mv1.WatchTopic, error) {
 	bts, err := json.Marshal(wt)
 	if err != nil {
 		return nil, err
@@ -314,4 +321,27 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 		Description: fmt.Sprintf(desc, "governance", scope),
 		Kinds:       kinds,
 	}
+}
+
+func GetWatchTopic(cfg config.CentralConfig, client APIClient) (*mv1.WatchTopic, error) {
+	env := cfg.GetEnvironmentName()
+
+	wtName := getWatchTopicName(env, cfg.GetAgentType())
+	wt, err := getCachedWatchTopic(cache.New(), wtName)
+	if err != nil || wt == nil {
+		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg)
+		if err != nil {
+			return nil, err
+		}
+		// cache the watch topic
+	}
+	return wt, err
+}
+
+func getWatchTopicName(envName string, agentType config.AgentType) string {
+	return envName + getWatchTopicNameSuffix(agentType)
+}
+
+func getWatchTopicNameSuffix(agentType config.AgentType) string {
+	return "-" + agentTypesMap[agentType]
 }

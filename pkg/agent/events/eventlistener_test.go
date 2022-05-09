@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func TestEventListener_start(t *testing.T) {
 		name      string
 		hasError  bool
 		events    chan *proto.Event
-		client    apiClient
+		client    APIClient
 		handler   handler.Handler
 		writeStop bool
 	}{
@@ -117,7 +117,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		client   apiClient
+		client   APIClient
 		handler  handler.Handler
 	}{
 		{

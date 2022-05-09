@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -19,12 +20,6 @@ import (
 const (
 	defaultEventPageSize = 100
 )
-
-// SequenceProvider - Interface to provide event sequence ID to harvester client to fetch events
-type SequenceProvider interface {
-	GetSequence() int64
-	SetSequence(sequenceID int64)
-}
 
 // Harvest is an interface for retrieving harvester events
 type Harvest interface {
@@ -40,7 +35,7 @@ type Config struct {
 	Port             uint32
 	Protocol         string
 	ProxyURL         string
-	SequenceProvider SequenceProvider
+	SequenceProvider events.SequenceProvider
 	TenantID         string
 	TlsCfg           *tls.Config
 	TokenGetter      func() (string, error)
@@ -53,7 +48,7 @@ type Client struct {
 	Url    string
 }
 
-func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, sq SequenceProvider) *Config {
+func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, sq events.SequenceProvider) *Config {
 	return &Config{
 		ClientTimeout:    cfg.GetClientTimeout(),
 		Host:             cfg.GetURL(),
