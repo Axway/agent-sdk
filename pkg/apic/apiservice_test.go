@@ -267,7 +267,7 @@ func TestUpdateService(t *testing.T) {
 	// tests for updating existing revision
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
@@ -275,11 +275,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -287,11 +283,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingserviceinstances.json", // for call to get instance
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -299,15 +291,11 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/existingconsumerinstances.json", // for call to check existance of the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 	})
@@ -326,7 +314,7 @@ func TestUpdateService(t *testing.T) {
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: "./testdata/apiservice-list.json", // for call to get the service
+			FileName: "./testdata/apiservice.json", // for call to update the service
 			RespCode: http.StatusOK,
 		},
 		{
@@ -334,11 +322,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingservicerevisions.json", // this for call to get the revision
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -346,11 +330,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingserviceinstances.json", // for call to get the serviceInstance
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -358,19 +338,11 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingconsumerinstances.json", // for call to get the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 	})
