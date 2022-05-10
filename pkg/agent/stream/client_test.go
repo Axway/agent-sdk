@@ -39,7 +39,7 @@ func TestNewStreamer(t *testing.T) {
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	onStreamConnection := func(s *StreamerClient) {
-		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.HealthCheck)
+		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}
 	streamer, err := NewStreamerClient(httpClient, cfg, getToken, cacheManager, onStreamConnection)
 	assert.NotNil(t, streamer)
@@ -116,7 +116,7 @@ func (m mockStreamer) Status() error {
 func (m mockStreamer) Stop() {
 }
 
-func (m mockStreamer) HealthCheck(_ string) *hc.Status {
+func (m mockStreamer) Healthcheck(_ string) *hc.Status {
 	return &hc.Status{
 		Result: hc.OK,
 	}

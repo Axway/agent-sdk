@@ -171,8 +171,8 @@ func (c *StreamerClient) Stop() {
 	c.listener.Stop()
 }
 
-// HealthCheck - health check for stream client
-func (c *StreamerClient) HealthCheck(_ string) *hc.Status {
+// Healthcheck - health check for stream client
+func (c *StreamerClient) Healthcheck(_ string) *hc.Status {
 	err := c.Status()
 	if err != nil {
 		return &hc.Status{

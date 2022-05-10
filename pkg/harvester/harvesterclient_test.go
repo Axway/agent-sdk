@@ -43,12 +43,14 @@ func TestReceiveSyncEvents(t *testing.T) {
 	mockServerURL, _ := url.Parse(s.server.URL)
 	port, _ := strconv.Atoi(mockServerURL.Port())
 	cfg := &Config{
-		Protocol:    mockServerURL.Scheme,
-		Host:        mockServerURL.Hostname(),
-		Port:        uint32(port),
-		TenantID:    "12345",
-		TokenGetter: getMockToken,
-		PageSize:    2,
+		Protocol: mockServerURL.Scheme,
+		Host:     mockServerURL.Hostname(),
+		Port:     uint32(port),
+		TenantID: "12345",
+		TokenGetter: func() (string, error) {
+			return "", nil
+		},
+		PageSize: 2,
 	}
 	client := NewClient(cfg)
 

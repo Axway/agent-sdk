@@ -19,7 +19,7 @@ type eventsJob interface {
 	Start() error
 	Status() error
 	Stop()
-	HealthCheck(_ string) *hc.Status
+	Healthcheck(_ string) *hc.Status
 }
 
 // eventProcessorJob job wrapper for a streamerClient that starts a stream and an event manager.

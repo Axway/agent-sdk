@@ -283,7 +283,7 @@ func startAPIServiceCache() error {
 	// 	}
 	// }
 
-	return nil
+	// return nil
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -473,7 +473,7 @@ func startStreamMode(agent agentData) error {
 		agent.tokenRequester,
 		agent.cacheManager,
 		func(s *stream.StreamerClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.HealthCheck)
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 		},
 		handlers...,
 	)

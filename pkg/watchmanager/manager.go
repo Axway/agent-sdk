@@ -70,9 +70,9 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			Errorf("failed to establish connection with watch service")
 	}
 
-	sg := manager.options.sequenceProvider
+	seq := manager.options.sequenceProvider
 
-	if sg != nil {
+	if seq != nil {
 		harvesterConfig := &harvester.Config{
 			Host:             manager.cfg.Host,
 			Port:             manager.cfg.Port,
@@ -81,7 +81,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			ProxyURL:         manager.options.proxyURL,
 			TlsCfg:           manager.options.tlsCfg,
 			ClientTimeout:    manager.options.keepAlive.timeout,
-			SequenceProvider: sg,
+			SequenceProvider: seq,
 		}
 		manager.hClient = harvester.NewClient(harvesterConfig)
 	}
@@ -135,6 +135,10 @@ func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
 
 // eventCatchUp - called until lastSequenceID is 0, caught up on events
 func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event) error {
+	if m.hClient == nil || m.options.sequenceProvider == nil {
+		return nil
+	}
+
 	err := m.hClient.EventCatchUp(link, events)
 	if err != nil {
 		m.clientMap[subID].handleError(err)

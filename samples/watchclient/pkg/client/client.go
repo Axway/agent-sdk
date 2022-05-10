@@ -20,7 +20,8 @@ type WatchClient struct {
 }
 
 type sequenceManager struct {
-	seqCache cache.Cache
+	seqCache       cache.Cache
+	watchTopicName string
 }
 
 func (s *sequenceManager) GetSequence() int64 {
@@ -31,6 +32,10 @@ func (s *sequenceManager) GetSequence() int64 {
 		}
 	}
 	return 0
+}
+
+func (s *sequenceManager) SetSequence(sequenceID int64) {
+	s.seqCache.Set("watchSequenceID", sequenceID)
 }
 
 // Todo - To be updated after cache persistence story

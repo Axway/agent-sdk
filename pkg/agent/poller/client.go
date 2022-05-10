@@ -92,7 +92,7 @@ func (c *pollClient) Status() error {
 	return nil
 }
 
-func (c *pollClient) HealthCheck(_ string) *hc.Status {
+func (c *pollClient) Healthcheck(_ string) *hc.Status {
 	err := c.Status()
 	if err != nil {
 		return &hc.Status{
