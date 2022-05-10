@@ -2,11 +2,14 @@ package poller
 
 import (
 	"testing"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,9 +22,10 @@ var cfg = &config.CentralConfiguration{
 	URL:           "http://abc.com",
 	TLS:           &config.TLSConfiguration{},
 	SingleURL:     "https://abc.com",
+	PollInterval:  1 * time.Second,
 }
 
-func TestPollClient(t *testing.T) {
+func TestPollClientStart(t *testing.T) {
 	getToken := &mockTokenGetter{}
 	wt := &mv1.WatchTopic{}
 	ri, _ := wt.AsInstance()
@@ -30,9 +34,37 @@ func TestPollClient(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	streamer, err := NewPollClient(httpClient, cfg, getToken, cacheManager)
-	assert.NotNil(t, streamer)
+	poller, err := NewPollClient(httpClient, cfg, getToken, cacheManager)
+	poller.poller.harvester = &mockHarvester{}
+	assert.NotNil(t, poller)
 	assert.Nil(t, err)
+
+	assert.NotNil(t, poller.Status())
+
+	errCh := make(chan error)
+	go func() {
+		err := poller.Start()
+		errCh <- err
+	}()
+
+	for poller.listener == nil {
+		continue
+	}
+
+	// assert the poller is healthy
+	assert.Nil(t, poller.Status())
+	assert.Equal(t, hc.OK, poller.Healthcheck("").Result)
+
+	// should stop the poller and write nil to the error channel
+	poller.Stop()
+
+	err = <-errCh
+	assert.Nil(t, err)
+
+	assert.Equal(t, hc.FAIL, poller.Healthcheck("").Result)
+	assert.NotNil(t, poller.Status())
+	poller.poller = nil
+	poller.listener = nil
 }
 
 type mockAPIClient struct {
@@ -66,4 +98,23 @@ type mockTokenGetter struct {
 
 func (m *mockTokenGetter) GetToken() (string, error) {
 	return m.token, m.err
+}
+
+type mockHarvester struct {
+	seqID   int64
+	eventCh chan *proto.Event
+	err     error
+}
+
+func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
+	return nil
+}
+
+func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event) (int64, error) {
+	if m.eventCh != nil {
+		m.eventCh <- &proto.Event{
+			Id: "1",
+		}
+	}
+	return m.seqID, m.err
 }

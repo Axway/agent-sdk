@@ -92,37 +92,6 @@ func TestNewStreamer(t *testing.T) {
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
 }
 
-// func TestClientStreamJob(t *testing.T) {
-// 	s := &mockStreamer{}
-// 	j := NewClientStreamJob(s)
-//
-// 	assert.Nil(t, j.Status())
-// 	assert.True(t, j.Ready())
-// 	assert.Nil(t, j.Execute())
-// }
-
-type mockStreamer struct {
-	hcErr    error
-	startErr error
-}
-
-func (m mockStreamer) Start() error {
-	return m.startErr
-}
-
-func (m mockStreamer) Status() error {
-	return m.hcErr
-}
-
-func (m mockStreamer) Stop() {
-}
-
-func (m mockStreamer) Healthcheck(_ string) *hc.Status {
-	return &hc.Status{
-		Result: hc.OK,
-	}
-}
-
 type mockManager struct {
 	status bool
 }

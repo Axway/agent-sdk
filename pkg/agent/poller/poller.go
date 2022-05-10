@@ -35,6 +35,7 @@ func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
 		ctx:       ctx,
 		cancel:    cancel,
 		interval:  interval,
+		sequence:  cfg.SequenceProvider,
 	}
 }
 
@@ -56,7 +57,7 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 	for {
 		select {
 		case <-m.ctx.Done():
-			return m.ctx.Err()
+			return nil
 		case <-m.timer.C:
 			m.logger.Trace("retrieving harvester events")
 			seqID, err := m.harvester.ReceiveSyncEvents(topic, m.sequence.GetSequence(), eventChan)
@@ -73,6 +74,7 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 func (m *manager) Stop() {
 	m.timer.Stop()
 	m.cancel()
+	m.logger.Debug("poller has been stopped")
 }
 
 // Status returns a bool indicating the status of the poller

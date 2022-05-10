@@ -158,6 +158,11 @@ func TestEventListener_handleEvent(t *testing.T) {
 				Payload: &proto.ResourceInstance{
 					Metadata: &proto.Metadata{
 						SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+						Scope: &proto.Metadata_ScopeKind{
+							Kind:     "Kind",
+							Name:     "Name",
+							SelfLink: "/self/link",
+						},
 					},
 				},
 				Metadata: &proto.EventMeta{

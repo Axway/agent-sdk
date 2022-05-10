@@ -79,8 +79,8 @@ func (c *pollClient) Start() error {
 
 // Stop stops the streamer
 func (c *pollClient) Stop() {
-	c.listener.Stop()
 	c.poller.Stop()
+	c.listener.Stop()
 }
 
 // Status returns an error if the poller is not running
