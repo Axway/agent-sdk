@@ -35,6 +35,7 @@ type EventListener struct {
 	logger          log.FieldLogger
 }
 
+// NewListenerFunc type for creating a new listener
 type NewListenerFunc func(
 	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
 ) *EventListener

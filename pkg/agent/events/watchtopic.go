@@ -323,6 +323,7 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 	}
 }
 
+// GetWatchTopic retrieves a watch topic based on the agent config. Creates a watch topic if one does not exist.
 func GetWatchTopic(cfg config.CentralConfig, client APIClient) (*mv1.WatchTopic, error) {
 	env := cfg.GetEnvironmentName()
 

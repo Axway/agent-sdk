@@ -24,6 +24,7 @@ type pollClient struct {
 	topicSelfLink string
 }
 
+// NewPollClient creates a polling client
 func NewPollClient(
 	apiClient events.APIClient,
 	cfg config.CentralConfig,
@@ -51,6 +52,7 @@ func NewPollClient(
 	return pc, nil
 }
 
+// Start the polling client
 func (c *pollClient) Start() error {
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
 	c.listener = c.newListener(
@@ -81,6 +83,7 @@ func (c *pollClient) Stop() {
 	c.poller.Stop()
 }
 
+// Status returns an error if the poller is not running
 func (c *pollClient) Status() error {
 	if c.poller == nil || c.listener == nil {
 		return fmt.Errorf("harvester polling client is not ready")
@@ -92,6 +95,7 @@ func (c *pollClient) Status() error {
 	return nil
 }
 
+// Healthcheck returns a healthcheck
 func (c *pollClient) Healthcheck(_ string) *hc.Status {
 	err := c.Status()
 	if err != nil {

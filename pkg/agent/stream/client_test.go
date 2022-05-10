@@ -26,6 +26,7 @@ var cfg = &config.CentralConfiguration{
 	AgentName:     "discoveryagents",
 	URL:           "http://abc.com",
 	TLS:           &config.TLSConfiguration{},
+	SingleURL:     "https://abc.com",
 }
 
 // should create a new streamer and call Start
@@ -37,7 +38,7 @@ func TestNewStreamer(t *testing.T) {
 		ri: ri,
 	}
 
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
 	onStreamConnection := func(s *StreamerClient) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}

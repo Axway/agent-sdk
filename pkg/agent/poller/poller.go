@@ -18,6 +18,7 @@ type manager struct {
 	sequence  events.SequenceProvider
 	ctx       context.Context
 	cancel    context.CancelFunc
+	interval  time.Duration
 }
 
 func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
@@ -33,17 +34,19 @@ func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
 		timer:     time.NewTimer(interval),
 		ctx:       ctx,
 		cancel:    cancel,
+		interval:  interval,
 	}
 }
 
+// RegisterWatch registers a watch topic for polling events and publishing events on a channel
 func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error) {
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
 	go func() {
 		err := m.sync(topic, eventChan)
+		m.Stop()
 		errChan <- err
-		m.cancel()
 	}()
 
 	return subID, nil
@@ -57,18 +60,22 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 		case <-m.timer.C:
 			m.logger.Trace("retrieving harvester events")
 			seqID, err := m.harvester.ReceiveSyncEvents(topic, m.sequence.GetSequence(), eventChan)
-			m.sequence.SetSequence(seqID)
 			if err != nil {
 				return err
 			}
+			m.sequence.SetSequence(seqID)
+			m.timer.Reset(m.interval)
 		}
 	}
 }
 
+// Stop stops the poller
 func (m *manager) Stop() {
+	m.timer.Stop()
 	m.cancel()
 }
 
+// Status returns a bool indicating the status of the poller
 func (m *manager) Status() bool {
 	return m.ctx.Err() == nil
 }
