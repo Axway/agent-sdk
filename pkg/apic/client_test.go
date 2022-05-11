@@ -6,18 +6,17 @@ import (
 	"testing"
 	"time"
 
+	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/api"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-
-	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewClient(t *testing.T) {
@@ -235,4 +234,130 @@ func TestCreateSubResourceUnscoped(t *testing.T) {
 
 	err := svcClient.CreateSubResourceUnscoped(ri.ResourceMeta, ri.SubResources)
 	assert.Nil(t, err)
+}
+
+func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
+	tests := []struct {
+		name           string
+		gvk            apiv1.GroupVersionKind
+		oldHash        string
+		newHash        string
+		apiResponses   []api.MockResponse
+		expectedTagVal string
+		expectErr      bool
+	}{
+		{
+			name:    "should error with bad response from api call",
+			gvk:     mv1.AccessRequestDefinitionGVK(),
+			oldHash: "1234",
+			newHash: "1235",
+			apiResponses: []api.MockResponse{
+				{
+					RespCode: http.StatusUnauthorized,
+				},
+			},
+			expectedTagVal: "existing",
+			expectErr:      true,
+		},
+		{
+			name:           "should not update ARD as hash is unchanged",
+			gvk:            mv1.AccessRequestDefinitionGVK(),
+			oldHash:        "1234",
+			newHash:        "1234",
+			apiResponses:   []api.MockResponse{},
+			expectedTagVal: "existing",
+			expectErr:      false,
+		},
+		{
+			name:           "should not update CRD as hash is unchanged",
+			gvk:            mv1.CredentialRequestDefinitionGVK(),
+			oldHash:        "1234",
+			newHash:        "1234",
+			apiResponses:   []api.MockResponse{},
+			expectedTagVal: "existing",
+			expectErr:      false,
+		},
+		{
+			name:    "should update ARD as hash has changed",
+			gvk:     mv1.AccessRequestDefinitionGVK(),
+			oldHash: "1234",
+			newHash: "5234",
+			apiResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json",
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json",
+					RespCode: http.StatusOK,
+				},
+			},
+			expectedTagVal: "prod",
+			expectErr:      false,
+		},
+		{
+			name:    "should update CRD as hash has changed",
+			gvk:     mv1.CredentialRequestDefinitionGVK(),
+			oldHash: "1234",
+			newHash: "5234",
+			apiResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json",
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json",
+					RespCode: http.StatusOK,
+				},
+			},
+			expectedTagVal: "prod",
+			expectErr:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svcClient, mockHTTPClient := GetTestServiceClient()
+			cfg := GetTestServiceClientCentralConfiguration(svcClient)
+			cfg.Environment = "mockenv"
+			cfg.PlatformURL = "http://foo.bar:4080"
+
+			// There should be one request for each sub resource of the ResourceInstance
+			mockHTTPClient.SetResponses(tt.apiResponses)
+
+			res := apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					Name:             tt.name,
+					GroupVersionKind: tt.gvk,
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							defs.AttrSpecHash: tt.oldHash,
+						},
+					},
+					Tags: []string{"existing"},
+				},
+				Spec: map[string]interface{}{},
+			}
+
+			// setup the cachedResources
+			switch tt.gvk.Kind {
+			case mv1.AccessRequestDefinitionGVK().Kind:
+				svcClient.caches.AddAccessRequestDefinition(&res)
+			case mv1.CredentialRequestDefinitionGVK().Kind:
+				svcClient.caches.AddCredentialRequestDefinition(&res)
+			}
+
+			newRes := res
+			newRes.Tags = []string{}
+			newRes.SubResources = map[string]interface{}{definitions.XAgentDetails: map[string]interface{}{defs.AttrSpecHash: tt.newHash}}
+
+			ri, err := svcClient.updateSpecORCreateResourceInstance(&newRes)
+			if tt.expectErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tt.expectedTagVal, ri.Tags[0])
+			}
+
+		})
+	}
 }

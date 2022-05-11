@@ -796,12 +796,11 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	switch data.Kind {
 	case mv1a.AccessRequestDefinitionGVK().Kind:
 		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
-	// case v1.CredentailRequestDefinition:
-	default:
+	case mv1a.CredentialRequestDefinitionGVK().Kind:
 		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
 	}
 
-	if err == nil {
+	if err == nil && existingRI != nil {
 		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
