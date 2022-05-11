@@ -11,8 +11,8 @@ import (
 func createSpecParser(specFile, specType string) (specResourceParser, error) {
 	specFileDescriptor, _ := os.Open(specFile)
 	specData, _ := ioutil.ReadAll(specFileDescriptor)
-	specParser := newSpecResourceParser(specData, specType)
-	err := specParser.parse()
+	specParser := NewSpecResourceParser(specData, specType)
+	err := specParser.Parse()
 	return specParser, err
 }
 
@@ -20,7 +20,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err := createSpecParser("./testdata/petstore-openapi3.json", "")
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
 	_, ok := specProcessor.(*oas3SpecProcessor)
@@ -29,7 +29,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// YAML OAS2 specification
 	specParser, err = createSpecParser("./testdata/petstore-openapi2.yaml", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
 	_, ok = specProcessor.(*oas2SpecProcessor)
@@ -38,7 +38,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// JSON OAS2 specification
 	specParser, err = createSpecParser("./testdata/petstore-swagger2.json", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
 	_, ok = specProcessor.(*oas2SpecProcessor)
@@ -47,7 +47,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// WSDL specification
 	specParser, err = createSpecParser("./testdata/weather.xml", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Wsdl, specProcessor.getResourceType())
 	_, ok = specProcessor.(*wsdlProcessor)
@@ -56,7 +56,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// Protobuf specification
 	specParser, err = createSpecParser("./testdata/petstore.proto", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Protobuf, specProcessor.getResourceType())
 	_, ok = specProcessor.(*protobufProcessor)
@@ -65,7 +65,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// AsyncAPI specification
 	specParser, err = createSpecParser("./testdata/asyncapi-sample.yaml", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, AsyncAPI, specProcessor.getResourceType())
 	_, ok = specProcessor.(*asyncAPIProcessor)
@@ -74,7 +74,7 @@ func TestSpecDiscovery(t *testing.T) {
 	// Unstructured specification
 	specParser, err = createSpecParser("./testdata/multiplication.thrift", "")
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Unstructured, specProcessor.getResourceType())
 	_, ok = specProcessor.(*unstructuredProcessor)
@@ -89,7 +89,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err = createSpecParser("./testdata/petstore-openapi3.json", Oas3)
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas3, specProcessor.getResourceType())
 	_, ok := specProcessor.(*oas3SpecProcessor)
@@ -111,7 +111,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 
 	specParser, err = createSpecParser("./testdata/petstore-openapi3-template-urls.json", Oas3)
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	endPoints, err = specProcessor.getEndpoints()
 
@@ -189,7 +189,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err = createSpecParser("./testdata/petstore-swagger2.json", Oas2)
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Oas2, specProcessor.getResourceType())
 	_, ok := specProcessor.(*oas2SpecProcessor)
@@ -206,7 +206,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 
 	specParser, err = createSpecParser("./testdata/petstore-openapi2.yaml", Oas2)
 	assert.Nil(t, err)
-	specProcessor = specParser.getSpecProcessor()
+	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	endPoints, err = specProcessor.getEndpoints()
 
@@ -225,7 +225,7 @@ func TestSpecWsdlProcessors(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err = createSpecParser("./testdata/weather.xml", Wsdl)
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Wsdl, specProcessor.getResourceType())
 	_, ok := specProcessor.(*wsdlProcessor)
@@ -247,7 +247,7 @@ func TestSpecProtobufProcessors(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err = createSpecParser("./testdata/petstore.proto", Protobuf)
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, Protobuf, specProcessor.getResourceType())
 	_, ok := specProcessor.(*protobufProcessor)
@@ -266,7 +266,7 @@ func TestSpecAsyncAPIProcessors(t *testing.T) {
 	// JSON OAS3 specification
 	specParser, err = createSpecParser("./testdata/asyncapi-sample.yaml", AsyncAPI)
 	assert.Nil(t, err)
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
 	assert.Equal(t, AsyncAPI, specProcessor.getResourceType())
 	_, ok := specProcessor.(*asyncAPIProcessor)

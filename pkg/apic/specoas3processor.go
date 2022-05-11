@@ -145,7 +145,7 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 	return endPoints, nil
 }
 
-func (p *oas3SpecProcessor) parseAuthInfo() {
+func (p *oas3SpecProcessor) ParseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
 	scopes := make(map[string]string)
@@ -178,14 +178,14 @@ func (p *oas3SpecProcessor) parseAuthInfo() {
 	p.scopes = scopes
 }
 
-func (p *oas3SpecProcessor) getAuthPolicies() []string {
+func (p *oas3SpecProcessor) GetAuthPolicies() []string {
 	return p.authPolicies
 }
 
-func (p *oas3SpecProcessor) getOAuthScopes() map[string]string {
+func (p *oas3SpecProcessor) GetOAuthScopes() map[string]string {
 	return p.scopes
 }
 
-func (p *oas3SpecProcessor) getAPIKeyInfo() []APIKeyInfo {
+func (p *oas3SpecProcessor) GetAPIKeyInfo() []APIKeyInfo {
 	return p.apiKeyInfo
 }

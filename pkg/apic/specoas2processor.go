@@ -68,7 +68,7 @@ func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
 	return endPoints, nil
 }
 
-func (p *oas2SpecProcessor) parseAuthInfo() {
+func (p *oas2SpecProcessor) ParseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
 	scopes := make(map[string]string)
@@ -93,15 +93,15 @@ func (p *oas2SpecProcessor) parseAuthInfo() {
 	p.scopes = scopes
 }
 
-func (p *oas2SpecProcessor) getAuthPolicies() []string {
+func (p *oas2SpecProcessor) GetAuthPolicies() []string {
 	return p.authPolicies
 }
 
-func (p *oas2SpecProcessor) getOAuthScopes() map[string]string {
+func (p *oas2SpecProcessor) GetOAuthScopes() map[string]string {
 	return p.scopes
 }
 
-func (p *oas2SpecProcessor) getAPIKeyInfo() []APIKeyInfo {
+func (p *oas2SpecProcessor) GetAPIKeyInfo() []APIKeyInfo {
 	return p.apiKeyInfo
 }
 

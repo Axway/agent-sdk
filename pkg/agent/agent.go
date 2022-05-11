@@ -248,9 +248,11 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func startAPIServiceCache() error {
-	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+	attrMigration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+	marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg)
+
 	// register the update cache job
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, attrMigration, marketplaceMigration)
 	err := discoveryCache.Execute()
 	if err != nil {
 		return err
@@ -402,7 +404,7 @@ func cleanUp() {
 
 func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
 	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil)
+	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil, nil)
 	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
 	if err != nil {
 		log.Errorf("could not start the All APIs cache update job: %v", err.Error())

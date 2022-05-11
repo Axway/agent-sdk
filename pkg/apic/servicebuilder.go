@@ -275,12 +275,12 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		return b.serviceBody, b.err
 	}
 
-	specParser := newSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
-	err := specParser.parse()
+	specParser := NewSpecResourceParser(b.serviceBody.SpecDefinition, b.serviceBody.ResourceType)
+	err := specParser.Parse()
 	if err != nil {
 		return b.serviceBody, fmt.Errorf("failed to parse service specification for '%s': %s", b.serviceBody.APIName, err)
 	}
-	specProcessor := specParser.getSpecProcessor()
+	specProcessor := specParser.GetSpecProcessor()
 	b.serviceBody.ResourceType = specProcessor.getResourceType()
 
 	// Check if the type is unstructured to gather more info
@@ -294,11 +294,11 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 
 	var i interface{} = specProcessor
-	if val, ok := i.(oasSpecProcessor); ok {
-		val.parseAuthInfo()
+	if val, ok := i.(OasSpecProcessor); ok {
+		val.ParseAuthInfo()
 
 		// get the auth policy from the spec
-		b.serviceBody.authPolicies = val.getAuthPolicies()
+		b.serviceBody.authPolicies = val.GetAuthPolicies()
 
 		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
 		if len(b.serviceBody.authPolicies) > 0 {
@@ -306,10 +306,10 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 
 		// get the apikey info
-		b.serviceBody.apiKeyInfo = val.getAPIKeyInfo()
+		b.serviceBody.apiKeyInfo = val.GetAPIKeyInfo()
 
 		// get oauth scopes
-		b.serviceBody.scopes = val.getOAuthScopes()
+		b.serviceBody.scopes = val.GetOAuthScopes()
 
 		// only set ard name based on spec if not already set
 		if b.serviceBody.ardName == "" {

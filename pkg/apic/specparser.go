@@ -18,11 +18,11 @@ type specProcessor interface {
 	getResourceType() string
 }
 
-type oasSpecProcessor interface {
-	parseAuthInfo()
-	getAuthPolicies() []string
-	getAPIKeyInfo() []APIKeyInfo
-	getOAuthScopes() map[string]string
+type OasSpecProcessor interface {
+	ParseAuthInfo()
+	GetAPIKeyInfo() []APIKeyInfo
+	GetOAuthScopes() map[string]string
+	GetAuthPolicies() []string
 }
 
 type specResourceParser struct {
@@ -31,11 +31,11 @@ type specResourceParser struct {
 	specProcessor    specProcessor
 }
 
-func newSpecResourceParser(resourceSpec []byte, resourceSpecType string) specResourceParser {
+func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) specResourceParser {
 	return specResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
 }
 
-func (s *specResourceParser) parse() error {
+func (s *specResourceParser) Parse() error {
 	if s.resourceSpecType == "" {
 		s.discoverSpecTypeAndCreateProcessor()
 	} else {
@@ -78,7 +78,7 @@ func (s *specResourceParser) createProcessorWithResourceType() error {
 	return err
 }
 
-func (s *specResourceParser) getSpecProcessor() specProcessor {
+func (s *specResourceParser) GetSpecProcessor() specProcessor {
 	return s.specProcessor
 }
 
