@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"sort"
+
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -112,8 +114,9 @@ func (s *ServiceBody) createAccessRequestDefintion() error {
 		oauthScopes = append(oauthScopes, scope)
 	}
 	if len(oauthScopes) > 0 {
+		// sort the strings for consistent specs
+		sort.Strings(oauthScopes)
 		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefintion).
-			SetTitle(s.NameToPush).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(

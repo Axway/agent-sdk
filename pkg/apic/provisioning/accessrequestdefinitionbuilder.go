@@ -75,15 +75,15 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.title = a.name
 	}
 
-	if a.name == "" {
-		return nil, fmt.Errorf("must set a name for the access request defintion")
-	}
-
 	spec := v1alpha1.AccessRequestDefinitionSpec{
 		Schema: a.schema,
 	}
 
 	hashInt, _ := util.ComputeHash(spec)
+
+	if a.name == "" {
+		a.name = util.ConvertUnitToString(hashInt)
+	}
 
 	ard := v1alpha1.NewAccessRequestDefinition(a.name, "")
 	ard.Title = a.title

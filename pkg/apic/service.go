@@ -119,6 +119,28 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 	return nil
 }
 
+func (c *ServiceClient) checkReferencesToAccessRequestDefinition(ard string) int {
+	count := 0
+	for _, instanceKey := range c.caches.GetAPIServiceInstanceKeys() {
+		serviceInstance, err := c.caches.GetAPIServiceInstanceByID(instanceKey)
+		if err != nil {
+			// skip this key as it did not return a service instance
+			continue
+		}
+		// check the references
+		for _, ref := range serviceInstance.Metadata.References {
+			if ref.Kind == v1alpha1.AccessRequestDefinitionGVK().Kind {
+				if ref.Name == ard {
+					count++
+				}
+				// only 1 ard per service instance
+				continue
+			}
+		}
+	}
+	return count
+}
+
 // DeleteAPIServiceInstanceWithFinalizers deletes an api service instance in central, handling finalizers
 func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error {
 	url := c.cfg.GetInstancesURL() + "/" + ri.Name
@@ -128,9 +150,15 @@ func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceIn
 	// handle finalizers
 	for _, f := range finalizers {
 		if f.Name == AccessRequestDefinitionFinalizer {
-			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetEnvironmentURL()+"/accessrequestdefinitions/"+f.Description, nil)
+			// check if we should remove the accessrequestdefinition
+			if c.checkReferencesToAccessRequestDefinition(f.Description) > 1 {
+				continue // do not add the finalizer back
+			}
+			// 1 or fewer references to the ARD, clean it up
+			tempARD := v1alpha1.NewAccessRequestDefinition(f.Description, c.cfg.GetEnvironmentName())
+			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.createAPIServerURL(tempARD.GetSelfLink()), nil)
 			if err == nil {
-				continue
+				continue // do not add the finalizer back
 			}
 		}
 		ri.Finalizers = append(ri.Finalizers, f)

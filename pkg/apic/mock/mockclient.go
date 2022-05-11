@@ -54,6 +54,7 @@ type Client struct {
 	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error)
 	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
 	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
 	CreateSubResourceScopedMock                              func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	CreateSubResourceUnscopedMock                            func(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -349,6 +350,13 @@ func (m *Client) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDef
 func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if m.UpdateAPIV1ResourceInstanceMock != nil {
 		return m.UpdateAPIV1ResourceInstanceMock(url, ri)
+	}
+	return nil, nil
+}
+
+func (m *Client) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	if m.UpdateResourceInstanceMock != nil {
+		return m.UpdateResourceInstanceMock(ri)
 	}
 	return nil, nil
 }

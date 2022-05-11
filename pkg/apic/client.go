@@ -89,6 +89,7 @@ type Client interface {
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -114,6 +115,10 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 	serviceClient.initClient(cfg)
 
 	return serviceClient
+}
+
+func (c *ServiceClient) createAPIServerURL(link string) string {
+	return fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), link)
 }
 
 // getTeamFromCache -
@@ -690,7 +695,7 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 	for subName, sub := range subs {
 		wg.Add(1)
 
-		url := fmt.Sprintf("%s/apis%s/%s", c.cfg.GetURL(), rm.GetSelfLink(), subName)
+		url := c.createAPIServerURL(fmt.Sprintf("%s/%s", rm.GetSelfLink(), subName))
 
 		r := map[string]interface{}{
 			subName: sub,
@@ -727,8 +732,7 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 
 // GetResource gets a single resource
 func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodGet, url, nil, nil)
+	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(url), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -760,8 +764,7 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, fin
 
 // UpdateResource updates a resource
 func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+	response, err := c.ExecuteAPI(http.MethodPut, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -772,8 +775,7 @@ func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceI
 
 // CreateResource deletes a resource
 func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodPost, url, nil, bts)
+	response, err := c.ExecuteAPI(http.MethodPost, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -785,7 +787,7 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 // updateORCreateResourceInstance
 func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// default to post
-	url := fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetKindLink())
+	url := c.createAPIServerURL(data.GetKindLink())
 	method := coreapi.POST
 
 	// check if the KIND and ID combo have an item in the cache
@@ -800,7 +802,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	}
 
 	if err == nil {
-		url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
+		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
 		// do not perform any actions if hash is the same
@@ -881,12 +883,21 @@ func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequest
 
 // UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
 func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	ri.Metadata.SelfLink = url
+	return c.UpdateResourceInstance(ri)
+}
+
+// UpdateResourceInstance - updates a ResourceInstance with instance using it's self link
+func (c *ServiceClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.GetSelfLink() == "" {
+		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
+	}
 	ri.Metadata.ResourceVersion = ""
 	bts, err := json.Marshal(ri)
 	if err != nil {
 		return nil, err
 	}
-	bts, err = c.ExecuteAPI(coreapi.PUT, url, nil, bts)
+	bts, err = c.ExecuteAPI(coreapi.PUT, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -904,6 +915,6 @@ func (c *ServiceClient) DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	if err != nil {
 		return err
 	}
-	_, err = c.ExecuteAPI(coreapi.DELETE, fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), ri.GetSelfLink()), nil, bts)
+	_, err = c.ExecuteAPI(coreapi.DELETE, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
 	return err
 }
