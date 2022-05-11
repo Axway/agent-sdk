@@ -8,7 +8,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/google/uuid"
 )
 
 type manager struct {
@@ -40,9 +39,10 @@ func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
 }
 
 // RegisterWatch registers a watch topic for polling events and publishing events on a channel
-func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error) {
-	subscriptionID, _ := uuid.NewUUID()
-	subID := subscriptionID.String()
+func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) error {
+	if err := m.harvester.EventCatchUp(topic, eventChan); err != nil {
+		return err
+	}
 
 	go func() {
 		err := m.sync(topic, eventChan)
@@ -50,7 +50,7 @@ func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errCh
 		errChan <- err
 	}()
 
-	return subID, nil
+	return nil
 }
 
 func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
@@ -60,11 +60,10 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 			return nil
 		case <-m.timer.C:
 			m.logger.Trace("retrieving harvester events")
-			seqID, err := m.harvester.ReceiveSyncEvents(topic, m.sequence.GetSequence(), eventChan)
+			_, err := m.harvester.ReceiveSyncEvents(topic, m.sequence.GetSequence(), eventChan)
 			if err != nil {
 				return err
 			}
-			m.sequence.SetSequence(seqID)
 			m.timer.Reset(m.interval)
 		}
 	}

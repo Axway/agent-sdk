@@ -25,10 +25,8 @@ func TestPollerRegisterWatch(t *testing.T) {
 		eventCh: eventCh,
 	}
 
-	_, err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
+	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 	assert.Nil(t, err)
-
-	<-eventCh
 
 	assert.Equal(t, int64(234), seq.GetSequence())
 }
@@ -46,7 +44,7 @@ func TestPollerRegisterWatchError(t *testing.T) {
 		err:   fmt.Errorf("harvester error"),
 	}
 
-	_, err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
+	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 	assert.Nil(t, err)
 
 	err = <-errCh

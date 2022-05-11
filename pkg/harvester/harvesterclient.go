@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -48,15 +49,19 @@ type Client struct {
 	Url    string
 }
 
-func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, sq events.SequenceProvider) *Config {
+// NewConfig creates a config for harvester connections
+func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.SequenceProvider) *Config {
+	parsed, _ := url.Parse(cfg.GetURL())
+	port := util.ParsePort(parsed)
+
 	return &Config{
 		ClientTimeout:    cfg.GetClientTimeout(),
-		Host:             cfg.GetURL(),
+		Host:             parsed.Host,
 		PageSize:         100,
-		Port:             443,
-		Protocol:         "https",
+		Port:             uint32(port),
+		Protocol:         parsed.Scheme,
 		ProxyURL:         cfg.GetProxyURL(),
-		SequenceProvider: sq,
+		SequenceProvider: seq,
 		TenantID:         cfg.GetTenantID(),
 		TlsCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
 		TokenGetter:      getToken.GetToken,
@@ -97,12 +102,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 	page := 1
 
 	for morePages {
-		pageableQueryParams := map[string]string{
-			"page":     strconv.Itoa(page),
-			"pageSize": strconv.Itoa(h.Cfg.PageSize),
-			"query":    fmt.Sprintf("sequenceID>%d", sequenceID),
-			"sort":     "sequenceID,ASC",
-		}
+		pageableQueryParams := h.buildParams(sequenceID, page, h.Cfg.PageSize)
 
 		req := api.Request{
 			Method:      http.MethodGet,
@@ -141,6 +141,25 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 	}
 
 	return lastID, err
+}
+
+func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]string {
+	if sequenceID > 0 {
+		return map[string]string{
+			"page":     strconv.Itoa(page),
+			"pageSize": strconv.Itoa(pageSize),
+			"query":    fmt.Sprintf("sequenceID>%d", sequenceID),
+			"sort":     "sequenceID,ASC",
+		}
+	}
+
+	// if the sequence id is 0, then there are no events to catch up on,
+	// so make a request to get the latest event so that we can save the sequence id to the cache.
+
+	return map[string]string{
+		"pageSize": strconv.Itoa(1),
+		"sort":     "sequenceID,DESC",
+	}
 }
 
 // EventCatchUp syncs all events

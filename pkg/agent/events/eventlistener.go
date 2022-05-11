@@ -17,6 +17,7 @@ type Listener interface {
 	Stop()
 }
 
+// APIClient client interface for handling resources
 type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -27,12 +28,13 @@ type APIClient interface {
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
 	cancel          context.CancelFunc
-	ctx             context.Context
 	client          APIClient
+	ctx             context.Context
+	errCh           chan error
 	handlers        []handler.Handler
-	source          chan *proto.Event
-	sequenceManager SequenceProvider
 	logger          log.FieldLogger
+	sequenceManager SequenceProvider
+	source          chan *proto.Event
 }
 
 // NewListenerFunc type for creating a new listener
@@ -51,12 +53,13 @@ func NewEventListener(
 
 	return &EventListener{
 		cancel:          cancel,
-		ctx:             ctx,
 		client:          client,
+		ctx:             ctx,
+		errCh:           make(chan error),
 		handlers:        cbs,
-		source:          source,
-		sequenceManager: sequenceManager,
 		logger:          logger,
+		sequenceManager: sequenceManager,
+		source:          source,
 	}
 }
 
@@ -69,52 +72,38 @@ func (em *EventListener) Stop() {
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() chan error {
-	errCh := make(chan error)
-	go func() {
-		for {
-			done, err := em.start()
-			if done && err == nil {
-				errCh <- nil
-				break
-			}
-
-			if err != nil {
-				errCh <- err
-				break
-			}
-		}
-	}()
-
-	return errCh
+	go em.start()
+	return em.errCh
 }
 
-func (em *EventListener) start() (done bool, err error) {
-	select {
-	case event, ok := <-em.source:
-		if !ok {
-			done = true
-			err = fmt.Errorf("stream event source has been closed")
-			break
-		}
+func (em *EventListener) start() {
+	for {
+		select {
+		case event, ok := <-em.source:
+			if !ok {
+				em.errCh <- fmt.Errorf("harvester event source has been closed")
+				em.Stop()
+				return
+			}
 
-		err := em.handleEvent(event)
-		if err != nil {
-			em.logger.WithError(err).Error("stream event listener error")
+			go func(evt *proto.Event) {
+				err := em.handleEvent(evt)
+				if err != nil {
+					em.logger.WithError(err).Error("harvester event listener error")
+				}
+			}(event)
+
+		case <-em.ctx.Done():
+			em.logger.Trace("harvester event listener has been gracefully stopped")
+			em.errCh <- nil
 		}
-	case <-em.ctx.Done():
-		em.logger.Trace("stream event listener has been gracefully stopped")
-		done = true
-		err = nil
-		break
 	}
-
-	return done, err
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
 	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
-	em.logger.WithField("sequence", event.Metadata.SequenceID).Trace("processing received watch event")
+	em.logger.WithField("sequence", event.Metadata.SequenceID).Trace("processing watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
@@ -135,9 +124,10 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
 func (em *EventListener) handleResource(
-	ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance,
+	ctx context.Context,
+	eventMetadata *proto.EventMeta,
+	resource *apiv1.ResourceInstance,
 ) {
-
 	for _, h := range em.handlers {
 		err := h.Handle(ctx, eventMetadata, resource)
 		if err != nil {

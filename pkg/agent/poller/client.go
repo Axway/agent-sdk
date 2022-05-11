@@ -14,15 +14,20 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-type pollClient struct {
-	apiClient     events.APIClient
-	handlers      []handler.Handler
-	listener      events.Listener
-	poller        *manager
-	newListener   events.NewListenerFunc
-	seq           events.SequenceProvider
-	topicSelfLink string
+// PollClient is a client for polling harvester
+type PollClient struct {
+	apiClient          events.APIClient
+	handlers           []handler.Handler
+	listener           events.Listener
+	newListener        events.NewListenerFunc
+	onStreamConnection OnStreamConnection
+	poller             *manager
+	seq                events.SequenceProvider
+	topicSelfLink      string
 }
+
+// OnStreamConnection func for updating the PollClient after connecting to central
+type OnStreamConnection func(*PollClient)
 
 // NewPollClient creates a polling client
 func NewPollClient(
@@ -30,8 +35,9 @@ func NewPollClient(
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
+	onStreamConnection OnStreamConnection,
 	handlers ...handler.Handler,
-) (*pollClient, error) {
+) (*PollClient, error) {
 	wt, err := events.GetWatchTopic(cfg, apiClient)
 	if err != nil {
 		return nil, err
@@ -41,32 +47,39 @@ func NewPollClient(
 	hcfg := harvester.NewConfig(cfg, getToken, seq)
 	poller := newPollManager(hcfg, cfg.GetPollInterval())
 
-	pc := &pollClient{
-		poller:        poller,
-		handlers:      handlers,
-		listener:      nil,
-		newListener:   events.NewEventListener,
-		topicSelfLink: wt.GetSelfLink(),
+	pc := &PollClient{
+		apiClient:          apiClient,
+		handlers:           handlers,
+		listener:           nil,
+		newListener:        events.NewEventListener,
+		onStreamConnection: onStreamConnection,
+		poller:             poller,
+		seq:                hcfg.SequenceProvider,
+		topicSelfLink:      wt.GetSelfLink(),
 	}
 
 	return pc, nil
 }
 
 // Start the polling client
-func (c *pollClient) Start() error {
+func (p *PollClient) Start() error {
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
-	c.listener = c.newListener(
+	p.listener = p.newListener(
 		eventCh,
-		c.apiClient,
-		c.seq,
-		c.handlers...,
+		p.apiClient,
+		p.seq,
+		p.handlers...,
 	)
 
-	listenCh := c.listener.Listen()
+	listenCh := p.listener.Listen()
 
-	_, err := c.poller.RegisterWatch(c.topicSelfLink, eventCh, eventErrorCh)
+	err := p.poller.RegisterWatch(p.topicSelfLink, eventCh, eventErrorCh)
 	if err != nil {
 		return err
+	}
+
+	if p.onStreamConnection != nil {
+		p.onStreamConnection(p)
 	}
 
 	select {
@@ -78,17 +91,17 @@ func (c *pollClient) Start() error {
 }
 
 // Stop stops the streamer
-func (c *pollClient) Stop() {
-	c.poller.Stop()
-	c.listener.Stop()
+func (p *PollClient) Stop() {
+	p.poller.Stop()
+	p.listener.Stop()
 }
 
 // Status returns an error if the poller is not running
-func (c *pollClient) Status() error {
-	if c.poller == nil || c.listener == nil {
+func (p *PollClient) Status() error {
+	if p.poller == nil || p.listener == nil {
 		return fmt.Errorf("harvester polling client is not ready")
 	}
-	if ok := c.poller.Status(); !ok {
+	if ok := p.poller.Status(); !ok {
 		return errors.ErrHarvesterConnection
 	}
 
@@ -96,8 +109,8 @@ func (c *pollClient) Status() error {
 }
 
 // Healthcheck returns a healthcheck
-func (c *pollClient) Healthcheck(_ string) *hc.Status {
-	err := c.Status()
+func (p *PollClient) Healthcheck(_ string) *hc.Status {
+	err := p.Status()
 	if err != nil {
 		return &hc.Status{
 			Result:  hc.FAIL,

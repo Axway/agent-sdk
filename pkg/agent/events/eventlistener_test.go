@@ -61,11 +61,7 @@ func TestEventListener_start(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			listener := NewEventListener(tc.events, tc.client, sequenceManager, tc.handler)
 
-			errCh := make(chan error)
-			go func() {
-				_, err := listener.start()
-				errCh <- err
-			}()
+			go listener.start()
 
 			if tc.hasError == false {
 				tc.events <- &proto.Event{
@@ -79,11 +75,12 @@ func TestEventListener_start(t *testing.T) {
 						SequenceID: 1,
 					},
 				}
+				listener.Stop()
 			} else {
 				close(tc.events)
 			}
 
-			err := <-errCh
+			err := <-listener.errCh
 			if tc.hasError == true {
 				assert.NotNil(t, err)
 			} else {

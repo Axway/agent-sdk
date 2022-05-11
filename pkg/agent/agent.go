@@ -257,33 +257,12 @@ func startAPIServiceCache() error {
 		return err
 	}
 
+	if !agent.cacheManager.HasLoadedPersistedCache() {
+		// trigger early saving for the initialized cache, following save will be done by interval job
+		agent.cacheManager.SaveCache()
+	}
+
 	return startCentralEventProcessor(agent)
-
-	// if !agent.cfg.IsUsingGRPC() {
-	// 	// health check for central in gRPC mode is registered by streamer
-	// 	hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.HealthCheck)
-	//
-	// 	id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
-	// 	}
-	// 	// Start the full update after the first interval
-	// 	go startDiscoveryCache(agent.instanceCacheLock)
-	// 	log.Tracef("registered API cache update job: %s", id)
-	// } else {
-	// 	// Load cache from API initially. Following updates to cache will be done using watch events
-	// 	if !agent.cacheManager.HasLoadedPersistedCache() {
-	// 		// trigger early saving for the initialized cache, following save will be done by interval job
-	// 		agent.cacheManager.SaveCache()
-	// 	}
-	//
-	// 	err := startStreamMode(agent)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// return nil
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -452,6 +431,9 @@ func startPollMode(agent agentData) error {
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
+		func(p *poller.PollClient) {
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
+		},
 		handlers...,
 	)
 

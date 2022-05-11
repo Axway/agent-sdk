@@ -28,5 +28,8 @@ func (s *agentSequenceManager) SetSequence(sequenceID int64) {
 
 // NewSequenceProvider creates a new SequenceProvider
 func NewSequenceProvider(cacheManager agentcache.Manager, watchTopicName string) SequenceProvider {
-	return &agentSequenceManager{cacheManager: cacheManager, watchTopicName: watchTopicName}
+	return &agentSequenceManager{
+		cacheManager:   cacheManager,
+		watchTopicName: watchTopicName,
+	}
 }
