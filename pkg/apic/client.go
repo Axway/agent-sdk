@@ -97,8 +97,7 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition) (*mv1a.CredentialRequestDefinition, error)
-	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error)
+	CreateOrUpdateResource(apiv1.Interface) (*apiv1.ResourceInstance, error)
 }
 
 // New creates a new Client
@@ -846,38 +845,16 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	return newRI, err
 }
 
-// RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition) (*mv1a.CredentialRequestDefinition, error) {
-	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
+// CreateOrUpdateResource deletes a resource
+func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	data.SetScopeName(c.cfg.GetEnvironmentName())
 	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
 	ri, err = c.updateSpecORCreateResourceInstance(ri)
-	if err != nil {
-		return nil, err
-	}
-
-	err = data.FromInstance(ri)
-	return data, err
-}
-
-// RegisterAccessRequestDefinition - Adds or updates a access request definition
-func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
-	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
-	ri, err := data.AsInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	ri, err = c.updateSpecORCreateResourceInstance(ri)
-	if err != nil {
-		return nil, err
-	}
-
-	err = data.FromInstance(ri)
-	return data, err
+	return ri, err
 }
 
 // UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource

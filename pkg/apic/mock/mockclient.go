@@ -51,8 +51,6 @@ type Client struct {
 	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	RegisterCredentialRequestDefinitionMock                  func(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error)
-	RegisterAccessRequestDefinitionMock                      func(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
 	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
@@ -62,6 +60,7 @@ type Client struct {
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizerMock                              func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
+	CreateOrUpdateResourceMock                               func(v1.Interface) (*v1.ResourceInstance, error)
 }
 
 func (m *Client) GetEnvironment() (*v1alpha1.Environment, error) {
@@ -333,20 +332,6 @@ func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1al
 	return nil, nil
 }
 
-func (m *Client) RegisterCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	if m.RegisterCredentialRequestDefinitionMock != nil {
-		return m.RegisterCredentialRequestDefinitionMock(data)
-	}
-	return nil, nil
-}
-
-func (m *Client) RegisterAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	if m.RegisterAccessRequestDefinitionMock != nil {
-		return m.RegisterAccessRequestDefinitionMock(data)
-	}
-	return nil, nil
-}
-
 func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if m.UpdateAPIV1ResourceInstanceMock != nil {
 		return m.UpdateAPIV1ResourceInstanceMock(url, ri)
@@ -406,6 +391,13 @@ func (m *Client) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, e
 func (m *Client) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error) {
 	if m.UpdateResourceFinalizerMock != nil {
 		return m.UpdateResourceFinalizerMock(res, finalizer, description, addAction)
+	}
+	return nil, nil
+}
+
+func (m *Client) CreateOrUpdateResource(iface v1.Interface) (*v1.ResourceInstance, error) {
+	if m.CreateOrUpdateResourceMock != nil {
+		return m.CreateOrUpdateResourceMock(iface)
 	}
 	return nil, nil
 }

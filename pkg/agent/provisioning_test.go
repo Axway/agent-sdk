@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -19,8 +20,9 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{MarketplaceProvisioning: true})
 
 	agent.apicClient = &mock.Client{
-		RegisterCredentialRequestDefinitionMock: func(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-			return data, nil
+		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+			ri, _ := data.AsInstance()
+			return ri, nil
 		},
 	}
 

@@ -2,18 +2,28 @@ package agent
 
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
 // credential request definitions
-
-// createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
+// createOrUpdateDefinition -
+func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	return agent.apicClient.RegisterCredentialRequestDefinition(data)
+	return agent.apicClient.CreateOrUpdateResource(data)
+}
+
+// createOrUpdateCredentialRequestDefinition -
+func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
+	}
+	err = data.FromInstance(ri)
+	return data, err
 }
 
 type crdBuilderOptions struct {
@@ -134,10 +144,12 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return nil, nil
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
 	}
-	return agent.apicClient.RegisterAccessRequestDefinition(data)
+	err = data.FromInstance(ri)
+	return data, err
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
