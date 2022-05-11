@@ -18,7 +18,7 @@ type MarketplaceMigrator interface {
 	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 }
 
-// NewAttributeMigration creates a new MarketplaceMigration
+// NewAttributeMigration - creates a new MarketplaceMigration
 func NewMarketplaceMigration(client client, cfg config.CentralConfig) *MarketplaceMigration {
 	return &MarketplaceMigration{
 		client: client,
@@ -32,6 +32,7 @@ type MarketplaceMigration struct {
 	cfg    config.CentralConfig
 }
 
+// Migrate -
 func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
 		return ri, fmt.Errorf("expected resource instance kind to be api service")

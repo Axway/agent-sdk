@@ -18,6 +18,7 @@ type specProcessor interface {
 	getResourceType() string
 }
 
+// OasSpecProcessor -
 type OasSpecProcessor interface {
 	ParseAuthInfo()
 	GetAPIKeyInfo() []APIKeyInfo
@@ -25,12 +26,14 @@ type OasSpecProcessor interface {
 	GetAuthPolicies() []string
 }
 
+// specResourceParser -
 type specResourceParser struct {
 	resourceSpecType string
 	resourceSpec     []byte
 	specProcessor    specProcessor
 }
 
+// NewSpecResourceParser -
 func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) specResourceParser {
 	return specResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
 }
