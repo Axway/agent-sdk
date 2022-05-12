@@ -17,7 +17,6 @@ type Listener interface {
 	Stop()
 }
 
-// APIClient client interface for handling resources
 type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -30,7 +29,6 @@ type EventListener struct {
 	cancel          context.CancelFunc
 	client          APIClient
 	ctx             context.Context
-	errCh           chan error
 	handlers        []handler.Handler
 	logger          log.FieldLogger
 	sequenceManager SequenceProvider
@@ -55,7 +53,6 @@ func NewEventListener(
 		cancel:          cancel,
 		client:          client,
 		ctx:             ctx,
-		errCh:           make(chan error),
 		handlers:        cbs,
 		logger:          logger,
 		sequenceManager: sequenceManager,
@@ -72,32 +69,46 @@ func (em *EventListener) Stop() {
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() chan error {
-	go em.start()
-	return em.errCh
-}
-
-func (em *EventListener) start() {
-	for {
-		select {
-		case event, ok := <-em.source:
-			if !ok {
-				em.errCh <- fmt.Errorf("harvester event source has been closed")
-				em.Stop()
-				return
+	errCh := make(chan error)
+	go func() {
+		for {
+			done, err := em.start()
+			if done && err == nil {
+				errCh <- nil
+				break
 			}
 
-			go func(evt *proto.Event) {
-				err := em.handleEvent(evt)
-				if err != nil {
-					em.logger.WithError(err).Error("harvester event listener error")
-				}
-			}(event)
-
-		case <-em.ctx.Done():
-			em.logger.Trace("harvester event listener has been gracefully stopped")
-			em.errCh <- nil
+			if err != nil {
+				errCh <- err
+				break
+			}
 		}
+	}()
+
+	return errCh
+}
+
+func (em *EventListener) start() (done bool, err error) {
+	select {
+	case event, ok := <-em.source:
+		if !ok {
+			done = true
+			err = fmt.Errorf("stream event source has been closed")
+			break
+		}
+
+		err := em.handleEvent(event)
+		if err != nil {
+			em.logger.WithError(err).Error("stream event listener error")
+		}
+	case <-em.ctx.Done():
+		em.logger.Trace("stream event listener has been gracefully stopped")
+		done = true
+		err = nil
+		break
 	}
+
+	return done, err
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
