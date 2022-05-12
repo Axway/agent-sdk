@@ -164,7 +164,12 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				_, ardExists := ri.Spec["accessRequestDefinitions"]
 				if !ardExists {
 					fmt.Println("accessRequestDefinitions doesn't exist")
-					m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+					ardRIName, err := m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+					if err != nil {
+						errCh <- err
+						return
+					}
+					fmt.Printf("adding the following access request definition %s", ardRIName)
 				}
 
 				// Check if CRD exists
@@ -213,14 +218,12 @@ func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies 
 			credentialRequestPolicies = append(credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
 		}
 	}
-	fmt.Printf("added credentialRequestDefinitions %s", credentialRequestPolicies)
 
 	return credentialRequestPolicies, nil
 
 }
 
-func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) error {
-	// ardName := "api-key"
+func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) (string, error) {
 
 	scopes := make([]string, 0)
 	for scope := range oauthScopes {
@@ -243,14 +246,22 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 									IsString().
 									SetEnumValues(scopes)))).Register()
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	return nil
+
+	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(m.accessRequestDefinition.Name)
+	return ardRI.Name, nil
 }
 
 func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	m.accessRequestDefinition = accessRequestDefinition
+
+	_, err := agent.apicClient.RegisterAccessRequestDefinition(m.accessRequestDefinition, false)
+	if err != nil {
+		return nil, err
+	}
+
 	return m.accessRequestDefinition, nil
 }
 
