@@ -673,7 +673,7 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 	return nil
 }
 
-// CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
+// CreateSubResource creates a sub resource on the provided resource.
 func (c *ServiceClient) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error {
 	_, err := c.createSubResource(rm, subs)
 	return err
