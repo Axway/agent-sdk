@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -22,7 +21,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -164,7 +162,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			startAPIServiceCache()
+			syncCache()
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -248,7 +246,7 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache() error {
+func syncCache() error {
 	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 	// register the update cache job
 	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
@@ -380,17 +378,6 @@ func setupSignalProcessor() {
 // cleanUp - AgentCleanup
 func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
-}
-
-func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
-	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil)
-	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-		return
-	}
-	log.Tracef("registered API cache update all job: %s", id)
 }
 
 func startCentralEventProcessor(agent agentData) error {

@@ -59,8 +59,11 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 		case <-m.ctx.Done():
 			return nil
 		case <-m.timer.C:
-			m.logger.Trace("retrieving harvester events")
-			_, err := m.harvester.ReceiveSyncEvents(topic, m.sequence.GetSequence(), eventChan)
+			seq := m.sequence.GetSequence()
+			m.logger.
+				WithField("sequenceID", seq).
+				Debug("retrieving harvester events")
+			_, err := m.harvester.ReceiveSyncEvents(topic, seq, eventChan)
 			if err != nil {
 				return err
 			}
