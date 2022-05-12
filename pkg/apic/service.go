@@ -123,7 +123,7 @@ func (c *ServiceClient) checkReferencesToAccessRequestDefinition(ard string) int
 	count := 0
 	for _, instanceKey := range c.caches.GetAPIServiceInstanceKeys() {
 		serviceInstance, err := c.caches.GetAPIServiceInstanceByID(instanceKey)
-		if err != nil {
+		if err != nil || serviceInstance == nil {
 			// skip this key as it did not return a service instance
 			continue
 		}
