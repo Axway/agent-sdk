@@ -3,7 +3,6 @@ package provisioning
 import (
 	"fmt"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -120,19 +119,11 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 		c.title = c.name
 	}
 
-	crd := &v1alpha1.CredentialRequestDefinition{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.CredentialRequestDefinitionGVK(),
-			Title:            c.title,
-			Name:             c.name,
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrSpecHash: fmt.Sprint(hashInt),
-				},
-			},
-		},
-		Spec: spec,
-	}
+	crd := v1alpha1.NewCredentialRequestDefinition(c.name, "")
+	crd.Title = c.title
+	crd.Spec = spec
+
+	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return c.registerFunc(crd)
 }

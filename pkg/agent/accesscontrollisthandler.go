@@ -44,7 +44,7 @@ func (j *aclUpdateJob) Status() error {
 
 func (j *aclUpdateJob) Execute() error {
 	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
-	newTeamIDs = sort.StringSlice(newTeamIDs)
+	sort.Strings(newTeamIDs)
 	if j.lastTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(j.lastTeamIDs, "") {
 		return nil
 	}

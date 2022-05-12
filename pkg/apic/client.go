@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
@@ -89,6 +89,7 @@ type Client interface {
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -96,8 +97,7 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error)
-	RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error)
+	CreateOrUpdateResource(apiv1.Interface) (*apiv1.ResourceInstance, error)
 }
 
 // New creates a new Client
@@ -114,6 +114,10 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 	serviceClient.initClient(cfg)
 
 	return serviceClient
+}
+
+func (c *ServiceClient) createAPIServerURL(link string) string {
+	return fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), link)
 }
 
 // getTeamFromCache -
@@ -672,58 +676,38 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
 func (c *ServiceClient) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	var execErr error
-	wg := &sync.WaitGroup{}
-	for subName, sub := range subs {
-		wg.Add(1)
-		url := fmt.Sprintf("%s/apis%s/%s", c.cfg.GetURL(), rm.GetSelfLink(), subName)
-
-		r := map[string]interface{}{
-			subName: sub,
-		}
-		bts, err := json.Marshal(r)
-		if err != nil {
-			return err
-		}
-
-		go func(wg *sync.WaitGroup, sn string) {
-			defer wg.Done()
-			_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
-			if err != nil {
-				if execErr == nil {
-					execErr = err
-				}
-				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
-			}
-		}(wg, subName)
-	}
-
-	wg.Wait()
-
-	return execErr
+	_, err := c.createSubResource(rm, subs)
+	return err
 }
 
 // CreateSubResourceScoped creates a sub resource on th provided scoped resource.
 func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
+	_, err := c.createSubResource(rm, subs)
+	return err
+}
+
+func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]interface{}) (*v1.ResourceInstance, error) {
 	var execErr error
+	var instanceBytes []byte
 	wg := &sync.WaitGroup{}
 
 	for subName, sub := range subs {
 		wg.Add(1)
 
-		url := fmt.Sprintf("%s/apis%s/%s", c.cfg.GetURL(), rm.GetSelfLink(), subName)
+		url := c.createAPIServerURL(fmt.Sprintf("%s/%s", rm.GetSelfLink(), subName))
 
 		r := map[string]interface{}{
 			subName: sub,
 		}
 		bts, err := json.Marshal(r)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		go func(sn string) {
 			defer wg.Done()
-			_, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+			var err error
+			instanceBytes, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
 				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
@@ -732,14 +716,22 @@ func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[str
 	}
 
 	wg.Wait()
+	if execErr != nil {
+		return nil, execErr
+	}
 
-	return execErr
+	ri := &v1.ResourceInstance{}
+	err := json.Unmarshal(instanceBytes, ri)
+	if err != nil {
+		return nil, err
+	}
+
+	return ri, nil
 }
 
 // GetResource gets a single resource
 func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodGet, url, nil, nil)
+	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(url), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -771,8 +763,7 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, fin
 
 // UpdateResource updates a resource
 func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodPut, url, nil, bts)
+	response, err := c.ExecuteAPI(http.MethodPut, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -783,8 +774,7 @@ func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceI
 
 // CreateResource deletes a resource
 func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
-	url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), url)
-	response, err := c.ExecuteAPI(http.MethodPost, url, nil, bts)
+	response, err := c.ExecuteAPI(http.MethodPost, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -794,32 +784,37 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 }
 
 // updateORCreateResourceInstance
-func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance, update bool) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// default to post
-	url := fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetKindLink())
+	url := c.createAPIServerURL(data.GetKindLink())
 	method := coreapi.POST
 
-	if update {
-		// get the existing RI and update it
-		url = fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), data.GetSelfLink())
+	// check if the KIND and ID combo have an item in the cache
+	var existingRI *apiv1.ResourceInstance
+	var err error
+	switch data.Kind {
+	case mv1a.AccessRequestDefinitionGVK().Kind:
+		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
+	case mv1a.CredentialRequestDefinitionGVK().Kind:
+		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
+	}
+
+	if err == nil && existingRI != nil {
+		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
-		response, err := c.ExecuteAPI(coreapi.GET, url, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		existingRI := &apiv1.ResourceInstance{}
-		err = json.Unmarshal(response, existingRI)
-		if err != nil {
-			return nil, err
-		}
-
-		if reflect.DeepEqual(existingRI.Spec, data.Spec) {
+		// do not perform any actions if hash is the same
+		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
+		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
+		if oldHash == newHash {
 			return existingRI, nil
 		}
 
-		// Update the spec from the data sent in
+		// Update the spec and agent details subresource, if they exist in incoming data
 		existingRI.Spec = data.Spec
+		existingRI.SubResources = data.SubResources
+
+		// set the data and subresources to be pushed
 		data = existingRI
 	}
 
@@ -835,52 +830,50 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 
 	newRI := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, newRI)
+	if err != nil {
+		return nil, err
+	}
+
+	if data := util.GetAgentDetails(data); data != nil {
+		// only send in the agent details here, that is all the agent needs to update for anything here
+		newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return newRI, err
 }
 
-// RegisterCredentialRequestDefinition - Adds or updates a credential request definition
-func (c *ServiceClient) RegisterCredentialRequestDefinition(data *mv1a.CredentialRequestDefinition, update bool) (*mv1a.CredentialRequestDefinition, error) {
-	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
+// CreateOrUpdateResource deletes a resource
+func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	data.SetScopeName(c.cfg.GetEnvironmentName())
 	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err
 	}
 
-	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
-	if err != nil {
-		return nil, err
-	}
-
-	err = data.FromInstance(ri)
-	return data, err
-}
-
-// RegisterAccessRequestDefinition - Adds or updates a access request definition
-func (c *ServiceClient) RegisterAccessRequestDefinition(data *mv1a.AccessRequestDefinition, update bool) (*mv1a.AccessRequestDefinition, error) {
-	data.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
-	ri, err := data.AsInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	ri, err = c.updateSpecORCreateResourceInstance(ri, update)
-	if err != nil {
-		return nil, err
-	}
-
-	err = data.FromInstance(ri)
-	return data, err
+	ri, err = c.updateSpecORCreateResourceInstance(ri)
+	return ri, err
 }
 
 // UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
 func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	ri.Metadata.SelfLink = url
+	return c.UpdateResourceInstance(ri)
+}
+
+// UpdateResourceInstance - updates a ResourceInstance with instance using it's self link
+func (c *ServiceClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.GetSelfLink() == "" {
+		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
+	}
 	ri.Metadata.ResourceVersion = ""
 	bts, err := json.Marshal(ri)
 	if err != nil {
 		return nil, err
 	}
-	bts, err = c.ExecuteAPI(coreapi.PUT, url, nil, bts)
+	bts, err = c.ExecuteAPI(coreapi.PUT, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -898,6 +891,6 @@ func (c *ServiceClient) DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	if err != nil {
 		return err
 	}
-	_, err = c.ExecuteAPI(coreapi.DELETE, fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), ri.GetSelfLink()), nil, bts)
+	_, err = c.ExecuteAPI(coreapi.DELETE, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
 	return err
 }
