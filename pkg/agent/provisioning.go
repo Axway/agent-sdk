@@ -2,30 +2,28 @@ package agent
 
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
 // credential request definitions
-
-// createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
+// createOrUpdateDefinition -
+func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	crdRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(data.Name)
-	if crdRI == nil {
-		return agent.apicClient.RegisterCredentialRequestDefinition(data, false)
-	}
-	if data.SubResources[definitions.AttrSpecHash] != crdRI.SubResources[definitions.AttrSpecHash] {
-		return agent.apicClient.RegisterCredentialRequestDefinition(data, true)
-	}
-	err := data.FromInstance(crdRI)
-	if err != nil {
+	return agent.apicClient.CreateOrUpdateResource(data)
+}
+
+// createOrUpdateCredentialRequestDefinition -
+func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
 		return nil, err
 	}
-	return data, nil
+	err = data.FromInstance(ri)
+	return data, err
 }
 
 type crdBuilderOptions struct {
@@ -146,21 +144,12 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return nil, nil
-	}
-	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(data.Name)
-	if ardRI == nil {
-		return agent.apicClient.RegisterAccessRequestDefinition(data, false)
-	}
-	if data.SubResources[definitions.AttrSpecHash] != ardRI.SubResources[definitions.AttrSpecHash] {
-		return agent.apicClient.RegisterAccessRequestDefinition(data, true)
-	}
-	err := data.FromInstance(ardRI)
-	if err != nil {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
 		return nil, err
 	}
-	return data, nil
+	err = data.FromInstance(ri)
+	return data, err
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
