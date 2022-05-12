@@ -124,7 +124,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
-	api.SetConfigAgent(centralCfg.GetEnvironmentName(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetSingleURL(), singleEntryFilter)
+	api.SetConfigAgent(centralCfg.GetEnvironmentName(), centralCfg.IsUsingGRPC(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetSingleURL(), singleEntryFilter)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
