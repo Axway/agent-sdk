@@ -41,7 +41,7 @@ type ServiceBuilder interface {
 	AddServiceEndpoint(protocol, host string, port int32, basePath string) ServiceBuilder
 	SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder
 	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
-	SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder
+	SetAccessRequestDefinitionName(accessRequestDefName string) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -340,8 +340,8 @@ func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDef
 	return b
 }
 
-// SetAccessRequestDefintionName -
-func (b *serviceBodyBuilder) SetAccessRequestDefintionName(accessRequestDefName string) ServiceBuilder {
+// SetAccessRequestDefinitionName -
+func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName string) ServiceBuilder {
 	b.serviceBody.ardName = accessRequestDefName
 	return b
 }

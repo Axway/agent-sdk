@@ -67,12 +67,12 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
 		logger.Tracef("processing resource in pending status")
 		cr := h.onPending(ctx, cr)
-		err := h.client.CreateSubResourceScoped(cr.ResourceMeta, cr.SubResources)
+		err := h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
 			logger.WithError(err).Errorf("error creating subresources")
 			return err
 		}
-		return h.client.CreateSubResourceScoped(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
+		return h.client.CreateSubResource(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
 	}
 
 	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
@@ -156,7 +156,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 		err := fmt.Errorf(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")
 		h.onError(ctx, cred, err)
-		h.client.CreateSubResourceScoped(cred.ResourceMeta, cred.SubResources)
+		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
 	}
 }
 

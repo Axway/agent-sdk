@@ -25,6 +25,7 @@ type propertyDefinition struct {
 	Title              string                        `json:"title"`
 	Description        string                        `json:"description"`
 	Enum               []string                      `json:"enum,omitempty"`
+	DefaultValue       interface{}                   `json:"default,omitempty"`
 	ReadOnly           bool                          `json:"readOnly,omitempty"`
 	Format             string                        `json:"format,omitempty"`
 	Properties         map[string]propertyDefinition `json:"properties,omitempty"`
@@ -69,7 +70,7 @@ type TypePropertyBuilder interface {
 	// IsArray - Set the property to be of type array
 	IsArray() ArrayPropertyBuilder
 	// IsObject - Set the property to be of type object
-	// IsObject() ObjectPropertyBuilder
+	IsObject() ObjectPropertyBuilder
 	PropertyBuilder
 }
 
@@ -85,6 +86,8 @@ type StringPropertyBuilder interface {
 	AddEnumValue(value string) StringPropertyBuilder
 	// IsEncrypted - Set that this field must be encrypted at rest
 	IsEncrypted() StringPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value string) StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -107,11 +110,11 @@ type IntegerPropertyBuilder interface {
 }
 
 // ObjectPropertyBuilder - specific methods related to the Object property builders
-// type ObjectPropertyBuilder interface {
-// 	// AddProperty - Add a property in the object property
-// 	AddProperty(property PropertyBuilder) ObjectPropertyBuilder
-// 	PropertyBuilder
-// }
+type ObjectPropertyBuilder interface {
+	// AddProperty - Add a property in the object property
+	AddProperty(property PropertyBuilder) ObjectPropertyBuilder
+	PropertyBuilder
+}
 
 // ArrayPropertyBuilder - specific methods related to the Array property builders
 type ArrayPropertyBuilder interface {
@@ -213,12 +216,12 @@ func (p *schemaProperty) IsArray() ArrayPropertyBuilder {
 }
 
 // IsObject - Set the property to be of type object
-// func (p *schemaProperty) IsObject() ObjectPropertyBuilder {
-// 	p.dataType = DataTypeObject
-// 	return &objectSchemaProperty{
-// 		schemaProperty: p,
-// 	}
-// }
+func (p *schemaProperty) IsObject() ObjectPropertyBuilder {
+	p.dataType = DataTypeObject
+	return &objectSchemaProperty{
+		schemaProperty: p,
+	}
+}
 
 // Build - create a string propertyDefinition for use in the subscription schema builder
 func (p *schemaProperty) Build() (*propertyDefinition, error) {
@@ -260,6 +263,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	defaultValue   string
 	StringPropertyBuilder
 }
 
@@ -308,6 +312,12 @@ func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder 
 	return p
 }
 
+// SetDefaultValue - Define the initial value for the property
+func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuilder {
+	p.defaultValue = value
+	return p
+}
+
 // IsEncrypted - Sets that this field needs to be encrypted at rest
 func (p *stringSchemaProperty) IsEncrypted() StringPropertyBuilder {
 	p.isEncrypted = true
@@ -332,6 +342,23 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
+
+	if len(p.defaultValue) > 0 {
+		if len(p.enums) > 0 {
+			// Check validity for defaultValue
+			isDefaultValueValid := false
+			for _, x := range p.enums {
+				if x == p.defaultValue {
+					isDefaultValueValid = true
+					break
+				}
+			}
+			if isDefaultValueValid == false {
+				return nil, fmt.Errorf("Default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
+			}
+		}
+		def.DefaultValue = p.defaultValue
+	}
 
 	// set if the property is encrypted at rest
 	def.IsEncrypted = p.isEncrypted
@@ -464,43 +491,43 @@ func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
   object property datatype builder
 */
 // objectSchemaProperty - adds specific info needed for an object schema property
-// type objectSchemaProperty struct {
-// 	schemaProperty *schemaProperty
-// 	properties     map[string]propertyDefinition
-// 	PropertyBuilder
-// }
+type objectSchemaProperty struct {
+	schemaProperty *schemaProperty
+	properties     map[string]propertyDefinition
+	PropertyBuilder
+}
 
-// // AddProperty - Add a property in the object property
-// func (p *objectSchemaProperty) AddProperty(property PropertyBuilder) ObjectPropertyBuilder {
-// 	def, err := property.Build()
-// 	if err == nil {
-// 		if p.properties == nil {
-// 			p.properties = make(map[string]propertyDefinition, 0)
-// 		}
-// 		p.properties[def.Name] = *def
-// 	} else {
-// 		p.schemaProperty.err = err
-// 	}
-// 	return p
-// }
+// AddProperty - Add a property in the object property
+func (p *objectSchemaProperty) AddProperty(property PropertyBuilder) ObjectPropertyBuilder {
+	def, err := property.Build()
+	if err == nil {
+		if p.properties == nil {
+			p.properties = make(map[string]propertyDefinition, 0)
+		}
+		p.properties[def.Name] = *def
+	} else {
+		p.schemaProperty.err = err
+	}
+	return p
+}
 
-// // Build - create the propertyDefinition for use in the subscription schema builder
-// func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
-// 	def, err = p.schemaProperty.Build()
-// 	if err != nil {
-// 		return
-// 	}
+// Build - create the propertyDefinition for use in the subscription schema builder
+func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
+	def, err = p.schemaProperty.Build()
+	if err != nil {
+		return
+	}
 
-// 	var requiredProperties []string
-// 	if p.properties != nil {
-// 		for _, property := range p.properties {
-// 			if property.Required {
-// 				requiredProperties = append(requiredProperties, property.Name)
-// 			}
-// 		}
-// 	}
+	var requiredProperties []string
+	if p.properties != nil {
+		for _, property := range p.properties {
+			if property.Required {
+				requiredProperties = append(requiredProperties, property.Name)
+			}
+		}
+	}
 
-// 	def.Properties = p.properties
-// 	def.RequiredProperties = requiredProperties
-// 	return def, err
-// }
+	def.Properties = p.properties
+	def.RequiredProperties = requiredProperties
+	return def, err
+}
