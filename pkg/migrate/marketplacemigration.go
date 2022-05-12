@@ -171,6 +171,11 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 						errCh <- err
 						return
 					}
+
+					if ardRIName == "" {
+						ardRIName = "api-key"
+					}
+
 					log.Debugf("adding the following access request definition %s", ardRIName)
 				}
 
