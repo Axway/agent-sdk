@@ -21,14 +21,12 @@ func TestPollerRegisterWatch(t *testing.T) {
 
 	eventCh, errCh := make(chan *proto.Event), make(chan error)
 	poller.harvester = &mockHarvester{
-		seqID:   234,
 		eventCh: eventCh,
 	}
 
 	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 	assert.Nil(t, err)
 
-	assert.Equal(t, int64(234), seq.GetSequence())
 }
 
 func TestPollerRegisterWatchError(t *testing.T) {
@@ -40,8 +38,7 @@ func TestPollerRegisterWatchError(t *testing.T) {
 
 	eventCh, errCh := make(chan *proto.Event), make(chan error)
 	poller.harvester = &mockHarvester{
-		seqID: 0,
-		err:   fmt.Errorf("harvester error"),
+		err: fmt.Errorf("harvester error"),
 	}
 
 	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)

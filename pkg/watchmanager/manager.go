@@ -79,7 +79,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			TenantID:         manager.cfg.TenantID,
 			TokenGetter:      manager.cfg.TokenGetter,
 			ProxyURL:         manager.options.proxyURL,
-			TlsCfg:           manager.options.tlsCfg,
+			TLSCfg:           manager.options.tlsCfg,
 			ClientTimeout:    manager.options.keepAlive.timeout,
 			SequenceProvider: seq,
 		}

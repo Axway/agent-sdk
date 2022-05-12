@@ -38,7 +38,7 @@ type Config struct {
 	ProxyURL         string
 	SequenceProvider events.SequenceProvider
 	TenantID         string
-	TlsCfg           *tls.Config
+	TLSCfg           *tls.Config
 	TokenGetter      func() (string, error)
 }
 
@@ -46,7 +46,7 @@ type Config struct {
 type Client struct {
 	Cfg    *Config
 	Client api.Client
-	Url    string
+	URL    string
 }
 
 // NewConfig creates a config for harvester connections
@@ -63,7 +63,7 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 		ProxyURL:         cfg.GetProxyURL(),
 		SequenceProvider: seq,
 		TenantID:         cfg.GetTenantID(),
-		TlsCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
+		TLSCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
 		TokenGetter:      getToken.GetToken,
 	}
 }
@@ -77,14 +77,14 @@ func NewClient(cfg *Config) *Client {
 		cfg.PageSize = defaultEventPageSize
 	}
 	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
-	tlsCfg.LoadFrom(cfg.TlsCfg)
+	tlsCfg.LoadFrom(cfg.TLSCfg)
 	clientTimeout := cfg.ClientTimeout
 	if clientTimeout == 0 {
 		clientTimeout = util.DefaultKeepAliveTimeout
 	}
 
 	return &Client{
-		Url:    cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(int(cfg.Port)) + "/events",
+		URL:    cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(int(cfg.Port)) + "/events",
 		Cfg:    cfg,
 		Client: api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout),
 	}
@@ -106,7 +106,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 
 		req := api.Request{
 			Method:      http.MethodGet,
-			URL:         h.Url + topicSelfLink,
+			URL:         h.URL + topicSelfLink,
 			Headers:     make(map[string]string),
 			QueryParams: pageableQueryParams,
 		}

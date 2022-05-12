@@ -120,6 +120,13 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 		acl, err = agent.apicClient.CreateAccessControlList(acl)
 	}
 
+	if err == nil {
+		aclInstance, err := acl.AsInstance()
+		if err == nil {
+			agent.cacheManager.SetAccessControlList(aclInstance)
+		}
+	}
+
 	return err
 }
 

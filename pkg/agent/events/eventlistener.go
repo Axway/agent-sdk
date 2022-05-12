@@ -17,6 +17,7 @@ type Listener interface {
 	Stop()
 }
 
+// APIClient -
 type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)

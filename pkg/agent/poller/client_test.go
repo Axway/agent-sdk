@@ -101,7 +101,6 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 }
 
 type mockHarvester struct {
-	seqID   int64
 	eventCh chan *proto.Event
 	err     error
 }
@@ -116,5 +115,5 @@ func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event)
 			Id: "1",
 		}
 	}
-	return m.seqID, m.err
+	return 0, m.err
 }
