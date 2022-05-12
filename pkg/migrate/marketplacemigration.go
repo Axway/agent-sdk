@@ -18,7 +18,7 @@ type MarketplaceMigrator interface {
 	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 }
 
-// NewAttributeMigration - creates a new MarketplaceMigration
+// NewMarketplaceMigration - creates a new MarketplaceMigration
 func NewMarketplaceMigration(client client, cfg config.CentralConfig) *MarketplaceMigration {
 	return &MarketplaceMigration{
 		client: client,
@@ -220,6 +220,7 @@ func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies 
 }
 
 func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) error {
+	// ardName := "api-key"
 
 	scopes := make([]string, 0)
 	for scope := range oauthScopes {
