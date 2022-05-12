@@ -28,8 +28,9 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig) *Marketpla
 
 // MarketplaceMigration - used for migrating attributes to subresource
 type MarketplaceMigration struct {
-	client client
-	cfg    config.CentralConfig
+	client                  client
+	cfg                     config.CentralConfig
+	accessRequestDefinition *mv1a.AccessRequestDefinition
 }
 
 // Migrate -
@@ -135,25 +136,54 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 		go func(ri *v1.ResourceInstance) {
 			defer wg.Done()
 
-			// Check if ARD exists
-			_, ardExists := ri.Spec["accessRequestDefinition"]
-			if !ardExists {
-				fmt.Println("accessRequestDefinition doesn't exist")
+			specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
+
+			specParser := apic.NewSpecResourceParser(specDefinition, specDefintionType)
+			err := specParser.Parse()
+			if err != nil {
+				errCh <- err
+				return
 			}
 
-			// Check if CRD exists
-			_, crdExists := ri.Spec["credentialRequestDefinitions"]
-			if !crdExists {
-				fmt.Println("credentialRequestDefinitions doesn't exist")
-				credentialRequestPolicies, _ := m.parseSpec(specDefinitionValue, specDefintionType) //TODO - return error causes an issue
-				fmt.Printf("adding credentialRequestDefinitions %s", credentialRequestPolicies)
-				// if err != nil {
-				// 	return err
-				// }
+			specProcessor := specParser.GetSpecProcessor()
+
+			var i interface{} = specProcessor
+			if val, ok := i.(apic.OasSpecProcessor); ok {
+				val.ParseAuthInfo()
+
+				// get the auth policy from the spec
+				authPolicies := val.GetAuthPolicies()
+
+				// get the apikey info
+				apiKeyInfo := val.GetAPIKeyInfo()
+
+				// get oauth scopes
+				oauthScopes := val.GetOAuthScopes()
+
+				// Check if ARD exists
+				_, ardExists := ri.Spec["accessRequestDefinitions"]
+				if !ardExists {
+					fmt.Println("accessRequestDefinitions doesn't exist")
+					m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+				}
+
+				// Check if CRD exists
+				_, crdExists := ri.Spec["credentialRequestDefinitions"]
+				if !crdExists {
+					fmt.Println("credentialRequestDefinitions doesn't exist")
+					credentialRequestPolicies, err := m.migrateCredentialRequestDefinitions(authPolicies, ri)
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					fmt.Printf("adding the following credential request policies %s", credentialRequestPolicies)
+				}
+
 			}
 
 			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-			err := m.updateRI(url, ri)
+			err = m.updateRI(url, ri)
 			errCh <- err
 		}(resource)
 	}
@@ -171,36 +201,56 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 
 }
 
-func (m *MarketplaceMigration) parseSpec(specDefinitionValue, specDefintionType string) ([]string, error) {
-
+func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies []string, ri *v1.ResourceInstance) ([]string, error) {
 	var credentialRequestPolicies []string
-	specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
 
-	specParser := apic.NewSpecResourceParser(specDefinition, specDefintionType)
-	err := specParser.Parse()
-	if err != nil {
-		return nil, err
-	}
-
-	specProcessor := specParser.GetSpecProcessor()
-
-	var i interface{} = specProcessor
-	if val, ok := i.(apic.OasSpecProcessor); ok {
-		val.ParseAuthInfo()
-
-		// get the auth policy from the spec
-		authPolicies := val.GetAuthPolicies()
-
-		for _, policy := range authPolicies {
-			if policy == apic.Apikey {
-				credentialRequestPolicies = append(credentialRequestPolicies, provisioning.APIKeyCRD)
-			}
-			if policy == apic.Oauth {
-				credentialRequestPolicies = append(credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
-			}
+	fmt.Println("credentialRequestDefinitions doesn't exist")
+	for _, policy := range authPolicies {
+		if policy == apic.Apikey {
+			credentialRequestPolicies = append(credentialRequestPolicies, provisioning.APIKeyCRD)
+		}
+		if policy == apic.Oauth {
+			credentialRequestPolicies = append(credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
 		}
 	}
+	fmt.Printf("added credentialRequestDefinitions %s", credentialRequestPolicies)
+
 	return credentialRequestPolicies, nil
+
+}
+
+func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) error {
+
+	scopes := make([]string, 0)
+	for scope := range oauthScopes {
+		scopes = append(scopes, scope)
+	}
+
+	if len(scopes) > 0 {
+		_, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
+			SetTitle(ri.Name).
+			SetSchema(
+				provisioning.NewSchemaBuilder().
+					AddProperty(
+						provisioning.NewSchemaPropertyBuilder().
+							SetName("scopes").
+							SetLabel("Scopes").
+							IsArray().
+							AddItem(
+								provisioning.NewSchemaPropertyBuilder().
+									SetName("scope").
+									IsString().
+									SetEnumValues(scopes)))).Register()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+	m.accessRequestDefinition = accessRequestDefinition
+	return m.accessRequestDefinition, nil
 }
 
 // updateRI updates the resource, and the sub resource
