@@ -231,8 +231,7 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 	}
 
 	if len(scopes) > 0 {
-		_, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
-			SetTitle(ri.Name).
+		ardRI, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
@@ -248,20 +247,13 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 		if err != nil {
 			return "", err
 		}
+		return ardRI.Name, nil
 	}
-
-	ardRI, _ := agent.cacheManager.GetAccessRequestDefinitionByName(m.accessRequestDefinition.Name)
-	return ardRI.Name, nil
+	return "", nil
 }
 
 func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	m.accessRequestDefinition = accessRequestDefinition
-
-	_, err := agent.apicClient.RegisterAccessRequestDefinition(m.accessRequestDefinition, false)
-	if err != nil {
-		return nil, err
-	}
-
 	return m.accessRequestDefinition, nil
 }
 
