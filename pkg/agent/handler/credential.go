@@ -101,7 +101,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Error("error getting resource details")
+		logger.WithError(err).Errorf("error getting resource details: %s")
 		h.onError(ctx, cred, err)
 		return cred
 	}
