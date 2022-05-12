@@ -78,10 +78,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 func (m *MarketplaceMigration) updateInst(ri *v1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 
-	q := map[string]string{
-		"query": queryFunc(ri.Name),
-		// "fields": "spec",
-	}
+	q := map[string]string{}
 
 	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
 	if err != nil {
