@@ -4,7 +4,7 @@ type unstructuredProcessor struct {
 	spec []byte
 }
 
-func newUnstructuredSpecProcessor(resourceSpec []byte) specProcessor {
+func newUnstructuredSpecProcessor(resourceSpec []byte) SpecProcessor {
 	return &unstructuredProcessor{spec: resourceSpec}
 }
 
