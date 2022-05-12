@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -147,7 +148,11 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 
 			specProcessor := specParser.GetSpecProcessor()
 
+			var ardRIName string
+			var credentialRequestPolicies []string
+
 			var i interface{} = specProcessor
+
 			if val, ok := i.(apic.OasSpecProcessor); ok {
 				val.ParseAuthInfo()
 
@@ -163,28 +168,39 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				// Check if ARD exists
 				_, ardExists := ri.Spec["accessRequestDefinitions"]
 				if !ardExists {
-					fmt.Println("accessRequestDefinitions doesn't exist")
-					ardRIName, err := m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+					log.Debug("accessRequestDefinitions doesn't exist")
+					ardRIName, err = m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
 					if err != nil {
 						errCh <- err
 						return
 					}
-					fmt.Printf("adding the following access request definition %s", ardRIName)
+					log.Debugf("adding the following access request definition %s", ardRIName)
 				}
 
 				// Check if CRD exists
 				_, crdExists := ri.Spec["credentialRequestDefinitions"]
 				if !crdExists {
-					fmt.Println("credentialRequestDefinitions doesn't exist")
-					credentialRequestPolicies, err := m.migrateCredentialRequestDefinitions(authPolicies, ri)
+					log.Debug("credentialRequestDefinitions doesn't exist")
+					credentialRequestPolicies, err = m.migrateCredentialRequestDefinitions(authPolicies, ri)
 					if err != nil {
 						errCh <- err
 						return
 					}
 
-					fmt.Printf("adding the following credential request policies %s", credentialRequestPolicies)
+					log.Debugf("adding the following credential request policies %s", credentialRequestPolicies)
+				}
+				newSpec := mv1a.ApiServiceInstanceSpec{
+					ApiServiceRevision:           ri.Name,
+					CredentialRequestDefinitions: credentialRequestPolicies,
+					AccessRequestDefinition:      ardRIName,
 				}
 
+				// convert to set ri.Spec
+				var inInterface map[string]interface{}
+				in, _ := json.Marshal(newSpec)
+				json.Unmarshal(in, &inInterface)
+
+				ri.Spec = inInterface
 			}
 
 			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
@@ -264,6 +280,5 @@ func (m *MarketplaceMigration) updateRI(url string, ri *v1.ResourceInstance) err
 		return err
 	}
 
-	// return m.createSubResource(ri)
 	return nil
 }
