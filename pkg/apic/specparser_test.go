@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createSpecParser(specFile, specType string) (specResourceParser, error) {
+func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
 	specFileDescriptor, _ := os.Open(specFile)
 	specData, _ := ioutil.ReadAll(specFileDescriptor)
 	specParser := NewSpecResourceParser(specData, specType)
