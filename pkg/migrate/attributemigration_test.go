@@ -166,7 +166,7 @@ func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceIns
 	return nil, nil
 }
 
-func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }

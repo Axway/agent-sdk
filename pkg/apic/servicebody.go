@@ -61,8 +61,8 @@ type ServiceBody struct {
 	accessRequestDefinition   *mv1a.AccessRequestDefinition
 }
 
-//SetAccessRequestDefintionName - set the name of the access request definition for this service body
-func (s *ServiceBody) SetAccessRequestDefintionName(ardName string, isUnique bool) {
+//SetAccessRequestDefinitionName - set the name of the access request definition for this service body
+func (s *ServiceBody) SetAccessRequestDefinitionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
 }

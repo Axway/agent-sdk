@@ -64,12 +64,12 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		ar := h.onPending(ctx, ar)
-		err := h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		err := h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
 			log.WithError(err).Errorf("error creating subresources")
 			return err
 		}
-		err = h.client.CreateSubResourceScoped(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
+		err = h.client.CreateSubResource(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
 		if err != nil {
 			log.WithError(err).Errorf("error creating status subresources")
 			return err
@@ -144,7 +144,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	if err != nil {
 		log.WithError(err).Error("error getting deprovision request details: %s")
 		h.onError(ctx, ar, err)
-		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 		err := fmt.Errorf(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
 		h.onError(ctx, ar, fmt.Errorf(status.GetMessage()))
-		h.client.CreateSubResourceScoped(ar.ResourceMeta, ar.SubResources)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 	}
 }
 

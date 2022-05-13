@@ -54,8 +54,7 @@ type Client struct {
 	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
-	CreateSubResourceScopedMock                              func(rm v1.ResourceMeta, subs map[string]interface{}) error
-	CreateSubResourceUnscopedMock                            func(rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
@@ -353,16 +352,9 @@ func (m *Client) DeleteResourceInstance(ri *v1.ResourceInstance) error {
 	return nil
 }
 
-func (m *Client) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	if m.CreateSubResourceScopedMock != nil {
-		return m.CreateSubResourceScopedMock(rm, subs)
-	}
-	return nil
-}
-
-func (m *Client) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	if m.CreateSubResourceUnscopedMock != nil {
-		return m.CreateSubResourceUnscopedMock(rm, subs)
+func (m *Client) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error {
+	if m.CreateSubResourceMock != nil {
+		return m.CreateSubResourceMock(rm, subs)
 	}
 	return nil
 }

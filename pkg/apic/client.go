@@ -91,8 +91,7 @@ type Client interface {
 	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
-	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
-	CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -674,14 +673,8 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 	return nil
 }
 
-// CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
-func (c *ServiceClient) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	_, err := c.createSubResource(rm, subs)
-	return err
-}
-
-// CreateSubResourceScoped creates a sub resource on th provided scoped resource.
-func (c *ServiceClient) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
+// CreateSubResource creates a sub resource on the provided resource.
+func (c *ServiceClient) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error {
 	_, err := c.createSubResource(rm, subs)
 	return err
 }

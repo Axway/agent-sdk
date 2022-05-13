@@ -155,7 +155,7 @@ func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.Resou
 	if serviceBody.GetAccessRequestDefintion() != nil {
 		newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefintion())
 		if err == nil && newARD != nil {
-			serviceBody.SetAccessRequestDefintionName(newARD.Name, true)
+			serviceBody.SetAccessRequestDefinitionName(newARD.Name, true)
 
 			ard, err := newARD.AsInstance()
 			if err == nil {

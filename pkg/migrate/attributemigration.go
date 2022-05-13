@@ -52,7 +52,7 @@ type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type item struct {
@@ -279,7 +279,7 @@ func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
 	subResources := map[string]interface{}{
 		defs.XAgentDetails: ri.SubResources[defs.XAgentDetails],
 	}
-	return m.client.CreateSubResourceScoped(ri.ResourceMeta, subResources)
+	return m.client.CreateSubResource(ri.ResourceMeta, subResources)
 }
 
 func updateAttrs(ri *v1.ResourceInstance) item {
