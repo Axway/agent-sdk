@@ -26,6 +26,7 @@ var cfg = &config.CentralConfiguration{
 	AgentName:     "discoveryagents",
 	URL:           "http://abc.com",
 	TLS:           &config.TLSConfiguration{},
+	SingleURL:     "https://abc.com",
 }
 
 // should create a new streamer and call Start
@@ -37,15 +38,14 @@ func TestNewStreamer(t *testing.T) {
 		ri: ri,
 	}
 
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	onStreamConnection := func(s Streamer) {
+	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
+	onStreamConnection := func(s *StreamerClient) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}
-	c, err := NewStreamer(httpClient, cfg, getToken, cacheManager, onStreamConnection)
-	assert.NotNil(t, c)
+	streamer, err := NewStreamerClient(httpClient, cfg, getToken, cacheManager, onStreamConnection)
+	assert.NotNil(t, streamer)
 	assert.Nil(t, err)
 
-	streamer := c.(*streamer)
 	manager := &mockManager{status: true}
 	streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
@@ -92,62 +92,6 @@ func TestNewStreamer(t *testing.T) {
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
 }
 
-func TestClientStreamJob(t *testing.T) {
-	s := &mockStreamer{}
-	j := NewClientStreamJob(s)
-
-	assert.Nil(t, j.Status())
-	assert.True(t, j.Ready())
-	assert.Nil(t, j.Execute())
-}
-
-func Test_getAgentSequenceManager(t *testing.T) {
-	wtName := "fake"
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sm := newAgentSequenceManager(cacheManager, wtName)
-	assert.Equal(t, sm.GetSequence(), int64(0))
-
-	sm = newAgentSequenceManager(cacheManager, "")
-	assert.Equal(t, sm.GetSequence(), int64(0))
-}
-
-func Test_getWatchTopic(t *testing.T) {
-	wt := &mv1.WatchTopic{}
-	ri, _ := wt.AsInstance()
-	httpClient := &mockAPIClient{
-		ri: ri,
-	}
-	wt, err := getWatchTopic(cfg, httpClient)
-	assert.NotNil(t, wt)
-	assert.Nil(t, err)
-
-	wt, err = getWatchTopic(cfg, httpClient)
-	assert.NotNil(t, wt)
-	assert.Nil(t, err)
-}
-
-type mockStreamer struct {
-	hcErr    error
-	startErr error
-}
-
-func (m mockStreamer) Start() error {
-	return m.startErr
-}
-
-func (m mockStreamer) Status() error {
-	return m.hcErr
-}
-
-func (m mockStreamer) Stop() {
-}
-
-func (m mockStreamer) Healthcheck(_ string) *hc.Status {
-	return &hc.Status{
-		Result: hc.OK,
-	}
-}
-
 type mockManager struct {
 	status bool
 }
@@ -189,4 +133,13 @@ func (m mockAPIClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceIn
 
 func (m mockAPIClient) DeleteResourceInstance(*apiv1.ResourceInstance) error {
 	return m.deleteErr
+}
+
+type mockTokenGetter struct {
+	token string
+	err   error
+}
+
+func (m *mockTokenGetter) GetToken() (string, error) {
+	return m.token, m.err
 }

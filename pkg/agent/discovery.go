@@ -131,13 +131,11 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
-			if !agent.cfg.IsUsingGRPC() {
-				apiSvc, e := ret.AsInstance()
-				if e == nil {
-					addErr := agent.cacheManager.AddAPIService(apiSvc)
-					if addErr != nil {
-						log.Error(addErr)
-					}
+			apiSvc, e := ret.AsInstance()
+			if e == nil {
+				addErr := agent.cacheManager.AddAPIService(apiSvc)
+				if addErr != nil {
+					log.Error(addErr)
 				}
 			}
 		} else {
@@ -159,9 +157,7 @@ func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.Resou
 
 			ard, err := newARD.AsInstance()
 			if err == nil {
-				if !agent.cfg.IsUsingGRPC() {
-					agent.cacheManager.AddAccessRequestDefinition(ard)
-				}
+				agent.cacheManager.AddAccessRequestDefinition(ard)
 			}
 			return ard, err
 		}
@@ -175,7 +171,7 @@ func RegisterAPIValidator(apiValidator APIValidator) {
 	agent.apiValidator = apiValidator
 
 	if agent.instanceValidatorJobID == "" && apiValidator != nil {
-		validator := newInstanceValidator(agent.instanceCacheLock, !agent.cfg.IsUsingGRPC())
+		validator := newInstanceValidator(agent.instanceCacheLock)
 		jobID, err := jobs.RegisterIntervalJobWithName(validator, agent.cfg.GetPollInterval(), "API service instance validator")
 		agent.instanceValidatorJobID = jobID
 		if err != nil {

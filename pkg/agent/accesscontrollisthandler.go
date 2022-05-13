@@ -14,7 +14,7 @@ import (
 
 const envACLFormat = "%s-agent-acl"
 
-//aclUpdateHandler - job that handles updates to the ACL in the environment
+// aclUpdateHandler - job that handles updates to the ACL in the environment
 type aclUpdateJob struct {
 	jobs.Job
 	lastTeamIDs []string
@@ -120,13 +120,13 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 		acl, err = agent.apicClient.CreateAccessControlList(acl)
 	}
 
-	// let the stream handlers cache this if in GRPC
-	if err == nil && !agent.cfg.IsUsingGRPC() {
+	if err == nil {
 		aclInstance, err := acl.AsInstance()
 		if err == nil {
 			agent.cacheManager.SetAccessControlList(aclInstance)
 		}
 	}
+
 	return err
 }
 

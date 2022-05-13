@@ -55,7 +55,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	cr := &mv1.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
-		logger.WithError(err).Errorf("could not handle credential request")
+		logger.WithError(err).Error("could not handle credential request")
 		return nil
 	}
 
@@ -69,7 +69,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		cr := h.onPending(ctx, cr)
 		err := h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
-			logger.WithError(err).Errorf("error creating subresources")
+			logger.WithError(err).Error("error creating subresources")
 			return err
 		}
 		return h.client.CreateSubResource(cr.ResourceMeta, map[string]interface{}{"status": cr.Status})
@@ -87,21 +87,21 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 	logger := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Errorf("error getting managed app")
+		logger.WithError(err).Error("error getting managed app")
 		h.onError(ctx, cred, err)
 		return cred
 	}
 
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
-		err = fmt.Errorf("error can't handle credential when application is not yet successful")
+		err = fmt.Errorf("cannot handle credential when application is not yet successful")
 		h.onError(ctx, cred, err)
 		return cred
 	}
 
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Error("error getting resource details")
+		logger.WithError(err).Errorf("error getting resource details: %s")
 		h.onError(ctx, cred, err)
 		return cred
 	}

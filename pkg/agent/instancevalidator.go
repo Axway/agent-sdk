@@ -15,12 +15,11 @@ import (
 
 type instanceValidator struct {
 	jobs.Job
-	cacheLock       *sync.Mutex
-	isAgentPollMode bool
+	cacheLock *sync.Mutex
 }
 
-func newInstanceValidator(cacheLock *sync.Mutex, isAgentPollMode bool) *instanceValidator {
-	return &instanceValidator{cacheLock: cacheLock, isAgentPollMode: isAgentPollMode}
+func newInstanceValidator(cacheLock *sync.Mutex) *instanceValidator {
+	return &instanceValidator{cacheLock: cacheLock}
 }
 
 // Ready -
@@ -126,10 +125,7 @@ func (j *instanceValidator) deleteServiceInstanceOrService(ri *apiV1.ResourceIns
 
 		// deleting the service will delete all associated resources, including the consumerInstance
 		err = agent.apicClient.DeleteServiceByName(svc.Name)
-		if j.isAgentPollMode {
-			agent.cacheManager.DeleteAPIService(apiID)
-		}
-
+		agent.cacheManager.DeleteAPIService(apiID)
 		if err != nil {
 			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title))
 			return

@@ -52,7 +52,7 @@ func (rm *ResourceMeta) SetName(name string) {
 	rm.Name = name
 }
 
-// SetName sets the name of a resource
+// SetScopeName sets the name of a resource
 func (rm *ResourceMeta) SetScopeName(name string) {
 	rm.Metadata.Scope.Name = name
 }
@@ -110,7 +110,7 @@ func (rm *ResourceMeta) GetKindLink() string {
 	return strings.Join(pathItems, "/")
 }
 
-// GetGroupVersionKind gets thee group, version, and kind of the resource
+// GetGroupVersionKind gets the group, version, and kind of the resource
 func (rm *ResourceMeta) GetGroupVersionKind() GroupVersionKind {
 	if rm == nil {
 		return GroupVersionKind{}

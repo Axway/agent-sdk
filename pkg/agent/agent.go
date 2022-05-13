@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -21,7 +21,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -163,7 +162,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			startAPIServiceCache()
+			syncCache()
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -247,7 +246,7 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
-func startAPIServiceCache() error {
+func syncCache() error {
 	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 	// register the update cache job
 	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
@@ -256,31 +255,12 @@ func startAPIServiceCache() error {
 		return err
 	}
 
-	if !agent.cfg.IsUsingGRPC() {
-		// health check for central in gRPC mode is registered by streamer
-		hc.RegisterHealthcheck(util.AmplifyCentral, "central", agent.apicClient.Healthcheck)
-
-		id, err := jobs.RegisterIntervalJobWithName(discoveryCache, agent.cfg.GetPollInterval(), "New APIs Cache")
-		if err != nil {
-			return fmt.Errorf("could not start the New APIs cache update job: %v", err.Error())
-		}
-		// Start the full update after the first interval
-		go startDiscoveryCache(agent.instanceCacheLock)
-		log.Tracef("registered API cache update job: %s", id)
-	} else {
-		// Load cache from API initially. Following updates to cache will be done using watch events
-		if !agent.cacheManager.HasLoadedPersistedCache() {
-			// trigger early saving for the initialized cache, following save will be done by interval job
-			agent.cacheManager.SaveCache()
-		}
-
-		err := startStreamMode(agent)
-		if err != nil {
-			return err
-		}
+	if !agent.cacheManager.HasLoadedPersistedCache() {
+		// trigger early saving for the initialized cache, following save will be done by interval job
+		agent.cacheManager.SaveCache()
 	}
 
-	return nil
+	return startCentralEventProcessor(agent)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -400,18 +380,15 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startDiscoveryCache(instanceCacheLock *sync.Mutex) {
-	time.Sleep(time.Hour)
-	allDiscoveryCacheJob := newDiscoveryCache(agent.agentResourceManager, true, instanceCacheLock, nil)
-	id, err := jobs.RegisterIntervalJobWithName(allDiscoveryCacheJob, time.Hour, "All APIs Cache")
-	if err != nil {
-		log.Errorf("could not start the All APIs cache update job: %v", err.Error())
-		return
+func startCentralEventProcessor(agent agentData) error {
+	if agent.cfg.IsUsingGRPC() {
+		return startStreamMode(agent)
 	}
-	log.Tracef("registered API cache update all job: %s", id)
+
+	return startPollMode(agent)
 }
 
-func startStreamMode(agent agentData) error {
+func newHandlers(agent agentData) []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
@@ -430,12 +407,41 @@ func startStreamMode(agent agentData) error {
 		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
 	}
 
-	cs, err := stream.NewStreamer(
+	return handlers
+}
+
+func startPollMode(agent agentData) error {
+	handlers := newHandlers(agent)
+
+	pc, err := poller.NewPollClient(
 		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
 		agent.cacheManager,
-		func(s stream.Streamer) {
+		func(p *poller.PollClient) {
+			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
+		},
+		handlers...,
+	)
+
+	if err != nil {
+		return fmt.Errorf("could not start the harvester poll client: %s", err)
+	}
+
+	newEventProcessorJob(pc)
+
+	return err
+}
+
+func startStreamMode(agent agentData) error {
+	handlers := newHandlers(agent)
+
+	sc, err := stream.NewStreamerClient(
+		agent.apicClient,
+		agent.cfg,
+		agent.tokenRequester,
+		agent.cacheManager,
+		func(s *stream.StreamerClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 		},
 		handlers...,
@@ -445,7 +451,7 @@ func startStreamMode(agent agentData) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	stream.NewClientStreamJob(cs)
+	newEventProcessorJob(sc)
 
 	return err
 }

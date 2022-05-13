@@ -142,7 +142,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
 		logger:                logger,
 	}
 
-	if cfg.IsUsingGRPC() && persistCache {
+	if persistCache {
 		m.initializePersistedCache(cfg)
 	}
 
