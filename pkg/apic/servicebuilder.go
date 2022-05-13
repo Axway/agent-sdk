@@ -286,7 +286,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	// Check if the type is unstructured to gather more info
 
 	if len(b.serviceBody.Endpoints) == 0 {
-		endPoints, err := specProcessor.getEndpoints()
+		endPoints, err := specProcessor.GetEndpoints()
 		if err != nil {
 			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
 		}

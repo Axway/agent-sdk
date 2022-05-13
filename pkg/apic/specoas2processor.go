@@ -33,7 +33,8 @@ func (p *oas2SpecProcessor) getResourceType() string {
 	return Oas2
 }
 
-func (p *oas2SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndpoints -
+func (p *oas2SpecProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	swaggerHostElements := strings.Split(p.spec.Host, ":")
 	host := swaggerHostElements[0]

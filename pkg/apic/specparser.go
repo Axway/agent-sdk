@@ -15,7 +15,7 @@ import (
 
 // SpecProcessor -
 type SpecProcessor interface {
-	getEndpoints() ([]EndpointDefinition, error)
+	GetEndpoints() ([]EndpointDefinition, error)
 	getResourceType() string
 }
 

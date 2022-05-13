@@ -29,7 +29,8 @@ func (p *oas3SpecProcessor) getResourceType() string {
 	return Oas3
 }
 
-func (p *oas3SpecProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndpoints -
+func (p *oas3SpecProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	if len(p.spec.Servers) > 0 {
 		var err error

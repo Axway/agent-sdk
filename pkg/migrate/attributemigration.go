@@ -53,6 +53,7 @@ type client interface {
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
+	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 }
 
 type item struct {

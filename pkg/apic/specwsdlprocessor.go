@@ -21,7 +21,8 @@ func (p *wsdlProcessor) getResourceType() string {
 	return Wsdl
 }
 
-func (p *wsdlProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndpoints -
+func (p *wsdlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
 	ports := p.spec.Service.Ports
 	for _, val := range ports {

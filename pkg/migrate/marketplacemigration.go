@@ -144,6 +144,12 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 			}
 
 			specProcessor := specParser.GetSpecProcessor()
+			endPoints, err := specProcessor.GetEndpoints()
+			instanceSpecEndPoints, err := m.createInstanceEndpoint(endPoints)
+			if err != nil {
+				errCh <- err
+				return
+			}
 
 			var ardRIName string
 			var credentialRequestPolicies []string
@@ -192,6 +198,7 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 					log.Debugf("adding the following credential request policies %s", credentialRequestPolicies)
 				}
 				newSpec := mv1a.ApiServiceInstanceSpec{
+					Endpoint:                     instanceSpecEndPoints,
 					ApiServiceRevision:           ri.Name,
 					CredentialRequestDefinitions: credentialRequestPolicies,
 					AccessRequestDefinition:      ardRIName,
@@ -277,10 +284,39 @@ func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition
 
 // updateRI updates the resource, and the sub resource
 func (m *MarketplaceMigration) updateRI(url string, ri *v1.ResourceInstance) error {
-	_, err := m.client.UpdateAPIV1ResourceInstance(url, ri)
+	_, err := m.client.UpdateResourceInstance(ri)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointDefinition) ([]mv1a.ApiServiceInstanceSpecEndpoint, error) {
+	endPoints := make([]mv1a.ApiServiceInstanceSpecEndpoint, 0)
+	var err error
+
+	// To set your own endpoints call AddServiceEndpoint/SetServiceEndpoint on the ServiceBodyBuilder.
+	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
+	if len(endpoints) > 0 {
+		for _, endpointDef := range endpoints {
+			ep := mv1a.ApiServiceInstanceSpecEndpoint{
+				Host:     endpointDef.Host,
+				Port:     endpointDef.Port,
+				Protocol: endpointDef.Protocol,
+				Routing: mv1a.ApiServiceInstanceSpecRouting{
+					BasePath: endpointDef.BasePath,
+				},
+			}
+			endPoints = append(endPoints, ep)
+		}
+	} else {
+		log.Debug("Processing API service instance with no endpoint")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return endPoints, nil
 }
