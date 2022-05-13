@@ -95,7 +95,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 	_, ok := specProcessor.(*oas3SpecProcessor)
 	assert.True(t, ok)
 
-	endPoints, err := specProcessor.getEndpoints()
+	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
@@ -113,7 +113,7 @@ func TestSpecOAS3Processors(t *testing.T) {
 	assert.Nil(t, err)
 	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
-	endPoints, err = specProcessor.getEndpoints()
+	endPoints, err = specProcessor.GetEndpoints()
 
 	type verification struct {
 		Host     string
@@ -195,7 +195,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	_, ok := specProcessor.(*oas2SpecProcessor)
 	assert.True(t, ok)
 
-	endPoints, err := specProcessor.getEndpoints()
+	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -208,7 +208,7 @@ func TestSpecOAS2Processors(t *testing.T) {
 	assert.Nil(t, err)
 	specProcessor = specParser.GetSpecProcessor()
 	assert.NotNil(t, specProcessor)
-	endPoints, err = specProcessor.getEndpoints()
+	endPoints, err = specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
@@ -231,7 +231,7 @@ func TestSpecWsdlProcessors(t *testing.T) {
 	_, ok := specProcessor.(*wsdlProcessor)
 	assert.True(t, ok)
 
-	endPoints, err := specProcessor.getEndpoints()
+	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with wsdl")
 	assert.Len(t, endPoints, 2, "The returned end points array did not have exactly 2 endpoints")
@@ -253,7 +253,7 @@ func TestSpecProtobufProcessors(t *testing.T) {
 	_, ok := specProcessor.(*protobufProcessor)
 	assert.True(t, ok)
 
-	endPoints, err := specProcessor.getEndpoints()
+	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with protobuf")
 	assert.Len(t, endPoints, 0, "The returned end points array is not empty")
@@ -272,7 +272,7 @@ func TestSpecAsyncAPIProcessors(t *testing.T) {
 	_, ok := specProcessor.(*asyncAPIProcessor)
 	assert.True(t, ok)
 
-	endPoints, err := specProcessor.getEndpoints()
+	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with asyncapi")
 	assert.Equal(t, "api.company.com", endPoints[0].Host)
