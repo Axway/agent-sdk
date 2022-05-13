@@ -88,7 +88,6 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
-	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -848,12 +847,6 @@ func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.Res
 
 	ri, err = c.updateSpecORCreateResourceInstance(ri)
 	return ri, err
-}
-
-// UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
-func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	ri.Metadata.SelfLink = url
-	return c.UpdateResourceInstance(ri)
 }
 
 // UpdateResourceInstance - updates a ResourceInstance with instance using it's self link

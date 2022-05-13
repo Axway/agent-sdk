@@ -134,7 +134,7 @@ func (m *mockClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, 
 	return m.res, nil
 }
 
-func (m *mockClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	m.updateCalled = true
 	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
 	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIID)
