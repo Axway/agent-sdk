@@ -20,7 +20,7 @@ func TestGetCatalogItemIDForConsumerInstance(t *testing.T) {
 
 	// no items found
 	httpClientMock.SetResponse(wd+"/testdata/catalogid-for-consumerinstance-empty.json", http.StatusOK)
-	itemID, err = client.GetCatalogItemIDForConsumerInstance("0000")
+	_, err = client.GetCatalogItemIDForConsumerInstance("0000")
 	assert.NotNil(t, err)
 
 	// bad response

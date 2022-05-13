@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 // MockSubscriptionManager - used for unit tests to bypass the normal SubscriptionManager
 type MockSubscriptionManager struct {
 	SubscriptionManager

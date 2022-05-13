@@ -8,11 +8,9 @@ import (
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -181,7 +179,7 @@ func TestCreateSubResourceScoped(t *testing.T) {
 			Name:             "test-resource",
 			GroupVersionKind: mv1.APIServiceGVK(),
 			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
 					"externalAPIID":   "12345",
 					"externalAPIName": "daleapi",
 					"createdBy":       "",
@@ -220,7 +218,7 @@ func TestCreateSubResourceUnscoped(t *testing.T) {
 			Name:             "test-resource",
 			GroupVersionKind: mv1.APIServiceGVK(),
 			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
 					"externalAPIID":   "12345",
 					"externalAPIName": "daleapi",
 					"createdBy":       "",
@@ -239,7 +237,7 @@ func TestCreateSubResourceUnscoped(t *testing.T) {
 func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 	tests := []struct {
 		name           string
-		gvk            apiv1.GroupVersionKind
+		gvk            v1.GroupVersionKind
 		oldHash        string
 		newHash        string
 		apiResponses   []api.MockResponse
@@ -324,12 +322,12 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 			// There should be one request for each sub resource of the ResourceInstance
 			mockHTTPClient.SetResponses(tt.apiResponses)
 
-			res := apiv1.ResourceInstance{
-				ResourceMeta: apiv1.ResourceMeta{
+			res := v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
 					Name:             tt.name,
 					GroupVersionKind: tt.gvk,
 					SubResources: map[string]interface{}{
-						definitions.XAgentDetails: map[string]interface{}{
+						defs.XAgentDetails: map[string]interface{}{
 							defs.AttrSpecHash: tt.oldHash,
 						},
 					},
@@ -348,7 +346,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 
 			newRes := res
 			newRes.Tags = []string{}
-			newRes.SubResources = map[string]interface{}{definitions.XAgentDetails: map[string]interface{}{defs.AttrSpecHash: tt.newHash}}
+			newRes.SubResources = map[string]interface{}{defs.XAgentDetails: map[string]interface{}{defs.AttrSpecHash: tt.newHash}}
 
 			ri, err := svcClient.updateSpecORCreateResourceInstance(&newRes)
 			if tt.expectErr {

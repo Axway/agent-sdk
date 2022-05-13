@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 import (
 	"sync"
 	"time"
@@ -106,6 +107,9 @@ func (sm *subscriptionManager) Status() error {
 }
 
 func (sm *subscriptionManager) Execute() error {
+	if sm.apicClient.cfg.IsMarketplaceSubsEnabled() {
+		log.Trace("Unified catalog polling disabled when using Marketplace Provisioning")
+	}
 	// query for central subscriptions
 	subscriptions, err := sm.apicClient.getSubscriptions(sm.ucStatesToQuery)
 	if err != nil {

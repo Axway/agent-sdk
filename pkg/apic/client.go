@@ -14,7 +14,6 @@ import (
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -75,8 +74,8 @@ type Client interface {
 	GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
 	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
 	GetAPIServiceInstances(query map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
-	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*v1.ResourceInstance, error)
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	GetAPIServiceByName(name string) (*mv1a.APIService, error)
 	GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error)
 	GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error)
@@ -88,16 +87,16 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
-	UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
+	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	DeleteResourceInstance(ri *v1.ResourceInstance) error
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error
-	GetResource(url string) (*apiv1.ResourceInstance, error)
-	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	CreateOrUpdateResource(apiv1.Interface) (*apiv1.ResourceInstance, error)
+	GetResource(url string) (*v1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
+	CreateOrUpdateResource(v1.Interface) (*v1.ResourceInstance, error)
 }
 
 // New creates a new Client
@@ -655,25 +654,6 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 	}
 }
 
-// linkSubResource creates a sub resource by calling the provided url. url should be the link to the resource.
-// subResourceName is the name of the sub resource to add to the resource found at the given url.
-// subResourceName will be appended to the end of the url for the PUT request.
-// body is the payload of the subresource to create.
-func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
-	// https://apicentral.axway.com/apis/management/v1alpha1/environments/wc-env/apiservices/eeeee/:extension
-	bts, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CreateSubResourceUnscoped creates a sub resource on th provided unscoped resource.
 func (c *ServiceClient) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
 	_, err := c.createSubResource(rm, subs)
@@ -730,18 +710,18 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 }
 
 // GetResource gets a single resource
-func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) GetResource(url string) (*v1.ResourceInstance, error) {
 	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(url), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	ri := &apiv1.ResourceInstance{}
+	ri := &v1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // UpdateResourceFinalizer - Add or remove a finalizer from a resource
-func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error) {
 	if addAction {
 		res.Finalizers = append(res.Finalizers, v1.Finalizer{Name: finalizer, Description: description})
 	} else {
@@ -762,35 +742,35 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, fin
 }
 
 // UpdateResource updates a resource
-func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
 	response, err := c.ExecuteAPI(http.MethodPut, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
-	ri := &apiv1.ResourceInstance{}
+	ri := &v1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // CreateResource deletes a resource
-func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) CreateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
 	response, err := c.ExecuteAPI(http.MethodPost, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
-	ri := &apiv1.ResourceInstance{}
+	ri := &v1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // updateORCreateResourceInstance
-func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	// default to post
 	url := c.createAPIServerURL(data.GetKindLink())
 	method := coreapi.POST
 
 	// check if the KIND and ID combo have an item in the cache
-	var existingRI *apiv1.ResourceInstance
+	var existingRI *v1.ResourceInstance
 	var err error
 	switch data.Kind {
 	case mv1a.AccessRequestDefinitionGVK().Kind:
@@ -828,7 +808,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		return nil, err
 	}
 
-	newRI := &apiv1.ResourceInstance{}
+	newRI := &v1.ResourceInstance{}
 	err = json.Unmarshal(response, newRI)
 	if err != nil {
 		return nil, err
@@ -846,7 +826,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 }
 
 // CreateOrUpdateResource deletes a resource
-func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error) {
 	data.SetScopeName(c.cfg.GetEnvironmentName())
 	ri, err := data.AsInstance()
 	if err != nil {
@@ -858,13 +838,13 @@ func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.Res
 }
 
 // UpdateAPIV1ResourceInstance - updates a ResourceInstance by providing a url to the resource
-func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	ri.Metadata.SelfLink = url
 	return c.UpdateResourceInstance(ri)
 }
 
 // UpdateResourceInstance - updates a ResourceInstance with instance using it's self link
-func (c *ServiceClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.GetSelfLink() == "" {
 		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
 	}
@@ -877,13 +857,13 @@ func (c *ServiceClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*api
 	if err != nil {
 		return nil, err
 	}
-	r := &apiv1.ResourceInstance{}
+	r := &v1.ResourceInstance{}
 	err = json.Unmarshal(bts, r)
 	return r, err
 }
 
 // DeleteResourceInstance - deletes a ResourceInstance with instance
-func (c *ServiceClient) DeleteResourceInstance(ri *apiv1.ResourceInstance) error {
+func (c *ServiceClient) DeleteResourceInstance(ri *v1.ResourceInstance) error {
 	if ri.GetSelfLink() == "" {
 		return fmt.Errorf("could not remove resource instance, could not get self link")
 	}

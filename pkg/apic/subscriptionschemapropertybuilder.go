@@ -5,6 +5,7 @@ import (
 	"sort"
 )
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 // Supported data types
 const (
 	DataTypeString  = "string"
@@ -204,11 +205,11 @@ func (p *schemaProperty) Build() (*SubscriptionSchemaPropertyDefinition, error) 
 		return nil, p.err
 	}
 	if p.name == "" {
-		return nil, fmt.Errorf("Cannot add a subscription schema property without a name")
+		return nil, fmt.Errorf("cannot add a subscription schema property without a name")
 	}
 
 	if p.dataType == "" {
-		return nil, fmt.Errorf("Subscription schema property named %s must have a data type", p.name)
+		return nil, fmt.Errorf("subscription schema property named %s must have a data type", p.name)
 	}
 
 	prop := &SubscriptionSchemaPropertyDefinition{
@@ -321,8 +322,8 @@ func (p *stringSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinitio
 					break
 				}
 			}
-			if isDefaultValueValid == false {
-				return nil, fmt.Errorf("Default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
+			if !isDefaultValueValid {
+				return nil, fmt.Errorf("default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
 			}
 		}
 		def.DefaultValue = p.defaultValue
@@ -337,8 +338,8 @@ func (p *stringSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinitio
 // numberSchemaProperty - adds specific info needed for a number schema property
 type numberSchemaProperty struct {
 	schemaProperty *schemaProperty
-	minValue       *float64 // We use a pointer to differentiate the "blank value" from a choosen 0 min value
-	maxValue       *float64 // We use a pointer to differentiate the "blank value" from a choosen 0 max value
+	minValue       *float64 // We use a pointer to differentiate the "blank value" from a chosen 0 min value
+	maxValue       *float64 // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	defaultValue   *float64
 	SubscriptionPropertyBuilder
 }
@@ -369,15 +370,15 @@ func (p *numberSchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinitio
 	}
 
 	if p.minValue != nil && p.maxValue != nil && *p.minValue > *p.maxValue {
-		return nil, fmt.Errorf("Max value (%f) must be greater than min value (%f)", *p.maxValue, *p.minValue)
+		return nil, fmt.Errorf("max value (%f) must be greater than min value (%f)", *p.maxValue, *p.minValue)
 	}
 
 	if p.defaultValue != nil {
 		if p.minValue != nil && *p.defaultValue < *p.minValue {
-			return nil, fmt.Errorf("Default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
+			return nil, fmt.Errorf("default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
 		}
 		if p.maxValue != nil && *p.defaultValue > *p.maxValue {
-			return nil, fmt.Errorf("Default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
+			return nil, fmt.Errorf("default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
 		}
 		def.DefaultValue = p.defaultValue
 	}
@@ -448,7 +449,7 @@ func (p *arraySchemaProperty) SetMinItems(min uint) ArrayPropertyBuilder {
 // SetMaxItems - set the maximum items in the property array
 func (p *arraySchemaProperty) SetMaxItems(max uint) ArrayPropertyBuilder {
 	if max < 1 {
-		p.schemaProperty.err = fmt.Errorf("The max array items must be greater than 0")
+		p.schemaProperty.err = fmt.Errorf("the max array items must be greater than 0")
 	} else {
 		p.maxItems = &max
 	}
@@ -468,7 +469,7 @@ func (p *arraySchemaProperty) Build() (def *SubscriptionSchemaPropertyDefinition
 	}
 
 	if p.minItems != nil && p.maxItems != nil && *p.minItems > *p.maxItems {
-		return nil, fmt.Errorf("Max array items (%d) must be greater than min array items (%d)", p.maxItems, p.minItems)
+		return nil, fmt.Errorf("max array items (%d) must be greater than min array items (%d)", p.maxItems, p.minItems)
 	}
 
 	def.Items = anyOfItems

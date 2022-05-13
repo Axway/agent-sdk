@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 import (
 	"encoding/json"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	agenterrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // SubscriptionSchema -
@@ -186,43 +186,6 @@ func (c *ServiceClient) registerSubscriptionSchema(subscriptionSchema Subscripti
 	return nil
 }
 
-func (c *ServiceClient) registerAccessRequestSubscriptionSchema(subscriptionSchema SubscriptionSchema, update bool) error {
-	accReqDefNameSuffix := "-access-request"
-	subscriptionSchema.SetSubscriptionName(subscriptionSchema.GetSubscriptionName() + accReqDefNameSuffix)
-
-	var registeredSpecHash uint64
-	registeredAccessRequestSchema := c.getCachedAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName())
-
-	spec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
-	if err != nil {
-		return err
-	}
-	if registeredAccessRequestSchema != nil {
-		registeredSpecHash, _ = util.ComputeHash(registeredAccessRequestSchema.Spec)
-	} else {
-		update = true
-	}
-
-	accessRequestSpec, err := c.prepareAccessRequestSubscriptionDefinitionSpec(subscriptionSchema)
-	if err != nil {
-		return err
-	}
-
-	// Create New definition
-	if registeredAccessRequestSchema == nil {
-		return c.createAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-	}
-
-	if update {
-		// Check if the schema definitions changed before update
-		if currentHash, _ := util.ComputeHash(spec); currentHash != registeredSpecHash {
-			return c.updateAccessRequestSubscriptionSchema(subscriptionSchema.GetSubscriptionName(), accessRequestSpec)
-		}
-	}
-
-	return nil
-}
-
 func (c *ServiceClient) getCachedSubscriptionSchema(defName string) *v1alpha1.ConsumerSubscriptionDefinition {
 	cachedSchema, err := c.subscriptionSchemaCache.Get(defName)
 	if err != nil {
@@ -233,18 +196,6 @@ func (c *ServiceClient) getCachedSubscriptionSchema(defName string) *v1alpha1.Co
 		return registeredSchema
 	}
 	return cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition)
-}
-
-func (c *ServiceClient) getCachedAccessRequestSubscriptionSchema(defName string) *v1alpha1.AccessRequestDefinition {
-	cachedSchema, err := c.subscriptionSchemaCache.Get(defName)
-	if err != nil {
-		registeredSchema, _ := c.getAccessRequestSubscriptionSchema(defName)
-		if registeredSchema != nil {
-			c.subscriptionSchemaCache.Set(defName, registeredSchema)
-		}
-		return registeredSchema
-	}
-	return cachedSchema.(*v1alpha1.AccessRequestDefinition)
 }
 
 func (c *ServiceClient) getSubscriptionSchema(schemaName string) (*v1alpha1.ConsumerSubscriptionDefinition, error) {
@@ -268,32 +219,6 @@ func (c *ServiceClient) getSubscriptionSchema(schemaName string) (*v1alpha1.Cons
 		return nil, nil
 	}
 	registeredSchema := &v1alpha1.ConsumerSubscriptionDefinition{}
-	json.Unmarshal(response.Body, registeredSchema)
-	return registeredSchema, nil
-}
-
-func (c *ServiceClient) getAccessRequestSubscriptionSchema(schemaName string) (*v1alpha1.AccessRequestDefinition, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL() + "/" + schemaName,
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-
-	if response.Code != http.StatusOK {
-		readResponseErrors(response.Code, response.Body)
-		return nil, agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
-	}
-	registeredSchema := &v1alpha1.AccessRequestDefinition{}
 	json.Unmarshal(response.Body, registeredSchema)
 	return registeredSchema, nil
 }
@@ -326,41 +251,6 @@ func (c *ServiceClient) createSubscriptionSchema(defName string, spec *v1alpha1.
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
 	}
 	registeredSchema := &v1alpha1.ConsumerSubscriptionDefinition{}
-	json.Unmarshal(response.Body, registeredSchema)
-	c.subscriptionSchemaCache.Set(defName, registeredSchema)
-	return nil
-}
-
-func (c *ServiceClient) createAccessRequestSubscriptionSchema(defName string, spec *v1alpha1.AccessRequestDefinitionSpec) error {
-	//Add API Server resource - SubscriptionDefinition
-	buffer, err := c.marshalAccessRequestSubscriptionDefinition(defName, spec)
-	if err != nil {
-		return err
-	}
-
-	headers, err := c.createHeader()
-	if err != nil {
-		return err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.POST,
-		URL:     c.cfg.GetAPIServerAccessRequestDefinitionURL(),
-		Headers: headers,
-		Body:    buffer,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		log.Error(err.Error())
-		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
-	}
-	if response.Code != http.StatusCreated {
-		readResponseErrors(response.Code, response.Body)
-		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.POST).FormatError(response.Code)
-	}
-
-	registeredSchema := &v1alpha1.AccessRequestDefinition{}
 	json.Unmarshal(response.Body, registeredSchema)
 	c.subscriptionSchemaCache.Set(defName, registeredSchema)
 	return nil
