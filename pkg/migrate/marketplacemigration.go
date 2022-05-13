@@ -134,6 +134,9 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 		go func(ri *v1.ResourceInstance) {
 			defer wg.Done()
 
+			apiSvcInst := mv1a.NewAPIServiceInstance(ri.Name, ri.Metadata.Scope.Name)
+			apiSvcInst.FromInstance(ri)
+
 			specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
 
 			specParser := apic.NewSpecResourceParser(specDefinition, specDefintionType)
@@ -159,9 +162,6 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 			if val, ok := i.(apic.OasSpecProcessor); ok {
 				val.ParseAuthInfo()
 
-				// get the auth policy from the spec
-				authPolicies := val.GetAuthPolicies()
-
 				// get the apikey info
 				apiKeyInfo := val.GetAPIKeyInfo()
 
@@ -169,8 +169,7 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				oauthScopes := val.GetOAuthScopes()
 
 				// Check if ARD exists
-				_, ardExists := ri.Spec["accessRequestDefinitions"]
-				if !ardExists {
+				if apiSvcInst.Spec.AccessRequestDefinition == "" {
 					log.Debug("accessRequestDefinitions doesn't exist")
 					ardRIName, err = m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
 					if err != nil {
@@ -185,18 +184,6 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 					log.Debugf("adding the following access request definition %s", ardRIName)
 				}
 
-				// Check if CRD exists
-				_, crdExists := ri.Spec["credentialRequestDefinitions"]
-				if !crdExists {
-					log.Debug("credentialRequestDefinitions doesn't exist")
-					credentialRequestPolicies, err = m.migrateCredentialRequestDefinitions(authPolicies, ri)
-					if err != nil {
-						errCh <- err
-						return
-					}
-
-					log.Debugf("adding the following credential request policies %s", credentialRequestPolicies)
-				}
 				newSpec := mv1a.ApiServiceInstanceSpec{
 					Endpoint:                     instanceSpecEndPoints,
 					ApiServiceRevision:           ri.Name,
@@ -234,7 +221,6 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies []string, ri *v1.ResourceInstance) ([]string, error) {
 	var credentialRequestPolicies []string
 
-	fmt.Println("credentialRequestDefinitions doesn't exist")
 	for _, policy := range authPolicies {
 		if policy == apic.Apikey {
 			credentialRequestPolicies = append(credentialRequestPolicies, provisioning.APIKeyCRD)
