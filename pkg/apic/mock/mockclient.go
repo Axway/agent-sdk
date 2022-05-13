@@ -51,7 +51,6 @@ type Client struct {
 	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
 	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
@@ -327,13 +326,6 @@ func (m *Client) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1al
 func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
 	if m.CreateAccessControlListMock != nil {
 		return m.CreateAccessControlListMock(acl)
-	}
-	return nil, nil
-}
-
-func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if m.UpdateAPIV1ResourceInstanceMock != nil {
-		return m.UpdateAPIV1ResourceInstanceMock(url, ri)
 	}
 	return nil, nil
 }
