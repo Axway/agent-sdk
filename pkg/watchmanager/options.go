@@ -41,12 +41,13 @@ type keepAliveOption struct {
 
 // watchOptions options to use when creating a stream
 type watchOptions struct {
-	tlsCfg           *tls.Config
-	proxyURL         string
-	singleEntryAddr  string
-	keepAlive        keepAliveOption
-	loggerEntry      *logrus.Entry
-	sequenceProvider events.SequenceProvider
+	tlsCfg            *tls.Config
+	proxyURL          string
+	singleEntryAddr   string
+	keepAlive         keepAliveOption
+	loggerEntry       *logrus.Entry
+	sequenceProvider  events.SequenceProvider
+	harvesterSignalCh chan interface{}
 }
 
 // newWatchOptions returns the default watchOptions
@@ -59,6 +60,13 @@ func newWatchOptions() *watchOptions {
 			timeout: util.DefaultKeepAliveTimeout,
 		},
 	}
+}
+
+// WithHarvesterSignalChan - provides a channel for harvester to write to when it encounters an error
+func WithHarvesterSignalChan(ch chan interface{}) Option {
+	return funcOption(func(o *watchOptions) {
+		o.harvesterSignalCh = ch
+	})
 }
 
 // WithTLSConfig - sets up the TLS credentials or insecure if nil

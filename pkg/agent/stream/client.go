@@ -49,6 +49,7 @@ func NewStreamerClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
+	cacheBuildSignal chan interface{},
 	handlers ...handler.Handler,
 ) (*StreamerClient, error) {
 	tenant := cfg.GetTenantID()
@@ -73,6 +74,7 @@ func NewStreamerClient(
 		wm.WithSyncEvents(seq),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
+		wm.WithHarvesterSignalChan(cacheBuildSignal),
 	}
 
 	if cfg.GetSingleURL() != "" {

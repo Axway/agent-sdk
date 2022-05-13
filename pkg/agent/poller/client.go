@@ -36,6 +36,7 @@ func NewPollClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
+	cacheBuildSignal chan interface{},
 	handlers ...handler.Handler,
 ) (*PollClient, error) {
 	wt, err := events.GetWatchTopic(cfg, apiClient)
@@ -45,7 +46,7 @@ func NewPollClient(
 
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	hcfg := harvester.NewConfig(cfg, getToken, seq)
-	poller := newPollManager(hcfg, cfg.GetPollInterval())
+	poller := newPollManager(hcfg, cfg.GetPollInterval(), cacheBuildSignal)
 
 	pc := &PollClient{
 		apiClient:          apiClient,

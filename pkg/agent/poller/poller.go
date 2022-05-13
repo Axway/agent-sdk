@@ -20,7 +20,7 @@ type manager struct {
 	interval  time.Duration
 }
 
-func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
+func newPollManager(cfg *harvester.Config, interval time.Duration, cacheBuildSignal chan interface{}) *manager {
 	logger := log.NewFieldLogger().
 		WithComponent("manager").
 		WithPackage("sdk.agent.poller")
@@ -28,7 +28,7 @@ func newPollManager(cfg *harvester.Config, interval time.Duration) *manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &manager{
-		harvester: harvester.NewClient(cfg),
+		harvester: harvester.NewClient(cfg, cacheBuildSignal),
 		logger:    logger,
 		timer:     time.NewTimer(interval),
 		ctx:       ctx,

@@ -21,6 +21,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -249,8 +250,17 @@ func UnregisterResourceEventHandler(name string) {
 func syncCache() error {
 	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
 	// register the update cache job
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
-	err := discoveryCache.Execute()
+	cacheBuildSignal, stopCh := make(chan interface{}), make(chan interface{})
+
+	discoveryCache := newDiscoveryCache(
+		agent.agentResourceManager,
+		false,
+		agent.instanceCacheLock,
+		migration,
+		cacheBuildSignal,
+		stopCh,
+	)
+	err := discoveryCache.execute()
 	if err != nil {
 		return err
 	}
@@ -260,7 +270,12 @@ func syncCache() error {
 		agent.cacheManager.SaveCache()
 	}
 
-	return startCentralEventProcessor(agent)
+	_, err = jobs.RegisterDetachedChannelJobWithName(discoveryCache, stopCh, "Discovery Cache")
+	if err != nil {
+		return err
+	}
+
+	return startCentralEventProcessor(agent, cacheBuildSignal)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -380,12 +395,12 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(agent agentData) error {
+func startCentralEventProcessor(agent agentData, cacheBuildSignal chan interface{}) error {
 	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(agent)
+		return startStreamMode(agent, cacheBuildSignal)
 	}
 
-	return startPollMode(agent)
+	return startPollMode(agent, cacheBuildSignal)
 }
 
 func newHandlers(agent agentData) []handler.Handler {
@@ -410,7 +425,7 @@ func newHandlers(agent agentData) []handler.Handler {
 	return handlers
 }
 
-func startPollMode(agent agentData) error {
+func startPollMode(agent agentData, cacheBuildSignal chan interface{}) error {
 	handlers := newHandlers(agent)
 
 	pc, err := poller.NewPollClient(
@@ -421,6 +436,7 @@ func startPollMode(agent agentData) error {
 		func(p *poller.PollClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
 		},
+		cacheBuildSignal,
 		handlers...,
 	)
 
@@ -433,7 +449,7 @@ func startPollMode(agent agentData) error {
 	return err
 }
 
-func startStreamMode(agent agentData) error {
+func startStreamMode(agent agentData, cacheBuildSignal chan interface{}) error {
 	handlers := newHandlers(agent)
 
 	sc, err := stream.NewStreamerClient(
@@ -444,6 +460,7 @@ func startStreamMode(agent agentData) error {
 		func(s *stream.StreamerClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 		},
+		cacheBuildSignal,
 		handlers...,
 	)
 

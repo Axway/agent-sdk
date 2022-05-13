@@ -47,10 +47,17 @@ type discoveryCache struct {
 	agentResourceManager resource.Manager
 	migrator             migrate.AttrMigrator
 	logger               log.FieldLogger
+	signal               chan interface{}
+	stopCh               chan interface{}
 }
 
 func newDiscoveryCache(
-	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
+	manager resource.Manager,
+	getAll bool,
+	instanceCacheLock *sync.Mutex,
+	migrator migrate.AttrMigrator,
+	signal chan interface{},
+	stopCh chan interface{},
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
@@ -67,6 +74,8 @@ func newDiscoveryCache(
 		getHCStatus:          hc.GetStatus,
 		migrator:             migrator,
 		logger:               logger,
+		signal:               signal,
+		stopCh:               stopCh,
 	}
 }
 
@@ -85,8 +94,22 @@ func (j *discoveryCache) Status() error {
 	return fmt.Errorf("could not establish a connection to APIC to update the cache")
 }
 
-// Execute -
+// Execute - starts a loop to wait for the discovery cache to receive a signal to rebuild the cache
 func (j *discoveryCache) Execute() error {
+	for {
+		select {
+		case <-j.stopCh:
+			return nil
+		case <-j.signal:
+			if err := j.execute(); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// execute rebuilds the discovery cache
+func (j *discoveryCache) execute() error {
 	discoveryCacheLock.Lock()
 	defer discoveryCacheLock.Unlock()
 	j.logger.Trace("executing API cache update job")

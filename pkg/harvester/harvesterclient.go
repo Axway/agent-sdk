@@ -44,9 +44,10 @@ type Config struct {
 
 // Client for connecting to harvester
 type Client struct {
-	Cfg    *Config
-	Client api.Client
-	URL    string
+	Cfg              *Config
+	Client           api.Client
+	URL              string
+	cacheBuildSignal chan interface{}
 }
 
 // NewConfig creates a config for harvester connections
@@ -69,7 +70,7 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 }
 
 // NewClient creates a new harvester client
-func NewClient(cfg *Config) *Client {
+func NewClient(cfg *Config, cacheBuildSignal chan interface{}) *Client {
 	if cfg.Protocol == "" {
 		cfg.Protocol = "https"
 	}
@@ -84,9 +85,10 @@ func NewClient(cfg *Config) *Client {
 	}
 
 	return &Client{
-		URL:    cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(int(cfg.Port)) + "/events",
-		Cfg:    cfg,
-		Client: api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout),
+		cacheBuildSignal: cacheBuildSignal,
+		URL:              cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(int(cfg.Port)) + "/events",
+		Cfg:              cfg,
+		Client:           api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout),
 	}
 }
 
@@ -116,16 +118,20 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["Content-Type"] = "application/json"
 		res, err := h.Client.Send(req)
 		if err != nil {
+			// send signal to discovery cache
+			h.signalErr()
 			return lastID, err
 		}
 
 		if res.Code != 200 {
+			h.signalErr()
 			return lastID, fmt.Errorf("expected a 200 response but received %d", res.Code)
 		}
 
 		pagedEvents := make([]*resourceEntryExternalEvent, 0)
 		err = json.Unmarshal(res.Body, &pagedEvents)
 		if err != nil {
+			h.signalErr()
 			return lastID, err
 		}
 
@@ -189,4 +195,13 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	}
 
 	return h.EventCatchUp(link, events)
+}
+
+func (h *Client) signalErr() {
+	h.Cfg.SequenceProvider.SetSequence(0)
+	if h.cacheBuildSignal != nil {
+		go func() {
+			h.cacheBuildSignal <- struct{}{}
+		}()
+	}
 }

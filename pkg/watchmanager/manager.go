@@ -83,7 +83,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			ClientTimeout:    manager.options.keepAlive.timeout,
 			SequenceProvider: seq,
 		}
-		manager.hClient = harvester.NewClient(harvesterConfig)
+		manager.hClient = harvester.NewClient(harvesterConfig, manager.options.harvesterSignalCh)
 	}
 
 	return manager, err
