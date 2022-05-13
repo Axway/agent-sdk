@@ -382,18 +382,9 @@ func updateInstResources(requestDefinition *v1.ResourceInstance, resourceURL str
 						credentialRequestPolicies, err = migrateCredentialRequestDefinitions(authPolicies, ri)
 
 						// Find only the known CRD's
-
-						log.Debugf("check to see if credential request definitions exist for %s", credentialRequestPolicies)
-						// remove any crd not in the cache
-						knownCRDs := make([]string, 0)
-						for _, credentialRequestPolicy := range credentialRequestPolicies {
-							if def, err := agent.cacheManager.GetCredentialRequestDefinitionByName(credentialRequestPolicy); err == nil && def != nil {
-								knownCRDs = append(knownCRDs, credentialRequestPolicy)
-							}
-						}
-
-						if len(knownCRDs) > 0 {
-							log.Debugf("attempt to add the following credential request definitions %s, to apiservice %s", knownCRDs, apiSvcInst.Name)
+						credentialRequestPolicies = checkCredentialRequestDefinitions(credentialRequestPolicies)
+						if len(credentialRequestPolicies) > 0 {
+							log.Debugf("attempt to add the following credential request definitions %s, to apiservice %s", credentialRequestPolicies, apiSvcInst.Name)
 						} else {
 							log.Debug("did not find any credential request definitions in cache")
 							return
@@ -481,7 +472,6 @@ func migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes m
 }
 
 func setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
-	accessRequestDefinition = accessRequestDefinition
 	return accessRequestDefinition, nil
 }
 
