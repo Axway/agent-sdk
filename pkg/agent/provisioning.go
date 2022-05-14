@@ -28,6 +28,9 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
 	if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
 		resources := make([]*v1.ResourceInstance, 0)
+
+		agent.cacheManager.AddAccessRequestDefinition(ri)
+
 		cache := agent.cacheManager.GetAPIServiceCache()
 
 		for _, key := range cache.GetKeys() {

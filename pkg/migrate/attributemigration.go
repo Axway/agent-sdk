@@ -54,6 +54,7 @@ type client interface {
 	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error)
 }
 
 type item struct {

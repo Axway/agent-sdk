@@ -203,6 +203,10 @@ func (m *mockClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]int
 	return nil
 }
 
+func (m *mockClient) CreateOrUpdateResource(data v1.Interface) (*apiv1.ResourceInstance, error) {
+	return m.execRes, nil
+}
+
 func (m *mockClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
 	return json.Marshal(m.execRes)
 }

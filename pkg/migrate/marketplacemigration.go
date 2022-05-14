@@ -171,14 +171,18 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				// Check if ARD exists
 				if apiSvcInst.Spec.AccessRequestDefinition == "" {
 					log.Debug("accessRequestDefinitions doesn't exist")
-					ardRIName, err = m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+					err = m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes)
 					if err != nil {
 						errCh <- err
 						return
 					}
 
-					if ardRIName == "" {
-						ardRIName = "api-key"
+					var ardRIName = "api-key"
+
+					ardRI, _ := client.CreateOrUpdateResource(nil, nil)
+
+					if ardRI.Name != "" {
+						ardRIName = ardRI.Name
 					}
 
 					log.Debugf("adding the following access request definition %s", ardRIName)
@@ -234,7 +238,7 @@ func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies 
 
 }
 
-func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) (string, error) {
+func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string) error {
 
 	scopes := make([]string, 0)
 	for scope := range oauthScopes {
@@ -242,7 +246,7 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 	}
 
 	if len(scopes) > 0 {
-		ardRI, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
+		_, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
@@ -256,16 +260,20 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 									IsString().
 									SetEnumValues(scopes)))).Register()
 		if err != nil {
-			return "", err
+			return err
 		}
-		return ardRI.Name, nil
 	}
-	return "", nil
+	return nil
 }
 
 func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	m.accessRequestDefinition = accessRequestDefinition
 	return m.accessRequestDefinition, nil
+}
+
+// getAccessRequestDefintion -
+func (m *MarketplaceMigration) getAccessRequestDefintion() *mv1a.AccessRequestDefinition {
+	return m.accessRequestDefinition
 }
 
 // updateRI updates the resource, and the sub resource
