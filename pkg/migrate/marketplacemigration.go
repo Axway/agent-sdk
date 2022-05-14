@@ -179,7 +179,7 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 
 					var ardRIName = "api-key"
 
-					ardRI, _ := client.CreateOrUpdateResource(nil, nil)
+					ardRI, _ := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
 
 					if ardRI.Name != "" {
 						ardRIName = ardRI.Name
