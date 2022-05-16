@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -20,10 +22,11 @@ type MarketplaceMigrator interface {
 }
 
 // NewMarketplaceMigration - creates a new MarketplaceMigration
-func NewMarketplaceMigration(client client, cfg config.CentralConfig) *MarketplaceMigration {
+func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache cache.Manager) *MarketplaceMigration {
 	return &MarketplaceMigration{
 		client: client,
 		cfg:    cfg,
+		cache:  cache,
 	}
 }
 
@@ -31,6 +34,7 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig) *Marketpla
 type MarketplaceMigration struct {
 	client                  client
 	cfg                     config.CentralConfig
+	cache                   agentcache.Manager
 	accessRequestDefinition *mv1a.AccessRequestDefinition
 }
 
@@ -146,6 +150,8 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				return
 			}
 
+			log.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, specDefintionType)
+
 			specProcessor := specParser.GetSpecProcessor()
 			endPoints, err := specProcessor.GetEndpoints()
 			instanceSpecEndPoints, err := m.createInstanceEndpoint(endPoints)
@@ -153,9 +159,6 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				errCh <- err
 				return
 			}
-
-			var ardRIName string
-			var credentialRequestPolicies []string
 
 			var i interface{} = specProcessor
 
@@ -168,44 +171,56 @@ func (m *MarketplaceMigration) migrate(resourceURL string, query map[string]stri
 				// get oauth scopes
 				oauthScopes := val.GetOAuthScopes()
 
+				ardRIName := apiSvcInst.Spec.AccessRequestDefinition
+				credentialRequestPolicies := apiSvcInst.Spec.CredentialRequestDefinitions
+
 				// Check if ARD exists
 				if apiSvcInst.Spec.AccessRequestDefinition == "" {
-					log.Debug("accessRequestDefinitions doesn't exist")
+					log.Debugf("access request definitions doesn't exist for apiserviceinstance %s", apiSvcInst.Name)
 					err = m.migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes)
 					if err != nil {
 						errCh <- err
 						return
 					}
 
-					var ardRIName = "api-key"
-
-					ardRI, _ := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
-
-					if ardRI.Name != "" {
-						ardRIName = ardRI.Name
+					newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
+					if err != nil {
+						errCh <- err
+						return
 					}
 
-					log.Debugf("adding the following access request definition %s", ardRIName)
+					if newARD != nil {
+						ard, err := newARD.AsInstance()
+						if err == nil {
+							m.cache.AddAccessRequestDefinition(ard)
+						} else {
+							errCh <- err
+							return
+						}
+						ardRIName = ard.Name
+					}
+
+					log.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
+
+					newSpec := mv1a.ApiServiceInstanceSpec{
+						Endpoint:                     instanceSpecEndPoints,
+						ApiServiceRevision:           ri.Name,
+						CredentialRequestDefinitions: credentialRequestPolicies,
+						AccessRequestDefinition:      ardRIName,
+					}
+					// convert to set ri.Spec
+					var inInterface map[string]interface{}
+					in, _ := json.Marshal(newSpec)
+					json.Unmarshal(in, &inInterface)
+
+					ri.Spec = inInterface
+
+					url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
+					err = m.updateRI(url, ri)
+					errCh <- err
 				}
-
-				newSpec := mv1a.ApiServiceInstanceSpec{
-					Endpoint:                     instanceSpecEndPoints,
-					ApiServiceRevision:           ri.Name,
-					CredentialRequestDefinitions: credentialRequestPolicies,
-					AccessRequestDefinition:      ardRIName,
-				}
-
-				// convert to set ri.Spec
-				var inInterface map[string]interface{}
-				in, _ := json.Marshal(newSpec)
-				json.Unmarshal(in, &inInterface)
-
-				ri.Spec = inInterface
 			}
 
-			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-			err = m.updateRI(url, ri)
-			errCh <- err
 		}(resource)
 	}
 
@@ -238,11 +253,11 @@ func (m *MarketplaceMigration) migrateCredentialRequestDefinitions(authPolicies 
 
 }
 
-func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string) error {
+func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, scopes map[string]string) error {
 
-	scopes := make([]string, 0)
-	for scope := range oauthScopes {
-		scopes = append(scopes, scope)
+	oauthScopes := make([]string, 0)
+	for scope := range scopes {
+		oauthScopes = append(oauthScopes, scope)
 	}
 
 	if len(scopes) > 0 {
@@ -258,11 +273,17 @@ func (m *MarketplaceMigration) migrateAccessRequestDefinitions(apiKeyInfo []apic
 								provisioning.NewSchemaPropertyBuilder().
 									SetName("scope").
 									IsString().
-									SetEnumValues(scopes)))).Register()
+									SetEnumValues(oauthScopes)))).Register()
 		if err != nil {
 			return err
 		}
 	}
+
+	ardRI, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).Register()
+	if err != nil {
+		return err
+	}
+	log.Debugf("created access request definition %s without any scopes", ardRI.Name)
 	return nil
 }
 

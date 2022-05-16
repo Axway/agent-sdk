@@ -130,7 +130,7 @@ func (j *discoveryCache) updateAPICache() error {
 	// Check if marketplace provisioning is enabled.  If it is enabled, verify that current apiservices have the necessary request definitions
 	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		j.logger.Trace("marketplace provisioning migration starting")
-		// j.marketplaceProvisioningMigration(apiServices)
+		j.marketplaceProvisioningMigration(apiServices)
 	}
 
 	return j.attributeMigration(apiServices, existingAPIs)

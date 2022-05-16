@@ -29,7 +29,7 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
 		resources := make([]*v1.ResourceInstance, 0)
 
-		agent.cacheManager.AddAccessRequestDefinition(ri)
+		agent.cacheManager.AddCredentialRequestDefinition(ri)
 
 		cache := agent.cacheManager.GetAPIServiceCache()
 
@@ -337,6 +337,8 @@ func updateInstResources(requestDefinition *v1.ResourceInstance, resourceURL str
 				return
 			}
 
+			log.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, specDefintionType)
+
 			specProcessor := specParser.GetSpecProcessor()
 			endPoints, err := specProcessor.GetEndpoints()
 			instanceSpecEndPoints, err := createInstanceEndpoint(endPoints)
@@ -344,9 +346,6 @@ func updateInstResources(requestDefinition *v1.ResourceInstance, resourceURL str
 				errCh <- err
 				return
 			}
-
-			var ardRIName string
-			var credentialRequestPolicies []string
 
 			var i interface{} = specProcessor
 
@@ -362,26 +361,25 @@ func updateInstResources(requestDefinition *v1.ResourceInstance, resourceURL str
 				// get oauth scopes
 				oauthScopes := val.GetOAuthScopes()
 
+				ardRIName := apiSvcInst.Spec.AccessRequestDefinition
+				credentialRequestPolicies := apiSvcInst.Spec.CredentialRequestDefinitions
+
 				if requestDefinition.Kind == mv1a.AccessRequestDefinitionGVK().Kind {
 					// Check if ARD exists
 					if apiSvcInst.Spec.AccessRequestDefinition == "" {
-						log.Debugf("apiservice %s does not have any access request definitions", apiSvcInst.Name)
-						ardRIName, err = migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
+						log.Debugf("access request definitions doesn't exist for apiserviceinstance %s", apiSvcInst.Name)
+						ardRI, err := migrateAccessRequestDefinitions(apiKeyInfo, oauthScopes, ri)
 						if err != nil {
 							errCh <- err
 							return
 						}
-
-						if ardRIName == "" {
-							ardRIName = "api-key"
-						}
-
+						ardRIName = ardRI.Name
 						log.Debugf("adding the following access request definition %s", ardRIName)
 					}
 				} else if requestDefinition.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
 					// Check if CRD exists
 					if len(apiSvcInst.Spec.CredentialRequestDefinitions) == 0 {
-						log.Debugf("apiservice %s does not have any credential request definitions", apiSvcInst.Name)
+						log.Debugf("credential request definition doesn't exist for apiserviceinstance %s", apiSvcInst.Name)
 						credentialRequestPolicies, err = migrateCredentialRequestDefinitions(authPolicies, ri)
 
 						// Find only the known CRD's
@@ -393,26 +391,25 @@ func updateInstResources(requestDefinition *v1.ResourceInstance, resourceURL str
 							return
 						}
 					}
+					newSpec := mv1a.ApiServiceInstanceSpec{
+						Endpoint:                     instanceSpecEndPoints,
+						ApiServiceRevision:           ri.Name,
+						CredentialRequestDefinitions: credentialRequestPolicies,
+						AccessRequestDefinition:      ardRIName,
+					}
+
+					// convert to set ri.Spec
+					var inInterface map[string]interface{}
+					in, _ := json.Marshal(newSpec)
+					json.Unmarshal(in, &inInterface)
+
+					ri.Spec = inInterface
 				}
 
-				newSpec := mv1a.ApiServiceInstanceSpec{
-					Endpoint:                     instanceSpecEndPoints,
-					ApiServiceRevision:           ri.Name,
-					CredentialRequestDefinitions: credentialRequestPolicies,
-					AccessRequestDefinition:      ardRIName,
-				}
-
-				// convert to set ri.Spec
-				var inInterface map[string]interface{}
-				in, _ := json.Marshal(newSpec)
-				json.Unmarshal(in, &inInterface)
-
-				ri.Spec = inInterface
+				url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
+				err = updateRI(url, ri)
+				errCh <- err
 			}
-
-			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-			err = updateRI(url, ri)
-			errCh <- err
 		}(resource)
 	}
 
@@ -445,15 +442,15 @@ func migrateCredentialRequestDefinitions(authPolicies []string, ri *v1.ResourceI
 
 }
 
-func migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string, ri *v1.ResourceInstance) (string, error) {
+func migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, scopes map[string]string, ri *v1.ResourceInstance) (*mv1a.AccessRequestDefinition, error) {
 
-	scopes := make([]string, 0)
-	for scope := range oauthScopes {
-		scopes = append(scopes, scope)
+	oauthScopes := make([]string, 0)
+	for scope := range scopes {
+		oauthScopes = append(oauthScopes, scope)
 	}
 
 	if len(scopes) > 0 {
-		ardRI, err := provisioning.NewAccessRequestBuilder(setAccessRequestDefintion).
+		ard, err := provisioning.NewAccessRequestBuilder(nil).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
@@ -465,17 +462,12 @@ func migrateAccessRequestDefinitions(apiKeyInfo []apic.APIKeyInfo, oauthScopes m
 								provisioning.NewSchemaPropertyBuilder().
 									SetName("scope").
 									IsString().
-									SetEnumValues(scopes)))).Register()
+									SetEnumValues(oauthScopes)))).Register()
 		if err != nil {
-			return "", err
+			return ard, err
 		}
-		return ardRI.Name, nil
 	}
-	return "", nil
-}
-
-func setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
-	return accessRequestDefinition, nil
+	return nil, nil
 }
 
 // updateRI updates the resource, and the sub resource

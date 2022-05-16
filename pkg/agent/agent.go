@@ -249,7 +249,7 @@ func UnregisterResourceEventHandler(name string) {
 
 func startAPIServiceCache() error {
 	attrMigration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
-	marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg)
+	marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
 
 	// register the update cache job
 	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, attrMigration, marketplaceMigration)
