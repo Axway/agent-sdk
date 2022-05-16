@@ -194,7 +194,7 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 							return
 						}
 
-						log.Debugf("attempt to create access request definition %s", m.getAccessRequestDefintion())
+						log.Debugf("attempt to create access request definition %s", m.getAccessRequestDefintion().Name)
 						newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
 						if err != nil {
 							errCh <- err
