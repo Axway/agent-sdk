@@ -42,7 +42,7 @@ func TestNewStreamer(t *testing.T) {
 	onStreamConnection := func(s *StreamerClient) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}
-	streamer, err := NewStreamerClient(httpClient, cfg, getToken, cacheManager, onStreamConnection)
+	streamer, err := NewStreamerClient(httpClient, cfg, getToken, cacheManager, onStreamConnection, nil)
 	assert.NotNil(t, streamer)
 	assert.Nil(t, err)
 

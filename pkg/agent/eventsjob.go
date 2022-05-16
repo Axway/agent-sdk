@@ -11,7 +11,6 @@ import (
 const (
 	defaultRetryInterval = 100 * time.Millisecond
 	maxRetryInterval     = 5 * time.Minute
-	clientStreamJobName  = "Stream Client"
 )
 
 // eventsJob interface for a job to execute to retrieve events in either stream or poll mode
@@ -28,16 +27,18 @@ type eventProcessorJob struct {
 	stop          chan interface{}
 	jobID         string
 	retryInterval time.Duration
+	name          string
 }
 
 // newEventProcessorJob creates a job for the streamerClient
-func newEventProcessorJob(streamer eventsJob) jobs.Job {
+func newEventProcessorJob(streamer eventsJob, name string) jobs.Job {
 	streamJob := &eventProcessorJob{
 		streamer:      streamer,
 		stop:          make(chan interface{}),
 		retryInterval: defaultRetryInterval,
+		name:          name,
 	}
-	streamJob.jobID, _ = jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, clientStreamJobName)
+	streamJob.jobID, _ = jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
 
 	return streamJob
 }
@@ -78,7 +79,7 @@ func (j *eventProcessorJob) renewRegistration() {
 		}
 
 		time.AfterFunc(j.retryInterval, func() {
-			j.jobID, _ = jobs.RegisterDetachedChannelJobWithName(j, j.stop, clientStreamJobName)
+			j.jobID, _ = jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
 		})
 		return
 	}

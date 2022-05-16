@@ -21,6 +21,8 @@ type manager struct {
 	onStop    func()
 }
 
+type newPollManagerFunc func(cfg *harvester.Config, interval time.Duration, onStop func()) *manager
+
 func newPollManager(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
 	logger := log.NewFieldLogger().
 		WithComponent("manager").

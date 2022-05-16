@@ -295,7 +295,7 @@ func (c *cacheManager) ReleaseResourceReadLock() {
 // Flush empties the persistent cache and all internal caches
 func (c *cacheManager) Flush() {
 	c.logger.Debug("resetting the persistent cache")
-	c.ReleaseResourceReadLock()
+	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	c.accessRequestMap.Flush()

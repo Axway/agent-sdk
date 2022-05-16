@@ -260,6 +260,8 @@ func syncCache() error {
 		stopCh,
 	)
 
+	discoveryCache.execute()
+
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		// trigger early saving for the initialized cache, following save will be done by interval job
 		agent.cacheManager.SaveCache()
@@ -269,7 +271,6 @@ func syncCache() error {
 	if err != nil {
 		return err
 	}
-	discoveryCache.SignalSync()
 
 	f := func() {
 		discoveryCache.SignalSync()
@@ -445,7 +446,7 @@ func startPollMode(agent agentData, cacheSyncFunc func()) error {
 		return fmt.Errorf("could not start the harvester poll client: %s", err)
 	}
 
-	newEventProcessorJob(pc)
+	newEventProcessorJob(pc, "Poll Client")
 
 	return err
 }
@@ -469,7 +470,7 @@ func startStreamMode(agent agentData, cacheSyncFunc func()) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	newEventProcessorJob(sc)
+	newEventProcessorJob(sc, "Stream Client")
 
 	return err
 }

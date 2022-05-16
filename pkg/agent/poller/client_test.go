@@ -8,6 +8,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -34,37 +35,40 @@ func TestPollClientStart(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	poller, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil)
-	poller.poller.harvester = &mockHarvester{}
-	assert.NotNil(t, poller)
+	pollClient, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil)
+	assert.NotNil(t, pollClient)
 	assert.Nil(t, err)
 
-	assert.NotNil(t, poller.Status())
+	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
+		p := newPollManager(cfg, interval, onStop)
+		p.harvester = &mockHarvester{}
+		return p
+	}
 
 	errCh := make(chan error)
 	go func() {
-		err := poller.Start()
+		err := pollClient.Start()
 		errCh <- err
 	}()
 
-	for poller.listener == nil {
+	for pollClient.listener == nil || pollClient.poller == nil {
 		continue
 	}
 
 	// assert the poller is healthy
-	assert.Nil(t, poller.Status())
-	assert.Equal(t, hc.OK, poller.Healthcheck("").Result)
+	assert.Nil(t, pollClient.Status())
+	assert.Equal(t, hc.OK, pollClient.Healthcheck("").Result)
 
 	// should stop the poller and write nil to the error channel
-	poller.Stop()
+	pollClient.Stop()
 
 	err = <-errCh
 	assert.Nil(t, err)
 
-	assert.Equal(t, hc.FAIL, poller.Healthcheck("").Result)
-	assert.NotNil(t, poller.Status())
-	poller.poller = nil
-	poller.listener = nil
+	assert.Equal(t, hc.FAIL, pollClient.Healthcheck("").Result)
+	assert.NotNil(t, pollClient.Status())
+	pollClient.poller = nil
+	pollClient.listener = nil
 }
 
 type mockAPIClient struct {

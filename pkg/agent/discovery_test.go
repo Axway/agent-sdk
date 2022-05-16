@@ -23,7 +23,8 @@ import (
 )
 
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(nil, true, &sync.Mutex{}, nil)
+	stopCh := make(chan interface{})
+	dcj := newDiscoveryCache(nil, true, &sync.Mutex{}, nil, stopCh)
 	dcj.getHCStatus = func(_ string) hc.StatusLevel {
 		return hc.OK
 	}
