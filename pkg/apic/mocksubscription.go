@@ -3,6 +3,7 @@ package apic
 import "fmt"
 
 // TODO - this file should be able to be removed once Unified Catalog support has been removed
+
 // MockSubscription - use for ease of testing agents
 type MockSubscription struct {
 	Subscription
