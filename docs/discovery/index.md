@@ -41,8 +41,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 
 
 | YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                              |
-| -------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| central.mode                   | CENTRAL_MODE                   | Mode in which Agent operates to publish APIs to Central (`publishToEnvironment` = API Service, `publishToEnvironmentAndCatalog` = API Service and Catalog asset)                                                                                                                                                         |
+| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | central.url                    | CENTRAL_URL                    | The URL to the Amplify Central instance being used for Agents (default value: US =`<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                             |
 | central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                 |
 | central.team                   | CENTRAL_TEAM                   | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to`Default Team`)                                                                                                                                                                |
@@ -59,11 +58,11 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.ssl.minVersion         | CENTRAL_SSL_MINVERSION         | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                     |
 | central.ssl.maxVersion         | CENTRAL_SSL_MAXVERSION         | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                   |
 | central.proxyURL               | CENTRAL_PROXYURL               | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                      |
-| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
-| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
-| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
-| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
-| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 10 seconds)          |
+| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                                                                                                                                                                                                      |
+| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                                                                                                                                                                                                     |
+| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                                                                                                                                                                                                          |
+| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                                                                                                                                                                                       |
+| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 10 seconds)                                                                                                                                                                                     |
 
 The following is a sample of Central configuration in YAML
 
@@ -88,11 +87,6 @@ Amplify Agents SDK expose the following interfaces to retrieve the configuration
 // Central Configuration
 type CentralConfig interface {
  GetAgentType() AgentType
- IsPublishToEnvironmentMode() bool
- IsPublishToEnvironmentOnlyMode() bool
- IsPublishToEnvironmentAndCatalogMode() bool
- GetAgentMode() AgentMode
- GetAgentModeAsString() string
  GetTenantID() string
  GetEnvironmentID() string
  GetEnvironmentName() string
@@ -394,7 +388,7 @@ The agent can discover APIs in external API Gateway based on the capability it p
 
 
 | API Service property | Description                                                                                                                                |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | ID                   | ID of the API.                                                                                                                             |
 | PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                                |
 | Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                         |
@@ -422,7 +416,7 @@ Along with the above properties the following properties are on the ServiceBodyB
 
 
 | API Service property    | Description                              | Default (not set)   |
-| ------------------------- | ------------------------------------------ | --------------------- |
+| ----------------------- | ---------------------------------------- | ------------------- |
 | UnstructuredAssetType   | Type of asset for the unstructured data. | Asset               |
 | UnstructuredContentType | Content type for this data.              | parse based on spec |
 | UnstructuredLabel       | Label to display int he catalog item.    | Asset               |

@@ -40,11 +40,6 @@ const (
 	AccessRequestDefinitionFinalizer = "agent.cleanup.accessrequestdefinition"
 )
 
-type apiError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
 // consts for state
 const (
 	UnpublishedState     = "UNPUBLISHED"

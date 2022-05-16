@@ -1,5 +1,9 @@
 package apic
 
+import "github.com/Axway/agent-sdk/pkg/util/log"
+
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
+
 // SubscriptionSchemaBuilder - used to build a subscription schema for API Central
 type SubscriptionSchemaBuilder interface {
 	Update(update bool) SubscriptionSchemaBuilder
@@ -70,6 +74,10 @@ func (s *schemaBuilder) SetJSONDraft07SchemaVersion() SubscriptionSchemaBuilder 
 
 // Register - build and register the subscription schema
 func (s *schemaBuilder) Register() error {
+	if s.apicClient.(*ServiceClient).cfg.IsMarketplaceSubsEnabled() {
+		log.Trace("Registering consumer subscrition definitions is disabled when using Marketplace Provisioning")
+		return nil
+	}
 	if s.err != nil {
 		return s.err
 	}

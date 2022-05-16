@@ -17,7 +17,7 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	if err != nil {
 		return nil, err
 	}
-	apiServiceIntances, err := v1alpha1.APIServiceRevisionFromInstanceArray(resources)
+	apiServiceInstances, err := v1alpha1.APIServiceRevisionFromInstanceArray(resources)
 	if err != nil {
 		return nil, err
 	}
@@ -26,13 +26,13 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 
 	//create array and filter by stage name. Check the stage name as this does not apply for v7
 	if stage != "" {
-		for _, apiServer := range apiServiceIntances {
+		for _, apiServer := range apiServiceInstances {
 			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
 				filteredAPIRevisions = append(filteredAPIRevisions, apiServer)
 			}
 		}
 	} else {
-		filteredAPIRevisions = apiServiceIntances
+		filteredAPIRevisions = apiServiceInstances
 	}
 
 	return filteredAPIRevisions, nil
@@ -98,5 +98,3 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 	return resourceInstance, nil
 }
-
-
