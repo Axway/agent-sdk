@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func TestEventListener_start(t *testing.T) {
 		name      string
 		hasError  bool
 		events    chan *proto.Event
-		client    apiClient
+		client    APIClient
 		handler   handler.Handler
 		writeStop bool
 	}{
@@ -56,7 +56,7 @@ func TestEventListener_start(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			listener := NewEventListener(tc.events, tc.client, sequenceManager, tc.handler)
@@ -97,7 +97,7 @@ func TestEventListener_start(t *testing.T) {
 // Should call Listen and handle a graceful stop, and an error
 func TestEventListener_Listen(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
 	listener := NewEventListener(events, &mockAPIClient{}, sequenceManager, &mockHandler{})
 	errCh := listener.Listen()
@@ -117,7 +117,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 		name     string
 		event    proto.Event_Type
 		hasError bool
-		client   apiClient
+		client   APIClient
 		handler  handler.Handler
 	}{
 		{
@@ -150,7 +150,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 		},
 	}
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sequenceManager := newAgentSequenceManager(cacheManager, "testWatch")
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			event := &proto.Event{
@@ -158,6 +158,11 @@ func TestEventListener_handleEvent(t *testing.T) {
 				Payload: &proto.ResourceInstance{
 					Metadata: &proto.Metadata{
 						SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+						Scope: &proto.Metadata_ScopeKind{
+							Kind:     "Kind",
+							Name:     "Name",
+							SelfLink: "/self/link",
+						},
 					},
 				},
 				Metadata: &proto.EventMeta{

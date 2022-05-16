@@ -1,4 +1,4 @@
-package watchmanager
+package harvester
 
 import (
 	"encoding/json"
@@ -42,15 +42,17 @@ func TestReceiveSyncEvents(t *testing.T) {
 	defer s.server.Close()
 	mockServerURL, _ := url.Parse(s.server.URL)
 	port, _ := strconv.Atoi(mockServerURL.Port())
-	cfg := &harvesterConfig{
-		protocol:    mockServerURL.Scheme,
-		host:        mockServerURL.Hostname(),
-		port:        uint32(port),
-		tenantID:    "12345",
-		tokenGetter: getMockToken,
-		pageSize:    2,
+	cfg := &Config{
+		Protocol: mockServerURL.Scheme,
+		Host:     mockServerURL.Hostname(),
+		Port:     uint32(port),
+		TenantID: "12345",
+		TokenGetter: func() (string, error) {
+			return "", nil
+		},
+		PageSize: 2,
 	}
-	client := newHarvesterClient(cfg)
+	client := NewClient(cfg)
 
 	eventCh := make(chan *proto.Event, 1)
 	stopCh := make(chan bool)
@@ -67,7 +69,7 @@ func TestReceiveSyncEvents(t *testing.T) {
 	}()
 	s.responseStatus = 200
 	s.harvesterResponse = []resourceEntryExternalEvent{}
-	_, err := client.receiveSyncEvents("/test", 1, eventCh)
+	_, err := client.ReceiveSyncEvents("/test", 1, eventCh)
 	assert.Nil(t, err)
 	stopCh <- true
 	assert.Equal(t, 0, len(events))

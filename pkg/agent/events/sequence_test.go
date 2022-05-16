@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"testing"
@@ -58,4 +58,14 @@ func Test_GetSequence(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getAgentSequenceManager(t *testing.T) {
+	wtName := "fake"
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	seq := NewSequenceProvider(cacheManager, wtName)
+	assert.Equal(t, seq.GetSequence(), int64(0))
+
+	seq = NewSequenceProvider(cacheManager, "")
+	assert.Equal(t, seq.GetSequence(), int64(0))
 }

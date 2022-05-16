@@ -155,7 +155,7 @@ func TestHealthCheck(t *testing.T) {
 	assert.Equal(t, status.Result, healthcheck.OK)
 }
 
-func TestCreateSubResourceScoped(t *testing.T) {
+func TestCreateSubResource(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	cfg.Environment = "mockenv"
@@ -190,46 +190,7 @@ func TestCreateSubResourceScoped(t *testing.T) {
 		},
 	}
 
-	err := svcClient.CreateSubResourceScoped(ri.ResourceMeta, ri.SubResources)
-	assert.Nil(t, err)
-}
-
-func TestCreateSubResourceUnscoped(t *testing.T) {
-	svcClient, mockHTTPClient := GetTestServiceClient()
-	cfg := GetTestServiceClientCentralConfiguration(svcClient)
-	cfg.Environment = "mockenv"
-	cfg.PlatformURL = "http://foo.bar:4080"
-
-	// There should be one request for each sub resource of the ResourceInstance
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/agent-details-sr.json",
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json",
-			RespCode: http.StatusOK,
-		},
-	})
-
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name:             "test-resource",
-			GroupVersionKind: mv1.APIServiceGVK(),
-			SubResources: map[string]interface{}{
-				defs.XAgentDetails: map[string]interface{}{
-					"externalAPIID":   "12345",
-					"externalAPIName": "daleapi",
-					"createdBy":       "",
-				},
-				"abc": map[string]interface{}{
-					"123": "132",
-				},
-			},
-		},
-	}
-
-	err := svcClient.CreateSubResourceUnscoped(ri.ResourceMeta, ri.SubResources)
+	err := svcClient.CreateSubResource(ri.ResourceMeta, ri.SubResources)
 	assert.Nil(t, err)
 }
 

@@ -175,7 +175,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
 			}
-			err = c.CreateSubResourceScoped(revision.ResourceMeta, subResources)
+			err = c.CreateSubResource(revision.ResourceMeta, subResources)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 				if rollbackErr != nil {

@@ -1,8 +1,14 @@
-package stream
+package events
 
 import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 )
+
+// SequenceProvider - Interface to provide event sequence ID to harvester client to fetch events
+type SequenceProvider interface {
+	GetSequence() int64
+	SetSequence(sequenceID int64)
+}
 
 // agentSequenceManager - represents the sequence manager for an agent
 type agentSequenceManager struct {
@@ -20,6 +26,10 @@ func (s *agentSequenceManager) SetSequence(sequenceID int64) {
 	s.cacheManager.AddSequence(s.watchTopicName, sequenceID)
 }
 
-func newAgentSequenceManager(cacheManager agentcache.Manager, watchTopicName string) *agentSequenceManager {
-	return &agentSequenceManager{cacheManager: cacheManager, watchTopicName: watchTopicName}
+// NewSequenceProvider creates a new SequenceProvider
+func NewSequenceProvider(cacheManager agentcache.Manager, watchTopicName string) SequenceProvider {
+	return &agentSequenceManager{
+		cacheManager:   cacheManager,
+		watchTopicName: watchTopicName,
+	}
 }

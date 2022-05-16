@@ -98,11 +98,11 @@ func (h *managedApplication) onPending(_ context.Context, app *mv1.ManagedApplic
 		defs.XAgentDetails: util.GetAgentDetails(app),
 	}
 
-	err := h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
+	err := h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	if err != nil {
 		return err
 	}
-	return h.client.CreateSubResourceScoped(app.ResourceMeta, map[string]interface{}{"status": app.Status})
+	return h.client.CreateSubResource(app.ResourceMeta, map[string]interface{}{"status": app.Status})
 }
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) {
@@ -116,7 +116,7 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApp
 		err := fmt.Errorf(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
 		h.onError(app, err)
-		h.client.CreateSubResourceScoped(app.ResourceMeta, app.SubResources)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	}
 }
 
