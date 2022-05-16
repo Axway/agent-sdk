@@ -195,7 +195,6 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 
 func TestRootCmdConfigDefault(t *testing.T) {
 	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		assert.Equal(t, corecfg.PublishToEnvironmentAndCatalog, centralConfig.GetAgentMode())
 		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamName())
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
@@ -367,13 +366,10 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	s := newTestServer()
 	defer s.Close()
 
-	var centralCfg corecfg.CentralConfig
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		centralCfg = centralConfig
 		return centralConfig, nil
 	}
 	cmdHandler := func() error {
-		centralCfg.GetAgentMode()
 		return nil
 	}
 

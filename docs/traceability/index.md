@@ -111,11 +111,6 @@ Amplify Agents SDK expose the following interfaces to retrieve the configuration
 // Central Configuration
 type CentralConfig interface {
  GetAgentType() AgentType
- IsPublishToEnvironmentMode() bool
- IsPublishToEnvironmentOnlyMode() bool
- IsPublishToEnvironmentAndCatalogMode() bool
- GetAgentMode() AgentMode
- GetAgentModeAsString() string
  GetTenantID() string
  GetEnvironmentID() string
  GetEnvironmentName() string

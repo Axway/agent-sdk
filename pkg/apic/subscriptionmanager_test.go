@@ -211,7 +211,6 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 
 	client, cfg := createServiceClientForSubscriptions(server)
 	assert.NotNil(t, client)
-	cfg.Mode = corecfg.PublishToEnvironment
 	cfg.Environment = "test"
 
 	approvedSubscriptions := make(map[string]Subscription)

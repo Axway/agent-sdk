@@ -179,7 +179,7 @@ func (sm *subscriptionManager) preprocessSubscription(subscription *CentralSubsc
 func (sm *subscriptionManager) preprocessSubscriptionForConsumerInstance(subscription *CentralSubscription, consumerInstanceName string) {
 	consumerInstance, err := sm.apicClient.getAPIServerConsumerInstance(consumerInstanceName, nil)
 	if err == nil {
-		if sm.apicClient.cfg.IsPublishToEnvironmentAndCatalogMode() {
+		if !sm.apicClient.cfg.IsMarketplaceSubsEnabled() {
 			resource, _ := consumerInstance.AsInstance()
 			sm.setSubscriptionInfo(subscription, resource)
 		} else {

@@ -5,7 +5,6 @@ import (
 
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 // APIKeyInfo -
@@ -32,7 +31,6 @@ type ServiceBody struct {
 	SpecDefinition            []byte
 	Documentation             []byte
 	Tags                      map[string]interface{}
-	AgentMode                 corecfg.AgentMode
 	Image                     string
 	ImageContentType          string
 	CreatedBy                 string

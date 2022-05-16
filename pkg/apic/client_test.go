@@ -27,7 +27,6 @@ func TestGetEnvironment(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	cfg.Environment = "Environment"
-	cfg.Mode = corecfg.PublishToEnvironment
 	mockHTTPClient.SetResponse("./testdata/apiserver-environment.json", http.StatusOK)
 
 	env, err := svcClient.GetEnvironment()
