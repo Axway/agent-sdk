@@ -87,14 +87,14 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
-	UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
-	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
+	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	DeleteResourceInstance(ri *v1.ResourceInstance) error
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
-	GetResource(url string) (*apiv1.ResourceInstance, error)
-	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	CreateOrUpdateResource(apiv1.Interface) (*apiv1.ResourceInstance, error)
+	GetResource(url string) (*v1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
+	CreateOrUpdateResource(v1.Interface) (*v1.ResourceInstance, error)
 }
 
 // New creates a new Client
