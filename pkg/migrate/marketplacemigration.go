@@ -187,14 +187,12 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 				if apiSvcInst.Spec.AccessRequestDefinition == "" {
 					// Only migrate resource with oauth scopes. Spec with type apiKey will be handled on startup
 					if len(oauthScopes) > 0 {
-						log.Debugf("access request definitions doesn't exist for apiserviceinstance %s", apiSvcInst.Name)
 						err = m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
 						if err != nil {
 							errCh <- err
 							return
 						}
 
-						log.Debugf("attempt to create access request definition %s", m.getAccessRequestDefintion().Name)
 						newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
 						if err != nil {
 							errCh <- err
@@ -216,7 +214,6 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 
 				// Check if CRD exists
 				if len(apiSvcInst.Spec.CredentialRequestDefinitions) == 0 {
-					log.Debugf("credential request definition doesn't exist for apiserviceinstance %s", apiSvcInst.Name)
 					credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, ri)
 
 					// Find only the known CRD's
@@ -281,7 +278,6 @@ func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []strin
 }
 
 func (m *MarketplaceMigration) checkCredentialRequestDefinitions(credentialRequestPolicies []string) []string {
-	log.Debugf("check to see if credential request definitions exist for %s", credentialRequestPolicies)
 	// remove any crd not in the cache
 	knownCRDs := make([]string, 0)
 	for _, credentialRequestPolicy := range credentialRequestPolicies {
