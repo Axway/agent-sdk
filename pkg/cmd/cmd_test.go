@@ -97,7 +97,6 @@ type configWithNoValidation struct {
 func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
 	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
 	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")

@@ -683,7 +683,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		AddUsageReportingProperties(props)
 	} else {
-		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
