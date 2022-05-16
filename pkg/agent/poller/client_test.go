@@ -34,7 +34,7 @@ func TestPollClientStart(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	poller, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil)
+	poller, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil)
 	poller.poller.harvester = &mockHarvester{}
 	assert.NotNil(t, poller)
 	assert.Nil(t, err)

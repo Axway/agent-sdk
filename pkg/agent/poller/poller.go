@@ -18,9 +18,10 @@ type manager struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	interval  time.Duration
+	onStop    func()
 }
 
-func newPollManager(cfg *harvester.Config, interval time.Duration, cacheBuildSignal chan interface{}) *manager {
+func newPollManager(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
 	logger := log.NewFieldLogger().
 		WithComponent("manager").
 		WithPackage("sdk.agent.poller")
@@ -28,32 +29,31 @@ func newPollManager(cfg *harvester.Config, interval time.Duration, cacheBuildSig
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &manager{
-		harvester: harvester.NewClient(cfg, cacheBuildSignal),
+		harvester: harvester.NewClient(cfg),
 		logger:    logger,
 		timer:     time.NewTimer(interval),
 		ctx:       ctx,
 		cancel:    cancel,
 		interval:  interval,
 		sequence:  cfg.SequenceProvider,
+		onStop:    onStop,
 	}
 }
 
 // RegisterWatch registers a watch topic for polling events and publishing events on a channel
-func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) error {
-	if err := m.harvester.EventCatchUp(topic, eventChan); err != nil {
-		return err
-	}
-
+func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) {
 	go func() {
 		err := m.sync(topic, eventChan)
 		m.Stop()
 		errChan <- err
 	}()
-
-	return nil
 }
 
 func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
+	if err := m.harvester.EventCatchUp(topic, eventChan); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -76,6 +76,9 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 func (m *manager) Stop() {
 	m.timer.Stop()
 	m.cancel()
+	if m.onStop != nil {
+		m.onStop()
+	}
 	m.logger.Debug("poller has been stopped")
 }
 

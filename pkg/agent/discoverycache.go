@@ -47,7 +47,7 @@ type discoveryCache struct {
 	agentResourceManager resource.Manager
 	migrator             migrate.AttrMigrator
 	logger               log.FieldLogger
-	signal               chan interface{}
+	signal               chan struct{}
 	stopCh               chan interface{}
 }
 
@@ -56,7 +56,6 @@ func newDiscoveryCache(
 	getAll bool,
 	instanceCacheLock *sync.Mutex,
 	migrator migrate.AttrMigrator,
-	signal chan interface{},
 	stopCh chan interface{},
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
@@ -74,7 +73,7 @@ func newDiscoveryCache(
 		getHCStatus:          hc.GetStatus,
 		migrator:             migrator,
 		logger:               logger,
-		signal:               signal,
+		signal:               make(chan struct{}),
 		stopCh:               stopCh,
 	}
 }
@@ -490,4 +489,10 @@ func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.Reso
 		subscriptionName,
 	)
 	return GetCentralClient().GetResource(url)
+}
+
+// SignalSync sends a signal to the discovery cache to start a new cache sync
+func (j *discoveryCache) SignalSync() {
+	j.logger.Debug("syncing discovery cache")
+	j.signal <- struct{}{}
 }

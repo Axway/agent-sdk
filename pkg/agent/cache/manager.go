@@ -23,6 +23,7 @@ type Manager interface {
 	// Cache management related methods
 	HasLoadedPersistedCache() bool
 	SaveCache()
+	Flush()
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error
@@ -103,23 +104,23 @@ type Manager interface {
 
 type cacheManager struct {
 	jobs.Job
-	logger                  log.FieldLogger
-	apiMap                  cache.Cache
-	instanceMap             cache.Cache
-	categoryMap             cache.Cache
-	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
-	subscriptionMap         cache.Cache
-	sequenceCache           cache.Cache
-	resourceCacheReadLock   sync.Mutex
-	cacheLock               sync.Mutex
-	persistedCache          cache.Cache
-	teams                   cache.Cache
+	apiMap                  cache.Cache
 	ardMap                  cache.Cache
-	crdMap                  cache.Cache
 	cacheFilename           string
+	cacheLock               sync.Mutex
+	categoryMap             cache.Cache
+	crdMap                  cache.Cache
 	hasLoadedPersistedCache bool
+	instanceMap             cache.Cache
 	isCacheUpdated          bool
+	logger                  log.FieldLogger
+	managedApplicationMap   cache.Cache
+	persistedCache          cache.Cache
+	resourceCacheReadLock   sync.Mutex
+	sequenceCache           cache.Cache
+	subscriptionMap         cache.Cache
+	teams                   cache.Cache
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
@@ -289,4 +290,23 @@ func (c *cacheManager) ApplyResourceReadLock() {
 
 func (c *cacheManager) ReleaseResourceReadLock() {
 	c.resourceCacheReadLock.Unlock()
+}
+
+// Flush empties the persistent cache and all internal caches
+func (c *cacheManager) Flush() {
+	c.logger.Debug("resetting the persistent cache")
+	c.ReleaseResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	c.accessRequestMap.Flush()
+	c.apiMap.Flush()
+	c.ardMap.Flush()
+	c.categoryMap.Flush()
+	c.crdMap.Flush()
+	c.instanceMap.Flush()
+	c.managedApplicationMap.Flush()
+	c.sequenceCache.Flush()
+	c.subscriptionMap.Flush()
+
+	c.SaveCache()
 }

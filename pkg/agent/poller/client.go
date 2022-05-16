@@ -36,7 +36,7 @@ func NewPollClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
-	cacheBuildSignal chan interface{},
+	onClientStop func(),
 	handlers ...handler.Handler,
 ) (*PollClient, error) {
 	wt, err := events.GetWatchTopic(cfg, apiClient)
@@ -46,7 +46,7 @@ func NewPollClient(
 
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	hcfg := harvester.NewConfig(cfg, getToken, seq)
-	poller := newPollManager(hcfg, cfg.GetPollInterval(), cacheBuildSignal)
+	poller := newPollManager(hcfg, cfg.GetPollInterval(), onClientStop)
 
 	pc := &PollClient{
 		apiClient:          apiClient,
@@ -74,10 +74,7 @@ func (p *PollClient) Start() error {
 
 	listenCh := p.listener.Listen()
 
-	err := p.poller.RegisterWatch(p.topicSelfLink, eventCh, eventErrorCh)
-	if err != nil {
-		return err
-	}
+	p.poller.RegisterWatch(p.topicSelfLink, eventCh, eventErrorCh)
 
 	if p.onStreamConnection != nil {
 		p.onStreamConnection(p)

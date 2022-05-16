@@ -83,7 +83,7 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 			ClientTimeout:    manager.options.keepAlive.timeout,
 			SequenceProvider: seq,
 		}
-		manager.hClient = harvester.NewClient(harvesterConfig, manager.options.harvesterSignalCh)
+		manager.hClient = harvester.NewClient(harvesterConfig)
 	}
 
 	return manager, err
@@ -175,6 +175,9 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	client.processRequest()
 
 	if err := m.eventCatchUp(link, subID, events); err != nil {
+		if m.options.onEventSyncError != nil {
+			m.options.onEventSyncError()
+		}
 		return subID, err
 	}
 
