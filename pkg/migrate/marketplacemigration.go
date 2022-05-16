@@ -44,33 +44,9 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		return ri, fmt.Errorf("expected resource instance kind to be api service")
 	}
 
-	log.Debugf("migrating marketplace provisioning for service: %s", ri.Name)
-
-	funcs := []migrateFunc{
-		m.updateInst,
-	}
-
-	errCh := make(chan error, len(funcs))
-	wg := &sync.WaitGroup{}
-
-	for _, f := range funcs {
-		wg.Add(1)
-
-		go func(fun migrateFunc) {
-			defer wg.Done()
-
-			err := fun(ri)
-			errCh <- err
-		}(f)
-	}
-
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return ri, e
-		}
+	err := m.updateInst(ri)
+	if err != nil {
+		return nil, fmt.Errorf("migration marketplace provisioning failed")
 	}
 
 	log.Debugf("finished migrating marketplace provisioning for service: %s", ri.Name)
@@ -138,8 +114,17 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 			apiSvcInst := mv1a.NewAPIServiceInstance(ri.Name, ri.Metadata.Scope.Name)
 			apiSvcInst.FromInstance(ri)
 
-			specDefintionType := resourceInstance.Spec["definition"].(map[string]interface{})["type"].(string)
-			specDefinitionValue := resourceInstance.Spec["definition"].(map[string]interface{})["value"].(string)
+			// get spec definition type from apiservicerevision
+			specDefintionType, ok := resourceInstance.Spec["definition"].(map[string]interface{})["type"].(string)
+			if !ok {
+				errCh <- fmt.Errorf("could not get the spec definition type from apiservicerevision %s", ri.Name)
+			}
+
+			// get spec definition value from apiservicerevision
+			specDefinitionValue, ok := resourceInstance.Spec["definition"].(map[string]interface{})["value"].(string)
+			if !ok {
+				errCh <- fmt.Errorf("could not get the spec definition value from apiservicerevision %s", ri.Name)
+			}
 
 			specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
 
