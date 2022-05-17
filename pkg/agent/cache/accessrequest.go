@@ -12,7 +12,7 @@ func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	return c.managedApplicationMap.GetKeys()
+	return c.accessRequestMap.GetKeys()
 }
 
 func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {

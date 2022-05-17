@@ -16,6 +16,7 @@ import (
 
 const envName = "env1"
 const svcName = "svc1"
+const ardID = "0987"
 
 func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 	rev := newRevision(svcName, "api-key-revision")
@@ -81,7 +82,9 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	_, err := mig.Migrate(svcRI)
 	assert.Nil(t, err)
 
-	assert.Equal(t, 2, c.updateCount)
+	assert.Equal(t, 1, c.updateCount)
+	a, _ := cm.GetAccessRequestDefinitionByID(ardID)
+	assert.NotNil(t, a)
 }
 
 func newInstance(revName, instName, ard string, credentialRequestDefinitions []string) *v1.ResourceInstance {
@@ -169,6 +172,6 @@ func (m *mockMPMigClient) UpdateResourceInstance(_ *apiv1.ResourceInstance) (*ap
 
 func (m *mockMPMigClient) CreateOrUpdateResource(i apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	ri, _ := i.AsInstance()
-	ri.Metadata.ID = "0987"
+	ri.Metadata.ID = ardID
 	return ri, nil
 }

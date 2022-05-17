@@ -65,6 +65,7 @@ type agentData struct {
 	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
+	marketplaceMigration   migrate.Migrator
 }
 
 var agent agentData
@@ -253,7 +254,9 @@ func startAPIServiceCache() error {
 	}
 
 	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		migrations = append(migrations, migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager))
+		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
+		agent.marketplaceMigration = marketplaceMigration
+		migrations = append(migrations, marketplaceMigration)
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)

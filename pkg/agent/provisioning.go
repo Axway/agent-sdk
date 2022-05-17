@@ -14,7 +14,7 @@ import (
 
 // credential request definitions
 // createOrUpdateDefinition -
-func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
+func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Migrator) (*v1.ResourceInstance, error) {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
@@ -23,32 +23,31 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 		return nil, err
 	}
 
-	if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
-		apiSvcResources := make([]*v1.ResourceInstance, 0)
+	if marketplaceMigration != nil {
+		if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
+			apiSvcResources := make([]*v1.ResourceInstance, 0)
+			agent.cacheManager.AddCredentialRequestDefinition(ri)
+			cache := agent.cacheManager.GetAPIServiceCache()
 
-		agent.cacheManager.AddCredentialRequestDefinition(ri)
+			for _, key := range cache.GetKeys() {
+				item, _ := cache.Get(key)
+				if item == nil {
+					continue
+				}
 
-		cache := agent.cacheManager.GetAPIServiceCache()
-
-		for _, key := range cache.GetKeys() {
-			item, _ := cache.Get(key)
-			if item == nil {
-				continue
+				svc, ok := item.(*v1.ResourceInstance)
+				if ok {
+					apiSvcResources = append(apiSvcResources, svc)
+				}
 			}
 
-			svc, ok := item.(*v1.ResourceInstance)
-			if ok {
-				apiSvcResources = append(apiSvcResources, svc)
-			}
-		}
-
-		for _, svc := range apiSvcResources {
-			var err error
-			log.Debugf("if necessary, update apiserviceinstances with credential request definition %s", ri.Name)
-			marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-			_, err = marketplaceMigration.Migrate(svc)
-			if err != nil {
-				return nil, fmt.Errorf("failed to migrate service: %s", err)
+			for _, svc := range apiSvcResources {
+				var err error
+				log.Debugf("if necessary, update apiserviceinstances with credential request definition %s", ri.Name)
+				_, err = marketplaceMigration.Migrate(svc)
+				if err != nil {
+					return nil, fmt.Errorf("failed to migrate service: %s", err)
+				}
 			}
 		}
 	}
@@ -58,7 +57,7 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
 // createOrUpdateCredentialRequestDefinition -
 func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data)
+	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err
 	}
@@ -184,7 +183,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data)
+	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err
 	}

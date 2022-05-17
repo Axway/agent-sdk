@@ -187,9 +187,9 @@ func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []strin
 func (m *MarketplaceMigration) checkCredentialRequestDefinitions(credentialRequestPolicies []string) []string {
 	// remove any crd not in the cache
 	knownCRDs := make([]string, 0)
-	for _, credentialRequestPolicy := range credentialRequestPolicies {
-		if def, err := m.cache.GetCredentialRequestDefinitionByName(credentialRequestPolicy); err == nil && def != nil {
-			knownCRDs = append(knownCRDs, credentialRequestPolicy)
+	for _, policy := range credentialRequestPolicies {
+		if def, err := m.cache.GetCredentialRequestDefinitionByName(policy); err == nil && def != nil {
+			knownCRDs = append(knownCRDs, policy)
 		}
 	}
 
