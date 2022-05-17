@@ -118,6 +118,7 @@ func (c *ServiceClient) createAPIServerURL(link string) string {
 	return fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), link)
 }
 
+// IsMarketplaceSubsEnabled -
 func (c *ServiceClient) IsMarketplaceSubsEnabled() bool {
 	return c.cfg.IsMarketplaceSubsEnabled()
 }
