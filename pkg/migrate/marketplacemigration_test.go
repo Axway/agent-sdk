@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -13,12 +14,16 @@ import (
 )
 
 const envName = "env1"
+const svcName = "svc1"
 
 func TestMarketplaceMigration(t *testing.T) {
-	rev := newRevision("svc1", "rev1")
+	rev := newRevision(svcName, "rev1")
 
 	c := &mockMPMigClient{
-		res: []*v1.ResourceInstance{
+		revisions: []*v1.ResourceInstance{
+			rev,
+		},
+		instances: []*v1.ResourceInstance{
 			newInstance(rev.Name, "inst1", ""),
 			newInstance(rev.Name, "inst2", ""),
 		},
@@ -35,8 +40,11 @@ func TestMarketplaceMigration(t *testing.T) {
 
 	cm.AddAccessRequestDefinition(ri)
 
+	svc := mv1a.NewAPIService(svcName, envName)
+	svcRI, _ := svc.AsInstance()
+
 	mig := NewMarketplaceMigration(c, cfg, cm)
-	err := mig.updateSvcInstance(cfg.GetInstancesURL(), map[string]string{}, rev)
+	_, err := mig.Migrate(svcRI)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 2, c.updateCount)
@@ -80,15 +88,20 @@ func newRevision(svcName, revName string) *v1.ResourceInstance {
 type mockMPMigClient struct {
 	sync.Mutex
 	updateCount int
-	res         []*v1.ResourceInstance
+	revisions   []*v1.ResourceInstance
+	instances   []*v1.ResourceInstance
 }
 
 func (m *mockMPMigClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
-	return m.res, nil
+func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, url string, _ int) ([]*apiv1.ResourceInstance, error) {
+	if strings.Contains(url, "instances") {
+		return m.instances, nil
+	} else {
+		return m.revisions, nil
+	}
 }
 
 func (m *mockMPMigClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
