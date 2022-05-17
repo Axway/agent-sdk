@@ -74,7 +74,7 @@ func (s *schemaBuilder) SetJSONDraft07SchemaVersion() SubscriptionSchemaBuilder 
 
 // Register - build and register the subscription schema
 func (s *schemaBuilder) Register() error {
-	if s.apicClient.(*ServiceClient).cfg.IsMarketplaceSubsEnabled() {
+	if s.apicClient.IsMarketplaceSubsEnabled() {
 		log.Trace("Registering consumer subscrition definitions is disabled when using Marketplace Provisioning")
 		return nil
 	}

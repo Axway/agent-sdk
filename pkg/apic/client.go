@@ -95,6 +95,7 @@ type Client interface {
 	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 	CreateOrUpdateResource(v1.Interface) (*v1.ResourceInstance, error)
+	IsMarketplaceSubsEnabled() bool
 }
 
 // New creates a new Client
@@ -115,6 +116,11 @@ func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, cac
 
 func (c *ServiceClient) createAPIServerURL(link string) string {
 	return fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), link)
+}
+
+// IsMarketplaceSubsEnabled -
+func (c *ServiceClient) IsMarketplaceSubsEnabled() bool {
+	return c.cfg.IsMarketplaceSubsEnabled()
 }
 
 // getTeamFromCache -
