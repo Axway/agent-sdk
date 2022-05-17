@@ -1,5 +1,7 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
+// the category stuff within this file may need to be saved, perhaps moved
 import (
 	"encoding/json"
 	"errors"

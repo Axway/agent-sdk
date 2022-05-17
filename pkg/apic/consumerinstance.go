@@ -20,6 +20,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) mv1a.ConsumerInstanceSpec {
 	subscriptionDefinitionName := serviceBody.SubscriptionName
 

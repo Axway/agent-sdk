@@ -97,7 +97,6 @@ type configWithNoValidation struct {
 func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.mode", "centralMode", "publishToEnvironmentAndCatalog", "Agent Mode")
 	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
 	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
 	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
@@ -195,7 +194,6 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 
 func TestRootCmdConfigDefault(t *testing.T) {
 	discoveryInitConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		assert.Equal(t, corecfg.PublishToEnvironmentAndCatalog, centralConfig.GetAgentMode())
 		assert.Equal(t, "https://apicentral.axway.com", centralConfig.GetURL())
 		assert.Equal(t, "222222", centralConfig.GetTeamName())
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker", centralConfig.GetAuthConfig().GetAudience())
@@ -367,13 +365,10 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	s := newTestServer()
 	defer s.Close()
 
-	var centralCfg corecfg.CentralConfig
 	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		centralCfg = centralConfig
 		return centralConfig, nil
 	}
 	cmdHandler := func() error {
-		centralCfg.GetAgentMode()
 		return nil
 	}
 
