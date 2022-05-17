@@ -9,6 +9,7 @@ import (
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // credential request definitions
@@ -43,6 +44,7 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
 		for _, svcInst := range resources {
 			var err error
+			log.Debugf("if necessary, update apiserviceinstances with credential request definition %s", ri.Name)
 			marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
 			_, err = marketplaceMigration.Migrate(svcInst)
 			if err != nil {

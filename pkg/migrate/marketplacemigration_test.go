@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"sync"
 	"testing"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -18,8 +19,8 @@ func TestMarketplaceMigration(t *testing.T) {
 
 	c := &mockMPMigClient{
 		res: []*v1.ResourceInstance{
-			newInstance(rev.Name, "inst1"),
-			newInstance(rev.Name, "inst2"),
+			newInstance(rev.Name, "inst1", ""),
+			newInstance(rev.Name, "inst2", ""),
 		},
 	}
 	cfg := &config.CentralConfiguration{
@@ -27,7 +28,7 @@ func TestMarketplaceMigration(t *testing.T) {
 		APIServerVersion: "v1alpha1",
 	}
 
-	ard := mv1a.NewAccessRequestDefinition("apik-key", envName)
+	ard := mv1a.NewAccessRequestDefinition("api-key", envName)
 	ard.Metadata.ID = "123"
 	ri, _ := ard.AsInstance()
 	cm := cache2.NewAgentCacheManager(cfg, false)
@@ -37,13 +38,15 @@ func TestMarketplaceMigration(t *testing.T) {
 	mig := NewMarketplaceMigration(c, cfg, cm)
 	err := mig.updateSvcInstance(cfg.GetInstancesURL(), map[string]string{}, rev)
 	assert.Nil(t, err)
+
+	assert.Equal(t, 2, c.updateCount)
 }
 
-func newInstance(revName, instName string) *v1.ResourceInstance {
+func newInstance(revName, instName, ard string) *v1.ResourceInstance {
 	inst := mv1a.NewAPIServiceInstance(instName, envName)
 	inst.Spec = mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           revName,
-		AccessRequestDefinition:      "api-key",
+		AccessRequestDefinition:      ard,
 		CredentialRequestDefinitions: []string{"api-key"},
 		Endpoint: []mv1a.ApiServiceInstanceSpecEndpoint{
 			{
@@ -75,29 +78,34 @@ func newRevision(svcName, revName string) *v1.ResourceInstance {
 }
 
 type mockMPMigClient struct {
-	res []*v1.ResourceInstance
+	sync.Mutex
+	updateCount int
+	res         []*v1.ResourceInstance
 }
 
-func (m mockMPMigClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+func (m *mockMPMigClient) ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func (m mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
 	return m.res, nil
 }
 
-func (m mockMPMigClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) UpdateAPIV1ResourceInstance(url string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
 
-func (m mockMPMigClient) CreateSubResourceScoped(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
+func (m *mockMPMigClient) CreateSubResourceScoped(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
 	return nil
 }
 
-func (m mockMPMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	m.Lock()
+	defer m.Unlock()
+	m.updateCount = m.updateCount + 1
 	return nil, nil
 }
 
-func (m mockMPMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
