@@ -76,7 +76,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 
 	m.logger.
 		WithField("service-name", ri.Name).
-		Debug("found %d revisions for api", len(revs))
+		Debugf("found %d revisions for api", len(revs))
 
 	errCh := make(chan error, len(revs))
 	wg := &sync.WaitGroup{}
@@ -338,11 +338,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 			updateRequestDefinition = true
 		}
 
-		existingARD, err := m.cache.GetAccessRequestDefinitionByName(ardRIName)
-		if err != nil {
-			return err
-		}
-
+		existingARD, _ := m.cache.GetAccessRequestDefinitionByName(ardRIName)
 		if existingARD != nil && apiSvcInst.Spec.AccessRequestDefinition == "" {
 			logger.Debugf("adding the following access request definition %s", ardRIName)
 			updateRequestDefinition = true
