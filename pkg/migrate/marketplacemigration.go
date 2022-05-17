@@ -44,21 +44,21 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		return ri, fmt.Errorf("expected resource instance kind to be api service")
 	}
 
-	err := m.updateInst(ri)
+	err := m.updateService(ri)
 	if err != nil {
 		return nil, fmt.Errorf("migration marketplace provisioning failed")
 	}
 
-	log.Debugf("finished migrating marketplace provisioning for service: %s", ri.Name)
-
 	return ri, nil
 }
 
-// updateInst gets a list of instances for the service and updates their request definitions.
-func (m *MarketplaceMigration) updateInst(ri *v1.ResourceInstance) error {
-	revURL := m.cfg.GetRevisionsURL()
+// updateService gets a list of instances for the service and updates their request definitions.
+func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 
-	q := map[string]string{}
+	revURL := m.cfg.GetRevisionsURL()
+	q := map[string]string{
+		"query": queryFunc(ri.Name),
+	}
 
 	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
 	if err != nil {
@@ -72,14 +72,14 @@ func (m *MarketplaceMigration) updateInst(ri *v1.ResourceInstance) error {
 	for _, rev := range revs {
 		wg.Add(1)
 
-		go func(r *v1.ResourceInstance) {
+		go func(revision *v1.ResourceInstance) {
 			defer wg.Done()
 
 			q := map[string]string{
-				"query": queryFunc(r.Name),
+				"query": queryFunc(revision.Name),
 			}
 			url := m.cfg.GetInstancesURL()
-			err := m.updateInstResources(url, q, r)
+			err := m.updateSvcInstance(url, q, revision)
 			errCh <- err
 		}(rev)
 	}
@@ -96,7 +96,7 @@ func (m *MarketplaceMigration) updateInst(ri *v1.ResourceInstance) error {
 	return nil
 }
 
-func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map[string]string, resourceInstance *v1.ResourceInstance) error {
+func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[string]string, revision *v1.ResourceInstance) error {
 	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
@@ -108,22 +108,22 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 	for _, resource := range resources {
 		wg.Add(1)
 
-		go func(ri *v1.ResourceInstance) {
+		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			apiSvcInst := mv1a.NewAPIServiceInstance(ri.Name, ri.Metadata.Scope.Name)
-			apiSvcInst.FromInstance(ri)
+			apiSvcInst := mv1a.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
+			apiSvcInst.FromInstance(svcInstance)
 
 			// get spec definition type from apiservicerevision
-			specDefintionType, ok := resourceInstance.Spec["definition"].(map[string]interface{})["type"].(string)
+			specDefintionType, ok := revision.Spec["definition"].(map[string]interface{})["type"].(string)
 			if !ok {
-				errCh <- fmt.Errorf("could not get the spec definition type from apiservicerevision %s", ri.Name)
+				errCh <- fmt.Errorf("could not get the spec definition type from apiservicerevision %s", revision.Name)
 			}
 
 			// get spec definition value from apiservicerevision
-			specDefinitionValue, ok := resourceInstance.Spec["definition"].(map[string]interface{})["value"].(string)
+			specDefinitionValue, ok := revision.Spec["definition"].(map[string]interface{})["value"].(string)
 			if !ok {
-				errCh <- fmt.Errorf("could not get the spec definition value from apiservicerevision %s", ri.Name)
+				errCh <- fmt.Errorf("could not get the spec definition value from apiservicerevision %s", revision.Name)
 			}
 
 			specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
@@ -168,53 +168,41 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 					log.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, "oauth")
 				}
 
+				var updateRequestDefinition = false
+
 				// Check if ARD exists
 				if apiSvcInst.Spec.AccessRequestDefinition == "" {
 					// Only migrate resource with oauth scopes. Spec with type apiKey will be handled on startup
 					if len(oauthScopes) > 0 {
-						err = m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
+						ardRIName, err = m.processAccessRequestDefinition(apiKeyInfo, oauthScopes)
 						if err != nil {
 							errCh <- err
-							return
-						}
-
-						newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						if newARD != nil {
-							ard, err := newARD.AsInstance()
-							if err == nil {
-								m.cache.AddAccessRequestDefinition(ard)
-							} else {
-								errCh <- err
-								return
-							}
-							ardRIName = ard.Name
 						}
 					}
 				}
 
 				// Check if CRD exists
 				if len(apiSvcInst.Spec.CredentialRequestDefinitions) == 0 {
-					credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, ri)
+					credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, svcInstance)
 
 					// Find only the known CRD's
 					credentialRequestPolicies = m.checkCredentialRequestDefinitions(credentialRequestPolicies)
 					if len(credentialRequestPolicies) > 0 {
-						log.Debugf("attempt to add the following credential request definitions %s, to apiservice %s", credentialRequestPolicies, apiSvcInst.Name)
+						log.Debugf("adding the following credential request definitions %s, to apiserviceinstance %s", credentialRequestPolicies, apiSvcInst.Name)
+						updateRequestDefinition = true
 					}
 				}
 
 				existingARD, err := m.cache.GetAccessRequestDefinitionByName(ardRIName)
-				if existingARD != nil {
+				if existingARD != nil && apiSvcInst.Spec.AccessRequestDefinition == "" {
 					log.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
+					updateRequestDefinition = true
+				}
 
+				if updateRequestDefinition {
 					newSpec := mv1a.ApiServiceInstanceSpec{
 						Endpoint:                     instanceSpecEndPoints,
-						ApiServiceRevision:           ri.Name,
+						ApiServiceRevision:           revision.Name,
 						CredentialRequestDefinitions: credentialRequestPolicies,
 						AccessRequestDefinition:      ardRIName,
 					}
@@ -223,12 +211,20 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 					in, _ := json.Marshal(newSpec)
 					json.Unmarshal(in, &inInterface)
 
-					ri.Spec = inInterface
+					svcInstance.Spec = inInterface
 
-					url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-					err = m.updateRI(url, ri)
-					errCh <- err
+					url := fmt.Sprintf("%s/%s", resourceURL, svcInstance.Name)
+					err = m.updateRI(url, svcInstance)
+					if err != nil {
+						errCh <- err
+						return
+					} else {
+						log.Debugf("migrated %s with the necessary request definitions", apiSvcInst.Name)
+					}
+				} else {
+					log.Debugf("no request definitions migrated for apiserviceinstance %s done at this time", apiSvcInst.Name)
 				}
+
 			}
 
 		}(resource)
@@ -244,6 +240,29 @@ func (m *MarketplaceMigration) updateInstResources(resourceURL string, query map
 	}
 
 	return nil
+}
+
+func (m *MarketplaceMigration) processAccessRequestDefinition(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string) (string, error) {
+	err := m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
+	if err != nil {
+		return "", err
+	}
+
+	newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
+	if err != nil {
+		return "", err
+	}
+	var ardRIName string
+	if newARD != nil {
+		ard, err := newARD.AsInstance()
+		if err == nil {
+			m.cache.AddAccessRequestDefinition(ard)
+		} else {
+			return "", err
+		}
+		ardRIName = ard.Name
+	}
+	return ardRIName, nil
 }
 
 func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []string, ri *v1.ResourceInstance) ([]string, error) {
