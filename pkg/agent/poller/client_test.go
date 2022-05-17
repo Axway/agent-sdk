@@ -39,9 +39,13 @@ func TestPollClientStart(t *testing.T) {
 	assert.NotNil(t, pollClient)
 	assert.Nil(t, err)
 
+	mockH := &mockHarvester{
+		readyCh: make(chan struct{}),
+	}
+
 	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
 		p := newPollManager(cfg, interval, onStop)
-		p.harvester = &mockHarvester{}
+		p.harvester = mockH
 		return p
 	}
 
@@ -51,9 +55,7 @@ func TestPollClientStart(t *testing.T) {
 		errCh <- err
 	}()
 
-	for pollClient.listener == nil || pollClient.poller == nil {
-		continue
-	}
+	<-mockH.readyCh
 
 	// assert the poller is healthy
 	assert.Nil(t, pollClient.Status())
@@ -107,6 +109,7 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 type mockHarvester struct {
 	eventCh chan *proto.Event
 	err     error
+	readyCh chan struct{}
 }
 
 func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
@@ -114,6 +117,10 @@ func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
 }
 
 func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event) (int64, error) {
+	if m.readyCh != nil {
+		m.readyCh <- struct{}{}
+	}
+
 	if m.eventCh != nil {
 		m.eventCh <- &proto.Event{
 			Id: "1",

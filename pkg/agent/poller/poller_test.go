@@ -20,12 +20,15 @@ func TestPollerRegisterWatch(t *testing.T) {
 	poller := newPollManager(hcfg, cfg.GetPollInterval(), nil)
 
 	eventCh, errCh := make(chan *proto.Event), make(chan error)
-	poller.harvester = &mockHarvester{
+	h := &mockHarvester{
 		eventCh: eventCh,
 	}
 
+	poller.harvester = h
 	poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 
+	evt := <-h.eventCh
+	assert.NotNil(t, evt)
 }
 
 func TestPollerRegisterWatchError(t *testing.T) {

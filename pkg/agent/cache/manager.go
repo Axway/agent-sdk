@@ -104,23 +104,23 @@ type Manager interface {
 
 type cacheManager struct {
 	jobs.Job
-	accessRequestMap        cache.Cache
-	apiMap                  cache.Cache
-	ardMap                  cache.Cache
-	cacheFilename           string
-	cacheLock               sync.Mutex
-	categoryMap             cache.Cache
-	crdMap                  cache.Cache
-	hasLoadedPersistedCache bool
-	instanceMap             cache.Cache
-	isCacheUpdated          bool
 	logger                  log.FieldLogger
+	apiMap                  cache.Cache
+	instanceMap             cache.Cache
+	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
-	persistedCache          cache.Cache
-	resourceCacheReadLock   sync.Mutex
-	sequenceCache           cache.Cache
+	accessRequestMap        cache.Cache
 	subscriptionMap         cache.Cache
+	sequenceCache           cache.Cache
+	resourceCacheReadLock   sync.Mutex
+	cacheLock               sync.Mutex
+	persistedCache          cache.Cache
 	teams                   cache.Cache
+	ardMap                  cache.Cache
+	crdMap                  cache.Cache
+	cacheFilename           string
+	hasLoadedPersistedCache bool
+	isCacheUpdated          bool
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
