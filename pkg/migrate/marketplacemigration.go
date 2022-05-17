@@ -125,7 +125,7 @@ func (m *MarketplaceMigration) updateSvcInstance(
 		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			err := m.handleSvcInstance(svcInstance, revision, resourceURL)
+			err := m.handleSvcInstance(svcInstance, revision)
 			if err != nil {
 				errCh <- err
 			}
@@ -168,7 +168,7 @@ func (m *MarketplaceMigration) processAccessRequestDefinition(oauthScopes map[st
 	return ardRIName, nil
 }
 
-func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []string, ri *v1.ResourceInstance) ([]string, error) {
+func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []string) ([]string, error) {
 	var credentialRequestPolicies []string
 
 	for _, policy := range authPolicies {
@@ -202,14 +202,14 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 		oauthScopes = append(oauthScopes, scope)
 	}
 
-	callbackfunc := func(ard *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+	callback := func(ard *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 		return ard, nil
 	}
 
 	var ard *mv1a.AccessRequestDefinition
 	var err error
 	if len(scopes) > 0 {
-		ard, err = provisioning.NewAccessRequestBuilder(callbackfunc).
+		ard, err = provisioning.NewAccessRequestBuilder(callback).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
@@ -230,7 +230,7 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 }
 
 // updateRI updates the resource, and the sub resource
-func (m *MarketplaceMigration) updateRI(url string, ri *v1.ResourceInstance) error {
+func (m *MarketplaceMigration) updateRI(ri *v1.ResourceInstance) error {
 	_, err := m.client.UpdateResourceInstance(ri)
 	if err != nil {
 		return err
@@ -267,7 +267,7 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 }
 
 func (m *MarketplaceMigration) handleSvcInstance(
-	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, resourceURL string,
+	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance,
 ) error {
 	logger := m.logger.
 		WithField("instance-name", svcInstance.Name).
@@ -321,12 +321,12 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		}
 
 		// Check if CRD exists
-		credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, svcInstance)
+		credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies)
 		if err != nil {
 			return err
 		}
 
-		// Find only the known CRD's
+		// Find only the known CRDs
 		credentialRequestDefinitions := m.checkCredentialRequestDefinitions(credentialRequestPolicies)
 		if len(credentialRequestDefinitions) > 0 {
 			log.Debugf("adding the following credential request definitions %s,", credentialRequestDefinitions)
@@ -343,8 +343,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 			inInterface := m.newInstanceSpec(instanceSpecEndPoints, revision.Name, ardRIName, credentialRequestDefinitions)
 			svcInstance.Spec = inInterface
 
-			url := fmt.Sprintf("%s/%s", resourceURL, svcInstance.Name)
-			err = m.updateRI(url, svcInstance)
+			err = m.updateRI(svcInstance)
 			if err != nil {
 				return err
 			}
@@ -380,13 +379,11 @@ func (m *MarketplaceMigration) newInstanceSpec(
 }
 
 func (m *MarketplaceMigration) getSpecParser(revision *v1.ResourceInstance) (apic.SpecProcessor, error) {
-	// get spec definition type from apiservicerevision
-	specDefintionType, ok := revision.Spec["definition"].(map[string]interface{})["type"].(string)
+	specDefinitionType, ok := revision.Spec["definition"].(map[string]interface{})["type"].(string)
 	if !ok {
 		return nil, fmt.Errorf("could not get the spec definition type from apiservicerevision %s", revision.Name)
 	}
 
-	// get spec definition value from apiservicerevision
 	specDefinitionValue, ok := revision.Spec["definition"].(map[string]interface{})["value"].(string)
 	if !ok {
 		return nil, fmt.Errorf("could not get the spec definition value from apiservicerevision %s", revision.Name)
@@ -394,7 +391,7 @@ func (m *MarketplaceMigration) getSpecParser(revision *v1.ResourceInstance) (api
 
 	specDefinition, _ := base64.StdEncoding.DecodeString(specDefinitionValue)
 
-	specParser := apic.NewSpecResourceParser(specDefinition, specDefintionType)
+	specParser := apic.NewSpecResourceParser(specDefinition, specDefinitionType)
 	err := specParser.Parse()
 	if err != nil {
 		return nil, err
