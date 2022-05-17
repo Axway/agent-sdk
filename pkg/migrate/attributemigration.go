@@ -24,11 +24,6 @@ var oldAttrs = []string{
 	defs.AttrCreatedBy,
 }
 
-// AttrMigrator interface for performing an attribute migration
-type AttrMigrator interface {
-	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-}
-
 var regexes = make([]string, 0)
 
 var tagRegexes = make([]string, 0)

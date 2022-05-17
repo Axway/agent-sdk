@@ -16,14 +16,19 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// MarketplaceMigrator interface for performing an marketplace provisioning migration
-type MarketplaceMigrator interface {
+// Migrator interface for performing a migration on a ResourceInstance
+type Migrator interface {
 	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 }
 
 // NewMarketplaceMigration - creates a new MarketplaceMigration
 func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache cache.Manager) *MarketplaceMigration {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.migrate").
+		WithComponent("MarketplaceMigration")
+
 	return &MarketplaceMigration{
+		logger: logger,
 		client: client,
 		cfg:    cfg,
 		cache:  cache,
@@ -32,6 +37,7 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache cach
 
 // MarketplaceMigration - used for migrating attributes to subresource
 type MarketplaceMigration struct {
+	logger                  log.FieldLogger
 	client                  client
 	cfg                     config.CentralConfig
 	cache                   agentcache.Manager
@@ -158,14 +164,14 @@ func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[s
 				// get the apikey info
 				apiKeyInfo := val.GetAPIKeyInfo()
 				if len(apiKeyInfo) > 0 {
-					log.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, "apiKey")
+					m.logger.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, "apiKey")
 					ardRIName = "api-key"
 				}
 
 				// get oauth scopes
 				oauthScopes := val.GetOAuthScopes()
 				if len(oauthScopes) > 0 {
-					log.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, "oauth")
+					m.logger.Debugf("apiserviceinstance %s has a spec definition type of %s", apiSvcInst.Name, "oauth")
 				}
 
 				var updateRequestDefinition = false
@@ -188,14 +194,14 @@ func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[s
 					// Find only the known CRD's
 					credentialRequestPolicies = m.checkCredentialRequestDefinitions(credentialRequestPolicies)
 					if len(credentialRequestPolicies) > 0 {
-						log.Debugf("adding the following credential request definitions %s, to apiserviceinstance %s", credentialRequestPolicies, apiSvcInst.Name)
+						m.logger.Debugf("adding the following credential request definitions %s, to apiserviceinstance %s", credentialRequestPolicies, apiSvcInst.Name)
 						updateRequestDefinition = true
 					}
 				}
 
 				existingARD, err := m.cache.GetAccessRequestDefinitionByName(ardRIName)
 				if existingARD != nil && apiSvcInst.Spec.AccessRequestDefinition == "" {
-					log.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
+					m.logger.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
 					updateRequestDefinition = true
 				}
 
@@ -219,10 +225,10 @@ func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[s
 						errCh <- err
 						return
 					} else {
-						log.Debugf("migrated %s with the necessary request definitions", apiSvcInst.Name)
+						m.logger.Debugf("migrated %s with the necessary request definitions", apiSvcInst.Name)
 					}
 				} else {
-					log.Debugf("no request definitions migrated for apiserviceinstance %s done at this time", apiSvcInst.Name)
+					m.logger.Debugf("no request definitions migrated for apiserviceinstance %s done at this time", apiSvcInst.Name)
 				}
 
 			}
@@ -360,7 +366,7 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 			endPoints = append(endPoints, ep)
 		}
 	} else {
-		log.Debug("Processing API service instance with no endpoint")
+		m.logger.Debug("Processing API service instance with no endpoint")
 	}
 
 	if err != nil {

@@ -45,13 +45,12 @@ type discoveryCache struct {
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
-	attrMigrator         migrate.AttrMigrator
-	marketplaceMigrator  migrate.MarketplaceMigrator
+	migrator             migrate.Migrator
 	logger               log.FieldLogger
 }
 
 func newDiscoveryCache(
-	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, attMigrator migrate.AttrMigrator, marketplaceMigrator migrate.MarketplaceMigrator,
+	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrations migrate.Migrator,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
@@ -66,8 +65,7 @@ func newDiscoveryCache(
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
-		attrMigrator:         attMigrator,
-		marketplaceMigrator:  marketplaceMigrator,
+		migrator:             migrations,
 		logger:               logger,
 	}
 }
@@ -127,20 +125,10 @@ func (j *discoveryCache) updateAPICache() error {
 		return err
 	}
 
-	// Check if marketplace provisioning is enabled.  If it is enabled, verify that current apiservices have the necessary request definitions
-	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		j.logger.Trace("marketplace provisioning migration starting")
-		j.marketplaceProvisioningMigration(apiServices)
-	}
-
-	return j.attributeMigration(apiServices, existingAPIs)
-}
-
-func (j *discoveryCache) attributeMigration(apiServices []*apiV1.ResourceInstance, existingAPIs map[string]bool) error {
 	for _, svc := range apiServices {
-		if j.attrMigrator != nil {
+		if j.migrator != nil {
 			var err error
-			svc, err = j.attrMigrator.Migrate(svc)
+			svc, err = j.migrator.Migrate(svc)
 			if err != nil {
 				return fmt.Errorf("failed to migrate service: %s", err)
 			}
@@ -177,19 +165,6 @@ func (j *discoveryCache) attributeMigration(apiServices []*apiV1.ResourceInstanc
 		}
 	}
 
-	return nil
-}
-
-func (j *discoveryCache) marketplaceProvisioningMigration(apiServices []*apiV1.ResourceInstance) error {
-	for _, svc := range apiServices {
-		if j.marketplaceMigrator != nil {
-			var err error
-			svc, err = j.marketplaceMigrator.Migrate(svc)
-			if err != nil {
-				return fmt.Errorf("failed to migrate service: %s", err)
-			}
-		}
-	}
 	return nil
 }
 
