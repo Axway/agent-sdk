@@ -182,15 +182,16 @@ func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[s
 				}
 
 				// Check if CRD exists
-				if len(apiSvcInst.Spec.CredentialRequestDefinitions) == 0 {
-					credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, svcInstance)
-
-					// Find only the known CRD's
-					credentialRequestPolicies = m.checkCredentialRequestDefinitions(credentialRequestPolicies)
-					if len(credentialRequestPolicies) > 0 {
-						log.Debugf("adding the following credential request definitions %s, to apiserviceinstance %s", credentialRequestPolicies, apiSvcInst.Name)
-						updateRequestDefinition = true
-					}
+				credentialRequestPolicies, err = m.getCredentialRequestPolicies(authPolicies, svcInstance)
+				if err != nil {
+					errCh <- err
+					return
+				}
+				// Find only the known CRD's
+				credentialRequestDefinitions := m.checkCredentialRequestDefinitions(credentialRequestPolicies)
+				if len(credentialRequestDefinitions) > 0 {
+					log.Debugf("adding the following credential request definitions %s, to apiserviceinstance %s", credentialRequestDefinitions, apiSvcInst.Name)
+					updateRequestDefinition = true
 				}
 
 				existingARD, err := m.cache.GetAccessRequestDefinitionByName(ardRIName)
@@ -203,7 +204,7 @@ func (m *MarketplaceMigration) updateSvcInstance(resourceURL string, query map[s
 					newSpec := mv1a.ApiServiceInstanceSpec{
 						Endpoint:                     instanceSpecEndPoints,
 						ApiServiceRevision:           revision.Name,
-						CredentialRequestDefinitions: credentialRequestPolicies,
+						CredentialRequestDefinitions: credentialRequestDefinitions,
 						AccessRequestDefinition:      ardRIName,
 					}
 					// convert to set ri.Spec
