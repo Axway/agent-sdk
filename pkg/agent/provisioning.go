@@ -24,7 +24,7 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	}
 
 	if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
-		resources := make([]*v1.ResourceInstance, 0)
+		apiSvcResources := make([]*v1.ResourceInstance, 0)
 
 		agent.cacheManager.AddCredentialRequestDefinition(ri)
 
@@ -36,17 +36,17 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 				continue
 			}
 
-			apiSvc, ok := item.(*v1.ResourceInstance)
+			svc, ok := item.(*v1.ResourceInstance)
 			if ok {
-				resources = append(resources, apiSvc)
+				apiSvcResources = append(apiSvcResources, svc)
 			}
 		}
 
-		for _, svcInst := range resources {
+		for _, svc := range apiSvcResources {
 			var err error
 			log.Debugf("if necessary, update apiserviceinstances with credential request definition %s", ri.Name)
 			marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-			_, err = marketplaceMigration.Migrate(svcInst)
+			_, err = marketplaceMigration.Migrate(svc)
 			if err != nil {
 				return nil, fmt.Errorf("failed to migrate service: %s", err)
 			}

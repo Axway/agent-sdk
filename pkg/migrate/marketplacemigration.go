@@ -41,11 +41,10 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 
 // MarketplaceMigration - used for migrating attributes to subresource
 type MarketplaceMigration struct {
-	logger                  log.FieldLogger
-	client                  client
-	cfg                     config.CentralConfig
-	cache                   ardCache
-	accessRequestDefinition *mv1a.AccessRequestDefinition
+	logger log.FieldLogger
+	client client
+	cfg    config.CentralConfig
+	cache  ardCache
 }
 
 // Migrate -
@@ -56,7 +55,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 
 	err := m.updateService(ri)
 	if err != nil {
-		return nil, fmt.Errorf("migration marketplace provisioning failed")
+		return ri, fmt.Errorf("migration marketplace provisioning failed")
 	}
 
 	return ri, nil
@@ -146,8 +145,8 @@ func (m *MarketplaceMigration) updateSvcInstance(
 	return nil
 }
 
-func (m *MarketplaceMigration) processAccessRequestDefinition(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string) (string, error) {
-	ard, err := m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
+func (m *MarketplaceMigration) processAccessRequestDefinition(oauthScopes map[string]string) (string, error) {
+	ard, err := m.registerAccessRequestDefinition(oauthScopes)
 	if err != nil {
 		return "", err
 	}
@@ -197,7 +196,7 @@ func (m *MarketplaceMigration) checkCredentialRequestDefinitions(credentialReque
 	return knownCRDs
 }
 
-func (m *MarketplaceMigration) registerAccessRequestDefintion(apiKeyInfo []apic.APIKeyInfo, scopes map[string]string) (*mv1a.AccessRequestDefinition, error) {
+func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string]string) (*mv1a.AccessRequestDefinition, error) {
 	oauthScopes := make([]string, 0)
 	for scope := range scopes {
 		oauthScopes = append(oauthScopes, scope)
@@ -315,7 +314,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		if apiSvcInst.Spec.AccessRequestDefinition == "" && len(oauthScopes) > 0 {
 			// Only migrate resource with oauth scopes. Spec with type apiKey will be handled on startup
 			logger.Debug("instance has a spec definition type of oauth")
-			ardRIName, err = m.processAccessRequestDefinition(apiKeyInfo, oauthScopes)
+			ardRIName, err = m.processAccessRequestDefinition(oauthScopes)
 			if err != nil {
 				return err
 			}
