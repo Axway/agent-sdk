@@ -117,22 +117,20 @@ func (j *discoveryCache) execute() error {
 		return err
 	}
 
-	if !agent.cacheManager.HasLoadedPersistedCache() {
-		j.updateAPIServiceInstancesCache()
+	j.updateAPIServiceInstancesCache()
 
-		switch agent.cfg.GetAgentType() {
-		case config.DiscoveryAgent:
-			j.updateCategoryCache()
-			j.updateCRDCache()
-			j.updateARDCache()
-		case config.TraceabilityAgent:
-			j.updateManagedApplicationCache()
-			j.updateAccessRequestCache()
-		}
+	switch agent.cfg.GetAgentType() {
+	case config.DiscoveryAgent:
+		j.updateCategoryCache()
+		j.updateCRDCache()
+		j.updateARDCache()
+	case config.TraceabilityAgent:
+		j.updateManagedApplicationCache()
+		j.updateAccessRequestCache()
+	}
 
-		if j.agentResourceManager != nil {
-			j.agentResourceManager.FetchAgentResource()
-		}
+	if j.agentResourceManager != nil {
+		j.agentResourceManager.FetchAgentResource()
 	}
 
 	return nil

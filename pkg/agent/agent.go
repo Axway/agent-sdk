@@ -260,9 +260,8 @@ func syncCache() error {
 		stopCh,
 	)
 
-	discoveryCache.execute()
-
 	if !agent.cacheManager.HasLoadedPersistedCache() {
+		discoveryCache.execute()
 		// trigger early saving for the initialized cache, following save will be done by interval job
 		agent.cacheManager.SaveCache()
 	}
@@ -273,8 +272,8 @@ func syncCache() error {
 	}
 
 	f := func() {
-		discoveryCache.SignalSync()
 		agent.cacheManager.Flush()
+		discoveryCache.SignalSync()
 	}
 
 	return startCentralEventProcessor(agent, f)
@@ -386,6 +385,7 @@ func setupSignalProcessor() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-sigs
+		// wait for cache processing to finish
 		cleanUp()
 		log.Info("Stopping agent")
 		os.Exit(0)
