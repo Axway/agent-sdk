@@ -41,11 +41,10 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 
 // MarketplaceMigration - used for migrating attributes to subresource
 type MarketplaceMigration struct {
-	logger                  log.FieldLogger
-	client                  client
-	cfg                     config.CentralConfig
-	cache                   ardCache
-	accessRequestDefinition *mv1a.AccessRequestDefinition
+	logger log.FieldLogger
+	client client
+	cfg    config.CentralConfig
+	cache  ardCache
 }
 
 // Migrate -
