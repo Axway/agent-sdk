@@ -147,12 +147,12 @@ func (m *MarketplaceMigration) updateSvcInstance(
 }
 
 func (m *MarketplaceMigration) processAccessRequestDefinition(apiKeyInfo []apic.APIKeyInfo, oauthScopes map[string]string) (string, error) {
-	err := m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
+	ard, err := m.registerAccessRequestDefintion(apiKeyInfo, oauthScopes)
 	if err != nil {
 		return "", err
 	}
 
-	newARD, err := m.client.CreateOrUpdateResource(m.getAccessRequestDefintion())
+	newARD, err := m.client.CreateOrUpdateResource(ard)
 	if err != nil {
 		return "", err
 	}
@@ -197,14 +197,20 @@ func (m *MarketplaceMigration) checkCredentialRequestDefinitions(credentialReque
 	return knownCRDs
 }
 
-func (m *MarketplaceMigration) registerAccessRequestDefintion(apiKeyInfo []apic.APIKeyInfo, scopes map[string]string) error {
+func (m *MarketplaceMigration) registerAccessRequestDefintion(apiKeyInfo []apic.APIKeyInfo, scopes map[string]string) (*mv1a.AccessRequestDefinition, error) {
 	oauthScopes := make([]string, 0)
 	for scope := range scopes {
 		oauthScopes = append(oauthScopes, scope)
 	}
 
+	callbackfunc := func(ard *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+		return ard, nil
+	}
+
+	var ard *mv1a.AccessRequestDefinition
+	var err error
 	if len(scopes) > 0 {
-		_, err := provisioning.NewAccessRequestBuilder(m.setAccessRequestDefintion).
+		ard, err = provisioning.NewAccessRequestBuilder(callbackfunc).
 			SetSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
@@ -218,20 +224,10 @@ func (m *MarketplaceMigration) registerAccessRequestDefintion(apiKeyInfo []apic.
 									IsString().
 									SetEnumValues(oauthScopes)))).Register()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
-}
-
-func (m *MarketplaceMigration) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
-	m.accessRequestDefinition = accessRequestDefinition
-	return m.accessRequestDefinition, nil
-}
-
-// getAccessRequestDefintion -
-func (m *MarketplaceMigration) getAccessRequestDefintion() *mv1a.AccessRequestDefinition {
-	return m.accessRequestDefinition
+	return ard, nil
 }
 
 // updateRI updates the resource, and the sub resource
