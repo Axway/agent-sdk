@@ -333,9 +333,13 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		}
 
 		existingARD, _ := m.cache.GetAccessRequestDefinitionByName(ardRIName)
-		if existingARD != nil && apiSvcInst.Spec.AccessRequestDefinition == "" {
-			logger.Debugf("adding the following access request definition %s", ardRIName)
-			updateRequestDefinition = true
+		if existingARD == nil {
+			ardRIName = ""
+		} else {
+			if apiSvcInst.Spec.AccessRequestDefinition == "" {
+				logger.Debugf("adding the following access request definition %s", ardRIName)
+				updateRequestDefinition = true
+			}
 		}
 
 		if updateRequestDefinition {

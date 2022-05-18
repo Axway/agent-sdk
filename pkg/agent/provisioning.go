@@ -35,22 +35,28 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 
 // willCreateOrUpdateResource - future check to see if CreateOrUpdateResource will be executed
 func willCreateOrUpdateResource(data v1.Interface) bool {
-	var willCreateOrUpdateResource = false
 
 	// Check (only) credential request definition to see if it exists prior to CreateOrUpdateResource call
 	ri, err := data.AsInstance()
 	if err != nil {
 		return false
 	}
+
 	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
-		existingRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
-		// If existingRI nil, this means it will attempt to CreateOrUpdateResource
-		if existingRI == nil {
-			// Which means we need to run migration
-			willCreateOrUpdateResource = true
+		log.Debug("checking if credential request definition %s needs to be created or updated ", ri.Name)
+		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+		if existingCRD == nil {
+			return true
+		}
+	} else {
+		log.Debug("checking if access request definition %s needs to be created or updated ", ri.Name)
+		existingARD, _ := agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
+		if existingARD == nil {
+			return true
 		}
 	}
-	return willCreateOrUpdateResource
+
+	return false
 }
 
 // migrateMarketPlace -
