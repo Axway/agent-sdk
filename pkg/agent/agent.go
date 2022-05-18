@@ -262,8 +262,6 @@ func syncCache() error {
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		discoveryCache.execute()
-		// trigger early saving for the initialized cache, following save will be done by interval job
-		agent.cacheManager.SaveCache()
 	}
 
 	_, err := jobs.RegisterDetachedChannelJobWithName(discoveryCache, stopCh, "Discovery Cache")
@@ -276,7 +274,7 @@ func syncCache() error {
 		discoveryCache.SignalSync()
 	}
 
-	return startCentralEventProcessor(agent, f)
+	return startCentralEventProcessor(f)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -385,7 +383,6 @@ func setupSignalProcessor() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-sigs
-		// wait for cache processing to finish
 		cleanUp()
 		log.Info("Stopping agent")
 		os.Exit(0)
@@ -397,15 +394,15 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(agent agentData, cacheSyncFunc func()) error {
+func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(agent, cacheSyncFunc)
+		return startStreamMode(cacheSyncFunc)
 	}
 
-	return startPollMode(agent, cacheSyncFunc)
+	return startPollMode(cacheSyncFunc)
 }
 
-func newHandlers(agent agentData) []handler.Handler {
+func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
@@ -427,8 +424,8 @@ func newHandlers(agent agentData) []handler.Handler {
 	return handlers
 }
 
-func startPollMode(agent agentData, cacheSyncFunc func()) error {
-	handlers := newHandlers(agent)
+func startPollMode(cacheSyncFunc func()) error {
+	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
 		agent.apicClient,
@@ -451,8 +448,8 @@ func startPollMode(agent agentData, cacheSyncFunc func()) error {
 	return err
 }
 
-func startStreamMode(agent agentData, cacheSyncFunc func()) error {
-	handlers := newHandlers(agent)
+func startStreamMode(cacheSyncFunc func()) error {
+	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(
 		agent.apicClient,

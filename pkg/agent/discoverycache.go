@@ -3,7 +3,6 @@ package agent
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -25,22 +24,10 @@ const (
 	apiServerPageSize   = 100
 	healthcheckEndpoint = "central"
 	apiServerFields     = "metadata,group,kind,name,title,owner,attributes,x-agent-details,finalizers"
-	queryFormatString   = "%s>\"%s\""
 )
-
-var discoveryCacheLock *sync.Mutex
-
-func init() {
-	discoveryCacheLock = &sync.Mutex{}
-}
 
 type discoveryCache struct {
 	jobs.Job
-	lastServiceTime      time.Time
-	lastInstanceTime     time.Time
-	lastCategoryTime     time.Time
-	lastARDTime          time.Time
-	lastCRDTime          time.Time
 	refreshAll           bool
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
@@ -49,6 +36,7 @@ type discoveryCache struct {
 	logger               log.FieldLogger
 	signal               chan struct{}
 	stopCh               chan interface{}
+	discoveryCacheLock   *sync.Mutex
 }
 
 func newDiscoveryCache(
@@ -62,11 +50,6 @@ func newDiscoveryCache(
 		WithPackage("sdk.agent").
 		WithComponent("discoveryCache")
 	return &discoveryCache{
-		lastServiceTime:      time.Time{},
-		lastInstanceTime:     time.Time{},
-		lastCategoryTime:     time.Time{},
-		lastARDTime:          time.Time{},
-		lastCRDTime:          time.Time{},
 		refreshAll:           getAll,
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
@@ -75,6 +58,7 @@ func newDiscoveryCache(
 		logger:               logger,
 		signal:               make(chan struct{}),
 		stopCh:               stopCh,
+		discoveryCacheLock:   &sync.Mutex{},
 	}
 }
 
@@ -107,10 +91,15 @@ func (j *discoveryCache) Execute() error {
 	}
 }
 
+func (j *discoveryCache) getURLs() {
+
+}
+
 // execute rebuilds the discovery cache
 func (j *discoveryCache) execute() error {
-	discoveryCacheLock.Lock()
-	defer discoveryCacheLock.Unlock()
+	j.discoveryCacheLock.Lock()
+	defer j.discoveryCacheLock.Unlock()
+
 	j.logger.Trace("executing API cache update job")
 	err := j.updateAPICache()
 	if err != nil {
@@ -133,14 +122,14 @@ func (j *discoveryCache) execute() error {
 		j.agentResourceManager.FetchAgentResource()
 	}
 
+	agent.cacheManager.SaveCache()
+
 	return nil
 }
 
 func (j *discoveryCache) updateAPICache() error {
-	j.logger.Trace("updating API cache")
-
 	existingAPIs := make(map[string]bool)
-	apiServices, err := j.getAPIServices()
+	apiServices, err := j.fetchAPIServices()
 	if err != nil {
 		return err
 	}
@@ -158,12 +147,6 @@ func (j *discoveryCache) updateAPICache() error {
 		// skip service without external api id
 		if externalAPIID == "" {
 			continue
-		}
-
-		// Update the lastServiceTime based on the newest service found
-		thisTime := time.Time(svc.Metadata.Audit.CreateTimestamp)
-		if j.lastServiceTime.Before(thisTime) {
-			j.lastServiceTime = thisTime
 		}
 
 		agent.cacheManager.AddAPIService(svc)
@@ -188,42 +171,9 @@ func (j *discoveryCache) updateAPICache() error {
 	return nil
 }
 
-func (j *discoveryCache) getAPIServices() ([]*apiV1.ResourceInstance, error) {
-	if agent.cacheManager.HasLoadedPersistedCache() {
-		return j.getCachedAPIServices(), nil
-	}
-	// Update cache with published resources
-	return j.fetchAPIServices()
-}
-
-func (j *discoveryCache) getCachedAPIServices() []*apiV1.ResourceInstance {
-	resources := make([]*apiV1.ResourceInstance, 0)
-	cache := agent.cacheManager.GetAPIServiceCache()
-
-	for _, key := range cache.GetKeys() {
-		item, _ := cache.Get(key)
-		if item == nil {
-			continue
-		}
-
-		apiSvc, ok := item.(*apiV1.ResourceInstance)
-		if ok {
-			resources = append(resources, apiSvc)
-		}
-	}
-
-	return resources
-}
-
 func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
-	}
-
-	if !j.lastServiceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
-		)
 	}
 
 	return GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
@@ -239,13 +189,6 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
-	if !j.lastInstanceTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastServiceTime.Format(apiV1.APIServerTimeFormat),
-		)
-	}
-
-	j.lastInstanceTime = time.Now()
 	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
 		query, agent.cfg.GetInstancesURL(), apiServerPageSize,
 	)
@@ -263,13 +206,6 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 			continue // skip instance without external api id
 		}
 		agent.cacheManager.AddAPIServiceInstance(instance)
-		if !j.refreshAll {
-			// Update the lastInstanceTime based on the newest instance found
-			thisTime := time.Time(instance.Metadata.Audit.CreateTimestamp)
-			if j.lastInstanceTime.Before(thisTime) {
-				j.lastInstanceTime = thisTime
-			}
-		}
 	}
 }
 
@@ -282,22 +218,11 @@ func (j *discoveryCache) updateCategoryCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
-	if !j.lastCategoryTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastCategoryTime.Format(apiV1.APIServerTimeFormat),
-		)
-	}
 	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
 		query, agent.cfg.GetCategoriesURL(), apiServerPageSize,
 	)
 
 	for _, category := range categories {
-		// Update the lastCategoryTime based on the newest category found
-		thisTime := time.Time(category.Metadata.Audit.CreateTimestamp)
-		if j.lastCategoryTime.Before(thisTime) {
-			j.lastCategoryTime = thisTime
-		}
-
 		agent.cacheManager.AddCategory(category)
 		existingCategories[category.Name] = true
 	}
@@ -328,20 +253,9 @@ func (j *discoveryCache) updateARDCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
-	if !j.lastARDTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastARDTime.Format(apiV1.APIServerTimeFormat),
-		)
-	}
 	ards, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
 
 	for _, ard := range ards {
-		// Update the lastARDTime based on the newest category found
-		thisTime := time.Time(ard.Metadata.Audit.CreateTimestamp)
-		if j.lastARDTime.Before(thisTime) {
-			j.lastARDTime = thisTime
-		}
-
 		agent.cacheManager.AddAccessRequestDefinition(ard)
 		existingARDs[ard.Metadata.ID] = true
 	}
@@ -393,7 +307,8 @@ func (j *discoveryCache) updateCRDCache() {
 	j.logger.Trace("updating credential request definition cache")
 
 	// create an empty credentialrequestdef to gen url
-	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
+	crd := mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), crd)
 
 	// Update cache with published resources
 	existingCRDs := make(map[string]bool)
@@ -401,20 +316,9 @@ func (j *discoveryCache) updateCRDCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
-	if !j.lastCRDTime.IsZero() && !j.refreshAll {
-		query[apic.QueryKey] = fmt.Sprintf(
-			queryFormatString, apic.CreateTimestampQueryKey, j.lastCRDTime.Format(apiV1.APIServerTimeFormat),
-		)
-	}
 	crds, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
 
 	for _, crd := range crds {
-		// Update the lastARDTime based on the newest category found
-		thisTime := time.Time(crd.Metadata.Audit.CreateTimestamp)
-		if j.lastCRDTime.Before(thisTime) {
-			j.lastCRDTime = thisTime
-		}
-
 		agent.cacheManager.AddCredentialRequestDefinition(crd)
 		existingCRDs[crd.Metadata.ID] = true
 	}
