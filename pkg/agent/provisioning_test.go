@@ -13,7 +13,6 @@ import (
 )
 
 func TestNewCredentialRequestBuilder(t *testing.T) {
-
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "test")
@@ -39,6 +38,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			expectedName: "oauth",
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var err error

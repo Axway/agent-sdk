@@ -13,29 +13,34 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type specProcessor interface {
-	getEndpoints() ([]EndpointDefinition, error)
+// SpecProcessor -
+type SpecProcessor interface {
+	GetEndpoints() ([]EndpointDefinition, error)
 	getResourceType() string
 }
 
-type oasSpecProcessor interface {
-	parseAuthInfo()
-	getAuthPolicies() []string
-	getAPIKeyInfo() []APIKeyInfo
-	getOAuthScopes() map[string]string
+// OasSpecProcessor -
+type OasSpecProcessor interface {
+	ParseAuthInfo()
+	GetAPIKeyInfo() []APIKeyInfo
+	GetOAuthScopes() map[string]string
+	GetAuthPolicies() []string
 }
 
-type specResourceParser struct {
+// SpecResourceParser -
+type SpecResourceParser struct {
 	resourceSpecType string
 	resourceSpec     []byte
-	specProcessor    specProcessor
+	specProcessor    SpecProcessor
 }
 
-func newSpecResourceParser(resourceSpec []byte, resourceSpecType string) specResourceParser {
-	return specResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
+// NewSpecResourceParser -
+func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
+	return SpecResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
 }
 
-func (s *specResourceParser) parse() error {
+// Parse -
+func (s *SpecResourceParser) Parse() error {
 	if s.resourceSpecType == "" {
 		s.discoverSpecTypeAndCreateProcessor()
 	} else {
@@ -51,7 +56,7 @@ func (s *specResourceParser) parse() error {
 	return nil
 }
 
-func (s *specResourceParser) discoverSpecTypeAndCreateProcessor() {
+func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() {
 	s.specProcessor, _ = s.discoverYAMLAndJSONSpec()
 	if s.specProcessor == nil {
 		s.specProcessor, _ = s.parseWSDLSpec()
@@ -61,7 +66,7 @@ func (s *specResourceParser) discoverSpecTypeAndCreateProcessor() {
 	}
 }
 
-func (s *specResourceParser) createProcessorWithResourceType() error {
+func (s *SpecResourceParser) createProcessorWithResourceType() error {
 	var err error
 	switch s.resourceSpecType {
 	case Wsdl:
@@ -78,11 +83,12 @@ func (s *specResourceParser) createProcessorWithResourceType() error {
 	return err
 }
 
-func (s *specResourceParser) getSpecProcessor() specProcessor {
+// GetSpecProcessor -
+func (s *SpecResourceParser) GetSpecProcessor() SpecProcessor {
 	return s.specProcessor
 }
 
-func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
+func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
 	err := yaml.Unmarshal(s.resourceSpec, &specDef)
@@ -121,7 +127,7 @@ func (s *specResourceParser) discoverYAMLAndJSONSpec() (specProcessor, error) {
 	return nil, errors.New("unknown yaml or json based specification")
 }
 
-func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 	def, err := wsdl.Unmarshal(s.resourceSpec)
 	if err != nil {
 		return nil, err
@@ -129,7 +135,7 @@ func (s *specResourceParser) parseWSDLSpec() (specProcessor, error) {
 	return newWsdlProcessor(def), nil
 }
 
-func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
+func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
 	swaggerObj := &oas2Swagger{}
 	// lowercase the byte array to ensure keys we care about are parsed
 
@@ -146,7 +152,7 @@ func (s *specResourceParser) parseOAS2Spec() (specProcessor, error) {
 	return newOas2Processor(swaggerObj), nil
 }
 
-func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
+func (s *SpecResourceParser) parseOAS3Spec() (SpecProcessor, error) {
 	oas3Obj, err := oas.ParseOAS3(s.resourceSpec)
 	if err != nil {
 		return nil, err
@@ -154,7 +160,7 @@ func (s *specResourceParser) parseOAS3Spec() (specProcessor, error) {
 	return newOas3Processor(oas3Obj), nil
 }
 
-func (s *specResourceParser) parseAsyncAPISpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
 	err := yaml.Unmarshal(s.resourceSpec, &specDef)
@@ -171,7 +177,7 @@ func (s *specResourceParser) parseAsyncAPISpec() (specProcessor, error) {
 	return nil, errors.New("invalid asyncapi specification")
 }
 
-func (s *specResourceParser) parseProtobufSpec() (specProcessor, error) {
+func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 	reader := bytes.NewReader(s.resourceSpec)
 	parser := proto.NewParser(reader)
 	definition, err := parser.Parse()

@@ -18,7 +18,8 @@ func (p *asyncAPIProcessor) getResourceType() string {
 	return AsyncAPI
 }
 
-func (p *asyncAPIProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndPoints -
+func (p *asyncAPIProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endpoints := make([]EndpointDefinition, 0)
 	var err error
 	servers := p.asyncapiDef["servers"]

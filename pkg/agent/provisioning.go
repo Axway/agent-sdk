@@ -1,24 +1,97 @@
 package agent
 
 import (
+	"fmt"
+
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // credential request definitions
 // createOrUpdateDefinition -
-func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
+func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Migrator) (*v1.ResourceInstance, error) {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	return agent.apicClient.CreateOrUpdateResource(data)
+
+	runMarketplaceMigration := willCreateOrUpdateResource(data)
+
+	ri, err := agent.apicClient.CreateOrUpdateResource(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if marketplaceMigration != nil && runMarketplaceMigration {
+		_, err = migrateMarketPlace(marketplaceMigration, ri)
+	}
+
+	return ri, nil
+}
+
+// willCreateOrUpdateResource - future check to see if CreateOrUpdateResource will be executed
+func willCreateOrUpdateResource(data v1.Interface) bool {
+	var willCreateOrUpdateResource = false
+
+	// Check (only) credential request definition to see if it exists prior to CreateOrUpdateResource call
+	ri, err := data.AsInstance()
+	if err != nil {
+		return false
+	}
+	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
+		existingRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+		// If existingRI nil, this means it will attempt to CreateOrUpdateResource
+		if existingRI == nil {
+			// Which means we need to run migration
+			willCreateOrUpdateResource = true
+		}
+	}
+	return willCreateOrUpdateResource
+}
+
+// migrateMarketPlace -
+func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	switch ri.Kind {
+	case mv1a.AccessRequestDefinitionGVK().Kind:
+		agent.cacheManager.AddAccessRequestDefinition(ri)
+	case mv1a.CredentialRequestDefinitionGVK().Kind:
+		agent.cacheManager.AddCredentialRequestDefinition(ri)
+	}
+
+	apiSvcResources := make([]*v1.ResourceInstance, 0)
+
+	cache := agent.cacheManager.GetAPIServiceCache()
+
+	for _, key := range cache.GetKeys() {
+		item, _ := cache.Get(key)
+		if item == nil {
+			continue
+		}
+
+		svc, ok := item.(*v1.ResourceInstance)
+		if ok {
+			apiSvcResources = append(apiSvcResources, svc)
+		}
+	}
+
+	for _, svc := range apiSvcResources {
+		var err error
+		log.Debugf("if necessary, update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		_, err = marketplaceMigration.Migrate(svc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to migrate service: %s", err)
+		}
+	}
+	return ri, nil
 }
 
 // createOrUpdateCredentialRequestDefinition -
 func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data)
+	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err
 	}
@@ -144,7 +217,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data)
+	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err
 	}
