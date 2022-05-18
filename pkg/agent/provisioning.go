@@ -18,12 +18,26 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 		return nil, nil
 	}
-	ri, err := agent.apicClient.CreateOrUpdateResource(data)
+
+	var runMarketplaceMigration = false
+
+	// Check (only) credential request definition to see if it exists prior to CreateOrUpdateResource call
+	ri, err := data.AsInstance()
+	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
+		existingRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+		// If existingRI nil, this means it will attempt to CreateOrUpdateResource
+		if existingRI == nil {
+			// Which means we need to run migration
+			runMarketplaceMigration = true
+		}
+	}
+
+	ri, err = agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
 	}
 
-	if marketplaceMigration != nil {
+	if marketplaceMigration != nil && runMarketplaceMigration {
 		if ri.Kind == mv1a.CredentialRequestDefinitionGVK().Kind {
 			apiSvcResources := make([]*v1.ResourceInstance, 0)
 			agent.cacheManager.AddCredentialRequestDefinition(ri)

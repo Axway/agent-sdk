@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -328,7 +329,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 
 		// Find only the known CRDs
 		credentialRequestDefinitions := m.checkCredentialRequestDefinitions(credentialRequestPolicies)
-		if len(credentialRequestDefinitions) > 0 {
+		if len(credentialRequestDefinitions) > 0 && !m.sortCompare(apiSvcInst.Spec.CredentialRequestDefinitions, credentialRequestDefinitions) {
 			log.Debugf("adding the following credential request definitions %s,", credentialRequestDefinitions)
 			updateRequestDefinition = true
 		}
@@ -376,6 +377,22 @@ func (m *MarketplaceMigration) newInstanceSpec(
 	in, _ := json.Marshal(newSpec)
 	json.Unmarshal(in, &inInterface)
 	return inInterface
+}
+
+func (m *MarketplaceMigration) sortCompare(apiSvcInstCRDs, knownCRDs []string) bool {
+	if len(apiSvcInstCRDs) != len(knownCRDs) {
+		return false
+	}
+
+	sort.Strings(apiSvcInstCRDs)
+	sort.Strings(knownCRDs)
+
+	for i, v := range apiSvcInstCRDs {
+		if v != knownCRDs[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *MarketplaceMigration) getSpecParser(revision *v1.ResourceInstance) (apic.SpecProcessor, error) {
