@@ -35,22 +35,28 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 
 // willCreateOrUpdateResource - future check to see if CreateOrUpdateResource will be executed
 func willCreateOrUpdateResource(data v1.Interface) bool {
-	var willCreateOrUpdateResource = false
 
 	// Check (only) credential request definition to see if it exists prior to CreateOrUpdateResource call
 	ri, err := data.AsInstance()
 	if err != nil {
 		return false
 	}
+
 	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
-		existingRI, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
-		// If existingRI nil, this means it will attempt to CreateOrUpdateResource
-		if existingRI == nil {
-			// Which means we need to run migration
-			willCreateOrUpdateResource = true
+		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+		if existingCRD == nil {
+			log.Debugf("credential request definition %s needs to be created or updated using migration path", ri.Name)
+			return true
+		}
+	} else {
+		existingARD, _ := agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
+		if existingARD == nil {
+			log.Debugf("access request definition %s needs to be created or updated using migration path", ri.Name)
+			return true
 		}
 	}
-	return willCreateOrUpdateResource
+
+	return false
 }
 
 // migrateMarketPlace -
@@ -80,7 +86,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		log.Debugf("if necessary, update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		log.Debugf("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 		_, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
