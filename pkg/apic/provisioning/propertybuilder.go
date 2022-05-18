@@ -36,7 +36,6 @@ type propertyDefinition struct {
 	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
-	Label              string                        `json:"x-axway-label,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -238,8 +237,7 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 
 	prop := &propertyDefinition{
 		Name:        p.name,
-		Label:       p.label,
-		Title:       p.name,
+		Title:       p.label,
 		Type:        p.dataType,
 		Description: p.description,
 		ReadOnly:    p.readOnly,
