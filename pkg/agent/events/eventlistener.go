@@ -1,4 +1,4 @@
-package stream
+package events
 
 import (
 	"context"
@@ -17,34 +17,47 @@ type Listener interface {
 	Stop()
 }
 
+// APIClient -
+type APIClient interface {
+	GetResource(url string) (*apiv1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
+}
+
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
 	cancel          context.CancelFunc
+	client          APIClient
 	ctx             context.Context
-	client          apiClient
 	handlers        []handler.Handler
-	source          chan *proto.Event
-	sequenceManager *agentSequenceManager
 	logger          log.FieldLogger
+	sequenceManager SequenceProvider
+	source          chan *proto.Event
 }
 
-type newListenerFunc func(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener
+// NewListenerFunc type for creating a new listener
+type NewListenerFunc func(
+	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
+) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(source chan *proto.Event, ri apiClient, sequenceManager *agentSequenceManager, cbs ...handler.Handler) *EventListener {
+func NewEventListener(
+	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
+) *EventListener {
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
-		WithPackage("sdk.agent.stream")
+		WithPackage("sdk.agent.events")
 
 	return &EventListener{
 		cancel:          cancel,
+		client:          client,
 		ctx:             ctx,
-		client:          ri,
 		handlers:        cbs,
-		source:          source,
-		sequenceManager: sequenceManager,
 		logger:          logger,
+		sequenceManager: sequenceManager,
+		source:          source,
 	}
 }
 
@@ -102,7 +115,12 @@ func (em *EventListener) start() (done bool, err error) {
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
 	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Name, event.Payload.Kind)
-	em.logger.WithField("sequence", event.Metadata.SequenceID).Trace("processing received watch event")
+	em.logger.
+		WithField("sequence", event.Metadata.SequenceID).
+		WithField("kind", event.Payload.Kind).
+		WithField("name", event.Payload.Name).
+		WithField("type", event.Type.String()).
+		Debug("processing watch event")
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
@@ -122,8 +140,11 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 }
 
 // handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(ctx context.Context, eventMetadata *proto.EventMeta, resource *apiv1.ResourceInstance) {
-
+func (em *EventListener) handleResource(
+	ctx context.Context,
+	eventMetadata *proto.EventMeta,
+	resource *apiv1.ResourceInstance,
+) {
 	for _, h := range em.handlers {
 		err := h.Handle(ctx, eventMetadata, resource)
 		if err != nil {

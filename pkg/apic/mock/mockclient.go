@@ -51,16 +51,15 @@ type Client struct {
 	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	UpdateAPIV1ResourceInstanceMock                          func(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
-	CreateSubResourceScopedMock                              func(rm v1.ResourceMeta, subs map[string]interface{}) error
-	CreateSubResourceUnscopedMock                            func(rm v1.ResourceMeta, subs map[string]interface{}) error
+	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizerMock                              func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 	CreateOrUpdateResourceMock                               func(v1.Interface) (*v1.ResourceInstance, error)
+	IsMarketplaceSubsEnabledMock                             func() bool
 }
 
 func (m *Client) GetEnvironment() (*v1alpha1.Environment, error) {
@@ -332,13 +331,6 @@ func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1al
 	return nil, nil
 }
 
-func (m *Client) UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if m.UpdateAPIV1ResourceInstanceMock != nil {
-		return m.UpdateAPIV1ResourceInstanceMock(url, ri)
-	}
-	return nil, nil
-}
-
 func (m *Client) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if m.UpdateResourceInstanceMock != nil {
 		return m.UpdateResourceInstanceMock(ri)
@@ -353,16 +345,9 @@ func (m *Client) DeleteResourceInstance(ri *v1.ResourceInstance) error {
 	return nil
 }
 
-func (m *Client) CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	if m.CreateSubResourceScopedMock != nil {
-		return m.CreateSubResourceScopedMock(rm, subs)
-	}
-	return nil
-}
-
-func (m *Client) CreateSubResourceUnscoped(rm v1.ResourceMeta, subs map[string]interface{}) error {
-	if m.CreateSubResourceUnscopedMock != nil {
-		return m.CreateSubResourceUnscopedMock(rm, subs)
+func (m *Client) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error {
+	if m.CreateSubResourceMock != nil {
+		return m.CreateSubResourceMock(rm, subs)
 	}
 	return nil
 }
@@ -400,4 +385,11 @@ func (m *Client) CreateOrUpdateResource(iface v1.Interface) (*v1.ResourceInstanc
 		return m.CreateOrUpdateResourceMock(iface)
 	}
 	return nil, nil
+}
+
+func (m *Client) IsMarketplaceSubsEnabled() bool {
+	if m.IsMarketplaceSubsEnabledMock != nil {
+		return m.IsMarketplaceSubsEnabledMock()
+	}
+	return false
 }

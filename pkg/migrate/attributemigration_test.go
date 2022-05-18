@@ -134,38 +134,6 @@ func (m *mockAttrMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]s
 	return m.res, nil
 }
 
-func (m *mockAttrMigClient) UpdateAPIV1ResourceInstance(_ string, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	m.updateCalled = true
-	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
-	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIID)
-	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIPrimaryKey)
-	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIName)
-	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIStage)
-	assert.NotContains(m.t, ri.Attributes, defs.AttrCreatedBy)
-	assert.NotContains(m.t, ri.Attributes, "majorHash")
-	assert.NotContains(m.t, ri.Attributes, "minorHash")
-	assert.NotContains(m.t, ri.Attributes, "az-api-hash")
-	assert.NotContains(m.t, ri.Attributes, "az-resource-id")
-	assert.Contains(m.t, ri.Attributes, "random")
-
-	sub := util.GetAgentDetails(ri)
-	assert.Contains(m.t, sub, defs.AttrPreviousAPIServiceRevisionID)
-	assert.Contains(m.t, sub, defs.AttrExternalAPIID)
-	assert.Contains(m.t, sub, defs.AttrExternalAPIPrimaryKey)
-	assert.Contains(m.t, sub, defs.AttrExternalAPIName)
-	assert.Contains(m.t, sub, defs.AttrExternalAPIStage)
-	assert.Contains(m.t, sub, defs.AttrCreatedBy)
-	assert.Contains(m.t, sub, "majorHash")
-	assert.Contains(m.t, sub, "minorHash")
-	assert.Contains(m.t, sub, "az-api-hash")
-	assert.Contains(m.t, sub, "az-resource-id")
-	assert.NotContains(m.t, sub, "random")
-
-	assert.Equal(m.t, m.expectedTags, len(ri.Tags))
-
-	return nil, nil
-}
-
 func (m *mockAttrMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	m.updateCalled = true
 	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
@@ -198,7 +166,7 @@ func (m *mockAttrMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (
 	return nil, nil
 }
 
-func (m *mockAttrMigClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockAttrMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }

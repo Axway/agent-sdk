@@ -192,7 +192,7 @@ func TestNewSingleEntryClient(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			SetConfigAgent("", false, "", tc.singleURL, tc.singleEntryFilter)
+			SetConfigAgent("", false, false, "", tc.singleURL, tc.singleEntryFilter)
 			c := NewSingleEntryClient(tc.tls, tc.proxyURL, defaultTimeout)
 			hc, ok := c.(*httpClient)
 			assert.True(t, ok)
@@ -236,6 +236,7 @@ func TestSend(t *testing.T) {
 		envName           string
 		agentName         string
 		isDocker          bool
+		isGRPC            bool
 	}{
 		{
 			name:   "invalid-url",
@@ -253,8 +254,9 @@ func TestSend(t *testing.T) {
 			respBody:          []byte{},
 			envName:           "env",
 			isDocker:          false,
+			isGRPC:            true,
 			agentName:         "agent",
-			expectedUserAgent: "Test/1.0 SDK/1.0 env agent binary",
+			expectedUserAgent: "Test/1.0 SDK/1.0 env agent binary reactive",
 		},
 		{
 			name:              "post-request-with-response",
@@ -283,7 +285,7 @@ func TestSend(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			SetConfigAgent(tc.envName, tc.isDocker, tc.agentName, httpServer.server.URL, []string{"http://test"})
+			SetConfigAgent(tc.envName, tc.isGRPC, tc.isDocker, tc.agentName, httpServer.server.URL, []string{"http://test"})
 			httpServer.reset()
 			httpServer.respBody = tc.respBody
 			httpServer.respCode = tc.respCode

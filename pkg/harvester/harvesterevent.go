@@ -1,4 +1,4 @@
-package watchmanager
+package harvester
 
 import (
 	"strings"

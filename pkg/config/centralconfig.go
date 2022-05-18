@@ -25,35 +25,12 @@ const (
 	GenericService
 )
 
-// AgentMode - Defines the agent mode
-type AgentMode int
-
-const (
-	// PublishToEnvironment (formerly Connected) - publish items to Environment
-	PublishToEnvironment AgentMode = iota + 1
-	// PublishToEnvironmentAndCatalog - publish items to both Catalog and Environment
-	PublishToEnvironmentAndCatalog
-)
-
 // subscription approval types
 const (
 	ManualApproval  string = "manual"
 	AutoApproval    string = "auto"
 	WebhookApproval string = "webhook"
 )
-
-// AgentModeStringMap - Map the Agent Mode constant to a string
-var AgentModeStringMap = map[AgentMode]string{
-	PublishToEnvironment:           "publishToEnvironment",
-	PublishToEnvironmentAndCatalog: "publishToEnvironmentAndCatalog",
-}
-
-// StringAgentModeMap - Map the string to the Agent Mode constant. Note that the strings are lowercased. In the config parser
-// we change the string to all lowers to all for mis-typing of the case
-var StringAgentModeMap = map[string]AgentMode{
-	"publishtoenvironment":           PublishToEnvironment,
-	"publishtoenvironmentandcatalog": PublishToEnvironmentAndCatalog,
-}
 
 // AgentTypeName - Holds the name Agent type
 var AgentTypeName string
@@ -86,11 +63,6 @@ type IResourceConfigCallback interface {
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
-	IsPublishToEnvironmentMode() bool
-	IsPublishToEnvironmentOnlyMode() bool
-	IsPublishToEnvironmentAndCatalogMode() bool
-	GetAgentMode() AgentMode
-	GetAgentModeAsString() string
 	GetTenantID() string
 	GetAPICDeployment() string
 	GetEnvironmentID() string
@@ -155,7 +127,6 @@ type CentralConfiguration struct {
 	CentralConfig
 	IConfigValidator
 	AgentType                 AgentType
-	Mode                      AgentMode            `config:"mode"`
 	TenantID                  string               `config:"organizationID"`
 	TeamName                  string               `config:"team"`
 	APICDeployment            string               `config:"deployment"`
@@ -198,7 +169,6 @@ type GRPCConfig struct {
 func NewCentralConfig(agentType AgentType) CentralConfig {
 	return &CentralConfiguration{
 		AgentType:                 agentType,
-		Mode:                      PublishToEnvironmentAndCatalog,
 		TeamName:                  "",
 		APIServerVersion:          "v1alpha1",
 		Auth:                      newAuthConfig(),
@@ -234,26 +204,6 @@ func (c *CentralConfiguration) GetPlatformURL() string {
 // GetAgentType - Returns the agent type
 func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
-}
-
-// IsPublishToEnvironmentOnlyMode -
-func (c *CentralConfiguration) IsPublishToEnvironmentOnlyMode() bool {
-	return c.Mode == PublishToEnvironment
-}
-
-// IsPublishToEnvironmentAndCatalogMode -
-func (c *CentralConfiguration) IsPublishToEnvironmentAndCatalogMode() bool {
-	return c.Mode == PublishToEnvironmentAndCatalog
-}
-
-// GetAgentMode - Returns the agent mode
-func (c *CentralConfiguration) GetAgentMode() AgentMode {
-	return c.Mode
-}
-
-// GetAgentModeAsString - Returns the agent mode
-func (c *CentralConfiguration) GetAgentModeAsString() string {
-	return AgentModeStringMap[c.Mode]
 }
 
 // GetTenantID - Returns the tenant ID
@@ -634,7 +584,7 @@ func (c *CentralConfiguration) validateConfig() {
 	if supportsTraceability(c.AgentType) {
 		c.validateTraceabilityAgentConfig()
 	} else {
-		c.validatePublishToEnvironmentModeConfig()
+		c.validateEnvironmentConfig()
 		c.validateDiscoveryAgentConfig()
 	}
 
@@ -666,11 +616,7 @@ func (c *CentralConfiguration) validateDiscoveryAgentConfig() {
 	}
 }
 
-func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
-	if !c.IsPublishToEnvironmentOnlyMode() && !c.IsPublishToEnvironmentAndCatalogMode() {
-		exception.Throw(ErrBadConfig.FormatError(pathMode))
-	}
-
+func (c *CentralConfiguration) validateEnvironmentConfig() {
 	if c.GetEnvironmentName() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathEnvironment))
 	}
@@ -679,7 +625,6 @@ func (c *CentralConfiguration) validatePublishToEnvironmentModeConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathAPIServerVersion))
 	}
 }
-
 func (c *CentralConfiguration) validateTraceabilityAgentConfig() {
 	if c.GetAPICDeployment() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathDeployment))
@@ -738,7 +683,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
 		AddUsageReportingProperties(props)
 	} else {
-		props.AddStringProperty(pathMode, "publishToEnvironmentAndCatalog", "Agent Mode")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
@@ -809,7 +753,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 	} else {
-		cfg.Mode = StringAgentModeMap[strings.ToLower(props.StringPropertyValue(pathMode))]
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)

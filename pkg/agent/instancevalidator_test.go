@@ -65,7 +65,7 @@ func setupAPIValidator(apiValidation bool) {
 
 func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 	// Setup
-	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
+	instanceValidator := newInstanceValidator(&sync.Mutex{})
 	setupCache("12345", "test")
 	setupAPIValidator(true)
 	instanceValidator.Execute()
@@ -79,7 +79,7 @@ func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 
 func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	// Setup
-	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
+	instanceValidator := newInstanceValidator(&sync.Mutex{})
 	setupCache("12345", "test")
 	setupAPICClient([]api.MockResponse{
 		{
@@ -103,7 +103,7 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 }
 
 func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
-	instanceValidator := newInstanceValidator(&sync.Mutex{}, true)
+	instanceValidator := newInstanceValidator(&sync.Mutex{})
 
 	setupCache("12345", "test")
 	instance := &v1.ResourceInstance{

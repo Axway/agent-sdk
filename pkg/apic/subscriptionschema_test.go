@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 import (
 	"encoding/json"
 	"net/http"
@@ -83,7 +84,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	serviceClient.apiClient = api.NewClient(nil, "")
 	err := svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.Nil(t, err)
-	cachedSchema, err := serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	cachedSchema, _ := serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
 	assert.NotNil(t, cachedSchema)
 	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
 	assert.True(t, schemaCreated)
@@ -102,7 +103,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 
 	// err = svcClient.RegisterSubscriptionSchema(apiKeySchema, true)
 	assert.Nil(t, err)
-	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
+	cachedSchema, _ = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
 	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
 	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
 	assert.NotNil(t, cachedSchema)

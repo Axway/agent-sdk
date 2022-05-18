@@ -40,7 +40,7 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 		for _, k := range keys {
 			svc := h.agentCacheManager.GetAPIServiceWithAPIID(k)
 
-			if svc.Metadata.ID == resource.Metadata.ID {
+			if svc != nil && svc.Metadata.ID == resource.Metadata.ID {
 				id, err := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
 				if err != nil {
 					return fmt.Errorf(

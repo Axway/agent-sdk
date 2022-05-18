@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 import (
 	"encoding/json"
 	"fmt"
@@ -27,7 +28,7 @@ const (
 	SubscriptionUnsubscribeInitiated  = SubscriptionState("UNSUBSCRIBE_INITIATED")
 	SubscriptionFailedToSubscribe     = SubscriptionState("FAILED_TO_SUBSCRIBE")
 	SubscriptionFailedToUnsubscribe   = SubscriptionState("FAILED_TO_UNSUBSCRIBE")
-	SubscriptionChangeRequested      = SubscriptionState("CHANGE_REQUESTED")
+	SubscriptionChangeRequested       = SubscriptionState("CHANGE_REQUESTED")
 	AccessRequestProvisioning         = SubscriptionState("provisioning")
 	AccessRequestProvisioned          = SubscriptionState("provisioned")
 	AccessRequestFailedProvisioning   = SubscriptionState("failedProvisioning")

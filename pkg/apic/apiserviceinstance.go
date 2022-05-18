@@ -188,7 +188,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			subResources := map[string]interface{}{
 				defs.XAgentDetails: xAgentDetail,
 			}
-			err = c.CreateSubResourceScoped(instance.ResourceMeta, subResources)
+			err = c.CreateSubResource(instance.ResourceMeta, subResources)
 			if err != nil {
 				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 				if rollbackErr != nil {

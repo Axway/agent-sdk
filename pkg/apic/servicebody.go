@@ -5,7 +5,6 @@ import (
 
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 // APIKeyInfo -
@@ -32,7 +31,6 @@ type ServiceBody struct {
 	SpecDefinition            []byte
 	Documentation             []byte
 	Tags                      map[string]interface{}
-	AgentMode                 corecfg.AgentMode
 	Image                     string
 	ImageContentType          string
 	CreatedBy                 string
@@ -61,8 +59,8 @@ type ServiceBody struct {
 	accessRequestDefinition   *mv1a.AccessRequestDefinition
 }
 
-//SetAccessRequestDefintionName - set the name of the access request definition for this service body
-func (s *ServiceBody) SetAccessRequestDefintionName(ardName string, isUnique bool) {
+//SetAccessRequestDefinitionName - set the name of the access request definition for this service body
+func (s *ServiceBody) SetAccessRequestDefinitionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
 }

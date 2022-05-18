@@ -8,7 +8,6 @@ import (
 
 type asyncAPIProcessor struct {
 	asyncapiDef map[string]interface{}
-	spec        []byte
 }
 
 func newAsyncAPIProcessor(asyncapiDef map[string]interface{}) *asyncAPIProcessor {

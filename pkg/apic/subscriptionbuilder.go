@@ -1,5 +1,6 @@
 package apic
 
+// TODO - this file should be able to be removed once Unified Catalog support has been removed
 import (
 	"fmt"
 )
@@ -46,7 +47,7 @@ func (s *subscriptionBuilder) UpdateEnumProperty(key, newValue, dataType string)
 // SetStringPropertyValue - save the key/value pair to the map for the value in this subscription
 func (s *subscriptionBuilder) SetStringPropertyValue(key, value string) SubscriptionBuilder {
 	if _, ok := s.propertyValues[key]; ok {
-		s.err = fmt.Errorf("Key %v already had a value, not updated", key)
+		s.err = fmt.Errorf("key %v already had a value, not updated", key)
 	} else {
 		s.propertyValues[key] = value
 	}

@@ -175,7 +175,7 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *mv1a.APIService) error
 	}
 
 	if len(subResources) > 0 {
-		return c.CreateSubResourceScoped(svc.ResourceMeta, subResources)
+		return c.CreateSubResource(svc.ResourceMeta, subResources)
 	}
 	return nil
 }

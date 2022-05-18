@@ -40,7 +40,6 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamName:     "testteam",
 		TenantID:     "112456",
-		Mode:         corecfg.PublishToEnvironmentAndCatalog,
 		Environment:  "testenvironment",
 		PollInterval: 1 * time.Second,
 		Auth: &corecfg.AuthConfiguration{

@@ -46,10 +46,9 @@ func RemoveTagPattern(tags ...string) {
 type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
-	UpdateAPIV1ResourceInstance(url string, ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	CreateSubResourceScoped(rm v1.ResourceMeta, subs map[string]interface{}) error
 	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 	CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error)
+	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type item struct {
@@ -139,7 +138,7 @@ func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 	// replace the address value so that the Migrate func can return the updated resource instance
 	*ri = *item.ri
 
-	return m.updateRI(url, item.ri)
+	return m.updateRI(item.ri)
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
@@ -233,8 +232,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 		go func(ri *v1.ResourceInstance) {
 			defer wg.Done()
 
-			url := fmt.Sprintf("%s/%s", resourceURL, ri.Name)
-			err := m.updateRI(url, ri)
+			err := m.updateRI(ri)
 			errCh <- err
 		}(item.ri)
 	}
@@ -252,8 +250,8 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 }
 
 // updateRI updates the resource, and the sub resource
-func (m *AttributeMigration) updateRI(url string, ri *v1.ResourceInstance) error {
-	_, err := m.client.UpdateAPIV1ResourceInstance(url, ri)
+func (m *AttributeMigration) updateRI(ri *v1.ResourceInstance) error {
+	_, err := m.client.UpdateResourceInstance(ri)
 	if err != nil {
 		return err
 	}
@@ -276,7 +274,7 @@ func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
 	subResources := map[string]interface{}{
 		defs.XAgentDetails: ri.SubResources[defs.XAgentDetails],
 	}
-	return m.client.CreateSubResourceScoped(ri.ResourceMeta, subResources)
+	return m.client.CreateSubResource(ri.ResourceMeta, subResources)
 }
 
 func updateAttrs(ri *v1.ResourceInstance) item {

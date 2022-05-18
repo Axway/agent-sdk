@@ -64,12 +64,12 @@ type logger struct {
 	entry *logrus.Entry
 }
 
-// WithField adds a field to the log message
+// WithComponent adds a field to the log message
 func (l *logger) WithComponent(value string) FieldLogger {
 	return &logger{entry: l.entry.WithField("component", value)}
 }
 
-// WithField adds a field to the log message
+// WithPackage adds a field to the log message
 func (l *logger) WithPackage(value string) FieldLogger {
 	return &logger{entry: l.entry.WithField("package", value)}
 }
