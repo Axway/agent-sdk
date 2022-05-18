@@ -16,6 +16,7 @@ func (p *protobufProcessor) getResourceType() string {
 	return Protobuf
 }
 
-func (p *protobufProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndpoints -
+func (p *protobufProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return []EndpointDefinition{}, nil
 }

@@ -71,7 +71,7 @@ func TestAttributeMigration(t *testing.T) {
 					},
 				},
 			}
-			c := &mockClient{
+			c := &mockAttrMigClient{
 				res:          res,
 				t:            t,
 				expectedTags: tc.expectedTags,
@@ -87,7 +87,7 @@ func TestAttributeMigration(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	c := &mockClient{
+	c := &mockAttrMigClient{
 		t: t,
 	}
 	cfg := &config.CentralConfiguration{}
@@ -121,7 +121,7 @@ func TestMigrate(t *testing.T) {
 	assert.NotNil(t, util.GetAgentDetails(svc))
 }
 
-type mockClient struct {
+type mockAttrMigClient struct {
 	res             []*apiv1.ResourceInstance
 	t               *testing.T
 	updateCalled    bool
@@ -130,11 +130,11 @@ type mockClient struct {
 	expectedTags    int
 }
 
-func (m *mockClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
 	return m.res, nil
 }
 
-func (m *mockClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	m.updateCalled = true
 	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
 	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIID)
@@ -166,11 +166,15 @@ func (m *mockClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.
 	return nil, nil
 }
 
-func (m *mockClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockAttrMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }
 
-func (m *mockClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
+func (m *mockAttrMigClient) CreateOrUpdateResource(data v1.Interface) (*apiv1.ResourceInstance, error) {
+	return m.execRes, nil
+}
+
+func (m *mockAttrMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
 	return json.Marshal(m.execRes)
 }

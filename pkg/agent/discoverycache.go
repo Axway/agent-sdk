@@ -45,12 +45,12 @@ type discoveryCache struct {
 	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
-	migrator             migrate.AttrMigrator
+	migrator             migrate.Migrator
 	logger               log.FieldLogger
 }
 
 func newDiscoveryCache(
-	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrator migrate.AttrMigrator,
+	manager resource.Manager, getAll bool, instanceCacheLock *sync.Mutex, migrations migrate.Migrator,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
@@ -65,7 +65,7 @@ func newDiscoveryCache(
 		instanceCacheLock:    instanceCacheLock,
 		agentResourceManager: manager,
 		getHCStatus:          hc.GetStatus,
-		migrator:             migrator,
+		migrator:             migrations,
 		logger:               logger,
 	}
 }

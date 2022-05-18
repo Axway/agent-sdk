@@ -4,7 +4,7 @@ type unstructuredProcessor struct {
 	spec []byte
 }
 
-func newUnstructuredSpecProcessor(resourceSpec []byte) specProcessor {
+func newUnstructuredSpecProcessor(resourceSpec []byte) SpecProcessor {
 	return &unstructuredProcessor{spec: resourceSpec}
 }
 
@@ -12,6 +12,7 @@ func (p *unstructuredProcessor) getResourceType() string {
 	return Unstructured
 }
 
-func (p *unstructuredProcessor) getEndpoints() ([]EndpointDefinition, error) {
+// GetEndpoints -
+func (p *unstructuredProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return []EndpointDefinition{}, nil
 }

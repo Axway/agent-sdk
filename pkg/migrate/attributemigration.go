@@ -24,11 +24,6 @@ var oldAttrs = []string{
 	defs.AttrCreatedBy,
 }
 
-// AttrMigrator interface for performing an attribute migration
-type AttrMigrator interface {
-	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-}
-
 var regexes = make([]string, 0)
 
 var tagRegexes = make([]string, 0)
@@ -52,6 +47,7 @@ type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
 	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 

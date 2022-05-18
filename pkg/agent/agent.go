@@ -64,6 +64,7 @@ type agentData struct {
 	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
+	marketplaceMigration   migrate.Migrator
 }
 
 var agent agentData
@@ -247,9 +248,21 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func syncCache() error {
-	migration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+
+	migrations := []migrate.Migrator{
+		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
+	}
+
+	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
+		agent.marketplaceMigration = marketplaceMigration
+		migrations = append(migrations, marketplaceMigration)
+	}
+
+	mig := migrate.NewMigrateAll(migrations...)
+
 	// register the update cache job
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, migration)
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, mig)
 	err := discoveryCache.Execute()
 	if err != nil {
 		return err
