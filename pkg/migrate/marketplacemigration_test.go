@@ -138,9 +138,10 @@ func newOAuthRev(svcName, revName string) *v1.ResourceInstance {
 
 type mockMPMigClient struct {
 	sync.Mutex
-	updateCount int
-	revisions   []*v1.ResourceInstance
-	instances   []*v1.ResourceInstance
+	updateCount     int
+	createSubCalled bool
+	revisions       []*v1.ResourceInstance
+	instances       []*v1.ResourceInstance
 }
 
 func (m *mockMPMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
@@ -160,6 +161,11 @@ func (m *mockMPMigClient) UpdateAPIV1ResourceInstance(_ string, _ *apiv1.Resourc
 }
 
 func (m *mockMPMigClient) CreateSubResourceScoped(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
+	return nil
+}
+
+func (m *mockMPMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+	m.createSubCalled = true
 	return nil
 }
 
