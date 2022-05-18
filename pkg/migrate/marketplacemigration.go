@@ -282,12 +282,6 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		return err
 	}
 
-	endPoints, err := specProcessor.GetEndpoints()
-	instanceSpecEndPoints, err := m.createInstanceEndpoint(endPoints)
-	if err != nil {
-		return err
-	}
-
 	var i interface{} = specProcessor
 
 	if processor, ok := i.(apic.OasSpecProcessor); ok {
@@ -341,7 +335,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		}
 
 		if updateRequestDefinition {
-			inInterface := m.newInstanceSpec(instanceSpecEndPoints, revision.Name, ardRIName, credentialRequestDefinitions)
+			inInterface := m.newInstanceSpec(apiSvcInst.Spec.Endpoint, revision.Name, ardRIName, credentialRequestDefinitions)
 			svcInstance.Spec = inInterface
 
 			err = m.updateRI(svcInstance)
