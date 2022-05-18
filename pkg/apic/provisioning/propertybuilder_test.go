@@ -162,8 +162,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetFirstEnumValue("firstValue"),
 			propertyDefinition{
 				Name:        "TheName",
-				Title:       "TheName",
-				Label:       "The Label",
+				Title:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -188,8 +187,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetSortEnumValues(),
 			propertyDefinition{
 				Name:        "TheName",
-				Title:       "TheName",
-				Label:       "The Label",
+				Title:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -220,8 +218,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetMaxValue(100.5),
 			propertyDefinition{
 				Name:        "TheName",
-				Title:       "TheName",
-				Label:       "The Label",
+				Title:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -252,8 +249,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetMaxValue(100),
 			propertyDefinition{
 				Name:        "TheName",
-				Title:       "TheName",
-				Label:       "The Label",
+				Title:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
@@ -287,8 +283,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetMaxItems(1),
 			propertyDefinition{
 				Name:        "TheName",
-				Title:       "TheName",
-				Label:       "The Label",
+				Title:       "The Label",
 				Description: "TheDescription",
 				Required:    true,
 				Format:      "hidden",
