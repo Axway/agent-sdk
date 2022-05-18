@@ -123,15 +123,15 @@ func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) 
 	return m.ri, m.getErr
 }
 
-func (m mockAPIClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m mockAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.createErr
 }
 
-func (m mockAPIClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m mockAPIClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.updateErr
 }
 
-func (m mockAPIClient) DeleteResourceInstance(*apiv1.ResourceInstance) error {
+func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
 

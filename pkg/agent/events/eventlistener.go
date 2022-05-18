@@ -20,9 +20,8 @@ type Listener interface {
 // APIClient -
 type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
-	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
-	DeleteResourceInstance(ri *apiv1.ResourceInstance) error
+	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri apiv1.Interface) error
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.

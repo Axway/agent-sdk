@@ -19,7 +19,6 @@ import (
 func TestAccessRequestHandler(t *testing.T) {
 	tests := []struct {
 		action           proto.Event_Type
-		createErr        error
 		expectedProvType string
 		getErr           error
 		hasError         bool
@@ -136,7 +135,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			}
 
 			c := &mockClient{
-				createErr:      tc.createErr,
 				expectedStatus: tc.outboundStatus,
 				getErr:         tc.getErr,
 				getRI:          mApp,
@@ -277,7 +275,6 @@ func Test_arReq(t *testing.T) {
 }
 
 type mockClient struct {
-	createErr       error
 	createSubCalled bool
 	expectedStatus  string
 	getErr          error
@@ -290,14 +287,6 @@ type mockClient struct {
 
 func (m *mockClient) GetResource(_ string) (*v1.ResourceInstance, error) {
 	return m.getRI, m.getErr
-}
-
-func (m *mockClient) CreateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
-	return nil, m.createErr
-}
-
-func (m *mockClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
-	return nil, m.updateErr
 }
 
 func (m *mockClient) CreateSubResource(_ v1.ResourceMeta, subs map[string]interface{}) error {

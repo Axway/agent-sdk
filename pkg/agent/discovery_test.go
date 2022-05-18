@@ -152,7 +152,7 @@ func TestDiscoveryCache(t *testing.T) {
 			ri, _ := accReqDef.AsInstance()
 			return ri, nil
 		},
-		DeleteResourceInstanceMock: func(_ *v1.ResourceInstance) error {
+		DeleteResourceInstanceMock: func(_ v1.Interface) error {
 			deleteCalled = true
 			return nil
 		},

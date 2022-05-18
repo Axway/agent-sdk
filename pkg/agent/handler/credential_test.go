@@ -29,7 +29,6 @@ func TestCredentialHandler(t *testing.T) {
 
 	tests := []struct {
 		action           proto.Event_Type
-		createErr        error
 		expectedProvType string
 		getAppErr        error
 		getCrdErr        error
@@ -136,7 +135,6 @@ func TestCredentialHandler(t *testing.T) {
 				crd:            crdRI,
 				getAppErr:      tc.getAppErr,
 				getCrdErr:      tc.getCrdErr,
-				createErr:      tc.createErr,
 				subError:       tc.subError,
 			}
 
@@ -442,9 +440,7 @@ type credClient struct {
 	crd             *v1.ResourceInstance
 	getAppErr       error
 	getCrdErr       error
-	createErr       error
 	createSubCalled bool
-	updateErr       error
 	subError        error
 	expectedStatus  string
 	t               *testing.T
@@ -460,14 +456,6 @@ func (m *credClient) GetResource(url string) (*v1.ResourceInstance, error) {
 	}
 
 	return nil, fmt.Errorf("mock client - resource not found")
-}
-
-func (m *credClient) CreateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
-	return nil, m.createErr
-}
-
-func (m *credClient) UpdateResource(_ string, _ []byte) (*v1.ResourceInstance, error) {
-	return nil, m.updateErr
 }
 
 func (m *credClient) CreateSubResource(_ v1.ResourceMeta, subs map[string]interface{}) error {

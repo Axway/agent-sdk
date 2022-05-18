@@ -195,25 +195,14 @@ func parseWatchTopicTemplate(values WatchTopicValues) (*mv1.WatchTopic, error) {
 
 // createOrUpdateWatchTopic creates a WatchTopic
 func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc APIClient) (*mv1.WatchTopic, error) {
-	bts, err := json.Marshal(wt)
-	if err != nil {
-		return nil, err
-	}
-
-	var ri *v1.ResourceInstance
 	if wt.Metadata.ID != "" {
-		// delete/create required for harvester
-		ri, err := wt.AsInstance()
-		if err != nil {
-			return nil, err
-		}
-		err = rc.DeleteResourceInstance(ri)
+		err := rc.DeleteResourceInstance(wt)
 		if err != nil {
 			return nil, err
 		}
 	}
-	ri, err = rc.CreateResource(wt.GetKindLink(), bts)
 
+	ri, err := rc.CreateResourceInstance(wt)
 	if err != nil {
 		return nil, err
 	}
