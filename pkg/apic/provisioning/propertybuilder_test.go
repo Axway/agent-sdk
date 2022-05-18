@@ -141,10 +141,11 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Minimal String property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				IsString(),
 			propertyDefinition{
 				Name:  "TheName",
-				Title: "TheName",
+				Title: "The Label",
 				Type:  DataTypeString,
 			}},
 		{"Full String property with unsorted enum and first value",
@@ -199,10 +200,11 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Minimal Number property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				IsNumber(),
 			propertyDefinition{
 				Name:  "TheName",
-				Title: "TheName",
+				Title: "The Label",
 				Type:  DataTypeNumber,
 			}},
 		{"Full Number property",
@@ -230,10 +232,11 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Minimal Integer property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				IsInteger(),
 			propertyDefinition{
 				Name:  "TheName",
-				Title: "TheName",
+				Title: "The Label",
 				Type:  DataTypeInteger,
 			}},
 		{"Full Integer property",
@@ -261,10 +264,11 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 		{"Minimal Array property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
+				SetLabel("The Label").
 				IsArray(),
 			propertyDefinition{
 				Name:  "TheName",
-				Title: "TheName",
+				Title: "The Label",
 				Type:  DataTypeArray,
 			}},
 		{"Full Array property",
@@ -278,6 +282,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				IsArray().
 				AddItem(NewSchemaPropertyBuilder().
 					SetName("ItemName").
+					SetLabel("Item Label").
 					IsString()).
 				SetMinItems(0).
 				SetMaxItems(1),
@@ -293,7 +298,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 					AnyOf: []propertyDefinition{
 						{
 							Name:  "ItemName",
-							Title: "ItemName",
+							Title: "Item Label",
 							Type:  DataTypeString,
 						},
 					},
