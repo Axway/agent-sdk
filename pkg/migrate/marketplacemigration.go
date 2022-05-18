@@ -92,7 +92,10 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 				"query": queryFunc(revision.Name),
 			}
 			url := m.cfg.GetInstancesURL()
-			err := m.updateSvcInstance(url, q, revision)
+
+			// Passing down apiservice name (ri.Name) for logging purposes
+			// Possible future refactor to send context through to get proper resources downstream
+			err := m.updateSvcInstance(url, q, ri.Name, revision)
 			errCh <- err
 		}(rev)
 	}
@@ -110,7 +113,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 }
 
 func (m *MarketplaceMigration) updateSvcInstance(
-	resourceURL string, query map[string]string, revision *v1.ResourceInstance,
+	resourceURL string, query map[string]string, apiservice string, revision *v1.ResourceInstance,
 ) error {
 	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
@@ -126,7 +129,7 @@ func (m *MarketplaceMigration) updateSvcInstance(
 		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			err := m.handleSvcInstance(svcInstance, revision)
+			err := m.handleSvcInstance(apiservice, svcInstance, revision)
 			if err != nil {
 				errCh <- err
 			}
@@ -268,9 +271,10 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 }
 
 func (m *MarketplaceMigration) handleSvcInstance(
-	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance,
+	apiservice string, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance,
 ) error {
 	logger := m.logger.
+		WithField("service-name", apiservice).
 		WithField("instance-name", svcInstance.Name).
 		WithField("revision-name", revision.Name)
 
