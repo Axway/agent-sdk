@@ -43,15 +43,15 @@ func willCreateOrUpdateResource(data v1.Interface) bool {
 	}
 
 	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
-		log.Debug("checking if credential request definition %s needs to be created or updated ", ri.Name)
 		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 		if existingCRD == nil {
+			log.Debugf("credential request definition %s needs to be created or updated using migration path", ri.Name)
 			return true
 		}
 	} else {
-		log.Debug("checking if access request definition %s needs to be created or updated ", ri.Name)
 		existingARD, _ := agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
 		if existingARD == nil {
+			log.Debugf("access request definition %s needs to be created or updated using migration path", ri.Name)
 			return true
 		}
 	}
@@ -86,7 +86,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		log.Debugf("if necessary, update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		log.Debugf("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 		_, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
