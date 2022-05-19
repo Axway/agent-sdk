@@ -8,7 +8,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -32,20 +31,11 @@ func newACLUpdateJob() *aclUpdateJob {
 }
 
 func (j *aclUpdateJob) Ready() bool {
-	status := hc.GetStatus(healthcheckEndpoint)
-	ready := status == hc.OK
-	if ready {
-		j.initializeACLJob()
-	}
-	return ready
+	return true
 }
 
 func (j *aclUpdateJob) Status() error {
-	status := hc.GetStatus(healthcheckEndpoint)
-	if status == hc.OK {
-		return nil
-	}
-	return fmt.Errorf("healthcheck for aclUpdateJob failed because the %s healthcheck failed", healthcheckEndpoint)
+	return nil
 }
 
 func (j *aclUpdateJob) Execute() error {
@@ -133,7 +123,7 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 		}
 	}
 
-	return err
+	return fmt.Errorf("acl update job failed: %s", err)
 }
 
 // registerAccessControlListHandler -

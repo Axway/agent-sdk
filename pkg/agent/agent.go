@@ -121,7 +121,14 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
-	api.SetConfigAgent(centralCfg.GetEnvironmentName(), centralCfg.IsUsingGRPC(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetSingleURL(), singleEntryFilter)
+	api.SetConfigAgent(
+		centralCfg.GetEnvironmentName(),
+		centralCfg.IsUsingGRPC(),
+		isRunningInDockerContainer(),
+		centralCfg.GetAgentName(),
+		centralCfg.GetSingleURL(),
+		singleEntryFilter,
+	)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
@@ -141,7 +148,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if centralCfg.GetAgentName() != "" {
 			if agent.agentResourceManager == nil {
-				agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
+				agent.agentResourceManager, err = resource.NewAgentResourceManager(
+					agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
+				)
 				if err != nil {
 					return err
 				}
@@ -160,7 +169,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			syncCache()
+			err := syncCache()
+			if err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -260,15 +272,23 @@ func syncCache() error {
 	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		discoveryCache.execute()
+		err := discoveryCache.execute()
+		if err != nil {
+			return err
+		}
 	}
 
-	f := func() {
+	cacheSync := func() {
 		agent.cacheManager.Flush()
-		discoveryCache.execute()
+		err := discoveryCache.execute()
+		if err != nil {
+			log.Error("failed to sync the discovery cache after encountering an error from harvester. shutting down the agent")
+			cleanUp()
+			os.Exit(1)
+		}
 	}
 
-	return startCentralEventProcessor(f)
+	return startCentralEventProcessor(cacheSync)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
