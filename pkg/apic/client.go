@@ -908,7 +908,7 @@ func (c *ServiceClient) CreateResourceInstance(ri v1.Interface) (*v1.ResourceIns
 	if err != nil {
 		return nil, err
 	}
-	if inst.GetSelfLink() == "" {
+	if inst.GetKindLink() == "" {
 		return nil, fmt.Errorf("could not create resource instance, could not get self link")
 	}
 	inst.Metadata.ResourceVersion = ""
@@ -916,7 +916,7 @@ func (c *ServiceClient) CreateResourceInstance(ri v1.Interface) (*v1.ResourceIns
 	if err != nil {
 		return nil, err
 	}
-	bts, err = c.ExecuteAPI(coreapi.POST, c.createAPIServerURL(inst.GetSelfLink()), nil, bts)
+	bts, err = c.ExecuteAPI(coreapi.POST, c.createAPIServerURL(inst.GetKindLink()), nil, bts)
 	if err != nil {
 		return nil, err
 	}
