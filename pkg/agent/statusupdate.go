@@ -136,7 +136,10 @@ func (su *agentStatusUpdate) getCombinedStatus() string {
 	status := su.getJobPoolStatus()
 	hcStatus := su.getHealthcheckStatus()
 	if hcStatus != AgentRunning {
-		su.logger.WithField("status", hcStatus).Info("agent not in running status")
+		su.logger.
+			WithField("pool-status", status).
+			WithField("healthcheck-status", hcStatus).
+			Info("agent not in running status")
 		status = hcStatus
 	}
 	return status
