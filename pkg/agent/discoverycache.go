@@ -14,9 +14,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -27,72 +25,24 @@ const (
 )
 
 type discoveryCache struct {
-	jobs.Job
-	refreshAll           bool
-	getHCStatus          hc.GetStatusLevel
 	instanceCacheLock    *sync.Mutex
 	agentResourceManager resource.Manager
 	migrator             migrate.Migrator
 	logger               log.FieldLogger
-	signal               chan struct{}
-	stopCh               chan interface{}
 	discoveryCacheLock   *sync.Mutex
 }
 
-func newDiscoveryCache(
-	manager resource.Manager,
-	getAll bool,
-	instanceCacheLock *sync.Mutex,
-	migrations migrate.Migrator,
-	stopCh chan interface{},
-) *discoveryCache {
+func newDiscoveryCache(manager resource.Manager, migrations migrate.Migrator) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("discoveryCache")
 	return &discoveryCache{
-		refreshAll:           getAll,
-		instanceCacheLock:    instanceCacheLock,
+		instanceCacheLock:    &sync.Mutex{},
 		agentResourceManager: manager,
-		getHCStatus:          hc.GetStatus,
 		migrator:             migrations,
 		logger:               logger,
-		signal:               make(chan struct{}),
-		stopCh:               stopCh,
 		discoveryCacheLock:   &sync.Mutex{},
 	}
-}
-
-// Ready -
-func (j *discoveryCache) Ready() bool {
-	status := j.getHCStatus(healthcheckEndpoint)
-	return status == hc.OK
-}
-
-// Status -
-func (j *discoveryCache) Status() error {
-	status := j.getHCStatus(healthcheckEndpoint)
-	if status == hc.OK {
-		return nil
-	}
-	return fmt.Errorf("could not establish a connection to APIC to update the cache")
-}
-
-// Execute - starts a loop to wait for the discovery cache to receive a signal to rebuild the cache
-func (j *discoveryCache) Execute() error {
-	for {
-		select {
-		case <-j.stopCh:
-			return nil
-		case <-j.signal:
-			if err := j.execute(); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (j *discoveryCache) getURLs() {
-
 }
 
 // execute rebuilds the discovery cache
@@ -100,7 +50,7 @@ func (j *discoveryCache) execute() error {
 	j.discoveryCacheLock.Lock()
 	defer j.discoveryCacheLock.Unlock()
 
-	j.logger.Trace("executing API cache update job")
+	j.logger.Trace("executing resource cache update job")
 	err := j.updateAPICache()
 	if err != nil {
 		return err
@@ -123,6 +73,7 @@ func (j *discoveryCache) execute() error {
 	}
 
 	agent.cacheManager.SaveCache()
+	j.logger.Trace("cache has been updated and saved")
 
 	return nil
 }
@@ -158,16 +109,6 @@ func (j *discoveryCache) updateAPICache() error {
 		}
 	}
 
-	if j.refreshAll {
-		// Remove items that are not published as Resources
-		cacheKeys := agent.cacheManager.GetAPIServiceKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingAPIs[key]; !ok {
-				agent.cacheManager.DeleteAPIService(key)
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -197,9 +138,6 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		return
 	}
 
-	if j.refreshAll {
-		agent.cacheManager.DeleteAllAPIServiceInstance()
-	}
 	for _, instance := range serviceInstances {
 		id, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if id == "" {
@@ -226,16 +164,6 @@ func (j *discoveryCache) updateCategoryCache() {
 		agent.cacheManager.AddCategory(category)
 		existingCategories[category.Name] = true
 	}
-
-	if j.refreshAll {
-		// Remove categories that no longer exist
-		cacheKeys := agent.cacheManager.GetCategoryKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingCategories[key]; !ok {
-				agent.cacheManager.DeleteCategory(key)
-			}
-		}
-	}
 }
 
 func (j *discoveryCache) updateARDCache() {
@@ -259,16 +187,6 @@ func (j *discoveryCache) updateARDCache() {
 		agent.cacheManager.AddAccessRequestDefinition(ard)
 		existingARDs[ard.Metadata.ID] = true
 	}
-
-	if j.refreshAll {
-		// Remove categories that no longer exist
-		cacheKeys := agent.cacheManager.GetAccessRequestDefinitionKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingARDs[key]; !ok {
-				agent.cacheManager.DeleteAccessRequestDefinition(key)
-			}
-		}
-	}
 }
 
 func (j *discoveryCache) updateManagedApplicationCache() {
@@ -287,16 +205,6 @@ func (j *discoveryCache) updateManagedApplicationCache() {
 	for _, managedApp := range managedApps {
 		agent.cacheManager.AddManagedApplication(managedApp)
 		existingManagedApplications[managedApp.Metadata.ID] = true
-	}
-
-	if j.refreshAll {
-		// Remove managed applications that no longer exist
-		cacheKeys := agent.cacheManager.GetManagedApplicationCacheKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingManagedApplications[key]; !ok {
-				agent.cacheManager.DeleteManagedApplication(key)
-			}
-		}
 	}
 }
 
@@ -322,16 +230,6 @@ func (j *discoveryCache) updateCRDCache() {
 		agent.cacheManager.AddCredentialRequestDefinition(crd)
 		existingCRDs[crd.Metadata.ID] = true
 	}
-
-	if j.refreshAll {
-		// Remove categories that no longer exist
-		cacheKeys := agent.cacheManager.GetCredentialRequestDefinitionKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingCRDs[key]; !ok {
-				agent.cacheManager.DeleteCredentialRequestDefinition(key)
-			}
-		}
-	}
 }
 
 func (j *discoveryCache) updateAccessRequestCache() {
@@ -353,16 +251,6 @@ func (j *discoveryCache) updateAccessRequestCache() {
 		agent.cacheManager.AddAccessRequest(ar)
 		existingAccessRequests[accessRequest.Metadata.ID] = true
 		j.addSubscription(ar)
-	}
-
-	if j.refreshAll {
-		// Remove access requests that no longer exist
-		cacheKeys := agent.cacheManager.GetAccessRequestCacheKeys()
-		for _, key := range cacheKeys {
-			if _, ok := existingAccessRequests[key]; !ok {
-				agent.cacheManager.DeleteAccessRequest(key)
-			}
-		}
 	}
 }
 
@@ -391,10 +279,4 @@ func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.Reso
 		subscriptionName,
 	)
 	return GetCentralClient().GetResource(url)
-}
-
-// SignalSync sends a signal to the discovery cache to start a new cache sync
-func (j *discoveryCache) SignalSync() {
-	j.logger.Debug("syncing discovery cache")
-	j.signal <- struct{}{}
 }

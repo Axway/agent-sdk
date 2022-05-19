@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -21,7 +20,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -62,7 +60,6 @@ type agentData struct {
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
-	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
@@ -72,7 +69,6 @@ var agent agentData
 
 func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
-	agent.instanceCacheLock = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent
@@ -261,29 +257,15 @@ func syncCache() error {
 
 	mig := migrate.NewMigrateAll(migrations...)
 
-	// register the update cache job
-	stopCh := make(chan interface{})
-
-	discoveryCache := newDiscoveryCache(
-		agent.agentResourceManager,
-		false,
-		agent.instanceCacheLock,
-		mig,
-		stopCh,
-	)
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		discoveryCache.execute()
 	}
 
-	_, err := jobs.RegisterDetachedChannelJobWithName(discoveryCache, stopCh, "Discovery Cache")
-	if err != nil {
-		return err
-	}
-
 	f := func() {
 		agent.cacheManager.Flush()
-		discoveryCache.SignalSync()
+		discoveryCache.execute()
 	}
 
 	return startCentralEventProcessor(f)

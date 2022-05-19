@@ -134,14 +134,13 @@ func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
 }
 
 // eventCatchUp - called until lastSequenceID is 0, caught up on events
-func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event) error {
+func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error {
 	if m.hClient == nil || m.options.sequenceProvider == nil {
 		return nil
 	}
 
 	err := m.hClient.EventCatchUp(link, events)
 	if err != nil {
-		m.clientMap[subID].handleError(err)
 		return err
 	}
 
@@ -150,9 +149,6 @@ func (m *watchManager) eventCatchUp(link, subID string, events chan *proto.Event
 
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
@@ -170,17 +166,19 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
+	m.mutex.Lock()
 	m.clientMap[subID] = client
+	m.mutex.Unlock()
 
-	client.processRequest()
-
-	if err := m.eventCatchUp(link, subID, events); err != nil {
+	if err := m.eventCatchUp(link, events); err != nil {
+		client.cancelStreamCtx()
 		if m.options.onEventSyncError != nil {
 			m.options.onEventSyncError()
 		}
 		return subID, err
 	}
 
+	client.processRequest()
 	go client.processEvents()
 
 	m.logger.
@@ -200,7 +198,7 @@ func (m *watchManager) CloseWatch(id string) error {
 	if !ok {
 		return errors.New("invalid watch subscription ID")
 	}
-	m.logger.WithField("id", id).Info("closing connection for subscription")
+	m.logger.WithField("watch-id", id).Info("closing connection for subscription")
 	client.cancelStreamCtx()
 	delete(m.clientMap, id)
 	return nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
@@ -28,6 +29,7 @@ type watchClient struct {
 	stream                 proto.Watch_SubscribeClient
 	streamCtx              context.Context
 	timer                  *time.Timer
+	mutex                  sync.Mutex
 }
 
 // newWatchClientFunc func signature to create a watch client
@@ -125,6 +127,8 @@ func (c *watchClient) send() error {
 
 // handleError stop the running timer, send to the error channel, and close the open stream.
 func (c *watchClient) handleError(err error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	c.isRunning = false
 	c.timer.Stop()
 	c.cfg.errors <- err

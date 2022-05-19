@@ -123,7 +123,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 			return lastID, err
 		}
 
-		if res.Code != 200 {
+		if res.Code != http.StatusOK {
 			return lastID, fmt.Errorf("expected a 200 response but received %d", res.Code)
 		}
 
