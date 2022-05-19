@@ -18,10 +18,16 @@ const envACLFormat = "%s-agent-acl"
 type aclUpdateJob struct {
 	jobs.Job
 	lastTeamIDs []string
+	logger      log.FieldLogger
 }
 
 func newACLUpdateJob() *aclUpdateJob {
-	job := &aclUpdateJob{}
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("aclUpdateJob")
+	job := &aclUpdateJob{
+		logger: logger,
+	}
 	return job
 }
 
@@ -39,7 +45,7 @@ func (j *aclUpdateJob) Status() error {
 	if status == hc.OK {
 		return nil
 	}
-	return fmt.Errorf("could not establish a connection to APIC to update the acl")
+	return fmt.Errorf("ACL healthcheck failed because the %s healthcheck is not healthy.", healthcheckEndpoint)
 }
 
 func (j *aclUpdateJob) Execute() error {
@@ -112,7 +118,7 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 	}
 
 	var err error
-	log.Tracef("acl about to be updated")
+	j.logger.Trace("acl about to be updated")
 	acl := j.createACLResource(teamIDs)
 	if currentACL != nil {
 		acl, err = agent.apicClient.UpdateAccessControlList(acl)
