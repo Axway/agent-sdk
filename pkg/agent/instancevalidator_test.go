@@ -2,7 +2,6 @@ package agent
 
 import (
 	"net/http"
-	"sync"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -65,7 +64,7 @@ func setupAPIValidator(apiValidation bool) {
 
 func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 	// Setup
-	instanceValidator := newInstanceValidator(&sync.Mutex{})
+	instanceValidator := newInstanceValidator()
 	setupCache("12345", "test")
 	setupAPIValidator(true)
 	instanceValidator.Execute()
@@ -79,7 +78,7 @@ func TestValidatorAPIExistsOnDataplane(t *testing.T) {
 
 func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	// Setup
-	instanceValidator := newInstanceValidator(&sync.Mutex{})
+	instanceValidator := newInstanceValidator()
 	setupCache("12345", "test")
 	setupAPICClient([]api.MockResponse{
 		{
@@ -103,7 +102,7 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 }
 
 func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
-	instanceValidator := newInstanceValidator(&sync.Mutex{})
+	instanceValidator := newInstanceValidator()
 
 	setupCache("12345", "test")
 	instance := &v1.ResourceInstance{
