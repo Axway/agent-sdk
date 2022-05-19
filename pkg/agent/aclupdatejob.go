@@ -45,7 +45,7 @@ func (j *aclUpdateJob) Execute() error {
 		return nil
 	}
 	if err := j.updateACL(newTeamIDs); err != nil {
-		return err
+		return fmt.Errorf("acl update job failed: %s", err)
 	}
 	j.lastTeamIDs = sort.StringSlice(newTeamIDs)
 	return nil
@@ -123,7 +123,7 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 		}
 	}
 
-	return fmt.Errorf("acl update job failed: %s", err)
+	return err
 }
 
 // registerAccessControlListHandler -
