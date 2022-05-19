@@ -45,7 +45,7 @@ func (j *aclUpdateJob) Status() error {
 	if status == hc.OK {
 		return nil
 	}
-	return fmt.Errorf("healthcheck for aclUpdateJob failed because the %s healthcheck failed.", healthcheckEndpoint)
+	return fmt.Errorf("healthcheck for aclUpdateJob failed because the %s healthcheck failed", healthcheckEndpoint)
 }
 
 func (j *aclUpdateJob) Execute() error {

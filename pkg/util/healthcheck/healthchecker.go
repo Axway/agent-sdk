@@ -109,12 +109,19 @@ func WaitForReady() error {
 func GetStatus(endpoint string) StatusLevel {
 	statusCheck, ok := globalHealthChecker.Checks[endpoint]
 	if !ok {
+		logger.Debugf("health check endpoint for %s not found in global health checker. Returning %s status", endpoint, FAIL)
 		return FAIL
+	}
+	if statusCheck.Status.Result != OK {
+		logger.
+			WithField("details", statusCheck.Status.Details).
+			WithField("result", statusCheck.Status.Result).
+			Error("health check for %s in not OK", endpoint)
 	}
 	return statusCheck.Status.Result
 }
 
-//RunChecks - loop through all
+// RunChecks - loop through all
 func RunChecks() StatusLevel {
 	passed := true
 	for _, check := range globalHealthChecker.Checks {
