@@ -189,6 +189,9 @@ func (j *discoveryCache) updateARDCache() {
 }
 
 func (j *discoveryCache) updateManagedApplicationCache() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		return
+	}
 	j.logger.Trace("updating managed application cache")
 
 	// Update cache with published resources
@@ -232,6 +235,9 @@ func (j *discoveryCache) updateCRDCache() {
 }
 
 func (j *discoveryCache) updateAccessRequestCache() {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		return
+	}
 	j.logger.Trace("updating access request cache")
 
 	// Update cache with published resources
