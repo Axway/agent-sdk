@@ -70,7 +70,7 @@ func (su *agentStatusUpdate) Execute() error {
 		su.logger.
 			WithField("previous-status", previousStatus).
 			WithField("new-status", status).
-			Debugf("status is changing", previousStatus, status)
+			Debug("status is changing")
 		UpdateStatusWithPrevious(status, previousStatus, "")
 	} else if su.typeOfStatusUpdate == periodic {
 		// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
